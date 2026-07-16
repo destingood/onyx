@@ -50,14 +50,14 @@ namespace BTOptimizer
         {
             if (string.Equals(args[0], "-gpuoc", StringComparison.OrdinalIgnoreCase))
             {
-                int pl, lockMin, lockMax;
-                if (!Sys.LoadGpuOcConfig(out pl, out lockMin, out lockMax))
+                int pl;
+                if (!Sys.LoadGpuOcConfig(out pl))
                 {
                     log("Configuration OC GPU introuvable : " + Sys.GpuOcConfigPath, 3);
                     return 3;
                 }
-                log("Ré-application de l'OC GPU (pl=" + pl + " W, verrou=" + lockMin + "-" + lockMax + " MHz).", 0);
-                Sys.ApplyGpuOc(pl, lockMin, lockMax, log);
+                log("Ré-application du power limit GPU (pl=" + pl + " W).", 0);
+                Sys.ApplyGpuOc(pl, log);
                 return 0;
             }
 

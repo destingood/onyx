@@ -16,7 +16,6 @@ namespace BTOptimizer
         private Label _gpuState;
         private TrackBar _plBar;
         private Label _plVal;
-        private NumericUpDown _coreMin, _coreMax;
         private CheckBox _chkPersist;
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
@@ -73,13 +72,12 @@ namespace BTOptimizer
             Controls.Add(_gpuState);
             y += 48;
 
-            // Presets GPU
-            var pSafe = MakePreset("Sûr", "Power limit max, fréquences gérées par le pilote. Aucun risque.", 20, y);
-            pSafe.Click += (s, e) => ApplyPreset(100, 0, 0);
-            var pBal = MakePreset("Équilibré", "Power limit max + léger verrou de boost stable. Recommandé.", 220, y);
+            // Presets GPU — power limit uniquement (aucun verrou de fréquence : sûr par conception)
+            var pSafe = MakePreset("Défaut", "Power limit constructeur (100 %). État d'origine.", 20, y);
+            pSafe.Click += (s, e) => ApplyPreset(100);
+            var pBal = MakePreset("Équilibré", "Power limit relevé à mi-chemin. Boost plus soutenu, sans risque.", 220, y);
             pBal.Click += (s, e) => ApplyBalanced();
-            var pMax = MakePreset("Maximum", "Power limit max + boost soutenu haut. À valider par un stress test.", 420, y);
-            pMax.ForeColor = Warn;
+            var pMax = MakePreset("Performance", "Power limit au maximum autorisé par le pilote. Le GPU booste seul, aucun verrou.", 420, y);
             pMax.Click += (s, e) => ApplyMax();
             Controls.Add(pSafe); Controls.Add(pBal); Controls.Add(pMax);
             y += 78;
@@ -106,20 +104,19 @@ namespace BTOptimizer
             UpdatePlLabel();
             y += 46;
 
-            // Verrou fréquences
-            var lockLbl = new Label { Text = "Verrou de fréquence cœur (MHz, 0 = pilote) :", Location = new Point(20, y + 4), AutoSize = true };
-            Controls.Add(lockLbl);
-            _coreMin = new NumericUpDown { Location = new Point(300, y), Size = new Size(90, 26), Minimum = 0, Maximum = 4000, Increment = 15 };
-            _coreMax = new NumericUpDown { Location = new Point(400, y), Size = new Size(90, 26), Minimum = 0, Maximum = 4000, Increment = 15 };
-            if (!_gpu.Ok) { _coreMin.Enabled = false; _coreMax.Enabled = false; }
-            Controls.Add(new Label { Text = "min", Location = new Point(300, y - 16), AutoSize = true, ForeColor = Color.Gray });
-            Controls.Add(new Label { Text = "max", Location = new Point(400, y - 16), AutoSize = true, ForeColor = Color.Gray });
-            Controls.Add(_coreMin); Controls.Add(_coreMax);
-            y += 44;
+            // Note sécurité : le verrou de fréquence a été retiré (un plancher verrouillé trop
+            // haut peut geler la machine). L'OC ici = power limit uniquement.
+            Controls.Add(new Label
+            {
+                Text = "OC sûr : seul le power limit est réglé — jamais de verrou de fréquence figé "
+                     + "(cause de plantages). Pour un OC avancé par offset/courbe, utilise MSI Afterburner.",
+                Location = new Point(20, y), Size = new Size(620, 34), ForeColor = Color.FromArgb(110, 115, 125)
+            });
+            y += 40;
 
             _chkPersist = new CheckBox
             {
-                Text = "Ré-appliquer cet OC GPU à chaque démarrage (tâche planifiée)",
+                Text = "Ré-appliquer ce power limit à chaque démarrage (tâche planifiée)",
                 Location = new Point(20, y), Size = new Size(500, 24),
                 Checked = Sys.OcGuardExists()
             };
@@ -236,64 +233,46 @@ namespace BTOptimizer
             _plVal.Text = pct + " %" + (watts > 0 ? "  (" + watts.ToString("0") + " W)" : "");
         }
 
-        private void ApplyPreset(int pct, int lockMin, int lockMax)
+        private void ApplyPreset(int pct)
         {
             _plBar.Value = Math.Min(_plBar.Maximum, Math.Max(_plBar.Minimum, pct));
-            _coreMin.Value = lockMin;
-            _coreMax.Value = lockMax;
         }
 
         private void ApplyBalanced()
         {
-            int maxPct = _plBar.Maximum;
-            int hi = _gpu.MaxCoreMhz > 0 ? (int)_gpu.MaxCoreMhz : 0;
-            // verrou boost stable ~ 90 % de la fréquence max annoncée -> évite les creux.
-            int lo = hi > 0 ? (int)(hi * 0.90) : 0;
-            ApplyPreset(maxPct, lo, hi);
+            // Mi-chemin entre le défaut (100 %) et le maximum autorisé par le pilote.
+            ApplyPreset((100 + _plBar.Maximum) / 2);
         }
 
         private void ApplyMax()
         {
-            int maxPct = _plBar.Maximum;
-            int hi = _gpu.MaxCoreMhz > 0 ? (int)_gpu.MaxCoreMhz : 0;
-            int lo = hi > 0 ? (int)(hi * 0.97) : 0;
-            ApplyPreset(maxPct, lo, hi);
+            ApplyPreset(_plBar.Maximum);
         }
 
         private void LoadSaved()
         {
-            int pl, lo, hi;
-            if (Sys.LoadGpuOcConfig(out pl, out lo, out hi) && _gpu.Ok && _gpu.PowerDefault > 0)
-            {
-                if (pl > 0) _plBar.Value = Math.Min(_plBar.Maximum, (int)Math.Round(100.0 * pl / _gpu.PowerDefault));
-                _coreMin.Value = Math.Min(_coreMin.Maximum, lo);
-                _coreMax.Value = Math.Min(_coreMax.Maximum, hi);
-            }
+            int pl;
+            if (Sys.LoadGpuOcConfig(out pl) && _gpu.Ok && _gpu.PowerDefault > 0 && pl > 0)
+                _plBar.Value = Math.Min(_plBar.Maximum, (int)Math.Round(100.0 * pl / _gpu.PowerDefault));
         }
 
         private void OnApplyGpu(object sender, EventArgs e)
         {
             int watts = _gpu.PowerDefault > 0 ? (int)Math.Round(_gpu.PowerDefault * _plBar.Value / 100.0) : 0;
-            int lo = (int)_coreMin.Value, hi = (int)_coreMax.Value;
-            if (lo > 0 && hi < lo)
-            {
-                MessageBox.Show(this, "Le verrou de fréquence max doit être ≥ au min.", "OC GPU",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
             if (MessageBox.Show(this,
-                    "Appliquer :\n· Power limit " + watts + " W (" + _plBar.Value + " %)\n"
-                    + (lo > 0 ? "· Verrou fréquence " + lo + "–" + hi + " MHz\n" : "· Fréquences gérées par le pilote\n")
-                    + "\nToutes les valeurs sont bornées par le pilote NVIDIA. Teste la stabilité en jeu ; en cas de souci, clique Réinitialiser.",
-                    "Appliquer l'OC GPU", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                    "Appliquer un power limit de " + watts + " W (" + _plBar.Value + " %) ?\n\n"
+                    + "· Aucune fréquence n'est verrouillée : le GPU gère son boost de façon stable.\n"
+                    + "· Valeur bornée par le pilote NVIDIA.\n"
+                    + "En cas de souci, clique « Réinitialiser » pour revenir au défaut constructeur.",
+                    "Appliquer le power limit GPU", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
 
-            Sys.ApplyGpuOc(watts, lo, hi, _log);
-            Sys.SaveGpuOcConfig(watts, lo, hi);
+            Sys.ApplyGpuOc(watts, _log);
+            Sys.SaveGpuOcConfig(watts);
             if (_chkPersist.Checked) Sys.SetOcGuard(true, Application.ExecutablePath, _log);
             else if (Sys.OcGuardExists()) Sys.SetOcGuard(false, Application.ExecutablePath, _log);
             _gpu = Sys.QueryGpuOc();
-            MessageBox.Show(this, "OC GPU appliqué. Lance un jeu ou un stress test pour valider la stabilité.",
+            MessageBox.Show(this, "Power limit GPU appliqué (fréquences gérées par le pilote).",
                 "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

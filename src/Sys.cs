@@ -899,19 +899,14 @@ namespace BTOptimizer
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpuoc.txt"); }
         }
 
-        public static void SaveGpuOcConfig(int powerLimit, int lockMin, int lockMax)
+        public static void SaveGpuOcConfig(int powerLimit)
         {
-            File.WriteAllLines(GpuOcConfigPath, new[]
-            {
-                "pl=" + powerLimit,
-                "lgcmin=" + lockMin,
-                "lgcmax=" + lockMax
-            });
+            File.WriteAllLines(GpuOcConfigPath, new[] { "pl=" + powerLimit });
         }
 
-        public static bool LoadGpuOcConfig(out int powerLimit, out int lockMin, out int lockMax)
+        public static bool LoadGpuOcConfig(out int powerLimit)
         {
-            powerLimit = 0; lockMin = 0; lockMax = 0;
+            powerLimit = 0;
             if (!File.Exists(GpuOcConfigPath)) return false;
             foreach (string line in File.ReadAllLines(GpuOcConfigPath))
             {
@@ -919,36 +914,30 @@ namespace BTOptimizer
                 if (kv.Length != 2) continue;
                 int v;
                 if (!int.TryParse(kv[1].Trim(), out v)) continue;
-                switch (kv[0].Trim().ToLowerInvariant())
-                {
-                    case "pl": powerLimit = v; break;
-                    case "lgcmin": lockMin = v; break;
-                    case "lgcmax": lockMax = v; break;
-                }
+                // On ne lit QUE le power limit. Les anciennes clés de verrou (lgcmin/lgcmax)
+                // sont volontairement ignorées : le verrou de fréquence a été retiré (dangereux).
+                if (kv[0].Trim().ToLowerInvariant() == "pl") powerLimit = v;
             }
-            return powerLimit > 0 || lockMin > 0;
+            return powerLimit > 0;
         }
 
-        /// <summary>Applique l'OC GPU via nvidia-smi (power limit, verrou de fréquences). Valeurs bornées par le pilote.</summary>
-        public static void ApplyGpuOc(int powerLimit, int lockMin, int lockMax, Action<string, int> log)
+        /// <summary>
+        /// Applique un power limit GPU via nvidia-smi. VOLONTAIREMENT sans verrou de fréquence :
+        /// figer le plancher de fréquence trop haut peut geler la machine (écran noir + reboot).
+        /// Le GPU gère lui-même son boost dans sa courbe stable ; seul le budget de puissance change.
+        /// </summary>
+        public static void ApplyGpuOc(int powerLimit, Action<string, int> log)
         {
             string smi = NvSmiPath();
             if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return; }
             GpuOcInfo cur = QueryGpuOc();
-            if (powerLimit > 0 && cur.Ok)
-            {
-                int pl = powerLimit;
-                if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;
-                NativeResult r = Run(smi, "-pl " + pl);
-                if (r.ExitCode == 0) log("Power limit GPU -> " + pl + " W.", 1);
-                else log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
-            }
-            if (lockMin > 0 && lockMax >= lockMin)
-            {
-                NativeResult r = Run(smi, "-lgc " + lockMin + "," + lockMax);
-                if (r.ExitCode == 0) log("Fréquences GPU verrouillées : " + lockMin + "-" + lockMax + " MHz.", 1);
-                else log("Echec verrouillage fréquences (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
-            }
+            if (powerLimit <= 0 || !cur.Ok) return;
+            int pl = powerLimit;
+            if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;                 // borne haute (pilote)
+            if (cur.PowerDefault > 0 && pl < (int)(cur.PowerDefault * 0.5)) pl = (int)(cur.PowerDefault * 0.5); // garde-fou bas
+            NativeResult r = Run(smi, "-pl " + pl);
+            if (r.ExitCode == 0) log("Power limit GPU -> " + pl + " W (fréquences gérées par le pilote).", 1);
+            else log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
         }
 
         public static void ResetGpuLocks(Action<string, int> log)
