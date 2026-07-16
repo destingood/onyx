@@ -64,7 +64,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.9 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 7.0 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -806,33 +806,11 @@ namespace BTOptimizer
         {
             try
             {
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine("===== RAPPORT BT OPTIMIZER 4.0 =====");
-                sb.AppendLine("Date    : " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                sb.AppendLine("Système : " + Sys.OsDescription());
-                sb.AppendLine("Timer   : " + Native.CurrentTimerMs().ToString("0.0") + " ms");
-                sb.AppendLine();
-                string currentCategory = null;
-                foreach (CheckBox cb in _boxes)
-                {
-                    var t = (Tweak)cb.Tag;
-                    if (t.Category != currentCategory)
-                    {
-                        currentCategory = t.Category;
-                        sb.AppendLine("-- " + currentCategory + " --");
-                    }
-                    bool? state = null;
-                    if (t.Check != null)
-                    {
-                        try { state = t.Check(); } catch { state = null; }
-                    }
-                    string tag = state.HasValue ? (state.Value ? "ACTIF  " : "inactif") : "  ?    ";
-                    sb.AppendLine("  [" + tag + "] " + t.Name);
-                }
-                string path = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-rapport.txt");
-                System.IO.File.WriteAllText(path, sb.ToString(), System.Text.Encoding.UTF8);
-                Log("Rapport enregistré : " + path, 1);
-                Process.Start("notepad.exe", "\"" + path + "\"");
+                string html = Report.BuildHtml(_tweaks, _hw ?? Hardware.Detect());
+                string path = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-rapport.html");
+                System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
+                Log("Rapport HTML enregistré : " + path, 1);
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
             }
             catch (Exception ex)
             {

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.9.0.0")]
-[assembly: AssemblyFileVersion("6.9.0.0")]
+[assembly: AssemblyVersion("7.0.0.0")]
+[assembly: AssemblyFileVersion("7.0.0.0")]
 
 namespace BTOptimizer
 {
@@ -136,6 +136,18 @@ namespace BTOptimizer
                 Console.WriteLine("  UI License/About/KeyForm : construites OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Rapport HTML...");
+            try
+            {
+                string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
+                bool ok = html.Contains("<table") && html.Contains("Optimisations actives") && html.Length > 2000;
+                Console.WriteLine("  Rapport généré : " + html.Length + " octets, structure " + (ok ? "OK" : "INVALIDE"));
+                if (!ok) errors++;
+                string rp = Environment.GetEnvironmentVariable("BT_REPORT_OUT");
+                if (!string.IsNullOrEmpty(rp)) { System.IO.File.WriteAllText(rp, html, new System.Text.UTF8Encoding(false)); Console.WriteLine("  Rapport écrit : " + rp); }
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Rapport ERREUR : " + ex.Message); }
 
             Console.WriteLine("Mode Jeu (Game Boost)...");
             try
