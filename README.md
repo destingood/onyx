@@ -85,6 +85,12 @@ Bouton **`Overclock automatique`** — panneau dédié :
 > ⚠️ Un overclock, même borné, se **valide par un test de stabilité** (jeu prolongé ou
 > stress test). En cas d'artefacts ou de plantage : bouton **Réinitialiser**.
 
+- **Profil pilote NVIDIA « faible latence »** (bouton dans le panneau Overclock) :
+  applique en un clic **Ultra Low Latency = Ultra**, **1 frame pré-rendue**, **mode
+  performances maximales** via `nvidiaProfileInspector -silentImport` (l'outil du dossier
+  `tools\npi\`). Utilise ton profil `input-lag-reapply.nip` s'il est présent, sinon un
+  profil de secours embarqué. Le bouton est grisé si l'outil est absent.
+
 ### Système autonome (v5)
 
 - **GARDIEN au démarrage** : case à cocher qui enregistre ta sélection comme *profil*
