@@ -1,8 +1,11 @@
 # Traces ETW volumineuses (regenerables via la capture de l'app)
 *.etl
 
-# Binaire compilable via Build.bat
+# Binaires compilables via Build.bat
 /BTOptimizer.exe
+bin/
+obj/
+dist/
 
 # Archives et outils tiers decompresses
 *.zip

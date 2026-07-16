@@ -2,9 +2,23 @@
 
 Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accélérer le PC, avec **cases à cocher** : chaque optimisation est optionnelle et réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**.
 
-## ⭐ L'application : `BTOptimizer.exe`
+## ⭐ Lancement : `Lancer-BTOptimizer.bat`  (compatible Smart App Control)
 
-**Double-clique sur `BTOptimizer.exe`** → UAC (Oui) → la fenêtre s'ouvre.
+**Double-clique sur `Lancer-BTOptimizer.bat`** → UAC (Oui) → la fenêtre s'ouvre.
+
+> **Pourquoi ce lanceur ?** Cette machine a **Smart App Control (contrôle intelligent
+> des applications)** activé. SAC **bloque les .exe compilés localement** (sans
+> réputation dans le cloud Microsoft), c'est pourquoi un `BTOptimizer.exe` maison se
+> fait refuser. La solution, **sans désactiver ta sécurité** : l'app est compilée en
+> **.NET 10** et lancée par **`dotnet.exe`, qui est signé Microsoft et donc autorisé
+> par SAC**. Le lanceur s'élève en admin puis exécute `dist\BTOptimizer.dll` via cet
+> hôte de confiance. (Compilation : double-clic sur `Build.bat` — nécessite le .NET
+> SDK, déjà présent ici.)
+
+### Ancienne voie (`BTOptimizer.exe`)
+
+Un `dist\BTOptimizer.exe` est aussi produit (double-clic direct possible, il s'élève
+seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`**.
 
 - **Vraie application native** (fenêtre, cases, boutons) — fonctionne même sur les
   machines où PowerShell est verrouillé (comme celle-ci) car elle ne dépend pas de PowerShell.

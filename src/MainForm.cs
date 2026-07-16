@@ -54,7 +54,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 5.1 — Latence, input lag, rapidité & overclock (Windows 10/11)";
+            Text = "BT Optimizer 5.2 — Latence, input lag, rapidité & overclock (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -232,10 +232,10 @@ namespace BTOptimizer
             _tray.Text = "BT Optimizer";
             _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
-            var trayMenu = new ContextMenu();
-            trayMenu.MenuItems.Add("Ouvrir BT Optimizer", (s, e) => RestoreFromTray());
-            trayMenu.MenuItems.Add("Quitter", (s, e) => { _tray.Visible = false; Close(); });
-            _tray.ContextMenu = trayMenu;
+            var trayMenu = new ContextMenuStrip();
+            trayMenu.Items.Add("Ouvrir BT Optimizer", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
+            _tray.ContextMenuStrip = trayMenu;
 
             // Toutes les 2 s : résolution timer réelle + détection jeu plein écran (mode AUTO).
             _uiTimer = new Timer();

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>BTOptimizer</AssemblyName>
+    <RootNamespace>BTOptimizer</RootNamespace>
+
+    <!-- On garde nos attributs [assembly:] manuels (Program.cs) et notre style C# 5. -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <ApplicationManifest>src\app.manifest</ApplicationManifest>
+    <ApplicationIcon>src\app.ico</ApplicationIcon>
+
+    <!-- Seuls les .cs de src\ sont du code applicatif. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
+
+    <!-- Projet cible Windows : les APIs Windows-only sont attendues. -->
+    <NoWarn>CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
