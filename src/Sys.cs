@@ -516,6 +516,13 @@ namespace BTOptimizer
             return IntEquals(v, 4);
         }
 
+        /// <summary>Valeur Start du service : 2=auto, 3=manuel, 4=désactivé, -1=absent.</summary>
+        public static int GetServiceStart(string name)
+        {
+            object v = GetMachine(@"SYSTEM\CurrentControlSet\Services\" + name, "Start");
+            return (v is int) ? (int)v : -1;
+        }
+
         public static void SetScheduledTask(string taskPath, bool enable)
         {
             Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));
