@@ -1,36 +1,52 @@
 ; ============================================================================
-;  Installeur BT Optimizer (Inno Setup)
-;  Compile avec Inno Setup 6+ :  double-clic sur ce fichier dans Inno Setup,
-;  ou en ligne de commande :  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
+;  Installateur BT Optimizer (Inno Setup 6.3+)
 ;
-;  Prérequis exécution client : .NET Desktop Runtime 10.x (x64).
-;  AVANT de compiler : lance Build.bat pour produire le dossier ..\dist
+;  Compilation (le plus simple) : double-clic sur ..\Build-Installer.bat
+;  Manuel :  1) publie l'app :  dotnet publish -c Release -o dist
+;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
+;  Résultat :  installer\Output\BTOptimizer-Setup-<version>.exe
+;
+;  Prérequis côté client : .NET Desktop Runtime 10.x (x64). Le script le vérifie
+;  et propose la page de téléchargement s'il est absent.
 ; ============================================================================
 
 #define AppName "BT Optimizer"
-#define AppVersion "6.1.0"
-#define AppPublisher "VOTRE NOM / SOCIÉTÉ"
-#define AppURL "https://votresite.example"
 #define AppExe "BTOptimizer.exe"
+; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
+#ifexist "..\dist\BTOptimizer.exe"
+  #define AppVersion GetVersionNumbersString("..\dist\BTOptimizer.exe")
+#else
+  #define AppVersion "7.6.0.0"
+#endif
+#define AppPublisher "BT Optimizer"
+#define AppURL "https://example.com"
 
 [Setup]
 AppId={{9F1C7A20-BT01-4E5A-9C3D-BTOPTIMIZER0001}
 AppName={#AppName}
 AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
+UninstallDisplayName={#AppName} {#AppVersion}
 OutputDir=Output
 OutputBaseFilename=BTOptimizer-Setup-{#AppVersion}
-Compression=lzma2
+SetupIconFile=..\src\app.ico
+Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0
 LicenseFile=LICENSE.txt
 DisableProgramGroupPage=yes
+; Empêche l'installation/désinstallation pendant que l'app tourne (mutex du Program.cs).
+AppMutex=BTOptimizer_SingleInstance
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
@@ -39,40 +55,87 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Components]
-Name: "app";   Description: "Application BT Optimizer"; Types: full compact custom; Flags: fixed
-Name: "tools"; Description: "Outils optionnels (nvidiaProfileInspector pour le profil NVIDIA)"; Types: full
+Name: "app";    Description: "Application BT Optimizer";                                        Types: full compact custom; Flags: fixed
+Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfileInspector)";     Types: full
 
 [Files]
-; Le binaire .NET 10 (produit par Build.bat dans ..\dist)
-Source: "..\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
-; Outils optionnels — vérifiez vos droits de redistribution avant diffusion.
-Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; Flags: ignoreversion recursesubdirs; Components: tools
-Source: "..\tools\input-lag-reapply.nip"; DestDir: "{app}\tools"; Flags: ignoreversion skipifsourcedoesntexist; Components: tools
+; Binaires .NET 10 (produits par « dotnet publish -o dist »).
+; On exclut les fichiers d'état générés à l'exécution et les symboles de débogage.
+Source: "..\dist\*"; DestDir: "{app}"; \
+  Excludes: "bt-*.txt,bt-*.csv,bt-*.nip,*.pdb,*.etl"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
+
+; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
+Source: "..\tools\dpc-trace.wprp"; DestDir: "{app}\tools"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
+
+; Composant NVIDIA optionnel. nvidiaProfileInspector est un outil tiers :
+; vérifiez ses droits de redistribution avant toute diffusion commerciale.
+Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; \
+  Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: nvidia
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
+Name: "{group}\{#AppName}";              Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"
 Name: "{group}\Désinstaller {#AppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall skipifsilent runascurrentuser
+Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app}"; \
+  Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; Nettoie les fichiers créés par l'app après coup (sauvegardes/état/traces).
+Type: files;      Name: "{app}\bt-*.txt"
+Type: files;      Name: "{app}\bt-*.csv"
+Type: files;      Name: "{app}\bt-*.nip"
+Type: files;      Name: "{app}\tools\trace-*.etl"
+Type: files;      Name: "{app}\tools\dpcisr-*.txt"
+Type: dirifempty; Name: "{app}\tools\npi"
+Type: dirifempty; Name: "{app}\tools"
+Type: dirifempty; Name: "{app}"
 
 [Code]
-// Avertit si le .NET Desktop Runtime 10 semble absent (l'app en a besoin).
-function InitializeSetup(): Boolean;
+// Détecte un runtime .NET Desktop 10.x (x64) installé.
+function HasNet10Desktop(): Boolean;
 var
   Base: string;
+  FR: TFindRec;
+begin
+  Result := False;
+  Base := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  if FindFirst(Base + '\*', FR) then
+  try
+    repeat
+      if (FR.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+        if Copy(FR.Name, 1, 3) = '10.' then
+          Result := True;
+    until Result or (not FindNext(FR));
+  finally
+    FindClose(FR);
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ErrorCode: Integer;
 begin
   Result := True;
-  Base := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  if not DirExists(Base) then
-  begin
-    if MsgBox('Le .NET Desktop Runtime 10 (x64) ne semble pas installé.' + #13#10 +
-              'BT Optimizer en a besoin pour fonctionner.' + #13#10#13#10 +
-              'Télécharge-le sur https://dotnet.microsoft.com/download/dotnet/10.0' + #13#10 +
-              '(section « .NET Desktop Runtime »).' + #13#10#13#10 +
-              'Continuer l''installation quand même ?',
-              mbConfirmation, MB_YESNO) = IDNO then
+  if HasNet10Desktop() then
+    Exit;
+
+  case MsgBox('Le .NET Desktop Runtime 10 (x64) est requis et ne semble pas installé.' + #13#10 +
+              'BT Optimizer ne pourra pas démarrer sans lui.' + #13#10#13#10 +
+              '« Oui »  : ouvrir la page de téléchargement (rubrique « .NET Desktop Runtime »),' + #13#10 +
+              '             installe le runtime puis relance ce programme.' + #13#10 +
+              '« Non »  : installer quand même.' + #13#10 +
+              '« Annuler » : arrêter.',
+              mbConfirmation, MB_YESNOCANCEL) of
+    IDYES:
+      begin
+        ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0',
+                  '', '', SW_SHOW, ewNoWait, ErrorCode);
+        Result := False;
+      end;
+    IDCANCEL:
       Result := False;
   end;
 end;
