@@ -794,6 +794,67 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  DNS (par carte réseau active, via WMI) + vidage du cache
+        // ------------------------------------------------------------------
+        public static string CurrentDnsSummary()
+        {
+            var lines = new List<string>();
+            try
+            {
+                using (var mos = new ManagementObjectSearcher(
+                    "SELECT Description, DNSServerSearchOrder FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
+                {
+                    foreach (ManagementObject mo in mos.Get())
+                    {
+                        string desc = Convert.ToString(mo["Description"]);
+                        string[] dns = mo["DNSServerSearchOrder"] as string[];
+                        string val = (dns != null && dns.Length > 0) ? string.Join(", ", dns) : "automatique (DHCP)";
+                        lines.Add("• " + desc + " : " + val);
+                    }
+                }
+            }
+            catch (Exception ex) { lines.Add("Lecture DNS impossible : " + ex.Message); }
+            if (lines.Count == 0) lines.Add("Aucune carte réseau active détectée.");
+            return string.Join("\r\n", lines.ToArray());
+        }
+
+        /// <summary>Applique une liste de serveurs DNS (null = retour DHCP automatique) sur toutes les cartes actives.</summary>
+        public static void SetDns(string[] servers, Action<string, int> log)
+        {
+            int done = 0, fail = 0;
+            using (var mos = new ManagementObjectSearcher(
+                "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
+            {
+                foreach (ManagementObject mo in mos.Get())
+                {
+                    try
+                    {
+                        using (ManagementBaseObject inp = mo.GetMethodParameters("SetDNSServerSearchOrder"))
+                        {
+                            inp["DNSServerSearchOrder"] = servers; // null => automatique
+                            using (ManagementBaseObject outp = mo.InvokeMethod("SetDNSServerSearchOrder", inp, null))
+                            {
+                                uint rv = Convert.ToUInt32(outp["ReturnValue"]);
+                                if (rv == 0 || rv == 1) done++;
+                                else { fail++; if (log != null) log("DNS échec (" + rv + ") : " + mo["Description"], 2); }
+                            }
+                        }
+                    }
+                    catch (Exception ex) { fail++; if (log != null) log("DNS : " + ex.Message, 2); }
+                }
+            }
+            FlushDns();
+            if (log != null)
+                log((servers == null ? "DNS remis en automatique" : "DNS appliqué") + " sur " + done + " carte(s)"
+                    + (fail > 0 ? " (" + fail + " échec)" : "") + ". Cache DNS vidé.", done > 0 ? 1 : 3);
+        }
+
+        public static void FlushDns()
+        {
+            Run(Sys32("ipconfig.exe"), "/flushdns");
+        }
+
+        // ------------------------------------------------------------------
         //  Infos système pour l'en-tête du journal
         // ------------------------------------------------------------------
         public static string OsDescription()

@@ -58,6 +58,14 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
   récents de `tools\`) : **comparaison AVANT/APRÈS** — bannière amélioration/dégradation,
   tuiles de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
 
+### DNS rapide (v5.4)
+
+Bouton **`DNS rapide`** — panneau dédié : affiche le DNS actuel de chaque carte
+réseau, propose un **résolveur rapide** (Cloudflare 1.1.1.1, Cloudflare anti-malware,
+Google, Quad9, AdGuard) appliqué **à toutes les cartes actives** via WMI, avec **vidage
+automatique du cache DNS**. Retour en **automatique (DHCP)** en un clic. Un DNS rapide
+réduit la latence de résolution (temps de connexion aux serveurs de jeu / sites).
+
 ### Overclock automatique (v5.1)
 
 Bouton **`Overclock automatique`** — panneau dédié :

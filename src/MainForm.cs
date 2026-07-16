@@ -23,7 +23,7 @@ namespace BTOptimizer
         private RichTextBox _log;
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
-        private Button _btnMonitor, _btnAutoCompare, _btnOverclock;
+        private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
         private Label _lblCount, _lblTimerRes;
         private NotifyIcon _tray;
         private Timer _uiTimer;
@@ -54,7 +54,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 5.3 — Latence, input lag, rapidité & overclock (Windows 10/11)";
+            Text = "BT Optimizer 5.4 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -195,11 +195,13 @@ namespace BTOptimizer
             _btnLatency.ForeColor = Accent;
 
             // Ligne outils
-            _btnMonitor = MakeButton("Moniteur matériel (CPU / RAM / GPU)", 16, 610, 284, 32, false);
+            _btnMonitor = MakeButton("Moniteur matériel", 16, 610, 210, 32, false);
             _btnMonitor.ForeColor = Accent;
-            _btnOverclock = MakeButton("Overclock automatique", 308, 610, 200, 32, false);
+            _btnOverclock = MakeButton("Overclock auto", 234, 610, 150, 32, false);
             _btnOverclock.ForeColor = Color.FromArgb(180, 70, 20);
-            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 516, 610, 368, 32, false);
+            _btnDns = MakeButton("DNS rapide", 392, 610, 130, 32, false);
+            _btnDns.ForeColor = Accent;
+            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 610, 354, 32, false);
 
             // Journal
             _log = new RichTextBox();
@@ -223,6 +225,7 @@ namespace BTOptimizer
             _btnMonitor.Click += (s, e) => { using (var f = new MonitorForm()) f.ShowDialog(this); };
             _btnAutoCompare.Click += OnAutoCompareClicked;
             _btnOverclock.Click += (s, e) => { using (var f = new OverclockForm(Log)) f.ShowDialog(this); };
+            _btnDns.Click += (s, e) => { using (var f = new DnsForm(Log)) f.ShowDialog(this); };
             FormClosing += OnFormClosingCleanup;
             Resize += OnResizeToTray;
 
@@ -249,7 +252,7 @@ namespace BTOptimizer
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
-                _btnMonitor, _btnOverclock, _btnAutoCompare, _log
+                _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, _log
             });
         }
 
@@ -440,7 +443,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("5.3.0.0")]
-[assembly: AssemblyFileVersion("5.3.0.0")]
+[assembly: AssemblyVersion("5.4.0.0")]
+[assembly: AssemblyFileVersion("5.4.0.0")]
 
 namespace BTOptimizer
 {
@@ -107,6 +107,15 @@ namespace BTOptimizer
                 errors++;
                 Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
             }
+
+            Console.WriteLine("DNS (lecture)...");
+            try
+            {
+                Console.WriteLine("  " + Sys.CurrentDnsSummary().Replace("\r\n", "\n  "));
+                using (var f = new DnsForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI DnsForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  DNS ERREUR : " + ex.Message); }
 
             Console.WriteLine("Overclock (sonde)...");
             try
