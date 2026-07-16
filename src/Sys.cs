@@ -516,6 +516,93 @@ namespace BTOptimizer
             return IntEquals(v, 4);
         }
 
+        public static void SetScheduledTask(string taskPath, bool enable)
+        {
+            Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));
+        }
+
+        public static bool? ScheduledTaskDisabled(string taskPath)
+        {
+            NativeResult r = Run(Sys32("schtasks.exe"), "/query /tn \"" + taskPath + "\" /fo LIST");
+            if (r.ExitCode != 0) return null;
+            // "Status"/"État" ... "Disabled"/"Désactivé" — on cherche le token désactivé.
+            string o = r.Output.ToLowerInvariant();
+            if (o.Contains("disabled") || o.Contains("désactiv") || o.Contains("desactiv")) return true;
+            if (o.Contains("ready") || o.Contains("prêt") || o.Contains("running")) return false;
+            return null;
+        }
+
+        // ------------------------------------------------------------------
+        //  Nettoyage disque (dossiers temporaires sûrs)
+        // ------------------------------------------------------------------
+        public class CleanTarget
+        {
+            public string Name;
+            public string Path;
+            public bool IsRecycleBin;
+            public long SizeMB;
+        }
+
+        public static System.Collections.Generic.List<CleanTarget> CleanTargets()
+        {
+            string win = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var list = new System.Collections.Generic.List<CleanTarget>
+            {
+                new CleanTarget { Name = "Fichiers temporaires (utilisateur)", Path = Environment.GetEnvironmentVariable("TEMP") },
+                new CleanTarget { Name = "Fichiers temporaires (Windows)", Path = Path.Combine(win, "Temp") },
+                new CleanTarget { Name = "Cache Windows Update", Path = Path.Combine(win, @"SoftwareDistribution\Download") },
+                new CleanTarget { Name = "Prefetch", Path = Path.Combine(win, "Prefetch") },
+                new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
+                new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true },
+            };
+            foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
+            return list;
+        }
+
+        private static long MeasureTarget(CleanTarget t)
+        {
+            try
+            {
+                if (t.IsRecycleBin) { long b; return NativeRecycle.QueryBytes(out b) ? b / (1024 * 1024) : 0; }
+                if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
+                long sum = 0;
+                foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
+                {
+                    try { sum += new FileInfo(f).Length; } catch { }
+                }
+                return sum / (1024 * 1024);
+            }
+            catch { return 0; }
+        }
+
+        /// <summary>Vide une cible ; retourne le nombre d'éléments supprimés. Ignore les fichiers verrouillés.</summary>
+        public static int CleanTargetNow(CleanTarget t, Action<string, int> log)
+        {
+            int removed = 0;
+            try
+            {
+                if (t.IsRecycleBin)
+                {
+                    NativeRecycle.Empty();
+                    log("Corbeille vidée.", 1);
+                    return 1;
+                }
+                if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
+                foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
+                {
+                    try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); removed++; } catch { }
+                }
+                foreach (string d in Directory.EnumerateDirectories(t.Path))
+                {
+                    try { Directory.Delete(d, true); } catch { }
+                }
+                log(t.Name + " : " + removed + " fichier(s) supprimé(s).", 1);
+            }
+            catch (Exception ex) { log(t.Name + " : " + ex.Message, 2); }
+            return removed;
+        }
+
         // ------------------------------------------------------------------
         //  Acceptation des conditions d'utilisation (EULA)
         // ------------------------------------------------------------------

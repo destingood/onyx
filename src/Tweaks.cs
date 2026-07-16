@@ -652,6 +652,112 @@ namespace BTOptimizer
                 Check = () => Sys.NicPowerDisabled()
             });
 
+            list.Add(new Tweak
+            {
+                Id = "qos_reserve_off", Category = Cat.Reseau, Esport = true,
+                Name = "Libérer la bande passante réservée par QoS (20 %)",
+                Desc = "Windows réserve 20 % de la bande passante pour QoS. Ce réglage la libère entièrement. « Rétablir » remet le comportement par défaut.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ephemeral_ports", Category = Cat.Reseau,
+                Name = "Plus de ports réseau + réutilisation plus rapide (jeux en ligne)",
+                Desc = "Augmente le nombre de ports sortants (MaxUserPort=65534) et réduit le délai avant réutilisation (TcpTimedWaitDelay=30 s). Utile quand beaucoup de connexions s'ouvrent.",
+                Reboot = true,
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "MaxUserPort", 65534, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpTimedWaitDelay", 30, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "MaxUserPort");
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "TcpTimedWaitDelay");
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters", "MaxUserPort"), 65534)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "hung_timeout", Category = Cat.Rapidite,
+                Name = "Fermer plus vite les applications qui ne répondent pas",
+                Desc = "Réduit les délais avant que Windows considère une appli figée (HungAppTimeout, WaitToKillAppTimeout). Récupération plus rapide en cas de blocage.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Desktop", "HungAppTimeout", "1000", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "WaitToKillAppTimeout", "2000", RegistryValueKind.String);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Desktop", "HungAppTimeout", "5000", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "WaitToKillAppTimeout", "20000", RegistryValueKind.String);
+                },
+                Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "HungAppTimeout"), "1000")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "explorer_separate", Category = Cat.Rapidite,
+                Name = "Explorateur : fenêtres de dossiers dans des processus séparés",
+                Desc = "Une fenêtre de l'Explorateur qui plante n'entraîne plus les autres. Interface plus stable, coût mémoire léger.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "SeparateProcess", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "SeparateProcess", 0, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "SeparateProcess"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "storage_sense_off", Category = Cat.Rapidite,
+                Name = "Désactiver l'Assistant Stockage (Storage Sense)",
+                Desc = "Empêche le nettoyage automatique en arrière-plan. Sans effet sur l'espace disque tant que tu ne nettoies pas toi-même.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\StorageSense" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wu_reboot_off", Category = Cat.Systeme,
+                Name = "Empêcher le redémarrage auto de Windows Update en session",
+                Desc = "Windows ne redémarre plus tout seul pour les mises à jour tant qu'un utilisateur est connecté (fini le reboot en pleine partie).",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoRebootWithLoggedOnUsers"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ceip_off", Category = Cat.Privacy, Esport = true,
+                Name = "Désactiver le programme d'amélioration (CEIP) et ses tâches",
+                Desc = "Coupe la collecte « expérience utilisateur » et ses tâches planifiées en arrière-plan.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\SQMClient\Windows" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SOFTWARE\Microsoft\SQMClient\Windows", "CEIPEnable", 0, RegistryValueKind.DWord);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Customer Experience Improvement Program\Consolidator", false);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip", false);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser", false);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(@"SOFTWARE\Microsoft\SQMClient\Windows", "CEIPEnable", 1, RegistryValueKind.DWord);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Customer Experience Improvement Program\Consolidator", true);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip", true);
+                    Sys.SetScheduledTask(@"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser", true);
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\SQMClient\Windows", "CEIPEnable"), 0)
+            });
+
             // ===================================================================
             //  BLOC AVANCÉ (« zéro limite ») — tout réversible, sauvegardé
             // ===================================================================

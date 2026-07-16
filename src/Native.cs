@@ -96,4 +96,31 @@ namespace BTOptimizer
             }
         }
     }
+
+    /// <summary>Corbeille via shell32 (taille et vidage).</summary>
+    internal static class NativeRecycle
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SHQUERYRBINFO { public int cbSize; public long i64Size; public long i64NumItems; }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SHQueryRecycleBin(string pszRootPath, ref SHQUERYRBINFO info);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SHEmptyRecycleBin(IntPtr hwnd, string pszRootPath, uint dwFlags);
+
+        public static bool QueryBytes(out long bytes)
+        {
+            var info = new SHQUERYRBINFO();
+            info.cbSize = Marshal.SizeOf(typeof(SHQUERYRBINFO));
+            int rc = SHQueryRecycleBin(null, ref info);
+            bytes = (rc == 0) ? info.i64Size : 0;
+            return rc == 0;
+        }
+
+        public static void Empty()
+        {
+            SHEmptyRecycleBin(IntPtr.Zero, null, 7); // NOCONFIRMATION|NOPROGRESSUI|NOSOUND
+        }
+    }
 }
