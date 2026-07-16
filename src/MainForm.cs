@@ -24,6 +24,10 @@ namespace BTOptimizer
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
+        private Button _btnAuto, _btnBench;
+        private TextBox _search;
+        private readonly List<GroupBox> _groups = new List<GroupBox>();
+        private HwProfile _hw;
         private Label _lblCount, _lblTimerRes;
         private NotifyIcon _tray;
         private Timer _uiTimer;
@@ -43,6 +47,7 @@ namespace BTOptimizer
             _tweaks = Catalog.All();
             BuildUi();
             Log("Système : " + Sys.OsDescription(), 0);
+            try { _hw = Hardware.Detect(); Log("Matériel : " + _hw.Summary(), 0); } catch { }
             if (!Sys.SameUser)
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
             Log("Prêt. Aucune modification n'est faite avant de cliquer sur APPLIQUER.", 0);
@@ -54,7 +59,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 5.8 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 5.9 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -111,9 +116,18 @@ namespace BTOptimizer
             _btnMeasure.ForeColor = Accent;
             _btnRestore = MakeButton("Restaurer une sauvegarde...", 700, 70, 184, 30, false);
 
+            // Ligne : presets intelligents + recherche
+            _btnAuto = MakeButton("Auto (adapté à mon PC)", 16, 104, 178, 28, false);
+            _btnAuto.ForeColor = Accent;
+            _btnBench = MakeButton("Preset : Benchmark", 200, 104, 150, 28, false);
+            _search = new TextBox();
+            _search.SetBounds(360, 105, 524, 26);
+            _search.PlaceholderText = "Rechercher une optimisation (nom, catégorie, description)...";
+            _search.TextChanged += (s, e) => FilterTweaks(_search.Text);
+
             // Zone déroulante des optimisations
             var panel = new Panel();
-            panel.SetBounds(16, 108, 868, 388);
+            panel.SetBounds(16, 138, 868, 358);
             panel.AutoScroll = true;
             panel.BackColor = Color.White;
             panel.BorderStyle = BorderStyle.FixedSingle;
@@ -154,6 +168,7 @@ namespace BTOptimizer
                     gb.Controls.Add(cb);
                     i++;
                 }
+                _groups.Add(gb);
                 panel.Controls.Add(gb);
                 y += gb.Height + 8;
             }
@@ -215,6 +230,13 @@ namespace BTOptimizer
             _btnEsport.Click += (s, e) => ApplyPreset(t => t.Esport);
             _btnAll.Click += (s, e) => ApplyPreset(t => true);
             _btnNone.Click += (s, e) => ApplyPreset(t => false);
+            _btnAuto.Click += OnAutoTune;
+            _btnBench.Click += (s, e) =>
+            {
+                var ids = Hardware.BenchmarkIds(_tweaks);
+                ApplyPreset(t => ids.Contains(t.Id));
+                Log("Preset Benchmark : tout sélectionné sauf les tweaks sécurité (Spectre, VBS).", 0);
+            };
             _btnApply.Click += OnApplyClicked;
             _btnRevert.Click += OnRevertClicked;
             _btnRestore.Click += OnRestoreClicked;
@@ -250,6 +272,7 @@ namespace BTOptimizer
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
+                _btnAuto, _btnBench, _search,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, _log
@@ -368,6 +391,41 @@ namespace BTOptimizer
                 cb.Checked = selector((Tweak)cb.Tag);
         }
 
+        private void OnAutoTune(object sender, EventArgs e)
+        {
+            if (_hw == null) _hw = Hardware.Detect();
+            var ids = Hardware.AutoTuneIds(_tweaks, _hw);
+            ApplyPreset(t => ids.Contains(t.Id));
+            Log("Auto-tune : " + _hw.Summary(), 0);
+            Log("Sélection adaptée : " + ids.Count + " optimisation(s)"
+                + (_hw.AllSsd ? " (SSD détecté → tweaks disque inclus)" : " (HDD présent → SysMain/Prefetch exclus)")
+                + ". Sécurité et expérimental laissés à ton choix.", 1);
+        }
+
+        private void FilterTweaks(string query)
+        {
+            string q = (query ?? "").Trim().ToLowerInvariant();
+            int py = 8;
+            foreach (GroupBox gb in _groups)
+            {
+                int cy = 20, visible = 0;
+                foreach (Control c in gb.Controls)
+                {
+                    CheckBox cb = c as CheckBox;
+                    if (cb == null) continue;
+                    var t = (Tweak)cb.Tag;
+                    bool match = q.Length == 0
+                        || (t.Name != null && t.Name.ToLowerInvariant().Contains(q))
+                        || (t.Category != null && t.Category.ToLowerInvariant().Contains(q))
+                        || (t.Desc != null && t.Desc.ToLowerInvariant().Contains(q));
+                    cb.Visible = match;
+                    if (match) { cb.Top = cy; cy += 24; visible++; }
+                }
+                gb.Visible = visible > 0;
+                if (visible > 0) { gb.Height = cy + 6; gb.Top = py; py += gb.Height + 8; }
+            }
+        }
+
         private List<Tweak> Selection()
         {
             return _boxes.Where(cb => cb.Checked).Select(cb => (Tweak)cb.Tag).ToList();
@@ -443,7 +501,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }

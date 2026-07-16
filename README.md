@@ -29,7 +29,12 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
   fond…), services (SysMain, télémétrie, indexation, WER, applis sponsorisées…),
   réseau (Nagle, RSC, veille de la carte réseau…). Y compris un **nettoyage HPET**
   qui retire les réglages néfastes laissés par d'anciens guides.
-- **Presets** : `Recommandé` (sûr), `eSport` (agressif), `Tout`, `Rien`.
+- **Presets** : `Recommandé` (sûr), **`Auto (adapté à mon PC)`** (détecte SSD/HDD, GPU,
+  RAM → coche intelligemment : pas de SysMain/Prefetch off sur disque mécanique, sécurité
+  et expérimental laissés à ton choix), `eSport` (agressif), **`Benchmark`** (tout sauf
+  sécurité), `Tout`, `Rien`.
+- **Barre de recherche** : filtre les 62 optimisations par nom, catégorie ou description.
+- **Détection matérielle** affichée au démarrage (CPU, RAM, GPU, type de disque).
 - **Timer Windows 1 ms** en direct + **affichage temps réel de la résolution du
   timer système** (passe en vert quand ≤ 1 ms : tu VOIS l'effet).
 - **Réduction en zone de notification** : la fenêtre réduite garde le timer 1 ms

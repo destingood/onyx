@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("5.8.0.0")]
-[assembly: AssemblyFileVersion("5.8.0.0")]
+[assembly: AssemblyVersion("5.9.0.0")]
+[assembly: AssemblyFileVersion("5.9.0.0")]
 
 namespace BTOptimizer
 {
@@ -107,6 +107,17 @@ namespace BTOptimizer
                 errors++;
                 Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
             }
+
+            Console.WriteLine("Matériel / auto-tune...");
+            try
+            {
+                HwProfile hw = Hardware.Detect();
+                Console.WriteLine("  " + hw.Summary());
+                var auto = Hardware.AutoTuneIds(Catalog.All(), hw);
+                var bench = Hardware.BenchmarkIds(Catalog.All());
+                Console.WriteLine("  Auto-tune : " + auto.Count + " tweaks | Benchmark : " + bench.Count + " tweaks");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Matériel ERREUR : " + ex.Message); }
 
             Console.WriteLine("DNS (lecture)...");
             try
