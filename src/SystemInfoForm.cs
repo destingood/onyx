@@ -11,6 +11,7 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private ListView _list;
         private List<ComponentInfo.Section> _sections;
+        private string _diagText = "";
 
         public SystemInfoForm(Action<string, int> log)
         {
@@ -54,7 +55,7 @@ namespace BTOptimizer
             var export = MakeBtn("Exporter (.txt)", 130, DockStyle.Left);
             export.Click += OnExport;
             var copy = MakeBtn("Copier", 100, DockStyle.Left);
-            copy.Click += (s, e) => { try { Clipboard.SetText(ComponentInfo.ToText(_sections)); } catch { } };
+            copy.Click += (s, e) => { try { Clipboard.SetText(_diagText + "\n" + ComponentInfo.ToText(_sections)); } catch { } };
             var close = MakeBtn("Fermer", 100, DockStyle.Right);
             close.Click += (s, e) => Close();
             bottom.Controls.Add(new Label { Dock = DockStyle.Fill });
@@ -79,6 +80,29 @@ namespace BTOptimizer
             _list.BeginUpdate();
             _list.Items.Clear();
             _list.Groups.Clear();
+
+            // ---- Diagnostic (constats actionnables, en tête) ----
+            try
+            {
+                var diag = new ListViewGroup("Diagnostic") { HeaderAlignment = HorizontalAlignment.Left };
+                _list.Groups.Add(diag);
+                var db = new System.Text.StringBuilder();
+                foreach (Diagnostics.Finding fd in Diagnostics.Run())
+                {
+                    string icon = fd.Level == 2 ? "✗" : (fd.Level == 1 ? "!" : "✓");
+                    db.AppendLine("  [" + icon + "] " + fd.Text);
+                    Color c = fd.Level == 2 ? Color.FromArgb(200, 40, 40)
+                            : (fd.Level == 1 ? Color.FromArgb(200, 120, 0) : Color.FromArgb(0, 140, 80));
+                    var it = new ListViewItem(icon) { Group = diag, UseItemStyleForSubItems = false };
+                    it.ForeColor = c;
+                    var sub = it.SubItems.Add(fd.Text);
+                    sub.ForeColor = c;
+                    _list.Items.Add(it);
+                }
+                _diagText = db.Length > 0 ? "[Diagnostic]\n" + db.ToString() : "";
+            }
+            catch { _diagText = ""; }
+
             _sections = ComponentInfo.Gather();
             foreach (ComponentInfo.Section sec in _sections)
             {
@@ -101,7 +125,7 @@ namespace BTOptimizer
             {
                 string path = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "bt-composants.txt");
-                System.IO.File.WriteAllText(path, ComponentInfo.ToText(_sections), new System.Text.UTF8Encoding(false));
+                System.IO.File.WriteAllText(path, _diagText + "\n" + ComponentInfo.ToText(_sections), new System.Text.UTF8Encoding(false));
                 if (_log != null) _log("Composants exportés : " + path, 1);
                 System.Diagnostics.Process.Start("notepad.exe", "\"" + path + "\"");
             }
