@@ -9,7 +9,18 @@
 tools/LibreHardwareMonitor/
 tools/npi/
 
+# Fichiers d'etat generes par l'app a l'execution
+bt-profile.txt
+bt-gpuoc.txt
+bt-optimizer-log.txt
+bt-monitor-*.csv
+bt-optimizer-rapport.txt
+bt-analyse-latence.txt
+bt-optimizer-mesures.txt
+
 # Sorties temporaires
 *.tmp
 Thumbs.db
 desktop.ini
+BTTest.exe
+BTTest-out.txt

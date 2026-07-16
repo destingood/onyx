@@ -1,7 +1,0 @@
-mouse_accel
-power_ultimate
-power_throttling
-fso_disable
-game_mode
-gamedvr_off
-sysresp
