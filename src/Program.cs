@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.1.0.0")]
-[assembly: AssemblyFileVersion("6.1.0.0")]
+[assembly: AssemblyVersion("6.2.0.0")]
+[assembly: AssemblyFileVersion("6.2.0.0")]
 
 namespace BTOptimizer
 {
@@ -123,6 +123,13 @@ namespace BTOptimizer
                     bool bad = License.Activate("ZmFrZQ==", false);
                 }
                 Console.WriteLine("  Édition : " + License.Status());
+                if (License.CanStartTrial)
+                {
+                    License.StartTrial();
+                    Console.WriteLine("  Essai démarré : actif=" + License.TrialActive + " jours=" + License.TrialDaysLeft + " -> " + License.Status());
+                    if (!License.TrialActive || License.TrialDaysLeft != 7) errors++;
+                }
+                else Console.WriteLine("  Essai : " + (License.TrialUsed ? License.Status() : "non applicable (Pro)"));
                 using (var f = new LicenseForm()) { f.CreateControl(); }
                 using (var f = new AboutForm()) { f.CreateControl(); }
                 using (var f = new LicenseKeyForm("Test")) { f.CreateControl(); }

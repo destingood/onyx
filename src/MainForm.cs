@@ -63,7 +63,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.1 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.2 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -434,16 +434,18 @@ namespace BTOptimizer
         /// <summary>Renvoie true si Pro (ou si l'utilisateur active une licence à l'instant), sinon false.</summary>
         private bool RequirePro(string feature)
         {
-            if (License.IsPro) return true;
+            if (License.ProUnlocked) return true;
             using (var f = new LicenseKeyForm(feature)) f.ShowDialog(this);
-            if (License.IsPro) { UpdateProUi(); return true; }
+            if (License.ProUnlocked) { UpdateProUi(); return true; }
             return false;
         }
 
         private void UpdateProUi()
         {
-            if (_miPro != null)
-                _miPro.Text = License.IsPro ? ("Édition Pro active (" + License.Licensee + ")") : "Activer la version Pro / entrer une clé";
+            if (_miPro == null) return;
+            if (License.IsPro) _miPro.Text = "Édition Pro active (" + License.Licensee + ")";
+            else if (License.TrialActive) _miPro.Text = "Essai Pro — " + License.TrialDaysLeft + " j restants · entrer une clé";
+            else _miPro.Text = "Activer la version Pro / essai gratuit";
         }
 
         private void OnAutoTune(object sender, EventArgs e)
@@ -807,7 +809,7 @@ namespace BTOptimizer
         private void OnGuardToggled(object sender, EventArgs e)
         {
             if (_guardEventSuppressed) return;
-            if (_chkGuard.Checked && !License.IsPro)
+            if (_chkGuard.Checked && !License.ProUnlocked)
             {
                 if (!RequirePro("Gardien de démarrage"))
                 {

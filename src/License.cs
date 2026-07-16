@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Win32;
 
 namespace BTOptimizer
 {
@@ -27,11 +29,75 @@ namespace BTOptimizer
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-license.txt"); }
         }
 
+        // ---- Essai gratuit ----
+        private const int TrialDays = 7;
+        private const string TrialRegPath = @"SOFTWARE\BTOptimizer";
+        private static string TrialFile
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-trial.txt"); }
+        }
+        public static DateTime? TrialStart { get; private set; }
+
+        public static bool TrialUsed { get { return TrialStart.HasValue; } }
+        public static bool TrialActive { get { return TrialStart.HasValue && DateTime.Now < TrialStart.Value.AddDays(TrialDays); } }
+        public static bool CanStartTrial { get { return !IsPro && !TrialStart.HasValue; } }
+        public static bool ProUnlocked { get { return IsPro || TrialActive; } }
+        public static int TrialDaysLeft
+        {
+            get
+            {
+                if (!TrialActive) return 0;
+                double d = (TrialStart.Value.AddDays(TrialDays) - DateTime.Now).TotalDays;
+                return Math.Max(1, (int)Math.Ceiling(d));
+            }
+        }
+
         static License()
         {
             Licensee = "";
             try { if (File.Exists(StorePath)) Activate(File.ReadAllText(StorePath).Trim(), false); }
             catch { }
+            LoadTrial();
+        }
+
+        private static DateTime? ParseDate(string s)
+        {
+            DateTime d;
+            if (!string.IsNullOrWhiteSpace(s) &&
+                DateTime.TryParse(s.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
+                return d;
+            return null;
+        }
+
+        private static void LoadTrial()
+        {
+            DateTime? f = null, r = null;
+            try { if (File.Exists(TrialFile)) f = ParseDate(File.ReadAllText(TrialFile)); } catch { }
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(TrialRegPath))
+                    if (k != null) r = ParseDate(k.GetValue("TrialStart") as string);
+            }
+            catch { }
+            // On retient la date la PLUS ANCIENNE (supprimer un marqueur ne prolonge pas l'essai).
+            if (f.HasValue && r.HasValue) TrialStart = (f < r) ? f : r;
+            else TrialStart = f ?? r;
+        }
+
+        public static bool StartTrial()
+        {
+            if (!CanStartTrial) return false;
+            DateTime now = DateTime.Now;
+            string s = now.ToString("o", CultureInfo.InvariantCulture);
+            try { File.WriteAllText(TrialFile, s); } catch { }
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.CreateSubKey(TrialRegPath))
+                    if (k != null) k.SetValue("TrialStart", s, RegistryValueKind.String);
+            }
+            catch { }
+            TrialStart = now;
+            return true;
         }
 
         /// <summary>Valide une clé ; si valide, passe en Pro (et l'enregistre si persist=true).</summary>
@@ -63,7 +129,10 @@ namespace BTOptimizer
 
         public static string Status()
         {
-            return IsPro ? ("Pro — licence : " + Licensee) : "Édition gratuite";
+            if (IsPro) return "Pro — licence : " + Licensee;
+            if (TrialActive) return "Essai Pro — " + TrialDaysLeft + " jour(s) restant(s)";
+            if (TrialUsed) return "Édition gratuite (essai Pro expiré)";
+            return "Édition gratuite";
         }
     }
 }
