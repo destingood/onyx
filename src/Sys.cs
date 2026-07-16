@@ -811,6 +811,69 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Profil NVIDIA faible latence (via nvidiaProfileInspector -silentImport)
+        // ------------------------------------------------------------------
+        private static string AppBase { get { return AppDomain.CurrentDomain.BaseDirectory; } }
+
+        public static string FindNvpi()
+        {
+            string[] cands =
+            {
+                Path.Combine(AppBase, @"tools\npi\nvidiaProfileInspector.exe"),
+                Path.Combine(AppBase, @"..\tools\npi\nvidiaProfileInspector.exe"),
+                Path.Combine(AppBase, @"npi\nvidiaProfileInspector.exe"),
+                Path.Combine(AppBase, "nvidiaProfileInspector.exe"),
+            };
+            foreach (string c in cands)
+                if (File.Exists(c)) return Path.GetFullPath(c);
+            return null;
+        }
+
+        private const string LowLatencyNip =
+            "<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n" +
+            "<ArrayOfProfile>\r\n  <Profile>\r\n    <ProfileName>Base Profile</ProfileName>\r\n" +
+            "    <Executeables />\r\n    <Settings>\r\n" +
+            "      <ProfileSetting><SettingNameInfo>Ultra Low Latency - CPL State (Ultra)</SettingNameInfo><SettingID>390467</SettingID><SettingValue>2</SettingValue><ValueType>Dword</ValueType></ProfileSetting>\r\n" +
+            "      <ProfileSetting><SettingNameInfo>Maximum pre-rendered frames</SettingNameInfo><SettingID>8102046</SettingID><SettingValue>1</SettingValue><ValueType>Dword</ValueType></ProfileSetting>\r\n" +
+            "      <ProfileSetting><SettingNameInfo>Power management mode (Prefer max perf)</SettingNameInfo><SettingID>274197361</SettingID><SettingValue>1</SettingValue><ValueType>Dword</ValueType></ProfileSetting>\r\n" +
+            "      <ProfileSetting><SettingNameInfo>Ultra Low Latency - Enabled</SettingNameInfo><SettingID>277041152</SettingID><SettingValue>1</SettingValue><ValueType>Dword</ValueType></ProfileSetting>\r\n" +
+            "    </Settings>\r\n    <ExecutableFindFiles />\r\n  </Profile>\r\n</ArrayOfProfile>";
+
+        public static string EnsureLowLatencyNip()
+        {
+            string[] cands =
+            {
+                Path.Combine(AppBase, @"..\tools\input-lag-reapply.nip"),
+                Path.Combine(AppBase, @"tools\input-lag-reapply.nip"),
+                Path.Combine(AppBase, "input-lag-reapply.nip"),
+            };
+            foreach (string c in cands)
+                if (File.Exists(c)) return Path.GetFullPath(c);
+            string mine = Path.Combine(AppBase, "bt-nvidia-lowlatency.nip");
+            File.WriteAllText(mine, LowLatencyNip, new System.Text.UnicodeEncoding(false, true));
+            return mine;
+        }
+
+        public static bool NvpiAvailable() { return FindNvpi() != null; }
+
+        /// <summary>Applique le profil NVIDIA faible latence (Ultra Low Latency, 1 frame pré-rendue, perf max).</summary>
+        public static void ApplyNvidiaLowLatency(Action<string, int> log)
+        {
+            string exe = FindNvpi();
+            if (exe == null)
+            {
+                log("nvidiaProfileInspector.exe introuvable (attendu dans tools\\npi\\). Impossible d'appliquer le profil NVIDIA.", 3);
+                return;
+            }
+            string nip = EnsureLowLatencyNip();
+            NativeResult r = Run(exe, "-silentImport \"" + nip + "\"");
+            if (r.ExitCode == 0)
+                log("Profil NVIDIA faible latence appliqué : Ultra Low Latency (Ultra), 1 frame pré-rendue, mode perf. max.", 1);
+            else
+                log("nvidiaProfileInspector a retourné le code " + r.ExitCode + ".", 2);
+        }
+
+        // ------------------------------------------------------------------
         //  DNS (par carte réseau active, via WMI) + vidage du cache
         // ------------------------------------------------------------------
         public static string CurrentDnsSummary()

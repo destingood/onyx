@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("5.6.0.0")]
-[assembly: AssemblyFileVersion("5.6.0.0")]
+[assembly: AssemblyVersion("5.7.0.0")]
+[assembly: AssemblyFileVersion("5.7.0.0")]
 
 namespace BTOptimizer
 {
@@ -132,6 +132,8 @@ namespace BTOptimizer
                 Console.WriteLine("  RAM : " + (ram.TotalMB / 1024) + "Go rated=" + ram.SpeedRated + " running=" + ram.SpeedRunning + " MT/s");
                 Sys.CpuInfo cpu = Sys.QueryCpu();
                 Console.WriteLine("  CPU : " + cpu.Name + " " + cpu.Cores + "c/" + cpu.Threads + "t");
+                Console.WriteLine("  NVIDIA profile inspector : " + (Sys.NvpiAvailable() ? Sys.FindNvpi() : "introuvable"));
+                Console.WriteLine("  Profil .nip cible : " + Sys.EnsureLowLatencyNip());
                 using (var f = new OverclockForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI OverclockForm : construite OK.");
             }

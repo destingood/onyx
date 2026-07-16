@@ -35,7 +35,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "BT Optimizer — Overclock automatique";
-            ClientSize = new Size(660, 640);
+            ClientSize = new Size(660, 690);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -132,7 +132,15 @@ namespace BTOptimizer
             btnReset.Enabled = _gpu.Ok;
             btnReset.Click += OnResetGpu;
             Controls.Add(btnApply); Controls.Add(btnReset);
-            y += 56;
+            y += 48;
+
+            var btnNv = MakeButton("Appliquer le profil pilote NVIDIA « faible latence » (Ultra Low Latency)", 20, y, 620, 34, false);
+            btnNv.ForeColor = Color.FromArgb(0, 120, 60);
+            btnNv.Enabled = Sys.NvpiAvailable();
+            if (!btnNv.Enabled) btnNv.Text = "Profil pilote NVIDIA — nvidiaProfileInspector introuvable (tools\\npi\\)";
+            btnNv.Click += OnApplyNvidia;
+            Controls.Add(btnNv);
+            y += 46;
 
             // ---------------- RAM / CPU ----------------
             AddSection("RAM & CPU — diagnostic (overclock au BIOS)", ref y);
@@ -286,6 +294,30 @@ namespace BTOptimizer
             _gpu = Sys.QueryGpuOc();
             MessageBox.Show(this, "OC GPU appliqué. Lance un jeu ou un stress test pour valider la stabilité.",
                 "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnApplyNvidia(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Appliquer le profil pilote NVIDIA « faible latence » ?\n\n"
+                    + "• Ultra Low Latency = Ultra\n• Frames pré-rendues max = 1\n• Mode de gestion = Performances maximales\n\n"
+                    + "Via nvidiaProfileInspector (ton propre outil). Réversible dans le panneau NVIDIA ou en remettant les réglages par défaut du pilote.",
+                    "Profil NVIDIA faible latence", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            var btn = sender as Button;
+            if (btn != null) btn.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                Sys.ApplyNvidiaLowLatency(_log);
+                BeginInvoke((Action)(() =>
+                {
+                    Cursor = Cursors.Default;
+                    if (btn != null) btn.Enabled = true;
+                    MessageBox.Show(this, "Profil NVIDIA appliqué. Certains réglages prennent effet au prochain lancement du jeu.",
+                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+            });
         }
 
         private void OnResetGpu(object sender, EventArgs e)
