@@ -48,11 +48,24 @@ namespace BTOptimizer
 
         private static int Execute(string[] args, Action<string, int> log)
         {
+            if (string.Equals(args[0], "-gpuoc", StringComparison.OrdinalIgnoreCase))
+            {
+                int pl, lockMin, lockMax;
+                if (!Sys.LoadGpuOcConfig(out pl, out lockMin, out lockMax))
+                {
+                    log("Configuration OC GPU introuvable : " + Sys.GpuOcConfigPath, 3);
+                    return 3;
+                }
+                log("Ré-application de l'OC GPU (pl=" + pl + " W, verrou=" + lockMin + "-" + lockMax + " MHz).", 0);
+                Sys.ApplyGpuOc(pl, lockMin, lockMax, log);
+                return 0;
+            }
+
             bool apply = string.Equals(args[0], "-apply", StringComparison.OrdinalIgnoreCase);
             bool revert = string.Equals(args[0], "-revert", StringComparison.OrdinalIgnoreCase);
             if (!apply && !revert)
             {
-                log("Argument inconnu : " + args[0] + " (attendu : -apply ou -revert).", 3);
+                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert ou -gpuoc).", 3);
                 return 2;
             }
             string mode = args.Length > 1 ? args[1].ToLowerInvariant() : "profile";

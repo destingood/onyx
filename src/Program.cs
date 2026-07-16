@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("5.0.0.0")]
-[assembly: AssemblyFileVersion("5.0.0.0")]
+[assembly: AssemblyVersion("5.1.0.0")]
+[assembly: AssemblyFileVersion("5.1.0.0")]
 
 namespace BTOptimizer
 {
@@ -106,6 +106,26 @@ namespace BTOptimizer
             {
                 errors++;
                 Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
+            }
+
+            Console.WriteLine("Overclock (sonde)...");
+            try
+            {
+                Sys.GpuOcInfo oc = Sys.QueryGpuOc();
+                Console.WriteLine("  GPU OC : " + (oc.Ok
+                    ? oc.Name + " pl=" + oc.PowerCur + "/" + oc.PowerDefault + "/" + oc.PowerMax + "W boostMax=" + oc.MaxCoreMhz + "MHz"
+                    : "n/d"));
+                Sys.RamInfo ram = Sys.QueryRam();
+                Console.WriteLine("  RAM : " + (ram.TotalMB / 1024) + "Go rated=" + ram.SpeedRated + " running=" + ram.SpeedRunning + " MT/s");
+                Sys.CpuInfo cpu = Sys.QueryCpu();
+                Console.WriteLine("  CPU : " + cpu.Name + " " + cpu.Cores + "c/" + cpu.Threads + "t");
+                using (var f = new OverclockForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI OverclockForm : construite OK.");
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                Console.WriteLine("  Overclock ERREUR : " + ex.Message);
             }
 
             Console.WriteLine("Moniteur matériel (échantillon)...");

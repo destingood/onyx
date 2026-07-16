@@ -44,6 +44,25 @@ Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accé
   récents de `tools\`) : **comparaison AVANT/APRÈS** — bannière amélioration/dégradation,
   tuiles de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
 
+### Overclock automatique (v5.1)
+
+Bouton **`Overclock automatique`** — panneau dédié :
+
+- **GPU (overclock réel via `nvidia-smi`)** : trois presets **Sûr / Équilibré / Maximum**,
+  plus réglage manuel du **power limit** (curseur en %, borné par le max constructeur)
+  et d'un **verrou de fréquence cœur** (min/max MHz). Toutes les valeurs sont **bornées
+  par le pilote NVIDIA** (pas de survoltage sauvage), **réversibles** en un clic
+  (« Réinitialiser » remet le défaut constructeur : `-rgc` + power limit d'origine), et
+  **persistables** au démarrage via une tâche planifiée (`BTOptimizerOC`).
+  En ligne de commande : `BTOptimizer.exe -gpuoc` ré-applique l'OC sauvegardé.
+- **RAM & CPU (diagnostic)** : l'overclock mémoire (XMP/EXPO) et CPU (multiplicateur/PBO)
+  **ne peut pas se faire depuis Windows** — c'est le BIOS. Le panneau **détecte** si ta
+  RAM tourne en-dessous de sa vitesse notée (→ active XMP) et si ton CPU est débloqué,
+  avec le conseil correspondant. Honnête plutôt que faux.
+
+> ⚠️ Un overclock, même borné, se **valide par un test de stabilité** (jeu prolongé ou
+> stress test). En cas d'artefacts ou de plantage : bouton **Réinitialiser**.
+
 ### Système autonome (v5)
 
 - **GARDIEN au démarrage** : case à cocher qui enregistre ta sélection comme *profil*

@@ -513,6 +513,199 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Overclock GPU (outillage officiel nvidia-smi) + infos RAM/CPU
+        // ------------------------------------------------------------------
+        public class GpuOcInfo
+        {
+            public bool Ok;
+            public string Name = "-";
+            public double PowerCur, PowerDefault, PowerMax;
+            public double MaxCoreMhz;
+        }
+
+        public static string NvSmiPath()
+        {
+            string p = Path.Combine(Environment.SystemDirectory, "nvidia-smi.exe");
+            return File.Exists(p) ? p : null;
+        }
+
+        public static GpuOcInfo QueryGpuOc()
+        {
+            var info = new GpuOcInfo();
+            string smi = NvSmiPath();
+            if (smi == null) return info;
+            NativeResult r = Run(smi,
+                "--query-gpu=name,power.limit,power.default_limit,power.max_limit,clocks.max.gr --format=csv,noheader,nounits");
+            if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) return info;
+            string[] p = r.Output.Split('\n')[0].Trim().Split(',');
+            if (p.Length < 5) return info;
+            info.Name = p[0].Trim();
+            double v;
+            if (double.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerCur = v;
+            if (double.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerDefault = v;
+            if (double.TryParse(p[3].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerMax = v;
+            if (double.TryParse(p[4].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.MaxCoreMhz = v;
+            info.Ok = true;
+            return info;
+        }
+
+        public static string GpuOcConfigPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpuoc.txt"); }
+        }
+
+        public static void SaveGpuOcConfig(int powerLimit, int lockMin, int lockMax)
+        {
+            File.WriteAllLines(GpuOcConfigPath, new[]
+            {
+                "pl=" + powerLimit,
+                "lgcmin=" + lockMin,
+                "lgcmax=" + lockMax
+            });
+        }
+
+        public static bool LoadGpuOcConfig(out int powerLimit, out int lockMin, out int lockMax)
+        {
+            powerLimit = 0; lockMin = 0; lockMax = 0;
+            if (!File.Exists(GpuOcConfigPath)) return false;
+            foreach (string line in File.ReadAllLines(GpuOcConfigPath))
+            {
+                string[] kv = line.Split('=');
+                if (kv.Length != 2) continue;
+                int v;
+                if (!int.TryParse(kv[1].Trim(), out v)) continue;
+                switch (kv[0].Trim().ToLowerInvariant())
+                {
+                    case "pl": powerLimit = v; break;
+                    case "lgcmin": lockMin = v; break;
+                    case "lgcmax": lockMax = v; break;
+                }
+            }
+            return powerLimit > 0 || lockMin > 0;
+        }
+
+        /// <summary>Applique l'OC GPU via nvidia-smi (power limit, verrou de fréquences). Valeurs bornées par le pilote.</summary>
+        public static void ApplyGpuOc(int powerLimit, int lockMin, int lockMax, Action<string, int> log)
+        {
+            string smi = NvSmiPath();
+            if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return; }
+            GpuOcInfo cur = QueryGpuOc();
+            if (powerLimit > 0 && cur.Ok)
+            {
+                int pl = powerLimit;
+                if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;
+                NativeResult r = Run(smi, "-pl " + pl);
+                if (r.ExitCode == 0) log("Power limit GPU -> " + pl + " W.", 1);
+                else log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            }
+            if (lockMin > 0 && lockMax >= lockMin)
+            {
+                NativeResult r = Run(smi, "-lgc " + lockMin + "," + lockMax);
+                if (r.ExitCode == 0) log("Fréquences GPU verrouillées : " + lockMin + "-" + lockMax + " MHz.", 1);
+                else log("Echec verrouillage fréquences (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            }
+        }
+
+        public static void ResetGpuLocks(Action<string, int> log)
+        {
+            string smi = NvSmiPath();
+            if (smi == null) return;
+            GpuOcInfo cur = QueryGpuOc();
+            NativeResult r = Run(smi, "-rgc");
+            if (r.ExitCode == 0) log("Verrou de fréquences GPU retiré (gestion pilote).", 1);
+            else log("Echec -rgc (code " + r.ExitCode + ").", 2);
+            if (cur.Ok && cur.PowerDefault > 0)
+            {
+                Run(smi, "-pl " + (int)cur.PowerDefault);
+                log("Power limit GPU remis au défaut constructeur (" + (int)cur.PowerDefault + " W).", 0);
+            }
+        }
+
+        private const string OcTask = "BTOptimizerOC";
+
+        public static bool OcGuardExists()
+        {
+            return Run(Sys32("schtasks.exe"), "/query /tn " + OcTask).ExitCode == 0;
+        }
+
+        public static bool SetOcGuard(bool enable, string exePath, Action<string, int> log)
+        {
+            if (enable)
+            {
+                string tr = "\"\\\"" + exePath + "\\\" -gpuoc\"";
+                NativeResult r = Run(Sys32("schtasks.exe"),
+                    "/create /f /rl HIGHEST /sc ONLOGON /tn " + OcTask + " /tr " + tr);
+                if (r.ExitCode == 0) { log("OC GPU persistant : ré-appliqué à chaque ouverture de session.", 1); return true; }
+                log("Création de la tâche OC impossible (code " + r.ExitCode + ").", 3);
+                return false;
+            }
+            NativeResult d = Run(Sys32("schtasks.exe"), "/delete /f /tn " + OcTask);
+            if (d.ExitCode == 0) log("Persistance OC GPU désactivée.", 0);
+            return d.ExitCode == 0;
+        }
+
+        // ---- RAM / CPU (diagnostic overclock) ----
+        public class RamInfo
+        {
+            public int Modules;
+            public long TotalMB;
+            public int SpeedRated;      // MT/s annoncés (SPD/XMP max)
+            public int SpeedRunning;    // MT/s configurés
+        }
+
+        public static RamInfo QueryRam()
+        {
+            var ram = new RamInfo();
+            try
+            {
+                using (var s = new ManagementObjectSearcher(
+                    "SELECT Capacity, Speed, ConfiguredClockSpeed FROM Win32_PhysicalMemory"))
+                {
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        ram.Modules++;
+                        object cap = mo["Capacity"];
+                        if (cap != null) ram.TotalMB += (long)(Convert.ToUInt64(cap) / (1024 * 1024));
+                        object sp = mo["Speed"];
+                        if (sp != null) ram.SpeedRated = Math.Max(ram.SpeedRated, Convert.ToInt32(sp));
+                        object cc = mo["ConfiguredClockSpeed"];
+                        if (cc != null) ram.SpeedRunning = Math.Max(ram.SpeedRunning, Convert.ToInt32(cc));
+                    }
+                }
+            }
+            catch { }
+            return ram;
+        }
+
+        public class CpuInfo
+        {
+            public string Name = "-";
+            public int Cores, Threads, MaxMhz;
+        }
+
+        public static CpuInfo QueryCpu()
+        {
+            var cpu = new CpuInfo();
+            try
+            {
+                using (var s = new ManagementObjectSearcher(
+                    "SELECT Name, MaxClockSpeed, NumberOfCores, NumberOfLogicalProcessors FROM Win32_Processor"))
+                {
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        cpu.Name = Convert.ToString(mo["Name"]).Trim();
+                        cpu.MaxMhz = Convert.ToInt32(mo["MaxClockSpeed"]);
+                        cpu.Cores = Convert.ToInt32(mo["NumberOfCores"]);
+                        cpu.Threads = Convert.ToInt32(mo["NumberOfLogicalProcessors"]);
+                        break;
+                    }
+                }
+            }
+            catch { }
+            return cpu;
+        }
+
+        // ------------------------------------------------------------------
         //  Infos système pour l'en-tête du journal
         // ------------------------------------------------------------------
         public static string OsDescription()
