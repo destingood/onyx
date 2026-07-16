@@ -802,6 +802,83 @@ namespace BTOptimizer
                 Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ExtendedUIHoverTime"), 100)
             });
 
+            list.Add(new Tweak
+            {
+                Id = "foreground_lock", Category = Cat.Systeme, Esport = true,
+                Name = "Focus immédiat de l'application au premier plan (ForegroundLockTimeout = 0)",
+                Desc = "Supprime le délai avant qu'une appli puisse prendre le premier plan : alt-tab et retour au jeu plus francs.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
+                Apply  = () => Sys.SetUser(@"Control Panel\Desktop", "ForegroundLockTimeout", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Control Panel\Desktop", "ForegroundLockTimeout", 200000, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Control Panel\Desktop", "ForegroundLockTimeout"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "long_paths", Category = Cat.Systeme, Reboot = true,
+                Name = "Activer les chemins de fichiers longs (Win32 > 260 caractères)",
+                Desc = "Autorise les chemins longs pour les jeux/outils qui installent dans des arborescences profondes. Sans effet négatif.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled", 0, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\FileSystem", "LongPathsEnabled"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "tailored_experiences_off", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Name = "Désactiver les « expériences personnalisées » (pubs ciblées)",
+                Desc = "Windows n'utilise plus tes données de diagnostic pour afficher des conseils/pubs personnalisés.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "suggested_content_off", Category = Cat.Privacy,
+                Name = "Désactiver les suggestions dans les Paramètres",
+                Desc = "Supprime les « contenus suggérés » (bannières/astuces) affichés dans l'application Paramètres.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" },
+                Apply = () =>
+                {
+                    string cdm = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
+                    Sys.SetUser(cdm, "SubscribedContent-338393Enabled", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(cdm, "SubscribedContent-353694Enabled", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(cdm, "SubscribedContent-353696Enabled", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    string cdm = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
+                    Sys.DelUser(cdm, "SubscribedContent-338393Enabled");
+                    Sys.DelUser(cdm, "SubscribedContent-353694Enabled");
+                    Sys.DelUser(cdm, "SubscribedContent-353696Enabled");
+                },
+                Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338393Enabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "lockscreen_tips_off", Category = Cat.Privacy,
+                Name = "Désactiver les astuces/pubs de l'écran de verrouillage",
+                Desc = "Plus de « faits amusants », astuces ou promotions sur l'écran de verrouillage.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" },
+                Apply = () =>
+                {
+                    string cdm = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
+                    Sys.SetUser(cdm, "RotatingLockScreenOverlayEnabled", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(cdm, "SubscribedContent-338387Enabled", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    string cdm = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
+                    Sys.DelUser(cdm, "RotatingLockScreenOverlayEnabled");
+                    Sys.DelUser(cdm, "SubscribedContent-338387Enabled");
+                },
+                Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338387Enabled"), 0)
+            });
+
             // ===================================================================
             //  BLOC AVANCÉ (« zéro limite ») — tout réversible, sauvegardé
             // ===================================================================
