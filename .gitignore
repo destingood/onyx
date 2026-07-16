@@ -1,0 +1,15 @@
+# Traces ETW volumineuses (regenerables via la capture de l'app)
+*.etl
+
+# Binaire compilable via Build.bat
+/BTOptimizer.exe
+
+# Archives et outils tiers decompresses
+*.zip
+tools/LibreHardwareMonitor/
+tools/npi/
+
+# Sorties temporaires
+*.tmp
+Thumbs.db
+desktop.ini

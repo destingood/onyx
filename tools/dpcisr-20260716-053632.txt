@@ -1,0 +1,452 @@
+
+--------------------------
+DPC Info
+
+--------------------------
+CPU Usage Summing By Module For the Whole Trace
+
+CPU Usage from 0 us to 30448742 us:
+
+     CPU 0 Usage,      CPU 1 Usage,      CPU 2 Usage,      CPU 3 Usage,      CPU 4 Usage,      CPU 5 Usage,      CPU 6 Usage,      CPU 7 Usage,      CPU 8 Usage,      CPU 9 Usage,      CPU 10 Usage,      CPU 11 Usage,      CPU 12 Usage,      CPU 13 Usage,      CPU 14 Usage,      CPU 15 Usage, 
+     usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %, Module
+      133   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, CLASSPNP.SYS
+        0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, FLTMGR.SYS
+     3640   0.01,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, HDAudBus.sys
+       37   0.00,         0   0.00,         4   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         1   0.00,         2   0.00,         1   0.00,         2   0.00,         2   0.00, Ndu.sys
+       11   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Ntfs.sys
+        3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, UnionFS.sys
+        3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, WdFilter.sys
+    15595   0.05,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Wdf01000.sys
+      101   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, afd.sys
+     4342   0.01,         0   0.00,        27   0.00,         6   0.00,        34   0.00,        10   0.00,        37   0.00,         6   0.00,        33   0.00,         7   0.00,        19   0.00,         7   0.00,         0   0.00,         3   0.00,         3   0.00,         0   0.00, dxgkrnl.sys
+        5   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, dxgmms2.sys
+        3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, gameflt.sys
+        3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, hvservice.sys
+      215   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, iaStorAC.sys
+    36075   0.12,      1488   0.00,      1720   0.01,       833   0.00,      1307   0.00,       793   0.00,      1118   0.00,       876   0.00,      1063   0.00,       816   0.00,      1525   0.01,       971   0.00,       996   0.00,      1496   0.00,      1197   0.00,      1202   0.00, ntoskrnl.exe
+    36327   0.12,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         1   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, nvlddmkm.sys
+        3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, rdbss.sys
+        0   0.00,        65   0.00,       123   0.00,       195   0.00,        85   0.00,       129   0.00,       105   0.00,        77   0.00,        93   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, stornvme.sys
+      878   0.00,       195   0.00,       456   0.00,       268   0.00,       669   0.00,       173   0.00,       575   0.00,        33   0.00,       492   0.00,        90   0.00,       500   0.00,        12   0.00,       439   0.00,       115   0.00,       261   0.00,         0   0.00, storport.sys
+        8   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, storvsp.sys
+      162   0.00,         0   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, symcryptk.dll
+      307   0.00,       203   0.00,      1580   0.01,       238   0.00,      1043   0.00,       136   0.00,       220   0.00,       405   0.00,       409   0.00,       304   0.00,       193   0.00,       281   0.00,       598   0.00,       109   0.00,       262   0.00,       201   0.00, tcpip.sys
+        7   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vhdmp.sys
+      295   0.00,       263   0.00,         0   0.00,         0   0.00,         4   0.00,         0   0.00,         0   0.00,         5   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmbusr.sys
+      105   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmswitch.sys
+      905   0.00,         6   0.00,      1728   0.01,       330   0.00,       891   0.00,        54   0.00,       803   0.00,       217   0.00,       737   0.00,       114   0.00,       511   0.00,        88   0.00,       348   0.00,       204   0.00,       727   0.00,        17   0.00, winhvr.sys
+
+Total = 14466
+Elapsed Time, >        0 usecs AND <=        1 usecs,   1245, or   8.61%
+Elapsed Time, >        1 usecs AND <=        2 usecs,   3362, or  23.24%
+Elapsed Time, >        2 usecs AND <=        4 usecs,   2681, or  18.53%
+Elapsed Time, >        4 usecs AND <=        8 usecs,   1992, or  13.77%
+Elapsed Time, >        8 usecs AND <=       16 usecs,   2374, or  16.41%
+Elapsed Time, >       16 usecs AND <=       32 usecs,   2351, or  16.25%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    409, or   2.83%
+Elapsed Time, >       64 usecs AND <=      128 usecs,     19, or   0.13%
+Elapsed Time, >      128 usecs AND <=      256 usecs,      1, or   0.01%
+Elapsed Time, >      256 usecs AND <=      512 usecs,     32, or   0.22%
+Total,                                                 14466
+
+Total = 73 for module CLASSPNP.SYS
+Elapsed Time, >        0 usecs AND <=        1 usecs,     52, or  71.23%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     16, or  21.92%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      1, or   1.37%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      3, or   4.11%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      0, or   0.00%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      1, or   1.37%
+Total,                                                    73
+
+Total = 1 for module FLTMGR.SYS
+Elapsed Time, >        0 usecs AND <=        1 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 427 for module HDAudBus.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      4, or   0.94%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     94, or  22.01%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    320, or  74.94%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      9, or   2.11%
+Total,                                                   427
+
+Total = 45 for module Ndu.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     33, or  73.33%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     10, or  22.22%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      1, or   2.22%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   2.22%
+Total,                                                    45
+
+Total = 5 for module Ntfs.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      3, or  60.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      2, or  40.00%
+Total,                                                     5
+
+Total = 1 for module UnionFS.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 1 for module WdFilter.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 993 for module Wdf01000.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      3, or   0.30%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     17, or   1.71%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    421, or  42.40%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     67, or   6.75%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    419, or  42.20%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     62, or   6.24%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      4, or   0.40%
+Total,                                                   993
+
+Total = 36 for module afd.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     19, or  52.78%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     12, or  33.33%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      4, or  11.11%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   2.78%
+Total,                                                    36
+
+Total = 246 for module dxgkrnl.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      7, or   2.85%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      2, or   0.81%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     65, or  26.42%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     11, or   4.47%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     85, or  34.55%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     25, or  10.16%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     41, or  16.67%
+Elapsed Time, >       64 usecs AND <=      128 usecs,     10, or   4.07%
+Total,                                                   246
+
+Total = 2 for module dxgmms2.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      2, or 100.00%
+Total,                                                     2
+
+Total = 1 for module gameflt.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 1 for module hvservice.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 37 for module iaStorAC.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     15, or  40.54%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     19, or  51.35%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      2, or   5.41%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   2.70%
+Total,                                                    37
+
+Total = 3014 for module ntoskrnl.exe
+Elapsed Time, >        0 usecs AND <=        1 usecs,     59, or   1.96%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     35, or   1.16%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    215, or   7.13%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    529, or  17.55%
+Elapsed Time, >        8 usecs AND <=       16 usecs,   1548, or  51.36%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    495, or  16.42%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    100, or   3.32%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.03%
+Elapsed Time, >      128 usecs AND <=      256 usecs,      0, or   0.00%
+Elapsed Time, >      256 usecs AND <=      512 usecs,     32, or   1.06%
+Total,                                                  3014
+
+Total = 2832 for module nvlddmkm.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      9, or   0.32%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     37, or   1.31%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    833, or  29.41%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    455, or  16.07%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    126, or   4.45%
+Elapsed Time, >       16 usecs AND <=       32 usecs,   1204, or  42.51%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    166, or   5.86%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.04%
+Elapsed Time, >      128 usecs AND <=      256 usecs,      1, or   0.04%
+Total,                                                  2832
+
+Total = 1 for module rdbss.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 465 for module stornvme.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     96, or  20.65%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    219, or  47.10%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    141, or  30.32%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      2, or   0.43%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      1, or   0.22%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      6, or   1.29%
+Total,                                                   465
+
+Total = 615 for module storport.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      1, or   0.16%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     51, or   8.29%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     26, or   4.23%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    350, or  56.91%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    125, or  20.33%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     57, or   9.27%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      5, or   0.81%
+Total,                                                   615
+
+Total = 3 for module storvsp.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      3, or 100.00%
+Total,                                                     3
+
+Total = 65 for module symcryptk.dll
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     28, or  43.08%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     36, or  55.38%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   1.54%
+Total,                                                    65
+
+Total = 1368 for module tcpip.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    822, or  60.09%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     42, or   3.07%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    218, or  15.94%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     68, or   4.97%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     85, or   6.21%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    101, or   7.38%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     30, or   2.19%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      2, or   0.15%
+Total,                                                  1368
+
+Total = 3 for module vhdmp.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      3, or 100.00%
+Total,                                                     3
+
+Total = 123 for module vmbusr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      2, or   1.63%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     82, or  66.67%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     31, or  25.20%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      5, or   4.07%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      2, or   1.63%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      1, or   0.81%
+Total,                                                   123
+
+Total = 5 for module vmswitch.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      1, or  20.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      4, or  80.00%
+Total,                                                     5
+
+Total = 4103 for module winhvr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    165, or   4.02%
+Elapsed Time, >        1 usecs AND <=        2 usecs,   2895, or  70.56%
+Elapsed Time, >        2 usecs AND <=        4 usecs,   1002, or  24.42%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      5, or   0.12%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      7, or   0.17%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     25, or   0.61%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      3, or   0.07%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.02%
+Total,                                                  4103
+
+All Module =  14466,  Total = 14466,   EQUAL
+
+--------------------------
+Usage From 0 ms to 30449 ms, Summing In 1 second intervals. Intervals=31
+
+                       ,      CPU 0 Usage ,      CPU 1 Usage ,      CPU 2 Usage ,      CPU 3 Usage ,      CPU 4 Usage ,      CPU 5 Usage ,      CPU 6 Usage ,      CPU 7 Usage ,      CPU 8 Usage ,      CPU 9 Usage ,      CPU 10 Usage ,      CPU 11 Usage ,      CPU 12 Usage ,      CPU 13 Usage ,      CPU 14 Usage ,      CPU 15 Usage 
+Start (ms) End (ms)    ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % 
+         0-1000      :,      3153   0.32,         9   0.00,       305   0.03,        17   0.00,       136   0.01,        15   0.00,        45   0.00,        90   0.01,        20   0.00,        25   0.00,       121   0.01,        61   0.01,        89   0.01,        57   0.01,        42   0.00,        62   0.01
+      1000-2000      :,      2790   0.28,        20   0.00,       109   0.01,         3   0.00,        60   0.01,         6   0.00,         8   0.00,        47   0.00,        51   0.01,        87   0.01,        26   0.00,         9   0.00,         9   0.00,         5   0.00,         0   0.00,        13   0.00
+      2000-3000      :,      2575   0.26,        31   0.00,       122   0.01,         6   0.00,        68   0.01,        21   0.00,        33   0.00,        57   0.01,        15   0.00,        80   0.01,        76   0.01,        13   0.00,        34   0.00,       133   0.01,        83   0.01,         7   0.00
+      3000-4000      :,      2429   0.24,        10   0.00,       100   0.01,        35   0.00,        52   0.01,         0   0.00,        24   0.00,        33   0.00,         9   0.00,       140   0.01,        12   0.00,        30   0.00,        33   0.00,        66   0.01,        80   0.01,         0   0.00
+      4000-5000      :,      2263   0.23,        36   0.00,       152   0.02,        17   0.00,        78   0.01,        12   0.00,        74   0.01,        16   0.00,        16   0.00,         3   0.00,        79   0.01,         2   0.00,        56   0.01,        34   0.00,         0   0.00,         4   0.00
+      5000-6000      :,      2511   0.25,        10   0.00,       123   0.01,        64   0.01,       110   0.01,        49   0.00,       142   0.01,        77   0.01,       104   0.01,         0   0.00,       108   0.01,         5   0.00,        35   0.00,        69   0.01,       102   0.01,         7   0.00
+      6000-7000      :,      3258   0.33,       916   0.09,       916   0.09,       784   0.08,       928   0.09,       758   0.08,       788   0.08,       813   0.08,       792   0.08,       766   0.08,       806   0.08,       770   0.08,       764   0.08,       784   0.08,       823   0.08,       769   0.08
+      7000-8000      :,      2284   0.23,        22   0.00,        92   0.01,         8   0.00,        53   0.01,         0   0.00,        41   0.00,         7   0.00,         1   0.00,         0   0.00,        62   0.01,        56   0.01,         0   0.00,        64   0.01,       170   0.02,         1   0.00
+      8000-9000      :,      2255   0.23,       101   0.01,       130   0.01,         0   0.00,        48   0.00,         0   0.00,         6   0.00,         4   0.00,        18   0.00,         0   0.00,        24   0.00,        77   0.01,         0   0.00,         9   0.00,        21   0.00,        46   0.00
+      9000-10000     :,      2123   0.21,        39   0.00,       167   0.02,         0   0.00,        21   0.00,        10   0.00,        24   0.00,         4   0.00,        23   0.00,         0   0.00,        53   0.01,        63   0.01,        10   0.00,        13   0.00,         4   0.00,        40   0.00
+     10000-11000     :,      1846   0.18,        40   0.00,       185   0.02,         0   0.00,       137   0.01,        44   0.00,        22   0.00,        29   0.00,        24   0.00,         3   0.00,        10   0.00,         5   0.00,        12   0.00,        36   0.00,        58   0.01,        10   0.00
+     11000-12000     :,      1967   0.20,        25   0.00,       340   0.03,        44   0.00,       193   0.02,        47   0.00,       113   0.01,        48   0.00,       128   0.01,        27   0.00,        69   0.01,         0   0.00,       150   0.01,        37   0.00,       226   0.02,         6   0.00
+     12000-13000     :,      1947   0.19,        38   0.00,       263   0.03,        75   0.01,       163   0.02,         3   0.00,        71   0.01,         3   0.00,        74   0.01,         0   0.00,        51   0.01,        34   0.00,        26   0.00,        10   0.00,        61   0.01,        28   0.00
+     13000-14000     :,      1984   0.20,        29   0.00,       111   0.01,        30   0.00,        22   0.00,         0   0.00,        22   0.00,         0   0.00,        74   0.01,         1   0.00,        55   0.01,         0   0.00,         6   0.00,        13   0.00,        77   0.01,         0   0.00
+     14000-15000     :,      2141   0.21,        25   0.00,       153   0.02,         0   0.00,        58   0.01,         0   0.00,         0   0.00,         4   0.00,         0   0.00,         0   0.00,         4   0.00,         0   0.00,        16   0.00,        26   0.00,        38   0.00,        18   0.00
+     15000-16000     :,      2409   0.24,         8   0.00,       141   0.01,         6   0.00,       147   0.01,         0   0.00,       114   0.01,         6   0.00,       103   0.01,         5   0.00,        41   0.00,         0   0.00,         0   0.00,        14   0.00,        43   0.00,        10   0.00
+     16000-17000     :,      2396   0.24,        55   0.01,       159   0.02,        37   0.00,       109   0.01,         5   0.00,        46   0.00,        18   0.00,        51   0.01,         0   0.00,       164   0.02,         0   0.00,        70   0.01,        33   0.00,         5   0.00,        19   0.00
+     17000-18000     :,      2148   0.21,        16   0.00,       102   0.01,         3   0.00,        82   0.01,        27   0.00,        98   0.01,         0   0.00,        72   0.01,         0   0.00,        34   0.00,        49   0.00,         9   0.00,        23   0.00,        18   0.00,         6   0.00
+     18000-19000     :,      2146   0.21,        16   0.00,        53   0.01,         0   0.00,        49   0.00,        34   0.00,        11   0.00,        12   0.00,        47   0.00,         0   0.00,        40   0.00,         0   0.00,        70   0.01,        38   0.00,       124   0.01,         1   0.00
+     19000-20000     :,      2175   0.22,        60   0.01,       223   0.02,        32   0.00,       112   0.01,        10   0.00,        82   0.01,         6   0.00,        50   0.01,        23   0.00,        85   0.01,         0   0.00,        81   0.01,         7   0.00,        35   0.00,         4   0.00
+     20000-21000     :,      1876   0.19,        10   0.00,        45   0.00,        35   0.00,        84   0.01,         0   0.00,        75   0.01,        24   0.00,        82   0.01,         8   0.00,        41   0.00,         5   0.00,        76   0.01,        18   0.00,        55   0.01,        15   0.00
+     21000-22000     :,      2024   0.20,        30   0.00,       207   0.02,       230   0.02,       200   0.02,        15   0.00,       141   0.01,        17   0.00,       106   0.01,         0   0.00,       107   0.01,         0   0.00,       195   0.02,        37   0.00,        38   0.00,         9   0.00
+     22000-23000     :,      1979   0.20,        77   0.01,       222   0.02,         3   0.00,        46   0.00,        46   0.00,       194   0.02,         3   0.00,       102   0.01,         0   0.00,        26   0.00,         0   0.00,        39   0.00,        44   0.00,        13   0.00,         4   0.00
+     23000-24000     :,      2215   0.22,        36   0.00,       143   0.01,         4   0.00,        49   0.00,         0   0.00,        53   0.01,        61   0.01,        85   0.01,        37   0.00,        89   0.01,        27   0.00,       125   0.01,        30   0.00,        62   0.01,        46   0.00
+     24000-25000     :,      3959   0.40,       212   0.02,       340   0.03,       223   0.02,       335   0.03,       121   0.01,       260   0.03,        69   0.01,       287   0.03,       104   0.01,       174   0.02,        68   0.01,       126   0.01,        77   0.01,        55   0.01,       160   0.02
+     25000-26000     :,     11177   1.12,        90   0.01,       236   0.02,        49   0.00,       260   0.03,        30   0.00,       163   0.02,        36   0.00,       214   0.02,        21   0.00,       133   0.01,        68   0.01,        90   0.01,        28   0.00,        52   0.01,        66   0.01
+     26000-27000     :,     14536   1.45,        35   0.00,       177   0.02,        22   0.00,        79   0.01,        41   0.00,        36   0.00,        14   0.00,        67   0.01,         0   0.00,       134   0.01,        19   0.00,       140   0.01,        35   0.00,        67   0.01,        27   0.00
+     27000-28000     :,      9545   0.95,        41   0.00,        66   0.01,        76   0.01,       121   0.01,         1   0.00,        61   0.01,         1   0.00,        78   0.01,         1   0.00,        61   0.01,         1   0.00,        71   0.01,        73   0.01,        28   0.00,        40   0.00
+     28000-29000     :,      2398   0.24,        16   0.00,       154   0.02,        47   0.00,       147   0.01,         3   0.00,        57   0.01,        36   0.00,        32   0.00,         0   0.00,        30   0.00,         0   0.00,        30   0.00,        69   0.01,         5   0.00,         3   0.00
+     29000-30000     :,      2157   0.22,        68   0.01,        86   0.01,         3   0.00,        89   0.01,         0   0.00,        59   0.01,        89   0.01,        88   0.01,         0   0.00,        11   0.00,         0   0.00,        22   0.00,        42   0.00,        17   0.00,         1   0.00
+     30000-30449     :,       497   0.11,       101   0.02,        16   0.00,        22   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        16   0.00,         0   0.00,        26   0.01,         0   0.00,         0   0.00,         5   0.00,        47   0.01,         0   0.00
+
+--------------------------
+Interrupt Info
+
+--------------------------
+CPU Usage Summing By Module For the Whole Trace
+
+CPU Usage from 0 us to 30448742 us:
+
+     CPU 0 Usage,      CPU 1 Usage,      CPU 2 Usage,      CPU 3 Usage,      CPU 4 Usage,      CPU 5 Usage,      CPU 6 Usage,      CPU 7 Usage,      CPU 8 Usage,      CPU 9 Usage,      CPU 10 Usage,      CPU 11 Usage,      CPU 12 Usage,      CPU 13 Usage,      CPU 14 Usage,      CPU 15 Usage, 
+     usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %, Module
+     6734   0.02,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, HDAudBus.sys
+     4855   0.02,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Wdf01000.sys
+    32320   0.11,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, dxgkrnl.sys
+      436   0.00,         2   0.00,       774   0.00,       190   0.00,       413   0.00,        44   0.00,       372   0.00,       122   0.00,       371   0.00,        86   0.00,       219   0.00,        67   0.00,       149   0.00,        80   0.00,       355   0.00,         8   0.00, ntoskrnl.exe
+      109   0.00,        74   0.00,        78   0.00,       101   0.00,       128   0.00,       139   0.00,       147   0.00,        96   0.00,       113   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, storport.sys
+       40   0.00,       123   0.00,         0   0.00,         0   0.00,         1   0.00,         0   0.00,         0   0.00,         1   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmbusr.sys
+
+Total = 7577
+Elapsed Time, >        0 usecs AND <=        1 usecs,   4353, or  57.45%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    794, or  10.48%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     10, or   0.13%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     87, or   1.15%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    924, or  12.19%
+Elapsed Time, >       16 usecs AND <=       32 usecs,   1136, or  14.99%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    272, or   3.59%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.01%
+Total,                                                  7577
+
+Total = 427 for module HDAudBus.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    395, or  92.51%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     21, or   4.92%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     11, or   2.58%
+Total,                                                   427
+
+Total = 993 for module Wdf01000.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    454, or  45.72%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     91, or   9.16%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      3, or   0.30%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     40, or   4.03%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    385, or  38.77%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     17, or   1.71%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      3, or   0.30%
+Total,                                                   993
+
+Total = 1485 for module dxgkrnl.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     24, or   1.62%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    133, or   8.96%
+Elapsed Time, >       16 usecs AND <=       32 usecs,   1071, or  72.12%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    256, or  17.24%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.07%
+Total,                                                  1485
+
+Total = 4103 for module ntoskrnl.exe
+Elapsed Time, >        0 usecs AND <=        1 usecs,   3581, or  87.28%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    500, or  12.19%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      3, or   0.07%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      5, or   0.12%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      4, or   0.10%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      9, or   0.22%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      1, or   0.02%
+Total,                                                  4103
+
+Total = 506 for module storport.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    284, or  56.13%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    180, or  35.57%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      4, or   0.79%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     18, or   3.56%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      3, or   0.59%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     16, or   3.16%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      1, or   0.20%
+Total,                                                   506
+
+Total = 63 for module vmbusr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     34, or  53.97%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     23, or  36.51%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      4, or   6.35%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      2, or   3.17%
+Total,                                                    63
+
+All Module =   7577,  Total =  7577,   EQUAL
+
+--------------------------
+Usage From 0 ms to 30449 ms, Summing In 1 second intervals. Intervals=31
+
+                       ,      CPU 0 Usage ,      CPU 1 Usage ,      CPU 2 Usage ,      CPU 3 Usage ,      CPU 4 Usage ,      CPU 5 Usage ,      CPU 6 Usage ,      CPU 7 Usage ,      CPU 8 Usage ,      CPU 9 Usage ,      CPU 10 Usage ,      CPU 11 Usage ,      CPU 12 Usage ,      CPU 13 Usage ,      CPU 14 Usage ,      CPU 15 Usage 
+Start (ms) End (ms)    ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % 
+         0-1000      :,      1114   0.11,        30   0.00,        45   0.00,        34   0.00,        52   0.01,        39   0.00,        31   0.00,         0   0.00,         5   0.00,        37   0.00,        12   0.00,         0   0.00,         3   0.00,         0   0.00,        50   0.00,         4   0.00
+      1000-2000      :,      1072   0.11,         1   0.00,        30   0.00,         2   0.00,         5   0.00,         0   0.00,         0   0.00,        21   0.00,        13   0.00,         5   0.00,         4   0.00,         3   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+      2000-3000      :,       696   0.07,         2   0.00,        28   0.00,         0   0.00,         1   0.00,         0   0.00,         3   0.00,        32   0.00,         1   0.00,         0   0.00,        21   0.00,        20   0.00,        11   0.00,        50   0.00,         6   0.00,         0   0.00
+      3000-4000      :,       755   0.08,         1   0.00,        15   0.00,         5   0.00,         7   0.00,         0   0.00,         4   0.00,        32   0.00,         2   0.00,        20   0.00,         5   0.00,        19   0.00,        14   0.00,        16   0.00,        11   0.00,         0   0.00
+      4000-5000      :,       771   0.08,         4   0.00,        36   0.00,        10   0.00,        20   0.00,        16   0.00,        23   0.00,         1   0.00,         3   0.00,         0   0.00,        12   0.00,         1   0.00,         9   0.00,         4   0.00,         0   0.00,         0   0.00
+      5000-6000      :,       790   0.08,         1   0.00,        15   0.00,         4   0.00,        17   0.00,         7   0.00,        30   0.00,         0   0.00,        36   0.00,         0   0.00,        13   0.00,         0   0.00,         2   0.00,         0   0.00,         8   0.00,         0   0.00
+      6000-7000      :,       797   0.08,        17   0.00,        24   0.00,         0   0.00,        48   0.00,         0   0.00,         6   0.00,         0   0.00,         8   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        17   0.00,         0   0.00
+      7000-8000      :,       893   0.09,         3   0.00,         4   0.00,         0   0.00,        19   0.00,         0   0.00,         5   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        76   0.01,         0   0.00
+      8000-9000      :,       569   0.06,        16   0.00,        35   0.00,         0   0.00,         4   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         9   0.00,         0   0.00
+      9000-10000     :,       604   0.06,         1   0.00,        28   0.00,         0   0.00,         0   0.00,         1   0.00,         3   0.00,         0   0.00,         9   0.00,         0   0.00,        12   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     10000-11000     :,       510   0.05,        18   0.00,        50   0.01,         0   0.00,        43   0.00,        39   0.00,         5   0.00,        22   0.00,         9   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     11000-12000     :,       545   0.05,        23   0.00,        65   0.01,         9   0.00,        40   0.00,        28   0.00,        63   0.01,        10   0.00,        40   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     12000-13000     :,       560   0.06,        21   0.00,        52   0.01,        25   0.00,        30   0.00,         2   0.00,        30   0.00,         1   0.00,        31   0.00,         0   0.00,         4   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     13000-14000     :,       484   0.05,         0   0.00,         0   0.00,        10   0.00,         2   0.00,         0   0.00,         7   0.00,         0   0.00,        29   0.00,         0   0.00,        22   0.00,         0   0.00,         3   0.00,         0   0.00,        31   0.00,         0   0.00
+     14000-15000     :,       555   0.06,         3   0.00,        35   0.00,         0   0.00,         7   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        19   0.00,         0   0.00
+     15000-16000     :,       785   0.08,         1   0.00,         5   0.00,         2   0.00,        13   0.00,         0   0.00,        37   0.00,         2   0.00,        20   0.00,         0   0.00,        12   0.00,         0   0.00,         0   0.00,         2   0.00,         5   0.00,         0   0.00
+     16000-17000     :,       790   0.08,         2   0.00,        33   0.00,        19   0.00,        45   0.00,         0   0.00,        12   0.00,         0   0.00,        12   0.00,         0   0.00,        50   0.00,         0   0.00,        15   0.00,         0   0.00,         0   0.00,         0   0.00
+     17000-18000     :,       694   0.07,         1   0.00,        28   0.00,         2   0.00,         6   0.00,        18   0.00,        21   0.00,         0   0.00,        28   0.00,         0   0.00,         1   0.00,        22   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     18000-19000     :,       534   0.05,         2   0.00,         3   0.00,         0   0.00,         0   0.00,         2   0.00,         2   0.00,         2   0.00,         0   0.00,         0   0.00,        10   0.00,         0   0.00,        29   0.00,         0   0.00,        47   0.00,         0   0.00
+     19000-20000     :,       601   0.06,         6   0.00,        45   0.00,        10   0.00,        26   0.00,         5   0.00,        19   0.00,         3   0.00,         7   0.00,         0   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         8   0.00,         0   0.00
+     20000-21000     :,       523   0.05,         2   0.00,         3   0.00,        27   0.00,        15   0.00,         0   0.00,        21   0.00,         2   0.00,        37   0.00,         4   0.00,        14   0.00,         0   0.00,         4   0.00,         0   0.00,         0   0.00,         0   0.00
+     21000-22000     :,       519   0.05,         2   0.00,        60   0.01,        46   0.00,        27   0.00,         7   0.00,        21   0.00,        31   0.00,        12   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     22000-23000     :,       493   0.05,        10   0.00,        42   0.00,         1   0.00,         5   0.00,         5   0.00,        47   0.00,         1   0.00,        24   0.00,         0   0.00,         8   0.00,         0   0.00,         5   0.00,         0   0.00,         0   0.00,         0   0.00
+     23000-24000     :,       622   0.06,         1   0.00,        10   0.00,         0   0.00,         4   0.00,         0   0.00,        17   0.00,         0   0.00,         0   0.00,        19   0.00,         9   0.00,         2   0.00,        33   0.00,         0   0.00,        15   0.00,         3   0.00
+     24000-25000     :,      1313   0.13,         6   0.00,        51   0.01,        19   0.00,        31   0.00,         3   0.00,        33   0.00,         0   0.00,        21   0.00,         0   0.00,         1   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     25000-26000     :,      7653   0.77,         4   0.00,        22   0.00,         6   0.00,        15   0.00,         4   0.00,        34   0.00,         4   0.00,        42   0.00,         0   0.00,         1   0.00,         0   0.00,        14   0.00,         0   0.00,         0   0.00,         1   0.00
+     26000-27000     :,     10823   1.08,         7   0.00,        26   0.00,        10   0.00,         9   0.00,         6   0.00,         4   0.00,         0   0.00,        12   0.00,         0   0.00,         3   0.00,         0   0.00,         5   0.00,         3   0.00,        29   0.00,         0   0.00
+     27000-28000     :,      6943   0.69,         1   0.00,        12   0.00,        23   0.00,        27   0.00,         0   0.00,        25   0.00,         0   0.00,        12   0.00,         0   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     28000-29000     :,       800   0.08,         3   0.00,        33   0.00,        17   0.00,        22   0.00,         2   0.00,        11   0.00,        13   0.00,        10   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+     29000-30000     :,       560   0.06,         9   0.00,        18   0.00,         1   0.00,         6   0.00,         0   0.00,         7   0.00,        42   0.00,        31   0.00,         0   0.00,         1   0.00,         0   0.00,         1   0.00,         7   0.00,         9   0.00,         0   0.00
+     30000-30449     :,       126   0.03,         1   0.00,         1   0.00,        11   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        30   0.01,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,        15   0.00,         0   0.00
+
+
+Distribution of number of 2000 ms intervals w.r.t. DPC/ISR usage:
+
+                ,                      CPU 0,                      CPU 1,                      CPU 2,                      CPU 3,                      CPU 4,                      CPU 5,                      CPU 6,                      CPU 7,                      CPU 8,                      CPU 9,                      CPU 10,                      CPU 11,                      CPU 12,                      CPU 13,                      CPU 14,                      CPU 15
+ DPC/ISR Usage %,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined
+>=  0 AND <=   1,       15,       16,       14,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16
+>   1 AND <=   5,        1,        0,        2,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>   5 AND <=  10,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  10 AND <=  20,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  20 AND <=  40,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  40 AND <=  60,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  60 AND <=  80,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  80 AND <= 100,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+---
+Total:          ,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16,       16

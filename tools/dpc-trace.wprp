@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0" Author="Claude" Comments="Trace DPC/ISR par driver">
+  <Profiles>
+    <SystemCollector Id="SystemCollector_DPC" Name="NT Kernel Logger">
+      <BufferSize Value="1024" />
+      <Buffers Value="128" />
+    </SystemCollector>
+    <SystemProvider Id="SystemProvider_DPC">
+      <Keywords>
+        <Keyword Value="ProcessThread" />
+        <Keyword Value="Loader" />
+        <Keyword Value="Interrupt" />
+        <Keyword Value="DPC" />
+      </Keywords>
+    </SystemProvider>
+    <Profile Id="DPC.Verbose.File" Name="DPC" Description="DPC/ISR par driver" LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <SystemCollectorId Value="SystemCollector_DPC">
+          <SystemProviderId Value="SystemProvider_DPC" />
+        </SystemCollectorId>
+      </Collectors>
+    </Profile>
+  </Profiles>
+</WindowsPerformanceRecorder>

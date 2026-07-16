@@ -1,0 +1,309 @@
+
+--------------------------
+DPC Info
+
+--------------------------
+CPU Usage Summing By Module For the Whole Trace
+
+CPU Usage from 0 us to 5769014 us:
+
+     CPU 0 Usage,      CPU 1 Usage,      CPU 2 Usage,      CPU 3 Usage,      CPU 4 Usage,      CPU 5 Usage,      CPU 6 Usage,      CPU 7 Usage,      CPU 8 Usage,      CPU 9 Usage,      CPU 10 Usage,      CPU 11 Usage,      CPU 12 Usage,      CPU 13 Usage,      CPU 14 Usage,      CPU 15 Usage, 
+     usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %, Module
+       15   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, CLASSPNP.SYS
+      597   0.01,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, HDAudBus.sys
+        2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Ndu.sys
+        2   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Ntfs.sys
+     8797   0.15,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Wdf01000.sys
+       13   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, afd.sys
+     2749   0.05,         0   0.00,        15   0.00,         2   0.00,        21   0.00,         0   0.00,        45   0.00,         2   0.00,         6   0.00,        12   0.00,        15   0.00,         9   0.00,         0   0.00,         0   0.00,         3   0.00,         0   0.00, dxgkrnl.sys
+       43   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, dxgmms2.sys
+     6212   0.11,        58   0.00,       283   0.00,       150   0.00,        88   0.00,         0   0.00,       152   0.00,         6   0.00,        57   0.00,        50   0.00,        55   0.00,        54   0.00,        60   0.00,        98   0.00,        57   0.00,       135   0.00, ntoskrnl.exe
+     7949   0.14,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, nvlddmkm.sys
+        0   0.00,         7   0.00,        26   0.00,        30   0.00,        26   0.00,        18   0.00,        35   0.00,        29   0.00,         8   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, stornvme.sys
+       65   0.00,         7   0.00,        69   0.00,         0   0.00,       121   0.00,        18   0.00,        36   0.00,        21   0.00,        25   0.00,        68   0.00,       146   0.00,        62   0.00,        74   0.00,        79   0.00,        42   0.00,         9   0.00, storport.sys
+       25   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, symcryptk.dll
+       10   0.00,        41   0.00,       286   0.00,         0   0.00,       425   0.01,       178   0.00,         0   0.00,       174   0.00,       155   0.00,       169   0.00,         0   0.00,       195   0.00,        34   0.00,       198   0.00,       255   0.00,         0   0.00, tcpip.sys
+       61   0.00,        36   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmbusr.sys
+        4   0.00,        23   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmswitch.sys
+      213   0.00,        50   0.00,       197   0.00,         7   0.00,       107   0.00,         9   0.00,        80   0.00,         0   0.00,        51   0.00,       124   0.00,       110   0.00,        80   0.00,       118   0.00,         0   0.00,       118   0.00,        21   0.00, winhvr.sys
+
+Total = 3364
+Elapsed Time, >        0 usecs AND <=        1 usecs,    432, or  12.84%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    542, or  16.11%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    569, or  16.91%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    374, or  11.12%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    838, or  24.91%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    481, or  14.30%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    111, or   3.30%
+Elapsed Time, >       64 usecs AND <=      128 usecs,     17, or   0.51%
+Total,                                                  3364
+
+Total = 14 for module CLASSPNP.SYS
+Elapsed Time, >        0 usecs AND <=        1 usecs,     11, or  78.57%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      3, or  21.43%
+Total,                                                    14
+
+Total = 70 for module HDAudBus.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or   1.43%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     14, or  20.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     54, or  77.14%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   1.43%
+Total,                                                    70
+
+Total = 6 for module Ndu.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      6, or 100.00%
+Total,                                                     6
+
+Total = 1 for module Ntfs.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      1, or 100.00%
+Total,                                                     1
+
+Total = 582 for module Wdf01000.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or   0.17%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     83, or  14.26%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    334, or  57.39%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    145, or  24.91%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     17, or   2.92%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      2, or   0.34%
+Total,                                                   582
+
+Total = 7 for module afd.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      4, or  57.14%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      3, or  42.86%
+Total,                                                     7
+
+Total = 142 for module dxgkrnl.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      2, or   1.41%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      2, or   1.41%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     36, or  25.35%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     10, or   7.04%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     50, or  35.21%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     12, or   8.45%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     19, or  13.38%
+Elapsed Time, >       64 usecs AND <=      128 usecs,     11, or   7.75%
+Total,                                                   142
+
+Total = 21 for module dxgmms2.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     14, or  66.67%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      7, or  33.33%
+Total,                                                    21
+
+Total = 573 for module ntoskrnl.exe
+Elapsed Time, >        0 usecs AND <=        1 usecs,      8, or   1.40%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      7, or   1.22%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     56, or   9.77%
+Elapsed Time, >        4 usecs AND <=        8 usecs,    109, or  19.02%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    298, or  52.01%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     78, or  13.61%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     14, or   2.44%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      3, or   0.52%
+Total,                                                   573
+
+Total = 565 for module nvlddmkm.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      1, or   0.18%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     33, or   5.84%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    157, or  27.79%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     75, or  13.27%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     49, or   8.67%
+Elapsed Time, >       16 usecs AND <=       32 usecs,    200, or  35.40%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     49, or   8.67%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      1, or   0.18%
+Total,                                                   565
+
+Total = 83 for module stornvme.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     11, or  13.25%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     21, or  25.30%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     50, or  60.24%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   1.20%
+Total,                                                    83
+
+Total = 99 for module storport.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      9, or   9.09%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or   1.01%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     59, or  59.60%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     20, or  20.20%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      8, or   8.08%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      2, or   2.02%
+Total,                                                    99
+
+Total = 12 for module symcryptk.dll
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      5, or  41.67%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      7, or  58.33%
+Total,                                                    12
+
+Total = 497 for module tcpip.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    355, or  71.43%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      5, or   1.01%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     46, or   9.26%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     19, or   3.82%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     33, or   6.64%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     29, or   5.84%
+Elapsed Time, >       32 usecs AND <=       64 usecs,     10, or   2.01%
+Total,                                                   497
+
+Total = 23 for module vmbusr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      1, or   4.35%
+Elapsed Time, >        2 usecs AND <=        4 usecs,     17, or  73.91%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      4, or  17.39%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   4.35%
+Total,                                                    23
+
+Total = 2 for module vmswitch.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or  50.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or  50.00%
+Total,                                                     2
+
+Total = 667 for module winhvr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     38, or   5.70%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    437, or  65.52%
+Elapsed Time, >        2 usecs AND <=        4 usecs,    186, or  27.89%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      1, or   0.15%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      5, or   0.75%
+Total,                                                   667
+
+All Module =   3364,  Total =  3364,   EQUAL
+
+--------------------------
+Usage From 0 ms to 5769 ms, Summing In 1 second intervals. Intervals=6
+
+                       ,      CPU 0 Usage ,      CPU 1 Usage ,      CPU 2 Usage ,      CPU 3 Usage ,      CPU 4 Usage ,      CPU 5 Usage ,      CPU 6 Usage ,      CPU 7 Usage ,      CPU 8 Usage ,      CPU 9 Usage ,      CPU 10 Usage ,      CPU 11 Usage ,      CPU 12 Usage ,      CPU 13 Usage ,      CPU 14 Usage ,      CPU 15 Usage 
+Start (ms) End (ms)    ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % 
+         0-1000      :,      6018   0.60,        16   0.00,       334   0.03,       139   0.01,       219   0.02,        64   0.01,       138   0.01,        63   0.01,        53   0.01,       144   0.01,        67   0.01,        92   0.01,        57   0.01,       151   0.02,       226   0.02,        38   0.00
+      1000-2000      :,      7225   0.72,        45   0.00,        89   0.01,        25   0.00,       119   0.01,        46   0.00,        48   0.00,        21   0.00,        67   0.01,        45   0.00,        92   0.01,       160   0.02,        55   0.01,        13   0.00,        70   0.01,         7   0.00
+      2000-3000      :,      4330   0.43,         3   0.00,       140   0.01,         7   0.00,       122   0.01,        22   0.00,        26   0.00,        64   0.01,        48   0.00,        44   0.00,        26   0.00,        22   0.00,        98   0.01,        77   0.01,        61   0.01,        12   0.00
+      3000-4000      :,      3131   0.31,       112   0.01,       117   0.01,        18   0.00,       163   0.02,        35   0.00,        35   0.00,        38   0.00,        42   0.00,        55   0.01,        78   0.01,        56   0.01,        62   0.01,       129   0.01,        24   0.00,        48   0.00
+      4000-5000      :,      3327   0.33,        12   0.00,       107   0.01,         0   0.00,       108   0.01,        21   0.00,        31   0.00,        21   0.00,        40   0.00,        82   0.01,        62   0.01,        68   0.01,        10   0.00,         5   0.00,        64   0.01,        37   0.00
+      5000-5769      :,      2723   0.35,        34   0.00,        89   0.01,         0   0.00,        58   0.01,        36   0.00,        71   0.01,        26   0.00,        52   0.01,        53   0.01,         0   0.00,         3   0.00,         4   0.00,         0   0.00,        31   0.00,        22   0.00
+
+--------------------------
+Interrupt Info
+
+--------------------------
+CPU Usage Summing By Module For the Whole Trace
+
+CPU Usage from 0 us to 5769014 us:
+
+     CPU 0 Usage,      CPU 1 Usage,      CPU 2 Usage,      CPU 3 Usage,      CPU 4 Usage,      CPU 5 Usage,      CPU 6 Usage,      CPU 7 Usage,      CPU 8 Usage,      CPU 9 Usage,      CPU 10 Usage,      CPU 11 Usage,      CPU 12 Usage,      CPU 13 Usage,      CPU 14 Usage,      CPU 15 Usage, 
+     usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %,      usec      %, Module
+     1066   0.02,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, HDAudBus.sys
+     1817   0.03,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, Wdf01000.sys
+     8422   0.15,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, dxgkrnl.sys
+       99   0.00,        23   0.00,        77   0.00,         4   0.00,        49   0.00,         4   0.00,        41   0.00,         0   0.00,        24   0.00,        60   0.00,        66   0.00,        37   0.00,        84   0.00,         0   0.00,        73   0.00,        11   0.00, ntoskrnl.exe
+        0   0.00,         4   0.00,        14   0.00,        15   0.00,        82   0.00,        11   0.00,        65   0.00,         8   0.00,         6   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, storport.sys
+        7   0.00,        35   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00, vmbusr.sys
+
+Total = 1723
+Elapsed Time, >        0 usecs AND <=        1 usecs,    979, or  56.82%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    210, or  12.19%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      2, or   0.12%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     25, or   1.45%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    249, or  14.45%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     97, or   5.63%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    155, or   9.00%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      6, or   0.35%
+Total,                                                  1723
+
+Total = 70 for module HDAudBus.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     67, or  95.71%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      3, or   4.29%
+Total,                                                    70
+
+Total = 582 for module Wdf01000.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,    368, or  63.23%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     70, or  12.03%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or   0.17%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     11, or   1.89%
+Elapsed Time, >        8 usecs AND <=       16 usecs,    127, or  21.82%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      3, or   0.52%
+Elapsed Time, >       32 usecs AND <=       64 usecs,      2, or   0.34%
+Total,                                                   582
+
+Total = 309 for module dxgkrnl.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      0, or   0.00%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      0, or   0.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,     14, or   4.53%
+Elapsed Time, >        8 usecs AND <=       16 usecs,     55, or  17.80%
+Elapsed Time, >       16 usecs AND <=       32 usecs,     81, or  26.21%
+Elapsed Time, >       32 usecs AND <=       64 usecs,    153, or  49.51%
+Elapsed Time, >       64 usecs AND <=      128 usecs,      6, or   1.94%
+Total,                                                   309
+
+Total = 667 for module ntoskrnl.exe
+Elapsed Time, >        0 usecs AND <=        1 usecs,    561, or  84.11%
+Elapsed Time, >        1 usecs AND <=        2 usecs,    102, or  15.29%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      1, or   0.15%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      3, or   0.45%
+Total,                                                   667
+
+Total = 83 for module storport.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,     42, or  50.60%
+Elapsed Time, >        1 usecs AND <=        2 usecs,     35, or  42.17%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      6, or   7.23%
+Total,                                                    83
+
+Total = 12 for module vmbusr.sys
+Elapsed Time, >        0 usecs AND <=        1 usecs,      8, or  66.67%
+Elapsed Time, >        1 usecs AND <=        2 usecs,      3, or  25.00%
+Elapsed Time, >        2 usecs AND <=        4 usecs,      0, or   0.00%
+Elapsed Time, >        4 usecs AND <=        8 usecs,      0, or   0.00%
+Elapsed Time, >        8 usecs AND <=       16 usecs,      0, or   0.00%
+Elapsed Time, >       16 usecs AND <=       32 usecs,      1, or   8.33%
+Total,                                                    12
+
+All Module =   1723,  Total =  1723,   EQUAL
+
+--------------------------
+Usage From 0 ms to 5769 ms, Summing In 1 second intervals. Intervals=6
+
+                       ,      CPU 0 Usage ,      CPU 1 Usage ,      CPU 2 Usage ,      CPU 3 Usage ,      CPU 4 Usage ,      CPU 5 Usage ,      CPU 6 Usage ,      CPU 7 Usage ,      CPU 8 Usage ,      CPU 9 Usage ,      CPU 10 Usage ,      CPU 11 Usage ,      CPU 12 Usage ,      CPU 13 Usage ,      CPU 14 Usage ,      CPU 15 Usage 
+Start (ms) End (ms)    ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % ,    (usec)      % 
+         0-1000      :,      3081   0.31,        33   0.00,        13   0.00,         5   0.00,        55   0.01,         4   0.00,        64   0.01,         3   0.00,         4   0.00,        16   0.00,        35   0.00,         0   0.00,         5   0.00,         0   0.00,        47   0.00,         0   0.00
+      1000-2000      :,      2387   0.24,         3   0.00,         0   0.00,         4   0.00,         7   0.00,         4   0.00,        16   0.00,         0   0.00,        16   0.00,         6   0.00,         5   0.00,        35   0.00,        16   0.00,         0   0.00,         4   0.00,         0   0.00
+      2000-3000      :,      1823   0.18,         1   0.00,        30   0.00,         3   0.00,        16   0.00,         0   0.00,         5   0.00,         5   0.00,         2   0.00,         5   0.00,         1   0.00,         0   0.00,        59   0.01,         0   0.00,         5   0.00,         0   0.00
+      3000-4000      :,      1377   0.14,        25   0.00,        26   0.00,         7   0.00,        15   0.00,         7   0.00,        14   0.00,         0   0.00,         2   0.00,         0   0.00,        11   0.00,         0   0.00,         2   0.00,         0   0.00,         0   0.00,         0   0.00
+      4000-5000      :,      1313   0.13,         0   0.00,        15   0.00,         0   0.00,        22   0.00,         0   0.00,         2   0.00,         0   0.00,         4   0.00,        17   0.00,        15   0.00,         0   0.00,         3   0.00,         0   0.00,        18   0.00,        11   0.00
+      5000-5769      :,      1429   0.19,         0   0.00,         8   0.00,         0   0.00,        16   0.00,         0   0.00,         4   0.00,         0   0.00,         1   0.00,        16   0.00,         0   0.00,         1   0.00,         0   0.00,         0   0.00,         0   0.00,         0   0.00
+
+
+Distribution of number of 2000 ms intervals w.r.t. DPC/ISR usage:
+
+                ,                      CPU 0,                      CPU 1,                      CPU 2,                      CPU 3,                      CPU 4,                      CPU 5,                      CPU 6,                      CPU 7,                      CPU 8,                      CPU 9,                      CPU 10,                      CPU 11,                      CPU 12,                      CPU 13,                      CPU 14,                      CPU 15
+ DPC/ISR Usage %,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined,      DPC      ISR Combined
+>=  0 AND <=   1,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3
+>   1 AND <=   5,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>   5 AND <=  10,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  10 AND <=  20,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  20 AND <=  40,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  40 AND <=  60,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  60 AND <=  80,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+>  80 AND <= 100,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+---
+Total:          ,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3,        3

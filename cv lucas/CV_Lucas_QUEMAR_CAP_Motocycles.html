@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Carnet d'entretien — Lucas QUEMAR — CAP Maintenance Motocycles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4;
+    margin: 7mm 10mm;
+  }
+
+  :root {
+    --noir: #1a1a1a;
+    --gris-fonce: #333;
+    --gris: #666;
+    --gris-clair: #d8d8d4;
+    --papier: #faf7f0;
+    --papier-trame: #f3efe5;
+    --jaune: #f5b800;
+    --jaune-fonce: #c89400;
+    --rouge: #b8252a;
+    --vert: #2f7d3f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #e8e6e0;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    color: var(--noir);
+    font-size: 8.5pt;
+    line-height: 1.35;
+  }
+
+  body {
+    background: var(--papier);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .doc {
+    background: var(--papier);
+    max-width: 210mm;
+    margin: 8mm auto;
+    padding: 8mm 12mm;
+    position: relative;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  }
+
+  @media print {
+    body { background: var(--papier); }
+    .doc { margin: 0; box-shadow: none; padding: 0; max-width: none; }
+  }
+
+  /* === EN-TÊTE TYPE BANDE ATELIER === */
+  .carnet-header {
+    display: flex;
+    align-items: stretch;
+    border: 2px solid var(--noir);
+    margin-bottom: 4mm;
+    position: relative;
+    background: white;
+  }
+
+  .bande-rayee {
+    width: 10mm;
+    background: repeating-linear-gradient(
+      135deg,
+      var(--noir) 0,
+      var(--noir) 5px,
+      var(--jaune) 5px,
+      var(--jaune) 10px
+    );
+  }
+
+  .titre-doc { flex: 1; padding: 3mm 5mm; }
+
+  .titre-petit {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 6.5pt;
+    letter-spacing: 1.8px;
+    color: var(--gris);
+    text-transform: uppercase;
+  }
+
+  .titre-doc h1 {
+    font-family: 'Oswald', Impact, sans-serif;
+    font-weight: 700;
+    font-size: 22pt;
+    letter-spacing: 1.2px;
+    line-height: 1;
+    margin: 0.8mm 0 1.5mm;
+    text-transform: uppercase;
+  }
+
+  .titre-doc .sous-titre {
+    font-size: 8pt;
+    color: var(--gris-fonce);
+    font-weight: 500;
+    display: block;
+    border-top: 1px dashed var(--gris-clair);
+    padding-top: 1.5mm;
+  }
+
+  /* === TAMPON === */
+  .tampon {
+    position: absolute;
+    top: 3mm;
+    right: 5mm;
+    width: 21mm;
+    height: 21mm;
+    border: 2.5px solid var(--rouge);
+    border-radius: 50%;
+    color: var(--rouge);
+    text-align: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    transform: rotate(-8deg);
+    opacity: 0.88;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    background: rgba(255,255,255,0.4);
+  }
+  .tampon .gros { font-size: 9pt; letter-spacing: 1px; }
+  .tampon .petit { font-size: 6pt; font-family: 'Roboto Mono', monospace; margin-top: 1.5mm; letter-spacing: 1px; }
+
+  /* === BLOCS / SECTIONS === */
+  .bloc { margin-bottom: 1.8mm; }
+  .bloc.atomique { page-break-inside: avoid; }
+  .intervention { page-break-inside: avoid; }
+
+  /* === GRID 2 COLONNES POUR BLOCS LATÉRAUX === */
+  .grid-2cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3mm;
+    margin-bottom: 1.8mm;
+  }
+  .grid-2cols > .bloc { margin-bottom: 0; }
+
+  .bloc h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1.5px solid var(--noir);
+    padding-bottom: 1mm;
+    margin-bottom: 2mm;
+    display: flex;
+    align-items: baseline;
+    gap: 2.5mm;
+  }
+
+  .bloc h2 .num {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 7.5pt;
+    background: var(--noir);
+    color: var(--jaune);
+    padding: 1mm 2mm;
+    letter-spacing: 1px;
+    border-radius: 1px;
+  }
+
+  /* === IDENTIFICATION === */
+  .grid-id {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--gris-clair);
+    background: white;
+  }
+  .grid-id > div {
+    padding: 1.5mm 2.5mm;
+    border-right: 1px solid var(--gris-clair);
+    border-bottom: 1px solid var(--gris-clair);
+    display: flex;
+    flex-direction: column;
+  }
+  .grid-id label {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 6.2pt;
+    text-transform: uppercase;
+    color: var(--gris);
+    letter-spacing: 0.8px;
+    margin-bottom: 0.5mm;
+  }
+  .grid-id span {
+    font-weight: 600;
+    font-size: 9pt;
+  }
+
+  .placeholder {
+    color: var(--rouge) !important;
+    font-style: italic;
+    font-weight: 500 !important;
+  }
+
+  /* === TABLEAUX === */
+  .tableau {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid var(--gris-clair);
+  }
+  .tableau th, .tableau td {
+    padding: 1.5mm 2.5mm;
+    text-align: left;
+    border-bottom: 1px solid var(--gris-clair);
+    vertical-align: middle;
+    font-size: 8.5pt;
+  }
+  .tableau th {
+    background: var(--noir);
+    color: var(--jaune);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 500;
+  }
+  .tableau td strong { font-weight: 600; }
+  .tableau td em { color: var(--gris); font-style: normal; font-size: 7.5pt; }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 6.8pt;
+    padding: 0.6mm 1.6mm;
+    border-radius: 1px;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-ok { background: var(--vert); color: white; }
+  .badge-prep { background: var(--jaune); color: var(--noir); }
+  .badge-x { background: var(--gris); color: white; }
+
+  /* === INTERVENTIONS === */
+  .intervention {
+    display: grid;
+    grid-template-columns: 19mm 1fr;
+    gap: 3mm;
+    padding: 1.8mm 0;
+    border-bottom: 1px dashed var(--gris-clair);
+  }
+  .intervention:last-child { border-bottom: none; }
+
+  .date-bloc {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 7pt;
+    font-weight: 700;
+    background: var(--noir);
+    color: white;
+    padding: 1.5mm;
+    text-align: center;
+    line-height: 1.2;
+    height: fit-content;
+    border-left: 3px solid var(--jaune);
+  }
+  .intervention .contenu h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10pt;
+    font-weight: 600;
+    margin-bottom: 0.3mm;
+  }
+  .intervention .lieu {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 7pt;
+    color: var(--gris);
+    margin-bottom: 1mm;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .intervention p { font-size: 8.2pt; color: var(--gris-fonce); }
+
+  /* === ATOUTS === */
+  .grille-atouts {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8mm 3mm;
+    background: white;
+    padding: 2mm 2.5mm;
+    border: 1px solid var(--gris-clair);
+  }
+  .grille-atouts li {
+    font-size: 7.8pt;
+    padding-left: 4.5mm;
+    position: relative;
+  }
+  .grille-atouts li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.4mm;
+    width: 2.8mm;
+    height: 2.8mm;
+    border: 1.2px solid var(--noir);
+    background: var(--jaune);
+  }
+  .grille-atouts li::after {
+    content: '✓';
+    position: absolute;
+    left: 0.2mm;
+    top: -0.8mm;
+    font-weight: 700;
+    font-size: 8pt;
+    color: var(--noir);
+  }
+
+  /* === CENTRES D'INTÉRÊT === */
+  .interets { display: flex; flex-wrap: wrap; gap: 1.5mm; }
+  .tag {
+    background: white;
+    border: 1.2px solid var(--noir);
+    padding: 1mm 2.5mm;
+    font-size: 8pt;
+    font-weight: 500;
+    border-radius: 0;
+  }
+
+  /* === CARNET DE BORD === */
+  .carnet-bord {
+    background: var(--papier-trame);
+    padding: 2.5mm 4mm 3mm;
+    border: 1px solid var(--noir);
+    position: relative;
+  }
+  .carnet-bord::before {
+    content: '« ';
+    position: absolute;
+    top: -1.5mm;
+    left: 1.5mm;
+    font-size: 22pt;
+    font-family: 'Oswald', serif;
+    color: var(--jaune);
+    line-height: 1;
+  }
+  .carnet-bord h2 { background: none; }
+  .quote {
+    font-size: 8.5pt;
+    font-style: italic;
+    line-height: 1.5;
+    padding-left: 3mm;
+    border-left: 2.5px solid var(--jaune);
+  }
+
+  /* === PIED DE PAGE === */
+  .pied {
+    margin-top: 2mm;
+    padding-top: 1.2mm;
+    border-top: 1.2px solid var(--noir);
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 6.5pt;
+    color: var(--gris);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .ref-doc {
+    position: absolute;
+    top: 2mm;
+    left: 10mm;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 6pt;
+    color: var(--gris);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc">
+  <div class="ref-doc">RÉF : CV-LQ-2026-05 — RÉV. 01</div>
+
+  <!-- ============ EN-TÊTE ============ -->
+  <header class="carnet-header">
+    <div class="bande-rayee"></div>
+    <div class="titre-doc">
+      <span class="titre-petit">— Document de candidature officiel —</span>
+      <h1>Carnet d'entretien</h1>
+      <span class="sous-titre">CAP Maintenance des Véhicules — Option B : Motocycles · Rentrée scolaire 2027</span>
+    </div>
+    <div class="tampon">
+      <span class="gros">VALIDÉ</span>
+      <span class="petit">05 · 2026</span>
+    </div>
+  </header>
+
+  <!-- ============ 01 IDENTIFICATION ============ -->
+  <section class="bloc atomique">
+    <h2><span class="num">01</span> Identification du candidat</h2>
+    <div class="grid-id">
+      <div><label>Nom</label><span>QUEMAR</span></div>
+      <div><label>Prénom</label><span>Lucas</span></div>
+      <div><label>Date de naissance</label><span>03 / 08 / 2000</span></div>
+      <div><label>Ville</label><span>Caen — Normandie</span></div>
+      <div><label>Téléphone</label><span>06 25 59 48 26</span></div>
+      <div><label>Email</label><span>lucas.startio19@gmail.com</span></div>
+    </div>
+  </section>
+
+  <!-- ============ 02 HABILITATIONS + 03 FORMATIONS (2 COLONNES) ============ -->
+  <div class="grid-2cols">
+    <section class="bloc atomique">
+      <h2><span class="num">02</span> Habilitations</h2>
+      <table class="tableau">
+        <tbody>
+          <tr>
+            <td><strong>Permis AM (BSR)</strong> — Cyclo 50 cm³</td>
+            <td><span class="badge badge-ok">✓ Acquis</span></td>
+          </tr>
+          <tr>
+            <td><strong>Véhicule deux-roues personnel</strong></td>
+            <td><span class="badge badge-ok">✓ Oui</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="bloc atomique">
+      <h2><span class="num">03</span> Formations</h2>
+      <table class="tableau">
+        <tbody>
+          <tr>
+            <td><strong>Certificat de Formation Générale</strong> (CFG)<br><em>Sept 2016 → Juin 2017 · Institut, Caen</em><br><em>Validé par stages pro et comptes-rendus</em></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- ============ 04 INTERVENTIONS (EXPÉRIENCES) ============ -->
+  <section class="bloc">
+    <h2><span class="num">04</span> Interventions réalisées · Parcours</h2>
+
+    <div class="intervention">
+      <div class="date-bloc">OCT 2023<br>→<br>JUIN 2024</div>
+      <div class="contenu">
+        <h3>Volontaire en Service Civique</h3>
+        <div class="lieu">Unis-Cité · Caen</div>
+        <p>Mission « <strong>Cinéma et Citoyenneté</strong> » : animation et organisation d'actions auprès des jeunes pour les sensibiliser à la culture cinématographique. Travail en équipe sur 9 mois — ponctualité, contact public, engagement sur la durée, rigueur dans le suivi des actions.</p>
+      </div>
+    </div>
+
+    <div class="intervention">
+      <div class="date-bloc">SEPT<br>2021</div>
+      <div class="contenu">
+        <h3>Organisateur de partenariat</h3>
+        <div class="lieu">D'jack Événementiel × Team Factory · Caen</div>
+        <p>Mise en place d'une collaboration entre deux structures locales sur un projet événementiel commun. Représentation, coordination logistique et prise d'initiative en autonomie.</p>
+      </div>
+    </div>
+
+    <div class="intervention">
+      <div class="date-bloc">MAI<br>2019</div>
+      <div class="contenu">
+        <h3>Stagiaire — Maintenance & remise en état d'équipements</h3>
+        <div class="lieu">Maintenance Pour Tous · Epron</div>
+        <p>Diagnostic de pannes, démontage / remontage, remise en état et reconditionnement de matériel. Apprentissage du travail manuel précis et du contrôle qualité en atelier.</p>
+      </div>
+    </div>
+
+    <div class="intervention">
+      <div class="date-bloc">DÉC<br>2018</div>
+      <div class="contenu">
+        <h3>Stagiaire — Maintenance technique</h3>
+        <div class="lieu">IDE · Colombelles</div>
+        <p>Première immersion en environnement professionnel d'atelier. Initiation au diagnostic méthodique et à la rigueur d'intervention.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SUITE PAGE 2 ===================== -->
+
+  <!-- ============ 05 ATOUTS + 06 INTÉRÊTS (2 COLONNES) ============ -->
+  <div class="grid-2cols">
+    <section class="bloc atomique">
+      <h2><span class="num">05</span> Qualités</h2>
+      <ul class="grille-atouts">
+        <li>Rigueur et précision</li>
+        <li>Sens du travail manuel</li>
+        <li>À l'écoute, équipe</li>
+        <li>Prise d'initiative</li>
+        <li>Curiosité technique</li>
+        <li>Respect engagements</li>
+        <li>Adaptable</li>
+        <li>Multi-tâches</li>
+      </ul>
+    </section>
+
+    <section class="bloc atomique">
+      <h2><span class="num">06</span> Centres d'intérêt</h2>
+      <div class="interets">
+        <span class="tag">🏍 Méca 2 roues</span>
+        <span class="tag">🔧 Bricolage 50 cm³</span>
+        <span class="tag">🏁 Aprilia</span>
+        <span class="tag">📺 YouTube TCQR</span>
+        <span class="tag">🎵 Musique</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ 07 CARNET DE BORD ============ -->
+  <section class="bloc atomique carnet-bord">
+    <h2><span class="num">07</span> Carnet de bord · Projet professionnel</h2>
+    <p class="quote">
+      Passionné de mécanique deux-roues depuis plusieurs années, je bricole moi-même sur des
+      <strong>scooters et motos 50 cm³</strong> et je suis la chaîne technique <strong>TCQR</strong>.
+      Marque qui me parle : <strong>Aprilia</strong>. Je souhaite transformer cette passion en métier
+      en intégrant un <strong>CAP Maintenance des Véhicules option Motocycles</strong>. Mon parcours
+      (service civique 9 mois, stages techniques, organisation de partenariats) m'a appris la rigueur,
+      le travail manuel et la tenue d'engagements. Permis AM + deux-roues personnel, mobile sur
+      <strong>Caen et son agglomération</strong>. Recherche pour la <strong>rentrée 2027</strong>,
+      avec stages en garage moto / concession. Disponible immédiatement pour rencontre ou test pratique.
+    </p>
+  </section>
+
+  <!-- ============ PIED DE PAGE ============ -->
+  <footer class="pied">
+    <div>Document personnel · Lucas QUEMAR · Caen</div>
+    <div>Mis à jour : Mai 2026</div>
+  </footer>
+</div>
+
+</body>
+</html>

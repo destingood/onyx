@@ -1,0 +1,157 @@
+using System;
+using System.Reflection;
+using System.Threading;
+using System.Windows.Forms;
+
+[assembly: AssemblyTitle("BT Optimizer")]
+[assembly: AssemblyProduct("BT Optimizer")]
+[assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
+[assembly: AssemblyCompany("BT")]
+[assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
+[assembly: AssemblyVersion("4.1.0.0")]
+[assembly: AssemblyFileVersion("4.1.0.0")]
+
+namespace BTOptimizer
+{
+    internal static class Program
+    {
+        [STAThread]
+        private static void Main()
+        {
+#if BTTEST
+            TestHarness.Run();
+#else
+            bool isNew;
+            using (var mutex = new Mutex(true, "BTOptimizer_SingleInstance", out isNew))
+            {
+                if (!isNew)
+                {
+                    MessageBox.Show("BT Optimizer est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                try
+                {
+                    Sys.Init();
+                    Application.Run(new MainForm());
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "BT Optimizer a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "BT Optimizer — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                GC.KeepAlive(mutex);
+            }
+#endif
+        }
+    }
+
+#if BTTEST
+    /// <summary>
+    /// Mode test (compilé avec /define:BTTEST) : aucun GUI, aucun droit admin requis,
+    /// aucune écriture. Charge le contexte et exécute tous les Check() (lectures seules)
+    /// pour valider le catalogue de bout en bout.
+    /// </summary>
+    internal static class TestHarness
+    {
+        public static void Run()
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Sys.Init();
+            Console.WriteLine("BT Optimizer TEST — contexte :");
+            Console.WriteLine("  OS             : " + Sys.OsDescription());
+            Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
+            Console.WriteLine("  SID cible      : " + Sys.TargetSid);
+            Console.WriteLine("  MêmeUtilisateur: " + Sys.SameUser);
+            Console.WriteLine("  Bureau backup  : " + Sys.BackupDesktop);
+            int i = 0, errors = 0;
+            foreach (Tweak t in Catalog.All())
+            {
+                i++;
+                string state;
+                try
+                {
+                    bool? c = (t.Check != null) ? t.Check() : null;
+                    state = c.HasValue ? (c.Value ? "ACTIF" : "inactif") : "n/a";
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    state = "ERREUR: " + ex.Message;
+                }
+                Console.WriteLine(string.Format("  {0,2}. [{1,-8}] {2}", i, state, t.Name));
+            }
+            Console.WriteLine("Mini-mesure de latence (3 s)...");
+            try
+            {
+                BenchResult r = Bench.Run(3, delegate(string m, int l) { });
+                Console.WriteLine(string.Format(
+                    "  timer={0:0.0} ms | Sleep(1) moy={1:0.00} max={2:0.00} ms | %DPC moy={3} | %IRQ moy={4} | DPC/s={5}",
+                    r.TimerMs, r.SleepAvgMs, r.SleepMaxMs,
+                    r.DpcAvg < 0 ? "n/d" : r.DpcAvg.ToString("0.00"),
+                    r.IrqAvg < 0 ? "n/d" : r.IrqAvg.ToString("0.00"),
+                    r.DpcRateAvg < 0 ? "n/d" : r.DpcRateAvg.ToString("0")));
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                Console.WriteLine("  ERREUR mesure : " + ex.Message);
+            }
+            string reportEnv = Environment.GetEnvironmentVariable("BT_PARSE");
+            if (!string.IsNullOrEmpty(reportEnv) && System.IO.File.Exists(reportEnv))
+            {
+                Console.WriteLine();
+                Console.WriteLine("Analyse DPC/ISR de : " + reportEnv);
+                DpcIsrReport rep = DpcIsrReport.Parse(reportEnv);
+                Console.WriteLine("  Durée trace  : " + rep.DurationSec.ToString("0.0") + " s");
+                Console.WriteLine("  Total DPC    : " + rep.TotalDpc + "   Total ISR : " + rep.TotalIsr);
+                Console.WriteLine("  Pire DPC     : <= " + rep.MaxDpcUs.ToString("0") + " us (" + rep.MaxDpcModule + ")");
+                Console.WriteLine("  Pire ISR     : <= " + rep.MaxIsrUs.ToString("0") + " us (" + rep.MaxIsrModule + ")");
+                Console.WriteLine("  Verdict [" + rep.VerdictLevel + "] : " + rep.VerdictTitle);
+                Console.WriteLine("  Top pilotes par pire latence :");
+                foreach (DriverStat d in rep.Drivers.GetRange(0, Math.Min(8, rep.Drivers.Count)))
+                    Console.WriteLine(string.Format("    {0,-16} DPCx{1,-6} <= {2,4:0}us   ISRx{3,-6} <= {4,4:0}us   {5}",
+                        d.Module, d.DpcCount, d.DpcMaxUs, d.IsrCount, d.IsrMaxUs, d.Description));
+                try
+                {
+                    System.Windows.Forms.Application.EnableVisualStyles();
+                    using (var f = new LatencyForm(rep)) { f.CreateControl(); }
+                    Console.WriteLine("  UI LatencyForm : construite OK (" + rep.Drivers.Count + " lignes).");
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    Console.WriteLine("  UI LatencyForm ERREUR : " + ex.Message);
+                }
+
+                string before = Environment.GetEnvironmentVariable("BT_PARSE2");
+                if (!string.IsNullOrEmpty(before) && System.IO.File.Exists(before))
+                {
+                    DpcIsrReport repB = DpcIsrReport.Parse(before);
+                    Console.WriteLine("  Comparaison AVANT=" + System.IO.Path.GetFileName(before)
+                        + " APRES=" + System.IO.Path.GetFileName(reportEnv));
+                    var deltas = DpcIsrReport.Compare(repB, rep);
+                    foreach (DpcIsrReport.ModuleDelta m in deltas.GetRange(0, Math.Min(6, deltas.Count)))
+                        Console.WriteLine(string.Format("    {0,-16} {1,5:0} -> {2,5:0} us  (delta {3,5:+0;-0;0})",
+                            m.Module, m.WorstBefore, m.WorstAfter, m.Delta));
+                    try
+                    {
+                        using (var f = new CompareForm(repB, rep)) { f.CreateControl(); }
+                        Console.WriteLine("  UI CompareForm : construite OK.");
+                    }
+                    catch (Exception ex)
+                    {
+                        errors++;
+                        Console.WriteLine("  UI CompareForm ERREUR : " + ex.Message);
+                    }
+                }
+            }
+            Console.WriteLine("TEST TERMINÉ — " + i + " optimisations chargées, " + errors + " erreur(s).");
+            Environment.Exit(errors == 0 ? 0 : 1);
+        }
+    }
+#endif
+}
