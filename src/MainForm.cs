@@ -64,7 +64,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.7 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -122,6 +122,11 @@ namespace BTOptimizer
             _menu.Items.Add(new ToolStripSeparator());
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
+            {
+                Log("Nettoyage de la mémoire...", 0);
+                System.Threading.Tasks.Task.Run(() => Sys.CleanMemory(Log));
+            });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
             _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));

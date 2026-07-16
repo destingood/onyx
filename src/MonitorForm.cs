@@ -18,7 +18,7 @@ namespace BTOptimizer
         private readonly Queue<double> _cpuHist = new Queue<double>();
         private readonly Queue<double> _gpuHist = new Queue<double>();
         private Panel _spark;
-        private Button _btnCsv;
+        private Button _btnCsv, _btnRam;
         private string _csvPath;   // non nul = enregistrement en cours
 
         private static readonly Color Bg     = Color.FromArgb(20, 22, 28);
@@ -91,7 +91,14 @@ namespace BTOptimizer
             _btnCsv.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 84);
             _btnCsv.Click += OnCsvToggle;
 
+            _btnRam = new Button();
+            _btnRam.Text = "Libérer la RAM"; _btnRam.Width = 130; _btnRam.Dock = DockStyle.Right;
+            _btnRam.FlatStyle = FlatStyle.Flat; _btnRam.BackColor = TileBg; _btnRam.ForeColor = GpuCol;
+            _btnRam.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 84);
+            _btnRam.Click += OnCleanRam;
+
             bottom.Controls.Add(legend);
+            bottom.Controls.Add(_btnRam);
             bottom.Controls.Add(_btnCsv);
             bottom.Controls.Add(close);
 
@@ -196,6 +203,28 @@ namespace BTOptimizer
                 }
                 catch { }
             }
+        }
+
+        private void OnCleanRam(object sender, EventArgs e)
+        {
+            _btnRam.Enabled = false;
+            _btnRam.Text = "Nettoyage...";
+            Task.Run(() =>
+            {
+                long freed = Sys.CleanMemory(null);
+                if (IsDisposed) return;
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _btnRam.Enabled = true;
+                        _btnRam.Text = "Libérer la RAM";
+                        MessageBox.Show(this, "Mémoire libérée : ~" + Math.Max(0, freed) + " Mo.",
+                            "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }));
+                }
+                catch { }
+            });
         }
 
         private void OnCsvToggle(object sender, EventArgs e)

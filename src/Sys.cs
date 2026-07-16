@@ -1166,6 +1166,23 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Nettoyage mémoire (RAM)
+        // ------------------------------------------------------------------
+        public static long CleanMemory(Action<string, int> log)
+        {
+            long before = NativeMem.UsedPhysMB();
+            int n = NativeMem.EmptyAllWorkingSets();
+            bool standby = NativeMem.PurgeStandby();
+            System.Threading.Thread.Sleep(250);
+            long after = NativeMem.UsedPhysMB();
+            long freed = before - after;
+            if (log != null)
+                log("RAM : " + n + " processus vidés" + (standby ? " + liste standby purgée" : "")
+                    + ", ~" + Math.Max(0, freed) + " Mo libérés.", 1);
+            return freed;
+        }
+
+        // ------------------------------------------------------------------
         //  Infos système pour l'en-tête du journal
         // ------------------------------------------------------------------
         public static string OsDescription()

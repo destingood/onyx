@@ -97,6 +97,79 @@ namespace BTOptimizer
         }
     }
 
+    /// <summary>Nettoyage mémoire : vide les working sets et purge la liste standby.</summary>
+    internal static class NativeMem
+    {
+        [DllImport("psapi.dll")]
+        private static extern bool EmptyWorkingSet(IntPtr hProcess);
+
+        [DllImport("ntdll.dll")]
+        private static extern int NtSetSystemInformation(int infoClass, ref int info, int length);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool OpenProcessToken(IntPtr h, uint access, out IntPtr token);
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool LookupPrivilegeValue(string sys, string name, out long luid);
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TOKEN_PRIVILEGES newState, int len, IntPtr prev, IntPtr retlen);
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetCurrentProcess();
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GlobalMemoryStatusEx([In, Out] MEMSTAT lp);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct TOKEN_PRIVILEGES { public int Count; public long Luid; public int Attributes; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private class MEMSTAT
+        {
+            public uint dwLength = (uint)Marshal.SizeOf(typeof(MEMSTAT));
+            public uint dwMemoryLoad;
+            public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
+        }
+
+        public static long UsedPhysMB()
+        {
+            var m = new MEMSTAT();
+            if (GlobalMemoryStatusEx(m)) return (long)((m.ullTotalPhys - m.ullAvailPhys) / (1024 * 1024));
+            return 0;
+        }
+
+        public static int EmptyAllWorkingSets()
+        {
+            int done = 0;
+            foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcesses())
+            {
+                try { if (EmptyWorkingSet(p.Handle)) done++; }
+                catch { }
+                finally { try { p.Dispose(); } catch { } }
+            }
+            return done;
+        }
+
+        public static bool PurgeStandby()
+        {
+            try
+            {
+                if (!EnablePrivilege("SeProfileSingleProcessPrivilege")) return false;
+                int cmd = 4; // MemoryPurgeStandbyList
+                return NtSetSystemInformation(0x50, ref cmd, sizeof(int)) == 0; // 0x50 = SystemMemoryListInformation
+            }
+            catch { return false; }
+        }
+
+        private static bool EnablePrivilege(string name)
+        {
+            IntPtr token;
+            if (!OpenProcessToken(GetCurrentProcess(), 0x0020 | 0x0008, out token)) return false;
+            long luid;
+            if (!LookupPrivilegeValue(null, name, out luid)) return false;
+            var tp = new TOKEN_PRIVILEGES { Count = 1, Luid = luid, Attributes = 0x00000002 };
+            return AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+        }
+    }
+
     /// <summary>Corbeille via shell32 (taille et vidage).</summary>
     internal static class NativeRecycle
     {
