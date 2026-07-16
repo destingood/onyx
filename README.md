@@ -39,6 +39,16 @@ Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accé
   nombre de DPC/ISR, pire latence (µs) et temps total par pilote, avec description
   lisible (NVIDIA, TCP/IP, audio HD, hyperviseur…). Les pilotes lents sont surlignés.
   La capture ETW ouvre cette fenêtre automatiquement.
+- Bouton **`Comparer avec (AVANT)…`** dans l'analyse : choisis un rapport de référence
+  et obtiens la **comparaison AVANT/APRÈS** — bannière amélioration/dégradation, tuiles
+  de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
+
+## Dépôt git
+
+Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,
+régénérables) et `BTOptimizer.exe` (recompilable via `Build.bat`) sont exclus par
+`.gitignore`. Identité configurée localement pour ce dépôt : modifie-la avec
+`git config user.name "..."` / `git config user.email "..."` si besoin.
 
 Pour recompiler après modification du code source (`src/`) : double-clic sur
 **`Build.bat`** (utilise le compilateur C# intégré à Windows, rien à installer).
