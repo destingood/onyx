@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
-        private Button _btnAuto, _btnBench, _btnMenu;
+        private Button _btnAuto, _btnBench, _btnMenu, _btnBoost;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _miPro;
         private TextBox _search;
@@ -64,7 +64,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.7 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.8 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -91,6 +91,16 @@ namespace BTOptimizer
             sub.Font = new Font("Segoe UI", 8.5f);
             sub.ForeColor = Color.FromArgb(170, 175, 185);
             sub.BackColor = HeaderBg;
+
+            _btnBoost = new Button();
+            _btnBoost.Text = "▶ MODE JEU";
+            _btnBoost.SetBounds(700, 12, 142, 38);
+            _btnBoost.FlatStyle = FlatStyle.Flat;
+            _btnBoost.FlatAppearance.BorderSize = 0;
+            _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+            _btnBoost.ForeColor = Color.White;
+            _btnBoost.Font = new Font("Segoe UI Semibold", 9.5f);
+            _btnBoost.Click += OnBoostToggle;
 
             _btnMenu = new Button();
             _btnMenu.Text = "☰";
@@ -143,14 +153,14 @@ namespace BTOptimizer
 
             _lblCount = new Label();
             _lblCount.Text = "";
-            _lblCount.SetBounds(560, 6, 278, 26);
+            _lblCount.SetBounds(400, 6, 288, 26);
             _lblCount.Font = new Font("Segoe UI Semibold", 10f);
             _lblCount.ForeColor = Color.FromArgb(0, 210, 130);
             _lblCount.BackColor = HeaderBg;
             _lblCount.TextAlign = ContentAlignment.MiddleRight;
 
             _lblTimerRes = new Label();
-            _lblTimerRes.SetBounds(560, 32, 278, 24);
+            _lblTimerRes.SetBounds(400, 32, 288, 24);
             _lblTimerRes.TextAlign = ContentAlignment.MiddleRight;
             _lblTimerRes.BackColor = HeaderBg;
             _lblTimerRes.ForeColor = Color.FromArgb(165, 170, 180);
@@ -160,7 +170,9 @@ namespace BTOptimizer
             header.Controls.Add(sub);
             header.Controls.Add(_lblCount);
             header.Controls.Add(_lblTimerRes);
+            header.Controls.Add(_btnBoost);
             header.Controls.Add(_btnMenu);
+            _btnBoost.BringToFront();
             _btnMenu.BringToFront();
 
             // Presets
@@ -338,6 +350,7 @@ namespace BTOptimizer
 
         private void OnFormClosingCleanup(object sender, FormClosingEventArgs e)
         {
+            if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         }
@@ -575,7 +588,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }
@@ -729,6 +742,30 @@ namespace BTOptimizer
         {
             try { Process.Start("explorer.exe", "\"" + Sys.BackupDesktop + "\""); }
             catch (Exception ex) { Log("Impossible d'ouvrir le dossier : " + ex.Message, 3); }
+        }
+
+        private void OnBoostToggle(object sender, EventArgs e)
+        {
+            _btnBoost.Enabled = false;
+            bool activating = !GameBoost.IsActive;
+            Task.Run(() =>
+            {
+                if (activating) GameBoost.Activate(Log); else GameBoost.Deactivate(Log);
+                try { BeginInvoke((Action)(() =>
+                {
+                    _btnBoost.Enabled = true;
+                    if (GameBoost.IsActive)
+                    {
+                        _btnBoost.Text = "■ MODE JEU ACTIF";
+                        _btnBoost.BackColor = Color.FromArgb(200, 60, 40);
+                    }
+                    else
+                    {
+                        _btnBoost.Text = "▶ MODE JEU";
+                        _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                    }
+                })); } catch { }
+            });
         }
 
         private void OnResetAll(object sender, EventArgs e)

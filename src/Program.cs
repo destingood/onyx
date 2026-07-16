@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.7.0.0")]
-[assembly: AssemblyFileVersion("6.7.0.0")]
+[assembly: AssemblyVersion("6.8.0.0")]
+[assembly: AssemblyFileVersion("6.8.0.0")]
 
 namespace BTOptimizer
 {
@@ -136,6 +136,17 @@ namespace BTOptimizer
                 Console.WriteLine("  UI License/About/KeyForm : construites OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Mode Jeu (Game Boost)...");
+            try
+            {
+                GameBoost.Activate(delegate(string m, int l) { Console.WriteLine("  " + m); });
+                Console.WriteLine("  actif=" + GameBoost.IsActive);
+                GameBoost.Deactivate(delegate(string m, int l) { Console.WriteLine("  " + m); });
+                if (GameBoost.IsActive) errors++;
+                Console.WriteLine("  apres off=" + GameBoost.IsActive);
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Mode Jeu ERREUR : " + ex.Message); }
 
             Console.WriteLine("Nettoyage RAM...");
             try

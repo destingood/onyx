@@ -523,6 +523,15 @@ namespace BTOptimizer
             return (v is int) ? (int)v : -1;
         }
 
+        public static bool IsServiceRunning(string name)
+        {
+            NativeResult r = Run(Sys32("sc.exe"), "query " + name);
+            return r.ExitCode == 0 && r.Output.IndexOf("RUNNING", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        public static void StopService(string name) { Run(Sys32("sc.exe"), "stop " + name); }
+        public static void StartService(string name) { Run(Sys32("sc.exe"), "start " + name); }
+
         public static void SetScheduledTask(string taskPath, bool enable)
         {
             Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));
