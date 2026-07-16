@@ -10,6 +10,7 @@ namespace BTOptimizer
     {
         private const string MMKey    = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
         private const string GamesKey = MMKey + @"\Tasks\Games";
+        private const string AudioKey = MMKey + @"\Tasks\Audio";
 
         public static List<Tweak> All()
         {
@@ -890,15 +891,57 @@ namespace BTOptimizer
                 Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate"), 1)
             });
 
+            // ================= SON & AUDIO =================
             list.Add(new Tweak
             {
-                Id = "audio_ducking_off", Category = Cat.Gpu, Esport = true,
+                Id = "audio_ducking_off", Category = Cat.Audio, Esport = true,
                 Name = "Ne plus baisser le son des jeux pendant une « communication »",
                 Desc = "Windows n'atténue plus automatiquement le volume des autres applis quand il détecte un appel/vocal (Discord, etc.).",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Multimedia\Audio" },
                 Apply  = () => Sys.SetUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference", 3, RegistryValueKind.DWord),
                 Revert = () => Sys.DelUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference"),
                 Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference"), 3)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "audio_mmcss_high", Category = Cat.Audio, Esport = true, Reboot = true,
+                Name = "Priorité MMCSS de la tâche « Audio » → Haute (moins de coupures)",
+                Desc = "Le planificateur multimédia (MMCSS) traite le flux audio en priorité Haute et E/S Haute au lieu de Moyenne. Réduit les micro-coupures / crépitements audio quand le CPU est chargé (jeu + Discord + stream). Réversible (valeurs Windows par défaut restaurées).",
+                BackupKeys = new[] { @"HKLM\" + AudioKey },
+                Apply = () =>
+                {
+                    Sys.SetMachine(AudioKey, "Scheduling Category", "High", RegistryValueKind.String);
+                    Sys.SetMachine(AudioKey, "SFIO Priority", "High", RegistryValueKind.String);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(AudioKey, "Scheduling Category", "Medium", RegistryValueKind.String);
+                    Sys.SetMachine(AudioKey, "SFIO Priority", "Normal", RegistryValueKind.String);
+                },
+                Check = () => Sys.StrEquals(Sys.GetMachine(AudioKey, "Scheduling Category"), "High")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "audio_startup_sound_off", Category = Cat.Audio,
+                Name = "Désactiver le son de démarrage de Windows",
+                Desc = "Coupe le jingle joué à l'ouverture de session. Purement cosmétique, sans effet sur le reste du son.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation", "DisableStartupSound", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation", "DisableStartupSound", 0, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\BootAnimation", "DisableStartupSound"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "audio_bt_absolute_volume_off", Category = Cat.Audio, Reboot = true,
+                Name = "Bluetooth : désactiver le « volume absolu » (contrôle fin du casque)",
+                Desc = "Sépare le volume Windows de celui du casque Bluetooth. Utile si ton casque BT saute directement de trop bas à trop fort, ou si le réglage est trop grossier. Sans effet si tu n'utilises pas d'audio Bluetooth.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Bluetooth\Audio\AVRCP\CT" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Bluetooth\Audio\AVRCP\CT", "DisableAbsoluteVolume", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Bluetooth\Audio\AVRCP\CT", "DisableAbsoluteVolume", 0, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Bluetooth\Audio\AVRCP\CT", "DisableAbsoluteVolume"), 1)
             });
 
             list.Add(new Tweak

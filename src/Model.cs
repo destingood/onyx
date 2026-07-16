@@ -23,6 +23,7 @@ namespace BTOptimizer
         public const string Souris   = "Souris & clavier";
         public const string Alim     = "Alimentation & CPU";
         public const string Gpu      = "GPU & jeux";
+        public const string Audio    = "Son & audio";
         public const string Systeme  = "Système & planificateur";
         public const string Rapidite = "Rapidité & démarrage";
         public const string Services = "Services & arrière-plan";
@@ -31,7 +32,7 @@ namespace BTOptimizer
 
         public static readonly string[] Order = new string[]
         {
-            Souris, Alim, Gpu, Systeme, Rapidite, Services, Privacy, Reseau
+            Souris, Alim, Gpu, Audio, Systeme, Rapidite, Services, Privacy, Reseau
         };
     }
 }

@@ -44,7 +44,7 @@ namespace BTOptimizer
 
             Controls.Add(new Label
             {
-                Text = "86 optimisations réversibles, mesure de latence, overclock GPU, DNS et bien plus. "
+                Text = Catalog.All().Count + " optimisations réversibles, mesure de latence, overclock GPU, DNS et bien plus. "
                      + "Toutes les modifications sont sauvegardées et annulables en un clic.",
                 Location = new Point(24, 112), Size = new Size(512, 44), ForeColor = Color.FromArgb(60, 64, 72)
             });
