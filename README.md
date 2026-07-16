@@ -45,6 +45,11 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
   réglages dans un .txt sur le Bureau — pratique pour comparer avant/après).
 - Journal coloré, icône d'application, instance unique, infos de version.
 - `Build.bat` ferme automatiquement l'app avant de recompiler.
+- **Menu (☰, en haut à droite)** : À propos, Conditions d'utilisation, **Réinitialiser
+  TOUTES les optimisations** (retour valeurs Windows + retrait gardien/OC + reset GPU),
+  ouvrir le dossier de sauvegardes, ouvrir le journal.
+- **Conditions d'utilisation** affichées et à accepter au **premier lancement**
+  (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
 ### Mesure & analyse de latence (façon LatencyMon)
 

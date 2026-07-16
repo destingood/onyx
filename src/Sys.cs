@@ -517,6 +517,30 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Acceptation des conditions d'utilisation (EULA)
+        // ------------------------------------------------------------------
+        private static string EulaPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-eula.txt"); }
+        }
+
+        public static int EulaAcceptedVersion()
+        {
+            try
+            {
+                if (!File.Exists(EulaPath)) return 0;
+                int v;
+                return int.TryParse(File.ReadAllText(EulaPath).Trim(), out v) ? v : 0;
+            }
+            catch { return 0; }
+        }
+
+        public static void SetEulaAccepted(int version)
+        {
+            try { File.WriteAllText(EulaPath, version.ToString()); } catch { }
+        }
+
+        // ------------------------------------------------------------------
         //  Profil (sélection sauvegardée) et gardien de démarrage
         // ------------------------------------------------------------------
         public static string ProfilePath

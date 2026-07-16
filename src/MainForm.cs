@@ -24,7 +24,8 @@ namespace BTOptimizer
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
-        private Button _btnAuto, _btnBench;
+        private Button _btnAuto, _btnBench, _btnMenu;
+        private ContextMenuStrip _menu;
         private TextBox _search;
         private readonly List<GroupBox> _groups = new List<GroupBox>();
         private HwProfile _hw;
@@ -59,7 +60,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 5.9 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.0 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -87,16 +88,43 @@ namespace BTOptimizer
             sub.ForeColor = Color.FromArgb(170, 175, 185);
             sub.BackColor = HeaderBg;
 
+            _btnMenu = new Button();
+            _btnMenu.Text = "☰";
+            _btnMenu.SetBounds(850, 12, 36, 38);
+            _btnMenu.FlatStyle = FlatStyle.Flat;
+            _btnMenu.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 84);
+            _btnMenu.BackColor = HeaderBg;
+            _btnMenu.ForeColor = Color.White;
+            _btnMenu.Font = new Font("Segoe UI", 12f);
+            _btnMenu.Click += (s, e) => _menu.Show(_btnMenu, new Point(0, _btnMenu.Height));
+
+            _menu = new ContextMenuStrip();
+            _menu.Items.Add("À propos de BT Optimizer", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
+            _menu.Items.Add(new ToolStripSeparator());
+            _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
+            _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
+            _menu.Items.Add("Ouvrir le journal (fichier)", null, (s, e) =>
+            {
+                try
+                {
+                    string p = System.IO.Path.Combine(Application.StartupPath, "bt-optimizer-log.txt");
+                    if (System.IO.File.Exists(p)) Process.Start("notepad.exe", "\"" + p + "\"");
+                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch { }
+            });
+
             _lblCount = new Label();
             _lblCount.Text = "";
-            _lblCount.SetBounds(640, 6, 244, 26);
+            _lblCount.SetBounds(560, 6, 278, 26);
             _lblCount.Font = new Font("Segoe UI Semibold", 10f);
             _lblCount.ForeColor = Color.FromArgb(0, 210, 130);
             _lblCount.BackColor = HeaderBg;
             _lblCount.TextAlign = ContentAlignment.MiddleRight;
 
             _lblTimerRes = new Label();
-            _lblTimerRes.SetBounds(640, 32, 244, 24);
+            _lblTimerRes.SetBounds(560, 32, 278, 24);
             _lblTimerRes.TextAlign = ContentAlignment.MiddleRight;
             _lblTimerRes.BackColor = HeaderBg;
             _lblTimerRes.ForeColor = Color.FromArgb(165, 170, 180);
@@ -106,6 +134,8 @@ namespace BTOptimizer
             header.Controls.Add(sub);
             header.Controls.Add(_lblCount);
             header.Controls.Add(_lblTimerRes);
+            header.Controls.Add(_btnMenu);
+            _btnMenu.BringToFront();
 
             // Presets
             _btnReco = MakeButton("Preset : Recommandé", 16, 70, 160, 30, false);
@@ -655,6 +685,40 @@ namespace BTOptimizer
         {
             try { Process.Start("explorer.exe", "\"" + Sys.BackupDesktop + "\""); }
             catch (Exception ex) { Log("Impossible d'ouvrir le dossier : " + ex.Message, 3); }
+        }
+
+        private void OnResetAll(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Tout réinitialiser ?\n\n"
+                    + "• Rétablit les 62 optimisations aux valeurs par défaut de Windows\n"
+                    + "• Retire le gardien de démarrage et l'OC GPU persistant\n"
+                    + "• Réinitialise le GPU (power limit / fréquences constructeur)\n\n"
+                    + "Utile pour repartir d'un état propre. Un redémarrage peut être nécessaire.",
+                    "Réinitialiser toutes les optimisations",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Log("Réinitialisation complète en cours...", 0);
+            string exe = Application.ExecutablePath;
+            List<Tweak> all = new List<Tweak>(_tweaks);
+            Task.Run(() =>
+            {
+                Engine.Run(all, false, false, false, Log);
+                try { Sys.SetGuard(false, exe, Log); } catch { }
+                try { Sys.SetOcGuard(false, exe, Log); } catch { }
+                try { Sys.ResetGpuLocks(Log); } catch { }
+                BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    if (_chkGuard != null) { _guardEventSuppressed = true; _chkGuard.Checked = false; _guardEventSuppressed = false; }
+                    RefreshStates();
+                    Log("Réinitialisation terminée.", 1);
+                    MessageBox.Show(this, "Toutes les optimisations ont été rétablies aux valeurs Windows.\nUn redémarrage est conseillé.",
+                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }));
+            });
         }
 
         private void OnReportClicked(object sender, EventArgs e)
