@@ -57,6 +57,37 @@ namespace BTOptimizer
             Log("Prêt. Aucune modification n'est faite avant de cliquer sur APPLIQUER.", 0);
             RefreshStates();
             Theme.Apply(this);
+            Shown += OnShownWelcome;
+        }
+
+        private void OnShownWelcome(object sender, EventArgs e)
+        {
+            Shown -= OnShownWelcome;
+            if (WelcomeForm.AlreadyShown) return;
+            WelcomeForm.MarkShown();
+            ShowWelcome();
+        }
+
+        private void ShowWelcome()
+        {
+            WelcomeForm.StartAction choice;
+            using (var w = new WelcomeForm()) { w.ShowDialog(this); choice = w.Choice; }
+
+            if (choice == WelcomeForm.StartAction.ApplyRecommended)
+            {
+                ApplyPreset(t => t.Recommended);
+                List<Tweak> sel = Selection();
+                if (sel.Count > 0)
+                {
+                    Log("Optimisation automatique (réglages recommandés)...", 0);
+                    RunOperation(sel, true);
+                }
+            }
+            else if (choice == WelcomeForm.StartAction.StartTrial)
+            {
+                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
+                UpdateProUi();
+            }
         }
 
         // ------------------------------------------------------------------
@@ -64,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 7.2 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 7.3 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -120,6 +151,7 @@ namespace BTOptimizer
                 UpdateProUi();
             });
             _menu.Items.Add(_miPro);
+            _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
             _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
             var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
             {
