@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.3.0.0")]
-[assembly: AssemblyFileVersion("6.3.0.0")]
+[assembly: AssemblyVersion("6.4.0.0")]
+[assembly: AssemblyFileVersion("6.4.0.0")]
 
 namespace BTOptimizer
 {
@@ -136,6 +136,17 @@ namespace BTOptimizer
                 Console.WriteLine("  UI License/About/KeyForm : construites OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Programmes au démarrage...");
+            try
+            {
+                var su = Sys.ListStartup();
+                int on = 0; foreach (var s in su) if (s.Enabled) on++;
+                Console.WriteLine("  " + su.Count + " entrées (" + on + " actives)");
+                using (var f = new StartupForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI StartupForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Démarrage ERREUR : " + ex.Message); }
 
             Console.WriteLine("Nettoyage disque (analyse)...");
             try

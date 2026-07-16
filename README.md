@@ -242,9 +242,11 @@ Get-ExecutionPolicy -List
 **69 optimisations** au total, chacune avec détection de son état (vert « déjà actif »).
 v6.3 ajoute : bande passante QoS libérée, plus de ports réseau, fermeture rapide des applis
 figées, Explorateur en processus séparés, Storage Sense off, blocage du redémarrage auto de
-Windows Update, désactivation du CEIP. Nouvelle fonction **Nettoyage disque** (menu ☰) :
-fichiers temporaires, cache Windows Update, Prefetch, rapports d'erreurs et corbeille, avec
-tailles et sélection. Bloc « avancé » (réversible + sauvegardé, à cocher en connaissance de cause) :
+Windows Update, désactivation du CEIP. Fonctions du menu ☰ : **Gestionnaire de démarrage** (activer/désactiver les programmes qui
+se lancent au boot, comme le Gestionnaire des tâches, réversible) et **Nettoyage disque**
+(fichiers temporaires, cache Windows Update, Prefetch, rapports d'erreurs et corbeille, avec
+tailles et sélection). v6.4 ajoute aussi : suivi des applis off, animations barre des tâches
+off, contenus dynamiques de recherche off, aperçus barre des tâches instantanés. Bloc « avancé » (réversible + sauvegardé, à cocher en connaissance de cause) :
 
 | Tweak | Catégorie | Effet |
 |-------|-----------|-------|

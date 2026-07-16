@@ -758,6 +758,50 @@ namespace BTOptimizer
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\SQMClient\Windows", "CEIPEnable"), 0)
             });
 
+            list.Add(new Tweak
+            {
+                Id = "app_tracking_off", Category = Cat.Privacy, Esport = true,
+                Name = "Ne plus suivre les applications lancées",
+                Desc = "Windows n'enregistre plus quelles applis tu ouvres pour « personnaliser » Démarrer. Menu Démarrer plus léger.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_TrackProgs", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_TrackProgs", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_TrackProgs"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "taskbar_anim_off", Category = Cat.Rapidite,
+                Name = "Désactiver les animations de la barre des tâches et des fenêtres",
+                Desc = "Interface plus sèche et plus rapide (ouverture/minimisation instantanées). Purement visuel.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarAnimations"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "search_highlights_off", Category = Cat.Privacy,
+                Name = "Désactiver les « contenus dynamiques » de la recherche",
+                Desc = "Supprime les images/suggestions animées dans la zone de recherche : moins de réseau et de fond.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDynamicSearchBoxEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "mouse_hover_taskbar", Category = Cat.Rapidite,
+                Name = "Aperçus de la barre des tâches instantanés",
+                Desc = "Réduit le délai avant l'affichage des vignettes/aperçus au survol de la barre des tâches (ExtendedUIHoverTime).",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ExtendedUIHoverTime", 100, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ExtendedUIHoverTime"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ExtendedUIHoverTime"), 100)
+            });
+
             // ===================================================================
             //  BLOC AVANCÉ (« zéro limite ») — tout réversible, sauvegardé
             // ===================================================================

@@ -533,6 +533,71 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Programmes au démarrage (comme l'onglet Démarrage du Gestionnaire)
+        // ------------------------------------------------------------------
+        public class StartupEntry
+        {
+            public string Name;
+            public string Command;
+            public string Scope;
+            public bool Machine;
+            public bool Enabled;
+        }
+
+        private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string ApprovedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
+        public static System.Collections.Generic.List<StartupEntry> ListStartup()
+        {
+            var list = new System.Collections.Generic.List<StartupEntry>();
+            AddRun(list, Registry.CurrentUser, "Utilisateur", false);
+            AddRun(list, Registry.LocalMachine, "Tous les utilisateurs", true);
+            return list;
+        }
+
+        private static void AddRun(System.Collections.Generic.List<StartupEntry> list, RegistryKey root, string scope, bool machine)
+        {
+            try
+            {
+                using (RegistryKey run = root.OpenSubKey(RunKey))
+                {
+                    if (run == null) return;
+                    using (RegistryKey appr = root.OpenSubKey(ApprovedKey))
+                    {
+                        foreach (string name in run.GetValueNames())
+                        {
+                            if (string.IsNullOrEmpty(name)) continue;
+                            var e = new StartupEntry
+                            {
+                                Name = name,
+                                Command = Convert.ToString(run.GetValue(name)),
+                                Scope = scope,
+                                Machine = machine,
+                                Enabled = true
+                            };
+                            byte[] b = (appr == null) ? null : appr.GetValue(name) as byte[];
+                            if (b != null && b.Length > 0 && b[0] == 0x03) e.Enabled = false;
+                            list.Add(e);
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>Active/désactive une entrée de démarrage sans la supprimer (même mécanisme que le Gestionnaire des tâches).</summary>
+        public static void SetStartupEnabled(StartupEntry e, bool enable)
+        {
+            RegistryKey root = e.Machine ? Registry.LocalMachine : Registry.CurrentUser;
+            using (RegistryKey appr = root.CreateSubKey(ApprovedKey))
+            {
+                var v = new byte[12];
+                v[0] = (byte)(enable ? 0x02 : 0x03);
+                appr.SetValue(e.Name, v, RegistryValueKind.Binary);
+            }
+        }
+
+        // ------------------------------------------------------------------
         //  Nettoyage disque (dossiers temporaires sûrs)
         // ------------------------------------------------------------------
         public class CleanTarget
