@@ -18,6 +18,8 @@ namespace BTOptimizer
         private readonly Queue<double> _cpuHist = new Queue<double>();
         private readonly Queue<double> _gpuHist = new Queue<double>();
         private Panel _spark;
+        private Button _btnCsv;
+        private string _csvPath;   // non nul = enregistrement en cours
 
         private static readonly Color Bg     = Color.FromArgb(20, 22, 28);
         private static readonly Color TileBg = Color.FromArgb(32, 35, 44);
@@ -82,7 +84,15 @@ namespace BTOptimizer
             close.FlatStyle = FlatStyle.Flat; close.BackColor = TileBg; close.ForeColor = Color.White;
             close.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 84);
             close.Click += (s, e) => Close();
+
+            _btnCsv = new Button();
+            _btnCsv.Text = "Enregistrer CSV : OFF"; _btnCsv.Width = 170; _btnCsv.Dock = DockStyle.Right;
+            _btnCsv.FlatStyle = FlatStyle.Flat; _btnCsv.BackColor = TileBg; _btnCsv.ForeColor = Color.White;
+            _btnCsv.FlatAppearance.BorderColor = Color.FromArgb(70, 74, 84);
+            _btnCsv.Click += OnCsvToggle;
+
             bottom.Controls.Add(legend);
+            bottom.Controls.Add(_btnCsv);
             bottom.Controls.Add(close);
 
             Controls.Add(_spark);
@@ -163,6 +173,51 @@ namespace BTOptimizer
             Push(_cpuHist, s.CpuLoad >= 0 ? s.CpuLoad : 0);
             Push(_gpuHist, (g != null && g.Ok) ? g.Util : 0);
             _spark.Invalidate();
+
+            if (_csvPath != null)
+            {
+                try
+                {
+                    var ci = System.Globalization.CultureInfo.InvariantCulture;
+                    string row = string.Join(";", new[]
+                    {
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        s.CpuLoad.ToString("0.0", ci),
+                        s.RamUsedMB.ToString(ci),
+                        double.IsNaN(s.CpuTempC) ? "" : s.CpuTempC.ToString("0.0", ci),
+                        s.TimerMs.ToString("0.00", ci),
+                        (g != null && g.Ok) ? g.TempC.ToString("0", ci) : "",
+                        (g != null && g.Ok) ? g.Util.ToString("0", ci) : "",
+                        (g != null && g.Ok) ? g.CoreMhz.ToString("0", ci) : "",
+                        (g != null && g.Ok) ? g.PowerW.ToString("0.0", ci) : "",
+                        (g != null && g.Ok) ? g.VramUsedMB.ToString(ci) : ""
+                    }) + Environment.NewLine;
+                    System.IO.File.AppendAllText(_csvPath, row);
+                }
+                catch { }
+            }
+        }
+
+        private void OnCsvToggle(object sender, EventArgs e)
+        {
+            if (_csvPath == null)
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                _csvPath = System.IO.Path.Combine(desktop,
+                    "bt-monitor-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv");
+                System.IO.File.WriteAllText(_csvPath,
+                    "horodatage;cpu_pct;ram_mo;cpu_temp_c;timer_ms;gpu_temp_c;gpu_pct;gpu_core_mhz;gpu_w;vram_mo" + Environment.NewLine);
+                _btnCsv.Text = "Enregistrer CSV : ON";
+                _btnCsv.ForeColor = Color.FromArgb(120, 230, 150);
+                Text = "BT Optimizer — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
+            }
+            else
+            {
+                _csvPath = null;
+                _btnCsv.Text = "Enregistrer CSV : OFF";
+                _btnCsv.ForeColor = Color.White;
+                Text = "BT Optimizer — Moniteur matériel";
+            }
         }
 
         private static void Push(Queue<double> q, double v)

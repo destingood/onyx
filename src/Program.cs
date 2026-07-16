@@ -8,19 +8,25 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("4.2.0.0")]
-[assembly: AssemblyFileVersion("4.2.0.0")]
+[assembly: AssemblyVersion("5.0.0.0")]
+[assembly: AssemblyFileVersion("5.0.0.0")]
 
 namespace BTOptimizer
 {
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
 #if BTTEST
             TestHarness.Run();
 #else
+            // Mode ligne de commande (gardien de démarrage / automatisation).
+            if (args.Length > 0 && args[0].StartsWith("-"))
+            {
+                Environment.ExitCode = Cli.Run(args);
+                return;
+            }
             bool isNew;
             using (var mutex = new Mutex(true, "BTOptimizer_SingleInstance", out isNew))
             {
@@ -84,6 +90,24 @@ namespace BTOptimizer
                 }
                 Console.WriteLine(string.Format("  {0,2}. [{1,-8}] {2}", i, state, t.Name));
             }
+            Console.WriteLine("Profil / gardien / plein écran...");
+            try
+            {
+                var testIds = new System.Collections.Generic.List<string> { "mouse_accel", "power_ultimate" };
+                Sys.SaveProfile(testIds);
+                System.Collections.Generic.List<string> back = Sys.LoadProfile();
+                Console.WriteLine("  Profil : sauvegardé puis relu = " + string.Join(",", back.ToArray())
+                    + (back.Count == 2 ? " (OK)" : " (ERREUR)"));
+                if (back.Count != 2) errors++;
+                Console.WriteLine("  Gardien (tâche planifiée) présent : " + Sys.GuardExists());
+                Console.WriteLine("  Plein écran au premier plan : " + Native.IsGameFullscreen());
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
+            }
+
             Console.WriteLine("Moniteur matériel (échantillon)...");
             try
             {

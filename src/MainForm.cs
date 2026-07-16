@@ -17,6 +17,9 @@ namespace BTOptimizer
         private CheckBox _chkBackup;
         private CheckBox _chkPoint;
         private CheckBox _chkTimer;
+        private CheckBox _chkAutoTimer;
+        private CheckBox _chkGuard;
+        private bool _guardEventSuppressed;
         private RichTextBox _log;
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
@@ -51,7 +54,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 4.2 — Latence, input lag & rapidité (Windows 10/11)";
+            Text = "BT Optimizer 5.0 — Latence, input lag & rapidité (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -81,15 +84,23 @@ namespace BTOptimizer
 
             _lblCount = new Label();
             _lblCount.Text = "";
-            _lblCount.SetBounds(640, 12, 244, 34);
+            _lblCount.SetBounds(640, 6, 244, 26);
             _lblCount.Font = new Font("Segoe UI Semibold", 10f);
             _lblCount.ForeColor = Color.FromArgb(0, 210, 130);
             _lblCount.BackColor = HeaderBg;
             _lblCount.TextAlign = ContentAlignment.MiddleRight;
 
+            _lblTimerRes = new Label();
+            _lblTimerRes.SetBounds(640, 32, 244, 24);
+            _lblTimerRes.TextAlign = ContentAlignment.MiddleRight;
+            _lblTimerRes.BackColor = HeaderBg;
+            _lblTimerRes.ForeColor = Color.FromArgb(165, 170, 180);
+            _lblTimerRes.Font = new Font("Segoe UI", 9f);
+
             header.Controls.Add(title);
             header.Controls.Add(sub);
             header.Controls.Add(_lblCount);
+            header.Controls.Add(_lblTimerRes);
 
             // Presets
             _btnReco = MakeButton("Preset : Recommandé", 16, 70, 160, 30, false);
@@ -149,24 +160,30 @@ namespace BTOptimizer
 
             // Options
             _chkBackup = new CheckBox();
-            _chkBackup.Text = "Sauvegarder le registre avant modification (.reg sur le Bureau)";
-            _chkBackup.SetBounds(16, 504, 430, 22);
+            _chkBackup.Text = "Sauvegarde .reg avant modification";
+            _chkBackup.SetBounds(16, 504, 240, 22);
             _chkBackup.Checked = true;
 
             _chkPoint = new CheckBox();
-            _chkPoint.Text = "Créer un point de restauration système";
-            _chkPoint.SetBounds(460, 504, 300, 22);
+            _chkPoint.Text = "Point de restauration système";
+            _chkPoint.SetBounds(262, 504, 210, 22);
             _chkPoint.Checked = true;
 
+            _chkGuard = new CheckBox();
+            _chkGuard.Text = "GARDIEN : ré-appliquer mon profil à chaque démarrage (tâche planifiée)";
+            _chkGuard.SetBounds(478, 504, 406, 22);
+            _chkGuard.Checked = Sys.GuardExists();
+            _chkGuard.CheckedChanged += OnGuardToggled;
+
             _chkTimer = new CheckBox();
-            _chkTimer.Text = "Forcer le timer Windows à 1 ms tant que l'app est ouverte (réduire l'app la garde active en zone de notification)";
-            _chkTimer.SetBounds(16, 528, 620, 22);
+            _chkTimer.Text = "Timer Windows 1 ms tant que l'app est ouverte (actif aussi réduite en zone de notification)";
+            _chkTimer.SetBounds(16, 528, 550, 22);
             _chkTimer.CheckedChanged += OnTimerToggled;
 
-            _lblTimerRes = new Label();
-            _lblTimerRes.SetBounds(640, 528, 244, 22);
-            _lblTimerRes.TextAlign = ContentAlignment.MiddleRight;
-            _lblTimerRes.ForeColor = ColInfo;
+            _chkAutoTimer = new CheckBox();
+            _chkAutoTimer.Text = "Timer 1 ms AUTO dès qu'un jeu plein écran est détecté";
+            _chkAutoTimer.SetBounds(572, 528, 312, 22);
+            _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
             // Boutons d'action
             _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 558, 268, 44, true);
@@ -217,17 +234,17 @@ namespace BTOptimizer
             trayMenu.MenuItems.Add("Quitter", (s, e) => { _tray.Visible = false; Close(); });
             _tray.ContextMenu = trayMenu;
 
-            // Rafraîchit l'affichage de la résolution timer réelle toutes les 2 s.
+            // Toutes les 2 s : résolution timer réelle + détection jeu plein écran (mode AUTO).
             _uiTimer = new Timer();
             _uiTimer.Interval = 2000;
-            _uiTimer.Tick += (s, e) => UpdateTimerLabel();
+            _uiTimer.Tick += (s, e) => { UpdateTimerState(); UpdateTimerLabel(); };
             _uiTimer.Start();
             UpdateTimerLabel();
 
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
-                panel, _chkBackup, _chkPoint, _chkTimer, _lblTimerRes,
+                panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnAutoCompare, _log
             });
@@ -616,11 +633,52 @@ namespace BTOptimizer
 
         private void OnTimerToggled(object sender, EventArgs e)
         {
-            Native.SetTimer1ms(_chkTimer.Checked);
-            if (_chkTimer.Checked)
-                Log("Timer Windows forcé à 1 ms (actif tant que la fenêtre reste ouverte).", 1);
+            UpdateTimerState();
+        }
+
+        /// <summary>Timer 1 ms effectif = case manuelle OU (mode AUTO + jeu plein écran détecté).</summary>
+        private void UpdateTimerState()
+        {
+            bool fullscreen = _chkAutoTimer.Checked && Native.IsGameFullscreen();
+            bool wanted = _chkTimer.Checked || fullscreen;
+            if (wanted == Native.TimerActive) return;
+            Native.SetTimer1ms(wanted);
+            if (wanted && fullscreen && !_chkTimer.Checked)
+                Log("Jeu plein écran détecté → timer 1 ms activé automatiquement.", 1);
+            else if (wanted)
+                Log("Timer Windows forcé à 1 ms.", 1);
             else
                 Log("Timer Windows rendu au système.", 0);
+        }
+
+        private void OnGuardToggled(object sender, EventArgs e)
+        {
+            if (_guardEventSuppressed) return;
+            if (_chkGuard.Checked)
+            {
+                List<Tweak> sel = Selection();
+                if (sel.Count == 0)
+                {
+                    MessageBox.Show(this, "Coche d'abord les optimisations à inclure dans ton profil,\npuis active le gardien.",
+                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _guardEventSuppressed = true;
+                    _chkGuard.Checked = false;
+                    _guardEventSuppressed = false;
+                    return;
+                }
+                Sys.SaveProfile(sel.Select(t => t.Id).ToList());
+                Log("Profil enregistré (" + sel.Count + " optimisation(s)) : " + Sys.ProfilePath, 0);
+                if (!Sys.SetGuard(true, Application.ExecutablePath, Log))
+                {
+                    _guardEventSuppressed = true;
+                    _chkGuard.Checked = false;
+                    _guardEventSuppressed = false;
+                }
+            }
+            else
+            {
+                Sys.SetGuard(false, Application.ExecutablePath, Log);
+            }
         }
     }
 }

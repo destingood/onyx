@@ -39,6 +39,45 @@ namespace BTOptimizer
             return 0;
         }
 
+        // ---- Détection d'un jeu / appli plein écran au premier plan ----
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int Left, Top, Right, Bottom; }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+
+        /// <summary>Vrai si la fenêtre au premier plan couvre tout son écran (jeu plein écran / borderless).</summary>
+        public static bool IsGameFullscreen()
+        {
+            try
+            {
+                IntPtr h = GetForegroundWindow();
+                if (h == IntPtr.Zero) return false;
+                RECT r;
+                if (!GetWindowRect(h, out r)) return false;
+                System.Drawing.Rectangle scr = System.Windows.Forms.Screen.FromHandle(h).Bounds;
+                if (r.Left > scr.Left || r.Top > scr.Top || r.Right < scr.Right || r.Bottom < scr.Bottom)
+                    return false;
+                uint pid;
+                GetWindowThreadProcessId(h, out pid);
+                if (pid == 0) return false;
+                if (pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return false;
+                string name = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName.ToLowerInvariant();
+                // Surfaces systèmes qui occupent l'écran sans être des jeux.
+                if (name == "explorer" || name == "searchhost" || name == "lockapp" ||
+                    name == "shellexperiencehost" || name == "startmenuexperiencehost" ||
+                    name == "dwm" || name == "idle") return false;
+                return true;
+            }
+            catch { return false; }
+        }
+
         private static bool _timerActive;
         public static bool TimerActive { get { return _timerActive; } }
 

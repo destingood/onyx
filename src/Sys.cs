@@ -364,6 +364,59 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Profil (sélection sauvegardée) et gardien de démarrage
+        // ------------------------------------------------------------------
+        public static string ProfilePath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-profile.txt"); }
+        }
+
+        public static void SaveProfile(List<string> tweakIds)
+        {
+            File.WriteAllLines(ProfilePath, tweakIds.ToArray());
+        }
+
+        public static List<string> LoadProfile()
+        {
+            var ids = new List<string>();
+            if (!File.Exists(ProfilePath)) return ids;
+            foreach (string line in File.ReadAllLines(ProfilePath))
+            {
+                string t = line.Trim();
+                if (t.Length > 0 && !t.StartsWith("#")) ids.Add(t);
+            }
+            return ids;
+        }
+
+        private const string GuardTask = "BTOptimizerGuard";
+
+        public static bool GuardExists()
+        {
+            return Run(Sys32("schtasks.exe"), "/query /tn " + GuardTask).ExitCode == 0;
+        }
+
+        /// <summary>Crée/supprime la tâche planifiée qui ré-applique le profil à l'ouverture de session.</summary>
+        public static bool SetGuard(bool enable, string exePath, Action<string, int> log)
+        {
+            if (enable)
+            {
+                string tr = "\"\\\"" + exePath + "\\\" -apply profile\"";
+                NativeResult r = Run(Sys32("schtasks.exe"),
+                    "/create /f /rl HIGHEST /sc ONLOGON /tn " + GuardTask + " /tr " + tr);
+                if (r.ExitCode == 0)
+                {
+                    log("Gardien activé : le profil sera ré-appliqué à chaque ouverture de session.", 1);
+                    return true;
+                }
+                log("Création de la tâche planifiée impossible (code " + r.ExitCode + ").", 3);
+                return false;
+            }
+            NativeResult d = Run(Sys32("schtasks.exe"), "/delete /f /tn " + GuardTask);
+            if (d.ExitCode == 0) log("Gardien désactivé (tâche planifiée supprimée).", 0);
+            return d.ExitCode == 0;
+        }
+
+        // ------------------------------------------------------------------
         //  Sauvegarde / restauration du registre
         // ------------------------------------------------------------------
         public static string ExportBackup(List<Tweak> tweaks, Action<string, int> log)

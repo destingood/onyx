@@ -44,6 +44,22 @@ Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accé
   récents de `tools\`) : **comparaison AVANT/APRÈS** — bannière amélioration/dégradation,
   tuiles de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
 
+### Système autonome (v5)
+
+- **GARDIEN au démarrage** : case à cocher qui enregistre ta sélection comme *profil*
+  (`bt-profile.txt`) et crée une **tâche planifiée** (`BTOptimizerGuard`, élévation
+  automatique) qui ré-applique silencieusement le profil à **chaque ouverture de
+  session** — les réglages écrasés par une mise à jour Windows reviennent tout seuls.
+  Décocher la case supprime la tâche. Journal silencieux : `bt-optimizer-log.txt`.
+- **Timer 1 ms AUTO** : case dédiée — dès qu'un **jeu plein écran / borderless** passe
+  au premier plan, le timer 1 ms s'active tout seul (et se relâche au retour bureau).
+- **Mode ligne de commande** (automatisation) :
+  `BTOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]`
+  et `BTOptimizer.exe -revert profile|all` — sans interface, code retour 0 = succès.
+- **Enregistrement CSV du moniteur** : bouton `Enregistrer CSV` — une ligne par seconde
+  (CPU %, RAM, temp CPU, timer, temp/charge/fréquence/watts GPU, VRAM) dans
+  `bt-monitor-<date>.csv` sur le Bureau. Parfait pour tracer une session de jeu.
+
 ### Moniteur matériel en direct
 
 Bouton **`Moniteur matériel`** : fenêtre qui rafraîchit chaque seconde —

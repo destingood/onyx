@@ -27,7 +27,7 @@ echo Compilation de BTOptimizer.exe ...
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /codepage:65001 ^
   /win32manifest:src\app.manifest /win32icon:src\app.ico ^
   /r:System.dll /r:System.Core.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Management.dll ^
-  /out:BTOptimizer.exe src\Model.cs src\Native.cs src\Sys.cs src\Tweaks.cs src\Engine.cs src\Bench.cs src\DpcIsr.cs src\HwMonitor.cs src\LatencyForm.cs src\CompareForm.cs src\MonitorForm.cs src\MainForm.cs src\Program.cs
+  /out:BTOptimizer.exe src\Model.cs src\Native.cs src\Sys.cs src\Tweaks.cs src\Engine.cs src\Bench.cs src\DpcIsr.cs src\HwMonitor.cs src\LatencyForm.cs src\CompareForm.cs src\MonitorForm.cs src\Cli.cs src\MainForm.cs src\Program.cs
 
 if %errorlevel% neq 0 (
     echo.
