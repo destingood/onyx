@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("4.1.0.0")]
-[assembly: AssemblyFileVersion("4.1.0.0")]
+[assembly: AssemblyVersion("4.2.0.0")]
+[assembly: AssemblyFileVersion("4.2.0.0")]
 
 namespace BTOptimizer
 {
@@ -84,6 +84,29 @@ namespace BTOptimizer
                 }
                 Console.WriteLine(string.Format("  {0,2}. [{1,-8}] {2}", i, state, t.Name));
             }
+            Console.WriteLine("Moniteur matériel (échantillon)...");
+            try
+            {
+                using (var mon = new HwMonitor())
+                {
+                    System.Threading.Thread.Sleep(1000);
+                    HwSample hs = mon.Sample();
+                    Console.WriteLine(string.Format("  CPU={0:0}% RAM={1:0.0}/{2:0.0}Go CPUtemp={3} GPU={4} {5:0}C {6:0}% {7:0}/{8:0}MHz {9:0}W VRAM={10:0.0}/{11:0.0}Go",
+                        hs.CpuLoad, hs.RamUsedMB / 1024.0, hs.RamTotalMB / 1024.0,
+                        double.IsNaN(hs.CpuTempC) ? "n/d" : hs.CpuTempC.ToString("0") + "C",
+                        hs.Gpu.Ok ? hs.Gpu.Name : "n/d", hs.Gpu.TempC, hs.Gpu.Util,
+                        hs.Gpu.CoreMhz, hs.Gpu.MemMhz, hs.Gpu.PowerW,
+                        hs.Gpu.VramUsedMB / 1024.0, hs.Gpu.VramTotalMB / 1024.0));
+                }
+                using (var f = new MonitorForm()) { f.CreateControl(); }
+                Console.WriteLine("  UI MonitorForm : construite OK.");
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                Console.WriteLine("  Moniteur ERREUR : " + ex.Message);
+            }
+
             Console.WriteLine("Mini-mesure de latence (3 s)...");
             try
             {

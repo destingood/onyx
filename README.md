@@ -39,9 +39,21 @@ Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accé
   nombre de DPC/ISR, pire latence (µs) et temps total par pilote, avec description
   lisible (NVIDIA, TCP/IP, audio HD, hyperviseur…). Les pilotes lents sont surlignés.
   La capture ETW ouvre cette fenêtre automatiquement.
-- Bouton **`Comparer avec (AVANT)…`** dans l'analyse : choisis un rapport de référence
-  et obtiens la **comparaison AVANT/APRÈS** — bannière amélioration/dégradation, tuiles
-  de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
+- Bouton **`Comparer avec (AVANT)…`** dans l'analyse (ou **`Comparer les 2 dernières
+  mesures`** sur la fenêtre principale, qui choisit tout seul les deux rapports les plus
+  récents de `tools\`) : **comparaison AVANT/APRÈS** — bannière amélioration/dégradation,
+  tuiles de deltas (pire DPC/ISR, DPC/s) et tableau par pilote avec Δ en µs coloré.
+
+### Moniteur matériel en direct
+
+Bouton **`Moniteur matériel`** : fenêtre qui rafraîchit chaque seconde —
+tuiles **charge CPU** (PDH), **RAM utilisée/totale**, **température CPU** (zone ACPI, si
+exposée), **timer système**, et pour le **GPU NVIDIA** (via `nvidia-smi`) : nom,
+température, charge, fréquences cœur/mémoire, consommation en watts et **VRAM**.
+Deux **sparklines** tracent l'historique charge CPU (cyan) et charge GPU (vert).
+Aucune dépendance externe : PDH + `GlobalMemoryStatusEx` + WMI + l'outil NVIDIA déjà
+présent (la lib LibreHardwareMonitor du dossier cible .NET 10, incompatible avec le
+runtime .NET Framework de l'exe, donc non liée).
 
 ## Dépôt git
 

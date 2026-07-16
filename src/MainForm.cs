@@ -20,6 +20,7 @@ namespace BTOptimizer
         private RichTextBox _log;
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
+        private Button _btnMonitor, _btnAutoCompare;
         private Label _lblCount, _lblTimerRes;
         private NotifyIcon _tray;
         private Timer _uiTimer;
@@ -50,8 +51,8 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 4.1 — Latence, input lag & rapidité (Windows 10/11)";
-            ClientSize = new Size(900, 748);
+            Text = "BT Optimizer 4.2 — Latence, input lag & rapidité (Windows 10/11)";
+            ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -176,9 +177,14 @@ namespace BTOptimizer
             _btnLatency = MakeButton("Analyse latence", 692, 558, 192, 44, false);
             _btnLatency.ForeColor = Accent;
 
+            // Ligne outils
+            _btnMonitor = MakeButton("Moniteur matériel (CPU / RAM / GPU en direct)", 16, 610, 430, 32, false);
+            _btnMonitor.ForeColor = Accent;
+            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures DPC/ISR", 454, 610, 430, 32, false);
+
             // Journal
             _log = new RichTextBox();
-            _log.SetBounds(16, 612, 868, 122);
+            _log.SetBounds(16, 650, 868, 138);
             _log.ReadOnly = true;
             _log.BackColor = Color.White;
             _log.Font = new Font("Consolas", 8.5f);
@@ -195,6 +201,8 @@ namespace BTOptimizer
             _btnReport.Click += OnReportClicked;
             _btnMeasure.Click += OnMeasureClicked;
             _btnLatency.Click += OnLatencyClicked;
+            _btnMonitor.Click += (s, e) => { using (var f = new MonitorForm()) f.ShowDialog(this); };
+            _btnAutoCompare.Click += OnAutoCompareClicked;
             FormClosing += OnFormClosingCleanup;
             Resize += OnResizeToTray;
 
@@ -220,7 +228,8 @@ namespace BTOptimizer
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
                 panel, _chkBackup, _chkPoint, _chkTimer, _lblTimerRes,
-                _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency, _log
+                _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
+                _btnMonitor, _btnAutoCompare, _log
             });
         }
 
@@ -411,7 +420,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }
@@ -505,6 +514,37 @@ namespace BTOptimizer
                 }
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                     ShowLatency(dlg.FileName);
+            }
+        }
+
+        private void OnAutoCompareClicked(object sender, EventArgs e)
+        {
+            string tools = System.IO.Path.Combine(Application.StartupPath, "tools");
+            if (!System.IO.Directory.Exists(tools))
+            {
+                MessageBox.Show(this, "Aucun dossier « tools ». Lance d'abord une capture (Mesurer latence → ETW).",
+                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var files = new System.IO.DirectoryInfo(tools).GetFiles("dpcisr-*.txt");
+            if (files.Length < 2)
+            {
+                MessageBox.Show(this, "Il faut au moins 2 rapports DPC/ISR dans « tools » pour comparer.\n" +
+                    "Fais deux captures (Mesurer latence → Oui à l'ETW), avant et après tes changements.",
+                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            Array.Sort(files, (a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
+            try
+            {
+                DpcIsrReport after = DpcIsrReport.Parse(files[0].FullName);   // le plus récent
+                DpcIsrReport before = DpcIsrReport.Parse(files[1].FullName);  // le précédent
+                Log("Comparaison auto : AVANT " + files[1].Name + "  →  APRÈS " + files[0].Name, 0);
+                using (var f = new CompareForm(before, after)) f.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                Log("Comparaison impossible : " + ex.Message, 3);
             }
         }
 
