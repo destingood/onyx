@@ -93,6 +93,7 @@ namespace BTOptimizer
             {
                 _status.Text = "Essai expiré — une clé est nécessaire pour la version Pro.";
             }
+            Theme.Apply(this);
         }
 
         private void OnActivate(object sender, EventArgs e)

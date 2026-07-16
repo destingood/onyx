@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.5.0.0")]
-[assembly: AssemblyFileVersion("6.5.0.0")]
+[assembly: AssemblyVersion("6.6.0.0")]
+[assembly: AssemblyFileVersion("6.6.0.0")]
 
 namespace BTOptimizer
 {
@@ -136,6 +136,17 @@ namespace BTOptimizer
                 Console.WriteLine("  UI License/About/KeyForm : construites OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Thème sombre...");
+            try
+            {
+                bool was = Theme.Dark;
+                if (!Theme.Dark) Theme.Toggle();
+                using (var f = new AboutForm()) { f.CreateControl(); } // le ctor applique le thème
+                Console.WriteLine("  Thème appliqué en sombre OK (Dark=" + Theme.Dark + ")");
+                if (Theme.Dark != was) Theme.Toggle(); // remet l'état initial
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Thème ERREUR : " + ex.Message); }
 
             Console.WriteLine("Services (curé)...");
             try

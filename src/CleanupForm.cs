@@ -22,6 +22,7 @@ namespace BTOptimizer
             _log = log;
             Build();
             Analyze();
+            Theme.Apply(this);
         }
 
         private void Build()

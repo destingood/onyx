@@ -24,6 +24,7 @@ namespace BTOptimizer
             _before = before;
             _after = after;
             Build();
+            Theme.Apply(this);
         }
 
         private void Build()

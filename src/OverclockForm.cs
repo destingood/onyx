@@ -30,6 +30,7 @@ namespace BTOptimizer
             _gpu = Sys.QueryGpuOc();
             Build();
             LoadSaved();
+            Theme.Apply(this);
         }
 
         private void Build()

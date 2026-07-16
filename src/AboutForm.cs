@@ -64,6 +64,7 @@ namespace BTOptimizer
             close.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             Controls.Add(close);
             AcceptButton = close;
+            Theme.Apply(this);
         }
     }
 }

@@ -56,6 +56,7 @@ namespace BTOptimizer
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
             Log("Prêt. Aucune modification n'est faite avant de cliquer sur APPLIQUER.", 0);
             RefreshStates();
+            Theme.Apply(this);
         }
 
         // ------------------------------------------------------------------
@@ -63,7 +64,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.5 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -110,6 +111,14 @@ namespace BTOptimizer
             });
             _menu.Items.Add(_miPro);
             _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
+            var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
+            {
+                Theme.Toggle();
+                ((ToolStripMenuItem)s).Checked = Theme.Dark;
+                Theme.Apply(this);
+            });
+            miDark.Checked = Theme.Dark;
+            _menu.Items.Add(miDark);
             _menu.Items.Add(new ToolStripSeparator());
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });

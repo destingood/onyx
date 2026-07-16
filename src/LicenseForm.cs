@@ -94,6 +94,7 @@ namespace BTOptimizer
 
             // Ordre d'empilement : banner (haut), bottom (bas), pad (remplit).
             Controls.SetChildIndex(banner, 0);
+            Theme.Apply(this);
         }
 
         /// <summary>Retourne true si les conditions sont acceptées (affiche le dialogue si nécessaire).</summary>
