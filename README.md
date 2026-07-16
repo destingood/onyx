@@ -147,6 +147,12 @@ pertes de FPS et d'input lag en jeu.
 Le `CoreSync.exe` d'**Adobe** Creative Cloud (synchro cloud, sans rapport) est reconnu
 via son chemin d'installation et laissé tranquille.
 
+Le diagnostic couvre aussi **Samsung Display Manager** (l'appli compagnon des moniteurs
+Samsung récents, inutile pour CoreSync puisque l'éclairage est calculé par l'écran) et
+son service **MAPT** (pont réseau B2B via la prise LAN du moniteur, sans intérêt à la
+maison) : bouton **`Désactiver`** → fermeture de l'appli, retrait du démarrage
+automatique (Run, raccourcis, tâches planifiées) et arrêt + désactivation du service.
+
 ## Dépôt git
 
 Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,

@@ -238,6 +238,10 @@ namespace BTOptimizer
                     case FixKind.DisableCoreSync:
                         DisableCoreSync();
                         break;
+
+                    case FixKind.DisableSdm:
+                        DisableSdm();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -297,6 +301,26 @@ namespace BTOptimizer
                 MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
                     + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
                     "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Reload();
+        }
+
+        private void DisableSdm()
+        {
+            if (MessageBox.Show(this,
+                    "Neutraliser Samsung Display Manager (et le service MAPT s'il est installé) ?\n\n"
+                    + "• Cette appli compagnon n'est pas nécessaire : CoreSync / l'éclairage est géré par le moniteur lui-même (menu OSD).\n"
+                    + "• MAPT est un service B2B (pont réseau via la prise LAN du moniteur), inutile à la maison.\n"
+                    + "• Action : fermeture de l'appli, retrait du démarrage automatique (Run, raccourcis, tâches planifiées), arrêt + désactivation du service MAPT.\n"
+                    + "• Réversible : relance l'appli, réactive la tâche dans le Planificateur, ou remets le service en « Manuel » (services.msc).",
+                    "Samsung Display Manager", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+            int n = 0;
+            try { n = SdmCheck.Disable(_log); }
+            catch (Exception ex) { if (_log != null) _log("SDM : échec (" + ex.Message + ").", 3); }
+            MessageBox.Show(this,
+                n > 0 ? "Samsung Display Manager neutralisé (" + n + " action(s))."
+                      : "Rien à faire : l'appli ne tournait pas et aucun démarrage automatique ni service MAPT n'a été trouvé.",
+                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Reload();
         }
 

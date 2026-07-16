@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -79,6 +79,23 @@ namespace BTOptimizer
                     f.Add(new Finding(0, "Samsung CoreSync présent mais inactif" + mon + " : aucun impact."));
                 else if (cs.SamsungMonitor != null)
                     f.Add(new Finding(0, "Écran Samsung détecté (" + cs.SamsungMonitor + "), logiciel CoreSync absent : OK. Saccades liées à l'éclairage ? Désactive CoreSync dans le menu du moniteur (Jeu → Éclairage Core)."));
+            }
+            catch { }
+
+            // Samsung Display Manager + service MAPT — appli compagnon inutile pour
+            // CoreSync (l'éclairage est calculé par le moniteur) ; MAPT = pont réseau
+            // B2B via la prise LAN du moniteur, sans intérêt à la maison.
+            try
+            {
+                SdmCheck.Status sd = SdmCheck.Probe();
+                if (sd.MaptRunning || sd.MaptInstalled)
+                    f.Add(new Finding(1, "Service Samsung MAPT " + (sd.MaptRunning ? "actif" : "installé") + " (pont réseau B2B via le moniteur) — inutile à la maison, à désactiver.", FixKind.DisableSdm, "Désactiver"));
+                else if (sd.Running > 0)
+                    f.Add(new Finding(1, "Samsung Display Manager tourne en fond — inutile pour CoreSync (géré par l'écran) ; un logiciel de fond en moins = moins de saccades.", FixKind.DisableSdm, "Désactiver"));
+                else if (sd.StartupEnabled)
+                    f.Add(new Finding(1, "Samsung Display Manager démarre avec Windows — inutile pour CoreSync (géré par l'écran).", FixKind.DisableSdm, "Désactiver"));
+                else if (sd.Installed)
+                    f.Add(new Finding(0, "Samsung Display Manager présent mais inactif : aucun impact."));
             }
             catch { }
 
