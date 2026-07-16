@@ -1174,6 +1174,24 @@ namespace BTOptimizer
             Run(Sys32("ipconfig.exe"), "/flushdns");
         }
 
+        /// <summary>Réparation réseau standard (vide le cache DNS, réinitialise Winsock et la pile TCP/IP). Redémarrage requis.</summary>
+        public static void NetworkRepair(Action<string, int> log)
+        {
+            var steps = new[]
+            {
+                new[] { Sys32("ipconfig.exe"), "/flushdns", "Cache DNS vidé" },
+                new[] { Sys32("netsh.exe"), "winsock reset", "Winsock réinitialisé" },
+                new[] { Sys32("netsh.exe"), "int ip reset", "Pile TCP/IP réinitialisée" },
+                new[] { Sys32("netsh.exe"), "int tcp reset", "Paramètres TCP réinitialisés" },
+            };
+            foreach (string[] s in steps)
+            {
+                NativeResult r = Run(s[0], s[1]);
+                log(s[2] + (r.ExitCode == 0 ? "." : " (code " + r.ExitCode + ")."), r.ExitCode == 0 ? 1 : 2);
+            }
+            log("Réparation réseau terminée. Un REDÉMARRAGE est nécessaire.", 2);
+        }
+
         // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------

@@ -64,7 +64,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 7.1 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 7.2 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -136,6 +136,17 @@ namespace BTOptimizer
             {
                 Log("Nettoyage de la mémoire...", 0);
                 System.Threading.Tasks.Task.Run(() => Sys.CleanMemory(Log));
+            });
+            _menu.Items.Add("Réparer le réseau (Winsock / TCP-IP)...", null, (s, e) =>
+            {
+                if (MessageBox.Show(this,
+                        "Réinitialiser la connexion réseau ?\n\n"
+                        + "Vide le cache DNS, réinitialise Winsock et la pile TCP/IP.\n"
+                        + "Règle la plupart des problèmes de connexion. Un REDÉMARRAGE sera nécessaire.",
+                        "Réparer le réseau", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                    return;
+                Log("Réparation réseau...", 0);
+                System.Threading.Tasks.Task.Run(() => Sys.NetworkRepair(Log));
             });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);

@@ -944,6 +944,28 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "auto_maintenance_off", Category = Cat.Systeme,
+                Name = "Désactiver la maintenance automatique de Windows",
+                Desc = "Windows ne lance plus ses tâches de maintenance (défrag, analyses…) en arrière-plan de façon imprévisible. À relancer manuellement au besoin.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "fth_off", Category = Cat.Systeme,
+                Name = "Désactiver le tas tolérant aux pannes (Fault Tolerant Heap)",
+                Desc = "Supprime une couche de compatibilité qui peut ralentir certaines applications qui ont planté par le passé. « Rétablir » le réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\FTH" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\FTH", "Enabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\FTH", "Enabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\FTH", "Enabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "aero_shake_off", Category = Cat.Rapidite,
                 Name = "Désactiver « Aero Shake » (secouer pour réduire les fenêtres)",
                 Desc = "Empêche la réduction accidentelle de toutes les fenêtres quand tu bouges vite une fenêtre.",
