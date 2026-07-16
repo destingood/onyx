@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 7.3 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 7.4 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -162,6 +162,7 @@ namespace BTOptimizer
             miDark.Checked = Theme.Dark;
             _menu.Items.Add(miDark);
             _menu.Items.Add(new ToolStripSeparator());
+            _menu.Items.Add("Composants du système (infos matériel)...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
