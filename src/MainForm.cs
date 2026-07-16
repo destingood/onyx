@@ -26,6 +26,7 @@ namespace BTOptimizer
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
         private Button _btnAuto, _btnBench, _btnMenu;
         private ContextMenuStrip _menu;
+        private ToolStripMenuItem _miPro;
         private TextBox _search;
         private readonly List<GroupBox> _groups = new List<GroupBox>();
         private HwProfile _hw;
@@ -48,6 +49,8 @@ namespace BTOptimizer
             _tweaks = Catalog.All();
             BuildUi();
             Log("Système : " + Sys.OsDescription(), 0);
+            Log("Édition : " + License.Status(), License.IsPro ? 1 : 0);
+            UpdateProUi();
             try { _hw = Hardware.Detect(); Log("Matériel : " + _hw.Summary(), 0); } catch { }
             if (!Sys.SameUser)
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
@@ -60,7 +63,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 6.0 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 6.1 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -100,6 +103,12 @@ namespace BTOptimizer
 
             _menu = new ContextMenuStrip();
             _menu.Items.Add("À propos de BT Optimizer", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
+            {
+                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
+                UpdateProUi();
+            });
+            _menu.Items.Add(_miPro);
             _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
@@ -257,12 +266,13 @@ namespace BTOptimizer
             _log.BorderStyle = BorderStyle.FixedSingle;
 
             _btnReco.Click += (s, e) => ApplyPreset(t => t.Recommended);
-            _btnEsport.Click += (s, e) => ApplyPreset(t => t.Esport);
+            _btnEsport.Click += (s, e) => { if (RequirePro("Preset eSport")) ApplyPreset(t => t.Esport); };
             _btnAll.Click += (s, e) => ApplyPreset(t => true);
             _btnNone.Click += (s, e) => ApplyPreset(t => false);
-            _btnAuto.Click += OnAutoTune;
+            _btnAuto.Click += (s, e) => { if (RequirePro("Auto-tune")) OnAutoTune(s, e); };
             _btnBench.Click += (s, e) =>
             {
+                if (!RequirePro("Preset Benchmark")) return;
                 var ids = Hardware.BenchmarkIds(_tweaks);
                 ApplyPreset(t => ids.Contains(t.Id));
                 Log("Preset Benchmark : tout sélectionné sauf les tweaks sécurité (Spectre, VBS).", 0);
@@ -276,8 +286,8 @@ namespace BTOptimizer
             _btnLatency.Click += OnLatencyClicked;
             _btnMonitor.Click += (s, e) => { using (var f = new MonitorForm()) f.ShowDialog(this); };
             _btnAutoCompare.Click += OnAutoCompareClicked;
-            _btnOverclock.Click += (s, e) => { using (var f = new OverclockForm(Log)) f.ShowDialog(this); };
-            _btnDns.Click += (s, e) => { using (var f = new DnsForm(Log)) f.ShowDialog(this); };
+            _btnOverclock.Click += (s, e) => { if (RequirePro("Overclock")) using (var f = new OverclockForm(Log)) f.ShowDialog(this); };
+            _btnDns.Click += (s, e) => { if (RequirePro("DNS rapide")) using (var f = new DnsForm(Log)) f.ShowDialog(this); };
             FormClosing += OnFormClosingCleanup;
             Resize += OnResizeToTray;
 
@@ -419,6 +429,21 @@ namespace BTOptimizer
         {
             foreach (CheckBox cb in _boxes)
                 cb.Checked = selector((Tweak)cb.Tag);
+        }
+
+        /// <summary>Renvoie true si Pro (ou si l'utilisateur active une licence à l'instant), sinon false.</summary>
+        private bool RequirePro(string feature)
+        {
+            if (License.IsPro) return true;
+            using (var f = new LicenseKeyForm(feature)) f.ShowDialog(this);
+            if (License.IsPro) { UpdateProUi(); return true; }
+            return false;
+        }
+
+        private void UpdateProUi()
+        {
+            if (_miPro != null)
+                _miPro.Text = License.IsPro ? ("Édition Pro active (" + License.Licensee + ")") : "Activer la version Pro / entrer une clé";
         }
 
         private void OnAutoTune(object sender, EventArgs e)
@@ -782,6 +807,14 @@ namespace BTOptimizer
         private void OnGuardToggled(object sender, EventArgs e)
         {
             if (_guardEventSuppressed) return;
+            if (_chkGuard.Checked && !License.IsPro)
+            {
+                if (!RequirePro("Gardien de démarrage"))
+                {
+                    _guardEventSuppressed = true; _chkGuard.Checked = false; _guardEventSuppressed = false;
+                    return;
+                }
+            }
             if (_chkGuard.Checked)
             {
                 List<Tweak> sel = Selection();

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("6.0.0.0")]
-[assembly: AssemblyFileVersion("6.0.0.0")]
+[assembly: AssemblyVersion("6.1.0.0")]
+[assembly: AssemblyFileVersion("6.1.0.0")]
 
 namespace BTOptimizer
 {
@@ -109,13 +109,24 @@ namespace BTOptimizer
                 Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
             }
 
-            Console.WriteLine("Commercial (EULA / fenêtres)...");
+            Console.WriteLine("Commercial (EULA / licence / fenêtres)...");
             try
             {
                 Console.WriteLine("  EULA version acceptée : " + Sys.EulaAcceptedVersion());
+                string tok = Environment.GetEnvironmentVariable("BT_LICENSE");
+                if (!string.IsNullOrEmpty(tok))
+                {
+                    bool ok = License.Activate(tok, false);
+                    Console.WriteLine("  Activation clé test : " + (ok ? "VALIDE -> " + License.Status() : "REJETÉE"));
+                    if (!ok) errors++;
+                    // clé falsifiée : doit être rejetée
+                    bool bad = License.Activate("ZmFrZQ==", false);
+                }
+                Console.WriteLine("  Édition : " + License.Status());
                 using (var f = new LicenseForm()) { f.CreateControl(); }
                 using (var f = new AboutForm()) { f.CreateControl(); }
-                Console.WriteLine("  UI LicenseForm + AboutForm : construites OK.");
+                using (var f = new LicenseKeyForm("Test")) { f.CreateControl(); }
+                Console.WriteLine("  UI License/About/KeyForm : construites OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
 

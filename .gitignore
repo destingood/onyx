@@ -12,7 +12,16 @@ dist/
 tools/LibreHardwareMonitor/
 tools/npi/
 
+# CLE PRIVEE DE LICENCE - NE JAMAIS COMMITER NI DISTRIBUER
+seller/private.xml
+seller/bin/
+seller/obj/
+installer/Output/
+
 # Fichiers d'etat generes par l'app a l'execution
+bt-license.txt
+bt-eula.txt
+bt-nvidia-lowlatency.nip
 bt-profile.txt
 bt-gpuoc.txt
 bt-optimizer-log.txt

@@ -1,0 +1,28 @@
+CONDITIONS D'UTILISATION ET AVERTISSEMENT — BT OPTIMIZER
+
+BT Optimizer (« le logiciel ») modifie des paramètres système de Windows : registre,
+plan d'alimentation, services, réglages réseau, DNS et pilote graphique.
+
+1. RISQUES. Certaines options réduisent volontairement des protections de sécurité
+(mitigations Spectre/Meltdown, Intégrité de la mémoire / VBS) ou modifient le
+comportement matériel (power limit et fréquences du GPU). Elles ne sont ni cochées par
+défaut ni incluses dans les presets automatiques, et doivent être activées en
+connaissance de cause.
+
+2. RÉVERSIBILITÉ. Chaque modification est réversible ; une sauvegarde du registre (.reg)
+et un point de restauration système peuvent être créés avant application. Il vous
+appartient de les créer et de les conserver.
+
+3. AUCUNE GARANTIE. Le logiciel est fourni « en l'état », sans garantie d'aucune sorte.
+Vous l'utilisez à vos seuls risques. L'éditeur ne peut être tenu responsable d'une perte
+de données, d'une instabilité, d'une baisse de performances, d'une perte de garantie
+matérielle ou de tout dommage direct ou indirect.
+
+4. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD ou Intel.
+Toutes les marques citées appartiennent à leurs propriétaires respectifs.
+
+5. USAGE. Vous êtes responsable de la conformité de l'usage sur les machines que vous
+administrez.
+
+En installant et en utilisant le logiciel, vous reconnaissez avoir lu, compris et
+accepté ces conditions.
