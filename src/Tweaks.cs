@@ -686,6 +686,47 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "dns_negative_cache_off", Category = Cat.Reseau, Esport = true,
+                Name = "Ne pas mémoriser les échecs DNS (réessai immédiat)",
+                Desc = "Windows garde en cache les résolutions DNS échouées pendant 5 s. Ce réglage les oublie aussitôt (MaxNegativeCacheTtl=0) : une résolution qui a raté un instant est retentée tout de suite au lieu d'échouer 5 s. « Rétablir » remet le comportement par défaut.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "MaxNegativeCacheTtl", 0, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "NegativeCacheTime", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "MaxNegativeCacheTtl");
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "NegativeCacheTime");
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters", "MaxNegativeCacheTtl"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ipv6_tunnels_off", Category = Cat.Reseau, Esport = true, Reboot = true,
+                Name = "Désactiver les tunnels IPv6 (Teredo / 6to4 / ISATAP)",
+                Desc = "Coupe les interfaces de tunnel IPv6 (Teredo, 6to4, ISATAP) souvent inutiles et sources de latence/instabilité, tout en gardant l'IPv6 natif et l'IPv4 intacts (DisabledComponents=0x01). « Rétablir » réactive les tunnels.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters", "DisabledComponents", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters", "DisabledComponents"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters", "DisabledComponents"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "smb_throttle_off", Category = Cat.Reseau, Reboot = true,
+                Name = "SMB : débit maximal sur le réseau local (NAS / partages)",
+                Desc = "Désactive le bridage de bande passante SMB (DisableBandwidthThrottling=1) pour de meilleurs débits vers un NAS ou un partage Windows sur le LAN. Sans effet si tu ne fais pas de transfert de fichiers réseau. « Rétablir » remet le comportement par défaut.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters", "DisableBandwidthThrottling", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters", "DisableBandwidthThrottling"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters", "DisableBandwidthThrottling"), 1)
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "hung_timeout", Category = Cat.Rapidite,
                 Name = "Fermer plus vite les applications qui ne répondent pas",
                 Desc = "Réduit les délais avant que Windows considère une appli figée (HungAppTimeout, WaitToKillAppTimeout). Récupération plus rapide en cas de blocage.",
