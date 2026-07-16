@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("5.4.0.0")]
-[assembly: AssemblyFileVersion("5.4.0.0")]
+[assembly: AssemblyVersion("5.5.0.0")]
+[assembly: AssemblyFileVersion("5.5.0.0")]
 
 namespace BTOptimizer
 {
@@ -112,6 +112,10 @@ namespace BTOptimizer
             try
             {
                 Console.WriteLine("  " + Sys.CurrentDnsSummary().Replace("\r\n", "\n  "));
+                double c = DpcHelperMs("1.1.1.1");
+                double g = DpcHelperMs("8.8.8.8");
+                Console.WriteLine("  Latence DNS : Cloudflare 1.1.1.1 = " + (c < 0 ? "—" : c.ToString("0") + " ms")
+                    + " | Google 8.8.8.8 = " + (g < 0 ? "—" : g.ToString("0") + " ms"));
                 using (var f = new DnsForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI DnsForm : construite OK.");
             }
@@ -227,6 +231,12 @@ namespace BTOptimizer
             }
             Console.WriteLine("TEST TERMINÉ — " + i + " optimisations chargées, " + errors + " erreur(s).");
             Environment.Exit(errors == 0 ? 0 : 1);
+        }
+
+        private static double DpcHelperMs(string server)
+        {
+            try { return DnsBench.QueryMs(server, "www.google.com", 800, 3); }
+            catch { return -1; }
         }
     }
 #endif

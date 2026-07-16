@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BTOptimizer
@@ -10,6 +11,8 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private ComboBox _combo;
         private Label _current;
+        private Label _results;
+        private Button _btnTest, _btnApply, _btnFlush, _btnClose;
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
@@ -42,7 +45,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "BT Optimizer — DNS";
-            ClientSize = new Size(560, 340);
+            ClientSize = new Size(560, 430);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -68,20 +71,74 @@ namespace BTOptimizer
             _combo.SelectedIndex = 1; // Cloudflare par défaut
             Controls.Add(lblSel); Controls.Add(_combo);
 
+            _btnTest = MakeBtn("Tester la latence des résolveurs", 18, 240, 260, 30, false);
+            _btnTest.Click += OnTest;
+            Controls.Add(_btnTest);
+
+            _results = new Label
+            {
+                Location = new Point(286, 240), Size = new Size(256, 96), ForeColor = Color.FromArgb(60, 64, 72),
+                Font = new Font("Consolas", 8.5f)
+            };
+            Controls.Add(_results);
+
             var info = new Label
             {
                 Text = "Appliqué à toutes les cartes réseau actives (IPv4). Le cache DNS est vidé automatiquement.",
-                Location = new Point(18, 240), Size = new Size(524, 34), ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5f)
+                Location = new Point(18, 276), Size = new Size(260, 60), ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5f)
             };
             Controls.Add(info);
 
-            var apply = MakeBtn("APPLIQUER", 18, 288, 200, 38, true);
-            apply.Click += OnApply;
-            var flush = MakeBtn("Vider le cache DNS", 228, 288, 170, 38, false);
-            flush.Click += (s, e) => { Sys.FlushDns(); if (_log != null) _log("Cache DNS vidé.", 1); };
-            var close = MakeBtn("Fermer", 452, 288, 90, 38, false);
-            close.Click += (s, e) => Close();
-            Controls.Add(apply); Controls.Add(flush); Controls.Add(close);
+            _btnApply = MakeBtn("APPLIQUER", 18, 378, 200, 38, true);
+            _btnApply.Click += OnApply;
+            _btnFlush = MakeBtn("Vider le cache DNS", 228, 378, 170, 38, false);
+            _btnFlush.Click += (s, e) => { Sys.FlushDns(); if (_log != null) _log("Cache DNS vidé.", 1); };
+            _btnClose = MakeBtn("Fermer", 452, 378, 90, 38, false);
+            _btnClose.Click += (s, e) => Close();
+            Controls.Add(_btnApply); Controls.Add(_btnFlush); Controls.Add(_btnClose);
+        }
+
+        private void OnTest(object sender, EventArgs e)
+        {
+            _btnTest.Enabled = false; _btnApply.Enabled = false;
+            _results.ForeColor = Color.FromArgb(60, 64, 72);
+            _results.Text = "Test en cours...";
+            Cursor = Cursors.WaitCursor;
+            Task.Run(() =>
+            {
+                var lines = new System.Collections.Generic.List<string>();
+                double best = double.MaxValue; int bestIdx = -1;
+                for (int i = 0; i < Providers.Length; i++)
+                {
+                    Provider p = Providers[i];
+                    if (p.Servers == null) continue;
+                    double ms = DnsBench.QueryMs(p.Servers[0], "www.google.com", 800, 3);
+                    string label = p.Servers[0];
+                    if (ms < 0) lines.Add(string.Format("{0,-15} : —", label));
+                    else
+                    {
+                        lines.Add(string.Format("{0,-15} : {1,3:0} ms", label, ms));
+                        if (ms < best) { best = ms; bestIdx = i; }
+                    }
+                }
+                string txt = string.Join("\r\n", lines.ToArray());
+                if (bestIdx >= 0) txt += "\r\n→ plus rapide : " + Providers[bestIdx].Servers[0];
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _results.Text = txt;
+                        if (bestIdx >= 0)
+                        {
+                            _combo.SelectedIndex = bestIdx;
+                            _results.ForeColor = Color.FromArgb(0, 120, 60);
+                        }
+                        _btnTest.Enabled = true; _btnApply.Enabled = true;
+                        Cursor = Cursors.Default;
+                    }));
+                }
+                catch { }
+            });
         }
 
         private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
