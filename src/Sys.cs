@@ -239,6 +239,23 @@ namespace BTOptimizer
             RunThrow(Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
         }
 
+        /// <summary>Index AC courant d'un paramètre d'alimentation du plan actif (lecture registre, indépendante de la langue).</summary>
+        public static int? GetPowerAcIndex(string subGuid, string settingGuid)
+        {
+            object act = GetMachine(@"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes", "ActivePowerScheme");
+            string scheme = act as string;
+            if (string.IsNullOrEmpty(scheme)) return null;
+            object v = GetMachine(@"SYSTEM\CurrentControlSet\Control\Power\User\PowerSchemes\" + scheme + "\\" + subGuid + "\\" + settingGuid, "ACSettingIndex");
+            if (v is int) return (int)v;
+            return null;
+        }
+
+        public static bool? PowerAcEquals(string subGuid, string settingGuid, int expected)
+        {
+            int? v = GetPowerAcIndex(subGuid, settingGuid);
+            return v.HasValue ? (bool?)(v.Value == expected) : null;
+        }
+
         /// <summary>Écrit une valeur AC/DC d'un paramètre caché ou visible du plan actif.</summary>
         public static void SetPowerValue(string subGuid, string settingGuid, int ac, int dc)
         {

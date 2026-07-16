@@ -120,7 +120,7 @@ namespace BTOptimizer
                 Desc = "Évite que la souris/le clavier USB soient mis en veille par Windows. À appliquer après le plan Performances ultimes.",
                 Apply = () => Sys.SetUsbSuspend(true),
                 Revert = () => Sys.SetUsbSuspend(false),
-                Check = () => null
+                Check = () => Sys.PowerAcEquals("2a737441-1930-4402-8d77-b2bebba308a3", "48e6b7a6-50f5-4782-a5d4-53bb8f07e226", 0)
             });
 
             list.Add(new Tweak
@@ -140,7 +140,7 @@ namespace BTOptimizer
                 Desc = "Les liens PCIe (GPU, SSD NVMe, carte réseau) restent à pleine vitesse au lieu de se rendormir : supprime des micro-latences de réveil. « Rétablir » remet le niveau Modéré.",
                 Apply = () => Sys.SetPowerValue("501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b-b6da-e5fa1a576df5", 0, 0),
                 Revert = () => Sys.SetPowerValue("501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b-b6da-e5fa1a576df5", 1, 1),
-                Check = () => null
+                Check = () => Sys.PowerAcEquals("501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b-b6da-e5fa1a576df5", 0)
             });
 
             // ================= GPU & JEUX =================
@@ -666,7 +666,7 @@ namespace BTOptimizer
                 Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 100),
                 Revert = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 5, 5),
-                Check  = () => null
+                Check  = () => Sys.PowerAcEquals(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100)
             });
 
             list.Add(new Tweak
@@ -676,7 +676,7 @@ namespace BTOptimizer
                 Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
                 Revert = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 0, 0),
-                Check  = () => null
+                Check  = () => Sys.PowerAcEquals(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1)
             });
 
             // ---- GPU & jeux (avancé) ----
