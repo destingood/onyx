@@ -879,6 +879,80 @@ namespace BTOptimizer
                 Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager", "SubscribedContent-338387Enabled"), 0)
             });
 
+            list.Add(new Tweak
+            {
+                Id = "wu_driver_exclude", Category = Cat.Systeme, Esport = true,
+                Name = "Empêcher Windows Update de remplacer tes pilotes",
+                Desc = "Windows Update n'installe plus de pilotes (GPU, etc.) par-dessus les tiens : fini les régressions de pilote NVIDIA/AMD après une mise à jour.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate", "ExcludeWUDriversInQualityUpdate"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "audio_ducking_off", Category = Cat.Gpu, Esport = true,
+                Name = "Ne plus baisser le son des jeux pendant une « communication »",
+                Desc = "Windows n'atténue plus automatiquement le volume des autres applis quand il détecte un appel/vocal (Discord, etc.).",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Multimedia\Audio" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference", 3, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Multimedia\Audio", "UserDuckingPreference"), 3)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "consumer_features_off", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Name = "Bloquer l'installation automatique d'applications promues",
+                Desc = "Windows n'installe plus tout seul de jeux/applis sponsorisés (Candy Crush & co.).",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\CloudContent", "DisableWindowsConsumerFeatures", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\CloudContent", "DisableWindowsConsumerFeatures"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\CloudContent", "DisableWindowsConsumerFeatures"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "explorer_ads_off", Category = Cat.Privacy,
+                Name = "Supprimer les pubs OneDrive/Office dans l'Explorateur",
+                Desc = "Plus de « notifications du fournisseur de synchronisation » (promotions OneDrive/Office 365) dans les fenêtres de fichiers.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSyncProviderNotifications", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSyncProviderNotifications", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "ShowSyncProviderNotifications"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "quick_access_off", Category = Cat.Rapidite,
+                Name = "Explorateur : ne plus lister les fichiers récents/fréquents",
+                Desc = "Accès rapide plus léger et plus privé : Windows n'affiche/n'enregistre plus les fichiers et dossiers récemment ouverts.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowRecent", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowFrequent", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowRecent", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowFrequent", 1, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer", "ShowRecent"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "aero_shake_off", Category = Cat.Rapidite,
+                Name = "Désactiver « Aero Shake » (secouer pour réduire les fenêtres)",
+                Desc = "Empêche la réduction accidentelle de toutes les fenêtres quand tu bouges vite une fenêtre.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "DisallowShaking", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "DisallowShaking"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "DisallowShaking"), 1)
+            });
+
             // ===================================================================
             //  BLOC AVANCÉ (« zéro limite ») — tout réversible, sauvegardé
             // ===================================================================
