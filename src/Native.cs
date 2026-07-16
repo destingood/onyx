@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Appels Win32 : paramètres souris en direct et timer haute résolution.</summary>
     internal static class Native

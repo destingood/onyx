@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-// Générateur de clés de licence BT Optimizer Pro.
+// Générateur de clés de licence DesTinGOOD PC Optimizer Pro.
 //   Usage : dotnet run -- "Nom du client"
 // Produit une clé à donner à l'acheteur. La clé encode le nom + une signature RSA
 // que seule cette machine (détentrice de private.xml) peut créer.

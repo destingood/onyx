@@ -1,5 +1,5 @@
 @echo off
-title BT Optimizer
+title DesTinGOOD PC Optimizer
 setlocal
 cd /d "%~dp0"
 
@@ -14,7 +14,7 @@ rem --- Lancement via l'hote dotnet (signe Microsoft) --------------------------
 rem  Smart App Control autorise dotnet.exe (signe) : l'app tourne donc meme si un
 rem  .exe compile localement serait bloque. Le code s'execute avec les droits admin
 rem  herites de ce script.
-set "DLL=%~dp0dist\BTOptimizer.dll"
+set "DLL=%~dp0dist\DTGOptimizer.dll"
 if not exist "%DLL%" (
     echo Build introuvable : "%DLL%"
     echo Lance d'abord Build.bat pour compiler l'application.

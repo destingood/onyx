@@ -4,7 +4,7 @@ using System.IO;
 using System.Management;
 using System.Runtime.InteropServices;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     public class GpuInfo
     {

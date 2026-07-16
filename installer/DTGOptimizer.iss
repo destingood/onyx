@@ -1,28 +1,29 @@
 ; ============================================================================
-;  Installateur BT Optimizer (Inno Setup 6.3+)
+;  Installateur DesTinGOOD PC Optimizer (Inno Setup 6.3+)
 ;
 ;  Compilation (le plus simple) : double-clic sur ..\Build-Installer.bat
 ;  Manuel :  1) publie l'app :  dotnet publish -c Release -o dist
-;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
-;  Résultat :  installer\Output\BTOptimizer-Setup-<version>.exe
+;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" DTGOptimizer.iss
+;  Résultat :  installer\Output\DTGOptimizer-Setup-<version>.exe
 ;
 ;  Prérequis côté client : .NET Desktop Runtime 10.x (x64). Le script le vérifie
 ;  et propose la page de téléchargement s'il est absent.
 ; ============================================================================
 
-#define AppName "BT Optimizer"
-#define AppExe "BTOptimizer.exe"
+#define AppName "DesTinGOOD PC Optimizer"
+#define AppExe "DTGOptimizer.exe"
 ; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
-#ifexist "..\dist\BTOptimizer.exe"
-  #define AppVersion GetVersionNumbersString("..\dist\BTOptimizer.exe")
+#ifexist "..\dist\DTGOptimizer.exe"
+  #define AppVersion GetVersionNumbersString("..\dist\DTGOptimizer.exe")
 #else
   #define AppVersion "7.6.0.0"
 #endif
-#define AppPublisher "BT Optimizer"
+#define AppPublisher "DesTinGOOD"
 #define AppURL "https://example.com"
 
 [Setup]
-AppId={{9F1C7A20-BT01-4E5A-9C3D-BTOPTIMIZER0001}
+; Nouvel AppId depuis le rebranding DesTinGOOD (l'ancien « BT Optimizer » est un produit distinct).
+AppId={{B7E4C2D9-51A3-4F8E-A6B2-DE571600D001}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
@@ -34,7 +35,7 @@ DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} {#AppVersion}
 OutputDir=Output
-OutputBaseFilename=BTOptimizer-Setup-{#AppVersion}
+OutputBaseFilename=DTGOptimizer-Setup-{#AppVersion}
 SetupIconFile=..\src\app.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -46,7 +47,7 @@ MinVersion=10.0
 LicenseFile=LICENSE.txt
 DisableProgramGroupPage=yes
 ; Empêche l'installation/désinstallation pendant que l'app tourne (mutex du Program.cs).
-AppMutex=BTOptimizer_SingleInstance
+AppMutex=DTGOptimizer_SingleInstance
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
@@ -55,14 +56,14 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Components]
-Name: "app";    Description: "Application BT Optimizer";                                        Types: full compact custom; Flags: fixed
+Name: "app";    Description: "Application DesTinGOOD PC Optimizer";                                        Types: full compact custom; Flags: fixed
 Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfileInspector)";     Types: full
 
 [Files]
 ; Binaires .NET 10 (produits par « dotnet publish -o dist »).
 ; On exclut les fichiers d'état générés à l'exécution et les symboles de débogage.
 Source: "..\dist\*"; DestDir: "{app}"; \
-  Excludes: "bt-*.txt,bt-*.csv,bt-*.nip,*.pdb,*.etl"; \
+  Excludes: "dtg-*.txt,dtg-*.csv,dtg-*.nip,bt-*.txt,bt-*.csv,bt-*.nip,*.pdb,*.etl"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
 
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
@@ -84,6 +85,10 @@ Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app
 
 [UninstallDelete]
 ; Nettoie les fichiers créés par l'app après coup (sauvegardes/état/traces).
+Type: files;      Name: "{app}\dtg-*.txt"
+Type: files;      Name: "{app}\dtg-*.csv"
+Type: files;      Name: "{app}\dtg-*.nip"
+; Anciens noms (versions « BT Optimizer » antérieures au rebranding)
 Type: files;      Name: "{app}\bt-*.txt"
 Type: files;      Name: "{app}\bt-*.csv"
 Type: files;      Name: "{app}\bt-*.nip"
@@ -123,7 +128,7 @@ begin
     Exit;
 
   case MsgBox('Le .NET Desktop Runtime 10 (x64) est requis et ne semble pas installé.' + #13#10 +
-              'BT Optimizer ne pourra pas démarrer sans lui.' + #13#10#13#10 +
+              'DesTinGOOD PC Optimizer ne pourra pas démarrer sans lui.' + #13#10#13#10 +
               '« Oui »  : ouvrir la page de téléchargement (rubrique « .NET Desktop Runtime »),' + #13#10 +
               '             installe le runtime puis relance ce programme.' + #13#10 +
               '« Non »  : installer quand même.' + #13#10 +

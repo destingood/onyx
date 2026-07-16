@@ -5,7 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Comparaison avant/après de deux rapports DPC/ISR : tuiles de delta + tableau par pilote.</summary>
     internal class CompareForm : Form
@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Comparaison AVANT / APRÈS";
+            Text = "DesTinGOOD PC Optimizer — Comparaison AVANT / APRÈS";
             ClientSize = new Size(980, 620);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(780, 480);

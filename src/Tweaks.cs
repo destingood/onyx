@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Catalogue des optimisations. Chaque entrée sait s'appliquer, se rétablir et se détecter.</summary>
     internal static class Catalog

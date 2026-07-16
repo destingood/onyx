@@ -1,7 +1,7 @@
 @echo off
-title BT Optimizer
+title DesTinGOOD PC Optimizer
 setlocal
-set "BT_SCRIPT=%~dp0bt-optimizer.ps1"
+set "BT_SCRIPT=%~dp0dtg-optimizer.ps1"
 
 if not exist "%BT_SCRIPT%" (
     echo Fichier introuvable : "%BT_SCRIPT%"

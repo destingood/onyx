@@ -3,15 +3,15 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("BT Optimizer")]
-[assembly: AssemblyProduct("BT Optimizer")]
+[assembly: AssemblyTitle("DesTinGOOD PC Optimizer")]
+[assembly: AssemblyProduct("DesTinGOOD PC Optimizer")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 [assembly: AssemblyVersion("7.6.0.0")]
 [assembly: AssemblyFileVersion("7.6.0.0")]
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     internal static class Program
     {
@@ -28,12 +28,12 @@ namespace BTOptimizer
                 return;
             }
             bool isNew;
-            using (var mutex = new Mutex(true, "BTOptimizer_SingleInstance", out isNew))
+            using (var mutex = new Mutex(true, "DTGOptimizer_SingleInstance", out isNew))
             {
                 if (!isNew)
                 {
-                    MessageBox.Show("BT Optimizer est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("DesTinGOOD PC Optimizer est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -47,8 +47,8 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "BT Optimizer a rencontré une erreur et va se fermer :\n\n" + ex,
-                        "BT Optimizer — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "DesTinGOOD PC Optimizer a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "DesTinGOOD PC Optimizer — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 GC.KeepAlive(mutex);
             }
@@ -68,7 +68,7 @@ namespace BTOptimizer
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Sys.Init();
-            Console.WriteLine("BT Optimizer TEST — contexte :");
+            Console.WriteLine("DesTinGOOD PC Optimizer TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
             Console.WriteLine("  SID cible      : " + Sys.TargetSid);

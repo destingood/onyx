@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     public class BenchResult
     {

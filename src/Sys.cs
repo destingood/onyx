@@ -8,7 +8,7 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     public class NativeResult
     {
@@ -689,7 +689,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string EulaPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-eula.txt"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-eula.txt"); }
         }
 
         public static int EulaAcceptedVersion()
@@ -713,7 +713,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static string ProfilePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-profile.txt"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-profile.txt"); }
         }
 
         public static void SaveProfile(List<string> tweakIds)
@@ -733,7 +733,8 @@ namespace BTOptimizer
             return ids;
         }
 
-        private const string GuardTask = "BTOptimizerGuard";
+        private const string GuardTask = "DTGOptimizerGuard";
+        private const string LegacyGuardTask = "BTOptimizerGuard"; // ancien nom (avant rebranding)
 
         public static bool GuardExists()
         {
@@ -743,6 +744,8 @@ namespace BTOptimizer
         /// <summary>Crée/supprime la tâche planifiée qui ré-applique le profil à l'ouverture de session.</summary>
         public static bool SetGuard(bool enable, string exePath, Action<string, int> log)
         {
+            // Retire silencieusement la tâche de l'ancien nom : elle pointe vers l'ancien exe.
+            Run(Sys32("schtasks.exe"), "/delete /f /tn " + LegacyGuardTask);
             if (enable)
             {
                 string tr = "\"\\\"" + exePath + "\\\" -apply profile\"";
@@ -767,7 +770,7 @@ namespace BTOptimizer
         public static string ExportBackup(List<Tweak> tweaks, Action<string, int> log)
         {
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            string dir = Path.Combine(BackupDesktop, "bt-optimizer-backup-" + stamp);
+            string dir = Path.Combine(BackupDesktop, "dtg-optimizer-backup-" + stamp);
             Directory.CreateDirectory(dir);
 
             List<string> keys = tweaks.SelectMany(t => t.BackupKeys)
@@ -836,7 +839,7 @@ namespace BTOptimizer
                 using (ManagementClass mc = new ManagementClass(scope, path, new ObjectGetOptions()))
                 using (ManagementBaseObject inParams = mc.GetMethodParameters("CreateRestorePoint"))
                 {
-                    inParams["Description"] = "BT Optimizer";
+                    inParams["Description"] = "DesTinGOOD PC Optimizer";
                     inParams["RestorePointType"] = (uint)12; // MODIFY_SETTINGS
                     inParams["EventType"] = (uint)100;       // BEGIN_SYSTEM_CHANGE
                     using (ManagementBaseObject outParams = mc.InvokeMethod("CreateRestorePoint", inParams, null))
@@ -896,7 +899,7 @@ namespace BTOptimizer
 
         public static string GpuOcConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpuoc.txt"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-gpuoc.txt"); }
         }
 
         public static void SaveGpuOcConfig(int powerLimit, int lockMin, int lockMax)
@@ -966,7 +969,8 @@ namespace BTOptimizer
             }
         }
 
-        private const string OcTask = "BTOptimizerOC";
+        private const string OcTask = "DTGOptimizerOC";
+        private const string LegacyOcTask = "BTOptimizerOC"; // ancien nom (avant rebranding)
 
         public static bool OcGuardExists()
         {
@@ -975,6 +979,8 @@ namespace BTOptimizer
 
         public static bool SetOcGuard(bool enable, string exePath, Action<string, int> log)
         {
+            // Retire silencieusement la tâche de l'ancien nom : elle pointe vers l'ancien exe.
+            Run(Sys32("schtasks.exe"), "/delete /f /tn " + LegacyOcTask);
             if (enable)
             {
                 string tr = "\"\\\"" + exePath + "\\\" -gpuoc\"";
@@ -1089,7 +1095,7 @@ namespace BTOptimizer
             };
             foreach (string c in cands)
                 if (File.Exists(c)) return Path.GetFullPath(c);
-            string mine = Path.Combine(AppBase, "bt-nvidia-lowlatency.nip");
+            string mine = Path.Combine(AppBase, "dtg-nvidia-lowlatency.nip");
             File.WriteAllText(mine, LowLatencyNip, new System.Text.UnicodeEncoding(false, true));
             return mine;
         }

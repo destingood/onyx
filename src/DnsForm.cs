@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Panneau DNS : choix d'un résolveur rapide appliqué à toutes les cartes réseau actives.</summary>
     internal class DnsForm : Form
@@ -45,7 +45,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — DNS";
+            Text = "DesTinGOOD PC Optimizer — DNS";
             ClientSize = new Size(560, 430);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -175,7 +175,7 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("DNS : " + ex.Message, 3); }
             finally { Cursor = Cursors.Default; }
             RefreshCurrent();
-            MessageBox.Show(this, "DNS mis à jour.", "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "DNS mis à jour.", "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

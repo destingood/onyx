@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Gestionnaire de services curé : liste de services couramment désactivés, avec description et recommandation.</summary>
     internal class ServicesForm : Form
@@ -52,7 +52,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Services Windows";
+            Text = "DesTinGOOD PC Optimizer — Services Windows";
             ClientSize = new Size(720, 460);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(600, 380);

@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Win32;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>
     /// Licence Free/Pro honnête et hors-ligne : une clé = le nom du licencié signé
@@ -26,15 +26,16 @@ namespace BTOptimizer
 
         private static string StorePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-license.txt"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-license.txt"); }
         }
 
         // ---- Essai gratuit ----
         private const int TrialDays = 7;
-        private const string TrialRegPath = @"SOFTWARE\BTOptimizer";
+        private const string TrialRegPath = @"SOFTWARE\DTGOptimizer";
+        private const string LegacyTrialRegPath = @"SOFTWARE\BTOptimizer"; // ancien nom (avant rebranding)
         private static string TrialFile
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-trial.txt"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-trial.txt"); }
         }
         public static DateTime? TrialStart { get; private set; }
 
@@ -77,6 +78,17 @@ namespace BTOptimizer
             {
                 using (RegistryKey k = Registry.LocalMachine.OpenSubKey(TrialRegPath))
                     if (k != null) r = ParseDate(k.GetValue("TrialStart") as string);
+            }
+            catch { }
+            // Marqueur laissé par une version « BT Optimizer » d'avant le rebranding.
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(LegacyTrialRegPath))
+                    if (k != null)
+                    {
+                        DateTime? old = ParseDate(k.GetValue("TrialStart") as string);
+                        if (old.HasValue && (!r.HasValue || old < r)) r = old;
+                    }
             }
             catch { }
             // On retient la date la PLUS ANCIENNE (supprimer un marqueur ne prolonge pas l'essai).

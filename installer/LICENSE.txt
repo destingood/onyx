@@ -1,6 +1,6 @@
-CONDITIONS D'UTILISATION ET AVERTISSEMENT — BT OPTIMIZER
+CONDITIONS D'UTILISATION ET AVERTISSEMENT — DESTINGOOD PC OPTIMIZER
 
-BT Optimizer (« le logiciel ») modifie des paramètres système de Windows : registre,
+DesTinGOOD PC Optimizer (« le logiciel ») modifie des paramètres système de Windows : registre,
 plan d'alimentation, services, réglages réseau, DNS et pilote graphique.
 
 1. RISQUES. Certaines options réduisent volontairement des protections de sécurité

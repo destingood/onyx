@@ -4,14 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>
     /// Mode ligne de commande (sans interface) :
-    ///   BTOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]
-    ///   BTOptimizer.exe -revert profile|all
+    ///   DTGOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]
+    ///   DTGOptimizer.exe -revert profile|all
     /// Utilisé par le gardien de démarrage (tâche planifiée). Journal :
-    /// bt-optimizer-log.txt à côté de l'exe. Code retour 0 = succès.
+    /// dtg-optimizer-log.txt à côté de l'exe. Code retour 0 = succès.
     /// </summary>
     internal static class Cli
     {
@@ -36,7 +36,7 @@ namespace BTOptimizer
 
             try
             {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-optimizer-log.txt");
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-optimizer-log.txt");
                 File.AppendAllText(logPath,
                     "===== CLI " + string.Join(" ", args) + " =====" + Environment.NewLine +
                     string.Join(Environment.NewLine, lines.ToArray()) + Environment.NewLine,

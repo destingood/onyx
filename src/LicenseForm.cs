@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Conditions d'utilisation + avertissement, à accepter au premier lancement (protection juridique).</summary>
     internal class LicenseForm : Form
@@ -14,7 +14,7 @@ namespace BTOptimizer
         private const string Eula =
 "CONDITIONS D'UTILISATION ET AVERTISSEMENT\r\n" +
 "\r\n" +
-"BT Optimizer (« le logiciel ») modifie des paramètres système de Windows : registre, " +
+"DesTinGOOD PC Optimizer (« le logiciel ») modifie des paramètres système de Windows : registre, " +
 "plan d'alimentation, services, réglages réseau, DNS et pilote graphique.\r\n" +
 "\r\n" +
 "1. RISQUES. Certaines options réduisent volontairement des protections de sécurité " +
@@ -42,7 +42,7 @@ namespace BTOptimizer
 
         public LicenseForm()
         {
-            Text = "BT Optimizer — Conditions d'utilisation";
+            Text = "DesTinGOOD PC Optimizer — Conditions d'utilisation";
             ClientSize = new Size(620, 480);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;

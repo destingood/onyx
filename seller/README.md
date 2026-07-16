@@ -1,6 +1,6 @@
 # Dossier VENDEUR — ne pas livrer aux clients
 
-Ce dossier contient les outils de commercialisation de BT Optimizer. **Rien ici ne doit
+Ce dossier contient les outils de commercialisation de DesTinGOOD PC Optimizer. **Rien ici ne doit
 être inclus dans le paquet distribué aux clients**, en particulier `private.xml`.
 
 ## 1. Générer une clé de licence Pro
@@ -36,9 +36,9 @@ Test local seulement (auto-signé, non reconnu ailleurs) : `.\sign.ps1 -SelfSign
 ## 3. Construire l'installeur
 
 1. À la racine du projet : lance **`Build.bat`** (produit `dist\`).
-2. (Optionnel) signe `dist\BTOptimizer.exe` et `.dll` (étape 2).
-3. Ouvre `installer\BTOptimizer.iss` dans **Inno Setup 6+** et compile
-   (ou `ISCC.exe installer\BTOptimizer.iss`). Renseigne d'abord `AppPublisher` et
+2. (Optionnel) signe `dist\DTGOptimizer.exe` et `.dll` (étape 2).
+3. Ouvre `installer\DTGOptimizer.iss` dans **Inno Setup 6+** et compile
+   (ou `ISCC.exe installer\DTGOptimizer.iss`). Renseigne d'abord `AppPublisher` et
    `AppURL` dans le `.iss`.
 4. L'installeur final est dans `installer\Output\`.
 

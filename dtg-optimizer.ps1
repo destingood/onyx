@@ -1,5 +1,5 @@
 <#
-    BT Optimizer - Reduction de l'input lag pour Windows 10/11
+    DesTinGOOD PC Optimizer - Reduction de l'input lag pour Windows 10/11
     ==================================================================
     Outil a cases a cocher : chaque optimisation est optionnelle. Rien
     n'est modifie tant que vous ne lancez pas "Appliquer".
@@ -26,7 +26,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$script:AppName = 'BT Optimizer'
+$script:AppName = 'DesTinGOOD PC Optimizer'
 $script:Version = '2.0'
 
 # --- Resolution du Bureau (compatible ConstrainedLanguage) --------------------
@@ -236,7 +236,7 @@ function Set-BtNagle {
 function Backup-BtRegistry {
     param([array]$Tweaks)
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $dir   = Join-Path -Path $script:BackupDesktop -ChildPath ("bt-optimizer-backup-" + $stamp)
+    $dir   = Join-Path -Path $script:BackupDesktop -ChildPath ("dtg-optimizer-backup-" + $stamp)
     [void](New-Item -ItemType Directory -Path $dir -Force)
     $keys = @($Tweaks | ForEach-Object { $_.BackupKeys } | Where-Object { $_ } | Sort-Object -Unique)
     foreach ($key in $keys) {
@@ -292,7 +292,7 @@ function New-BtRestorePoint {
     Write-BtLog "Creation d'un point de restauration systeme (peut prendre une minute)..."
     try {
         $warn = @()
-        Checkpoint-Computer -Description 'BT Optimizer' -RestorePointType 'MODIFY_SETTINGS' `
+        Checkpoint-Computer -Description 'DesTinGOOD PC Optimizer' -RestorePointType 'MODIFY_SETTINGS' `
             -ErrorAction Stop -WarningVariable warn -WarningAction SilentlyContinue
         if ($warn.Count -gt 0) {
             # Throttle des 24 h : Checkpoint-Computer emet un WARNING (pas une erreur)
@@ -799,7 +799,7 @@ function Show-BtGui {
 
     $btnRestore.Add_Click({
         $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dlg.Description  = 'Choisissez un dossier de sauvegarde bt-optimizer-backup-...'
+        $dlg.Description  = 'Choisissez un dossier de sauvegarde dtg-optimizer-backup-...'
         $dlg.SelectedPath = $script:BackupDesktop
         if ($dlg.ShowDialog() -eq 'OK') {
             if ([System.Windows.Forms.MessageBox]::Show($script:Form,
@@ -941,7 +941,7 @@ function Start-BtConsole {
             }
             'I' {
                 Write-Host ""
-                $folder = (Read-Host "  Chemin du dossier de sauvegarde (bt-optimizer-backup-...)").Trim('"').Trim()
+                $folder = (Read-Host "  Chemin du dossier de sauvegarde (dtg-optimizer-backup-...)").Trim('"').Trim()
                 if ($folder) {
                     Import-BtBackup -Folder $folder
                     [void](Read-Host "`n  Entree pour continuer")

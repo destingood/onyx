@@ -5,7 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Moniteur matériel en direct : tuiles CPU/RAM/GPU + sparklines.</summary>
     internal class MonitorForm : Form
@@ -38,7 +38,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Moniteur matériel";
+            Text = "DesTinGOOD PC Optimizer — Moniteur matériel";
             ClientSize = new Size(720, 470);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(600, 420);
@@ -220,7 +220,7 @@ namespace BTOptimizer
                         _btnRam.Enabled = true;
                         _btnRam.Text = "Libérer la RAM";
                         MessageBox.Show(this, "Mémoire libérée : ~" + Math.Max(0, freed) + " Mo.",
-                            "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }
@@ -233,19 +233,19 @@ namespace BTOptimizer
             {
                 string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 _csvPath = System.IO.Path.Combine(desktop,
-                    "bt-monitor-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv");
+                    "dtg-monitor-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv");
                 System.IO.File.WriteAllText(_csvPath,
                     "horodatage;cpu_pct;ram_mo;cpu_temp_c;timer_ms;gpu_temp_c;gpu_pct;gpu_core_mhz;gpu_w;vram_mo" + Environment.NewLine);
                 _btnCsv.Text = "Enregistrer CSV : ON";
                 _btnCsv.ForeColor = Color.FromArgb(120, 230, 150);
-                Text = "BT Optimizer — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
+                Text = "DesTinGOOD PC Optimizer — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
             }
             else
             {
                 _csvPath = null;
                 _btnCsv.Text = "Enregistrer CSV : OFF";
                 _btnCsv.ForeColor = Color.White;
-                Text = "BT Optimizer — Moniteur matériel";
+                Text = "DesTinGOOD PC Optimizer — Moniteur matériel";
             }
         }
 

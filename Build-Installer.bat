@@ -1,5 +1,5 @@
 @echo off
-title Construction de l'installateur BT Optimizer
+title Construction de l'installateur DesTinGOOD PC Optimizer
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
@@ -18,16 +18,19 @@ if %errorlevel% neq 0 (
 )
 
 echo === 1/4  Fermeture de l'app si elle tourne ===
-taskkill /IM BTOptimizer.exe /F >nul 2>&1
-taskkill /IM dotnet.exe /FI "WINDOWTITLE eq BT Optimizer*" /F >nul 2>&1
+taskkill /IM DTGOptimizer.exe /F >nul 2>&1
+taskkill /IM dotnet.exe /FI "WINDOWTITLE eq DesTinGOOD PC Optimizer*" /F >nul 2>&1
 
 echo === 2/4  Publication (.NET 10, dependant du runtime) ===
 rem Nettoie les fichiers d'etat/symboles qui ne doivent pas etre distribues.
+del /q "dist\dtg-*.txt" >nul 2>&1
+del /q "dist\dtg-*.csv" >nul 2>&1
+del /q "dist\dtg-*.nip" >nul 2>&1
 del /q "dist\bt-*.txt"  >nul 2>&1
 del /q "dist\bt-*.csv"  >nul 2>&1
 del /q "dist\bt-*.nip"  >nul 2>&1
 del /q "dist\*.pdb"      >nul 2>&1
-dotnet publish BTOptimizer.csproj -c Release -o dist --nologo -p:DebugType=none
+dotnet publish DTGOptimizer.csproj -c Release -o dist --nologo -p:DebugType=none
 if %errorlevel% neq 0 (
     echo [X] Echec de la publication.
     pause & exit /b 1
@@ -68,7 +71,7 @@ if not defined ISCC (
 )
 
 echo === 4/4  Compilation de l'installateur ===
-"%ISCC%" "installer\BTOptimizer.iss"
+"%ISCC%" "installer\DTGOptimizer.iss"
 if %errorlevel% neq 0 (
     echo [X] Echec de la compilation de l'installateur.
     pause & exit /b 1

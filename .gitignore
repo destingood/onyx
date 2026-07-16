@@ -2,7 +2,7 @@
 *.etl
 
 # Binaires compilables via Build.bat
-/BTOptimizer.exe
+/DTGOptimizer.exe
 bin/
 obj/
 dist/
@@ -19,18 +19,24 @@ seller/obj/
 installer/Output/
 
 # Fichiers d'etat generes par l'app a l'execution
-bt-license.txt
-bt-eula.txt
-bt-nvidia-lowlatency.nip
-bt-profile.txt
-bt-gpuoc.txt
-bt-optimizer-log.txt
-bt-monitor-*.csv
-bt-optimizer-rapport.txt
-bt-analyse-latence.txt
-bt-optimizer-mesures.txt
+dtg-license.txt
+dtg-eula.txt
+dtg-nvidia-lowlatency.nip
+dtg-profile.txt
+dtg-gpuoc.txt
+dtg-optimizer-log.txt
+dtg-monitor-*.csv
+dtg-optimizer-rapport.txt
+dtg-analyse-latence.txt
+dtg-optimizer-mesures.txt
 
 # Sauvegardes registre generees par l'app / le script a l'execution
+dtg-optimizer-backup-*/
+
+# Anciens noms de fichiers d'etat (avant le rebranding DesTinGOOD PC Optimizer)
+bt-*.txt
+bt-*.csv
+bt-*.nip
 bt-optimizer-backup-*/
 
 # Documents personnels - ne pas versionner

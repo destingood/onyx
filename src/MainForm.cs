@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     internal class MainForm : Form
     {
@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 7.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD PC Optimizer 7.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -110,7 +110,7 @@ namespace BTOptimizer
             header.BackColor = HeaderBg;
 
             var title = new Label();
-            title.Text = "BT Optimizer";
+            title.Text = "DesTinGOOD PC Optimizer";
             title.SetBounds(16, 8, 400, 30);
             title.Font = new Font("Segoe UI Semibold", 15f);
             title.ForeColor = Color.White;
@@ -144,7 +144,7 @@ namespace BTOptimizer
             _btnMenu.Click += (s, e) => _menu.Show(_btnMenu, new Point(0, _btnMenu.Height));
 
             _menu = new ContextMenuStrip();
-            _menu.Items.Add("À propos de BT Optimizer", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _menu.Items.Add("À propos de DesTinGOOD PC Optimizer", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
             _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
             {
                 using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
@@ -188,9 +188,9 @@ namespace BTOptimizer
             {
                 try
                 {
-                    string p = System.IO.Path.Combine(Application.StartupPath, "bt-optimizer-log.txt");
+                    string p = System.IO.Path.Combine(Application.StartupPath, "dtg-optimizer-log.txt");
                     if (System.IO.File.Exists(p)) Process.Start("notepad.exe", "\"" + p + "\"");
-                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch { }
             });
@@ -367,11 +367,11 @@ namespace BTOptimizer
             // Zone de notification : réduire la fenêtre garde l'app (et le timer 1 ms) active.
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "BT Optimizer";
+            _tray.Text = "DesTinGOOD PC Optimizer";
             _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("Ouvrir BT Optimizer", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Ouvrir DesTinGOOD PC Optimizer", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
             _tray.ContextMenuStrip = trayMenu;
 
@@ -410,7 +410,7 @@ namespace BTOptimizer
                 string tip = Native.TimerActive
                     ? "Toujours actif — le timer 1 ms reste maintenu. Double-clic pour rouvrir."
                     : "Toujours actif en arrière-plan. Double-clic pour rouvrir.";
-                _tray.ShowBalloonTip(2500, "BT Optimizer", tip, ToolTipIcon.Info);
+                _tray.ShowBalloonTip(2500, "DesTinGOOD PC Optimizer", tip, ToolTipIcon.Info);
             }
         }
 
@@ -570,7 +570,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Aucune optimisation cochée.", "BT Optimizer",
+                MessageBox.Show(this, "Aucune optimisation cochée.", "DesTinGOOD PC Optimizer",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -588,7 +588,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "BT Optimizer",
+                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "DesTinGOOD PC Optimizer",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -619,7 +619,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this,
                     "Une erreur est survenue avant l'application :\n\n" + res.PrepError,
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (res.RebootNeeded)
             {
@@ -678,7 +678,7 @@ namespace BTOptimizer
             _lastBench = r;
             try
             {
-                string hist = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-mesures.txt");
+                string hist = System.IO.Path.Combine(Sys.BackupDesktop, "dtg-optimizer-mesures.txt");
                 System.IO.File.AppendAllText(hist, r.ToText() + Environment.NewLine, System.Text.Encoding.UTF8);
                 Log("Mesure ajoutée à l'historique : " + hist, 0);
             }
@@ -735,7 +735,7 @@ namespace BTOptimizer
             if (!System.IO.Directory.Exists(tools))
             {
                 MessageBox.Show(this, "Aucun dossier « tools ». Lance d'abord une capture (Mesurer latence → ETW).",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var files = new System.IO.DirectoryInfo(tools).GetFiles("dpcisr-*.txt");
@@ -743,7 +743,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this, "Il faut au moins 2 rapports DPC/ISR dans « tools » pour comparer.\n" +
                     "Fais deux captures (Mesurer latence → Oui à l'ETW), avant et après tes changements.",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             Array.Sort(files, (a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
@@ -764,7 +764,7 @@ namespace BTOptimizer
         {
             using (var dlg = new FolderBrowserDialog())
             {
-                dlg.Description = "Choisissez un dossier de sauvegarde bt-optimizer-backup-...";
+                dlg.Description = "Choisissez un dossier de sauvegarde dtg-optimizer-backup-...";
                 dlg.SelectedPath = Sys.BackupDesktop;
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 if (MessageBox.Show(this,
@@ -841,7 +841,7 @@ namespace BTOptimizer
                     RefreshStates();
                     Log("Réinitialisation terminée.", 1);
                     MessageBox.Show(this, "Toutes les optimisations ont été rétablies aux valeurs Windows.\nUn redémarrage est conseillé.",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -851,7 +851,7 @@ namespace BTOptimizer
             try
             {
                 string html = Report.BuildHtml(_tweaks, _hw ?? Hardware.Detect());
-                string path = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-rapport.html");
+                string path = System.IO.Path.Combine(Sys.BackupDesktop, "dtg-optimizer-rapport.html");
                 System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
                 Log("Rapport HTML enregistré : " + path, 1);
                 Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
@@ -899,7 +899,7 @@ namespace BTOptimizer
                 if (sel.Count == 0)
                 {
                     MessageBox.Show(this, "Coche d'abord les optimisations à inclure dans ton profil,\npuis active le gardien.",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _guardEventSuppressed = true;
                     _chkGuard.Checked = false;
                     _guardEventSuppressed = false;

@@ -1,6 +1,6 @@
 using System;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Une optimisation individuelle, cochable dans l'interface.</summary>
     public class Tweak

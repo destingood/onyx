@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Management;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     public class HwProfile
     {

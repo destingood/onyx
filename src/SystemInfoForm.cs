@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Inventaire matériel + diagnostic santé avec corrections en un clic.</summary>
     internal class SystemInfoForm : Form
@@ -33,7 +33,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Composants & diagnostic";
+            Text = "DesTinGOOD PC Optimizer — Composants & diagnostic";
             ClientSize = new Size(660, 580);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 480);
@@ -300,12 +300,12 @@ namespace BTOptimizer
                         bool ok = res != null && !res.PrepFailed && res.Ok > 0 && res.Ko == 0;
                         if (ok)
                             MessageBox.Show(this, "Intégrité de la mémoire désactivée.\nRedémarre pour que le changement prenne effet.",
-                                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "DesTinGOOD PC Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         else
                         {
                             string why = res == null ? "erreur inconnue"
                                 : (res.PrepFailed ? res.PrepError : "l'écriture registre a échoué (droits administrateur requis)");
-                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "BT Optimizer",
+                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "DesTinGOOD PC Optimizer",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }));
@@ -333,7 +333,7 @@ namespace BTOptimizer
             try
             {
                 string path = System.IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "bt-composants.txt");
+                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "dtg-composants.txt");
                 System.IO.File.WriteAllText(path, _diagText + "\n" + ComponentInfo.ToText(_sections), new System.Text.UTF8Encoding(false));
                 if (_log != null) _log("Composants exportés : " + path, 1);
                 System.Diagnostics.Process.Start("notepad.exe", "\"" + path + "\"");

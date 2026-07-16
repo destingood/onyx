@@ -1,23 +1,25 @@
-# BT Optimizer
+# DesTinGOOD PC Optimizer
+
+> Optimiseur PC gaming par **DesTinGOOD** — anciennement *BT Optimizer*. Nom technique (exe, tâches planifiées, installateur) : `DTGOptimizer`.
 
 Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accélérer le PC, avec **cases à cocher** : chaque optimisation est optionnelle et réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**.
 
-## ⭐ Lancement : `Lancer-BTOptimizer.bat`  (compatible Smart App Control)
+## ⭐ Lancement : `Lancer-DTGOptimizer.bat`  (compatible Smart App Control)
 
-**Double-clique sur `Lancer-BTOptimizer.bat`** → UAC (Oui) → la fenêtre s'ouvre.
+**Double-clique sur `Lancer-DTGOptimizer.bat`** → UAC (Oui) → la fenêtre s'ouvre.
 
 > **Pourquoi ce lanceur ?** Cette machine a **Smart App Control (contrôle intelligent
 > des applications)** activé. SAC **bloque les .exe compilés localement** (sans
-> réputation dans le cloud Microsoft), c'est pourquoi un `BTOptimizer.exe` maison se
+> réputation dans le cloud Microsoft), c'est pourquoi un `DTGOptimizer.exe` maison se
 > fait refuser. La solution, **sans désactiver ta sécurité** : l'app est compilée en
 > **.NET 10** et lancée par **`dotnet.exe`, qui est signé Microsoft et donc autorisé
-> par SAC**. Le lanceur s'élève en admin puis exécute `dist\BTOptimizer.dll` via cet
+> par SAC**. Le lanceur s'élève en admin puis exécute `dist\DTGOptimizer.dll` via cet
 > hôte de confiance. (Compilation : double-clic sur `Build.bat` — nécessite le .NET
 > SDK, déjà présent ici.)
 
-### Ancienne voie (`BTOptimizer.exe`)
+### Ancienne voie (`DTGOptimizer.exe`)
 
-Un `dist\BTOptimizer.exe` est aussi produit (double-clic direct possible, il s'élève
+Un `dist\DTGOptimizer.exe` est aussi produit (double-clic direct possible, il s'élève
 seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`**.
 
 - **Vraie application native** (fenêtre, cases, boutons) — fonctionne même sur les
@@ -55,7 +57,7 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 
 - Bouton **`Mesurer latence`** : mesure rapide 12 s (timer système, gigue réelle de
   `Sleep(1)`, % DPC/ISR, DPC/s) + comparaison automatique avec la mesure précédente,
-  historisée dans `bt-optimizer-mesures.txt`. Propose en option la **capture ETW
+  historisée dans `dtg-optimizer-mesures.txt`. Propose en option la **capture ETW
   DPC/ISR de 30 s** (WPR + `xperf`, même méthode que les scripts du dossier `tools\`).
 - Bouton **`Analyse latence`** : ouvre n'importe quel rapport `xperf dpcisr` dans une
   **vraie interface façon LatencyMon** — bannière de verdict colorée (vert/orange/rouge),
@@ -85,8 +87,8 @@ Bouton **`Overclock automatique`** — panneau dédié :
   et d'un **verrou de fréquence cœur** (min/max MHz). Toutes les valeurs sont **bornées
   par le pilote NVIDIA** (pas de survoltage sauvage), **réversibles** en un clic
   (« Réinitialiser » remet le défaut constructeur : `-rgc` + power limit d'origine), et
-  **persistables** au démarrage via une tâche planifiée (`BTOptimizerOC`).
-  En ligne de commande : `BTOptimizer.exe -gpuoc` ré-applique l'OC sauvegardé.
+  **persistables** au démarrage via une tâche planifiée (`DTGOptimizerOC`).
+  En ligne de commande : `DTGOptimizer.exe -gpuoc` ré-applique l'OC sauvegardé.
 - **RAM & CPU (diagnostic)** : l'overclock mémoire (XMP/EXPO) et CPU (multiplicateur/PBO)
   **ne peut pas se faire depuis Windows** — c'est le BIOS. Le panneau **détecte** si ta
   RAM tourne en-dessous de sa vitesse notée (→ active XMP) et si ton CPU est débloqué,
@@ -104,18 +106,18 @@ Bouton **`Overclock automatique`** — panneau dédié :
 ### Système autonome (v5)
 
 - **GARDIEN au démarrage** : case à cocher qui enregistre ta sélection comme *profil*
-  (`bt-profile.txt`) et crée une **tâche planifiée** (`BTOptimizerGuard`, élévation
+  (`dtg-profile.txt`) et crée une **tâche planifiée** (`DTGOptimizerGuard`, élévation
   automatique) qui ré-applique silencieusement le profil à **chaque ouverture de
   session** — les réglages écrasés par une mise à jour Windows reviennent tout seuls.
-  Décocher la case supprime la tâche. Journal silencieux : `bt-optimizer-log.txt`.
+  Décocher la case supprime la tâche. Journal silencieux : `dtg-optimizer-log.txt`.
 - **Timer 1 ms AUTO** : case dédiée — dès qu'un **jeu plein écran / borderless** passe
   au premier plan, le timer 1 ms s'active tout seul (et se relâche au retour bureau).
 - **Mode ligne de commande** (automatisation) :
-  `BTOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]`
-  et `BTOptimizer.exe -revert profile|all` — sans interface, code retour 0 = succès.
+  `DTGOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]`
+  et `DTGOptimizer.exe -revert profile|all` — sans interface, code retour 0 = succès.
 - **Enregistrement CSV du moniteur** : bouton `Enregistrer CSV` — une ligne par seconde
   (CPU %, RAM, temp CPU, timer, temp/charge/fréquence/watts GPU, VRAM) dans
-  `bt-monitor-<date>.csv` sur le Bureau. Parfait pour tracer une session de jeu.
+  `dtg-monitor-<date>.csv` sur le Bureau. Parfait pour tracer une session de jeu.
 
 ### Moniteur matériel en direct
 
@@ -131,7 +133,7 @@ runtime .NET Framework de l'exe, donc non liée).
 ## Dépôt git
 
 Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,
-régénérables) et `BTOptimizer.exe` (recompilable via `Build.bat`) sont exclus par
+régénérables) et `DTGOptimizer.exe` (recompilable via `Build.bat`) sont exclus par
 `.gitignore`. Identité configurée localement pour ce dépôt : modifie-la avec
 `git config user.name "..."` / `git config user.email "..."` si besoin.
 
@@ -140,12 +142,12 @@ Pour recompiler après modification du code source (`src/`) : double-clic sur
 
 ## Alternative PowerShell : `Lancer-Optimiseur.bat`
 
-Ancienne version script (`bt-optimizer.ps1`) : interface graphique PowerShell, ou
+Ancienne version script (`dtg-optimizer.ps1`) : interface graphique PowerShell, ou
 menu console en repli automatique si PowerShell est verrouillé. Conservée en secours.
 
 ## Sécurité (avant toute modification)
 
-- ☑ **Sauvegarde du registre** en `.reg` dans un dossier `bt-optimizer-backup-…` sur le Bureau
+- ☑ **Sauvegarde du registre** en `.reg` dans un dossier `dtg-optimizer-backup-…` sur le Bureau
 - ☑ **Point de restauration système** (optionnel)
 - **Retablir les valeurs Windows** : annule les réglages cochés
 - **Restaurer une sauvegarde** : réimporte un dossier `.reg` créé précédemment
@@ -278,10 +280,10 @@ En plus des tweaks input lag historiques :
 
 | Fichier | Rôle |
 |---------|------|
-| **`BTOptimizer.exe`** | **L'application** (recommandé) |
+| **`DTGOptimizer.exe`** | **L'application** (recommandé) |
 | `Build.bat` | Recompile l'application depuis `src/` |
 | `src/` | Code source C# de l'application |
-| `bt-optimizer.ps1` | Version script PowerShell (secours) |
+| `dtg-optimizer.ps1` | Version script PowerShell (secours) |
 | `Lancer-Optimiseur.bat` | Lanceur de la version PowerShell |
 | `scripts/` | Scripts PowerShell autonomes (boot gaming, input lag, réseau TP-Link, overclock GPU, mesure DPC…) |
 | `README.md` | Ce document |

@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Fenêtre « À propos » : identité produit, version, mentions légales.</summary>
     internal class AboutForm : Form
@@ -14,7 +14,7 @@ namespace BTOptimizer
             string ver = "5.9";
             try { ver = Assembly.GetExecutingAssembly().GetName().Version.ToString(3); } catch { }
 
-            Text = "À propos de BT Optimizer";
+            Text = "À propos de DesTinGOOD PC Optimizer";
             ClientSize = new Size(480, 340);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -26,7 +26,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 78, BackColor = Color.FromArgb(28, 30, 38) };
             var name = new Label
             {
-                Text = "BT Optimizer", Location = new Point(18, 12), AutoSize = true,
+                Text = "DesTinGOOD PC Optimizer", Location = new Point(18, 12), AutoSize = true,
                 ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 18f), BackColor = Color.Transparent
             };
             var tag = new Label

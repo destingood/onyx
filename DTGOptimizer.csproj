@@ -4,8 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>BTOptimizer</AssemblyName>
-    <RootNamespace>BTOptimizer</RootNamespace>
+    <AssemblyName>DTGOptimizer</AssemblyName>
+    <RootNamespace>DTGOptimizer</RootNamespace>
 
     <!-- On garde nos attributs [assembly:] manuels (Program.cs) et notre style C# 5. -->
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

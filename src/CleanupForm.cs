@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Nettoyage disque : dossiers temporaires sûrs, avec tailles et sélection.</summary>
     internal class CleanupForm : Form
@@ -27,7 +27,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Nettoyage disque";
+            Text = "DesTinGOOD PC Optimizer — Nettoyage disque";
             ClientSize = new Size(520, 380);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Statistiques DPC + ISR agrégées pour un pilote (module noyau).</summary>
     public class DriverStat

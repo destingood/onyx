@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="3.0.0.0" name="BTOptimizer" type="win32"/>
-  <description>BT Optimizer - latence et input lag</description>
+  <assemblyIdentity version="3.0.0.0" name="DTGOptimizer" type="win32"/>
+  <description>DesTinGOOD PC Optimizer - latence et input lag</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">

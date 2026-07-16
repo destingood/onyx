@@ -3,7 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Écran de démarrage rapide au premier lancement : oriente et propose une action immédiate.</summary>
     internal class WelcomeForm : Form
@@ -11,7 +11,7 @@ namespace BTOptimizer
         public enum StartAction { Open, ApplyRecommended, StartTrial }
         public StartAction Choice { get; private set; }
 
-        private static string FlagPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-welcome.txt"); } }
+        private static string FlagPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-welcome.txt"); } }
         public static bool AlreadyShown { get { return File.Exists(FlagPath); } }
         public static void MarkShown() { try { File.WriteAllText(FlagPath, "1"); } catch { } }
 
@@ -19,7 +19,7 @@ namespace BTOptimizer
         {
             Choice = StartAction.Open;
 
-            Text = "Bienvenue dans BT Optimizer";
+            Text = "Bienvenue dans DesTinGOOD PC Optimizer";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -31,7 +31,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 96, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "BT Optimizer", Location = new Point(22, 20), AutoSize = true,
+                Text = "DesTinGOOD PC Optimizer", Location = new Point(22, 20), AutoSize = true,
                 ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 20f), BackColor = Color.Transparent
             });
             banner.Controls.Add(new Label

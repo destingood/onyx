@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Management;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
     public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate }

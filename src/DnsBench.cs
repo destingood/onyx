@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Mesure la latence réelle d'un résolveur DNS via une requête UDP brute (port 53).</summary>
     internal static class DnsBench

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Management;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Détection détaillée des composants matériels (façon inventaire système).</summary>
     internal static class ComponentInfo
@@ -212,7 +212,7 @@ namespace BTOptimizer
         public static string ToText(List<Section> sections)
         {
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine("=== COMPOSANTS DU SYSTÈME — BT Optimizer ===");
+            sb.AppendLine("=== COMPOSANTS DU SYSTÈME — DesTinGOOD PC Optimizer ===");
             sb.AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
             foreach (Section s in sections)
             {

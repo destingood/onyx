@@ -1,5 +1,5 @@
 @echo off
-title Compilation BT Optimizer (.NET 10)
+title Compilation DesTinGOOD PC Optimizer (.NET 10)
 setlocal
 cd /d "%~dp0"
 
@@ -20,12 +20,12 @@ if %errorlevel% neq 0 (
 )
 
 echo Fermeture de l'app si elle tourne...
-taskkill /IM BTOptimizer.exe /F >nul 2>&1
-taskkill /IM dotnet.exe /FI "WINDOWTITLE eq BT Optimizer*" /F >nul 2>&1
+taskkill /IM DTGOptimizer.exe /F >nul 2>&1
+taskkill /IM dotnet.exe /FI "WINDOWTITLE eq DesTinGOOD PC Optimizer*" /F >nul 2>&1
 
 echo.
 echo Compilation .NET 10 (compatible Smart App Control)...
-dotnet publish BTOptimizer.csproj -c Release -o dist --nologo
+dotnet publish DTGOptimizer.csproj -c Release -o dist --nologo
 if %errorlevel% neq 0 (
     echo.
     echo ECHEC de la compilation.
@@ -34,6 +34,6 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo OK : dist\BTOptimizer.exe cree (v5.2).
-echo Lance l'application avec  Lancer-BTOptimizer.bat  (passe par l'hote dotnet signe).
+echo OK : dist\DTGOptimizer.exe cree (v5.2).
+echo Lance l'application avec  Lancer-DTGOptimizer.bat  (passe par l'hote dotnet signe).
 pause

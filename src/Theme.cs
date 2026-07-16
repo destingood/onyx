@@ -3,7 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>
     /// Thème clair/sombre appliqué récursivement. L'applicateur reconnaît les
@@ -22,7 +22,7 @@ namespace BTOptimizer
         // Tokens (basculent avec le thème).
         private static Color Bg, Panel, Ink, InkDim, Line, GroupInk, FieldBg;
 
-        private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-theme.txt"); } }
+        private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dtg-theme.txt"); } }
 
         static Theme()
         {

@@ -1,5 +1,5 @@
 <#
-    Signature du binaire BT Optimizer.
+    Signature du binaire DesTinGOOD PC Optimizer.
 
     Signature avec un VRAI certificat (recommandé pour la vente) :
         powershell -ExecutionPolicy Bypass -File .\sign.ps1 -Pfx "C:\chemin\moncert.pfx" -Password "motdepasse"
@@ -20,12 +20,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $dist = Join-Path $PSScriptRoot "..\dist"
-$targets = @("BTOptimizer.exe", "BTOptimizer.dll") | ForEach-Object { Join-Path $dist $_ } | Where-Object { Test-Path $_ }
+$targets = @("DTGOptimizer.exe", "DTGOptimizer.dll") | ForEach-Object { Join-Path $dist $_ } | Where-Object { Test-Path $_ }
 if ($targets.Count -eq 0) { Write-Error "Aucun binaire dans ..\dist. Lance Build.bat d'abord."; exit 1 }
 
 if ($SelfSignedTest) {
     Write-Host "Certificat AUTO-SIGNE (test local uniquement)..." -ForegroundColor Yellow
-    $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=BT Optimizer (TEST)" `
+    $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=DesTinGOOD PC Optimizer (TEST)" `
         -CertStoreLocation "Cert:\CurrentUser\My" -KeyUsage DigitalSignature -KeySpec Signature
 }
 elseif ($Pfx) {

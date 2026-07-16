@@ -1,5 +1,5 @@
 @echo off
-title Compilation BT Optimizer
+title Compilation DesTinGOOD PC Optimizer
 setlocal
 cd /d "%~dp0"
 
@@ -21,21 +21,21 @@ if not exist "%CSC%" (
 )
 
 rem Si l'application tourne encore, on la ferme proprement (sinon fichier verrouille).
-tasklist /FI "IMAGENAME eq BTOptimizer.exe" 2>nul | find /I "BTOptimizer.exe" >nul
+tasklist /FI "IMAGENAME eq DTGOptimizer.exe" 2>nul | find /I "DTGOptimizer.exe" >nul
 if %errorlevel% equ 0 (
-    echo Fermeture de BT Optimizer en cours d'execution...
-    taskkill /IM BTOptimizer.exe >nul 2>&1
+    echo Fermeture de DesTinGOOD PC Optimizer en cours d'execution...
+    taskkill /IM DTGOptimizer.exe >nul 2>&1
     timeout /t 2 /nobreak >nul
-    tasklist /FI "IMAGENAME eq BTOptimizer.exe" 2>nul | find /I "BTOptimizer.exe" >nul
-    if %errorlevel% equ 0 taskkill /F /IM BTOptimizer.exe >nul 2>&1
+    tasklist /FI "IMAGENAME eq DTGOptimizer.exe" 2>nul | find /I "DTGOptimizer.exe" >nul
+    if %errorlevel% equ 0 taskkill /F /IM DTGOptimizer.exe >nul 2>&1
     timeout /t 1 /nobreak >nul
 )
 
-echo Compilation de BTOptimizer.exe ...
+echo Compilation de DTGOptimizer.exe ...
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /codepage:65001 ^
   /win32manifest:src\app.manifest /win32icon:src\app.ico ^
   /r:System.dll /r:System.Core.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Management.dll ^
-  /out:BTOptimizer.exe src\Model.cs src\Native.cs src\Sys.cs src\Tweaks.cs src\Engine.cs src\Bench.cs src\DpcIsr.cs src\HwMonitor.cs src\LatencyForm.cs src\CompareForm.cs src\MonitorForm.cs src\OverclockForm.cs src\Cli.cs src\MainForm.cs src\Program.cs
+  /out:DTGOptimizer.exe src\Model.cs src\Native.cs src\Sys.cs src\Tweaks.cs src\Engine.cs src\Bench.cs src\DpcIsr.cs src\HwMonitor.cs src\LatencyForm.cs src\CompareForm.cs src\MonitorForm.cs src\OverclockForm.cs src\Cli.cs src\MainForm.cs src\Program.cs
 
 if %errorlevel% neq 0 (
     echo.
@@ -44,5 +44,5 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 echo.
-echo OK : BTOptimizer.exe cree. Double-cliquez dessus pour lancer l'application.
+echo OK : DTGOptimizer.exe cree. Double-cliquez dessus pour lancer l'application.
 pause

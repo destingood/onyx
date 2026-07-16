@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>Gestionnaire des programmes au démarrage : activer/désactiver ce qui se lance au boot.</summary>
     internal class StartupForm : Form
@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Programmes au démarrage";
+            Text = "DesTinGOOD PC Optimizer — Programmes au démarrage";
             ClientSize = new Size(680, 440);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 360);
@@ -89,7 +89,7 @@ namespace BTOptimizer
                 if (e.Enabled) on++;
                 _list.Items.Add(it);
             }
-            Text = "BT Optimizer — Programmes au démarrage (" + on + " actifs / " + _entries.Count + ")";
+            Text = "DesTinGOOD PC Optimizer — Programmes au démarrage (" + on + " actifs / " + _entries.Count + ")";
             _loading = false;
         }
 

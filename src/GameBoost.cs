@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace BTOptimizer
+namespace DTGOptimizer
 {
     /// <summary>
     /// Mode Jeu : un interrupteur temporaire qui nettoie la RAM, suspend (arrête, sans
