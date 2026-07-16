@@ -1,5 +1,5 @@
 # Optimisation Windows (gaming) - A EXECUTER EN ADMINISTRATEUR
-#   powershell -ExecutionPolicy Bypass -File .\optimise-windows-ADMIN.ps1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\optimise-windows-ADMIN.ps1
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) { Write-Host "ERREUR : lance en administrateur." -ForegroundColor Red; exit 1 }

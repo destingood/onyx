@@ -30,6 +30,12 @@ bt-optimizer-rapport.txt
 bt-analyse-latence.txt
 bt-optimizer-mesures.txt
 
+# Sauvegardes registre generees par l'app / le script a l'execution
+bt-optimizer-backup-*/
+
+# Documents personnels - ne pas versionner
+cv lucas/
+
 # Sorties temporaires
 *.tmp
 Thumbs.db

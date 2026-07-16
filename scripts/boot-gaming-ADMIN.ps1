@@ -1,5 +1,5 @@
 # Cree une entree de demarrage "GAMING" sans hyperviseur - A EXECUTER EN ADMIN
-#   powershell -ExecutionPolicy Bypass -File .\boot-gaming-ADMIN.ps1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\boot-gaming-ADMIN.ps1
 #
 # Effet : au demarrage du PC, un menu propose 2 choix :
 #   - "Windows 11"                  -> normal, Docker/WSL2 fonctionnent

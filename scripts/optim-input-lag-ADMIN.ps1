@@ -1,6 +1,6 @@
 # Optimisations input lag - A EXECUTER EN ADMINISTRATEUR
 # (clic droit > Executer avec PowerShell en admin, ou depuis un terminal admin :
-#   powershell -ExecutionPolicy Bypass -File .\optim-input-lag-ADMIN.ps1)
+#   powershell -ExecutionPolicy Bypass -File .\scripts\optim-input-lag-ADMIN.ps1)
 # Un redemarrage est necessaire pour le HAGS et le timer global.
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

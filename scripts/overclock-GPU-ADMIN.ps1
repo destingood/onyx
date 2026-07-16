@@ -1,5 +1,5 @@
 # Overclock GPU (RTX 4080 SUPER) - A EXECUTER EN ADMINISTRATEUR
-#   powershell -ExecutionPolicy Bypass -File .\overclock-GPU-ADMIN.ps1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\overclock-GPU-ADMIN.ps1
 #
 # Utilise nvidia-smi (outil OFFICIEL NVIDIA livre avec le driver).
 # Monte le power limit de 320 W (defaut) a 400 W (max autorise par ta

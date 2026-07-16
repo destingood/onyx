@@ -283,4 +283,5 @@ En plus des tweaks input lag historiques :
 | `src/` | Code source C# de l'application |
 | `bt-optimizer.ps1` | Version script PowerShell (secours) |
 | `Lancer-Optimiseur.bat` | Lanceur de la version PowerShell |
+| `scripts/` | Scripts PowerShell autonomes (boot gaming, input lag, réseau TP-Link, overclock GPU, mesure DPC…) |
 | `README.md` | Ce document |

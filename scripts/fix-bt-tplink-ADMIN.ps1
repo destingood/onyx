@@ -1,5 +1,5 @@
 # Fiabilisation du dongle Bluetooth TP-Link UB500 - A EXECUTER EN ADMINISTRATEUR
-#   powershell -ExecutionPolicy Bypass -File .\fix-bt-tplink-ADMIN.ps1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\fix-bt-tplink-ADMIN.ps1
 #
 # Probleme constate : erreurs BTHUSB 5 (paquets HCI corrompus) -> Windows
 # reinitialise la radio (evenement 18) -> la manette Xbox se deconnecte
