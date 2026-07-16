@@ -234,6 +234,10 @@ namespace BTOptimizer
                         if (!StartShell("ms-settings:windowsupdate", null))
                             StartShell("control.exe", "/name Microsoft.WindowsUpdate");
                         break;
+
+                    case FixKind.DisableCoreSync:
+                        DisableCoreSync();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -270,6 +274,29 @@ namespace BTOptimizer
             }
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
+            Reload();
+        }
+
+        private void DisableCoreSync()
+        {
+            if (MessageBox.Show(this,
+                    "Désactiver Samsung CoreSync ?\n\n"
+                    + "• CoreSync synchronise l'éclairage arrière (Core Lighting) des moniteurs Odyssey en capturant l'écran en continu : cause connue de saccades, pertes de FPS et d'input lag en jeu.\n"
+                    + "• Action : fermeture de l'appli + désactivation de son lancement au démarrage de Windows.\n"
+                    + "• L'éclairage reste réglable sans logiciel, directement dans le menu du moniteur (Jeu → Éclairage Core), en couleur fixe.\n"
+                    + "• Réversible : relance l'appli CoreSync, ou réactive-la dans Gestionnaire des tâches → Applications de démarrage.",
+                    "Samsung CoreSync", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+            int n = 0;
+            try { n = CoreSyncCheck.Disable(_log); }
+            catch (Exception ex) { if (_log != null) _log("CoreSync : échec (" + ex.Message + ").", 3); }
+            if (n > 0)
+                MessageBox.Show(this, "Samsung CoreSync neutralisé (" + n + " action(s)) : appli fermée et/ou démarrage automatique coupé.",
+                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            else
+                MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
+                    + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
+                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Reload();
         }
 

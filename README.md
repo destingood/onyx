@@ -128,6 +128,25 @@ Aucune dépendance externe : PDH + `GlobalMemoryStatusEx` + WMI + l'outil NVIDIA
 présent (la lib LibreHardwareMonitor du dossier cible .NET 10, incompatible avec le
 runtime .NET Framework de l'exe, donc non liée).
 
+### Samsung CoreSync — anti-saccades Odyssey (v7.9)
+
+Le **diagnostic santé** (fenêtre « Composants & diagnostic ») détecte le logiciel
+**Samsung CoreSync**, l'appli compagnon qui synchronise l'éclairage *Core Lighting*
+des moniteurs **Odyssey** (G6/G7/G8/G9, Neo, Ark) avec l'image. Pour teinter les LED
+arrière, elle **capture l'écran en continu** : cause connue de micro-saccades, de
+pertes de FPS et d'input lag en jeu.
+
+- CoreSync **tourne en fond** ou **démarre avec Windows** → bouton **`Désactiver`** :
+  ferme l'appli et coupe son lancement automatique (entrées Run + tâche de démarrage
+  de l'appli Store, même mécanisme que Gestionnaire des tâches → Démarrage). Réversible :
+  relance l'appli ou réactive-la dans le Gestionnaire des tâches.
+- Un **écran Samsung/Odyssey est branché** sans CoreSync → simple rappel : l'éclairage
+  se règle aussi directement dans le menu du moniteur (Jeu → Éclairage Core), en couleur
+  fixe de préférence.
+
+Le `CoreSync.exe` d'**Adobe** Creative Cloud (synchro cloud, sans rapport) est reconnu
+via son chemin d'installation et laissé tranquille.
+
 ## Dépôt git
 
 Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,

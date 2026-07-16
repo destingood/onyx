@@ -16,7 +16,7 @@
 #ifexist "..\dist\BTOptimizer.exe"
   #define AppVersion GetVersionNumbersString("..\dist\BTOptimizer.exe")
 #else
-  #define AppVersion "7.6.0.0"
+  #define AppVersion "7.9.0.0"
 #endif
 #define AppPublisher "BT Optimizer"
 #define AppURL "https://example.com"

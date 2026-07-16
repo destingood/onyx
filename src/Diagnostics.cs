@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -64,6 +64,23 @@ namespace BTOptimizer
             object hvci = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
             if (Sys.IntEquals(hvci, 1))
                 f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu.", FixKind.DisableVbs, "Désactiver"));
+
+            // Samsung CoreSync (synchro d'éclairage des moniteurs Odyssey) — capture
+            // l'écran en continu : cause connue de saccades / pertes de FPS en jeu.
+            try
+            {
+                CoreSyncCheck.Status cs = CoreSyncCheck.Probe();
+                string mon = cs.SamsungMonitor != null ? " (écran " + cs.SamsungMonitor + ")" : "";
+                if (cs.Running > 0)
+                    f.Add(new Finding(1, "Samsung CoreSync tourne en fond" + mon + " — la synchro d'éclairage capture l'écran en continu : saccades et pertes de FPS en jeu.", FixKind.DisableCoreSync, "Désactiver"));
+                else if (cs.StartupEnabled)
+                    f.Add(new Finding(1, "Samsung CoreSync démarre avec Windows" + mon + " — source connue de saccades en jeu ; il reviendra au prochain redémarrage.", FixKind.DisableCoreSync, "Désactiver"));
+                else if (cs.Installed)
+                    f.Add(new Finding(0, "Samsung CoreSync présent mais inactif" + mon + " : aucun impact."));
+                else if (cs.SamsungMonitor != null)
+                    f.Add(new Finding(0, "Écran Samsung détecté (" + cs.SamsungMonitor + "), logiciel CoreSync absent : OK. Saccades liées à l'éclairage ? Désactive CoreSync dans le menu du moniteur (Jeu → Éclairage Core)."));
+            }
+            catch { }
 
             // Résolution du timer
             double t = Native.CurrentTimerMs();
