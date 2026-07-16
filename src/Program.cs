@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("7.5.0.0")]
-[assembly: AssemblyFileVersion("7.5.0.0")]
+[assembly: AssemblyVersion("7.6.0.0")]
+[assembly: AssemblyFileVersion("7.6.0.0")]
 
 namespace BTOptimizer
 {
@@ -156,9 +156,11 @@ namespace BTOptimizer
                 var fnd = Diagnostics.Run();
                 int ok = 0, warn = 0, bad = 0;
                 foreach (var d in fnd) { if (d.Level == 0) ok++; else if (d.Level == 1) warn++; else bad++; }
-                Console.WriteLine("  " + fnd.Count + " constats (" + ok + " OK, " + warn + " attention, " + bad + " problème)");
+                int fixable = 0; foreach (var d in fnd) if (d.Fix != FixKind.None) fixable++;
+                Console.WriteLine("  " + fnd.Count + " constats (" + ok + " OK, " + warn + " attention, " + bad + " problème, " + fixable + " corrigeable(s))");
                 foreach (var d in fnd)
-                    Console.WriteLine("   [" + (d.Level == 2 ? "X" : (d.Level == 1 ? "!" : "v")) + "] " + d.Text);
+                    Console.WriteLine("   [" + (d.Level == 2 ? "X" : (d.Level == 1 ? "!" : "v")) + "] " + d.Text
+                        + (d.Fix != FixKind.None ? "   -> [bouton: " + d.FixLabel + " / " + d.Fix + "]" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Diagnostic ERREUR : " + ex.Message); }
 

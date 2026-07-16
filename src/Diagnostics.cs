@@ -5,6 +5,9 @@ using System.Management;
 
 namespace BTOptimizer
 {
+    /// <summary>Action corrective proposée à côté d'un constat.</summary>
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate }
+
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
     {
@@ -12,7 +15,10 @@ namespace BTOptimizer
         {
             public int Level;
             public string Text;
+            public FixKind Fix = FixKind.None;
+            public string FixLabel = "";
             public Finding(int lvl, string t) { Level = lvl; Text = t; }
+            public Finding(int lvl, string t, FixKind fix, string fixLabel) { Level = lvl; Text = t; Fix = fix; FixLabel = fixLabel; }
         }
 
         public static List<Finding> Run()
@@ -27,7 +33,7 @@ namespace BTOptimizer
                 long freeGB = d.AvailableFreeSpace / 1000000000;
                 double pct = d.TotalSize > 0 ? 100.0 * d.AvailableFreeSpace / d.TotalSize : 100;
                 if (pct < 10 || freeGB < 20)
-                    f.Add(new Finding(2, "Disque système presque plein (" + freeGB + " Go libres) — utilise le Nettoyage disque."));
+                    f.Add(new Finding(2, "Disque système presque plein (" + freeGB + " Go libres) — libère de l'espace.", FixKind.CleanDisk, "Nettoyer"));
                 else
                     f.Add(new Finding(0, "Espace disque système correct (" + freeGB + " Go libres)."));
             }
@@ -50,19 +56,19 @@ namespace BTOptimizer
             // Âge du pilote GPU
             int days = GpuDriverAgeDays();
             if (days > 270)
-                f.Add(new Finding(1, "Pilote GPU ancien (~" + Math.Max(1, days / 30) + " mois) — une mise à jour peut améliorer perfs et stabilité."));
+                f.Add(new Finding(1, "Pilote GPU ancien (~" + Math.Max(1, days / 30) + " mois) — une mise à jour peut améliorer perfs et stabilité.", FixKind.WindowsUpdate, "Windows Update"));
             else if (days >= 0)
                 f.Add(new Finding(0, "Pilote GPU récent (~" + days + " jour(s))."));
 
             // Intégrité mémoire (VBS/HVCI)
             object hvci = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
             if (Sys.IntEquals(hvci, 1))
-                f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu (désactivable dans la section Système)."));
+                f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu.", FixKind.DisableVbs, "Désactiver"));
 
             // Résolution du timer
             double t = Native.CurrentTimerMs();
             if (t > 1.2)
-                f.Add(new Finding(1, "Timer système à " + t.ToString("0.0") + " ms — active « Timer 1 ms » ou le Mode Jeu pour plus de réactivité."));
+                f.Add(new Finding(1, "Timer système à " + t.ToString("0.0") + " ms — force 1 ms pour plus de réactivité.", FixKind.Timer1ms, "Forcer 1 ms"));
             else if (t > 0)
                 f.Add(new Finding(0, "Timer système à " + t.ToString("0.0") + " ms."));
 
@@ -71,7 +77,7 @@ namespace BTOptimizer
             {
                 object srDisabled = Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR");
                 if (Sys.IntEquals(srDisabled, 1))
-                    f.Add(new Finding(1, "La restauration système semble désactivée — active-la pour pouvoir revenir en arrière."));
+                    f.Add(new Finding(1, "La restauration système semble désactivée — active-la pour pouvoir revenir en arrière.", FixKind.OpenRestore, "Ouvrir"));
             }
             catch { }
 
