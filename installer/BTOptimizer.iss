@@ -79,8 +79,11 @@ Name: "{group}\Désinstaller {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
+; L'app a un manifeste requireAdministrator. Une entree postinstall s'execute par
+; defaut avec le jeton NON eleve de l'utilisateur d'origine -> CreateProcess echoue
+; (code 740). runascurrentuser la lance avec le jeton (deja eleve) de l'installateur.
 Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app}"; \
-  Flags: nowait postinstall skipifsilent
+  Flags: nowait postinstall skipifsilent runascurrentuser
 
 [UninstallDelete]
 ; Nettoie les fichiers créés par l'app après coup (sauvegardes/état/traces).

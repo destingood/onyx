@@ -17,6 +17,8 @@ seller/private.xml
 seller/bin/
 seller/obj/
 installer/Output/
+installer/Output-fix/
+installer/Output*/
 
 # Fichiers d'etat generes par l'app a l'execution
 bt-license.txt
