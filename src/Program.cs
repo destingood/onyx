@@ -145,8 +145,15 @@ namespace BTOptimizer
                 Console.WriteLine("  " + secs.Count + " sections, " + rows + " propriétés détectées");
                 foreach (var sc in secs)
                     Console.WriteLine("   - " + sc.Title + " (" + sc.Rows.Count + ")");
-                using (var f = new SystemInfoForm(delegate(string m, int l) { })) { f.CreateControl(); }
-                Console.WriteLine("  UI SystemInfoForm : construite OK.");
+                using (var f = new SystemInfoForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    var mi = typeof(SystemInfoForm).GetMethod("Reload",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi.Invoke(f, null);   // premier remplissage
+                    mi.Invoke(f, null);   // second : exerce la libération des anciennes lignes (anti-fuite)
+                }
+                Console.WriteLine("  UI SystemInfoForm : construite + 2x Reload + Dispose OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Composants ERREUR : " + ex.Message); }
 

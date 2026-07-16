@@ -18,6 +18,11 @@ namespace BTOptimizer
         private ToolTip _tip;
         private List<ComponentInfo.Section> _sections;
         private string _diagText = "";
+        private List<Font> _ownedFonts;   // polices allouées une fois, libérées au Dispose
+        private Font _diagFont;           // réutilisée par chaque libellé de constat
+        private Font _fixFont;            // réutilisée par chaque bouton de correction
+
+        private Font Own(Font f) { _ownedFonts.Add(f); return f; }
 
         public SystemInfoForm(Action<string, int> log)
         {
@@ -33,7 +38,10 @@ namespace BTOptimizer
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 480);
             BackColor = Color.FromArgb(245, 246, 248);
-            Font = new Font("Segoe UI", 9f);
+            _ownedFonts = new List<Font>();
+            _diagFont = Own(new Font("Segoe UI", 9.5f));
+            _fixFont = Own(new Font("Segoe UI", 8.75f));
+            Font = Own(new Font("Segoe UI", 9f));
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             _tip = new ToolTip { AutoPopDelay = 20000, InitialDelay = 300 };
 
@@ -41,7 +49,7 @@ namespace BTOptimizer
             banner.Controls.Add(new Label
             {
                 Text = "  Composants & diagnostic santé", Dock = DockStyle.Fill, ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 13f), TextAlign = ContentAlignment.MiddleLeft
+                Font = Own(new Font("Segoe UI Semibold", 13f)), TextAlign = ContentAlignment.MiddleLeft
             });
 
             // ---- Panneau diagnostic (constats + boutons de correction) ----
@@ -49,7 +57,7 @@ namespace BTOptimizer
             var diagHead = new Label
             {
                 Text = "Diagnostic santé — corrige en un clic", Dock = DockStyle.Top, Height = 22,
-                Font = new Font("Segoe UI Semibold", 10f), ForeColor = Color.FromArgb(50, 70, 130)
+                Font = Own(new Font("Segoe UI Semibold", 10f)), ForeColor = Color.FromArgb(50, 70, 130)
             };
             _diagTable = new TableLayoutPanel
             {
@@ -66,7 +74,7 @@ namespace BTOptimizer
             _list = new ListView
             {
                 Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true, GridLines = false,
-                HeaderStyle = ColumnHeaderStyle.None, ShowGroups = true, Font = new Font("Segoe UI", 9.5f)
+                HeaderStyle = ColumnHeaderStyle.None, ShowGroups = true, Font = Own(new Font("Segoe UI", 9.5f))
             };
             _list.Columns.Add("Propriété", 230);
             _list.Columns.Add("Valeur", 400);
@@ -122,7 +130,7 @@ namespace BTOptimizer
                 FlatStyle = FlatStyle.Flat, Margin = new Padding(0, 3, 2, 3),
                 BackColor = primary ? Accent : (Theme.Dark ? Color.FromArgb(44, 48, 56) : Color.White),
                 ForeColor = primary ? Color.White : (Theme.Dark ? Color.FromArgb(210, 216, 222) : Color.FromArgb(40, 44, 52)),
-                Font = new Font("Segoe UI", 8.75f), Tag = fd
+                Font = _fixFont, Tag = fd
             };
             b.FlatAppearance.BorderColor = primary ? Accent : Color.FromArgb(120, 126, 134);
             b.Click += (s, e) => OnFix((Diagnostics.Finding)((Button)s).Tag);
@@ -141,9 +149,14 @@ namespace BTOptimizer
 
             // ---- Diagnostic ----
             _diagTable.SuspendLayout();
+            // Libère les anciens contrôles : Controls.Clear() détache sans disposer
+            // (chaque Label/Button possède un handle natif + une entrée ToolTip).
+            var stale = new List<Control>();
+            foreach (Control c in _diagTable.Controls) stale.Add(c);
             _diagTable.Controls.Clear();
             _diagTable.RowStyles.Clear();
             _diagTable.RowCount = 0;
+            foreach (Control c in stale) { try { _tip.SetToolTip(c, string.Empty); } catch { } c.Dispose(); }
             var db = new System.Text.StringBuilder();
             int r = 0;
             try
@@ -157,7 +170,7 @@ namespace BTOptimizer
                         Text = icon + "   " + fd.Text, Dock = DockStyle.Fill, AutoEllipsis = true,
                         TextAlign = ContentAlignment.MiddleLeft, BackColor = Color.Transparent,
                         ForeColor = DiagColor(fd.Level), Margin = new Padding(2, 1, 6, 1),
-                        Font = new Font("Segoe UI", 9.5f)
+                        Font = _diagFont
                     };
                     _tip.SetToolTip(lbl, fd.Text);
                     _diagTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 32f));
@@ -214,7 +227,7 @@ namespace BTOptimizer
                         break;
 
                     case FixKind.OpenRestore:
-                        StartShell("SystemPropertiesProtection.exe", null);
+                        EnableRestore();
                         break;
 
                     case FixKind.WindowsUpdate:
@@ -236,6 +249,28 @@ namespace BTOptimizer
                 return true;
             }
             catch { return false; }
+        }
+
+        private void EnableRestore()
+        {
+            // Le constat vient de la stratégie HKLM\...\Policies\...\SystemRestore\DisableSR = 1,
+            // que la fenêtre « Protection système » ne peut PAS outrepasser. On lève d'abord le
+            // blocage (suppression des valeurs de stratégie), puis on ouvre le dialogue.
+            if (MessageBox.Show(this,
+                    "La restauration système est bloquée par une stratégie.\n\n"
+                    + "Lever le blocage puis ouvrir la fenêtre « Protection système » pour l'activer ?\n"
+                    + "(Réversible : la stratégie peut être remise.)",
+                    "Restauration système", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+            try
+            {
+                Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR");
+                Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableConfig");
+                if (_log != null) _log("Blocage de la restauration système levé (stratégie supprimée).", 1);
+            }
+            catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
+            StartShell("SystemPropertiesProtection.exe", null);
+            Reload();
         }
 
         private void DisableVbs()
@@ -262,16 +297,35 @@ namespace BTOptimizer
                     {
                         SetBusy(false);
                         Reload();
-                        if (res != null && res.PrepFailed)
-                            MessageBox.Show(this, "Échec : " + res.PrepError, "BT Optimizer",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        else
+                        bool ok = res != null && !res.PrepFailed && res.Ok > 0 && res.Ko == 0;
+                        if (ok)
                             MessageBox.Show(this, "Intégrité de la mémoire désactivée.\nRedémarre pour que le changement prenne effet.",
                                 "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        else
+                        {
+                            string why = res == null ? "erreur inconnue"
+                                : (res.PrepFailed ? res.PrepError : "l'écriture registre a échoué (droits administrateur requis)");
+                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "BT Optimizer",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }));
                 }
                 catch { }
             });
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_tip != null) { try { _tip.RemoveAll(); _tip.Dispose(); } catch { } _tip = null; }
+                if (_ownedFonts != null)
+                {
+                    foreach (Font fnt in _ownedFonts) { try { fnt.Dispose(); } catch { } }
+                    _ownedFonts.Clear();
+                }
+            }
+            base.Dispose(disposing);
         }
 
         private void OnExport(object sender, EventArgs e)
