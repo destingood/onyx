@@ -629,7 +629,7 @@ namespace BTOptimizer
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" },
                 Apply = () => Sys.SetNagle(true),
                 Revert = () => Sys.SetNagle(false),
-                Check = () => null
+                Check = () => Sys.NagleActive()
             });
 
             list.Add(new Tweak
@@ -639,7 +639,7 @@ namespace BTOptimizer
                 Desc = "Les paquets reçus sont traités immédiatement au lieu d'être regroupés : latence réseau réduite de quelques ms, léger surcoût CPU.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set global rsc=disabled", "Désactivation du RSC"),
                 Revert = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set global rsc=enabled", "Réactivation du RSC"),
-                Check = () => null
+                Check = () => Sys.RscDisabled()
             });
 
             list.Add(new Tweak
@@ -649,7 +649,7 @@ namespace BTOptimizer
                 Desc = "Coupe la mise en veille de l'adaptateur réseau : évite micro-coupures et pics de ping après une période calme.",
                 Apply = () => Sys.SetNicPowerSaving(true),
                 Revert = () => Sys.SetNicPowerSaving(false),
-                Check = () => null
+                Check = () => Sys.NicPowerDisabled()
             });
 
             // ===================================================================

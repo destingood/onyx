@@ -54,7 +54,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 5.7 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 5.8 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;

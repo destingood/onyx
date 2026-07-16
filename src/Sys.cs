@@ -450,6 +450,54 @@ namespace BTOptimizer
             return null;
         }
 
+        public static bool? NagleActive()
+        {
+            const string root = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(root))
+            {
+                if (rk == null) return null;
+                foreach (string c in rk.GetSubKeyNames())
+                    using (RegistryKey ik = rk.OpenSubKey(c))
+                        if (ik != null && IntEquals(ik.GetValue("TcpAckFrequency"), 1)) return true;
+            }
+            return false;
+        }
+
+        public static bool? NicPowerDisabled()
+        {
+            const string netClass = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(netClass))
+            {
+                if (rk == null) return null;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c))
+                    {
+                        if (ik == null || ik.GetValue("NetCfgInstanceId") == null) continue;
+                        if (IntEquals(ik.GetValue("PnPCapabilities"), 24)) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static bool? RscDisabled()
+        {
+            NativeResult r = Run(Sys32("netsh.exe"), "int tcp show global");
+            if (r.ExitCode != 0) return null;
+            foreach (string line in r.Output.Split('\n'))
+            {
+                if (line.IndexOf("RSC", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (line.IndexOf("disabled", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                    if (line.IndexOf("enabled", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                }
+            }
+            return null;
+        }
+
         // ------------------------------------------------------------------
         //  Services Windows
         // ------------------------------------------------------------------
