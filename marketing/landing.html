@@ -1,0 +1,365 @@
+<title>BT Optimizer — la latence, mesurée</title>
+<style>
+  :root {
+    --bg: #0B0E11;
+    --panel: #12171C;
+    --panel-2: #161C22;
+    --line: rgba(255,255,255,0.08);
+    --line-strong: rgba(255,255,255,0.14);
+    --ink: #D2DAE0;
+    --ink-dim: #8A97A0;
+    --ink-faint: #5C666E;
+    --signal: #35E0A1;
+    --signal-deep: #17b381;
+    --before: #F0A93C;
+    --grid: rgba(53,224,161,0.07);
+    --scale: clamp(1rem, 0.9rem + 0.4vw, 1.125rem);
+    --h1: clamp(2.5rem, 1.4rem + 5vw, 5rem);
+    --h2: clamp(1.7rem, 1.1rem + 2.4vw, 2.7rem);
+    --sans: "Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --mono: "Cascadia Code","SFMono-Regular","SF Mono",Consolas,"Liberation Mono",monospace;
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #EEF2F3; --panel: #FFFFFF; --panel-2: #F6F8F9;
+      --line: rgba(12,20,26,0.10); --line-strong: rgba(12,20,26,0.16);
+      --ink: #10171C; --ink-dim: #4E5A62; --ink-faint: #85939B;
+      --signal: #0C9F71; --signal-deep: #0a815d; --before: #C77A16;
+      --grid: rgba(12,159,113,0.08);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0B0E11;--panel:#12171C;--panel-2:#161C22;--line:rgba(255,255,255,0.08);--line-strong:rgba(255,255,255,0.14);
+    --ink:#D2DAE0;--ink-dim:#8A97A0;--ink-faint:#5C666E;--signal:#35E0A1;--signal-deep:#17b381;--before:#F0A93C;--grid:rgba(53,224,161,0.07);
+  }
+  :root[data-theme="light"] {
+    --bg:#EEF2F3;--panel:#FFFFFF;--panel-2:#F6F8F9;--line:rgba(12,20,26,0.10);--line-strong:rgba(12,20,26,0.16);
+    --ink:#10171C;--ink-dim:#4E5A62;--ink-faint:#85939B;--signal:#0C9F71;--signal-deep:#0a815d;--before:#C77A16;--grid:rgba(12,159,113,0.08);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: var(--scale); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  h1,h2,h3 { text-wrap: balance; letter-spacing: -0.02em; margin: 0; }
+  .mono { font-family: var(--mono); }
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--signal); margin: 0 0 18px;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* nav */
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(10px); background: color-mix(in srgb, var(--bg) 78%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-in { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-weight: 700; letter-spacing: -0.01em; }
+  .glyph {
+    width: 26px; height: 26px; border: 1.5px solid var(--signal); border-radius: 7px;
+    display: grid; place-items: center; color: var(--signal); font-family: var(--mono); font-size: 15px;
+  }
+  .nav-links { display: flex; align-items: center; gap: 26px; }
+  .nav-links a { color: var(--ink-dim); text-decoration: none; font-size: 0.92rem; }
+  .nav-links a:hover { color: var(--ink); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    font-family: var(--sans); font-weight: 600; font-size: 0.95rem;
+    padding: 11px 20px; border-radius: 9px; text-decoration: none; cursor: pointer;
+    border: 1px solid transparent; transition: transform .12s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn-primary { background: var(--signal); color: #04150E; }
+  .btn-primary:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--signal) 88%, white); }
+  .btn-ghost { border-color: var(--line-strong); color: var(--ink); background: transparent; }
+  .btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 6px; }
+
+  /* hero */
+  .hero { padding: 70px 0 40px; position: relative; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+  h1 { font-size: var(--h1); font-weight: 800; line-height: 1.02; }
+  h1 .accent { color: var(--signal); }
+  .lede { color: var(--ink-dim); max-width: 46ch; margin: 22px 0 30px; font-size: 1.08rem; }
+  .cta-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .cta-note { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-faint); }
+
+  /* scope */
+  .scope {
+    position: relative; border: 1px solid var(--line-strong); border-radius: 16px; overflow: hidden;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 34px 100%,
+      var(--panel);
+    box-shadow: 0 30px 80px -40px rgba(0,0,0,0.6);
+  }
+  .scope canvas { display: block; width: 100%; height: 300px; }
+  .scope-tag {
+    position: absolute; top: 14px; left: 16px; font-family: var(--mono); font-size: 0.7rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  .scope-legend { position: absolute; top: 14px; right: 16px; display: flex; gap: 16px; font-family: var(--mono); font-size: 0.7rem; }
+  .lg { display: flex; align-items: center; gap: 6px; color: var(--ink-dim); }
+  .lg i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .statbar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 26px;
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--line);
+  }
+  .stat { background: var(--panel); padding: 18px 18px; }
+  .stat .k { font-family: var(--mono); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.02em; }
+  .stat .k b { color: var(--signal); font-weight: 600; }
+  .stat .l { color: var(--ink-dim); font-size: 0.82rem; margin-top: 4px; }
+
+  section { padding: 72px 0; border-top: 1px solid var(--line); }
+  .sec-head { max-width: 60ch; margin-bottom: 40px; }
+  h2 { font-size: var(--h2); font-weight: 700; }
+  .sub { color: var(--ink-dim); margin-top: 14px; }
+
+  /* before/after */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .ba-card { border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: var(--panel); }
+  .ba-card h3 { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+  .ba-row { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .ba-row:last-child { border-bottom: 0; }
+  .ba-row .name { color: var(--ink-dim); font-size: 0.9rem; }
+  .ba-row .val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+  .ba-card.after { border-color: color-mix(in srgb, var(--signal) 40%, var(--line)); }
+  .ba-card.after .val { color: var(--signal); }
+
+  /* features */
+  .feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: var(--panel);
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .card .ix { font-family: var(--mono); font-size: 0.72rem; color: var(--signal); letter-spacing: 0.12em; }
+  .card h3 { font-size: 1.12rem; font-weight: 700; margin: 12px 0 8px; }
+  .card p { color: var(--ink-dim); font-size: 0.94rem; margin: 0; }
+
+  /* pricing */
+  .price { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 820px; }
+  .plan { border: 1px solid var(--line); border-radius: 16px; padding: 30px; background: var(--panel); display: flex; flex-direction: column; }
+  .plan.pro { border-color: color-mix(in srgb, var(--signal) 46%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--signal) 7%, var(--panel)), var(--panel)); }
+  .plan .tier { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; color: var(--ink-dim); }
+  .plan.pro .tier { color: var(--signal); }
+  .plan .amt { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; margin: 10px 0 2px; }
+  .plan .amt small { font-size: 0.9rem; font-weight: 500; color: var(--ink-faint); letter-spacing: 0; }
+  .plan ul { list-style: none; padding: 0; margin: 20px 0 26px; display: flex; flex-direction: column; gap: 11px; }
+  .plan li { display: flex; gap: 10px; font-size: 0.92rem; color: var(--ink-dim); }
+  .plan li::before { content: "▸"; color: var(--signal); }
+  .plan .btn { margin-top: auto; }
+
+  /* disclaimer */
+  .note { border: 1px solid var(--line); border-left: 3px solid var(--signal); border-radius: 12px; padding: 22px 24px; background: var(--panel-2); color: var(--ink-dim); font-size: 0.9rem; }
+  .note b { color: var(--ink); }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 0.84rem; }
+  .foot-in { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 34px; }
+    .statbar { grid-template-columns: repeat(2,1fr); }
+    .ba, .feat, .price { grid-template-columns: 1fr; }
+    .nav-links a:not(.btn) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="brand"><span class="glyph">⧗</span> BT Optimizer</div>
+    <div class="nav-links">
+      <a href="#mesure">Mesure</a>
+      <a href="#fonctions">Fonctions</a>
+      <a href="#tarifs">Tarifs</a>
+      <a class="btn btn-primary" href="#tarifs">Télécharger</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Mesuré, pas promis</p>
+      <h1>La latence de ton PC, <span class="accent">chiffrée</span> puis réduite.</h1>
+      <p class="lede">62 optimisations réversibles pour l'input lag et la rapidité sous Windows 10/11. L'outil mesure ta latence <em>avant</em> et <em>après</em> — tu vois le gain, tu ne le crois pas sur parole.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#tarifs">Essayer gratuitement</a>
+        <a class="btn btn-ghost" href="#mesure">Voir la mesure</a>
+        <span class="cta-note">Windows 10/11 · réversible · sauvegarde auto</span>
+      </div>
+    </div>
+
+    <div class="scope" aria-hidden="true">
+      <span class="scope-tag">latence · µs</span>
+      <div class="scope-legend">
+        <span class="lg"><i style="background:var(--before)"></i>avant</span>
+        <span class="lg"><i style="background:var(--signal)"></i>après</span>
+      </div>
+      <canvas id="scope" width="620" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="statbar tnum">
+      <div class="stat"><div class="k">62</div><div class="l">optimisations réversibles</div></div>
+      <div class="stat"><div class="k">&lt;<b>1</b>ms</div><div class="l">timer système forcé</div></div>
+      <div class="stat"><div class="k"><b>DPC</b>/ISR</div><div class="l">analyse façon LatencyMon</div></div>
+      <div class="stat"><div class="k"><b>1</b>-clic</div><div class="l">tout rétablir</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="mesure">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Avant / Après</p>
+      <h2>Le seul optimiseur qui te montre ses preuves.</h2>
+      <p class="sub">Capture ETW intégrée (WPR + xperf) et test de gigue temps réel. Applique un profil, relance la mesure, compare. Exemple relevé sur une machine de test — tes chiffres dépendent de ton matériel.</p>
+    </div>
+    <div class="ba">
+      <div class="ba-card before">
+        <h3>Avant réglages</h3>
+        <div class="ba-row"><span class="name">Résolution du timer</span><span class="val">15.6 ms</span></div>
+        <div class="ba-row"><span class="name">Gigue Sleep(1) — pire cas</span><span class="val">3.9 ms</span></div>
+        <div class="ba-row"><span class="name">Pire latence DPC pilote</span><span class="val">512 µs</span></div>
+        <div class="ba-row"><span class="name">Verdict</span><span class="val">à surveiller</span></div>
+      </div>
+      <div class="ba-card after">
+        <h3>Après réglages</h3>
+        <div class="ba-row"><span class="name">Résolution du timer</span><span class="val">0.5 ms</span></div>
+        <div class="ba-row"><span class="name">Gigue Sleep(1) — pire cas</span><span class="val">1.7 ms</span></div>
+        <div class="ba-row"><span class="name">Pire latence DPC pilote</span><span class="val">128 µs</span></div>
+        <div class="ba-row"><span class="name">Verdict</span><span class="val">excellent</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fonctions">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Ce qu'il fait</p>
+      <h2>Un atelier de réglage complet, pas une liste de tweaks.</h2>
+    </div>
+    <div class="feat">
+      <div class="card"><div class="ix">01 · INPUT LAG</div><h3>62 optimisations</h3><p>Souris, files d'attente, timer 1 ms, MSU/MSI GPU, plein écran exclusif, planificateur CPU, réseau — cochables une par une, avec détection de l'état actuel.</p></div>
+      <div class="card"><div class="ix">02 · MESURE</div><h3>Analyse DPC/ISR</h3><p>Interface façon LatencyMon : verdict, pires latences par pilote, comparaison avant/après. Ta preuve chiffrée du gain.</p></div>
+      <div class="card"><div class="ix">03 · MATÉRIEL</div><h3>Auto-tune intelligent</h3><p>Détecte SSD/HDD, GPU et RAM, puis sélectionne les réglages adaptés — jamais SysMain off sur un disque mécanique.</p></div>
+      <div class="card"><div class="ix">04 · GPU</div><h3>Overclock encadré</h3><p>Power limit et fréquences via l'outillage NVIDIA, bornés par le pilote, persistants et réversibles. Profil pilote « faible latence » en un clic.</p></div>
+      <div class="card"><div class="ix">05 · TEMPS RÉEL</div><h3>Moniteur matériel</h3><p>CPU, RAM, GPU (température, charge, fréquences, VRAM) en direct, avec courbes et enregistrement CSV d'une session.</p></div>
+      <div class="card"><div class="ix">06 · RÉSEAU</div><h3>DNS rapide</h3><p>Résolveurs Cloudflare, Google, Quad9… avec test de latence intégré qui choisit le plus rapide depuis ta connexion.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tarifs">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Tarifs</p>
+      <h2>Gratuit pour régler. Pro pour automatiser.</h2>
+    </div>
+    <div class="price">
+      <div class="plan">
+        <span class="tier">Gratuit</span>
+        <div class="amt">0 €</div>
+        <ul>
+          <li>Les 62 optimisations en manuel</li>
+          <li>Preset « Recommandé »</li>
+          <li>Sauvegarde .reg + point de restauration</li>
+          <li>Mesure de latence &amp; moniteur matériel</li>
+          <li>Tout rétablir en un clic</li>
+        </ul>
+        <a class="btn btn-ghost" href="#">Télécharger</a>
+      </div>
+      <div class="plan pro">
+        <span class="tier">Pro</span>
+        <div class="amt">19 € <small>/ licence à vie</small></div>
+        <ul>
+          <li>Auto-tune adapté à ton matériel</li>
+          <li>Presets eSport &amp; Benchmark</li>
+          <li>Overclock GPU + profil pilote NVIDIA</li>
+          <li>Gardien de démarrage (réglages verrouillés)</li>
+          <li>Outils DNS &amp; analyse avancée</li>
+        </ul>
+        <a class="btn btn-primary" href="#">Passer à la version Pro</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="note">
+      <b>Transparence.</b> Chaque modification est réversible et une sauvegarde du registre est créée avant application. Les options qui réduisent une protection de sécurité (mitigations Spectre/Meltdown, intégrité de la mémoire) ou qui overclockent le matériel ne sont <b>jamais</b> appliquées automatiquement — elles restent un choix explicite. Logiciel fourni sans garantie, à utiliser à vos risques. <b>Non affilié</b> à Microsoft, NVIDIA, AMD ou Intel ; les marques citées appartiennent à leurs propriétaires.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div>© BT Optimizer — Optimiseur de latence pour Windows.</div>
+    <div class="mono">v6.1 · Windows 10/11 · x64</div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var c = document.getElementById('scope');
+  if (!c || !c.getContext) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ctx = c.getContext('2d');
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function resize() {
+    var r = c.getBoundingClientRect();
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.max(320, r.width) * dpr;
+    c.height = 300 * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // pseudo-random but deterministic jitter
+  function noise(i, s){ return Math.sin(i*12.9898 + s)*43758.5453 % 1; }
+
+  var t = 0;
+  function trace(amp, spike, color, width, phase, smooth) {
+    var w = c.clientWidth || 600, h = 300, mid = h * 0.52;
+    ctx.beginPath();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.95;
+    for (var x = 0; x <= w; x += 3) {
+      var i = x * 0.05 + phase;
+      var base = Math.sin(i*0.7 + t*0.6) * amp * 0.4;
+      var j = (noise(Math.floor(i*2), phase) - 0.5) * amp * smooth;
+      var sp = 0;
+      var spk = Math.sin(i*0.13 + t*0.3 + phase);
+      if (spike > 0 && spk > 0.86) sp = -(spk-0.86) * spike * 7;
+      var y = mid + base + j + sp;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function frame() {
+    var w = c.clientWidth || 600, h = 300;
+    ctx.clearRect(0, 0, w, h);
+    trace(26, 34, css('--before'), 1.6, 10, 0.9);   // avant : jagged + spikes
+    trace(16, 0, css('--signal'), 2, 40, 0.15);      // apres : smooth
+    if (!reduce) { t += 0.05; requestAnimationFrame(frame); }
+  }
+  frame();
+})();
+</script>
