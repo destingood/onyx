@@ -215,6 +215,22 @@ Get-ExecutionPolicy -List
 
 ## Nouvelles optimisations (v3, application .exe)
 
+**62 optimisations** au total. Bloc « avancé » (v5.3, réversible + sauvegardé, à cocher en connaissance de cause) :
+
+| Tweak | Catégorie | Effet |
+|-------|-----------|-------|
+| **MSI mode GPU** | GPU | Interruptions par message → moins de latence/stutter d'interruption |
+| État min. processeur 100 % | Alim | CPU à pleine fréquence, pas de latence de montée en régime |
+| Désactiver les C-States CPU | Alim | Latence d'interruption minimale (chaleur/conso en hausse — exp.) |
+| **Mitigations Spectre/Meltdown off** | Système | Gros gain CPU ancien — ⚠ réduit la protection (réversible) |
+| **VBS / Intégrité mémoire (HVCI) off** | Système | Récupère les perfs mangées par la virtualisation — ⚠ sécurité |
+| Prefetch/Superfetch off (SSD) | Système | Moins d'écritures disque |
+| Horodatage « dernier accès » NTFS off | Système | Moins d'écritures disque |
+| Catégorie **Confidentialité** | — | ID pub, télémétrie, historique d'activité, localisation, feedback, Cortana |
+| Services Xbox / MapsBroker / Registre distant | Services | Moins de fond / surface d'attaque (réversibles) |
+
+Les tweaks ⚠ **sécurité** ne sont ni recommandés ni dans les presets : opt-in explicite.
+
 En plus des tweaks input lag historiques :
 
 | Tweak | Catégorie | Effet |

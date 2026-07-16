@@ -652,6 +652,238 @@ namespace BTOptimizer
                 Check = () => null
             });
 
+            // ===================================================================
+            //  BLOC AVANCÉ (« zéro limite ») — tout réversible, sauvegardé
+            // ===================================================================
+            const string SubProc = "54533251-82be-4824-96c1-47b60b740d00";
+            const string MemMgmt  = @"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management";
+
+            // ---- Alimentation & CPU (avancé) ----
+            list.Add(new Tweak
+            {
+                Id = "proc_min_100", Category = Cat.Alim, Esport = true,
+                Name = "État minimal du processeur à 100 % (pas de sous-cadençage)",
+                Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %.",
+                Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 100),
+                Revert = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 5, 5),
+                Check  = () => null
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "cpu_idle_disable", Category = Cat.Alim,
+                Name = "Désactiver les états de repos du CPU (C-States) — EXPÉRIMENTAL",
+                Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos.",
+                Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
+                Revert = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 0, 0),
+                Check  = () => null
+            });
+
+            // ---- GPU & jeux (avancé) ----
+            list.Add(new Tweak
+            {
+                Id = "gpu_msi", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Name = "Activer le MSI mode sur le GPU (interruptions par message)",
+                Desc = "Le GPU utilise des interruptions modernes (MSI) au lieu des IRQ à ligne : réduit la latence et le stutter d'interruption. Standard sur GPU récents. « Rétablir » remet le défaut du pilote.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
+                Apply  = () => Sys.SetGpuMsi(true, null),
+                Revert = () => Sys.SetGpuMsi(false, null),
+                Check  = () => Sys.GpuMsiActive()
+            });
+
+            // ---- Système & planificateur (avancé / sécurité) ----
+            list.Add(new Tweak
+            {
+                Id = "spectre_off", Category = Cat.Systeme, Reboot = true,
+                Name = "Désactiver les mitigations Spectre/Meltdown — EXPÉRIMENTAL / SÉCURITÉ",
+                Desc = "Gros gain CPU sur les processeurs anciens (ex : 9900K), MAIS réduit la protection contre les failles Spectre/Meltdown. À n'activer qu'en connaissance de cause. Entièrement réversible.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(MemMgmt, "FeatureSettingsOverride", 1, RegistryValueKind.DWord);
+                    Sys.SetMachine(MemMgmt, "FeatureSettingsOverrideMask", 3, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.DelMachine(MemMgmt, "FeatureSettingsOverride");
+                    Sys.DelMachine(MemMgmt, "FeatureSettingsOverrideMask");
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(MemMgmt, "FeatureSettingsOverride"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "vbs_off", Category = Cat.Systeme, Reboot = true,
+                Name = "Désactiver VBS / Intégrité de la mémoire (HVCI) — SÉCURITÉ",
+                Desc = "La sécurité basée sur la virtualisation coûte des performances en jeu (elle génère des DPC hyperviseur, visibles dans l'analyse de latence). La désactiver les récupère, au prix d'une protection noyau réduite. Réversible.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity", 0, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity", 1, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled", 1, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "prefetch_off", Category = Cat.Systeme,
+                Name = "Désactiver Prefetch/Superfetch (registre) — SSD uniquement",
+                Desc = "Coupe le préchargement disque au niveau noyau. Sur SSD : moins d'écritures, aucun intérêt de préchargement. Sur disque mécanique : à ÉVITER. « Rétablir » remet la valeur 3.",
+                BackupKeys = new[] { MemMgmt + @"\PrefetchParameters" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(MemMgmt + @"\PrefetchParameters", "EnablePrefetcher", 0, RegistryValueKind.DWord);
+                    Sys.SetMachine(MemMgmt + @"\PrefetchParameters", "EnableSuperfetch", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(MemMgmt + @"\PrefetchParameters", "EnablePrefetcher", 3, RegistryValueKind.DWord);
+                    Sys.SetMachine(MemMgmt + @"\PrefetchParameters", "EnableSuperfetch", 3, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(MemMgmt + @"\PrefetchParameters", "EnablePrefetcher"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "lastaccess_off", Category = Cat.Systeme,
+                Name = "Désactiver l'horodatage « dernier accès » NTFS",
+                Desc = "Windows n'écrit plus la date de dernier accès à chaque lecture de fichier : moins d'écritures disque. « Rétablir » remet le mode géré par le système.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" },
+                Apply  = () => Sys.RunThrow(Sys.Sys32("fsutil.exe"), "behavior set disablelastaccess 1", "NTFS last-access off"),
+                Revert = () => Sys.RunThrow(Sys.Sys32("fsutil.exe"), "behavior set disablelastaccess 2", "NTFS last-access system-managed"),
+                Check  = () =>
+                {
+                    object v = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsDisableLastAccessUpdate");
+                    return (v is int) && (((int)v) == 1 || ((int)v) == 3);
+                }
+            });
+
+            // ---- Confidentialité ----
+            list.Add(new Tweak
+            {
+                Id = "advertising_id_off", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Name = "Désactiver l'identifiant de publicité",
+                Desc = "Coupe l'ID publicitaire utilisé pour le suivi entre applications.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo", "DisabledByGroupPolicy", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo", "DisabledByGroupPolicy"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo", "DisabledByGroupPolicy"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "telemetry_policy", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Name = "Télémétrie au minimum (stratégie AllowTelemetry = 0)",
+                Desc = "Réduit la collecte de données de diagnostic au niveau stratégie (complète la désactivation du service DiagTrack).",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "activity_history_off", Category = Cat.Privacy, Esport = true,
+                Name = "Désactiver l'historique d'activité / Timeline",
+                Desc = "Windows n'enregistre ni n'envoie plus l'historique de tes activités.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "EnableActivityFeed", 0, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "PublishUserActivities", 0, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "UploadUserActivities", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "EnableActivityFeed");
+                    Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "PublishUserActivities");
+                    Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "UploadUserActivities");
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "EnableActivityFeed"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "location_off", Category = Cat.Privacy,
+                Name = "Désactiver le service de localisation",
+                Desc = "Bloque l'accès à la localisation pour le système et les applications.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location", "Value", "Deny", RegistryValueKind.String),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location", "Value", "Allow", RegistryValueKind.String),
+                Check  = () => Sys.StrEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location", "Value"), "Deny")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "feedback_off", Category = Cat.Privacy,
+                Name = "Ne plus demander de commentaires (feedback Windows)",
+                Desc = "Windows ne t'interrompt plus pour demander ton avis.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Siuf\Rules" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Siuf\Rules", "NumberOfSIUFInPeriod"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "cortana_off", Category = Cat.Privacy,
+                Name = "Désactiver Cortana",
+                Desc = "Désactive l'assistant Cortana au niveau stratégie.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Windows Search", "AllowCortana"), 0)
+            });
+
+            // ---- Services & arrière-plan (avancé) ----
+            list.Add(new Tweak
+            {
+                Id = "xbox_services_off", Category = Cat.Services,
+                Name = "Désactiver les services Xbox (si tu ne joues pas à des jeux Xbox/PC Game Pass)",
+                Desc = "Arrête les services Xbox Live/Game Save. À ÉVITER si tu utilises le Game Pass ou des jeux du Microsoft Store. Réversible.",
+                Apply = () =>
+                {
+                    Sys.ConfigureService("XblAuthManager", "disabled", true, false);
+                    Sys.ConfigureService("XblGameSave", "disabled", true, false);
+                    Sys.ConfigureService("XboxGipSvc", "disabled", true, false);
+                    Sys.ConfigureService("XboxNetApiSvc", "disabled", true, false);
+                },
+                Revert = () =>
+                {
+                    Sys.ConfigureService("XblAuthManager", "demand", false, false);
+                    Sys.ConfigureService("XblGameSave", "demand", false, false);
+                    Sys.ConfigureService("XboxGipSvc", "demand", false, false);
+                    Sys.ConfigureService("XboxNetApiSvc", "demand", false, false);
+                },
+                Check = () => Sys.ServiceDisabled("XblAuthManager")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "mapsbroker_off", Category = Cat.Services,
+                Name = "Désactiver le service des cartes hors ligne (MapsBroker)",
+                Desc = "Coupe le téléchargement/mise à jour des cartes hors ligne en arrière-plan. Sans effet si tu n'utilises pas l'appli Cartes.",
+                Apply  = () => Sys.ConfigureService("MapsBroker", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("MapsBroker", "delayed-auto", false, false),
+                Check  = () => Sys.ServiceDisabled("MapsBroker")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "remote_registry_off", Category = Cat.Services,
+                Name = "Désactiver le Registre à distance (surface d'attaque)",
+                Desc = "Empêche la modification du registre depuis le réseau. Recommandé pour un PC personnel.",
+                Apply  = () => Sys.ConfigureService("RemoteRegistry", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("RemoteRegistry", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("RemoteRegistry")
+            });
+
             return list;
         }
     }

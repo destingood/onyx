@@ -346,6 +346,94 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  MSI mode (Message Signaled Interrupts) sur le(s) GPU
+        // ------------------------------------------------------------------
+        private const string DisplayClass = "{4d36e968-e325-11ce-bfc1-08002be10318}";
+
+        private static bool IsGpuDevice(RegistryKey instKey)
+        {
+            string cls = instKey.GetValue("ClassGUID") as string;
+            string svc = instKey.GetValue("Service") as string;
+            if (cls != null && cls.Equals(DisplayClass, StringComparison.OrdinalIgnoreCase)) return true;
+            if (svc != null)
+            {
+                svc = svc.ToLowerInvariant();
+                if (svc == "nvlddmkm" || svc == "amdkmdag" || svc == "atikmdag" || svc.StartsWith("igfx") || svc == "igdkmd64")
+                    return true;
+            }
+            return false;
+        }
+
+        public static void SetGpuMsi(bool enable, Action<string, int> log)
+        {
+            int count = 0;
+            using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
+            {
+                if (pci == null) { log("Enum PCI introuvable.", 2); return; }
+                foreach (string devId in pci.GetSubKeyNames())
+                {
+                    using (RegistryKey dev = pci.OpenSubKey(devId))
+                    {
+                        if (dev == null) continue;
+                        foreach (string inst in dev.GetSubKeyNames())
+                        {
+                            using (RegistryKey ik = dev.OpenSubKey(inst))
+                            {
+                                if (ik == null || !IsGpuDevice(ik)) continue;
+                                string msiPath = @"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
+                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties";
+                                try
+                                {
+                                    if (enable)
+                                    {
+                                        using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
+                                            m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
+                                    }
+                                    else
+                                    {
+                                        using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
+                                            if (m != null) m.DeleteValue("MSISupported", false);
+                                    }
+                                    count++;
+                                }
+                                catch (Exception ex) { if (log != null) log("MSI GPU (" + devId + ") : " + ex.Message, 2); }
+                            }
+                        }
+                    }
+                }
+            }
+            if (log != null)
+                log("MSI mode GPU " + (enable ? "activé" : "retiré (défaut pilote)") + " sur " + count + " périphérique(s). Redémarrage requis.", count > 0 ? 1 : 2);
+            if (count == 0) throw new Exception("Aucun GPU trouvé pour le MSI mode.");
+        }
+
+        public static bool? GpuMsiActive()
+        {
+            using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
+            {
+                if (pci == null) return null;
+                foreach (string devId in pci.GetSubKeyNames())
+                {
+                    using (RegistryKey dev = pci.OpenSubKey(devId))
+                    {
+                        if (dev == null) continue;
+                        foreach (string inst in dev.GetSubKeyNames())
+                        {
+                            using (RegistryKey ik = dev.OpenSubKey(inst))
+                            {
+                                if (ik == null || !IsGpuDevice(ik)) continue;
+                                object v = GetMachine(@"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
+                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties", "MSISupported");
+                                return IntEquals(v, 1);
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // ------------------------------------------------------------------
         //  Services Windows
         // ------------------------------------------------------------------
         public static void ConfigureService(string name, string startType, bool stopNow, bool startNow)

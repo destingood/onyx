@@ -26,11 +26,12 @@ namespace BTOptimizer
         public const string Systeme  = "Système & planificateur";
         public const string Rapidite = "Rapidité & démarrage";
         public const string Services = "Services & arrière-plan";
+        public const string Privacy  = "Confidentialité";
         public const string Reseau   = "Réseau";
 
         public static readonly string[] Order = new string[]
         {
-            Souris, Alim, Gpu, Systeme, Rapidite, Services, Reseau
+            Souris, Alim, Gpu, Systeme, Rapidite, Services, Privacy, Reseau
         };
     }
 }
