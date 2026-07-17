@@ -34,11 +34,12 @@ namespace BTOptimizer
         {
             public int Pid;
             public string Name = "?";
-            public double Fps;          // images présentées sur la dernière seconde
-            public double AvgMs;        // frametime moyen (1 s)
-            public double OnePctLowFps; // 1% low : 1000 / moyenne du pire 1 % des frametimes
-            public double WorstMs;      // pire frametime (fenêtre récente)
-            public long Total;          // total d'images depuis le début / la remise à zéro
+            public double Fps;            // images présentées sur la dernière seconde
+            public double AvgMs;          // frametime moyen (1 s)
+            public double OnePctLowFps;   // 1% low : 1000 / moyenne du pire 1 % des frametimes
+            public double TenthPctLowFps; // 0.1% low (les pires micro-saccades) — 0 tant que < 1000 frames
+            public double WorstMs;        // pire frametime (fenêtre récente)
+            public long Total;            // total d'images depuis le début / la remise à zéro
         }
 
         // Par PID : horodatages (ms relatives) des dernières présentations + frametimes.
@@ -165,18 +166,15 @@ namespace BTOptimizer
                         if (t.Fts[i] > worst) worst = t.Fts[i];
                     }
 
-                    // 1% low sur les ~20 dernières secondes de frames conservées.
-                    double onePct = 0;
+                    // 1% low / 0.1% low sur les ~20 dernières secondes de frames conservées.
+                    double onePct = 0, tenthPct = 0;
                     int m = t.Fts.Count;
                     if (m >= 100)
                     {
                         var copy = new List<double>(t.Fts);
                         copy.Sort();
-                        int k = Math.Max(1, m / 100);
-                        double s = 0;
-                        for (int i = m - k; i < m; i++) s += copy[i];   // pire 1 % (frametimes les plus longs)
-                        double avgWorst = s / k;
-                        if (avgWorst > 0) onePct = 1000.0 / avgWorst;
+                        onePct = LowAvgFps(copy, m / 100);
+                        if (m >= 1000) tenthPct = LowAvgFps(copy, m / 1000);
                     }
 
                     var st = new ProcStat
@@ -186,6 +184,7 @@ namespace BTOptimizer
                         Fps = n * 1000.0 / windowMs,
                         AvgMs = sum / n,
                         OnePctLowFps = onePct,
+                        TenthPctLowFps = tenthPct,
                         WorstMs = worst,
                         Total = t.Total
                     };
@@ -194,6 +193,16 @@ namespace BTOptimizer
             }
             result.Sort((a, b) => b.Fps.CompareTo(a.Fps));
             return result;
+        }
+
+        /// <summary>Moyenne du pire k-ième des frametimes triés, convertie en FPS.</summary>
+        private static double LowAvgFps(List<double> sorted, int k)
+        {
+            if (k < 1) k = 1;
+            double s = 0;
+            for (int i = sorted.Count - k; i < sorted.Count; i++) s += sorted[i];
+            double avgWorst = s / k;
+            return avgWorst > 0 ? 1000.0 / avgWorst : 0;
         }
 
         /// <summary>Frametimes récents d'un PID (copie, pour le graphique).</summary>

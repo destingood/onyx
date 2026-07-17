@@ -1087,6 +1087,30 @@ namespace BTOptimizer
                 Check  = () => Sys.PowerAcEquals(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1)
             });
 
+            // Boost CPU (les vrais leviers Windows — le multiplicateur reste au BIOS)
+            const string PerfBoostMode = "be337238-0d82-4146-a960-4f3749d470c7";
+            const string CpMinCores = "0cc5b647-c1df-4637-891a-dec35c318583";
+
+            list.Add(new Tweak
+            {
+                Id = "cpu_boost_aggressive", Category = Cat.Alim, Esport = true,
+                Name = "Turbo boost CPU en mode Agressif (montée immédiate en fréquence)",
+                Desc = "Windows demande d'emblée le boost maximal du CPU dès qu'une charge arrive, au lieu d'une montée progressive économe : fréquences turbo tenues plus tôt et plus souvent en jeu. « Rétablir » remet le mode efficace de Windows.",
+                Apply  = () => Sys.SetPowerValue(SubProc, PerfBoostMode, 2, 2),
+                Revert = () => Sys.SetPowerValue(SubProc, PerfBoostMode, 3, 3),
+                Check  = () => Sys.PowerAcEquals(SubProc, PerfBoostMode, 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "cpu_unpark_cores", Category = Cat.Alim, Esport = true,
+                Name = "Déparquer tous les cœurs CPU (core parking off)",
+                Desc = "Tous les cœurs restent actifs au lieu d'être « garés » puis réveillés à la demande : supprime la latence de réveil des cœurs sous charge irrégulière (typique des jeux). « Rétablir » remet la valeur d'origine de Windows (10 %).",
+                Apply  = () => Sys.SetPowerValue(SubProc, CpMinCores, 100, 100),
+                Revert = () => Sys.SetPowerValue(SubProc, CpMinCores, 10, 10),
+                Check  = () => Sys.PowerAcEquals(SubProc, CpMinCores, 100)
+            });
+
             // ---- GPU & jeux (avancé) ----
             list.Add(new Tweak
             {
