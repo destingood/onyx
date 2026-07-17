@@ -79,6 +79,7 @@ namespace BTOptimizer
         public static List<Item> Analyze()
         {
             var items = new List<Item>();
+            items.Add(CheckGpuOc());
             items.Add(CheckDnsFilter());
             items.Add(CheckHosts());
             items.Add(CheckStoreServices());
@@ -92,6 +93,103 @@ namespace BTOptimizer
             items.Add(CheckSteamCache());
             items.Add(FlushDnsItem());
             return items;
+        }
+
+        // --- 0. Overclock GPU / erreurs pilote NVIDIA ------------------------
+        // Un OC GPU instable (power limit monté, anciens verrous de fréquence) fait
+        // crasher les jeux ET les vues web accélérées GPU (boutique Steam/overlay :
+        // « chargement infini »). On détecte l'OC posé par l'outil + les erreurs
+        // récentes du pilote (nvlddmkm) et on remet tout aux valeurs constructeur.
+        private static List<string> GpuOcConfigFiles()
+        {
+            var files = new List<string>();
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            files.Add(Sys.GpuOcConfigPath);                                        // à côté de l'exe
+            try { files.Add(Path.GetFullPath(Path.Combine(baseDir, @"..\bt-gpuoc.txt"))); } catch { } // résidu ancienne installation
+            return files;
+        }
+
+        /// <summary>Erreurs du pilote NVIDIA (nvlddmkm) dans le journal Système sur 7 jours ; -1 si illisible.</summary>
+        private static int NvlddmkmErrors7d()
+        {
+            NativeResult r = Sys.Run(Sys.Sys32("wevtutil.exe"),
+                "qe System \"/q:*[System[Provider[@Name='nvlddmkm'] and TimeCreated[timediff(@SystemTime) <= 604800000]]]\" /c:25 /rd:true /f:xml");
+            if (r.ExitCode != 0) return -1;
+            int n = 0, i = 0;
+            while ((i = r.Output.IndexOf("<Event ", i, StringComparison.Ordinal)) >= 0) { n++; i += 7; }
+            return n;
+        }
+
+        private static Item CheckGpuOc()
+        {
+            Sys.GpuOcInfo gpu = Sys.QueryGpuOc();
+            bool plRaised = gpu.Ok && gpu.PowerDefault > 0 && gpu.PowerCur > gpu.PowerDefault + 1;
+
+            bool ocFile = false, oldLocks = false;
+            foreach (string f in GpuOcConfigFiles())
+            {
+                try
+                {
+                    if (!File.Exists(f)) continue;
+                    ocFile = true;
+                    foreach (string line in File.ReadAllLines(f))
+                        if (line.TrimStart().StartsWith("lgc", StringComparison.OrdinalIgnoreCase)) oldLocks = true;
+                }
+                catch { }
+            }
+
+            bool ocTask = Sys.OcGuardExists();
+            bool plTask = Sys.Run(Sys.Sys32("schtasks.exe"), "/query /tn GPU-PowerLimit-400W").ExitCode == 0;
+            int drvErrors = NvlddmkmErrors7d();
+
+            bool ocDetected = plRaised || ocFile || ocTask || plTask;
+            var parts = new List<string>();
+            if (plRaised) parts.Add("power limit " + (int)gpu.PowerCur + " W (défaut " + (int)gpu.PowerDefault + " W)");
+            if (ocFile) parts.Add(oldLocks ? "fichier OC avec ANCIENS VERROUS de fréquence" : "fichier OC");
+            if (ocTask) parts.Add("tâche BTOptimizerOC");
+            if (plTask) parts.Add("tâche GPU-PowerLimit-400W");
+            if (drvErrors > 0) parts.Add(drvErrors + " erreur(s) pilote NVIDIA sur 7 jours");
+
+            string status;
+            if (ocDetected)
+                status = string.Join(" + ", parts.ToArray())
+                       + " — réparer remet fréquences et power limit constructeur et retire la ré-application au démarrage";
+            else if (drvErrors > 0)
+                status = drvErrors + " erreur(s) pilote NVIDIA (7 j) sans OC de l'outil — suspecter pilote, jeu ou RAM/XMP ; "
+                       + "retire aussi le profil NVIDIA « perf max » (panneau 🎯 500 FPS) si ça persiste";
+            else
+                status = "aucun overclock appliqué par l'outil, aucune erreur pilote récente";
+
+            return new Item
+            {
+                Id = "gpu_oc",
+                Name = "Overclock GPU / erreurs pilote NVIDIA (crashs de jeux)",
+                Problem = ocDetected,
+                // Pré-coché seulement si l'instabilité est PROUVÉE (erreurs pilote récentes) :
+                // un power limit monté volontairement sans crash reste le choix du joueur.
+                DefaultCheck = ocDetected && drvErrors > 0,
+                Status = status,
+                Repair = delegate(Action<string, int> log)
+                {
+                    Sys.ResetGpuLocks(log); // -rgc + power limit constructeur (nvidia-smi officiel)
+                    foreach (string f in GpuOcConfigFiles())
+                    {
+                        try
+                        {
+                            if (!File.Exists(f)) continue;
+                            File.Copy(f, f + ".destingood.bak", true);
+                            File.Delete(f);
+                            log("Fichier OC retiré : " + f + " (sauvegarde .destingood.bak).", 1);
+                        }
+                        catch (Exception ex) { log("Fichier OC « " + f + " » : " + ex.Message, 2); }
+                    }
+                    if (Sys.OcGuardExists()) Sys.SetOcGuard(false, null, log);
+                    if (Sys.Run(Sys.Sys32("schtasks.exe"), "/delete /f /tn GPU-PowerLimit-400W").ExitCode == 0)
+                        log("Tâche GPU-PowerLimit-400W supprimée (power limit constructeur au prochain démarrage).", 1);
+                    log("GPU remis aux valeurs constructeur. Si les jeux crashent encore : pilote NVIDIA propre, "
+                        + "RAM/XMP, et retirer le profil NVIDIA « perf max » (panneau 🎯 500 FPS).", 0);
+                }
+            };
         }
 
         // --- 1. DNS filtrant -------------------------------------------------

@@ -58,13 +58,22 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
-### 🛒 Boutiques en jeu qui chargent à l'infini (v10.7)
+### 🛒 Boutiques à l'infini / jeux qui crashent (v10.7)
 
-Menu ☰ → **Boutiques en jeu qui chargent à l'infini (Steam / Game Pass)…** — quand la
-boutique Steam reste vide, que l'inventaire/les skins tournent sans fin ou que la
-boutique intégrée d'un jeu ne s'ouvre plus, ce panneau **diagnostique les causes
-connues côté Windows** et répare les points cochés en un clic (tout est journalisé) :
+Menu ☰ → **Boutiques qui chargent à l'infini / jeux qui crashent (Steam / Game Pass)…** —
+quand la boutique Steam reste vide, que l'inventaire/les skins tournent sans fin, que la
+boutique intégrée d'un jeu ne s'ouvre plus **ou que les jeux crashent/figent**, ce panneau
+**diagnostique les causes connues côté Windows** et répare les points cochés en un clic
+(tout est journalisé) :
 
+- **Overclock GPU / erreurs pilote NVIDIA** : power limit monté, anciens verrous de
+  fréquence (`lgc`), tâches de ré-application au démarrage (`BTOptimizerOC`,
+  `GPU-PowerLimit-400W`) — croisés avec les **erreurs pilote `nvlddmkm` des 7 derniers
+  jours** (journal Système). Un OC instable fait crasher les jeux ET les vues web
+  accélérées GPU (boutique Steam/overlay = « chargement infini »). Réparer = fréquences
+  et power limit **constructeur** (`nvidia-smi -rgc` / `-pl` défaut), fichiers OC purgés
+  (sauvegarde `.bak`), tâches retirées. Pré-coché seulement si des erreurs pilote
+  récentes prouvent l'instabilité.
 - **DNS filtrant** (AdGuard anti-pub, Cloudflare anti-malware, Quad9…) : un domaine de
   boutique/CDN bloqué par le résolveur = page qui tourne à l'infini → retour au DNS
   automatique. Le panneau **DNS rapide** marque désormais ces résolveurs « (filtre) »,

@@ -43,7 +43,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  Boutiques / contenu en jeu qui chargent à l'infini — diagnostic & réparation",
+                Text = "  Boutiques à l'infini / jeux qui crashent — diagnostic & réparation",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -51,9 +51,9 @@ namespace BTOptimizer
 
             var intro = new Label
             {
-                Text = "Boutique Steam vide, articles/skins qui tournent sans fin, boutique intégrée d'un jeu morte ? "
-                     + "Chaque point ci-dessous est une cause connue. Les points ⚠ détectés sont pré-cochés ; "
-                     + "la réparation est sans danger et journalisée.",
+                Text = "Boutique Steam vide, skins qui tournent sans fin, jeux qui crashent ou figent ? "
+                     + "Chaque point ci-dessous est une cause connue (l'overclock GPU instable fait les deux : "
+                     + "crashs ET boutiques infinies). Les points ⚠ sûrs sont pré-cochés ; tout est journalisé.",
                 Location = new Point(18, 60), Size = new Size(644, 46), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(intro);
