@@ -324,7 +324,7 @@ namespace BTOptimizer
             _chkPoint.Checked = true;
 
             _chkGuard = new CheckBox();
-            _chkGuard.Text = "GARDIEN : ré-appliquer mon profil à chaque démarrage (tâche planifiée)";
+            _chkGuard.Text = "GARDIEN : ré-appliquer mon profil à chaque démarrage";
             _chkGuard.SetBounds(478, 504, 406, 22);
             _chkGuard.Checked = Sys.GuardExists();
             _chkGuard.CheckedChanged += OnGuardToggled;
@@ -335,7 +335,7 @@ namespace BTOptimizer
             _chkTimer.CheckedChanged += OnTimerToggled;
 
             _chkAutoTimer = new CheckBox();
-            _chkAutoTimer.Text = "Timer 1 ms AUTO dès qu'un jeu plein écran est détecté";
+            _chkAutoTimer.Text = "Timer 1 ms AUTO en jeu plein écran";
             _chkAutoTimer.SetBounds(572, 528, 312, 22);
             _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
