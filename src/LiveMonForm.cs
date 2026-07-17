@@ -44,9 +44,9 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "DesTinGOOD — Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)";
-            ClientSize = new Size(980, 680);
+            ClientSize = new Size(1180, 680);
             StartPosition = FormStartPosition.CenterParent;
-            MinimumSize = new Size(780, 540);
+            MinimumSize = new Size(1160, 540);
             BackColor = Bg;
             Font = new Font("Segoe UI", 9f);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
@@ -197,16 +197,19 @@ namespace BTOptimizer
             _lastEvents = events;
             _lastTick = DateTime.UtcNow;
 
-            double probeMax = 0, probeAvg = 0;
-            if (_probe != null) _probe.Read(out probeMax, out probeAvg);
+            double probeMax = 0, probeAvg = 0, probeP99 = 0;
+            if (_probe != null) _probe.Read(out probeMax, out probeAvg, out probeP99);
+            EtwLive.HardFaultInfo hf = _etw.HardFaults();
 
             _tiles.SuspendLayout();
             _tiles.Controls.Clear();
             _tiles.Controls.Add(MakeTile("Pire DPC — " + rep.MaxDpcModule, rep.MaxDpcUs.ToString("0") + " µs", TileColor(rep.MaxDpcUs)));
             _tiles.Controls.Add(MakeTile("Pire ISR — " + rep.MaxIsrModule, rep.MaxIsrUs.ToString("0") + " µs", TileColor(rep.MaxIsrUs)));
+            _tiles.Controls.Add(MakeTile("Défauts de page durs" + (hf.Count > 0 ? " — pire " + hf.WorstMs.ToString("0.0") + " ms" : ""),
+                hf.Count.ToString("#,0"), HardFaultColor(hf)));
+            _tiles.Controls.Add(MakeTile("Réveil 1 ms (p99 · max)",
+                probeP99.ToString("0") + " · " + probeMax.ToString("0") + " µs", TileColor(probeP99 > 0 ? probeP99 : probeMax)));
             _tiles.Controls.Add(MakeTile("Événements / s", rate.ToString("#,0"), Color.White));
-            _tiles.Controls.Add(MakeTile("Réveil 1 ms (max)", probeMax.ToString("0") + " µs", TileColor(probeMax)));
-            _tiles.Controls.Add(MakeTile("Réveil 1 ms (moyen)", probeAvg.ToString("0.0") + " µs", Color.White));
             _tiles.Controls.Add(MakeTile("Durée", rep.DurationSec.ToString("0") + " s", Color.White));
             _tiles.ResumeLayout();
 
@@ -242,6 +245,14 @@ namespace BTOptimizer
             if (us <= 500) return Color.FromArgb(120, 230, 170);
             if (us <= 1000) return Color.FromArgb(245, 190, 90);
             return Color.FromArgb(245, 120, 120);
+        }
+
+        private static Color HardFaultColor(EtwLive.HardFaultInfo hf)
+        {
+            if (hf.Count == 0) return Color.FromArgb(120, 230, 170);         // aucun accès disque forcé
+            if (hf.WorstMs >= 50) return Color.FromArgb(245, 120, 120);      // gros stutter potentiel
+            if (hf.WorstMs >= 10) return Color.FromArgb(245, 190, 90);
+            return Color.White;
         }
 
         // ---------------- tri ----------------
@@ -288,8 +299,9 @@ namespace BTOptimizer
             try
             {
                 DpcIsrReport rep = _etw.Snapshot();
-                double probeMax = 0, probeAvg = 0;
-                if (_probe != null) _probe.Read(out probeMax, out probeAvg);
+                double probeMax = 0, probeAvg = 0, probeP99 = 0;
+                if (_probe != null) _probe.Read(out probeMax, out probeAvg, out probeP99);
+                EtwLive.HardFaultInfo hf = _etw.HardFaults();
 
                 string outPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
@@ -300,7 +312,11 @@ namespace BTOptimizer
                 sb.AppendLine("Verdict : " + rep.VerdictTitle);
                 sb.AppendLine("Pire DPC : " + rep.MaxDpcUs.ToString("0") + " µs (" + rep.MaxDpcModule + ")"
                              + "   Pire ISR : " + rep.MaxIsrUs.ToString("0") + " µs (" + rep.MaxIsrModule + ")");
-                sb.AppendLine("Réveil timer 1 ms : max " + probeMax.ToString("0") + " µs, moyen " + probeAvg.ToString("0.0") + " µs");
+                sb.AppendLine("Réveil timer 1 ms : p99 " + probeP99.ToString("0") + " µs, max " + probeMax.ToString("0")
+                             + " µs, moyen " + probeAvg.ToString("0.0") + " µs");
+                sb.AppendLine("Défauts de page durs : " + hf.Count
+                             + (hf.Count > 0 ? " (pire " + hf.WorstMs.ToString("0.0") + " ms par " + hf.WorstProcess
+                                             + " ; top : " + hf.Top + ")" : " (aucun accès disque forcé — parfait)"));
                 sb.AppendLine("Total DPC : " + rep.TotalDpc + "   Total ISR : " + rep.TotalIsr
                              + "   Perdus : " + _etw.EventsLost);
                 sb.AppendLine();

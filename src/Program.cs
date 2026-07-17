@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.3.0.0")]
-[assembly: AssemblyFileVersion("10.3.0.0")]
+[assembly: AssemblyVersion("10.4.0.0")]
+[assembly: AssemblyFileVersion("10.4.0.0")]
 
 namespace BTOptimizer
 {
@@ -517,6 +517,9 @@ namespace BTOptimizer
                             if (++shown >= 6) break;
                         }
                         if (rep.TotalDpc + rep.TotalIsr == 0) { errors++; Console.WriteLine("  ERREUR : session active mais aucun événement reçu."); }
+                        var hf = live.HardFaults();
+                        Console.WriteLine("  Défauts de page durs : " + hf.Count
+                            + (hf.Count > 0 ? " (pire " + hf.WorstMs.ToString("0.0") + " ms par " + hf.WorstProcess + " ; top : " + hf.Top + ")" : ""));
                     }
                     else
                         Console.WriteLine("  Session noyau refusée : " + (live.LastError ?? "?") + " — attendu sans droits admin.");

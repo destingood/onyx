@@ -137,7 +137,7 @@ namespace BTOptimizer
         private Panel MakeTile(string caption, string value, Color valueColor)
         {
             var p = new Panel();
-            p.Size = new Size(210, 74);
+            p.Size = new Size(178, 74);
             p.Margin = new Padding(4, 2, 4, 2);
             p.BackColor = TileBg;
 

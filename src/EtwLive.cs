@@ -50,12 +50,14 @@ namespace BTOptimizer
                 _session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
                 _session.EnableKernelProvider(
                     KernelTraceEventParser.Keywords.DeferedProcedureCalls
-                    | KernelTraceEventParser.Keywords.Interrupt);
+                    | KernelTraceEventParser.Keywords.Interrupt
+                    | KernelTraceEventParser.Keywords.MemoryHardFaults);
 
                 _session.Source.Kernel.PerfInfoDPC += OnDpc;
                 _session.Source.Kernel.PerfInfoThreadedDPC += OnDpc;
                 _session.Source.Kernel.PerfInfoTimerDPC += OnDpc;
                 _session.Source.Kernel.PerfInfoISR += OnIsr;
+                _session.Source.Kernel.MemoryHardFault += OnHardFault;
 
                 _startedUtc = DateTime.UtcNow;
                 _thread = new Thread(() => { try { _session.Source.Process(); } catch { } });
@@ -99,7 +101,9 @@ namespace BTOptimizer
         private void OnIsr(ISRTraceData d)
         {
             double us = d.ElapsedTimeMSec * 1000.0;
-            if (us < 0 || us > 4e6) return;
+            // > 20 ms : invraisemblable pour un ISR réel (artefact de bord de session, ex.
+            // interruption commencée avant l'activation de la trace) — on l'écarte.
+            if (us < 0 || us > 20000) return;
             string module = KernelModules.Lookup(d.Routine);
             lock (_lock)
             {
@@ -121,6 +125,69 @@ namespace BTOptimizer
                 _map[module] = s;
             }
             return s;
+        }
+
+        // ------------------------------------------------------------------
+        //  Défauts de page durs (hard pagefaults) : une app lit le DISQUE en
+        //  pleine exécution — cause classique de stutter (comme LatencyMon).
+        // ------------------------------------------------------------------
+        public class HardFaultInfo
+        {
+            public long Count;
+            public double WorstMs;
+            public string WorstProcess = "-";
+            public string Top = "";        // « proc (n), proc (n)... » les 3 plus gourmands
+        }
+
+        private long _hfCount;
+        private double _hfWorstMs;
+        private string _hfWorstProc = "-";
+        private readonly Dictionary<int, long> _hfByPid = new Dictionary<int, long>();
+        private readonly Dictionary<int, string> _hfNames = new Dictionary<int, string>();
+
+        private void OnHardFault(Microsoft.Diagnostics.Tracing.Parsers.Kernel.MemoryHardFaultTraceData d)
+        {
+            double ms = d.ElapsedTimeMSec;
+            if (ms < 0 || ms > 60000) return;
+            int pid = d.ProcessID;
+            string name = d.ProcessName;
+            lock (_lock)
+            {
+                _hfCount++;
+                long n;
+                _hfByPid.TryGetValue(pid, out n);
+                _hfByPid[pid] = n + 1;
+                if (!string.IsNullOrEmpty(name) && !_hfNames.ContainsKey(pid)) _hfNames[pid] = name;
+                if (ms > _hfWorstMs) { _hfWorstMs = ms; _hfWorstProc = HfName(pid); }
+            }
+        }
+
+        private string HfName(int pid)
+        {
+            string name;
+            if (_hfNames.TryGetValue(pid, out name) && !string.IsNullOrEmpty(name)) return name;
+            try { name = System.Diagnostics.Process.GetProcessById(pid).ProcessName; }
+            catch { name = "PID " + pid; }
+            _hfNames[pid] = name;
+            return name;
+        }
+
+        public HardFaultInfo HardFaults()
+        {
+            var info = new HardFaultInfo();
+            lock (_lock)
+            {
+                info.Count = _hfCount;
+                info.WorstMs = _hfWorstMs;
+                info.WorstProcess = _hfWorstProc;
+                var top = new List<KeyValuePair<int, long>>(_hfByPid);
+                top.Sort((a, b) => b.Value.CompareTo(a.Value));
+                var parts = new List<string>();
+                for (int i = 0; i < top.Count && i < 3; i++)
+                    parts.Add(HfName(top[i].Key) + " (" + top[i].Value + ")");
+                info.Top = string.Join(", ", parts.ToArray());
+            }
+            return info;
         }
 
         /// <summary>Photographie thread-safe de l'état courant, sous la même forme que l'analyse xperf.</summary>
@@ -165,6 +232,8 @@ namespace BTOptimizer
                 _totalDpc = _totalIsr = 0;
                 _maxDpcUs = _maxIsrUs = 0;
                 _maxDpcModule = _maxIsrModule = "-";
+                _hfCount = 0; _hfWorstMs = 0; _hfWorstProc = "-";
+                _hfByPid.Clear();
                 _startedUtc = DateTime.UtcNow;
             }
         }
@@ -293,6 +362,7 @@ namespace BTOptimizer
         private readonly object _lock = new object();
         private double _maxUs, _sumUs;
         private long _count;
+        private readonly double[] _ring = new double[8192];   // derniers retards, pour le percentile 99
 
         public void Start()
         {
@@ -316,6 +386,7 @@ namespace BTOptimizer
                 if (us > 1e6) continue;                        // veille/suspension : ignorer
                 lock (_lock)
                 {
+                    _ring[_count % _ring.Length] = us;
                     _count++;
                     _sumUs += us;
                     if (us > _maxUs) _maxUs = us;
@@ -325,10 +396,25 @@ namespace BTOptimizer
 
         public void Read(out double maxUs, out double avgUs)
         {
+            double p99;
+            Read(out maxUs, out avgUs, out p99);
+        }
+
+        public void Read(out double maxUs, out double avgUs, out double p99Us)
+        {
             lock (_lock)
             {
                 maxUs = _maxUs;
                 avgUs = _count > 0 ? _sumUs / _count : 0;
+                p99Us = 0;
+                int n = (int)Math.Min(_count, _ring.Length);
+                if (n >= 100)
+                {
+                    var copy = new double[n];
+                    Array.Copy(_ring, copy, n);
+                    Array.Sort(copy);
+                    p99Us = copy[(int)(n * 0.99)];   // 99 % des réveils sont plus rapides que ça
+                }
             }
         }
 

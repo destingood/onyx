@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer 10.3 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer 10.4 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
