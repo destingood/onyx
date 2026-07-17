@@ -1291,6 +1291,136 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("RemoteRegistry")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE =================
+
+            list.Add(new Tweak
+            {
+                Id = "filter_toggle_keys_off", Category = Cat.Souris, Recommended = true, Esport = true,
+                Name = "Empêcher les touches Filtres/Bascules (pop-ups accidentels en jeu)",
+                Desc = "Désactive « Touches filtres » et « Touches bascules » : plus de fenêtre parasite ni de bip quand tu maintiens Maj ou appuies vite en jeu. « Rétablir » remet les valeurs Windows.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Accessibility\Keyboard Response", @"HKCU\Control Panel\Accessibility\ToggleKeys" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Accessibility\Keyboard Response", "Flags", "122", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Accessibility\ToggleKeys", "Flags", "38", RegistryValueKind.String);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Accessibility\Keyboard Response", "Flags", "126", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Accessibility\ToggleKeys", "Flags", "62", RegistryValueKind.String);
+                },
+                Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Accessibility\Keyboard Response", "Flags"), "122")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "reserved_storage_off", Category = Cat.Rapidite, Reboot = true,
+                Name = "Libérer le stockage réservé de Windows (~7 Go)",
+                Desc = "Indique à Windows de ne plus réserver d'espace disque pour les mises à jour (ShippedWithReserves=0). Effet complet après la prochaine mise à jour cumulative. « Rétablir » réactive la réserve.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "taskbar_end_task", Category = Cat.Rapidite,
+                Name = "Ajouter « Fin de tâche » au clic droit sur la barre des tâches (Win11)",
+                Desc = "Active l'option développeur « Fin de tâche » : tuer une appli figée directement depuis sa vignette dans la barre des tâches, sans passer par le Gestionnaire des tâches.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\TaskbarDeveloperSettings" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\TaskbarDeveloperSettings", "TaskbarEndTask", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\TaskbarDeveloperSettings", "TaskbarEndTask", 0, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\TaskbarDeveloperSettings", "TaskbarEndTask"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "online_speech_off", Category = Cat.Privacy, Recommended = true,
+                Name = "Désactiver la reconnaissance vocale en ligne",
+                Desc = "Empêche l'envoi de ta voix aux services cloud Microsoft pour la reconnaissance vocale. La dictée hors-ligne reste possible. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy", "HasAccepted", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy", "HasAccepted", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy", "HasAccepted"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "inking_personalization_off", Category = Cat.Privacy, Recommended = true,
+                Name = "Désactiver la personnalisation saisie/manuscrite (collecte de frappe)",
+                Desc = "Windows n'analyse plus ce que tu tapes/écris pour « personnaliser » (collecte implicite de texte et de contacts). « Rétablir » remet les valeurs par défaut.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\InputPersonalization", @"HKCU\Software\Microsoft\Personalization\Settings" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization\TrainedDataStore", "HarvestContacts", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Personalization\Settings", "AcceptedPrivacyPolicy", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\InputPersonalization\TrainedDataStore", "HarvestContacts", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Personalization\Settings", "AcceptedPrivacyPolicy", 1, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\InputPersonalization", "RestrictImplicitInkCollection"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "recent_docs_off", Category = Cat.Privacy,
+                Name = "Ne pas mémoriser les documents/fichiers récents",
+                Desc = "Empêche Windows de tenir l'historique des fichiers récemment ouverts (Explorateur, menu Démarrer). « Rétablir » réactive l'historique.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRecentDocsHistory", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRecentDocsHistory"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRecentDocsHistory"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "store_auto_update_off", Category = Cat.Services,
+                Name = "Désactiver les mises à jour automatiques du Microsoft Store",
+                Desc = "Le Store ne télécharge plus les apps en arrière-plan (moins d'E/S disque et réseau surprises). Tu peux toujours mettre à jour à la main. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\WindowsStore" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload", 2, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\WindowsStore", "AutoDownload"), 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ndu_off", Category = Cat.Services, Reboot = true,
+                Name = "Désactiver le pilote de suivi de consommation réseau (Ndu)",
+                Desc = "Coupe le service Ndu qui surveille l'usage réseau par appli (mémoire en moins, moins de fond). « Rétablir » le remet en démarrage automatique. Optionnel.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Ndu" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Ndu", "Start", 4, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Ndu", "Start", 2, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Ndu", "Start"), 4)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "spooler_off", Category = Cat.Services,
+                Name = "Désactiver le spouleur d'impression (si aucune imprimante)",
+                Desc = "Arrête le service d'impression : moins de fond et surface d'attaque réduite. À N'ACTIVER QUE si tu n'imprimes pas. « Rétablir » relance l'impression.",
+                Apply  = () => Sys.ConfigureService("Spooler", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("Spooler", "auto", false, false),
+                Check  = () => Sys.ServiceDisabled("Spooler")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "tablet_service_off", Category = Cat.Services,
+                Name = "Désactiver le service clavier tactile / manuscrit (PC sans tactile)",
+                Desc = "Arrête TabletInputService (clavier tactile, saisie manuscrite), inutile sur un PC de bureau sans écran tactile. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("TabletInputService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("TabletInputService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("TabletInputService")
+            });
+
             return list;
         }
     }
