@@ -14,12 +14,14 @@ namespace BTOptimizer
         public int RamGB;
         public string CpuName = "-";
         public bool CpuUnlocked;
+        public int MaxHz;                // meilleure fréquence supportée parmi les écrans (500 Hz...)
 
         public string Summary()
         {
             string disk = DiskCount == 0 ? "disque : ?" :
                 (AllSsd ? "disque : SSD" : (AnyHdd ? "disque : SSD+HDD mixte" : "disque : ?"));
-            return CpuName + "  ·  " + RamGB + " Go RAM  ·  " + GpuName + "  ·  " + disk;
+            string screen = MaxHz > 0 ? "  ·  écran " + MaxHz + " Hz" : "";
+            return CpuName + "  ·  " + RamGB + " Go RAM  ·  " + GpuName + "  ·  " + disk + screen;
         }
     }
 
@@ -92,6 +94,14 @@ namespace BTOptimizer
             }
             catch { }
 
+            // Écrans : la fréquence max supportée décide du profil « très hauts FPS ».
+            try
+            {
+                foreach (DisplayInfo.DisplayMode d in DisplayInfo.Query())
+                    if (d.MaxHz > hw.MaxHz) hw.MaxHz = d.MaxHz;
+            }
+            catch { }
+
             Sys.RamInfo ram = Sys.QueryRam();
             hw.RamGB = (int)Math.Round(ram.TotalMB / 1024.0);
             Sys.CpuInfo cpu = Sys.QueryCpu();
@@ -102,7 +112,11 @@ namespace BTOptimizer
             return hw;
         }
 
-        /// <summary>Sélection intelligente : base « eSport + recommandé », adaptée au matériel, hors sécurité/expérimental.</summary>
+        /// <summary>
+        /// Sélection intelligente : base « eSport + recommandé », adaptée au matériel, hors
+        /// sécurité/expérimental — SAUF sur écran très haute fréquence (240 Hz+), où les
+        /// tweaks expérimentaux orientés FPS redeviennent pertinents (jamais Spectre/VBS).
+        /// </summary>
         public static HashSet<string> AutoTuneIds(List<Tweak> all, HwProfile hw)
         {
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -122,6 +136,16 @@ namespace BTOptimizer
             ids.Remove("dynamic_tick");
             ids.Remove("input_queues");
             ids.Remove("wsearch_off");   // pénalise la recherche de fichiers : opt-in
+
+            // Écran 240 Hz+ : on vise les très hauts FPS, les compromis changent.
+            // (msi_storage reste hors auto : « avancé », problématique sur de rares contrôleurs.)
+            if (hw.MaxHz >= 240)
+            {
+                ids.Add("dynamic_tick");         // tick noyau fixe : frame pacing plus régulier
+                ids.Add("input_queues");         // files souris/clavier courtes
+                if (hw.MaxHz >= 360)
+                    ids.Add("cpu_idle_disable"); // C-States off : réveil CPU instantané (consomme/chauffe plus)
+            }
             return ids;
         }
 

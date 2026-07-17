@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.5 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.6 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -606,9 +606,12 @@ namespace BTOptimizer
             var ids = Hardware.AutoTuneIds(_tweaks, _hw);
             ApplyPreset(t => ids.Contains(t.Id));
             Log("Auto-tune : " + _hw.Summary(), 0);
-            Log("Sélection adaptée : " + ids.Count + " optimisation(s)"
-                + (_hw.AllSsd ? " (SSD détecté → tweaks disque inclus)" : " (HDD présent → SysMain/Prefetch exclus)")
-                + ". Sécurité et expérimental laissés à ton choix.", 1);
+            string note = _hw.AllSsd ? " (SSD détecté → tweaks disque inclus)" : " (HDD présent → SysMain/Prefetch exclus)";
+            if (_hw.MaxHz >= 240)
+                note += " (écran " + _hw.MaxHz + " Hz → pack très hauts FPS : tick noyau fixe, files d'entrée courtes"
+                     + (_hw.MaxHz >= 360 ? ", C-States off" : "") + ")";
+            Log("Sélection adaptée : " + ids.Count + " optimisation(s)" + note
+                + ". Sécurité (Spectre/VBS) toujours laissée à ton choix.", 1);
         }
 
         private void FilterTweaks(string query)
