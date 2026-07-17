@@ -1856,6 +1856,91 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("WalletService")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 6 =================
+            const string SubSleep  = "238c9fa8-0aad-41ed-83f4-97be242c8f20";
+            const string WakeTimer = "bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d";
+
+            list.Add(new Tweak
+            {
+                Id = "wake_timers_off", Category = Cat.Alim,
+                Name = "Interdire les minuteries de réveil (pas de réveil surprise)",
+                Desc = "Empêche Windows de sortir le PC de veille tout seul (tâches planifiées, mises à jour). « Rétablir » les réautorise.",
+                Apply  = () => Sys.SetPowerValue(SubSleep, WakeTimer, 0, 0),
+                Revert = () => Sys.SetPowerValue(SubSleep, WakeTimer, 1, 1),
+                Check  = () => Sys.PowerAcEquals(SubSleep, WakeTimer, 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "settings_sync_off", Category = Cat.Privacy,
+                Name = "Désactiver la synchronisation des paramètres (cloud)",
+                Desc = "Tes paramètres Windows (thème, mots de passe, préférences) ne sont plus synchronisés vers le cloud Microsoft. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync", 2, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync"), 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "nvidia_telemetry_off", Category = Cat.Services,
+                Name = "Désactiver la télémétrie NVIDIA (NvTelemetryContainer)",
+                Desc = "Coupe le service de télémétrie du pilote NVIDIA, sans effet sur les jeux ni les performances. Sans effet si tu n'as pas de GPU NVIDIA. « Rétablir » le remet.",
+                Apply  = () => Sys.ConfigureService("NvTelemetryContainer", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("NvTelemetryContainer", "auto", false, false),
+                Check  = () => Sys.ServiceDisabled("NvTelemetryContainer")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ssdp_off", Category = Cat.Services,
+                Name = "Désactiver la découverte SSDP/UPnP",
+                Desc = "Coupe SSDPSRV (découverte de périphériques UPnP sur le réseau). Peut gêner le partage média/DLNA — optionnel. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SSDPSRV", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SSDPSRV", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SSDPSRV")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "trkwks_off", Category = Cat.Services,
+                Name = "Désactiver le suivi de liens distribués (TrkWks)",
+                Desc = "Coupe le service qui suit les fichiers liés déplacés sur le réseau NTFS, rarement utile en usage personnel. « Rétablir » le remet en automatique.",
+                Apply  = () => Sys.ConfigureService("TrkWks", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("TrkWks", "auto", false, false),
+                Check  = () => Sys.ServiceDisabled("TrkWks")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "icssvc_off", Category = Cat.Services,
+                Name = "Désactiver le point d'accès mobile (icssvc)",
+                Desc = "Coupe le service de partage de connexion (hotspot Windows). À laisser actif si tu partages ta connexion. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("icssvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("icssvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("icssvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "semgr_off", Category = Cat.Services,
+                Name = "Désactiver le gestionnaire de paiements/NFC (SEMgrSvc)",
+                Desc = "Coupe le service de paiements sans contact et éléments sécurisés, inutile sur un PC de bureau. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SEMgrSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SEMgrSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SEMgrSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "sensor_service_off", Category = Cat.Services,
+                Name = "Désactiver le service de capteurs (PC sans capteur)",
+                Desc = "Coupe SensorService (luminosité auto, orientation), inutile sur un PC fixe sans capteur. À laisser actif sur un portable. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SensorService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SensorService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SensorService")
+            });
+
             return list;
         }
     }
