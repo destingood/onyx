@@ -550,6 +550,8 @@ namespace BTOptimizer
         public const string DevClassKeyboard  = "{4d36e96b-e325-11ce-bfc1-08002be10318}";
         public const string DevClassBluetooth = "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}"; // radios Bluetooth
         public const string DevClassMedia     = "{4d36e96c-e325-11ce-bfc1-08002be10318}"; // périphériques audio
+        public const string DevClassXboxGip   = "{05f5cfe2-4733-4950-a6bb-07aad01a3a84}"; // manettes Xbox (pilote GIP/dc1)
+        public const string DevClassXnaComp   = "{d61ca365-5af4-4486-998b-9db4734c6ca3}"; // manettes/adaptateur Xbox (XnaComposite)
 
         private class DevPowerEntry { public string Cls; public bool Enable; }
         private static readonly object DevPowerLock = new object();

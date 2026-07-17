@@ -2028,7 +2028,8 @@ namespace BTOptimizer
             // ===== LOT SUPPLÉMENTAIRE 8 : onglet « Gestion de l'alimentation » =====
             // (les cases du Gestionnaire de périphériques, décochées famille par famille)
             string[] devUsbHubs = { Sys.DevClassUsb };
-            string[] devInput   = { Sys.DevClassHid, Sys.DevClassMouse, Sys.DevClassKeyboard };
+            string[] devInput   = { Sys.DevClassHid, Sys.DevClassMouse, Sys.DevClassKeyboard,
+                                    Sys.DevClassXboxGip, Sys.DevClassXnaComp };
             string[] devBt      = { Sys.DevClassBluetooth };
             string[] devAudio   = { Sys.DevClassMedia };
             string[] devNet     = { Sys.MsiNetClass };
@@ -2046,8 +2047,8 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "devpower_hid_off", Category = Cat.Souris, Esport = true, Reboot = true,
-                Name = "Ne plus laisser Windows éteindre la souris et le clavier (HID)",
-                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur les périphériques d'entrée (HID) : plus de premier clic ou de première frappe « avalé » après une pause. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
+                Name = "Ne plus laisser Windows éteindre souris, clavier et manettes (HID/Xbox)",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur les périphériques d'entrée (HID) et les manettes Xbox : plus de premier clic « avalé » après une pause, ni de manette qui décroche. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
                 Apply  = () => Sys.SetDevicePowerSaving(devInput, false),
                 Revert = () => Sys.SetDevicePowerSaving(devInput, true),
                 Check  = () => Sys.DevicePowerSavingOff(devInput)
