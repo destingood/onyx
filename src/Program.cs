@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.1.0.0")]
-[assembly: AssemblyFileVersion("10.1.0.0")]
+[assembly: AssemblyVersion("10.2.0.0")]
+[assembly: AssemblyFileVersion("10.2.0.0")]
 
 namespace BTOptimizer
 {
@@ -530,6 +530,30 @@ namespace BTOptimizer
                     double mx, avg; probe.Read(out mx, out avg);
                     Console.WriteLine("  Sonde réveil 1 ms : max " + mx.ToString("0") + " µs, moyen " + avg.ToString("0.0") + " µs.");
                 }
+
+                Console.WriteLine("FPS en direct (DXGI/D3D9, façon PresentMon)...");
+                using (var fps = new FpsEtw())
+                {
+                    if (fps.Start())
+                    {
+                        System.Threading.Thread.Sleep(2500);
+                        var stats = fps.Snapshot(2500);
+                        Console.WriteLine("  " + stats.Count + " application(s) présentent des images :");
+                        int shown = 0;
+                        foreach (var st in stats)
+                        {
+                            Console.WriteLine("   - " + st.Name + " (PID " + st.Pid + ") : " + st.Fps.ToString("0.0")
+                                + " FPS, frametime moyen " + st.AvgMs.ToString("0.00") + " ms, total " + st.Total);
+                            if (++shown >= 5) break;
+                        }
+                        if (stats.Count == 0)
+                            Console.WriteLine("  (aucune présentation pendant la fenêtre — normal sur un bureau immobile)");
+                    }
+                    else
+                        Console.WriteLine("  Session FPS refusée : " + (fps.LastError ?? "?") + " — attendu sans droits admin.");
+                }
+                using (var f = new FpsMonForm(delegate (string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI FpsMonForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Latence direct ERREUR : " + ex.Message); }
         }

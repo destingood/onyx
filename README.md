@@ -51,6 +51,21 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### FPS EN DIRECT — façon PresentMon (v10.2)
+
+Menu ☰ → **FPS EN DIRECT (par jeu)**, ou bouton **Compteur FPS…** du panneau 🎯.
+Session ETW abonnée aux fournisseurs **Microsoft-Windows-DXGI / D3D9** (les mêmes
+événements que PresentMon) : chaque `Present()` de chaque application est compté,
+**sans overlay, sans injection, zéro impact** — compatible anti-cheat puisqu'on ne
+touche pas au jeu. La fenêtre montre : bannière **verdict face au Hz de l'écran**
+(vert ≥ 95 % : « ton 500 Hz est exploité »), **FPS**, **1% low** (moyenne du pire
+1 % des frametimes — l'indicateur de fluidité réel), frametime moyen, pire frame,
+**graphique des frametimes** (une barre = une image, ligne verte = cible de
+l'écran, barres orange/rouge = micro-saccades), et le tableau de toutes les
+applications qui présentent (clic = suivre ; dwm/explorer grisés, un jeu est
+sélectionné automatiquement). Idéal pour vérifier qu'un déblocage de limite de
+FPS (panneau 🎯) a fonctionné — et voir les vrais 500 FPS s'afficher.
+
 ### Latence EN DIRECT — précision LatencyMon (v9.5)
 
 Menu ☰ → **Latence EN DIRECT (DPC/ISR par pilote)**. Contrairement à la mesure

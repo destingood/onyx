@@ -40,9 +40,9 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "BT Optimizer — Objectif 500 FPS (écran 500 Hz)";
-            ClientSize = new Size(760, 640);
+            ClientSize = new Size(920, 640);
             StartPosition = FormStartPosition.CenterParent;
-            MinimumSize = new Size(640, 500);
+            MinimumSize = new Size(900, 500);
             BackColor = Color.FromArgb(245, 246, 248);
             _ownedFonts = new List<Font>();
             Font = Own(new Font("Segoe UI", 9f));
@@ -77,20 +77,23 @@ namespace BTOptimizer
 
             var bottom = new Panel { Dock = DockStyle.Bottom, Height = 46, Padding = new Padding(12, 7, 12, 7) };
 
-            _btnPack = MakeBtn("⚡ Appliquer le pack 500 FPS", 200, DockStyle.Left);
+            _btnPack = MakeBtn("⚡ Appliquer le pack 500 FPS", 190, DockStyle.Left);
             _btnPack.BackColor = Color.FromArgb(0, 120, 215);
             _btnPack.ForeColor = Color.White;
             _btnPack.FlatAppearance.BorderSize = 0;
             _btnPack.Click += (s, e) => { ApplyPackRequested = true; Close(); };
 
-            _btnMaxHz = MakeBtn("⬆ Écran → fréquence max", 180, DockStyle.Left);
+            _btnMaxHz = MakeBtn("⬆ Écran → fréquence max", 170, DockStyle.Left);
             _btnMaxHz.Click += OnForceMaxHz;
 
-            var scr = MakeBtn("Réglages écran...", 130, DockStyle.Left);
+            var fps = MakeBtn("Compteur FPS...", 115, DockStyle.Left);
+            fps.Click += (s, e) => { using (var f = new FpsMonForm(_log)) f.ShowDialog(this); };
+
+            var scr = MakeBtn("Réglages écran...", 125, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
-            var gpu = MakeBtn("Panneau NVIDIA...", 130, DockStyle.Left);
+            var gpu = MakeBtn("Panneau NVIDIA...", 125, DockStyle.Left);
             gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
-            var refresh = MakeBtn("Rafraîchir", 90, DockStyle.Left);
+            var refresh = MakeBtn("Rafraîchir", 85, DockStyle.Left);
             refresh.Click += (s, e) => Reload();
             var close = MakeBtn("Fermer", 80, DockStyle.Right);
             close.Click += (s, e) => Close();
