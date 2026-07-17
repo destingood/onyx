@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.5 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -560,10 +560,20 @@ namespace BTOptimizer
             if (_hw == null) _hw = Hardware.Detect();
             var ids = Hardware.AutoTuneIds(_tweaks, _hw);
             ApplyPreset(t => ids.Contains(t.Id));
-            Log("Auto-tune : " + _hw.Summary(), 0);
-            Log("Sélection adaptée : " + ids.Count + " optimisation(s)"
-                + (_hw.AllSsd ? " (SSD détecté → tweaks disque inclus)" : " (HDD présent → SysMain/Prefetch exclus)")
-                + ". Sécurité et expérimental laissés à ton choix.", 1);
+
+            Log("Auto-tune adapté à ton matériel : " + _hw.Summary(), 0);
+            // Explique les décisions prises d'après le matériel détecté.
+            Log("  • Disque : " + (_hw.AllSsd
+                ? "SSD → SysMain/Prefetch désactivés (inutiles sur SSD)."
+                : "HDD présent → préchargement conservé, disque laissé libre de se garer."), 0);
+            Log("  • RAM : " + _hw.RamGB + " Go → " + (_hw.RamGB >= 16
+                ? "combinaison de pages mémoire désactivée (moins de CPU)."
+                : "réglages mémoire prudents (RAM limitée)."), 0);
+            bool nvidia = _hw.GpuVendor != null && _hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
+            Log("  • GPU : " + _hw.GpuName + (nvidia ? " → télémétrie NVIDIA coupée." : " → réglages GPU génériques."), 0);
+            Log("  • Réseau : MSI carte réseau activé (latence).", 0);
+            Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), CPU sans veille, recherche Windows, MSI stockage.", 2);
+            Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s). Vérifie puis clique APPLIQUER.", 1);
         }
 
         private void FilterTweaks(string query)

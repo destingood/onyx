@@ -103,25 +103,55 @@ namespace BTOptimizer
         }
 
         /// <summary>Sélection intelligente : base « eSport + recommandé », adaptée au matériel, hors sécurité/expérimental.</summary>
+        /// <summary>Sélection auto : ensemble latence/perf sûr (eSport+recommandé), ajusté au matériel détecté.</summary>
         public static HashSet<string> AutoTuneIds(List<Tweak> all, HwProfile hw)
         {
+            var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Tweak t in all) have.Add(t.Id);
+
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Tweak t in all)
                 if (t.Esport || t.Recommended) ids.Add(t.Id);
 
-            // Tweaks dangereux sur disque mécanique : à retirer si un HDD est présent.
-            if (!hw.AllSsd)
+            // --- Jamais en auto : choix explicite requis ---
+            ids.Remove("spectre_off");        // réduit une protection de sécurité
+            ids.Remove("vbs_off");            // réduit une protection de sécurité
+            ids.Remove("cpu_idle_disable");   // garde le CPU hors veille : chaleur/conso, mieux en opt-in
+            ids.Remove("wsearch_off");        // pénalise la recherche de fichiers
+            ids.Remove("msi_storage");        // MSI stockage = avancé (rare risque de boot)
+
+            // --- Disque ---
+            if (hw.AllSsd)
+            {
+                ids.Add("sysmain_off");       // inutiles sur SSD -> gain
+                ids.Add("prefetch_off");
+            }
+            else                              // HDD présent : ne pas casser le préchargement / laisser garer
             {
                 ids.Remove("sysmain_off");
                 ids.Remove("prefetch_off");
+                ids.Remove("disk_timeout_off");
             }
-            // Jamais en auto : sécurité et expérimental (choix explicite requis).
-            ids.Remove("spectre_off");
-            ids.Remove("vbs_off");
-            ids.Remove("cpu_idle_disable");
-            ids.Remove("dynamic_tick");
-            ids.Remove("input_queues");
-            ids.Remove("wsearch_off");   // pénalise la recherche de fichiers : opt-in
+
+            // --- RAM ---
+            if (hw.RamGB >= 16)
+                ids.Add("disable_paging_combining");   // moins de CPU à fusionner les pages
+            else
+            {
+                ids.Remove("disable_paging_combining");
+                ids.Remove("paging_executive");        // garder le noyau paginable si peu de RAM
+            }
+
+            // --- GPU ---
+            bool nvidia = hw.GpuVendor != null && hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (nvidia) ids.Add("nvidia_telemetry_off");
+            else ids.Remove("nvidia_telemetry_off");   // inutile sans GPU NVIDIA
+
+            // --- Réseau : MSI carte réseau (sûr, gain latence) ---
+            ids.Add("msi_network");
+
+            // On ne garde que des Id réellement présents dans le catalogue.
+            ids.RemoveWhere(id => !have.Contains(id));
             return ids;
         }
 
