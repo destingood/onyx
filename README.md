@@ -58,6 +58,25 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### Habillage pro (v10.6)
+
+Interface au niveau d'un produit commercial, sans changer une seule habitude :
+
+- **Barre de titre sombre** fusionnée avec le bandeau (API DWM, teinte exacte sur
+  Windows 11) — la fenêtre est d'un seul tenant.
+- **Bandeau repensé** : wordmark **DesTinGOOD** en dégradé vert→bleu, puces
+  `v10.6` / `PRO` / `ESSAI n J`, et **liseré dégradé signature** repris sous le
+  bandeau de toutes les fenêtres.
+- **Boutons arrondis** redessinés partout (survol, pression, focus, désactivé) —
+  les couleurs accent (vert, orange, bleu) sont conservées.
+- **Catégories en cartes arrondies** avec pastille accent (fini la bordure gravée
+  des GroupBox) ; journal posé dans une carte.
+- **Menus assortis au thème** (☰, zone de notification, presets Auto), coins
+  arrondis sur Windows 11.
+- **Tableaux** : en-têtes de colonnes plats assortis, bordure enfoncée retirée.
+- **Bascule clair/sombre fiabilisée** : chaque contrôle garde son rôle (bandeaux,
+  tuiles, boutons accent) d'une bascule à l'autre ; champs de saisie affinés.
+
 ### FPS EN DIRECT — façon PresentMon (v10.2)
 
 Menu ☰ → **FPS EN DIRECT (par jeu)**, ou bouton **Compteur FPS…** du panneau 🎯.

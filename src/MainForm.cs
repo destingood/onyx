@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -42,7 +43,11 @@ namespace BTOptimizer
         private static readonly Color ColOk     = Color.FromArgb(0, 150, 90);
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
-        private static readonly Color ColActive = Color.FromArgb(0, 130, 0);
+
+        private Panel _header;
+        private readonly Font _fontBrand = new Font("Segoe UI Semibold", 16f);
+        private readonly Font _fontTag = new Font("Segoe UI", 8.5f);
+        private readonly Font _fontChip = new Font("Segoe UI Semibold", 7.5f);
 
         public MainForm()
         {
@@ -95,7 +100,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer 10.5 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer 10.6 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -104,24 +109,12 @@ namespace BTOptimizer
             BackColor = Color.FromArgb(245, 246, 248);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-            // En-tête
+            // En-tête : marque peinte (wordmark dégradé, puces version/édition, tagline).
             var header = new Panel();
             header.SetBounds(0, 0, 900, 62);
             header.BackColor = HeaderBg;
-
-            var title = new Label();
-            title.Text = "DesTinGOOD";
-            title.SetBounds(16, 8, 400, 30);
-            title.Font = new Font("Segoe UI Semibold", 15f);
-            title.ForeColor = Color.White;
-            title.BackColor = HeaderBg;
-
-            var sub = new Label();
-            sub.Text = "Optimiseur gaming — 500 FPS, latence minimale. Coche, survole pour les détails, APPLIQUER. Tout est réversible (.reg auto).";
-            sub.SetBounds(18, 38, 860, 18);
-            sub.Font = new Font("Segoe UI", 8.5f);
-            sub.ForeColor = Color.FromArgb(170, 175, 185);
-            sub.BackColor = HeaderBg;
+            _header = header;
+            header.Paint += OnPaintHeader;
 
             _btnBoost = new Button();
             _btnBoost.Text = "▶ MODE JEU";
@@ -225,8 +218,6 @@ namespace BTOptimizer
             _lblTimerRes.ForeColor = Color.FromArgb(165, 170, 180);
             _lblTimerRes.Font = new Font("Segoe UI", 9f);
 
-            header.Controls.Add(title);
-            header.Controls.Add(sub);
             header.Controls.Add(_lblCount);
             header.Controls.Add(_lblTimerRes);
             header.Controls.Add(_btnBoost);
@@ -269,7 +260,6 @@ namespace BTOptimizer
             panel.SetBounds(16, 138, 868, 358);
             panel.AutoScroll = true;
             panel.BackColor = Color.White;
-            panel.BorderStyle = BorderStyle.FixedSingle;
 
             var tip = new ToolTip();
             tip.AutoPopDelay = 20000;
@@ -358,13 +348,19 @@ namespace BTOptimizer
             _btnDns.ForeColor = Accent;
             _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 610, 354, 32, false);
 
-            // Journal
+            // Journal : console posée dans une carte arrondie.
+            var logCard = new Panel();
+            logCard.SetBounds(16, 650, 868, 138);
+            logCard.Padding = new Padding(8, 6, 8, 6);
+            logCard.Paint += OnPaintLogCard;
+            logCard.Resize += (s, e) => logCard.Invalidate();
             _log = new RichTextBox();
-            _log.SetBounds(16, 650, 868, 138);
+            _log.Dock = DockStyle.Fill;
             _log.ReadOnly = true;
             _log.BackColor = Color.White;
             _log.Font = new Font("Consolas", 8.5f);
-            _log.BorderStyle = BorderStyle.FixedSingle;
+            _log.BorderStyle = BorderStyle.None;
+            logCard.Controls.Add(_log);
 
             _btnReco.Click += (s, e) => ApplyPreset(t => t.Recommended);
             _btnEsport.Click += (s, e) => { if (RequirePro("Preset eSport")) ApplyPreset(t => t.Esport); };
@@ -439,7 +435,7 @@ namespace BTOptimizer
                 _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
-                _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, _log
+                _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, logCard
             });
         }
 
@@ -534,6 +530,72 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  En-tête : wordmark « DesTin » blanc + « GOOD » dégradé, puces
+        //  version/édition, tagline. Le liseré dégradé du bas est posé par le
+        //  thème (signature commune à toutes les fenêtres).
+        // ------------------------------------------------------------------
+        private void OnPaintHeader(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            int x = 16, y = 7;
+
+            float wm = Theme.DrawWordmark(g, _fontBrand, x, y);
+
+            // Puces : version, puis édition (PRO / essai) si active.
+            int cx = x + (int)wm + 14;
+            cx += DrawChip(g, cx, 13, "v10.6", Color.FromArgb(0, 210, 130), false) + 6;
+            if (License.IsPro)
+                DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
+            else if (License.TrialActive)
+                DrawChip(g, cx, 13, "ESSAI " + License.TrialDaysLeft + " J", Color.FromArgb(235, 180, 60), false);
+
+            // Tagline bornée : la zone à droite appartient aux compteurs.
+            TextRenderer.DrawText(g,
+                "500 FPS · latence minimale · " + _tweaks.Count + " optimisations réversibles",
+                _fontTag, new Rectangle(17, 38, 376, 17), Color.FromArgb(150, 156, 166),
+                TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+        }
+
+        /// <summary>Puce arrondie (pleine ou contour) ; renvoie sa largeur.</summary>
+        private int DrawChip(Graphics g, int x, int y, string text, Color tone, bool filled)
+        {
+            Size ts = TextRenderer.MeasureText(g, text, _fontChip);
+            int w = ts.Width + 10, h = 17;
+            var rf = new RectangleF(x, y, w, h);
+            SmoothingMode old = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var path = Theme.RoundPath(rf, h / 2f))
+            {
+                using (var br = new SolidBrush(filled ? tone : Color.FromArgb(28, tone)))
+                    g.FillPath(br, path);
+                using (var pen = new Pen(Color.FromArgb(filled ? 255 : 165, tone)))
+                    g.DrawPath(pen, path);
+            }
+            g.SmoothingMode = old;
+            TextRenderer.DrawText(g, text, _fontChip, new Rectangle(x, y, w, h),
+                filled ? Color.White : tone,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+            return w;
+        }
+
+        /// <summary>Carte arrondie derrière le journal.</summary>
+        private void OnPaintLogCard(object sender, PaintEventArgs e)
+        {
+            var p = (Panel)sender;
+            Rectangle r = p.ClientRectangle;
+            if (r.Width < 8 || r.Height < 8) return;
+            using (var br = new SolidBrush(p.Parent != null ? p.Parent.BackColor : BackColor))
+                e.Graphics.FillRectangle(br, r);
+            var rf = new RectangleF(0.5f, 0.5f, r.Width - 1f, r.Height - 1f);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var path = Theme.RoundPath(rf, 8f))
+            {
+                using (var br = new SolidBrush(Theme.FieldColor)) e.Graphics.FillPath(br, path);
+                using (var pen = new Pen(Theme.LineColor)) e.Graphics.DrawPath(pen, path);
+            }
+        }
+
+        // ------------------------------------------------------------------
         //  Journal (utilisable depuis un thread de fond)
         // ------------------------------------------------------------------
         private void Log(string message, int level)
@@ -575,12 +637,12 @@ namespace BTOptimizer
                 if (state == true)
                 {
                     active++;
-                    cb.ForeColor = ColActive;
+                    cb.ForeColor = Theme.OkColor;
                     cb.Text = _baseText[t.Id] + "   [déjà actif]";
                 }
                 else
                 {
-                    cb.ForeColor = SystemColors.ControlText;
+                    cb.ForeColor = Theme.InkColor;
                     cb.Text = _baseText[t.Id];
                 }
             }
@@ -665,6 +727,7 @@ namespace BTOptimizer
 
         private void UpdateProUi()
         {
+            if (_header != null) _header.Invalidate();   // puce PRO / ESSAI de l'en-tête
             if (_miPro == null) return;
             if (License.IsPro) _miPro.Text = "Édition Pro active (" + License.Licensee + ")";
             else if (License.TrialActive) _miPro.Text = "Essai Pro — " + License.TrialDaysLeft + " j restants · entrer une clé";

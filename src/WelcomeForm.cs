@@ -28,12 +28,9 @@ namespace BTOptimizer
             Font = new Font("Segoe UI", 9f);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
+            var brandFont = new Font("Segoe UI Semibold", 20f);
             var banner = new Panel { Dock = DockStyle.Top, Height = 96, BackColor = Color.FromArgb(28, 30, 38) };
-            banner.Controls.Add(new Label
-            {
-                Text = "DesTinGOOD", Location = new Point(22, 20), AutoSize = true,
-                ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 20f), BackColor = Color.Transparent
-            });
+            banner.Paint += (s, e) => Theme.DrawWordmark(e.Graphics, brandFont, 22, 18);
             banner.Controls.Add(new Label
             {
                 Text = "Réduire la latence et l'input lag, en 1 clic ou à la carte.",
