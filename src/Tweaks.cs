@@ -1781,6 +1781,81 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("lfsvc")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 5 =================
+
+            list.Add(new Tweak
+            {
+                Id = "cpu_perf_boost_aggressive", Category = Cat.Alim, Esport = true,
+                Name = "Turbo processeur agressif (Perf Boost = Aggressive)",
+                Desc = "Le CPU monte en turbo plus tôt et plus fort au lieu d'attendre. Gagne en réactivité/FPS, consomme un peu plus. « Rétablir » remet le mode par défaut.",
+                Apply  = () => Sys.SetPowerValue(SubProc, "be337238-0d82-4146-a960-4f3749d470c7", 2, 2),
+                Revert = () => Sys.SetPowerValue(SubProc, "be337238-0d82-4146-a960-4f3749d470c7", 3, 3),
+                Check  = () => Sys.PowerAcEquals(SubProc, "be337238-0d82-4146-a960-4f3749d470c7", 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "no_lock_screen", Category = Cat.Rapidite,
+                Name = "Passer l'écran de verrouillage (connexion plus directe)",
+                Desc = "Va directement à la saisie du mot de passe sans l'écran de verrouillage intermédiaire. « Rétablir » le remet.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Personalization" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Personalization", "NoLockScreen"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "clipboard_history_off", Category = Cat.Privacy,
+                Name = "Désactiver l'historique du presse-papiers",
+                Desc = "Windows ne garde plus l'historique (Win+V) de ce que tu copies. « Rétablir » le réactive. Optionnel — pratique pour certains.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowClipboardHistory", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowClipboardHistory"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowClipboardHistory"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "lmhosts_off", Category = Cat.Reseau,
+                Name = "Désactiver la recherche LMHOSTS (NetBIOS hérité)",
+                Desc = "Coupe la résolution de noms via le fichier LMHOSTS, héritage inutile aujourd'hui : petite réduction de surface et de requêtes. « Rétablir » la réactive.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\NetBT\Parameters", "EnableLMHOSTS", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\NetBT\Parameters", "EnableLMHOSTS", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\NetBT\Parameters", "EnableLMHOSTS"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ajrouter_off", Category = Cat.Services,
+                Name = "Désactiver le routeur AllJoyn (AJRouter)",
+                Desc = "Coupe un service d'objets connectés (IoT AllJoyn) inutile sur un PC de jeu/bureautique. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("AJRouter", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("AJRouter", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("AJRouter")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "fax_off", Category = Cat.Services,
+                Name = "Désactiver le service Fax",
+                Desc = "Coupe le service de télécopie, inutile pour la quasi-totalité des usages. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("Fax", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("Fax", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("Fax")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wallet_service_off", Category = Cat.Services,
+                Name = "Désactiver le service Portefeuille (WalletService)",
+                Desc = "Coupe le service Portefeuille Windows, rarement utilisé. « Rétablir » le remet à la demande. Optionnel.",
+                Apply  = () => Sys.ConfigureService("WalletService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("WalletService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("WalletService")
+            });
+
             return list;
         }
     }
