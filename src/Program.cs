@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("8.0.0.0")]
-[assembly: AssemblyFileVersion("8.0.0.0")]
+[assembly: AssemblyVersion("8.1.0.0")]
+[assembly: AssemblyFileVersion("8.1.0.0")]
 
 namespace BTOptimizer
 {
@@ -170,6 +170,26 @@ namespace BTOptimizer
                         + (d.Fix != FixKind.None ? "   -> [bouton: " + d.FixLabel + " / " + d.Fix + "]" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Diagnostic ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Audio & enceintes (lecture seule)...");
+            try
+            {
+                var devs = AudioTools.ListRender();
+                string def = AudioTools.DefaultRenderId();
+                Console.WriteLine("  " + devs.Count + " périphérique(s) de lecture actif(s), défaut=" + (def ?? "?"));
+                foreach (var d in devs)
+                    Console.WriteLine("   - " + d.Name + (d.IsDefault ? " [DEFAUT]" : ""));
+                using (var f = new AudioForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    var mi = typeof(AudioForm).GetMethod("Reload",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi.Invoke(f, null);
+                    mi.Invoke(f, null);
+                }
+                Console.WriteLine("  UI AudioForm : construite + 2x Reload + Dispose OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Audio ERREUR : " + ex.Message); }
 
             Console.WriteLine("Écran d'accueil...");
             try
