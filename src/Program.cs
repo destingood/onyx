@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("8.9.0.0")]
-[assembly: AssemblyFileVersion("8.9.0.0")]
+[assembly: AssemblyVersion("9.0.0.0")]
+[assembly: AssemblyFileVersion("9.0.0.0")]
 
 namespace BTOptimizer
 {
@@ -170,6 +170,20 @@ namespace BTOptimizer
                         + (d.Fix != FixKind.None ? "   -> [bouton: " + d.FixLabel + " / " + d.Fix + "]" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Diagnostic ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Guide latence & perf...");
+            try
+            {
+                using (var f = new LatencyGuideForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    var mi = typeof(LatencyGuideForm).GetMethod("Reload",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi.Invoke(f, null);
+                }
+                Console.WriteLine("  UI LatencyGuideForm : construite + Reload OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Guide latence ERREUR : " + ex.Message); }
 
             Console.WriteLine("Écrans (Hz actuel vs max)...");
             try
