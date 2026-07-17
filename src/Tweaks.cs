@@ -1684,6 +1684,103 @@ namespace BTOptimizer
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiStorageClass)
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 4 =================
+
+            list.Add(new Tweak
+            {
+                Id = "disable_paging_combining", Category = Cat.Systeme, Reboot = true,
+                Name = "Désactiver la combinaison de pages mémoire (PC avec beaucoup de RAM)",
+                Desc = "Windows scanne la RAM pour fusionner les pages identiques — utile si la RAM manque, coûteux en CPU si tu en as beaucoup (16 Go+). Ce réglage l'arrête. « Rétablir » le réactive.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingCombining", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingCombining"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "DisablePagingCombining"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "copilot_off", Category = Cat.Privacy,
+                Name = "Désactiver Windows Copilot",
+                Desc = "Retire l'assistant Copilot (bouton barre des tâches + processus de fond). « Rétablir » le réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" },
+                Apply  = () => Sys.SetUser(@"Software\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "chat_taskbar_off", Category = Cat.Rapidite,
+                Name = "Retirer l'icône Chat (Teams) de la barre des tâches",
+                Desc = "Enlève le bouton Chat/Teams de la barre des tâches. « Rétablir » le remet.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "taskbar_search_hide", Category = Cat.Rapidite,
+                Name = "Masquer la barre de recherche de la barre des tâches",
+                Desc = "Retire la zone de recherche (gain de place, moins de suggestions web/télémétrie). La recherche reste accessible via le menu Démarrer. « Rétablir » la réaffiche.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Search" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "lang_list_access_off", Category = Cat.Privacy,
+                Name = "Ne pas exposer ta liste de langues aux sites web",
+                Desc = "Empêche les sites de lire ta liste de langues préférées (utilisée pour le pistage). « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Control Panel\International\User Profile" },
+                Apply  = () => Sys.SetUser(@"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Control Panel\International\User Profile", "HttpAcceptLanguageOptOut"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wisvc_off", Category = Cat.Services,
+                Name = "Désactiver le service Windows Insider (wisvc)",
+                Desc = "Coupe le service du programme Windows Insider, inutile si tu n'es pas dans les préversions. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("wisvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("wisvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("wisvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wmp_network_off", Category = Cat.Services,
+                Name = "Désactiver le partage réseau Windows Media Player",
+                Desc = "Coupe WMPNetworkSvc (partage de médias en réseau), inutile pour la plupart. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("WMPNetworkSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("WMPNetworkSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("WMPNetworkSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "smartcard_off", Category = Cat.Services,
+                Name = "Désactiver le service Carte à puce (si non utilisé)",
+                Desc = "Coupe SCardSvr, inutile sans lecteur de carte à puce. À laisser actif en entreprise. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SCardSvr", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SCardSvr", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SCardSvr")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "geo_service_off", Category = Cat.Services,
+                Name = "Désactiver le service de géolocalisation (lfsvc)",
+                Desc = "Coupe le service de localisation Windows. Les applis météo/carte ne connaîtront plus ta position. « Rétablir » le remet à la demande. Optionnel.",
+                Apply  = () => Sys.ConfigureService("lfsvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("lfsvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("lfsvc")
+            });
+
             return list;
         }
     }
