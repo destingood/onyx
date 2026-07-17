@@ -20,15 +20,15 @@ namespace BTOptimizer
 
     public static class Cat
     {
-        public const string Souris   = "Souris & clavier";
-        public const string Alim     = "Alimentation & CPU";
-        public const string Gpu      = "GPU & jeux";
-        public const string Audio    = "Son & audio";
-        public const string Systeme  = "Système & planificateur";
-        public const string Rapidite = "Rapidité & démarrage";
-        public const string Services = "Services & arrière-plan";
-        public const string Privacy  = "Confidentialité";
-        public const string Reseau   = "Réseau";
+        public const string Souris   = "🖱 Souris & clavier";
+        public const string Alim     = "⚡ Alimentation & CPU";
+        public const string Gpu      = "🎮 GPU & jeux";
+        public const string Audio    = "🔊 Son & audio";
+        public const string Systeme  = "🧠 Système & planificateur";
+        public const string Rapidite = "🚀 Rapidité & démarrage";
+        public const string Services = "🧹 Services & arrière-plan";
+        public const string Privacy  = "🕵 Confidentialité";
+        public const string Reseau   = "🌐 Réseau";
 
         public static readonly string[] Order = new string[]
         {

@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer 10.4 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer 10.5 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -195,6 +195,8 @@ namespace BTOptimizer
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             // --- Maintenance ---
+            _menu.Items.Add("Re-vérifier l'état des optimisations (re-scan)", null,
+                (s, e) => { RefreshStates(); Log("États re-vérifiés : les mentions [déjà actif] sont à jour.", 0); });
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
             _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
             _menu.Items.Add("Ouvrir le journal (fichier)", null, (s, e) =>
@@ -417,6 +419,9 @@ namespace BTOptimizer
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var trayMenu = new ContextMenuStrip();
             trayMenu.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("▶ MODE JEU on/off   (Ctrl+Alt+G)", null, (s, e) => OnBoostToggle(s, e));
+            trayMenu.Items.Add("Timer 1 ms on/off", null, (s, e) => _chkTimer.Checked = !_chkTimer.Checked);
+            trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
             _tray.ContextMenuStrip = trayMenu;
 
@@ -439,9 +444,47 @@ namespace BTOptimizer
 
         private void OnFormClosingCleanup(object sender, FormClosingEventArgs e)
         {
+            try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
+        }
+
+        // ------------------------------------------------------------------
+        //  Raccourci clavier GLOBAL : Ctrl+Alt+G bascule le MODE JEU, même
+        //  minimisé ou en pleine partie (le jeu garde le focus).
+        // ------------------------------------------------------------------
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        private const int HotkeyBoostId = 0xB70;
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try
+            {
+                if (RegisterHotKey(Handle, HotkeyBoostId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'))
+                    Log("Raccourci global actif : Ctrl+Alt+G = MODE JEU (fonctionne en pleine partie).", 0);
+            }
+            catch { }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyBoostId)
+            {
+                OnBoostToggle(this, EventArgs.Empty);
+                if (!Visible && _tray != null && _tray.Visible)
+                    _tray.ShowBalloonTip(1500, "DesTinGOOD",
+                        GameBoost.IsActive ? "MODE JEU activé (Ctrl+Alt+G)" : "MODE JEU désactivé (Ctrl+Alt+G)",
+                        ToolTipIcon.Info);
+            }
+            base.WndProc(ref m);
         }
 
         private void OnResizeToTray(object sender, EventArgs e)

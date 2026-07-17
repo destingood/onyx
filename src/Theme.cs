@@ -67,6 +67,16 @@ namespace BTOptimizer
         {
             return Math.Abs(a.R - b.R) + Math.Abs(a.G - b.G) + Math.Abs(a.B - b.B) < 26;
         }
+
+        /// <summary>Couleur de survol : éclaircit les fonds sombres, assombrit les fonds clairs (steps 1-2).</summary>
+        private static Color Hover(Color c, int step)
+        {
+            int d = (c.GetBrightness() < 0.5f ? 1 : -1) * (step == 1 ? 16 : 30);
+            return Color.FromArgb(
+                Math.Max(0, Math.Min(255, c.R + d)),
+                Math.Max(0, Math.Min(255, c.G + d)),
+                Math.Max(0, Math.Min(255, c.B + d)));
+        }
         private static bool IsGrayish(Color c)
         {
             return Math.Abs(c.R - c.G) < 18 && Math.Abs(c.G - c.B) < 18;
@@ -114,10 +124,21 @@ namespace BTOptimizer
             else if (c is Button)
             {
                 var b = (Button)c;
-                if (!Near(b.BackColor, AccentRef)) // laisse les boutons accent tels quels
+                bool accent = Near(b.BackColor, AccentRef) || (b.FlatStyle == FlatStyle.Flat && b.FlatAppearance.BorderSize == 0 && !IsGrayish(b.BackColor));
+                if (!accent) // laisse les boutons accent (couleur pleine) tels quels
                 {
                     b.BackColor = Panel; b.ForeColor = Ink;
                     try { b.FlatAppearance.BorderColor = Line; } catch { }
+                }
+                // Retour visuel au survol / clic pour TOUS les boutons plats.
+                if (b.FlatStyle == FlatStyle.Flat)
+                {
+                    try
+                    {
+                        b.FlatAppearance.MouseOverBackColor = Hover(b.BackColor, 1);
+                        b.FlatAppearance.MouseDownBackColor = Hover(b.BackColor, 2);
+                    }
+                    catch { }
                 }
             }
             else if (c is GroupBox)
