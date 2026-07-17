@@ -534,6 +534,273 @@ namespace BTOptimizer
             return found ? (bool?)true : null;
         }
 
+        // ------------------------------------------------------------------
+        //  Onglet « Gestion de l'alimentation » du Gestionnaire de périphériques.
+        //  Canal officiel : classes WMI MSPower_DeviceEnable (« Autoriser
+        //  l'ordinateur à éteindre ce périphérique pour économiser l'énergie »)
+        //  et MSPower_DeviceWakeEnable (« Autoriser ce périphérique à sortir
+        //  l'ordinateur du mode veille ») dans root\wmi — exactement ce que
+        //  le Gestionnaire de périphériques coche/décoche. Repli pilotes WDF
+        //  (IdleInWorkingState sous Enum\USB) pour les machines où les classes
+        //  MSPower sont en panne (cf. scripts\fix-bt-tplink-ADMIN.ps1).
+        // ------------------------------------------------------------------
+        public const string DevClassUsb       = "{36fc9e60-c465-11cf-8056-444553540000}"; // hubs & contrôleurs USB
+        public const string DevClassHid       = "{745a17a0-74d3-11d0-b6fe-00a0c90f57da}"; // périphériques d'entrée HID
+        public const string DevClassMouse     = "{4d36e96f-e325-11ce-bfc1-08002be10318}";
+        public const string DevClassKeyboard  = "{4d36e96b-e325-11ce-bfc1-08002be10318}";
+        public const string DevClassBluetooth = "{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}"; // radios Bluetooth
+        public const string DevClassMedia     = "{4d36e96c-e325-11ce-bfc1-08002be10318}"; // périphériques audio
+
+        private class DevPowerEntry { public string Cls; public bool Enable; }
+        private static readonly object DevPowerLock = new object();
+        private static List<DevPowerEntry>[] _devPowerSnap = new List<DevPowerEntry>[2];
+        private static DateTime[] _devPowerSnapAt = new DateTime[2];
+
+        private static bool ClassIn(string cls, string[] classGuids)
+        {
+            if (cls == null) return false;
+            foreach (string g in classGuids)
+                if (cls.Equals(g, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>ClassGUID du périphérique derrière une instance MSPower_*
+        /// ("USB\VID_..\5&..&2_0" -> valeur ClassGUID sous Enum, sans le suffixe "_n").</summary>
+        private static string DeviceClassOfInstance(string instanceName)
+        {
+            if (string.IsNullOrEmpty(instanceName)) return null;
+            int us = instanceName.LastIndexOf('_');
+            string id = us > 0 ? instanceName.Substring(0, us) : instanceName;
+            return GetMachine(@"SYSTEM\CurrentControlSet\Enum\" + id, "ClassGUID") as string;
+        }
+
+        /// <summary>Photo (classe, case cochée) des instances MSPower. Cache de quelques
+        /// secondes pour que les Check des différentes familles ne relancent pas WMI.
+        /// null = classes MSPower indisponibles sur cette machine.</summary>
+        private static List<DevPowerEntry> DevPowerSnapshot(bool wake)
+        {
+            int slot = wake ? 1 : 0;
+            lock (DevPowerLock)
+            {
+                if (_devPowerSnapAt[slot] != DateTime.MinValue &&
+                    (DateTime.UtcNow - _devPowerSnapAt[slot]).TotalSeconds < 4)
+                    return _devPowerSnap[slot];
+                List<DevPowerEntry> snap = null;
+                try
+                {
+                    snap = new List<DevPowerEntry>();
+                    using (var s = new ManagementObjectSearcher(@"root\wmi",
+                        "SELECT * FROM " + (wake ? "MSPower_DeviceWakeEnable" : "MSPower_DeviceEnable")))
+                    {
+                        foreach (ManagementObject mo in s.Get())
+                        {
+                            try
+                            {
+                                string cls = DeviceClassOfInstance(Convert.ToString(mo["InstanceName"]));
+                                if (cls != null)
+                                    snap.Add(new DevPowerEntry { Cls = cls, Enable = Convert.ToBoolean(mo["Enable"]) });
+                            }
+                            catch { } // instance débranchée/illisible : suivante
+                            finally { mo.Dispose(); }
+                        }
+                    }
+                }
+                catch { snap = null; }
+                _devPowerSnap[slot] = snap;
+                _devPowerSnapAt[slot] = DateTime.UtcNow;
+                return snap;
+            }
+        }
+
+        private static void InvalidateDevPowerSnapshot()
+        {
+            lock (DevPowerLock)
+            {
+                _devPowerSnapAt[0] = DateTime.MinValue;
+                _devPowerSnapAt[1] = DateTime.MinValue;
+            }
+        }
+
+        private static int SetMsPowerBox(bool wake, string[] classGuids, bool allow)
+        {
+            int n = 0;
+            try
+            {
+                using (var s = new ManagementObjectSearcher(@"root\wmi",
+                    "SELECT * FROM " + (wake ? "MSPower_DeviceWakeEnable" : "MSPower_DeviceEnable")))
+                {
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        try
+                        {
+                            if (!ClassIn(DeviceClassOfInstance(Convert.ToString(mo["InstanceName"])), classGuids)) continue;
+                            mo["Enable"] = allow;
+                            mo.Put();
+                            n++;
+                        }
+                        catch { } // périphérique débranché/protégé : on passe au suivant
+                        finally { mo.Dispose(); }
+                    }
+                }
+            }
+            catch { } // MSPower en panne : le repli WDF de l'appelant prend le relais
+            return n;
+        }
+
+        /// <summary>Coche (allow=true) ou décoche (allow=false) « Autoriser l'ordinateur à
+        /// éteindre ce périphérique pour économiser l'énergie » sur toute une famille.</summary>
+        public static void SetDevicePowerSaving(string[] classGuids, bool allow)
+        {
+            int n = SetMsPowerBox(false, classGuids, allow);
+            if (n == 0) n = SetUsbIdleRegistry(classGuids, allow);
+            InvalidateDevPowerSnapshot();
+            if (n == 0)
+                throw new Exception("Aucun périphérique de cette famille n'expose la gestion d'alimentation.");
+        }
+
+        /// <summary>true = case « éteindre ce périphérique » décochée sur TOUTE la famille,
+        /// false = au moins une encore cochée, null = famille absente / WMI muet.</summary>
+        public static bool? DevicePowerSavingOff(string[] classGuids)
+        {
+            List<DevPowerEntry> snap = DevPowerSnapshot(false);
+            if (snap != null)
+            {
+                bool found = false;
+                foreach (DevPowerEntry e in snap)
+                {
+                    if (!ClassIn(e.Cls, classGuids)) continue;
+                    found = true;
+                    if (e.Enable) return false;
+                }
+                if (found) return true;
+            }
+            return UsbIdleRegistryCleared(classGuids);
+        }
+
+        /// <summary>Coche/décoche « Autoriser ce périphérique à sortir l'ordinateur du mode
+        /// veille » sur toute une famille de périphériques.</summary>
+        public static void SetDeviceWakeAllowed(string[] classGuids, bool allow)
+        {
+            int n = SetMsPowerBox(true, classGuids, allow);
+            InvalidateDevPowerSnapshot();
+            if (n == 0)
+                throw new Exception("Aucun périphérique de cette famille n'expose le réveil de l'ordinateur.");
+        }
+
+        /// <summary>true = case « sortir l'ordinateur du mode veille » décochée sur TOUTE la
+        /// famille, false = au moins une encore cochée, null = famille absente / WMI muet.</summary>
+        public static bool? DeviceWakeOff(string[] classGuids)
+        {
+            List<DevPowerEntry> snap = DevPowerSnapshot(true);
+            if (snap == null) return null;
+            bool found = false;
+            foreach (DevPowerEntry e in snap)
+            {
+                if (!ClassIn(e.Cls, classGuids)) continue;
+                found = true;
+                if (e.Enable) return false;
+            }
+            return found ? (bool?)true : null;
+        }
+
+        /// <summary>Chemins Enum\USB\&lt;dev&gt;\&lt;inst&gt; dont le ClassGUID appartient aux classes données.</summary>
+        private static List<string> UsbInstancesOf(string[] classGuids)
+        {
+            var paths = new List<string>();
+            using (RegistryKey usb = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USB"))
+            {
+                if (usb == null) return paths;
+                foreach (string dev in usb.GetSubKeyNames())
+                {
+                    using (RegistryKey dk = usb.OpenSubKey(dev))
+                    {
+                        if (dk == null) continue;
+                        foreach (string inst in dk.GetSubKeyNames())
+                        {
+                            try
+                            {
+                                using (RegistryKey ik = dk.OpenSubKey(inst))
+                                    if (ik != null && ClassIn(ik.GetValue("ClassGUID") as string, classGuids))
+                                        paths.Add(@"SYSTEM\CurrentControlSet\Enum\USB\" + dev + "\\" + inst);
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            return paths;
+        }
+
+        /// <summary>Repli registre de la case « éteindre ce périphérique » (jamais créé,
+        /// modifié seulement si le pilote expose déjà la valeur) : WDF\IdleInWorkingState
+        /// pour les pilotes KMDF/UMDF (hubs USB, radios BT), SelectiveSuspendEnabled pour
+        /// les pilotes WDM (hidusb : souris/claviers). Prise en compte au redémarrage.</summary>
+        private static int SetUsbIdleRegistry(string[] classGuids, bool allow)
+        {
+            int n = 0;
+            foreach (string path in UsbInstancesOf(classGuids))
+            {
+                try
+                {
+                    bool touched = false;
+                    using (RegistryKey wdf = Registry.LocalMachine.OpenSubKey(path + @"\Device Parameters\WDF", true))
+                    {
+                        if (wdf != null && wdf.GetValue("IdleInWorkingState") != null)
+                        {
+                            wdf.SetValue("IdleInWorkingState", allow ? 1 : 0, RegistryValueKind.DWord);
+                            touched = true;
+                        }
+                    }
+                    using (RegistryKey dp = Registry.LocalMachine.OpenSubKey(path + @"\Device Parameters", true))
+                    {
+                        if (dp != null && dp.GetValue("SelectiveSuspendEnabled") != null)
+                        {
+                            // hidusb lit un type figé par l'INF : on préserve BINARY ou DWORD.
+                            if (dp.GetValueKind("SelectiveSuspendEnabled") == RegistryValueKind.Binary)
+                                dp.SetValue("SelectiveSuspendEnabled", new byte[] { (byte)(allow ? 1 : 0) }, RegistryValueKind.Binary);
+                            else
+                                dp.SetValue("SelectiveSuspendEnabled", allow ? 1 : 0, RegistryValueKind.DWord);
+                            touched = true;
+                        }
+                    }
+                    if (touched) n++;
+                }
+                catch { }
+            }
+            return n;
+        }
+
+        private static bool SuspendValueIsZero(object v)
+        {
+            if (v is int) return (int)v == 0;
+            byte[] b = v as byte[];
+            if (b == null || b.Length == 0) return false;
+            foreach (byte x in b) if (x != 0) return false;
+            return true;
+        }
+
+        private static bool? UsbIdleRegistryCleared(string[] classGuids)
+        {
+            bool found = false;
+            foreach (string path in UsbInstancesOf(classGuids))
+            {
+                object w = GetMachine(path + @"\Device Parameters\WDF", "IdleInWorkingState");
+                if (w != null)
+                {
+                    found = true;
+                    if (!IntEquals(w, 0)) return false;
+                    continue; // pilote WDF : IdleInWorkingState fait foi pour cette instance
+                }
+                object s = GetMachine(path + @"\Device Parameters", "SelectiveSuspendEnabled");
+                if (s != null)
+                {
+                    found = true;
+                    if (!SuspendValueIsZero(s)) return false;
+                }
+            }
+            return found ? (bool?)true : null;
+        }
+
         public static bool? NagleActive()
         {
             const string root = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";

@@ -2025,6 +2025,64 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("DisplayEnhancementService")
             });
 
+            // ===== LOT SUPPLÉMENTAIRE 8 : onglet « Gestion de l'alimentation » =====
+            // (les cases du Gestionnaire de périphériques, décochées famille par famille)
+            string[] devUsbHubs = { Sys.DevClassUsb };
+            string[] devInput   = { Sys.DevClassHid, Sys.DevClassMouse, Sys.DevClassKeyboard };
+            string[] devBt      = { Sys.DevClassBluetooth };
+            string[] devAudio   = { Sys.DevClassMedia };
+            string[] devNet     = { Sys.MsiNetClass };
+
+            list.Add(new Tweak
+            {
+                Id = "devpower_usb_off", Category = Cat.Alim, Esport = true, Reboot = true,
+                Name = "Ne plus laisser Windows éteindre les hubs USB (Gestionnaire de périphériques)",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique pour économiser l'énergie » sur tous les hubs et contrôleurs USB, comme dans le Gestionnaire de périphériques. Complète la suspension sélective USB : souris, clavier et dongles ne sont plus coupés au repos. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
+                Apply  = () => Sys.SetDevicePowerSaving(devUsbHubs, false),
+                Revert = () => Sys.SetDevicePowerSaving(devUsbHubs, true),
+                Check  = () => Sys.DevicePowerSavingOff(devUsbHubs)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "devpower_hid_off", Category = Cat.Souris, Esport = true, Reboot = true,
+                Name = "Ne plus laisser Windows éteindre la souris et le clavier (HID)",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur les périphériques d'entrée (HID) : plus de premier clic ou de première frappe « avalé » après une pause. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
+                Apply  = () => Sys.SetDevicePowerSaving(devInput, false),
+                Revert = () => Sys.SetDevicePowerSaving(devInput, true),
+                Check  = () => Sys.DevicePowerSavingOff(devInput)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "devpower_bt_off", Category = Cat.Alim, Esport = true, Reboot = true,
+                Name = "Ne plus laisser Windows éteindre la radio Bluetooth",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur les radios Bluetooth : la manette et le casque BT ne décrochent plus quand Windows endort le dongle. Sans effet si le PC n'a pas de Bluetooth. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
+                Apply  = () => Sys.SetDevicePowerSaving(devBt, false),
+                Revert = () => Sys.SetDevicePowerSaving(devBt, true),
+                Check  = () => Sys.DevicePowerSavingOff(devBt)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "devpower_audio_off", Category = Cat.Audio, Reboot = true,
+                Name = "Ne plus laisser Windows éteindre les périphériques audio",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur les périphériques audio (casque/DAC USB) : supprime les « plops » et le retard de son au réveil du périphérique. Sans effet si aucun périphérique audio n'expose ce réglage. Prise en compte au plus tard au redémarrage. « Rétablir » recoche la case.",
+                Apply  = () => Sys.SetDevicePowerSaving(devAudio, false),
+                Revert = () => Sys.SetDevicePowerSaving(devAudio, true),
+                Check  = () => Sys.DevicePowerSavingOff(devAudio)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "devpower_net_wake_off", Category = Cat.Reseau,
+                Name = "Empêcher la carte réseau de réveiller le PC",
+                Desc = "Décoche « Autoriser ce périphérique à sortir l'ordinateur du mode veille » sur les cartes réseau : plus de réveils surprise provoqués par le trafic ou le Wake-on-LAN. Complète « Interdire les minuteries de réveil ». « Rétablir » recoche la case.",
+                Apply  = () => Sys.SetDeviceWakeAllowed(devNet, false),
+                Revert = () => Sys.SetDeviceWakeAllowed(devNet, true),
+                Check  = () => Sys.DeviceWakeOff(devNet)
+            });
+
             return list;
         }
     }
