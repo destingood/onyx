@@ -337,6 +337,7 @@ namespace BTOptimizer
             _chkAutoTimer = new CheckBox();
             _chkAutoTimer.Text = "Timer 1 ms AUTO en jeu plein écran";
             _chkAutoTimer.SetBounds(572, 528, 312, 22);
+            _chkAutoTimer.Checked = true;   // par défaut : le timer 1 ms suit les jeux tout seul
             _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
             // Boutons d'action

@@ -68,6 +68,22 @@ namespace BTOptimizer
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Sys.Init();
+
+            // BT_PRINT_AUTO=prudent|equilibre|aggressive : imprime UNIQUEMENT la sélection
+            // Auto calculée pour CETTE machine (un id par ligne) — pour l'automatisation.
+            string printAuto = Environment.GetEnvironmentVariable("BT_PRINT_AUTO");
+            if (!string.IsNullOrEmpty(printAuto))
+            {
+                int lvl = printAuto.StartsWith("p", StringComparison.OrdinalIgnoreCase) ? Hardware.LevelPrudent
+                        : printAuto.StartsWith("a", StringComparison.OrdinalIgnoreCase) ? Hardware.LevelAggressive
+                        : Hardware.LevelBalanced;
+                var autoIds = new System.Collections.Generic.List<string>(
+                    Hardware.AutoTuneIds(Catalog.All(), Hardware.Detect(), lvl));
+                autoIds.Sort(StringComparer.Ordinal);
+                foreach (string id in autoIds) Console.WriteLine(id);
+                return;
+            }
+
             Console.WriteLine("DesTinGOOD TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
