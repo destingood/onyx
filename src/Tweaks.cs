@@ -1856,6 +1856,244 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("WalletService")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 6 =================
+            const string SubSleep  = "238c9fa8-0aad-41ed-83f4-97be242c8f20";
+            const string WakeTimer = "bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d";
+
+            list.Add(new Tweak
+            {
+                Id = "wake_timers_off", Category = Cat.Alim,
+                Name = "Interdire les minuteries de réveil (pas de réveil surprise)",
+                Desc = "Empêche Windows de sortir le PC de veille tout seul (tâches planifiées, mises à jour). « Rétablir » les réautorise.",
+                Apply  = () => Sys.SetPowerValue(SubSleep, WakeTimer, 0, 0),
+                Revert = () => Sys.SetPowerValue(SubSleep, WakeTimer, 1, 1),
+                Check  = () => Sys.PowerAcEquals(SubSleep, WakeTimer, 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "settings_sync_off", Category = Cat.Privacy,
+                Name = "Désactiver la synchronisation des paramètres (cloud)",
+                Desc = "Tes paramètres Windows (thème, mots de passe, préférences) ne sont plus synchronisés vers le cloud Microsoft. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync", 2, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\SettingSync", "DisableSettingSync"), 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "nvidia_telemetry_off", Category = Cat.Services,
+                Name = "Désactiver la télémétrie NVIDIA (NvTelemetryContainer)",
+                Desc = "Coupe le service de télémétrie du pilote NVIDIA, sans effet sur les jeux ni les performances. Sans effet si tu n'as pas de GPU NVIDIA. « Rétablir » le remet.",
+                Apply  = () => Sys.ConfigureService("NvTelemetryContainer", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("NvTelemetryContainer", "auto", false, false),
+                Check  = () => Sys.ServiceDisabled("NvTelemetryContainer")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ssdp_off", Category = Cat.Services,
+                Name = "Désactiver la découverte SSDP/UPnP",
+                Desc = "Coupe SSDPSRV (découverte de périphériques UPnP sur le réseau). Peut gêner le partage média/DLNA — optionnel. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SSDPSRV", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SSDPSRV", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SSDPSRV")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "trkwks_off", Category = Cat.Services,
+                Name = "Désactiver le suivi de liens distribués (TrkWks)",
+                Desc = "Coupe le service qui suit les fichiers liés déplacés sur le réseau NTFS, rarement utile en usage personnel. « Rétablir » le remet en automatique.",
+                Apply  = () => Sys.ConfigureService("TrkWks", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("TrkWks", "auto", false, false),
+                Check  = () => Sys.ServiceDisabled("TrkWks")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "icssvc_off", Category = Cat.Services,
+                Name = "Désactiver le point d'accès mobile (icssvc)",
+                Desc = "Coupe le service de partage de connexion (hotspot Windows). À laisser actif si tu partages ta connexion. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("icssvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("icssvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("icssvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "semgr_off", Category = Cat.Services,
+                Name = "Désactiver le gestionnaire de paiements/NFC (SEMgrSvc)",
+                Desc = "Coupe le service de paiements sans contact et éléments sécurisés, inutile sur un PC de bureau. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SEMgrSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SEMgrSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SEMgrSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "sensor_service_off", Category = Cat.Services,
+                Name = "Désactiver le service de capteurs (PC sans capteur)",
+                Desc = "Coupe SensorService (luminosité auto, orientation), inutile sur un PC fixe sans capteur. À laisser actif sur un portable. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("SensorService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("SensorService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("SensorService")
+            });
+
+            // ================= LOT SUPPLÉMENTAIRE 7 =================
+
+            list.Add(new Tweak
+            {
+                Id = "hybrid_sleep_off", Category = Cat.Alim,
+                Name = "Désactiver la veille hybride (mise en veille plus rapide)",
+                Desc = "La veille hybride écrit la RAM sur le disque à chaque mise en veille (lent, usure SSD). La désactiver rend la veille immédiate. « Rétablir » la réactive.",
+                Apply  = () => Sys.SetPowerValue(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 0, 0),
+                Revert = () => Sys.SetPowerValue(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 1, 1),
+                Check  = () => Sys.PowerAcEquals(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "search_history_off", Category = Cat.Privacy,
+                Name = "Ne pas mémoriser l'historique de recherche de l'appareil",
+                Desc = "Windows ne garde plus la trace de tes recherches locales. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "snap_assist_off", Category = Cat.Rapidite,
+                Name = "Désactiver les suggestions d'ancrage de fenêtres (Snap flyout)",
+                Desc = "Retire le petit menu de dispositions qui apparaît au survol du bouton agrandir. « Rétablir » le remet.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wcncsvc_off", Category = Cat.Services,
+                Name = "Désactiver Windows Connect Now (wcncsvc)",
+                Desc = "Coupe un service de configuration sans fil hérité (WPS), rarement utile. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("wcncsvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("wcncsvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("wcncsvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "dot3svc_off", Category = Cat.Services,
+                Name = "Désactiver l'authentification filaire 802.1X (dot3svc)",
+                Desc = "Coupe le service d'authentification réseau filaire (802.1X), inutile hors entreprise. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("dot3svc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("dot3svc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("dot3svc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wfds_off", Category = Cat.Services,
+                Name = "Désactiver les services Wi-Fi Direct (WFDSConMgrSvc)",
+                Desc = "Coupe le gestionnaire Wi-Fi Direct (partage sans fil pair-à-pair). À laisser si tu utilises Miracast/impression Wi-Fi Direct. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("WFDSConMgrSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("WFDSConMgrSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("WFDSConMgrSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "diag_collector_off", Category = Cat.Services,
+                Name = "Désactiver le collecteur de diagnostics Microsoft",
+                Desc = "Coupe diagnosticshub.standardcollector.service (collecte de traces de diagnostic). « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("diagnosticshub.standardcollector.service", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("diagnosticshub.standardcollector.service", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("diagnosticshub.standardcollector.service")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "displayenhancement_off", Category = Cat.Services,
+                Name = "Désactiver le service d'amélioration d'affichage (PC fixe)",
+                Desc = "Coupe DisplayEnhancementService (luminosité adaptative / veilleuse). À laisser actif sur un portable. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("DisplayEnhancementService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("DisplayEnhancementService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("DisplayEnhancementService")
+            });
+
+            // ================= LOT CIBLÉ (impact réel) =================
+
+            list.Add(new Tweak
+            {
+                Id = "gamedvr_policy_off", Category = Cat.Gpu, Esport = true,
+                Name = "Désactiver GameDVR par stratégie (verrou machine)",
+                Desc = "Force GameDVR à OFF au niveau machine (stratégie), en plus du réglage utilisateur : certains jeux/MAJ réactivent GameDVR côté utilisateur, ceci l'empêche. Gain de FPS et moins d'overhead de capture. « Rétablir » lève la stratégie.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "dns_priority", Category = Cat.Reseau, Esport = true,
+                Name = "Prioriser la résolution locale des noms (DNS plus réactif)",
+                Desc = "Réordonne les fournisseurs de résolution pour privilégier le cache/hosts/DNS local avant NetBIOS : résolution de noms plus rapide. « Rétablir » remet les priorités Windows.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority", 4, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "HostsPriority", 5, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "DnsPriority", 6, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "NetbtPriority", 7, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority", 499, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "HostsPriority", 500, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "DnsPriority", 2000, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "NetbtPriority", 2001, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority"), 4)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "edge_startup_boost_off", Category = Cat.Rapidite, Recommended = true,
+                Name = "Désactiver le « démarrage rapide » d'Edge (Startup Boost)",
+                Desc = "Edge ne se pré-lance plus en arrière-plan à l'ouverture de session : RAM et CPU libérés au démarrage. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Edge" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "remote_assistance_off", Category = Cat.Services, Recommended = true,
+                Name = "Désactiver l'Assistance à distance (surface d'attaque)",
+                Desc = "Empêche les invitations d'assistance à distance entrantes. Recommandé pour un PC personnel. « Rétablir » la réautorise.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "modern_standby_off", Category = Cat.Alim, Reboot = true,
+                Name = "Forcer la veille S3 classique (corrige la veille moderne)",
+                Desc = "Désactive la « veille moderne » (S0) au profit de la veille S3 : corrige la décharge de batterie en veille et les réveils intempestifs sur les machines où S0 est mal géré. « Rétablir » remet la veille moderne. Avancé.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Power" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride"), 0)
+            });
+
             // ================= OBJECTIF 500 FPS =================
 
             list.Add(new Tweak

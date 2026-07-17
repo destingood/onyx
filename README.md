@@ -199,12 +199,14 @@ débloquent DANS chaque jeu (limite de FPS, V-Sync). Le panneau fait donc trois 
    Minecraft. Plus les règles d'or (V-Sync OFF, Reflex ON, presets compétitifs) et les
    réglages pilote NVIDIA/AMD (V-Sync off, pas de limiteur pilote, perfs max, anti-lag).
 
-**v9.6 — le preset `Auto` connaît ton écran** : la détection matérielle lit désormais la
-**fréquence max des écrans**. Sur un écran **240 Hz+**, `Auto (adapté à mon PC)` ajoute le
-pack très hauts FPS (tick noyau fixe `dynamic_tick`, files d'entrée courtes
-`input_queues`, et à partir de **360 Hz** les C-States off `cpu_idle_disable` — réveil CPU
-instantané au prix de la consommation). Sécurité (Spectre/VBS) et `msi_storage` (avancé)
-restent TOUJOURS un choix explicite. Le journal explique ce que l'écran a déclenché.
+**v10.0 — le preset `Auto` connaît ton écran** : la détection matérielle lit désormais la
+**fréquence max des écrans** (affichée dans le résumé). Sur un écran **240 Hz+**, les
+niveaux **Équilibré/Agressif** d'`Auto (adapté à mon PC)` ajoutent le pack très hauts FPS
+(files d'entrée courtes `input_queues`, tick noyau fixe `dynamic_tick` sur PC fixe, et à
+partir de **360 Hz** les C-States off `cpu_idle_disable` — réveil CPU instantané au prix
+de la consommation). Le niveau Prudent et les portables gardent leurs protections.
+Sécurité (Spectre/VBS) et `msi_storage` (avancé) restent TOUJOURS un choix explicite.
+Le journal explique ce que l'écran a déclenché.
 
 **v9.4 — priorité CPU « Haute » pour les jeux compétitifs** : nouveau tweak
 `games_cpu_priority_high` — Windows lance CS2, OW2, Valorant, Fortnite, Apex, COD, LoL,

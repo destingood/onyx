@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.6 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 10.0 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -360,7 +360,15 @@ namespace BTOptimizer
             _btnEsport.Click += (s, e) => { if (RequirePro("Preset eSport")) ApplyPreset(t => t.Esport); };
             _btnAll.Click += (s, e) => ApplyPreset(t => true);
             _btnNone.Click += (s, e) => ApplyPreset(t => false);
-            _btnAuto.Click += (s, e) => { if (RequirePro("Auto-tune")) OnAutoTune(s, e); };
+            _btnAuto.Click += (s, e) =>
+            {
+                if (!RequirePro("Auto-tune")) return;
+                var m = new ContextMenuStrip();
+                m.Items.Add("Prudent — sûr, sans redémarrage", null, (a, b) => OnAutoTune(Hardware.LevelPrudent));
+                m.Items.Add("Équilibré — latence & perf (recommandé)", null, (a, b) => OnAutoTune(Hardware.LevelBalanced));
+                m.Items.Add("Agressif — maximum sûr (réversible)", null, (a, b) => OnAutoTune(Hardware.LevelAggressive));
+                m.Show(_btnAuto, new Point(0, _btnAuto.Height));
+            };
             _btnBench.Click += (s, e) =>
             {
                 if (!RequirePro("Preset Benchmark")) return;
@@ -600,18 +608,45 @@ namespace BTOptimizer
             else _miPro.Text = "Activer la version Pro / essai gratuit";
         }
 
-        private void OnAutoTune(object sender, EventArgs e)
+        private void OnAutoTune(int level)
         {
             if (_hw == null) _hw = Hardware.Detect();
-            var ids = Hardware.AutoTuneIds(_tweaks, _hw);
+            var ids = Hardware.AutoTuneIds(_tweaks, _hw, level);
             ApplyPreset(t => ids.Contains(t.Id));
-            Log("Auto-tune : " + _hw.Summary(), 0);
-            string note = _hw.AllSsd ? " (SSD détecté → tweaks disque inclus)" : " (HDD présent → SysMain/Prefetch exclus)";
-            if (_hw.MaxHz >= 240)
-                note += " (écran " + _hw.MaxHz + " Hz → pack très hauts FPS : tick noyau fixe, files d'entrée courtes"
-                     + (_hw.MaxHz >= 360 ? ", C-States off" : "") + ")";
-            Log("Sélection adaptée : " + ids.Count + " optimisation(s)" + note
-                + ". Sécurité (Spectre/VBS) toujours laissée à ton choix.", 1);
+
+            string niveau = level == Hardware.LevelPrudent ? "Prudent (sûr, sans redémarrage)"
+                          : level == Hardware.LevelAggressive ? "Agressif (max sûr)"
+                          : "Équilibré (latence/perf)";
+            Log("Auto-tune — niveau " + niveau, 1);
+            Log("Adapté à ton matériel : " + _hw.Summary(), 0);
+            // Explique les décisions prises d'après le matériel détecté.
+            Log("  • Disque : " + (_hw.AllSsd
+                ? "SSD → SysMain/Prefetch désactivés (inutiles sur SSD)."
+                : "HDD présent → préchargement conservé, disque laissé libre de se garer."), 0);
+            Log("  • RAM : " + _hw.RamGB + " Go → " + (_hw.RamGB >= 16
+                ? "combinaison de pages mémoire désactivée (moins de CPU)."
+                : "réglages mémoire prudents (RAM limitée)."), 0);
+            bool nvidia = _hw.GpuVendor != null && _hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
+            Log("  • GPU : " + _hw.GpuName + (nvidia ? " → télémétrie NVIDIA coupée." : " → réglages GPU génériques."), 0);
+            Log("  • Châssis : " + (_hw.IsLaptop
+                ? "portable → économie préservée (pas de CPU 100% permanent, veille USB/PCIe gardées)."
+                : "PC fixe → perfs à fond" + (_hw.HasTouch ? "." : ", services capteurs/luminosité coupés.")), 0);
+            Log("  • OS : " + (_hw.IsWin11 ? "Windows 11 → Widgets/Chat/Copilot retirés." : "Windows 10 → tweaks Win11 écartés."), 0);
+            Log("  • Périphériques : " + (_hw.HasPrinter ? "imprimante détectée → spouleur conservé" : "aucune imprimante → spouleur coupé")
+                + (_hw.HasBluetooth ? " · Bluetooth présent." : " · pas de Bluetooth."), 0);
+            Log("  • Réseau : MSI carte réseau activé (latence).", 0);
+            if (_hw.MaxHz >= 240 && level == Hardware.LevelPrudent)
+                Log("  • Écran : " + _hw.MaxHz + " Hz — le pack très hauts FPS s'active aux niveaux Équilibré/Agressif.", 0);
+            else if (_hw.MaxHz >= 240)
+                Log("  • Écran : " + _hw.MaxHz + " Hz → pack très hauts FPS (files d'entrée courtes"
+                    + (ids.Contains("dynamic_tick") ? ", tick noyau fixe" : "")
+                    + (ids.Contains("cpu_idle_disable") ? ", CPU sans veille (C-States off)" : "") + ").", 0);
+            else if (_hw.MaxHz > 0)
+                Log("  • Écran : " + _hw.MaxHz + " Hz.", 0);
+            bool idleIncluded = ids.Contains("cpu_idle_disable");
+            Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), recherche Windows, MSI stockage"
+                + (idleIncluded ? "." : ", CPU sans veille."), 2);
+            Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s). Vérifie puis clique APPLIQUER.", 1);
         }
 
         private void FilterTweaks(string query)

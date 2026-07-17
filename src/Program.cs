@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("9.6.0.0")]
-[assembly: AssemblyFileVersion("9.6.0.0")]
+[assembly: AssemblyVersion("10.0.0.0")]
+[assembly: AssemblyFileVersion("10.0.0.0")]
 
 namespace BTOptimizer
 {
@@ -344,9 +344,15 @@ namespace BTOptimizer
             {
                 HwProfile hw = Hardware.Detect();
                 Console.WriteLine("  " + hw.Summary());
-                var auto = Hardware.AutoTuneIds(Catalog.All(), hw);
-                var bench = Hardware.BenchmarkIds(Catalog.All());
-                Console.WriteLine("  Auto-tune : " + auto.Count + " tweaks | Benchmark : " + bench.Count + " tweaks");
+                var prudent = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelPrudent);
+                var equil   = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelBalanced);
+                var aggro   = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelAggressive);
+                var bench   = Hardware.BenchmarkIds(Catalog.All());
+                Console.WriteLine("  Auto-tune : Prudent=" + prudent.Count + " | Équilibré=" + equil.Count
+                    + " | Agressif=" + aggro.Count + " | Benchmark=" + bench.Count);
+                // Cohérence attendue : prudent <= équilibré <= agressif <= benchmark
+                if (!(prudent.Count <= equil.Count && equil.Count <= aggro.Count && aggro.Count <= bench.Count))
+                { errors++; Console.WriteLine("  [!] Ordre des niveaux incohérent."); }
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Matériel ERREUR : " + ex.Message); }
 
