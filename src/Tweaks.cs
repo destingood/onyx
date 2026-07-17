@@ -1941,6 +1941,90 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("SensorService")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 7 =================
+
+            list.Add(new Tweak
+            {
+                Id = "hybrid_sleep_off", Category = Cat.Alim,
+                Name = "Désactiver la veille hybride (mise en veille plus rapide)",
+                Desc = "La veille hybride écrit la RAM sur le disque à chaque mise en veille (lent, usure SSD). La désactiver rend la veille immédiate. « Rétablir » la réactive.",
+                Apply  = () => Sys.SetPowerValue(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 0, 0),
+                Revert = () => Sys.SetPowerValue(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 1, 1),
+                Check  = () => Sys.PowerAcEquals(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "search_history_off", Category = Cat.Privacy,
+                Name = "Ne pas mémoriser l'historique de recherche de l'appareil",
+                Desc = "Windows ne garde plus la trace de tes recherches locales. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\SearchSettings", "IsDeviceSearchHistoryEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "snap_assist_off", Category = Cat.Rapidite,
+                Name = "Désactiver les suggestions d'ancrage de fenêtres (Snap flyout)",
+                Desc = "Retire le petit menu de dispositions qui apparaît au survol du bouton agrandir. « Rétablir » le remet.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "EnableSnapAssistFlyout"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wcncsvc_off", Category = Cat.Services,
+                Name = "Désactiver Windows Connect Now (wcncsvc)",
+                Desc = "Coupe un service de configuration sans fil hérité (WPS), rarement utile. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("wcncsvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("wcncsvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("wcncsvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "dot3svc_off", Category = Cat.Services,
+                Name = "Désactiver l'authentification filaire 802.1X (dot3svc)",
+                Desc = "Coupe le service d'authentification réseau filaire (802.1X), inutile hors entreprise. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("dot3svc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("dot3svc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("dot3svc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wfds_off", Category = Cat.Services,
+                Name = "Désactiver les services Wi-Fi Direct (WFDSConMgrSvc)",
+                Desc = "Coupe le gestionnaire Wi-Fi Direct (partage sans fil pair-à-pair). À laisser si tu utilises Miracast/impression Wi-Fi Direct. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("WFDSConMgrSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("WFDSConMgrSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("WFDSConMgrSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "diag_collector_off", Category = Cat.Services,
+                Name = "Désactiver le collecteur de diagnostics Microsoft",
+                Desc = "Coupe diagnosticshub.standardcollector.service (collecte de traces de diagnostic). « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("diagnosticshub.standardcollector.service", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("diagnosticshub.standardcollector.service", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("diagnosticshub.standardcollector.service")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "displayenhancement_off", Category = Cat.Services,
+                Name = "Désactiver le service d'amélioration d'affichage (PC fixe)",
+                Desc = "Coupe DisplayEnhancementService (luminosité adaptative / veilleuse). À laisser actif sur un portable. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("DisplayEnhancementService", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("DisplayEnhancementService", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("DisplayEnhancementService")
+            });
+
             return list;
         }
     }
