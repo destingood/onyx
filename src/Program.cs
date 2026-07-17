@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("8.2.0.0")]
-[assembly: AssemblyFileVersion("8.2.0.0")]
+[assembly: AssemblyVersion("8.3.0.0")]
+[assembly: AssemblyFileVersion("8.3.0.0")]
 
 namespace BTOptimizer
 {
@@ -190,6 +190,19 @@ namespace BTOptimizer
                 Console.WriteLine("  UI AudioForm : construite + 2x Reload + Dispose OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Audio ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Gestionnaire de périphériques (lecture seule)...");
+            try
+            {
+                var devs = DeviceInfo.ListAll();
+                var probs = DeviceInfo.Problems(devs);
+                Console.WriteLine("  " + devs.Count + " périphérique(s), " + probs.Count + " en erreur.");
+                foreach (var d in probs)
+                    Console.WriteLine("   ✗ " + d.Name + " — " + DeviceInfo.ErrorText(d.ErrorCode));
+                using (var f = new DeviceManagerForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI DeviceManagerForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Périphériques ERREUR : " + ex.Message); }
 
             Console.WriteLine("Écran d'accueil...");
             try
