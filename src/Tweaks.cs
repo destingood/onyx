@@ -1652,6 +1652,38 @@ namespace BTOptimizer
                 Check = () => Sys.StrEquals(Sys.GetMachine(ProAudioKey, "SFIO Priority"), "High")
             });
 
+            // ================= MODE MSI (interruptions par message) =================
+
+            list.Add(new Tweak
+            {
+                Id = "msi_usb", Category = Cat.Souris, Esport = true, Reboot = true,
+                Name = "Mode MSI sur les contrôleurs USB (latence souris/clavier)",
+                Desc = "Passe les contrôleurs USB en interruptions par message (MSI) au lieu des IRQ classiques : traitement plus direct des périphériques USB, dont ta souris et ton clavier. Réduit la latence et le jitter d'entrée. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiUsbClass, true, null),
+                Revert = () => Sys.SetMsiForClass(Sys.MsiUsbClass, false, null),
+                Check  = () => Sys.MsiActiveForClass(Sys.MsiUsbClass)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "msi_network", Category = Cat.Reseau, Reboot = true,
+                Name = "Mode MSI sur les cartes réseau (latence réseau)",
+                Desc = "Passe les cartes réseau en interruptions par message (MSI) : traitement des paquets plus direct, moins de DPC réseau. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiNetClass, true, null),
+                Revert = () => Sys.SetMsiForClass(Sys.MsiNetClass, false, null),
+                Check  = () => Sys.MsiActiveForClass(Sys.MsiNetClass)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "msi_storage", Category = Cat.Systeme, Reboot = true,
+                Name = "Mode MSI sur les contrôleurs de stockage (avancé)",
+                Desc = "Passe les contrôleurs NVMe/SATA en interruptions par message (MSI) : moins de latence disque sous charge. AVANCÉ : sur de rares configurations, un contrôleur gère mal le MSI — teste au redémarrage ; si souci, « Rétablir » depuis l'app (ou Mode sans échec). Redémarrage requis.",
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiStorageClass, true, null),
+                Revert = () => Sys.SetMsiForClass(Sys.MsiStorageClass, false, null),
+                Check  = () => Sys.MsiActiveForClass(Sys.MsiStorageClass)
+            });
+
             return list;
         }
     }

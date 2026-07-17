@@ -450,6 +450,90 @@ namespace BTOptimizer
             return null;
         }
 
+        // ------------------------------------------------------------------
+        //  Mode MSI générique par classe de périphérique PCI (USB, stockage, réseau)
+        //  Même mécanisme que le GPU : MSISupported=1. Réversible (retrait de la valeur).
+        // ------------------------------------------------------------------
+        public const string MsiUsbClass     = "{36fc9e60-c465-11cf-8056-444553540000}";
+        public const string MsiStorageClass = "{4d36e97b-e325-11ce-bfc1-08002be10318}";
+        public const string MsiNetClass     = "{4d36e972-e325-11ce-bfc1-08002be10318}";
+
+        public static int SetMsiForClass(string classGuid, bool enable, Action<string, int> log)
+        {
+            int count = 0;
+            using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
+            {
+                if (pci == null) { if (log != null) log("Enum PCI introuvable.", 2); return 0; }
+                foreach (string devId in pci.GetSubKeyNames())
+                {
+                    using (RegistryKey dev = pci.OpenSubKey(devId))
+                    {
+                        if (dev == null) continue;
+                        foreach (string inst in dev.GetSubKeyNames())
+                        {
+                            using (RegistryKey ik = dev.OpenSubKey(inst))
+                            {
+                                if (ik == null) continue;
+                                string cls = ik.GetValue("ClassGUID") as string;
+                                if (cls == null || !cls.Equals(classGuid, StringComparison.OrdinalIgnoreCase)) continue;
+                                string msiPath = @"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
+                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties";
+                                try
+                                {
+                                    if (enable)
+                                    {
+                                        using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
+                                            m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
+                                    }
+                                    else
+                                    {
+                                        using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
+                                            if (m != null) m.DeleteValue("MSISupported", false);
+                                    }
+                                    count++;
+                                }
+                                catch (Exception ex) { if (log != null) log("MSI (" + devId + ") : " + ex.Message, 2); }
+                            }
+                        }
+                    }
+                }
+            }
+            if (log != null)
+                log("MSI mode " + (enable ? "activé" : "retiré") + " sur " + count + " périphérique(s). Redémarrage requis.", count > 0 ? 1 : 2);
+            return count;
+        }
+
+        /// <summary>true = tous les périphériques de la classe ont MSI, false = au moins un sans, null = aucun trouvé.</summary>
+        public static bool? MsiActiveForClass(string classGuid)
+        {
+            bool found = false;
+            using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
+            {
+                if (pci == null) return null;
+                foreach (string devId in pci.GetSubKeyNames())
+                {
+                    using (RegistryKey dev = pci.OpenSubKey(devId))
+                    {
+                        if (dev == null) continue;
+                        foreach (string inst in dev.GetSubKeyNames())
+                        {
+                            using (RegistryKey ik = dev.OpenSubKey(inst))
+                            {
+                                if (ik == null) continue;
+                                string cls = ik.GetValue("ClassGUID") as string;
+                                if (cls == null || !cls.Equals(classGuid, StringComparison.OrdinalIgnoreCase)) continue;
+                                found = true;
+                                object v = GetMachine(@"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
+                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties", "MSISupported");
+                                if (!IntEquals(v, 1)) return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return found ? (bool?)true : null;
+        }
+
         public static bool? NagleActive()
         {
             const string root = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces";
