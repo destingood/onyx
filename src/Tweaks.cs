@@ -11,6 +11,7 @@ namespace BTOptimizer
         private const string MMKey    = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
         private const string GamesKey = MMKey + @"\Tasks\Games";
         private const string AudioKey = MMKey + @"\Tasks\Audio";
+        private const string ProAudioKey = MMKey + @"\Tasks\Pro Audio";
 
         public static List<Tweak> All()
         {
@@ -1617,6 +1618,38 @@ namespace BTOptimizer
                 Apply  = () => Sys.ConfigureService("PrintNotify", "disabled", true, false),
                 Revert = () => Sys.ConfigureService("PrintNotify", "demand", false, false),
                 Check  = () => Sys.ServiceDisabled("PrintNotify")
+            });
+
+            // ================= GPU & AUDIO (compléments) =================
+
+            list.Add(new Tweak
+            {
+                Id = "dx_vrr", Category = Cat.Gpu, Esport = true,
+                Name = "Fréquence d'actualisation variable (VRR) pour les jeux fenêtrés",
+                Desc = "Active l'optimisation VRR de Windows pour les jeux en fenêtré/sans bordure : moins de déchirure et de latence sur un écran G-Sync/FreeSync. Sans effet si l'écran ne gère pas le VRR. « Rétablir » la retire.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\DirectX\UserGpuPreferences" },
+                Apply  = () => Sys.SetDxToken("VRROptimizeEnable", "1"),
+                Revert = () => Sys.SetDxToken("VRROptimizeEnable", null),
+                Check  = () => Sys.DxTokenEquals("VRROptimizeEnable", "1")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "audio_proaudio_mmcss", Category = Cat.Audio, Esport = true,
+                Name = "Priorité MMCSS « Pro Audio » → Haute (Voicemeeter, DAW, ASIO)",
+                Desc = "Donne aux applis audio faible latence (Voicemeeter, stations audio, moteurs ASIO) une priorité de planification et d'E/S Haute. Complète la tâche « Audio ». « Rétablir » remet les valeurs Windows.",
+                BackupKeys = new[] { @"HKLM\" + ProAudioKey },
+                Apply = () =>
+                {
+                    Sys.SetMachine(ProAudioKey, "Scheduling Category", "High", RegistryValueKind.String);
+                    Sys.SetMachine(ProAudioKey, "SFIO Priority", "High", RegistryValueKind.String);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(ProAudioKey, "Scheduling Category", "High", RegistryValueKind.String);
+                    Sys.SetMachine(ProAudioKey, "SFIO Priority", "Normal", RegistryValueKind.String);
+                },
+                Check = () => Sys.StrEquals(Sys.GetMachine(ProAudioKey, "SFIO Priority"), "High")
             });
 
             return list;
