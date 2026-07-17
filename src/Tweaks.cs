@@ -1521,6 +1521,104 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("RetailDemo")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 3 =================
+
+            list.Add(new Tweak
+            {
+                Id = "show_file_extensions", Category = Cat.Rapidite, Recommended = true,
+                Name = "Afficher les extensions de fichiers (anti-piège .exe)",
+                Desc = "Windows affiche l'extension réelle des fichiers : un « photo.jpg.exe » ne peut plus se déguiser en image. Sécurité + confort. « Rétablir » les masque à nouveau.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideFileExt"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "explorer_launch_to_thispc", Category = Cat.Rapidite,
+                Name = "Ouvrir l'Explorateur sur « Ce PC » (pas « Accès rapide »)",
+                Desc = "L'Explorateur s'ouvre directement sur Ce PC (disques) au lieu de l'Accès rapide : plus rapide et sans historique de fichiers récents affiché. « Rétablir » remet l'Accès rapide.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo", 2, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "LaunchTo"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "auto_end_tasks", Category = Cat.Rapidite,
+                Name = "Fermer automatiquement les applis figées à l'arrêt (arrêt plus rapide)",
+                Desc = "À l'extinction/redémarrage, Windows ne bloque plus sur une appli qui ne répond pas : il la ferme tout seul. « Rétablir » remet la demande de confirmation.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
+                Apply  = () => Sys.SetUser(@"Control Panel\Desktop", "AutoEndTasks", "1", RegistryValueKind.String),
+                Revert = () => Sys.DelUser(@"Control Panel\Desktop", "AutoEndTasks"),
+                Check  = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "AutoEndTasks"), "1")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wait_kill_service", Category = Cat.Rapidite,
+                Name = "Réduire le délai d'arrêt des services (arrêt plus rapide)",
+                Desc = "Windows attend moins longtemps un service récalcitrant avant de l'arrêter (2 s au lieu de 5). « Rétablir » remet 5 s.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "2000", RegistryValueKind.String),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String),
+                Check  = () => Sys.StrEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout"), "2000")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "voice_activation_off", Category = Cat.Privacy, Recommended = true,
+                Name = "Désactiver l'activation vocale des applis (micro en écoute)",
+                Desc = "Empêche les applis de rester à l'écoute du micro pour un mot-clé vocal. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps", "AgentActivationEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps", "AgentActivationEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps", "AgentActivationEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "clipboard_cloud_off", Category = Cat.Privacy,
+                Name = "Désactiver le presse-papiers cloud (synchronisation entre appareils)",
+                Desc = "Ce que tu copies ne part plus dans le cloud Microsoft pour être partagé entre appareils. Le presse-papiers local reste normal. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowCrossDeviceClipboard", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowCrossDeviceClipboard"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\System", "AllowCrossDeviceClipboard"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "dmwappush_off", Category = Cat.Services,
+                Name = "Désactiver le service de routage WAP Push (dmwappushservice)",
+                Desc = "Coupe un service lié à la télémétrie/messages WAP, inutile pour un usage bureautique/jeu. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("dmwappushservice", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("dmwappushservice", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("dmwappushservice")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "phone_service_off", Category = Cat.Services,
+                Name = "Désactiver le service Téléphone (PhoneSvc)",
+                Desc = "Arrête le service de gestion de téléphonie, inutile si tu ne relies pas de téléphone à Windows. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("PhoneSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("PhoneSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("PhoneSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "printnotify_off", Category = Cat.Services,
+                Name = "Désactiver les notifications d'imprimante (PrintNotify)",
+                Desc = "Coupe le service de notifications d'impression. À laisser actif si tu imprimes régulièrement. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("PrintNotify", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("PrintNotify", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("PrintNotify")
+            });
+
             return list;
         }
     }
