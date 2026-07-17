@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
-        private Button _btnAuto, _btnBench, _btnMenu, _btnBoost;
+        private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _miPro;
         private TextBox _search;
@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 8.5 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 8.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -234,8 +234,14 @@ namespace BTOptimizer
             _btnAuto = MakeButton("Auto (adapté à mon PC)", 16, 104, 178, 28, false);
             _btnAuto.ForeColor = Accent;
             _btnBench = MakeButton("Preset : Benchmark", 200, 104, 150, 28, false);
+            _btnLatMin = MakeButton("⚡ LATENCE MIN", 748, 104, 136, 28, false);
+            _btnLatMin.BackColor = Accent;
+            _btnLatMin.ForeColor = Color.White;
+            _btnLatMin.Font = new Font("Segoe UI Semibold", 9f);
+            _btnLatMin.FlatAppearance.BorderSize = 0;
+            _btnLatMin.Click += OnLatencyMinimal;
             _search = new TextBox();
-            _search.SetBounds(360, 105, 524, 26);
+            _search.SetBounds(360, 105, 380, 26);
             _search.PlaceholderText = "Rechercher une optimisation (nom, catégorie, description)...";
             _search.TextChanged += (s, e) => FilterTweaks(_search.Text);
 
@@ -387,7 +393,7 @@ namespace BTOptimizer
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
-                _btnAuto, _btnBench, _search,
+                _btnAuto, _btnBench, _btnLatMin, _search,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, _log
@@ -505,6 +511,30 @@ namespace BTOptimizer
         {
             foreach (CheckBox cb in _boxes)
                 cb.Checked = selector((Tweak)cb.Tag);
+        }
+
+        /// <summary>Pack phare : coche l'ensemble latence/perf (eSport), force le timer 1 ms et applique.</summary>
+        private void OnLatencyMinimal(object sender, EventArgs e)
+        {
+            ApplyPreset(t => t.Esport);
+            if (!_chkTimer.Checked) _chkTimer.Checked = true;   // déclenche le timer 1 ms immédiat
+            List<Tweak> sel = Selection();
+            if (sel.Count == 0) return;
+            int reboot = sel.Count(t => t.Reboot);
+            string msg = "Appliquer le pack LATENCE MINIMALE ?\n\n"
+                + sel.Count + " optimisations orientées input lag + performances :\n"
+                + "• souris/clavier en prise directe (accélération off, file d'attente)\n"
+                + "• timer 1 ms + tick fixe, priorité planificateur aux jeux\n"
+                + "• alimentation maximale (CPU 100 %, pas de veille/throttling)\n"
+                + "• GPU en mode MSI, HAGS, Game Mode, MPO off\n"
+                + "• réseau réactif (Nagle off, throttling off, RSC/QoS)\n\n"
+                + "Tout est réversible (sauvegarde .reg automatique)."
+                + (reboot > 0 ? "\n" + reboot + " réglage(s) nécessitent un redémarrage." : "");
+            if (MessageBox.Show(this, msg, "⚡ Latence minimale",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            Log("Application du pack LATENCE MINIMALE (" + sel.Count + " optimisations)...", 0);
+            RunOperation(sel, true);
         }
 
         /// <summary>Renvoie true si Pro (ou si l'utilisateur active une licence à l'instant), sinon false.</summary>
@@ -634,7 +664,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }

@@ -42,7 +42,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "input_queues", Category = Cat.Souris, Reboot = true,
+                Id = "input_queues", Category = Cat.Souris, Esport = true, Reboot = true,
                 Name = "Réduire les files d'attente souris/clavier (32 au lieu de 100)",
                 Desc = "Buffers pilote plus petits = traitement plus direct des entrées. Expérimental : sans effet mesurable sur certaines machines.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters",
@@ -321,7 +321,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dynamic_tick", Category = Cat.Systeme, Reboot = true,
+                Id = "dynamic_tick", Category = Cat.Systeme, Esport = true, Reboot = true,
                 Name = "Désactiver le tick dynamique du noyau (bcdedit) — EXPÉRIMENTAL",
                 Desc = "Timer noyau à cadence fixe : peut lisser la latence sur certaines machines, augmente la consommation. À tester, réversible.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/set disabledynamictick yes", "bcdedit disabledynamictick"),
@@ -624,7 +624,7 @@ namespace BTOptimizer
             // ================= RÉSEAU =================
             list.Add(new Tweak
             {
-                Id = "nagle", Category = Cat.Reseau,
+                Id = "nagle", Category = Cat.Reseau, Esport = true,
                 Name = "Désactiver l'algorithme de Nagle (TcpAckFrequency / TCPNoDelay)",
                 Desc = "Envoi TCP immédiat sans regroupement de paquets : utile pour les jeux en ligne TCP. Sans effet sur les jeux en UDP.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" },
@@ -1078,7 +1078,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "cpu_idle_disable", Category = Cat.Alim,
+                Id = "cpu_idle_disable", Category = Cat.Alim, Esport = true,
                 Name = "Désactiver les états de repos du CPU (C-States) — EXPÉRIMENTAL",
                 Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
