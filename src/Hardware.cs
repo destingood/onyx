@@ -158,96 +158,129 @@ namespace BTOptimizer
         private static extern int GetSystemMetrics(int nIndex);
         private const int SM_MAXIMUMTOUCHES = 95;
 
-        /// <summary>Sélection intelligente : base « eSport + recommandé », adaptée au matériel, hors sécurité/expérimental.</summary>
-        /// <summary>Sélection auto : ensemble latence/perf sûr (eSport+recommandé), ajusté au matériel détecté.</summary>
+        public const int LevelPrudent = 0, LevelBalanced = 1, LevelAggressive = 2;
+
+        // Extras sûrs et réversibles ajoutés au niveau Agressif (le matériel filtre ensuite).
+        private static readonly string[] AggroExtras =
+        {
+            "cpu_idle_disable", "input_queues", "dynamic_tick", "disk_timeout_off",
+            "ssdp_off", "wcncsvc_off", "dot3svc_off", "wfds_off", "diag_collector_off", "ajrouter_off",
+            "fax_off", "wallet_service_off", "wisvc_off", "wmp_network_off", "dmwappush_off", "retail_demo_off",
+            "semgr_off", "ndu_off", "geo_service_off", "phone_service_off", "smartcard_off",
+            "store_auto_update_off", "first_logon_anim_off", "low_disk_warning_off", "auto_end_tasks",
+            "wait_kill_service", "recent_docs_off", "online_speech_off", "inking_personalization_off",
+            "lang_list_access_off", "voice_activation_off", "clipboard_cloud_off", "clipboard_history_off",
+            "settings_sync_off", "search_history_off", "find_my_device_off", "spooler_off", "printnotify_off",
+            "tablet_service_off", "sensor_service_off", "displayenhancement_off", "crash_dump_minimal",
+            "no_lock_screen", "llmnr_off", "ipv6_tunnels_off", "smb_throttle_off", "numlock_boot"
+        };
+
+        /// <summary>Overload compat (niveau Équilibré).</summary>
         public static HashSet<string> AutoTuneIds(List<Tweak> all, HwProfile hw)
+        {
+            return AutoTuneIds(all, hw, LevelBalanced);
+        }
+
+        /// <summary>
+        /// Sélection auto adaptée au matériel ET au niveau souhaité :
+        /// 0 Prudent (recommandé, sans redémarrage), 1 Équilibré (latence/perf sûr),
+        /// 2 Agressif (max sûr, réversible). Sécurité et MSI stockage jamais inclus.
+        /// </summary>
+        public static HashSet<string> AutoTuneIds(List<Tweak> all, HwProfile hw, int level)
         {
             var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Tweak t in all) have.Add(t.Id);
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Base selon le niveau
             foreach (Tweak t in all)
-                if (t.Esport || t.Recommended) ids.Add(t.Id);
+            {
+                if (level == LevelPrudent) { if (t.Recommended && !t.Reboot) ids.Add(t.Id); }
+                else if (t.Esport || t.Recommended) ids.Add(t.Id);
+            }
 
-            // --- Jamais en auto : choix explicite requis ---
-            ids.Remove("spectre_off");        // réduit une protection de sécurité
-            ids.Remove("vbs_off");            // réduit une protection de sécurité
-            ids.Remove("cpu_idle_disable");   // garde le CPU hors veille : chaleur/conso, mieux en opt-in
-            ids.Remove("wsearch_off");        // pénalise la recherche de fichiers
-            ids.Remove("msi_storage");        // MSI stockage = avancé (rare risque de boot)
+            // Niveau Agressif : ajoute les extras sûrs (le matériel filtre juste après).
+            if (level >= LevelAggressive)
+                foreach (string id in AggroExtras) ids.Add(id);
 
             // --- Disque ---
             if (hw.AllSsd)
             {
-                ids.Add("sysmain_off");       // inutiles sur SSD -> gain
+                ids.Add("sysmain_off");
                 ids.Add("prefetch_off");
             }
-            else                              // HDD présent : ne pas casser le préchargement / laisser garer
+            else
             {
                 ids.Remove("sysmain_off");
                 ids.Remove("prefetch_off");
                 ids.Remove("disk_timeout_off");
             }
 
-            // --- RAM ---
-            if (hw.RamGB >= 16)
-                ids.Add("disable_paging_combining");   // moins de CPU à fusionner les pages
+            // --- RAM (combinaison de pages = redémarrage : pas au niveau Prudent) ---
+            if (hw.RamGB >= 16 && level >= LevelBalanced)
+                ids.Add("disable_paging_combining");
             else
             {
                 ids.Remove("disable_paging_combining");
-                ids.Remove("paging_executive");        // garder le noyau paginable si peu de RAM
+                if (hw.RamGB < 16) ids.Remove("paging_executive");
             }
 
             // --- GPU ---
             bool nvidia = hw.GpuVendor != null && hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
-            if (nvidia) ids.Add("nvidia_telemetry_off");
-            else ids.Remove("nvidia_telemetry_off");   // inutile sans GPU NVIDIA
+            if (nvidia && level >= LevelBalanced) ids.Add("nvidia_telemetry_off");
+            else ids.Remove("nvidia_telemetry_off");
 
-            // --- Réseau : MSI carte réseau (sûr, gain latence) ---
-            ids.Add("msi_network");
+            // --- Réseau : MSI carte réseau (redémarrage : pas au niveau Prudent) ---
+            if (level >= LevelBalanced) ids.Add("msi_network"); else ids.Remove("msi_network");
 
-            // --- Portable vs fixe : ne pas sacrifier batterie/chaleur sur un laptop ---
+            // --- Portable : préserver batterie/chaleur (gagne sur les extras Agressif) ---
             if (hw.IsLaptop)
             {
-                ids.Remove("proc_min_100");                 // CPU 100% permanent = batterie
-                ids.Remove("power_throttling");             // garder le throttling (économie)
+                ids.Remove("proc_min_100");
+                ids.Remove("power_throttling");
                 ids.Remove("cpu_perf_boost_aggressive");
-                ids.Remove("usb_suspend");                  // garder la veille USB
-                ids.Remove("pcie_aspm_off");                // garder l'économie PCIe
+                ids.Remove("cpu_idle_disable");
+                ids.Remove("usb_suspend");
+                ids.Remove("pcie_aspm_off");
                 ids.Remove("disk_timeout_off");
             }
-            else
+            else if (!hw.HasTouch && level >= LevelBalanced)
             {
-                // PC fixe sans écran tactile : services capteurs/luminosité inutiles.
-                if (!hw.HasTouch)
-                {
-                    ids.Add("sensor_service_off");
-                    ids.Add("displayenhancement_off");
-                }
+                ids.Add("sensor_service_off");
+                ids.Add("displayenhancement_off");
+            }
+
+            // Écran tactile : ne pas couper les services tactiles/capteurs.
+            if (hw.HasTouch)
+            {
+                ids.Remove("sensor_service_off");
+                ids.Remove("displayenhancement_off");
+                ids.Remove("tablet_service_off");
             }
 
             // --- Windows 11 vs 10 ---
             if (hw.IsWin11)
             {
-                ids.Add("widgets_off");
-                ids.Add("chat_taskbar_off");
-                ids.Add("copilot_off");
+                if (level >= LevelBalanced) { ids.Add("widgets_off"); ids.Add("chat_taskbar_off"); ids.Add("copilot_off"); }
             }
             else
             {
-                // Tweaks purement Win11 : sans effet sur Win10, on nettoie la sélection.
                 ids.Remove("widgets_off"); ids.Remove("chat_taskbar_off"); ids.Remove("copilot_off");
                 ids.Remove("dx_vrr"); ids.Remove("taskbar_end_task"); ids.Remove("snap_assist_off");
             }
 
-            // --- Bluetooth ---
+            // --- Bluetooth / Imprimante ---
             if (!hw.HasBluetooth) ids.Remove("audio_bt_absolute_volume_off");
-
-            // --- Imprimante : couper le spouleur seulement si aucune imprimante ---
             if (hw.HasPrinter) { ids.Remove("spooler_off"); ids.Remove("printnotify_off"); }
-            else { ids.Add("spooler_off"); ids.Add("printnotify_off"); }
+            else if (level >= LevelBalanced) { ids.Add("spooler_off"); ids.Add("printnotify_off"); }
 
-            // On ne garde que des Id réellement présents dans le catalogue.
+            // --- Jamais en auto (sécurité / avancé), quel que soit le niveau : appliqué EN DERNIER ---
+            ids.Remove("spectre_off");
+            ids.Remove("vbs_off");
+            ids.Remove("wsearch_off");
+            ids.Remove("msi_storage");
+            if (level == LevelPrudent) ids.Remove("cpu_idle_disable");   // sécurité : jamais en prudent
+
             ids.RemoveWhere(id => !have.Contains(id));
             return ids;
         }

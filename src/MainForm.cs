@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.7 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.8 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -351,7 +351,15 @@ namespace BTOptimizer
             _btnEsport.Click += (s, e) => { if (RequirePro("Preset eSport")) ApplyPreset(t => t.Esport); };
             _btnAll.Click += (s, e) => ApplyPreset(t => true);
             _btnNone.Click += (s, e) => ApplyPreset(t => false);
-            _btnAuto.Click += (s, e) => { if (RequirePro("Auto-tune")) OnAutoTune(s, e); };
+            _btnAuto.Click += (s, e) =>
+            {
+                if (!RequirePro("Auto-tune")) return;
+                var m = new ContextMenuStrip();
+                m.Items.Add("Prudent — sûr, sans redémarrage", null, (a, b) => OnAutoTune(Hardware.LevelPrudent));
+                m.Items.Add("Équilibré — latence & perf (recommandé)", null, (a, b) => OnAutoTune(Hardware.LevelBalanced));
+                m.Items.Add("Agressif — maximum sûr (réversible)", null, (a, b) => OnAutoTune(Hardware.LevelAggressive));
+                m.Show(_btnAuto, new Point(0, _btnAuto.Height));
+            };
             _btnBench.Click += (s, e) =>
             {
                 if (!RequirePro("Preset Benchmark")) return;
@@ -555,13 +563,17 @@ namespace BTOptimizer
             else _miPro.Text = "Activer la version Pro / essai gratuit";
         }
 
-        private void OnAutoTune(object sender, EventArgs e)
+        private void OnAutoTune(int level)
         {
             if (_hw == null) _hw = Hardware.Detect();
-            var ids = Hardware.AutoTuneIds(_tweaks, _hw);
+            var ids = Hardware.AutoTuneIds(_tweaks, _hw, level);
             ApplyPreset(t => ids.Contains(t.Id));
 
-            Log("Auto-tune adapté à ton matériel : " + _hw.Summary(), 0);
+            string niveau = level == Hardware.LevelPrudent ? "Prudent (sûr, sans redémarrage)"
+                          : level == Hardware.LevelAggressive ? "Agressif (max sûr)"
+                          : "Équilibré (latence/perf)";
+            Log("Auto-tune — niveau " + niveau, 1);
+            Log("Adapté à ton matériel : " + _hw.Summary(), 0);
             // Explique les décisions prises d'après le matériel détecté.
             Log("  • Disque : " + (_hw.AllSsd
                 ? "SSD → SysMain/Prefetch désactivés (inutiles sur SSD)."
