@@ -538,7 +538,7 @@ namespace BTOptimizer
             {
                 Id = "bg_apps", Category = Cat.Services, Esport = true,
                 Name = "Désactiver les applications en arrière-plan (UWP)",
-                Desc = "Empêche les applications du Store de tourner en fond. Peut retarder certaines notifications d'applis du Store.",
+                Desc = "Empêche les applications du Store de tourner en fond. Peut retarder certaines notifications d'applis du Store. Si un jeu Store/Game Pass a une boutique qui charge à l'infini, rétablis ce réglage (ou menu ☰ → Boutiques en jeu).",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" },
                 Apply = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1, RegistryValueKind.DWord),
                 Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled"),

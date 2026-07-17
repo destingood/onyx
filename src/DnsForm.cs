@@ -20,8 +20,9 @@ namespace BTOptimizer
 
         private class Provider
         {
-            public string Name; public string[] Servers;
+            public string Name; public string[] Servers; public bool Filtering;
             public Provider(string n, string[] s) { Name = n; Servers = s; }
+            public Provider(string n, string[] s, bool filtering) { Name = n; Servers = s; Filtering = filtering; }
             public override string ToString() { return Name; }
         }
 
@@ -29,10 +30,10 @@ namespace BTOptimizer
         {
             new Provider("Automatique (DHCP / box) — par défaut", null),
             new Provider("Cloudflare — 1.1.1.1 / 1.0.0.1 (le plus rapide)", new[] { "1.1.1.1", "1.0.0.1" }),
-            new Provider("Cloudflare anti-malware — 1.1.1.2 / 1.0.0.2", new[] { "1.1.1.2", "1.0.0.2" }),
+            new Provider("Cloudflare anti-malware — 1.1.1.2 / 1.0.0.2 (filtre)", new[] { "1.1.1.2", "1.0.0.2" }, true),
             new Provider("Google — 8.8.8.8 / 8.8.4.4", new[] { "8.8.8.8", "8.8.4.4" }),
-            new Provider("Quad9 (sécurisé) — 9.9.9.9 / 149.112.112.112", new[] { "9.9.9.9", "149.112.112.112" }),
-            new Provider("AdGuard (anti-pub) — 94.140.14.14 / 94.140.15.15", new[] { "94.140.14.14", "94.140.15.15" }),
+            new Provider("Quad9 (sécurisé) — 9.9.9.9 / 149.112.112.112 (filtre)", new[] { "9.9.9.9", "149.112.112.112" }, true),
+            new Provider("AdGuard (anti-pub) — peut bloquer boutiques en jeu (filtre)", new[] { "94.140.14.14", "94.140.15.15" }, true),
         };
 
         public DnsForm(Action<string, int> log)
@@ -85,7 +86,7 @@ namespace BTOptimizer
 
             var info = new Label
             {
-                Text = "Appliqué à toutes les cartes réseau actives (IPv4). Le cache DNS est vidé automatiquement.",
+                Text = "Appliqué à toutes les cartes réseau actives (IPv4). Cache DNS vidé automatiquement. Les résolveurs « (filtre) » peuvent bloquer des boutiques en jeu.",
                 Location = new Point(18, 276), Size = new Size(260, 60), ForeColor = Color.Gray, Font = new Font("Segoe UI", 8.5f)
             };
             Controls.Add(info);
@@ -114,16 +115,18 @@ namespace BTOptimizer
                     Provider p = Providers[i];
                     if (p.Servers == null) continue;
                     double ms = DnsBench.QueryMs(p.Servers[0], "www.google.com", 800, 3);
-                    string label = p.Servers[0];
-                    if (ms < 0) lines.Add(string.Format("{0,-15} : —", label));
+                    string label = p.Servers[0] + (p.Filtering ? " (filtre)" : "");
+                    if (ms < 0) lines.Add(string.Format("{0,-24} : —", label));
                     else
                     {
-                        lines.Add(string.Format("{0,-15} : {1,3:0} ms", label, ms));
-                        if (ms < best) { best = ms; bestIdx = i; }
+                        lines.Add(string.Format("{0,-24} : {1,3:0} ms", label, ms));
+                        // Auto-sélection : le plus rapide SANS filtre — un résolveur filtrant
+                        // peut bloquer des boutiques/CDN de jeux (chargement infini).
+                        if (!p.Filtering && ms < best) { best = ms; bestIdx = i; }
                     }
                 }
                 string txt = string.Join("\r\n", lines.ToArray());
-                if (bestIdx >= 0) txt += "\r\n→ plus rapide : " + Providers[bestIdx].Servers[0];
+                if (bestIdx >= 0) txt += "\r\n→ conseillé (sans filtre) : " + Providers[bestIdx].Servers[0];
                 try
                 {
                     BeginInvoke((Action)(() =>
@@ -168,6 +171,10 @@ namespace BTOptimizer
             string msg = (p.Servers == null)
                 ? "Remettre le DNS en automatique (DHCP) sur toutes les cartes ?"
                 : "Appliquer le DNS " + string.Join(" / ", p.Servers) + " sur toutes les cartes réseau actives ?";
+            if (p.Filtering)
+                msg += "\n\n⚠ Ce résolveur FILTRE des domaines : si une boutique en jeu (Steam, Game Pass, "
+                     + "boutique intégrée) charge à l'infini ensuite, reviens ici et choisis Cloudflare 1.1.1.1 "
+                     + "ou Automatique.";
             if (MessageBox.Show(this, msg, "DNS", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
             Cursor = Cursors.WaitCursor;

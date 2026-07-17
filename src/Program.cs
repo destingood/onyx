@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.6.0.0")]
-[assembly: AssemblyFileVersion("10.6.0.0")]
+[assembly: AssemblyVersion("10.7.0.0")]
+[assembly: AssemblyFileVersion("10.7.0.0")]
 
 namespace BTOptimizer
 {
@@ -387,6 +387,21 @@ namespace BTOptimizer
                 Console.WriteLine("  UI DnsForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  DNS ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Boutiques & contenu en jeu (diagnostic, lecture seule)...");
+            try
+            {
+                int problems = 0;
+                foreach (ShopFix.Item it in ShopFix.Analyze())
+                {
+                    if (it.Problem) problems++;
+                    Console.WriteLine("  " + (it.Problem ? "[!]" : "[ok]") + " " + it.Name + " : " + it.Status);
+                }
+                Console.WriteLine("  → " + problems + " cause(s) probable(s) détectée(s).");
+                using (var f = new ShopFixForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI ShopFixForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Boutiques ERREUR : " + ex.Message); }
 
             Console.WriteLine("Overclock (sonde)...");
             try

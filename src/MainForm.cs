@@ -185,6 +185,8 @@ namespace BTOptimizer
                 Log("Réparation réseau...", 0);
                 System.Threading.Tasks.Task.Run(() => Sys.NetworkRepair(Log));
             });
+            _menu.Items.Add("🛒 Boutiques en jeu qui chargent à l'infini (Steam / Game Pass)...", null,
+                (s, e) => { using (var f = new ShopFixForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             // --- Maintenance ---
@@ -543,7 +545,7 @@ namespace BTOptimizer
 
             // Puces : version, puis édition (PRO / essai) si active.
             int cx = x + (int)wm + 14;
-            cx += DrawChip(g, cx, 13, "v10.6", Color.FromArgb(0, 210, 130), false) + 6;
+            cx += DrawChip(g, cx, 13, "v10.7", Color.FromArgb(0, 210, 130), false) + 6;
             if (License.IsPro)
                 DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
             else if (License.TrialActive)

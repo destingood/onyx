@@ -58,6 +58,35 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🛒 Boutiques en jeu qui chargent à l'infini (v10.7)
+
+Menu ☰ → **Boutiques en jeu qui chargent à l'infini (Steam / Game Pass)…** — quand la
+boutique Steam reste vide, que l'inventaire/les skins tournent sans fin ou que la
+boutique intégrée d'un jeu ne s'ouvre plus, ce panneau **diagnostique les causes
+connues côté Windows** et répare les points cochés en un clic (tout est journalisé) :
+
+- **DNS filtrant** (AdGuard anti-pub, Cloudflare anti-malware, Quad9…) : un domaine de
+  boutique/CDN bloqué par le résolveur = page qui tourne à l'infini → retour au DNS
+  automatique. Le panneau **DNS rapide** marque désormais ces résolveurs « (filtre) »,
+  l'auto-sélection du test de latence ne choisit plus qu'un résolveur **sans filtre**,
+  et un avertissement s'affiche avant d'appliquer un résolveur filtrant.
+- **Fichier hosts** : lignes `0.0.0.0/127.0.0.1` héritées d'anciens guides anti-pub qui
+  bloquent Steam/Epic/Xbox/EA… → neutralisées avec sauvegarde (`hosts.destingood.bak`).
+- **Services Boutique/licences** (ClipSVC, LicenseManager, wlidsvc, TokenBroker,
+  InstallService, AppXSvc, BITS, wuauserv, DoSvc) et **services Xbox** désactivés par un
+  optimiseur → retour au démarrage Windows par défaut.
+- **Applications UWP en arrière-plan coupées**, **politiques** DODownloadMode /
+  AutoDownload du Store → retirées (jeux Store/Game Pass qui se connectent à nouveau).
+- **IPv6 bridé** (DisabledComponents), **proxy fantôme** (WinINET + WinHTTP),
+  **heure Windows** (certificats TLS) → remis d'aplomb.
+- **Cache web Steam** (boutique, overlay, inventaire — `htmlcache`/`httpcache`) : LE
+  remède classique ; Steam est fermé proprement (`-shutdown`), le cache vidé, et il se
+  reconstruit au lancement suivant. + **vidage du cache DNS** en un clic.
+
+Chaque point affiche ✔/⚠ après analyse ; seuls les points détectés sont pré-cochés.
+Les réparations sont **idempotentes et sans danger** — elles annulent au besoin les
+optimisations agressives correspondantes (visibles « non actives » au re-scan).
+
 ### Habillage pro (v10.6)
 
 Interface au niveau d'un produit commercial, sans changer une seule habitude :
