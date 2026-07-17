@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.4 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.5 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -167,6 +167,8 @@ namespace BTOptimizer
             _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🎯 Objectif 500 FPS (écran 500 Hz)...", null, OnFps500Open);
+            _menu.Items.Add("Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)...", null,
+                (s, e) => { using (var f = new LiveMonForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>

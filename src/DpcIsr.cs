@@ -302,7 +302,7 @@ namespace BTOptimizer
             { "acpi.sys", "Gestion ACPI (alimentation)" },
         };
 
-        private static string DescribeDriver(string module)
+        internal static string DescribeDriver(string module)
         {
             string d;
             if (Known.TryGetValue(module, out d)) return d;

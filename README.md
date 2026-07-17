@@ -51,6 +51,28 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### Latence EN DIRECT — précision LatencyMon (v9.5)
+
+Menu ☰ → **Latence EN DIRECT (DPC/ISR par pilote)**. Contrairement à la mesure
+rapide (compteurs) et à la capture xperf (différée, histogrammes), cette fenêtre
+consomme la **session ETW noyau en temps réel** (NT Kernel Logger, moteur
+TraceEvent de Microsoft — celui de PerfView) : chaque **DPC** et chaque **ISR**
+arrive avec sa **durée exacte** (horloge QPC) et est attribué à son pilote via la
+table des modules noyau (`NtQuerySystemInformation`). Pas d'échantillonnage, pas
+d'approximation : validé à 22 000+ événements / 2,5 s, 0 perdu.
+
+- **Verdict coloré en direct** (mêmes seuils que l'analyse : < 500 µs vert,
+  \> 1000 µs rouge) avec le pilote fautif nommé.
+- **Tuiles** : pire DPC / pire ISR (+ module), événements/s, durée, et **sonde de
+  réveil 1 ms** (un thread haute priorité mesure de combien Windows le réveille en
+  retard : l'équivalent utilisateur de l'« interrupt to process latency » de
+  LatencyMon — ce que subit réellement un jeu).
+- **Tableau par pilote** rafraîchi chaque seconde, triable : DPC (nb, max µs,
+  moyenne µs), ISR (nb, max µs), CPU total ms, description lisible.
+- **Remise à zéro** sans couper la session, **export** `bt-latence-live.txt`.
+- Reprend la main proprement si une trace noyau (WPR/xperf) traînait, timer 1 ms
+  forcé pendant la mesure puis rendu, session fermée au dernier octet à la fermeture.
+
 ### Mesure & analyse de latence (façon LatencyMon)
 
 - Bouton **`Mesurer latence`** : mesure rapide 12 s (timer système, gigue réelle de

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("9.4.0.0")]
-[assembly: AssemblyFileVersion("9.4.0.0")]
+[assembly: AssemblyVersion("9.5.0.0")]
+[assembly: AssemblyFileVersion("9.5.0.0")]
 
 namespace BTOptimizer
 {
@@ -196,6 +196,13 @@ namespace BTOptimizer
                         + (d.BelowMax ? "  << SOUS LE MAX" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Écrans ERREUR : " + ex.Message); }
+
+            // BT_ETW_ONLY=1 : ne tester QUE la latence en direct (permet une vérification
+            // élevée ciblée sans dérouler tout le harnais).
+            bool etwOnly = Environment.GetEnvironmentVariable("BT_ETW_ONLY") == "1";
+            if (etwOnly) { TestEtwLive(ref errors); Console.WriteLine("TEST ETW TERMINÉ — " + errors + " erreur(s)."); return; }
+
+            TestEtwLive(ref errors);
 
             Console.WriteLine("Objectif 500 FPS (écran + jeux, lecture seule)...");
             try
@@ -474,6 +481,48 @@ namespace BTOptimizer
         {
             try { return DnsBench.QueryMs(server, "www.google.com", 800, 3); }
             catch { return -1; }
+        }
+
+        /// <summary>Latence en direct : modules noyau, session ETW (2,5 s si admin), UI, sonde de réveil.</summary>
+        private static void TestEtwLive(ref int errors)
+        {
+            Console.WriteLine("Latence en direct (ETW noyau temps réel)...");
+            try
+            {
+                KernelModules.Refresh();
+                Console.WriteLine("  Modules noyau cartographiés : " + KernelModules.Count);
+                using (var live = new EtwLive())
+                {
+                    if (live.Start())
+                    {
+                        System.Threading.Thread.Sleep(2500);
+                        var rep = live.Snapshot();
+                        Console.WriteLine("  2,5 s de session : " + (rep.TotalDpc + rep.TotalIsr) + " événements, pire DPC "
+                            + rep.MaxDpcUs.ToString("0") + " µs (" + rep.MaxDpcModule + "), pire ISR "
+                            + rep.MaxIsrUs.ToString("0") + " µs (" + rep.MaxIsrModule + "), perdus=" + live.EventsLost);
+                        int shown = 0;
+                        foreach (var d in rep.Drivers)
+                        {
+                            Console.WriteLine("   - " + d.Module + "  DPC=" + d.DpcCount + " (max " + d.DpcMaxUs.ToString("0")
+                                + " µs)  ISR=" + d.IsrCount + " (max " + d.IsrMaxUs.ToString("0") + " µs)  " + d.Description);
+                            if (++shown >= 6) break;
+                        }
+                        if (rep.TotalDpc + rep.TotalIsr == 0) { errors++; Console.WriteLine("  ERREUR : session active mais aucun événement reçu."); }
+                    }
+                    else
+                        Console.WriteLine("  Session noyau refusée : " + (live.LastError ?? "?") + " — attendu sans droits admin.");
+                }
+                using (var f = new LiveMonForm(delegate (string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI LiveMonForm : construite OK.");
+                using (var probe = new WakeupProbe())
+                {
+                    probe.Start();
+                    System.Threading.Thread.Sleep(1200);
+                    double mx, avg; probe.Read(out mx, out avg);
+                    Console.WriteLine("  Sonde réveil 1 ms : max " + mx.ToString("0") + " µs, moyen " + avg.ToString("0.0") + " µs.");
+                }
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Latence direct ERREUR : " + ex.Message); }
         }
     }
 #endif
