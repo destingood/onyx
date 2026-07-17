@@ -650,20 +650,26 @@ namespace BTOptimizer
         }
 
         /// <summary>Coche (allow=true) ou décoche (allow=false) « Autoriser l'ordinateur à
-        /// éteindre ce périphérique pour économiser l'énergie » sur toute une famille.</summary>
+        /// éteindre ce périphérique pour économiser l'énergie » sur toute une famille.
+        /// Les deux canaux sont TOUJOURS appliqués : WMI peut fonctionner partiellement
+        /// (il s'arrête à la première instance en panne, en ayant écrit les précédentes),
+        /// le registre couvre alors les instances que WMI n'a pas atteintes.</summary>
         public static void SetDevicePowerSaving(string[] classGuids, bool allow)
         {
             int n = SetMsPowerBox(false, classGuids, allow);
-            if (n == 0) n = SetUsbIdleRegistry(classGuids, allow);
+            n += SetUsbIdleRegistry(classGuids, allow);
             InvalidateDevPowerSnapshot();
             if (n == 0)
                 throw new Exception("Aucun périphérique de cette famille n'expose la gestion d'alimentation.");
         }
 
         /// <summary>true = case « éteindre ce périphérique » décochée sur TOUTE la famille,
-        /// false = au moins une encore cochée, null = famille absente / WMI muet.</summary>
+        /// false = au moins une encore cochée, null = famille absente / indéterminé.
+        /// Croise la vue WMI et la vue registre : WMI partiel peut ne pas voir certaines
+        /// instances (cf. SetDevicePowerSaving), le registre les rattrape.</summary>
         public static bool? DevicePowerSavingOff(string[] classGuids)
         {
+            bool? wmi = null;
             List<DevPowerEntry> snap = DevPowerSnapshot(false);
             if (snap != null)
             {
@@ -672,11 +678,14 @@ namespace BTOptimizer
                 {
                     if (!ClassIn(e.Cls, classGuids)) continue;
                     found = true;
-                    if (e.Enable) return false;
+                    if (e.Enable) { wmi = false; break; }
                 }
-                if (found) return true;
+                if (wmi == null && found) wmi = true;
             }
-            return UsbIdleRegistryCleared(classGuids);
+            bool? reg = UsbIdleRegistryCleared(classGuids);
+            if (wmi == false || reg == false) return false;
+            if (wmi == true || reg == true) return true;
+            return null;
         }
 
         /// <summary>Coche/décoche « Autoriser ce périphérique à sortir l'ordinateur du mode
