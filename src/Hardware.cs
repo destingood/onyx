@@ -14,12 +14,19 @@ namespace BTOptimizer
         public int RamGB;
         public string CpuName = "-";
         public bool CpuUnlocked;
+        // Signaux additionnels pour l'auto-tune intelligent
+        public bool IsLaptop;
+        public bool IsWin11;
+        public bool HasBluetooth;
+        public bool HasPrinter;
+        public bool HasTouch;
 
         public string Summary()
         {
             string disk = DiskCount == 0 ? "disque : ?" :
                 (AllSsd ? "disque : SSD" : (AnyHdd ? "disque : SSD+HDD mixte" : "disque : ?"));
-            return CpuName + "  ·  " + RamGB + " Go RAM  ·  " + GpuName + "  ·  " + disk;
+            return CpuName + "  ·  " + RamGB + " Go RAM  ·  " + GpuName + "  ·  " + disk
+                + "  ·  " + (IsLaptop ? "portable" : "fixe") + "  ·  " + (IsWin11 ? "Windows 11" : "Windows 10");
         }
     }
 
@@ -99,8 +106,57 @@ namespace BTOptimizer
             string cl = (cpu.Name ?? "").ToLowerInvariant();
             hw.CpuUnlocked = cl.Contains("ryzen") || cl.EndsWith("k") || cl.Contains("k ") ||
                              cl.Contains("kf") || cl.Contains("ks") || cl.Contains("x ") || cl.Contains("threadripper");
+
+            // Windows 11 = build >= 22000 (instantané).
+            try { hw.IsWin11 = Environment.OSVersion.Version.Build >= 22000; } catch { }
+
+            // Écran tactile (instantané) : SM_MAXIMUMTOUCHES.
+            try { hw.HasTouch = GetSystemMetrics(SM_MAXIMUMTOUCHES) > 0; } catch { }
+
+            // Portable vs fixe : type de châssis (Win32_SystemEnclosure).
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT ChassisTypes FROM Win32_SystemEnclosure"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        var types = mo["ChassisTypes"] as ushort[];
+                        if (types == null) continue;
+                        foreach (ushort t in types)
+                            if (t == 8 || t == 9 || t == 10 || t == 11 || t == 12 || t == 14 || t == 30 || t == 31 || t == 32)
+                                hw.IsLaptop = true;
+                    }
+            }
+            catch { }
+
+            // Bluetooth présent (radio/périphérique).
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name FROM Win32_PnPEntity WHERE PNPClass='Bluetooth'"))
+                    foreach (ManagementObject mo in s.Get()) { hw.HasBluetooth = true; break; }
+            }
+            catch { }
+
+            // Imprimante réelle (hors PDF/XPS/OneNote/Fax et ports virtuels).
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name,PortName FROM Win32_Printer"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string n = (Convert.ToString(mo["Name"]) ?? "").ToLowerInvariant();
+                        string port = (Convert.ToString(mo["PortName"]) ?? "").ToLowerInvariant();
+                        if (n.Contains("pdf") || n.Contains("xps") || n.Contains("onenote") || n.Contains("fax") || n.Contains("clipboard")) continue;
+                        if (port.StartsWith("portprompt") || port.StartsWith("nul") || port.StartsWith("shrfax") || port.Length == 0) continue;
+                        hw.HasPrinter = true; break;
+                    }
+            }
+            catch { }
+
             return hw;
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+        private const int SM_MAXIMUMTOUCHES = 95;
 
         /// <summary>Sélection intelligente : base « eSport + recommandé », adaptée au matériel, hors sécurité/expérimental.</summary>
         /// <summary>Sélection auto : ensemble latence/perf sûr (eSport+recommandé), ajusté au matériel détecté.</summary>
@@ -149,6 +205,47 @@ namespace BTOptimizer
 
             // --- Réseau : MSI carte réseau (sûr, gain latence) ---
             ids.Add("msi_network");
+
+            // --- Portable vs fixe : ne pas sacrifier batterie/chaleur sur un laptop ---
+            if (hw.IsLaptop)
+            {
+                ids.Remove("proc_min_100");                 // CPU 100% permanent = batterie
+                ids.Remove("power_throttling");             // garder le throttling (économie)
+                ids.Remove("cpu_perf_boost_aggressive");
+                ids.Remove("usb_suspend");                  // garder la veille USB
+                ids.Remove("pcie_aspm_off");                // garder l'économie PCIe
+                ids.Remove("disk_timeout_off");
+            }
+            else
+            {
+                // PC fixe sans écran tactile : services capteurs/luminosité inutiles.
+                if (!hw.HasTouch)
+                {
+                    ids.Add("sensor_service_off");
+                    ids.Add("displayenhancement_off");
+                }
+            }
+
+            // --- Windows 11 vs 10 ---
+            if (hw.IsWin11)
+            {
+                ids.Add("widgets_off");
+                ids.Add("chat_taskbar_off");
+                ids.Add("copilot_off");
+            }
+            else
+            {
+                // Tweaks purement Win11 : sans effet sur Win10, on nettoie la sélection.
+                ids.Remove("widgets_off"); ids.Remove("chat_taskbar_off"); ids.Remove("copilot_off");
+                ids.Remove("dx_vrr"); ids.Remove("taskbar_end_task"); ids.Remove("snap_assist_off");
+            }
+
+            // --- Bluetooth ---
+            if (!hw.HasBluetooth) ids.Remove("audio_bt_absolute_volume_off");
+
+            // --- Imprimante : couper le spouleur seulement si aucune imprimante ---
+            if (hw.HasPrinter) { ids.Remove("spooler_off"); ids.Remove("printnotify_off"); }
+            else { ids.Add("spooler_off"); ids.Add("printnotify_off"); }
 
             // On ne garde que des Id réellement présents dans le catalogue.
             ids.RemoveWhere(id => !have.Contains(id));

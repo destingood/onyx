@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.6 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.7 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -571,6 +571,12 @@ namespace BTOptimizer
                 : "réglages mémoire prudents (RAM limitée)."), 0);
             bool nvidia = _hw.GpuVendor != null && _hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
             Log("  • GPU : " + _hw.GpuName + (nvidia ? " → télémétrie NVIDIA coupée." : " → réglages GPU génériques."), 0);
+            Log("  • Châssis : " + (_hw.IsLaptop
+                ? "portable → économie préservée (pas de CPU 100% permanent, veille USB/PCIe gardées)."
+                : "PC fixe → perfs à fond" + (_hw.HasTouch ? "." : ", services capteurs/luminosité coupés.")), 0);
+            Log("  • OS : " + (_hw.IsWin11 ? "Windows 11 → Widgets/Chat/Copilot retirés." : "Windows 10 → tweaks Win11 écartés."), 0);
+            Log("  • Périphériques : " + (_hw.HasPrinter ? "imprimante détectée → spouleur conservé" : "aucune imprimante → spouleur coupé")
+                + (_hw.HasBluetooth ? " · Bluetooth présent." : " · pas de Bluetooth."), 0);
             Log("  • Réseau : MSI carte réseau activé (latence).", 0);
             Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), CPU sans veille, recherche Windows, MSI stockage.", 2);
             Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s). Vérifie puis clique APPLIQUER.", 1);
