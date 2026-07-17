@@ -2025,6 +2025,75 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("DisplayEnhancementService")
             });
 
+            // ================= LOT CIBLÉ (impact réel) =================
+
+            list.Add(new Tweak
+            {
+                Id = "gamedvr_policy_off", Category = Cat.Gpu, Esport = true,
+                Name = "Désactiver GameDVR par stratégie (verrou machine)",
+                Desc = "Force GameDVR à OFF au niveau machine (stratégie), en plus du réglage utilisateur : certains jeux/MAJ réactivent GameDVR côté utilisateur, ceci l'empêche. Gain de FPS et moins d'overhead de capture. « Rétablir » lève la stratégie.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "dns_priority", Category = Cat.Reseau, Esport = true,
+                Name = "Prioriser la résolution locale des noms (DNS plus réactif)",
+                Desc = "Réordonne les fournisseurs de résolution pour privilégier le cache/hosts/DNS local avant NetBIOS : résolution de noms plus rapide. « Rétablir » remet les priorités Windows.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority", 4, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "HostsPriority", 5, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "DnsPriority", 6, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "NetbtPriority", 7, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority", 499, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "HostsPriority", 500, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "DnsPriority", 2000, RegistryValueKind.DWord);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "NetbtPriority", 2001, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider", "LocalPriority"), 4)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "edge_startup_boost_off", Category = Cat.Rapidite, Recommended = true,
+                Name = "Désactiver le « démarrage rapide » d'Edge (Startup Boost)",
+                Desc = "Edge ne se pré-lance plus en arrière-plan à l'ouverture de session : RAM et CPU libérés au démarrage. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Edge" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Edge", "StartupBoostEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "remote_assistance_off", Category = Cat.Services, Recommended = true,
+                Name = "Désactiver l'Assistance à distance (surface d'attaque)",
+                Desc = "Empêche les invitations d'assistance à distance entrantes. Recommandé pour un PC personnel. « Rétablir » la réautorise.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "modern_standby_off", Category = Cat.Alim, Reboot = true,
+                Name = "Forcer la veille S3 classique (corrige la veille moderne)",
+                Desc = "Désactive la « veille moderne » (S0) au profit de la veille S3 : corrige la décharge de batterie en veille et les réveils intempestifs sur les machines où S0 est mal géré. « Rétablir » remet la veille moderne. Avancé.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Power" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "PlatformAoAcOverride"), 0)
+            });
+
             return list;
         }
     }
