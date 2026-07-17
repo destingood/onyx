@@ -211,6 +211,9 @@ namespace BTOptimizer
             AddCheck(gWin, Sys.IntEquals(Sys.GetMachine(MMKey, "NoLazyMode"), 1),
                 "MMCSS : mode paresseux désactivé", "Le planificateur multimédia reste réactif en continu.",
                 "Coche « MMCSS : désactiver le mode paresseux (NoLazyMode) ».");
+            AddCheck(gWin, GamesPriorityHigh(),
+                "Priorité CPU « Haute » pour les jeux", "Les jeux compétitifs passent devant les tâches de fond quand le CPU sature.",
+                "Coche « Priorité CPU Haute pour les jeux compétitifs » — le levier qui aide quand c'est le CPU qui limite (ex. OW2).");
             try
             {
                 double ms = Native.CurrentTimerMs();
@@ -268,6 +271,18 @@ namespace BTOptimizer
         private void AddCheck(ListViewGroup g, bool ok, string name, string okText, string fixText)
         {
             try { Add(g, ok ? 0 : 1, name, ok ? okText : fixText); } catch { }
+        }
+
+        private static bool GamesPriorityHigh()
+        {
+            try
+            {
+                foreach (string exe in GameScan.PriorityExes())
+                    if (!Sys.IntEquals(Sys.GetMachine(GameScan.IfeoKey + "\\" + exe + "\\PerfOptions", "CpuPriorityClass"), 3))
+                        return false;
+                return true;
+            }
+            catch { return false; }
         }
 
         private static bool PlanPerf()

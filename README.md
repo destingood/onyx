@@ -177,6 +177,13 @@ débloquent DANS chaque jeu (limite de FPS, V-Sync). Le panneau fait donc trois 
    Minecraft. Plus les règles d'or (V-Sync OFF, Reflex ON, presets compétitifs) et les
    réglages pilote NVIDIA/AMD (V-Sync off, pas de limiteur pilote, perfs max, anti-lag).
 
+**v9.4 — priorité CPU « Haute » pour les jeux compétitifs** : nouveau tweak
+`games_cpu_priority_high` — Windows lance CS2, OW2, Valorant, Fortnite, Apex, COD, LoL,
+Rocket League et R6 en priorité processeur Haute via **PerfOptions** (IFEO), le mécanisme
+officiel de Windows : aucune injection, compatible anti-cheat, réversible. C'est le levier
+qui compte quand le jeu est **limité par le CPU** (le jeu passe devant les tâches de fond
+quand tous les cœurs saturent). Vérifié en direct dans le panneau 🎯.
+
 ## Dépôt git
 
 Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,

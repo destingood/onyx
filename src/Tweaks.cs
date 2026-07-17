@@ -1869,6 +1869,31 @@ namespace BTOptimizer
                 Check  = () => Sys.IntEquals(Sys.GetMachine(MMKey, "NoLazyMode"), 1)
             });
 
+            list.Add(new Tweak
+            {
+                Id = "games_cpu_priority_high", Category = Cat.Systeme, Esport = true,
+                Name = "Priorité CPU « Haute » pour les jeux compétitifs (CS2, OW2, Valorant…)",
+                Desc = "Windows lance ces jeux en priorité processeur Haute (PerfOptions, mécanisme officiel — aucune injection, compatible anti-cheat) : quand le CPU sature, le jeu passe devant les tâches de fond. Précieux sur les machines limitées par le CPU. Réversible.",
+                BackupKeys = new[] { @"HKLM\" + GameScan.IfeoKey },
+                Apply = () =>
+                {
+                    foreach (string exe in GameScan.PriorityExes())
+                        Sys.SetMachine(GameScan.IfeoKey + "\\" + exe + "\\PerfOptions", "CpuPriorityClass", 3, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    foreach (string exe in GameScan.PriorityExes())
+                        Sys.DelMachine(GameScan.IfeoKey + "\\" + exe + "\\PerfOptions", "CpuPriorityClass");
+                },
+                Check = () =>
+                {
+                    foreach (string exe in GameScan.PriorityExes())
+                        if (!Sys.IntEquals(Sys.GetMachine(GameScan.IfeoKey + "\\" + exe + "\\PerfOptions", "CpuPriorityClass"), 3))
+                            return false;
+                    return true;
+                }
+            });
+
             return list;
         }
     }

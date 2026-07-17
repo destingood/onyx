@@ -13,6 +13,29 @@ namespace BTOptimizer
     /// </summary>
     internal static class GameScan
     {
+        /// <summary>Clé IFEO officielle de Windows (PerfOptions = priorité au lancement, aucune injection).</summary>
+        public const string IfeoKey = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options";
+
+        /// <summary>
+        /// Exécutables des jeux compétitifs pour la priorité CPU « Haute » (PerfOptions).
+        /// javaw.exe (Minecraft) est volontairement exclu : trop générique (toutes les applis Java).
+        /// </summary>
+        public static string[] PriorityExes()
+        {
+            return new[]
+            {
+                "cs2.exe",                                     // Counter-Strike 2
+                "VALORANT-Win64-Shipping.exe",                 // VALORANT
+                "FortniteClient-Win64-Shipping.exe",           // Fortnite
+                "Overwatch.exe",                               // Overwatch 2
+                "r5apex.exe",                                  // Apex Legends
+                "cod.exe", "cod22-cod.exe", "cod23-cod.exe",   // Call of Duty (HQ / MWII / MWIII)
+                "League of Legends.exe",                       // League of Legends
+                "RocketLeague.exe",                            // Rocket League
+                "RainbowSix.exe", "RainbowSix_Vulkan.exe"      // Rainbow Six Siege (DX11 / Vulkan)
+            };
+        }
+
         public class GameInfo
         {
             public string Name;          // nom affiché
