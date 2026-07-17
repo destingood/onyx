@@ -1,13 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
 namespace BTOptimizer
 {
     /// <summary>
-    /// Panneau overclock : OC GPU réel (power limit + verrou de fréquences via nvidia-smi,
-    /// bornés par le pilote, persistant en option), et diagnostic RAM/CPU — l'OC de ces
-    /// derniers se fait au BIOS (XMP/EXPO, PBO), pas depuis Windows.
+    /// Panneau overclock : OC GPU réel (power limit via nvidia-smi, borné par le pilote,
+    /// persistant en option), boost CPU maximal (tous les leviers que Windows possède :
+    /// plan ultimes, turbo Agressif, état min 100 %, déparcage des cœurs, plafond de
+    /// fréquence levé — avec fréquence effective EN DIRECT), et diagnostic RAM — l'OC
+    /// multiplicateur/tensions (PBO, XMP/EXPO) se fait au BIOS, pas depuis Windows.
     /// </summary>
     internal class OverclockForm : Form
     {
@@ -17,6 +22,28 @@ namespace BTOptimizer
         private TrackBar _plBar;
         private Label _plVal;
         private CheckBox _chkPersist;
+
+        // ---- CPU : leviers Windows + fréquence effective en direct ----
+        private const string SubProc = "54533251-82be-4824-96c1-47b60b740d00";
+        private const string PerfBoostMode = "be337238-0d82-4146-a960-4f3749d470c7";
+        private const string CpMinCores = "0cc5b647-c1df-4637-891a-dec35c318583";
+        private const string ProcFreqMax = "75b0ae3f-bce0-45a7-8c89-c9611c25e100";
+        private const string ProcMinState = "893dee8e-2bef-41e0-89c6-b55d0929964c";
+
+        [DllImport("pdh.dll")] private static extern uint PdhOpenQuery(IntPtr src, IntPtr user, out IntPtr q);
+        [DllImport("pdh.dll", CharSet = CharSet.Unicode)] private static extern uint PdhAddEnglishCounter(IntPtr q, string path, IntPtr user, out IntPtr c);
+        [DllImport("pdh.dll")] private static extern uint PdhCollectQueryData(IntPtr q);
+        [DllImport("pdh.dll")] private static extern uint PdhGetFormattedCounterValue(IntPtr c, uint fmt, IntPtr res, out PdhValue v);
+        [DllImport("pdh.dll")] private static extern uint PdhCloseQuery(IntPtr q);
+        [StructLayout(LayoutKind.Sequential)] private struct PdhValue { public uint CStatus; public double Value; }
+        private const uint PDH_FMT_DOUBLE = 0x00000200;
+
+        private IntPtr _pdhQuery, _pdhPerf;
+        private bool _pdhReady;
+        private Timer _cpuTimer;
+        private double _baseMhz;
+        private Label _cpuLive, _cpuLevers;
+        private Button _btnBoostCpu, _btnRevertCpu;
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
@@ -34,7 +61,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Overclock automatique";
+            Text = "DesTinGOOD — Overclock automatique (GPU & CPU)";
             ClientSize = new Size(660, 690);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -46,7 +73,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = Header };
             var bt = new Label
             {
-                Text = "  Overclock automatique",
+                Text = "  Overclock automatique — GPU & CPU", UseMnemonic = false,
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 14f), TextAlign = ContentAlignment.MiddleLeft
             };
@@ -112,7 +139,7 @@ namespace BTOptimizer
                      + "(cause de plantages). Pour un OC avancé par offset/courbe, utilise MSI Afterburner.",
                 Location = new Point(20, y), Size = new Size(620, 34), ForeColor = Color.FromArgb(110, 115, 125)
             });
-            y += 40;
+            y += 38;
 
             _chkPersist = new CheckBox
             {
@@ -121,31 +148,81 @@ namespace BTOptimizer
                 Checked = Sys.OcGuardExists()
             };
             Controls.Add(_chkPersist);
-            y += 34;
+            y += 32;
 
-            var btnApply = MakeButton("APPLIQUER L'OC GPU", 20, y, 300, 40, true);
+            var btnApply = MakeButton("APPLIQUER L'OC GPU", 20, y, 300, 38, true);
             btnApply.Enabled = _gpu.Ok;
             btnApply.Click += OnApplyGpu;
-            var btnReset = MakeButton("Réinitialiser (défaut constructeur)", 330, y, 310, 40, false);
+            var btnReset = MakeButton("Réinitialiser (défaut constructeur)", 330, y, 310, 38, false);
             btnReset.Enabled = _gpu.Ok;
             btnReset.Click += OnResetGpu;
             Controls.Add(btnApply); Controls.Add(btnReset);
-            y += 48;
+            y += 46;
 
-            var btnNv = MakeButton("Appliquer le profil pilote NVIDIA « faible latence » (Ultra Low Latency)", 20, y, 620, 34, false);
+            var btnNv = MakeButton("Appliquer le profil pilote NVIDIA « faible latence » (Ultra Low Latency)", 20, y, 620, 32, false);
             btnNv.ForeColor = Color.FromArgb(0, 120, 60);
             btnNv.Enabled = Sys.NvpiAvailable();
             if (!btnNv.Enabled) btnNv.Text = "Profil pilote NVIDIA — nvidiaProfileInspector introuvable (tools\\npi\\)";
             btnNv.Click += OnApplyNvidia;
             Controls.Add(btnNv);
+            y += 44;
+
+            // ---------------- CPU ----------------
+            AddSection("CPU — boost maximal (tout ce que Windows peut donner)", ref y);
+
+            Sys.CpuInfo cpu = Sys.QueryCpu();
+            _baseMhz = cpu.MaxMhz;
+            bool unlocked = cpu.Name.IndexOf("K", StringComparison.OrdinalIgnoreCase) >= 0
+                         || cpu.Name.IndexOf("X", StringComparison.OrdinalIgnoreCase) >= 0
+                         || cpu.Name.IndexOf("Ryzen", StringComparison.OrdinalIgnoreCase) >= 0;
+            Controls.Add(new Label
+            {
+                Text = "CPU : " + cpu.Name + "  (" + cpu.Cores + " cœurs / " + cpu.Threads + " threads, base "
+                    + (cpu.MaxMhz / 1000.0).ToString("0.0") + " GHz).\n"
+                    + (unlocked
+                        ? "CPU débloqué : le vrai overclock (multiplicateur, PBO, Curve Optimizer) se règle au BIOS — Windows ne peut pas le faire."
+                        : "CPU non débloqué : pas d'overclock multiplicateur possible. Soigne le refroidissement pour tenir le turbo."),
+                Location = new Point(20, y), Size = new Size(620, 42), ForeColor = Color.FromArgb(60, 64, 72)
+            });
             y += 46;
 
-            // ---------------- RAM / CPU ----------------
-            AddSection("RAM & CPU — diagnostic (overclock au BIOS)", ref y);
+            _cpuLive = new Label
+            {
+                Text = "Fréquence effective : mesure...",
+                Location = new Point(20, y), Size = new Size(620, 22),
+                Font = new Font("Segoe UI Semibold", 10.5f), ForeColor = Color.FromArgb(60, 64, 72)
+            };
+            Controls.Add(_cpuLive);
+            y += 26;
+
+            _cpuLevers = new Label
+            {
+                Location = new Point(20, y), Size = new Size(620, 88),
+                ForeColor = Color.FromArgb(60, 64, 72)
+            };
+            Controls.Add(_cpuLevers);
+            y += 92;
+
+            _btnBoostCpu = MakeButton("⚡ BOOST CPU MAXIMAL", 20, y, 300, 38, true);
+            _btnBoostCpu.Click += OnBoostCpu;
+            _btnRevertCpu = MakeButton("Rétablir le boost CPU (défauts Windows)", 330, y, 310, 38, false);
+            _btnRevertCpu.Click += OnRevertCpu;
+            Controls.Add(_btnBoostCpu); Controls.Add(_btnRevertCpu);
+            y += 46;
+
+            Controls.Add(new Label
+            {
+                Text = "Le pack applique : plan Performances ultimes, turbo boost Agressif, état minimal 100 %, "
+                     + "déparcage des cœurs, et lève tout plafond de fréquence du plan. Réversible d'un clic — "
+                     + "aucune tension ni multiplicateur touchés (ça, c'est le BIOS).",
+                Location = new Point(20, y), Size = new Size(620, 50), ForeColor = Color.FromArgb(110, 115, 125)
+            });
+            y += 54;
+
+            // ---------------- RAM ----------------
+            AddSection("RAM — diagnostic (XMP/EXPO au BIOS)", ref y);
 
             Sys.RamInfo ram = Sys.QueryRam();
-            Sys.CpuInfo cpu = Sys.QueryCpu();
-
             string ramMsg;
             Color ramColor = Color.FromArgb(60, 64, 72);
             if (ram.Modules == 0)
@@ -165,23 +242,15 @@ namespace BTOptimizer
             });
             y += 50;
 
-            string cpuMsg = "CPU : " + cpu.Name + "  (" + cpu.Cores + " cœurs / " + cpu.Threads + " threads, base "
-                + (cpu.MaxMhz / 1000.0).ToString("0.0") + " GHz).\n";
-            bool k = cpu.Name.IndexOf("K", StringComparison.OrdinalIgnoreCase) >= 0
-                     || cpu.Name.IndexOf("X", StringComparison.OrdinalIgnoreCase) >= 0
-                     || cpu.Name.IndexOf("Ryzen", StringComparison.OrdinalIgnoreCase) >= 0;
-            cpuMsg += k
-                ? "→ CPU débloqué : l'overclock (multiplicateur / PBO / Curve Optimizer) se fait dans le BIOS. Windows ne peut pas le faire."
-                : "→ CPU non débloqué : pas d'overclock possible. Vérifie surtout le refroidissement pour tenir le turbo.";
-            Controls.Add(new Label
-            {
-                Text = cpuMsg, Location = new Point(20, y), Size = new Size(620, 44), ForeColor = Color.FromArgb(60, 64, 72)
-            });
-            y += 52;
-
-            var close = MakeButton("Fermer", 470, y, 170, 34, false);
+            var close = MakeButton("Fermer", 470, y, 170, 32, false);
             close.Click += (s, e) => Close();
             Controls.Add(close);
+            y += 42;
+
+            ClientSize = new Size(660, y);
+
+            RefreshLevers();
+            StartCpuLive();
         }
 
         private void AddSection(string title, ref int y)
@@ -224,6 +293,135 @@ namespace BTOptimizer
             };
             b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             return b;
+        }
+
+        // ------------------------------------------------------------------
+        //  CPU : fréquence effective en direct (PDH % Processor Performance)
+        // ------------------------------------------------------------------
+        private void StartCpuLive()
+        {
+            if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out _pdhQuery) == 0)
+            {
+                if (PdhAddEnglishCounter(_pdhQuery, @"\Processor Information(_Total)\% Processor Performance", IntPtr.Zero, out _pdhPerf) == 0)
+                {
+                    PdhCollectQueryData(_pdhQuery); // amorçage
+                    _pdhReady = true;
+                }
+            }
+            if (!_pdhReady || _baseMhz <= 0)
+            {
+                _cpuLive.Text = "Fréquence effective : compteur indisponible sur ce système.";
+                return;
+            }
+            _cpuTimer = new Timer { Interval = 1000 };
+            _cpuTimer.Tick += (s, e) => UpdateCpuLive();
+            _cpuTimer.Start();
+        }
+
+        private void UpdateCpuLive()
+        {
+            if (!_pdhReady || PdhCollectQueryData(_pdhQuery) != 0) return;
+            PdhValue v;
+            if (PdhGetFormattedCounterValue(_pdhPerf, PDH_FMT_DOUBLE, IntPtr.Zero, out v) != 0 || v.CStatus != 0) return;
+            double eff = _baseMhz * v.Value / 100.0;
+            _cpuLive.Text = "Fréquence effective : " + (eff / 1000.0).ToString("0.00") + " GHz   ("
+                + v.Value.ToString("0") + " % de la base " + (_baseMhz / 1000.0).ToString("0.0") + " GHz)";
+            _cpuLive.ForeColor = v.Value >= 100 ? Color.FromArgb(0, 130, 80) : Color.FromArgb(60, 64, 72);
+        }
+
+        // ------------------------------------------------------------------
+        //  CPU : état des leviers + pack boost / rétablissement
+        // ------------------------------------------------------------------
+        private void RefreshLevers()
+        {
+            bool ult = false;
+            try { ult = Sys.UltimateActive(); } catch { }
+            bool? boost = Sys.PowerAcEquals(SubProc, PerfBoostMode, 2);
+            bool? min = Sys.PowerAcEquals(SubProc, ProcMinState, 100);
+            bool? unpark = Sys.PowerAcEquals(SubProc, CpMinCores, 100);
+            int? cap = Sys.GetPowerAcIndex(SubProc, ProcFreqMax);
+
+            var sb = new StringBuilder();
+            sb.AppendLine(Mark(ult) + "  Plan d'alimentation Performances ultimes");
+            sb.AppendLine(Mark(boost == true) + "  Turbo boost en mode Agressif");
+            sb.AppendLine(Mark(min == true) + "  État minimal du processeur à 100 %");
+            sb.AppendLine(Mark(unpark == true) + "  Tous les cœurs déparqués (core parking off)");
+            if (cap.HasValue && cap.Value > 0)
+                sb.Append("⚠  Plafond Windows détecté : " + cap.Value + " MHz max — le pack le lève.");
+            else
+                sb.Append(Mark(true) + "  Aucun plafond de fréquence Windows");
+            _cpuLevers.Text = sb.ToString();
+        }
+
+        private static string Mark(bool on) { return on ? "✓" : "○"; }
+
+        private List<Tweak> BoostTweaks()
+        {
+            string[] ids = { "power_ultimate", "proc_min_100", "cpu_boost_aggressive", "cpu_unpark_cores" };
+            List<Tweak> all = Catalog.All();
+            var sel = new List<Tweak>();
+            foreach (string id in ids)
+                foreach (Tweak t in all)
+                    if (t.Id == id) { sel.Add(t); break; }
+            return sel;
+        }
+
+        private void OnBoostCpu(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Appliquer le BOOST CPU MAXIMAL ?\n\n"
+                    + "• Plan d'alimentation Performances ultimes\n"
+                    + "• Turbo boost en mode Agressif (fréquence max immédiate)\n"
+                    + "• État minimal du processeur à 100 % (pas de sous-cadençage)\n"
+                    + "• Tous les cœurs déparqués (core parking off)\n"
+                    + "• Plafond de fréquence du plan levé (aucune limite)\n\n"
+                    + "Aucune tension ni multiplicateur modifiés : c'est le maximum que Windows\n"
+                    + "autorise, dans les limites du refroidissement. Consommation en hausse au repos.\n"
+                    + "Réversible avec « Rétablir le boost CPU ».",
+                    "⚡ Boost CPU maximal", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            RunCpuPack(true);
+        }
+
+        private void OnRevertCpu(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Rétablir les valeurs par défaut de Windows pour le boost CPU ?\n\n"
+                    + "Turbo boost efficace, état minimal 5 %, parcage des cœurs rétabli (10 %),\n"
+                    + "et retour au plan d'alimentation Équilibré.",
+                    "Rétablir le boost CPU", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            RunCpuPack(false);
+        }
+
+        private void RunCpuPack(bool apply)
+        {
+            List<Tweak> sel = BoostTweaks();
+            _btnBoostCpu.Enabled = _btnRevertCpu.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                Engine.Run(sel, apply, false, false, _log);
+                if (apply)
+                {
+                    // Lève tout plafond de fréquence posé dans le plan (0 = illimité).
+                    try { Sys.SetPowerValue(SubProc, ProcFreqMax, 0, 0); } catch { }
+                }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Cursor = Cursors.Default;
+                        _btnBoostCpu.Enabled = _btnRevertCpu.Enabled = true;
+                        RefreshLevers();
+                        MessageBox.Show(this,
+                            apply ? "Boost CPU maximal appliqué. La fréquence effective ci-dessus doit tenir le turbo."
+                                  : "Boost CPU rétabli aux valeurs par défaut de Windows.",
+                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }));
+                }
+                catch { }
+            });
         }
 
         private void UpdatePlLabel()
@@ -310,6 +508,16 @@ namespace BTOptimizer
             UpdatePlLabel();
             MessageBox.Show(this, "GPU remis aux réglages par défaut du constructeur.",
                 "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_cpuTimer != null) { _cpuTimer.Stop(); _cpuTimer.Dispose(); _cpuTimer = null; }
+                if (_pdhQuery != IntPtr.Zero) { try { PdhCloseQuery(_pdhQuery); } catch { } _pdhQuery = IntPtr.Zero; }
+            }
+            base.Dispose(disposing);
         }
     }
 }

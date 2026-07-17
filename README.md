@@ -158,10 +158,17 @@ Bouton **`Overclock automatique`** — panneau dédié :
   (« Réinitialiser » remet le défaut constructeur : `-rgc` + power limit d'origine), et
   **persistables** au démarrage via une tâche planifiée (`BTOptimizerOC`).
   En ligne de commande : `BTOptimizer.exe -gpuoc` ré-applique l'OC sauvegardé.
-- **RAM & CPU (diagnostic)** : l'overclock mémoire (XMP/EXPO) et CPU (multiplicateur/PBO)
-  **ne peut pas se faire depuis Windows** — c'est le BIOS. Le panneau **détecte** si ta
-  RAM tourne en-dessous de sa vitesse notée (→ active XMP) et si ton CPU est débloqué,
-  avec le conseil correspondant. Honnête plutôt que faux.
+- **CPU — boost maximal (v10.7)** : tout ce que Windows peut réellement donner, en un
+  clic — plan **Performances ultimes**, **turbo boost Agressif** (fréquence max immédiate),
+  **état minimal 100 %**, **déparcage de tous les cœurs**, et levée de tout **plafond de
+  fréquence** posé dans le plan. **Fréquence effective affichée EN DIRECT** (compteur
+  `% Processor Performance` × base) pour VOIR le turbo tenir, état ✓/○ de chaque levier,
+  rétablissement des défauts Windows d'un clic. Les deux nouveaux leviers (turbo Agressif,
+  déparcage) existent aussi en cases dans la liste principale (presets eSport/LATENCE MIN).
+  Aucune tension ni multiplicateur touchés — honnête : le vrai OC (PBO, multiplicateur)
+  reste au BIOS, le panneau détecte si ton CPU est débloqué et te dit quoi activer.
+- **RAM (diagnostic)** : détecte si la RAM tourne en-dessous de sa vitesse notée
+  (→ active XMP/EXPO au BIOS). Honnête plutôt que faux.
 
 > ⚠️ Un overclock, même borné, se **valide par un test de stabilité** (jeu prolongé ou
 > stress test). En cas d'artefacts ou de plantage : bouton **Réinitialiser**.
