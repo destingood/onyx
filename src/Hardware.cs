@@ -203,7 +203,8 @@ namespace BTOptimizer
             "lang_list_access_off", "voice_activation_off", "clipboard_cloud_off", "clipboard_history_off",
             "settings_sync_off", "search_history_off", "find_my_device_off", "spooler_off", "printnotify_off",
             "tablet_service_off", "sensor_service_off", "displayenhancement_off", "crash_dump_minimal",
-            "no_lock_screen", "llmnr_off", "ipv6_tunnels_off", "smb_throttle_off", "numlock_boot"
+            "no_lock_screen", "llmnr_off", "ipv6_tunnels_off", "smb_throttle_off", "numlock_boot",
+            "svchost_split_off"
         };
 
         /// <summary>Overload compat (niveau Équilibré).</summary>
@@ -249,12 +250,17 @@ namespace BTOptimizer
 
             // --- RAM (combinaison de pages = redémarrage : pas au niveau Prudent) ---
             if (hw.RamGB >= 16 && level >= LevelBalanced)
+            {
                 ids.Add("disable_paging_combining");
+                ids.Add("memory_compression_off");   // pile de compression = défauts de page durs « PID -1 »
+            }
             else
             {
                 ids.Remove("disable_paging_combining");
+                ids.Remove("memory_compression_off"); // peu de RAM : la compression évite de paginer sur disque
                 if (hw.RamGB < 16) ids.Remove("paging_executive");
             }
+            if (hw.RamGB < 8) ids.Remove("svchost_split_off");   // isolation svchost déjà quasi inactive
 
             // --- GPU ---
             bool nvidia = hw.GpuVendor != null && hw.GpuVendor.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -274,6 +280,8 @@ namespace BTOptimizer
                 ids.Remove("usb_suspend");
                 ids.Remove("pcie_aspm_off");
                 ids.Remove("disk_timeout_off");
+                ids.Remove("usb3_lpm_off");
+                ids.Remove("nic_interrupt_moderation_off");
             }
             else if (!hw.HasTouch && level >= LevelBalanced)
             {

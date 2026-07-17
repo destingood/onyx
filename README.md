@@ -58,6 +58,31 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### Latence v3 — 4 optimisations issues de la mesure réelle (v10.7)
+
+Quatre réglages ajoutés directement d'après ce que LATENCE EN DIRECT révèle,
+et intégrés au preset **Auto** (168 optimisations au total) :
+
+- **Compression mémoire coupée** (`memory_compression_off`) : la pile de
+  compression du noyau est le fameux **« PID -1 »** des défauts de page durs.
+  Avec 16 Go+ de RAM, l'Auto (Équilibré+) la désactive : plus de détour
+  compression/décompression en pleine partie.
+- **Modération d'interruptions réseau coupée** (`nic_interrupt_moderation_off`,
+  Équilibré+) : la carte réseau remonte chaque paquet immédiatement au lieu de
+  les grouper (~250 µs d'attente en moins, DPC `tcpip.sys` plus courts). Ping
+  plus stable en jeu ; les portables gardent la modération (batterie).
+- **Économie des liens USB 3 coupée** (`usb3_lpm_off`, Équilibré+) : les ports
+  USB 3 ne descendent plus en U1/U2 entre deux transferts — souris/clavier/casque
+  réveillés en permanence, en complément de la suspension sélective.
+- **Services svchost regroupés** (`svchost_split_off`, Agressif) : le seuil
+  d'isolation est relevé à la RAM installée → ~40 processus svchost de moins,
+  moins de commutations de contexte. Réversible (seuil Windows restauré).
+
+Et le moniteur balaie devant sa porte : pendant LATENCE EN DIRECT, l'app
+**verrouille un plancher de 96 Mo résidents** et monte la priorité de la pompe
+ETW — les défauts de page durs « BTOptimizer » vus dans les rapports (jusqu'à
+1,2 ms) disparaissent de la mesure.
+
 ### Habillage pro (v10.6)
 
 Interface au niveau d'un produit commercial, sans changer une seule habitude :

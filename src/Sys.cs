@@ -269,6 +269,94 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Compression mémoire (pile « PID -1 » des défauts de page durs).
+        //  Pas de valeur registre documentée : on passe par les cmdlets MMAgent,
+        //  l'interface officielle (l'app tourne déjà en administrateur).
+        // ------------------------------------------------------------------
+        private static string PowerShellExe()
+        {
+            return Sys32(@"WindowsPowerShell\v1.0\powershell.exe");
+        }
+
+        public static void SetMemoryCompression(bool enable)
+        {
+            string cmd = (enable ? "Enable-MMAgent" : "Disable-MMAgent") + " -MemoryCompression";
+            RunThrow(PowerShellExe(),
+                "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"" + cmd + "\"",
+                (enable ? "Réactivation" : "Désactivation") + " de la compression mémoire");
+        }
+
+        public static bool? MemoryCompressionOff()
+        {
+            NativeResult r = Run(PowerShellExe(),
+                "-NoProfile -NonInteractive -Command \"(Get-MMAgent).MemoryCompression\"");
+            if (r.ExitCode != 0) return null;
+            // Sortie attendue : « True » (compression active) ou « False » (coupée).
+            if (r.Output.IndexOf("False", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            if (r.Output.IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            return null;   // sans droits admin, Get-MMAgent ne répond pas
+        }
+
+        /// <summary>
+        /// Coupe (ou rétablit) la modération d'interruptions sur les adaptateurs réseau
+        /// qui exposent le réglage standard « *InterruptModeration » ("1" par défaut).
+        /// Pris en compte par le pilote au prochain redémarrage de l'adaptateur.
+        /// </summary>
+        public static void SetNicInterruptModeration(bool disable)
+        {
+            const string netClass = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
+            int touched = 0;
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(netClass))
+            {
+                if (rk == null) throw new Exception("Classe des adaptateurs réseau introuvable.");
+                foreach (string child in rk.GetSubKeyNames())
+                {
+                    int ignored;
+                    if (!int.TryParse(child, out ignored)) continue;
+                    try
+                    {
+                        using (RegistryKey ik = Registry.LocalMachine.OpenSubKey(netClass + "\\" + child, true))
+                        {
+                            if (ik == null) continue;
+                            if (ik.GetValue("NetCfgInstanceId") == null) continue;   // pas un adaptateur
+                            if (ik.GetValue("*InterruptModeration") == null) continue; // pilote sans ce réglage
+                            ik.SetValue("*InterruptModeration", disable ? "0" : "1", RegistryValueKind.String);
+                            touched++;
+                        }
+                    }
+                    catch { } // adaptateur protégé : on passe au suivant
+                }
+            }
+            if (touched == 0)
+                throw new Exception("Aucun adaptateur réseau n'expose la modération d'interruptions.");
+        }
+
+        public static bool? NicInterruptModerationOff()
+        {
+            const string netClass = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
+            bool found = false, allOff = true;
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(netClass))
+            {
+                if (rk == null) return null;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c))
+                    {
+                        if (ik == null || ik.GetValue("NetCfgInstanceId") == null) continue;
+                        object v = ik.GetValue("*InterruptModeration");
+                        if (v == null) continue;
+                        found = true;
+                        if (!StrEquals(v, "0")) allOff = false;
+                    }
+                }
+            }
+            if (!found) return null;
+            return allOff;
+        }
+
+        // ------------------------------------------------------------------
         //  Préférences GPU DirectX globales (Win11) — valeur à jetons
         //  "TokenA=1;TokenB=0;" : on modifie UN jeton sans toucher aux autres.
         // ------------------------------------------------------------------

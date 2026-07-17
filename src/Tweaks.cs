@@ -2132,6 +2132,64 @@ namespace BTOptimizer
                 }
             });
 
+            // ================= LOT v10.7 — LATENCE EN DIRECT =================
+            // Quatre réglages ciblés sur ce que la mesure ETW révèle réellement :
+            // défauts de page durs (PID -1 = pile de compression), DPC réseau,
+            // réveils USB et prolifération des processus svchost.
+
+            list.Add(new Tweak
+            {
+                Id = "memory_compression_off", Category = Cat.Systeme, Reboot = true,
+                Name = "Désactiver la compression mémoire (défauts de page durs du « PID -1 »)",
+                Desc = "La pile de compression du noyau compresse/décompresse la RAM en pleine partie : c'est elle qui apparaît en « PID -1 » dans les défauts de page durs de LATENCE EN DIRECT. Avec 16 Go+ de RAM, on la coupe : accès mémoire directs, sans détour CPU. « Rétablir » la réactive.",
+                Apply  = () => Sys.SetMemoryCompression(false),
+                Revert = () => Sys.SetMemoryCompression(true),
+                Check  = () => Sys.MemoryCompressionOff()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "nic_interrupt_moderation_off", Category = Cat.Reseau, Esport = true, Reboot = true,
+                Name = "Désactiver la modération d'interruptions réseau (paquet traité dès l'arrivée)",
+                Desc = "La carte réseau retient les paquets pour prévenir le CPU par lots (jusqu'à ~250 µs d'attente + DPC tcpip plus longs). Coupée, chaque paquet est remonté immédiatement : ping plus stable en jeu, léger surcoût CPU en gros transfert. Appliqué aux adaptateurs qui exposent le réglage.",
+                Apply  = () => Sys.SetNicInterruptModeration(true),
+                Revert = () => Sys.SetNicInterruptModeration(false),
+                Check  = () => Sys.NicInterruptModerationOff()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "usb3_lpm_off", Category = Cat.Alim, Esport = true,
+                Name = "Désactiver l'économie d'énergie des liens USB 3 (LPM U1/U2)",
+                Desc = "Les ports USB 3 ne redescendent plus en états d'économie U1/U2 entre deux transferts : souris, clavier et casque restent réveillés en permanence. Complète la suspension sélective USB ; à appliquer après le plan Performances ultimes. « Rétablir » remet les valeurs Windows.",
+                Apply  = () => Sys.SetPowerValue("2a737441-1930-4402-8d77-b2bebba308a3", "d4e98f31-5ffe-4ce1-be31-1b38b384c009", 0, 0),
+                Revert = () => Sys.SetPowerValue("2a737441-1930-4402-8d77-b2bebba308a3", "d4e98f31-5ffe-4ce1-be31-1b38b384c009", 2, 3),
+                Check  = () => Sys.PowerAcEquals("2a737441-1930-4402-8d77-b2bebba308a3", "d4e98f31-5ffe-4ce1-be31-1b38b384c009", 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "svchost_split_off", Category = Cat.Systeme, Reboot = true,
+                Name = "Regrouper les services Windows (moins de processus svchost)",
+                Desc = "Au-delà de 3,5 Go de RAM, Windows isole chaque service dans son propre processus (~80 svchost). En relevant le seuil à la RAM installée, les services se regroupent comme avant : moins de processus, de commutations de contexte et de RAM occupée. « Rétablir » remet le seuil Windows.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control" },
+                Apply = () =>
+                {
+                    long kb = Sys.QueryRam().TotalMB * 1024L;
+                    if (kb < 1024L * 1024) kb = 380000L;                     // RAM illisible : seuil par défaut
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB",
+                        (int)Math.Min(kb, int.MaxValue), RegistryValueKind.DWord);
+                },
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB",
+                    380000, RegistryValueKind.DWord),                        // défaut Windows (0x5CC00)
+                Check = () =>
+                {
+                    object v = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB");
+                    if (!(v is int)) return null;
+                    return (bool?)(unchecked((uint)(int)v) >= 4u * 1024 * 1024);   // ≥ 4 Go : services regroupés
+                }
+            });
+
             return list;
         }
     }

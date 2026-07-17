@@ -100,7 +100,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer 10.6 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer 10.7 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -543,7 +543,7 @@ namespace BTOptimizer
 
             // Puces : version, puis édition (PRO / essai) si active.
             int cx = x + (int)wm + 14;
-            cx += DrawChip(g, cx, 13, "v10.6", Color.FromArgb(0, 210, 130), false) + 6;
+            cx += DrawChip(g, cx, 13, "v10.7", Color.FromArgb(0, 210, 130), false) + 6;
             if (License.IsPro)
                 DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
             else if (License.TrialActive)

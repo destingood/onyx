@@ -60,9 +60,15 @@ namespace BTOptimizer
                 _session.Source.Kernel.MemoryHardFault += OnHardFault;
 
                 _startedUtc = DateTime.UtcNow;
+                // La mesure ne doit pas se polluer elle-même : plancher de mémoire résidente
+                // (sans lui, nos propres pages paginées ressortent en « BTOptimizer » dans les
+                // défauts de page durs) et pompe ETW au-dessus de la normale pour vider les
+                // tampons sans retard.
+                TryBoostResidency();
                 _thread = new Thread(() => { try { _session.Source.Process(); } catch { } });
                 _thread.IsBackground = true;
                 _thread.Name = "BT-EtwLive";
+                _thread.Priority = ThreadPriority.AboveNormal;
                 _thread.Start();
 
                 Running = true;
@@ -236,6 +242,30 @@ namespace BTOptimizer
                 _hfByPid.Clear();
                 _startedUtc = DateTime.UtcNow;
             }
+        }
+
+        // ------------------------------------------------------------------
+        //  Plancher de mémoire résidente : 96 Mo garantis en RAM (plafond souple),
+        //  posé une fois pour la durée de vie du processus.
+        // ------------------------------------------------------------------
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetProcessWorkingSetSizeEx(IntPtr process, IntPtr min, IntPtr max, uint flags);
+
+        private const uint QuotaLimitsHardwsMinEnable = 0x1;   // le minimum devient un vrai plancher
+        private const uint QuotaLimitsHardwsMaxDisable = 0x8;  // le maximum reste indicatif (peut grandir)
+        private static bool _residencyBoosted;
+
+        private static void TryBoostResidency()
+        {
+            if (_residencyBoosted) return;
+            try
+            {
+                _residencyBoosted = SetProcessWorkingSetSizeEx(
+                    System.Diagnostics.Process.GetCurrentProcess().Handle,
+                    (IntPtr)(96L * 1024 * 1024), (IntPtr)(512L * 1024 * 1024),
+                    QuotaLimitsHardwsMinEnable | QuotaLimitsHardwsMaxDisable);
+            }
+            catch { }
         }
 
         private void CleanupSession()
