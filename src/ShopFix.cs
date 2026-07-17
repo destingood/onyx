@@ -23,6 +23,7 @@ namespace BTOptimizer
             public bool DefaultCheck;                  // pré-coché dans la liste
             public bool NeedReboot;                    // la réparation demande un redémarrage
             public bool ClosesSteam;                   // la réparation ferme Steam (à confirmer)
+            public bool SecuritySensitive;             // retire une protection choisie (jamais pré-coché)
             public Action<Action<string, int>> Repair; // action de réparation (log niveau 0..3)
         }
 
@@ -57,14 +58,19 @@ namespace BTOptimizer
             "XblAuthManager", "XblGameSave", "XboxNetApiSvc", "XboxGipSvc"
         };
 
-        // Domaines de boutiques/lanceurs : une entrée hosts qui les envoie vers
-        // 0.0.0.0 / 127.0.0.1 (reste d'un guide « anti-pub/anti-télémétrie ») bloque tout.
-        private static readonly string[] StoreDomainTokens =
+        // Domaines de boutiques/lanceurs (suffixes exacts) : une entrée hosts qui les envoie
+        // vers 0.0.0.0 / 127.0.0.1 (reste d'un guide « anti-pub ») bloque boutique/connexion.
+        // Volontairement restreint aux domaines de JEU — on ne touche pas aux blocages
+        // télémétrie/pub génériques (microsoft.com, akamai...) qui peuvent être voulus.
+        private static readonly string[] StoreDomainSuffixes =
         {
-            "steampowered", "steamstatic", "steamcommunity", "steamcontent", "steamserver",
-            "epicgames", "unrealengine", "xboxlive", "xbox.com", "microsoft.com", "msftconnecttest",
-            "windowsupdate", "akamai", "riotgames", "rockstargames", "ea.com", "origin.com",
-            "battle.net", "blizzard", "ubisoft", "ubi.com", "playstation", "nintendo"
+            "steampowered.com", "steamstatic.com", "steamcommunity.com", "steamcontent.com",
+            "steamusercontent.com", "steamserver.net",
+            "epicgames.com", "unrealengine.com",
+            "xboxlive.com", "xbox.com", "xboxservices.com",
+            "riotgames.com", "rockstargames.com",
+            "ea.com", "origin.com", "battle.net", "blizzard.com",
+            "ubisoft.com", "ubi.com", "playstation.net", "playstation.com", "nintendo.net"
         };
 
         // ------------------------------------------------------------------
@@ -100,9 +106,11 @@ namespace BTOptimizer
             {
                 Id = "dns_filter",
                 Name = "DNS filtrant (anti-pub / anti-malware)",
-                Problem = bad, DefaultCheck = bad,
+                // Jamais pré-coché : ce résolveur a pu être choisi exprès (contrôle
+                // parental, anti-malware) — retirer cette protection reste TON choix.
+                Problem = bad, DefaultCheck = false, SecuritySensitive = bad,
                 Status = bad
-                    ? "détecté : " + string.Join(", ", found.ToArray()) + " — peut bloquer boutiques et CDN"
+                    ? "détecté : " + string.Join(", ", found.ToArray()) + " — peut bloquer boutiques/CDN ; coche pour revenir en automatique (retire ce filtre)"
                     : "aucun résolveur filtrant détecté",
                 Repair = delegate(Action<string, int> log)
                 {
@@ -122,12 +130,24 @@ namespace BTOptimizer
         {
             string t = line.Trim();
             if (t.Length == 0 || t.StartsWith("#")) return false;
-            string low = t.ToLowerInvariant();
-            if (!(low.StartsWith("0.0.0.0") || low.StartsWith("127.0.0.1") || low.StartsWith("::1 ") || low.StartsWith(":: ")))
-                return false;
-            // 127.0.0.1 localhost & co : jamais considérés bloquants
-            foreach (string token in StoreDomainTokens)
-                if (low.IndexOf(token, StringComparison.Ordinal) >= 0) return true;
+            int hash = t.IndexOf('#');                       // commentaire en fin de ligne
+            if (hash >= 0) t = t.Substring(0, hash).Trim();
+
+            string[] fields = t.ToLowerInvariant().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length < 2) return false;
+            string ip = fields[0];
+            if (ip != "0.0.0.0" && ip != "127.0.0.1" && ip != "::" && ip != "::1") return false;
+
+            // Correspondance par frontière de domaine (jamais de sous-chaîne brute) :
+            // « store.steampowered.com » oui, « korea.com » non pour « ea.com ».
+            for (int i = 1; i < fields.Length; i++)
+            {
+                string host = fields[i];
+                if (host == "localhost" || host == "localhost.localdomain") continue;
+                foreach (string suffix in StoreDomainSuffixes)
+                    if (host == suffix || host.EndsWith("." + suffix, StringComparison.Ordinal))
+                        return true;
+            }
             return false;
         }
 
@@ -164,9 +184,11 @@ namespace BTOptimizer
                     for (int i = 0; i < lines.Length; i++)
                         if (IsBlockingHostsLine(lines[i]))
                         {
+                            if (fixedCount < 10) log("hosts neutralisé : " + lines[i].Trim(), 0);
                             lines[i] = "# [DesTinGOOD boutiques] " + lines[i];
                             fixedCount++;
                         }
+                    if (fixedCount > 10) log("hosts : ... et " + (fixedCount - 10) + " autre(s) ligne(s).", 0);
                     if (fixedCount == 0) { log("hosts : rien à corriger.", 0); return; }
                     try
                     {

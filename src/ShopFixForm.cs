@@ -149,15 +149,17 @@ namespace BTOptimizer
                 return;
             }
 
-            bool closesSteam = false, needReboot = false;
+            bool closesSteam = false, needReboot = false, securitySensitive = false;
             foreach (ShopFix.Item it in sel)
             {
                 if (it.ClosesSteam) closesSteam = true;
                 if (it.NeedReboot) needReboot = true;
+                if (it.SecuritySensitive) securitySensitive = true;
             }
 
             string msg = "Réparer les " + sel.Count + " point(s) cochés ?";
             if (closesSteam) msg += "\n\n• Steam sera fermé proprement pour vider son cache web (les téléchargements en cours reprendront à la réouverture).";
+            if (securitySensitive) msg += "\n• Le DNS filtrant (anti-malware / contrôle parental) sera remis en AUTOMATIQUE : cette protection sera retirée.";
             if (needReboot) msg += "\n• Un point nécessite un REDÉMARRAGE pour prendre effet.";
             if (MessageBox.Show(this, msg, "Boutiques & contenu en jeu",
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
