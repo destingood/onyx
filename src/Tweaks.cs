@@ -1421,6 +1421,106 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("TabletInputService")
             });
 
+            // ================= LOT SUPPLÉMENTAIRE 2 =================
+            const string SubDisk   = "0012ee47-9041-4b5d-9b77-535fba8b1442";
+            const string DiskIdle  = "6738e2c4-e8a5-4a42-b16a-e040e769756e";
+
+            list.Add(new Tweak
+            {
+                Id = "disk_timeout_off", Category = Cat.Alim, Esport = true,
+                Name = "Ne jamais mettre les disques en veille (pas de micro-freeze au réveil)",
+                Desc = "Empêche l'arrêt automatique des disques : supprime le petit gel quand un disque « se réveille ». « Rétablir » remet 20 min (défaut).",
+                Apply  = () => Sys.SetPowerValue(SubDisk, DiskIdle, 0, 0),
+                Revert = () => Sys.SetPowerValue(SubDisk, DiskIdle, 1200, 1200),
+                Check  = () => Sys.PowerAcEquals(SubDisk, DiskIdle, 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "llmnr_off", Category = Cat.Reseau, Recommended = true,
+                Name = "Désactiver LLMNR (résolution multicast) — sécurité + latence",
+                Desc = "Coupe la résolution de noms multicast LLMNR : réduit une surface d'attaque connue et évite des requêtes réseau inutiles. Le DNS classique reste intact. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\DNSClient", "EnableMulticast", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\DNSClient", "EnableMulticast"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\DNSClient", "EnableMulticast"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "crash_dump_minimal", Category = Cat.Systeme,
+                Name = "Vidage mémoire minimal en cas de BSOD (moins de disque)",
+                Desc = "En cas d'écran bleu, Windows n'écrit qu'un petit fichier minidump au lieu d'un vidage complet (plus rapide, moins d'espace). « Rétablir » remet le vidage automatique.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled", 3, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled", 7, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled"), 3)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "first_logon_anim_off", Category = Cat.Rapidite,
+                Name = "Désactiver l'animation de première connexion",
+                Desc = "Supprime l'animation d'accueil (« Bonjour... ») à la première ouverture de session : connexion plus directe. « Rétablir » la réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableFirstLogonAnimation", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableFirstLogonAnimation", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableFirstLogonAnimation"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "low_disk_warning_off", Category = Cat.Rapidite,
+                Name = "Désactiver l'avertissement « disque presque plein »",
+                Desc = "Supprime la bulle d'avertissement d'espace disque faible. « Rétablir » la réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLowDiskSpaceChecks", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLowDiskSpaceChecks"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLowDiskSpaceChecks"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "numlock_boot", Category = Cat.Systeme,
+                Name = "Activer le Verr. Num au démarrage",
+                Desc = "Le pavé numérique est actif dès l'écran de connexion. « Rétablir » remet le comportement par défaut.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Keyboard" },
+                Apply  = () => Sys.SetUser(@"Control Panel\Keyboard", "InitialKeyboardIndicators", "2147483650", RegistryValueKind.String),
+                Revert = () => Sys.SetUser(@"Control Panel\Keyboard", "InitialKeyboardIndicators", "2147483648", RegistryValueKind.String),
+                Check  = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Keyboard", "InitialKeyboardIndicators"), "2147483650")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "find_my_device_off", Category = Cat.Privacy,
+                Name = "Désactiver « Localiser mon appareil »",
+                Desc = "Windows ne synchronise plus la position de l'appareil pour la localisation à distance. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Settings\FindMyDevice" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Settings\FindMyDevice", "LocationSyncEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Settings\FindMyDevice", "LocationSyncEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Settings\FindMyDevice", "LocationSyncEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "wersvc_off", Category = Cat.Services,
+                Name = "Désactiver le service Rapport d'erreurs Windows (WerSvc)",
+                Desc = "Arrête l'envoi automatique des rapports de plantage à Microsoft (moins de fond). « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("WerSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("WerSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("WerSvc")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "retail_demo_off", Category = Cat.Services,
+                Name = "Désactiver le service Mode Démo magasin (RetailDemo)",
+                Desc = "Coupe un service destiné aux PC de démonstration en magasin, inutile sur un PC personnel. « Rétablir » le remet à la demande.",
+                Apply  = () => Sys.ConfigureService("RetailDemo", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("RetailDemo", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("RetailDemo")
+            });
+
             return list;
         }
     }
