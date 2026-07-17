@@ -15,12 +15,16 @@ namespace BTOptimizer
         public string CpuName = "-";
         public bool CpuUnlocked;
         public int MaxHz;                // meilleure fréquence supportée parmi les écrans (500 Hz...)
+        public int ScreensBelowMax;      // écrans qui tournent SOUS leur fréquence max (à corriger)
         // Signaux additionnels pour l'auto-tune intelligent
         public bool IsLaptop;
         public bool IsWin11;
         public bool HasBluetooth;
         public bool HasPrinter;
         public bool HasTouch;
+        public bool HypervisorActive;    // VBS/Hyper-V en cours (coûte quelques % de CPU)
+        public int RamRatedMTs;          // vitesse max des barrettes (XMP)
+        public int RamRunningMTs;        // vitesse réellement configurée
 
         public string Summary()
         {
@@ -105,12 +109,29 @@ namespace BTOptimizer
             try
             {
                 foreach (DisplayInfo.DisplayMode d in DisplayInfo.Query())
+                {
                     if (d.MaxHz > hw.MaxHz) hw.MaxHz = d.MaxHz;
+                    if (d.BelowMax) hw.ScreensBelowMax++;
+                }
+            }
+            catch { }
+
+            // Hyperviseur actif (VBS / Hyper-V) : coûte quelques % de CPU en jeu.
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT HypervisorPresent FROM Win32_ComputerSystem"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        object hv = mo["HypervisorPresent"];
+                        if (hv != null && Convert.ToBoolean(hv)) hw.HypervisorActive = true;
+                    }
             }
             catch { }
 
             Sys.RamInfo ram = Sys.QueryRam();
             hw.RamGB = (int)Math.Round(ram.TotalMB / 1024.0);
+            hw.RamRatedMTs = ram.SpeedRated;
+            hw.RamRunningMTs = ram.SpeedRunning;
             Sys.CpuInfo cpu = Sys.QueryCpu();
             hw.CpuName = cpu.Name;
             string cl = (cpu.Name ?? "").ToLowerInvariant();

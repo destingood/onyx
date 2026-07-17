@@ -199,6 +199,15 @@ débloquent DANS chaque jeu (limite de FPS, V-Sync). Le panneau fait donc trois 
    Minecraft. Plus les règles d'or (V-Sync OFF, Reflex ON, presets compétitifs) et les
    réglages pilote NVIDIA/AMD (V-Sync off, pas de limiteur pilote, perfs max, anti-lag).
 
+**v10.1 — mode Auto conseiller & un clic** : le bouton Auto **retient ton dernier niveau**
+(marqué « ← dernier choix » en gras dans le menu), propose d'**appliquer immédiatement**
+la sélection (Oui/Non — Non laisse juste coché comme avant), et son journal devient un
+vrai conseiller : **RAM sous sa vitesse XMP** (« active XMP dans le BIOS » — gain gratuit),
+**écran sous sa fréquence max** (renvoie vers 🎯), **hyperviseur/VBS actif** (coût CPU,
+désactivable via le diagnostic — ton choix), **jeux compétitifs détectés** (priorité CPU
+Haute). Nouveaux signaux matériels : `HypervisorActive`, `RamRatedMTs/RamRunningMTs`,
+`ScreensBelowMax`.
+
 **v10.0 — le preset `Auto` connaît ton écran** : la détection matérielle lit désormais la
 **fréquence max des écrans** (affichée dans le résumé). Sur un écran **240 Hz+**, les
 niveaux **Équilibré/Agressif** d'`Auto (adapté à mon PC)` ajoutent le pack très hauts FPS

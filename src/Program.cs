@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.0.0.0")]
-[assembly: AssemblyFileVersion("10.0.0.0")]
+[assembly: AssemblyVersion("10.1.0.0")]
+[assembly: AssemblyFileVersion("10.1.0.0")]
 
 namespace BTOptimizer
 {
@@ -344,6 +344,9 @@ namespace BTOptimizer
             {
                 HwProfile hw = Hardware.Detect();
                 Console.WriteLine("  " + hw.Summary());
+                Console.WriteLine("  Signaux : hyperviseur=" + hw.HypervisorActive
+                    + " | RAM " + hw.RamRunningMTs + "/" + hw.RamRatedMTs + " MT/s"
+                    + " | écrans sous leur max=" + hw.ScreensBelowMax);
                 var prudent = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelPrudent);
                 var equil   = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelBalanced);
                 var aggro   = Hardware.AutoTuneIds(Catalog.All(), hw, Hardware.LevelAggressive);

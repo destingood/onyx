@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 10.0 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 10.1 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -363,10 +363,22 @@ namespace BTOptimizer
             _btnAuto.Click += (s, e) =>
             {
                 if (!RequirePro("Auto-tune")) return;
+                int last = Sys.LoadAutoLevel();
                 var m = new ContextMenuStrip();
-                m.Items.Add("Prudent — sûr, sans redémarrage", null, (a, b) => OnAutoTune(Hardware.LevelPrudent));
-                m.Items.Add("Équilibré — latence & perf (recommandé)", null, (a, b) => OnAutoTune(Hardware.LevelBalanced));
-                m.Items.Add("Agressif — maximum sûr (réversible)", null, (a, b) => OnAutoTune(Hardware.LevelAggressive));
+                string[] labels =
+                {
+                    "Prudent — sûr, sans redémarrage",
+                    "Équilibré — latence & perf (recommandé)",
+                    "Agressif — maximum sûr (réversible)"
+                };
+                for (int lvl = 0; lvl <= 2; lvl++)
+                {
+                    int captured = lvl;
+                    var item = new ToolStripMenuItem(labels[lvl] + (lvl == last ? "   ← dernier choix" : ""),
+                        null, (a, b) => OnAutoTune(captured));
+                    if (lvl == last) item.Font = new Font(Font, FontStyle.Bold);
+                    m.Items.Add(item);
+                }
                 m.Show(_btnAuto, new Point(0, _btnAuto.Height));
             };
             _btnBench.Click += (s, e) =>
@@ -610,6 +622,7 @@ namespace BTOptimizer
 
         private void OnAutoTune(int level)
         {
+            Sys.SaveAutoLevel(level);
             if (_hw == null) _hw = Hardware.Detect();
             var ids = Hardware.AutoTuneIds(_tweaks, _hw, level);
             ApplyPreset(t => ids.Contains(t.Id));
@@ -643,10 +656,38 @@ namespace BTOptimizer
                     + (ids.Contains("cpu_idle_disable") ? ", CPU sans veille (C-States off)" : "") + ").", 0);
             else if (_hw.MaxHz > 0)
                 Log("  • Écran : " + _hw.MaxHz + " Hz.", 0);
+            try
+            {
+                var games = GameScan.Known();
+                GameScan.Detect(games);
+                int found = games.Count(g => g.Detected);
+                if (found > 0)
+                    Log("  • Jeux : " + found + " jeu(x) compétitif(s) détecté(s) → priorité CPU « Haute » "
+                        + (ids.Contains("games_cpu_priority_high") ? "incluse." : "disponible dès le niveau Équilibré."), 0);
+            }
+            catch { }
+            if (_hw.RamRatedMTs > _hw.RamRunningMTs + 66 && _hw.RamRunningMTs > 0)
+                Log("  ! RAM à " + _hw.RamRunningMTs + " MT/s alors que tes barrettes gèrent " + _hw.RamRatedMTs
+                    + " : active le profil XMP/EXPO dans le BIOS — gain de FPS gratuit.", 2);
+            if (_hw.ScreensBelowMax > 0)
+                Log("  ! " + _hw.ScreensBelowMax + " écran(s) SOUS leur fréquence max — ouvre 🎯 Objectif 500 FPS (bouton ⬆ Passer à la fréquence max).", 2);
+            if (_hw.HypervisorActive)
+                Log("  • Hyperviseur/VBS actif : coûte quelques % de CPU en jeu — désactivable via Composants & diagnostic (compromis sécurité, ton choix).", 0);
             bool idleIncluded = ids.Contains("cpu_idle_disable");
             Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), recherche Windows, MSI stockage"
                 + (idleIncluded ? "." : ", CPU sans veille."), 2);
-            Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s). Vérifie puis clique APPLIQUER.", 1);
+            Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s).", 1);
+
+            List<Tweak> sel = Selection();
+            if (sel.Count > 0 && MessageBox.Show(this,
+                    "Appliquer maintenant les " + sel.Count + " optimisations cochées ?\n\n"
+                    + "Oui : application immédiate (sauvegarde .reg automatique).\n"
+                    + "Non : elles restent cochées, tu vérifies et appliques quand tu veux.",
+                    "Auto — niveau " + niveau, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Log("Application de la sélection Auto (" + sel.Count + " optimisations)...", 0);
+                RunOperation(sel, true);
+            }
         }
 
         private void FilterTweaks(string query)

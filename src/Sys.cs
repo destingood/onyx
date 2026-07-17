@@ -793,6 +793,31 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Dernier niveau Auto choisi (Prudent/Équilibré/Agressif)
+        // ------------------------------------------------------------------
+        private static string AutoLevelPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-autolevel.txt"); }
+        }
+
+        public static int LoadAutoLevel()
+        {
+            try
+            {
+                if (!File.Exists(AutoLevelPath)) return -1;
+                int v;
+                if (int.TryParse(File.ReadAllText(AutoLevelPath).Trim(), out v) && v >= 0 && v <= 2) return v;
+            }
+            catch { }
+            return -1;
+        }
+
+        public static void SaveAutoLevel(int level)
+        {
+            try { File.WriteAllText(AutoLevelPath, level.ToString()); } catch { }
+        }
+
+        // ------------------------------------------------------------------
         //  Profil (sélection sauvegardée) et gardien de démarrage
         // ------------------------------------------------------------------
         public static string ProfilePath
