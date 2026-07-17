@@ -1856,6 +1856,19 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("WalletService")
             });
 
+            // ================= OBJECTIF 500 FPS =================
+
+            list.Add(new Tweak
+            {
+                Id = "mmcss_no_lazy", Category = Cat.Systeme, Esport = true,
+                Name = "MMCSS : désactiver le mode paresseux (NoLazyMode)",
+                Desc = "Empêche le planificateur multimédia de regrouper ses réveils pour économiser l'énergie : il reste réactif en continu pendant le jeu. Cible les très hauts FPS (240-500 Hz). Expérimental, réversible.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" },
+                Apply  = () => Sys.SetMachine(MMKey, "NoLazyMode", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(MMKey, "NoLazyMode"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(MMKey, "NoLazyMode"), 1)
+            });
+
             return list;
         }
     }

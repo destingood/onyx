@@ -153,6 +153,30 @@ son service **MAPT** (pont réseau B2B via la prise LAN du moniteur, sans intér
 maison) : bouton **`Désactiver`** → fermeture de l'appli, retrait du démarrage
 automatique (Run, raccourcis, tâches planifiées) et arrêt + désactivation du service.
 
+### 🎯 Objectif 500 FPS — écran 500 Hz (v9.3)
+
+Bouton **`🎯 500 FPS`** (fenêtre principale) ou menu ☰ → *Objectif 500 FPS*. Principe
+honnête : **Windows ne « fabrique » pas des FPS, il enlève les freins** — les 500 FPS se
+débloquent DANS chaque jeu (limite de FPS, V-Sync). Le panneau fait donc trois choses :
+
+1. **L'écran d'abord** : liste chaque écran avec **Hz actuel vs Hz max** ; si l'écran
+   500 Hz tourne à 240, bouton **`⬆ Passer à 500 Hz`** (API `ChangeDisplaySettingsEx`,
+   testée avant application, **retour automatique en 12 s** si l'image disparaît —
+   même sécurité que Windows). Rappels câble DisplayPort/OSD et fréquence FIXE (pas DRR).
+2. **Freins Windows vérifiés en direct** (vert/orange) : plan d'alimentation, Power
+   Throttling, HAGS, Mode Jeu, Game DVR, optimisations plein écran, MPO, flip fenêtré,
+   SystemResponsiveness, **NoLazyMode** (nouveau tweak MMCSS v9.3), timer 1 ms — avec,
+   pour chaque point orange, la case exacte à cocher. Bouton **`⚡ Appliquer le pack
+   500 FPS`** : sélectionne et applique tout d'un coup (réversible, sauvegarde .reg).
+3. **Jeu par jeu** : détecte les jeux installés (Steam multi-bibliothèques, Riot, Epic,
+   Battle.net, clés de désinstallation — lecture seule, aucun fichier de jeu modifié)
+   et affiche pour chacun **la manip exacte qui débloque la limite de FPS** : CS2
+   (`fps_max 0`), VALORANT (Limiter les FPS : Non), Fortnite (Illimitée + mode
+   Performance), Overwatch 2 (Personnalisée → 500), Apex (`+fps_max unlimited`),
+   Call of Duty, LoL, Rocket League (`TASystemSettings.ini → MaxFPS=500`), R6 Siege,
+   Minecraft. Plus les règles d'or (V-Sync OFF, Reflex ON, presets compétitifs) et les
+   réglages pilote NVIDIA/AMD (V-Sync off, pas de limiteur pilote, perfs max, anti-lag).
+
 ## Dépôt git
 
 Le dossier est un dépôt git local (branche `main`). Les traces `.etl` (volumineuses,

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("9.2.0.0")]
-[assembly: AssemblyFileVersion("9.2.0.0")]
+[assembly: AssemblyVersion("9.3.0.0")]
+[assembly: AssemblyFileVersion("9.3.0.0")]
 
 namespace BTOptimizer
 {
@@ -196,6 +196,28 @@ namespace BTOptimizer
                         + (d.BelowMax ? "  << SOUS LE MAX" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Écrans ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Objectif 500 FPS (écran + jeux, lecture seule)...");
+            try
+            {
+                var games = GameScan.Known();
+                GameScan.Detect(games);
+                int found = 0;
+                foreach (var g in games) if (g.Detected) found++;
+                Console.WriteLine("  " + games.Count + " jeux connus, " + found + " détecté(s) sur ce PC :");
+                foreach (var g in games)
+                    if (g.Detected) Console.WriteLine("   - " + g.Name);
+                using (var f = new Fps500Form(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    var mi = typeof(Fps500Form).GetMethod("Reload",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi.Invoke(f, null);
+                    mi.Invoke(f, null);
+                }
+                Console.WriteLine("  UI Fps500Form : construite + 2x Reload + Dispose OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Objectif 500 FPS ERREUR : " + ex.Message); }
 
             Console.WriteLine("Audio & enceintes (lecture seule)...");
             try

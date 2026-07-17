@@ -43,10 +43,18 @@ namespace BTOptimizer
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern bool EnumDisplayDevices(string device, uint devNum, ref DISPLAY_DEVICE displayDevice, uint flags);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int ChangeDisplaySettingsEx(string deviceName, ref DEVMODE devMode, IntPtr hwnd, uint flags, IntPtr lParam);
+
         private const int ENUM_CURRENT_SETTINGS = -1;
+        private const uint DM_DISPLAYFREQUENCY = 0x400000;
+        private const uint CDS_TEST = 0x2;
+        private const uint CDS_UPDATEREGISTRY = 0x1;
+        private const int DISP_CHANGE_SUCCESSFUL = 0;
 
         public class DisplayMode
         {
+            public string Device;    // nom d'adaptateur Windows (\\.\DISPLAY1), pour ChangeDisplaySettingsEx
             public string Name;
             public int Width, Height;
             public int CurrentHz;
@@ -100,6 +108,7 @@ namespace BTOptimizer
 
                         list.Add(new DisplayMode
                         {
+                            Device = sc.DeviceName,
                             Name = MonitorName(sc.DeviceName, idx),
                             Width = w, Height = h, CurrentHz = hz, MaxHz = max, Primary = sc.Primary
                         });
@@ -110,6 +119,27 @@ namespace BTOptimizer
             }
             catch { }
             return list;
+        }
+
+        /// <summary>
+        /// Change la fréquence de rafraîchissement d'un écran (résolution inchangée).
+        /// Teste d'abord le mode (CDS_TEST) puis l'applique et le mémorise dans le registre.
+        /// Renvoie true si le mode a bien été appliqué.
+        /// </summary>
+        public static bool SetHz(string device, int hz)
+        {
+            if (string.IsNullOrEmpty(device) || hz <= 0) return false;
+            try
+            {
+                DEVMODE dm = NewDevMode();
+                if (!EnumDisplaySettings(device, ENUM_CURRENT_SETTINGS, ref dm)) return false;
+                dm.dmDisplayFrequency = (uint)hz;
+                dm.dmFields = DM_DISPLAYFREQUENCY;
+                if (ChangeDisplaySettingsEx(device, ref dm, IntPtr.Zero, CDS_TEST, IntPtr.Zero) != DISP_CHANGE_SUCCESSFUL)
+                    return false;
+                return ChangeDisplaySettingsEx(device, ref dm, IntPtr.Zero, CDS_UPDATEREGISTRY, IntPtr.Zero) == DISP_CHANGE_SUCCESSFUL;
+            }
+            catch { return false; }
         }
     }
 }

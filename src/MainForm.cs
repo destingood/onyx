@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
-        private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin;
+        private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin, _btnFps500;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _miPro;
         private TextBox _search;
@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 9.2 — Latence, input lag, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "BT Optimizer 9.3 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -166,6 +166,7 @@ namespace BTOptimizer
             _menu.Items.Add("Audio & enceintes (périphériques, améliorations)...", null, (s, e) => { using (var f = new AudioForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🎯 Objectif 500 FPS (écran 500 Hz)...", null, OnFps500Open);
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
@@ -241,8 +242,14 @@ namespace BTOptimizer
             _btnLatMin.Font = new Font("Segoe UI Semibold", 9f);
             _btnLatMin.FlatAppearance.BorderSize = 0;
             _btnLatMin.Click += OnLatencyMinimal;
+            _btnFps500 = MakeButton("🎯 500 FPS", 636, 104, 106, 28, false);
+            _btnFps500.BackColor = Color.FromArgb(200, 80, 0);
+            _btnFps500.ForeColor = Color.White;
+            _btnFps500.Font = new Font("Segoe UI Semibold", 9f);
+            _btnFps500.FlatAppearance.BorderSize = 0;
+            _btnFps500.Click += OnFps500Open;
             _search = new TextBox();
-            _search.SetBounds(360, 105, 380, 26);
+            _search.SetBounds(360, 105, 270, 26);
             _search.PlaceholderText = "Rechercher une optimisation (nom, catégorie, description)...";
             _search.TextChanged += (s, e) => FilterTweaks(_search.Text);
 
@@ -394,7 +401,7 @@ namespace BTOptimizer
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
-                _btnAuto, _btnBench, _btnLatMin, _search,
+                _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, _log
@@ -538,6 +545,42 @@ namespace BTOptimizer
             RunOperation(sel, true);
         }
 
+        /// <summary>Ouvre le panneau « Objectif 500 FPS » ; applique le pack si l'utilisateur l'a demandé depuis le panneau.</summary>
+        private void OnFps500Open(object sender, EventArgs e)
+        {
+            bool applyPack;
+            using (var f = new Fps500Form(Log))
+            {
+                f.ShowDialog(this);
+                applyPack = f.ApplyPackRequested;
+            }
+            if (applyPack) ApplyFps500Pack();
+        }
+
+        /// <summary>Pack 500 FPS : lève tous les freins Windows aux très hauts FPS (sélection eSport + timer 1 ms) et applique.</summary>
+        private void ApplyFps500Pack()
+        {
+            ApplyPreset(t => t.Esport);
+            if (!_chkTimer.Checked) _chkTimer.Checked = true;   // timer 1 ms immédiat
+            List<Tweak> sel = Selection();
+            if (sel.Count == 0) return;
+            int reboot = sel.Count(t => t.Reboot);
+            string msg = "Appliquer le pack 500 FPS ?\n\n"
+                + sel.Count + " optimisations qui lèvent les freins Windows aux très hauts FPS :\n"
+                + "• GPU : HAGS, vrai plein écran, MPO off, Mode Jeu, Game DVR off\n"
+                + "• CPU : Performances ultimes, turbo agressif, zéro throttling\n"
+                + "• planificateur : priorité au jeu, timer 1 ms, MMCSS réactif\n\n"
+                + "Rappel honnête : les 500 FPS se DÉBLOQUENT ensuite dans chaque jeu\n"
+                + "(limite de FPS → 500/illimitée, V-Sync off) — le panneau 🎯 te guide jeu par jeu.\n\n"
+                + "Tout est réversible (sauvegarde .reg automatique)."
+                + (reboot > 0 ? "\n" + reboot + " réglage(s) nécessitent un redémarrage." : "");
+            if (MessageBox.Show(this, msg, "🎯 Objectif 500 FPS",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            Log("Application du pack 500 FPS (" + sel.Count + " optimisations)...", 0);
+            RunOperation(sel, true);
+        }
+
         /// <summary>Renvoie true si Pro (ou si l'utilisateur active une licence à l'instant), sinon false.</summary>
         private bool RequirePro(string feature)
         {
@@ -665,7 +708,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin, _btnFps500 };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }
