@@ -242,6 +242,12 @@ namespace BTOptimizer
                     case FixKind.DisableSdm:
                         DisableSdm();
                         break;
+
+                    case FixKind.DisplaySettings:
+                        // Page « Affichage avancé » (choix de l'écran + fréquence de rafraîchissement)
+                        if (!StartShell("ms-settings:display-advanced", null))
+                            StartShell("ms-settings:display", null);
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }

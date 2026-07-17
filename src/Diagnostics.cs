@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -105,6 +105,23 @@ namespace BTOptimizer
                 f.Add(new Finding(1, "Timer système à " + t.ToString("0.0") + " ms — force 1 ms pour plus de réactivité.", FixKind.Timer1ms, "Forcer 1 ms"));
             else if (t > 0)
                 f.Add(new Finding(0, "Timer système à " + t.ToString("0.0") + " ms."));
+
+            // Écrans sous leur fréquence maximale (gros levier d'input lag, souvent oublié)
+            try
+            {
+                foreach (DisplayInfo.DisplayMode d in DisplayInfo.Query())
+                {
+                    if (d.BelowMax)
+                        f.Add(new Finding(1,
+                            "Écran " + d.Name + (d.Primary ? " (principal)" : "") + " à " + d.CurrentHz
+                            + " Hz alors qu'il supporte " + d.MaxHz + " Hz en " + d.Width + "×" + d.Height
+                            + " — règle-le au maximum.", FixKind.DisplaySettings, "Régler l'écran"));
+                    else
+                        f.Add(new Finding(0, "Écran " + d.Name + (d.Primary ? " (principal)" : "")
+                            + " à " + d.CurrentHz + " Hz (max " + d.MaxHz + " Hz : OK)."));
+                }
+            }
+            catch { }
 
             // Restauration système
             try

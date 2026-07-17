@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("8.6.0.0")]
-[assembly: AssemblyFileVersion("8.6.0.0")]
+[assembly: AssemblyVersion("8.7.0.0")]
+[assembly: AssemblyFileVersion("8.7.0.0")]
 
 namespace BTOptimizer
 {
@@ -170,6 +170,18 @@ namespace BTOptimizer
                         + (d.Fix != FixKind.None ? "   -> [bouton: " + d.FixLabel + " / " + d.Fix + "]" : ""));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Diagnostic ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Écrans (Hz actuel vs max)...");
+            try
+            {
+                var dms = DisplayInfo.Query();
+                Console.WriteLine("  " + dms.Count + " écran(s) :");
+                foreach (var d in dms)
+                    Console.WriteLine("   - " + d.Name + (d.Primary ? " [PRINCIPAL]" : "") + " : "
+                        + d.Width + "x" + d.Height + " @ " + d.CurrentHz + " Hz (max " + d.MaxHz + ")"
+                        + (d.BelowMax ? "  << SOUS LE MAX" : ""));
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Écrans ERREUR : " + ex.Message); }
 
             Console.WriteLine("Audio & enceintes (lecture seule)...");
             try

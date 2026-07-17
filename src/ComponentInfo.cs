@@ -181,12 +181,27 @@ namespace BTOptimizer
             var mon = new Section { Title = "Écrans" };
             try
             {
-                int i = 1;
-                foreach (Screen sc in Screen.AllScreens)
+                var modes = DisplayInfo.Query();
+                if (modes.Count > 0)
                 {
-                    mon.Add("Écran " + i + (sc.Primary ? " (principal)" : ""),
-                        sc.Bounds.Width + " × " + sc.Bounds.Height);
-                    i++;
+                    int i = 1;
+                    foreach (DisplayInfo.DisplayMode d in modes)
+                    {
+                        mon.Add("Écran " + i + (d.Primary ? " (principal)" : ""),
+                            d.Name + " — " + d.Width + " × " + d.Height + " @ " + d.CurrentHz + " Hz"
+                            + (d.BelowMax ? "  (max " + d.MaxHz + " Hz !)" : "  (max " + d.MaxHz + " Hz)"));
+                        i++;
+                    }
+                }
+                else
+                {
+                    int i = 1;
+                    foreach (Screen sc in Screen.AllScreens)
+                    {
+                        mon.Add("Écran " + i + (sc.Primary ? " (principal)" : ""),
+                            sc.Bounds.Width + " × " + sc.Bounds.Height);
+                        i++;
+                    }
                 }
             }
             catch { }
