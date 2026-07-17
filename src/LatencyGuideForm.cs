@@ -67,8 +67,10 @@ namespace BTOptimizer
             var bottom = new Panel { Dock = DockStyle.Bottom, Height = 46, Padding = new Padding(12, 7, 12, 7) };
             var scr = MakeBtn("Réglages écran...", 150, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
+            _tip.SetToolTip(scr, "Ouvre l'Affichage avancé : choisis l'écran et sa fréquence de rafraîchissement maximale.");
             var gpu = MakeBtn("Panneau NVIDIA...", 150, DockStyle.Left);
             gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
+            _tip.SetToolTip(gpu, "Ouvre le panneau NVIDIA (G-Sync, faible latence, fréquence préférée).");
             var refresh = MakeBtn("Rafraîchir", 100, DockStyle.Left);
             refresh.Click += (s, e) => Reload();
             var close = MakeBtn("Fermer", 90, DockStyle.Right);
@@ -112,7 +114,6 @@ namespace BTOptimizer
             if (level != 2) it.Font = _bold;
             var sub = it.SubItems.Add(advice);
             sub.ForeColor = c;
-            _tip.SetToolTip(_list, advice);
             _list.Items.Add(it);
         }
 
