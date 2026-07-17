@@ -92,6 +92,14 @@ applications qui présentent (clic = suivre ; dwm/explorer grisés, un jeu est
 sélectionné automatiquement). Idéal pour vérifier qu'un déblocage de limite de
 FPS (panneau 🎯) a fonctionné — et voir les vrais 500 FPS s'afficher.
 
+**v10.6 — compteur amélioré** : **gros affichage du FPS** dans la bannière,
+nouvelle métrique **0,1 % low** (les pires micro-saccades, comme dans les
+benchmarks) en tuile et en colonne, tuiles arrondies mises à jour sans
+clignotement, graphique sur carte avec **grille graduée en ms** et échelle
+lissée, **export CSV des frametimes** (~20 s de frames, ouvrable dans Excel),
+et **mode compact 📌** : petite fenêtre épinglée au-dessus du jeu (nom, gros
+FPS, verdict), réversible d'un clic.
+
 ### Latence EN DIRECT — précision LatencyMon (v9.5)
 
 Menu ☰ → **Latence EN DIRECT (DPC/ISR par pilote)**. Contrairement à la mesure

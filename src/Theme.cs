@@ -300,7 +300,17 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static void Apply(Control root)
         {
+            // 1) Classification d'après les couleurs POSÉES PAR LA FENÊTRE, avant tout
+            //    recoloriage : sinon les panneaux sans couleur explicite héritent du fond
+            //    sombre du formulaire déjà recoloré et se font prendre pour des bandeaux.
+            try { Classify(root); } catch { }
             try { Walk(root, false); } catch { }
+        }
+
+        private static void Classify(Control c)
+        {
+            RoleOf(c);
+            foreach (Control ch in c.Controls) Classify(ch);
         }
 
         private static void Walk(Control c, bool inHeader)
@@ -557,6 +567,10 @@ namespace BTOptimizer
         //  assortis au thème (les lignes restent rendues par Windows, donc
         //  les couleurs par pilote/état des fenêtres sont conservées).
         // ------------------------------------------------------------------
+        private sealed class ListExtra { public int LastColWidth; }
+        private static readonly ConditionalWeakTable<ListView, ListExtra> Lists =
+            new ConditionalWeakTable<ListView, ListExtra>();
+
         private static void WireList(ListView lv)
         {
             try { lv.BorderStyle = BorderStyle.None; } catch { }
@@ -564,6 +578,35 @@ namespace BTOptimizer
             lv.DrawColumnHeader += OnDrawListHeader;
             lv.DrawItem += OnDrawListDefault;
             lv.DrawSubItem += OnDrawListSubDefault;
+            // La dernière colonne absorbe l'espace restant (sinon la zone d'en-tête
+            // à droite garde le fond clair natif). La largeur d'origine reste le minimum.
+            var extra = new ListExtra();
+            extra.LastColWidth = lv.Columns.Count > 0 ? lv.Columns[lv.Columns.Count - 1].Width : 0;
+            Lists.Add(lv, extra);
+            lv.Resize += OnListResize;
+            StretchLastColumn(lv);
+        }
+
+        private static void OnListResize(object sender, EventArgs e)
+        {
+            StretchLastColumn((ListView)sender);
+        }
+
+        private static void StretchLastColumn(ListView lv)
+        {
+            try
+            {
+                if (lv.View != View.Details || lv.Columns.Count == 0) return;
+                ListExtra extra;
+                if (!Lists.TryGetValue(lv, out extra)) return;
+                int sum = 0;
+                for (int i = 0; i < lv.Columns.Count - 1; i++) sum += lv.Columns[i].Width;
+                int want = lv.ClientSize.Width - sum - 4;
+                ColumnHeader last = lv.Columns[lv.Columns.Count - 1];
+                int target = Math.Max(extra.LastColWidth, want);
+                if (last.Width != target) last.Width = target;
+            }
+            catch { }
         }
 
         private static void OnDrawListHeader(object sender, DrawListViewColumnHeaderEventArgs e)
