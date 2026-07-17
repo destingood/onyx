@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Audio & enceintes";
+            Text = "DesTinGOOD — Audio & enceintes";
             ClientSize = new Size(660, 500);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(580, 420);

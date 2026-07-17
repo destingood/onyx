@@ -26,7 +26,15 @@ namespace BTOptimizer
 
         static Theme()
         {
-            try { Dark = File.Exists(StorePath) && File.ReadAllText(StorePath).Trim() == "dark"; } catch { Dark = false; }
+            // Sombre par défaut (identité gaming DesTinGOOD) ; le choix de l'utilisateur,
+            // une fois fait, est respecté (bt-theme.txt).
+            try
+            {
+                Dark = File.Exists(StorePath)
+                    ? File.ReadAllText(StorePath).Trim() == "dark"
+                    : true;
+            }
+            catch { Dark = true; }
             LoadTokens();
         }
 

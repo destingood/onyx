@@ -945,7 +945,7 @@ namespace BTOptimizer
                 using (ManagementClass mc = new ManagementClass(scope, path, new ObjectGetOptions()))
                 using (ManagementBaseObject inParams = mc.GetMethodParameters("CreateRestorePoint"))
                 {
-                    inParams["Description"] = "BT Optimizer";
+                    inParams["Description"] = "DesTinGOOD";
                     inParams["RestorePointType"] = (uint)12; // MODIFY_SETTINGS
                     inParams["EventType"] = (uint)100;       // BEGIN_SYSTEM_CHANGE
                     using (ManagementBaseObject outParams = mc.InvokeMethod("CreateRestorePoint", inParams, null))

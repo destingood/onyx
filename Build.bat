@@ -1,5 +1,5 @@
 @echo off
-title Compilation BT Optimizer (.NET 10)
+title Compilation DesTinGOOD (.NET 10)
 setlocal
 cd /d "%~dp0"
 
@@ -21,7 +21,7 @@ if %errorlevel% neq 0 (
 
 echo Fermeture de l'app si elle tourne...
 taskkill /IM BTOptimizer.exe /F >nul 2>&1
-taskkill /IM dotnet.exe /FI "WINDOWTITLE eq BT Optimizer*" /F >nul 2>&1
+taskkill /IM dotnet.exe /FI "WINDOWTITLE eq DesTinGOOD*" /F >nul 2>&1
 
 echo.
 echo Compilation .NET 10 (compatible Smart App Control)...

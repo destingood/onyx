@@ -33,7 +33,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Composants & diagnostic";
+            Text = "DesTinGOOD — Composants & diagnostic";
             ClientSize = new Size(660, 580);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 480);
@@ -302,11 +302,11 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("CoreSync : échec (" + ex.Message + ").", 3); }
             if (n > 0)
                 MessageBox.Show(this, "Samsung CoreSync neutralisé (" + n + " action(s)) : appli fermée et/ou démarrage automatique coupé.",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
             else
                 MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
                     + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Reload();
         }
 
@@ -326,7 +326,7 @@ namespace BTOptimizer
             MessageBox.Show(this,
                 n > 0 ? "Samsung Display Manager neutralisé (" + n + " action(s))."
                       : "Rien à faire : l'appli ne tournait pas et aucun démarrage automatique ni service MAPT n'a été trouvé.",
-                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Reload();
         }
 
@@ -357,12 +357,12 @@ namespace BTOptimizer
                         bool ok = res != null && !res.PrepFailed && res.Ok > 0 && res.Ko == 0;
                         if (ok)
                             MessageBox.Show(this, "Intégrité de la mémoire désactivée.\nRedémarre pour que le changement prenne effet.",
-                                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         else
                         {
                             string why = res == null ? "erreur inconnue"
                                 : (res.PrepFailed ? res.PrepError : "l'écriture registre a échoué (droits administrateur requis)");
-                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "BT Optimizer",
+                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "DesTinGOOD",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }));

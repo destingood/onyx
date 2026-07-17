@@ -1,6 +1,13 @@
-# BT Optimizer
+# DesTinGOOD Optimizer
 
-Application Windows 10/11 pour réduire l'**input lag**, la **latence** et accélérer le PC, avec **cases à cocher** : chaque optimisation est optionnelle et réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**.
+*(anciennement « BT Optimizer » — v10.3 : rebranding. Les fichiers techniques gardent leurs
+noms — `BTOptimizer.exe/.dll`, `Lancer-BTOptimizer.bat`, `bt-*.txt`, sauvegardes — pour que
+lanceurs, licences, profils et gardien continuent de fonctionner sans rien casser.)*
+
+Application Windows 10/11 pour le **gaming** : viser les **500 FPS**, réduire l'**input lag**
+et la **latence**, avec **cases à cocher** : chaque optimisation est optionnelle et
+réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**. Thème
+sombre par défaut (basculable dans le menu ☰).
 
 ## ⭐ Lancement : `Lancer-BTOptimizer.bat`  (compatible Smart App Control)
 

@@ -12,7 +12,7 @@ namespace BTOptimizer
 
         public LicenseKeyForm(string feature)
         {
-            Text = "BT Optimizer — Version Pro";
+            Text = "DesTinGOOD — Version Pro";
             ClientSize = new Size(520, 300);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -77,7 +77,7 @@ namespace BTOptimizer
                     if (License.StartTrial())
                     {
                         MessageBox.Show(this, "Essai Pro activé : " + License.TrialDaysLeft + " jours. Toutes les fonctions sont débloquées.",
-                            "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         DialogResult = DialogResult.OK; Close();
                     }
                 };
@@ -101,7 +101,7 @@ namespace BTOptimizer
             if (License.Activate(_key.Text, true))
             {
                 MessageBox.Show(this, "Merci ! Édition Pro activée pour : " + License.Licensee,
-                    "BT Optimizer Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 DialogResult = DialogResult.OK;
                 Close();
             }

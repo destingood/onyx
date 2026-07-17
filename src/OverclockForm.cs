@@ -34,7 +34,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Overclock automatique";
+            Text = "DesTinGOOD — Overclock automatique";
             ClientSize = new Size(660, 690);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -273,7 +273,7 @@ namespace BTOptimizer
             else if (Sys.OcGuardExists()) Sys.SetOcGuard(false, Application.ExecutablePath, _log);
             _gpu = Sys.QueryGpuOc();
             MessageBox.Show(this, "Power limit GPU appliqué (fréquences gérées par le pilote).",
-                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnApplyNvidia(object sender, EventArgs e)
@@ -295,7 +295,7 @@ namespace BTOptimizer
                     Cursor = Cursors.Default;
                     if (btn != null) btn.Enabled = true;
                     MessageBox.Show(this, "Profil NVIDIA appliqué. Certains réglages prennent effet au prochain lancement du jeu.",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -309,7 +309,7 @@ namespace BTOptimizer
             _gpu = Sys.QueryGpuOc();
             UpdatePlLabel();
             MessageBox.Show(this, "GPU remis aux réglages par défaut du constructeur.",
-                "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

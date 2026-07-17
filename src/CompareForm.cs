@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Comparaison AVANT / APRÈS";
+            Text = "DesTinGOOD — Comparaison AVANT / APRÈS";
             ClientSize = new Size(980, 620);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(780, 480);

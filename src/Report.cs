@@ -59,10 +59,10 @@ namespace BTOptimizer
             var html = new StringBuilder();
             html.Append("<!doctype html><html lang='fr'><head><meta charset='utf-8'>");
             html.Append("<meta name='viewport' content='width=device-width, initial-scale=1'>");
-            html.Append("<title>BT Optimizer — Rapport de configuration</title><style>");
+            html.Append("<title>DesTinGOOD — Rapport de configuration</title><style>");
             html.Append(Css());
             html.Append("</style></head><body><div class='wrap'>");
-            html.Append("<header><div class='brand'>BT Optimizer</div><div class='sub'>Rapport de configuration · ").Append(date).Append("</div></header>");
+            html.Append("<header><div class='brand'>DesTinGOOD</div><div class='sub'>Rapport de configuration · ").Append(date).Append("</div></header>");
             html.Append(head);
             html.Append(body);
             html.Append("<footer>Logiciel fourni « en l'état », sans garantie. Non affilié à Microsoft, NVIDIA, AMD ou Intel. Toutes les modifications sont réversibles depuis l'application.</footer>");

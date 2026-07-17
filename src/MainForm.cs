@@ -95,7 +95,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "BT Optimizer 10.2 — Latence, input lag, 500 FPS, rapidité, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer 10.3 — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
             ClientSize = new Size(900, 800);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -110,14 +110,14 @@ namespace BTOptimizer
             header.BackColor = HeaderBg;
 
             var title = new Label();
-            title.Text = "BT Optimizer";
+            title.Text = "DesTinGOOD";
             title.SetBounds(16, 8, 400, 30);
             title.Font = new Font("Segoe UI Semibold", 15f);
             title.ForeColor = Color.White;
             title.BackColor = HeaderBg;
 
             var sub = new Label();
-            sub.Text = "Cochez les optimisations, survolez pour les détails, puis Appliquer. Tout est réversible (sauvegarde .reg automatique).";
+            sub.Text = "Optimiseur gaming — 500 FPS, latence minimale. Coche, survole pour les détails, APPLIQUER. Tout est réversible (.reg auto).";
             sub.SetBounds(18, 38, 860, 18);
             sub.Font = new Font("Segoe UI", 8.5f);
             sub.ForeColor = Color.FromArgb(170, 175, 185);
@@ -144,7 +144,7 @@ namespace BTOptimizer
             _btnMenu.Click += (s, e) => _menu.Show(_btnMenu, new Point(0, _btnMenu.Height));
 
             _menu = new ContextMenuStrip();
-            _menu.Items.Add("À propos de BT Optimizer", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _menu.Items.Add("À propos de DesTinGOOD", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
             _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
             {
                 using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
@@ -162,15 +162,18 @@ namespace BTOptimizer
             miDark.Checked = Theme.Dark;
             _menu.Items.Add(miDark);
             _menu.Items.Add(new ToolStripSeparator());
+            // --- Les panneaux vedettes (500 FPS, mesure temps réel) ---
+            _menu.Items.Add("🎯 Objectif 500 FPS (écran 500 Hz)...", null, OnFps500Open);
+            _menu.Items.Add("📈 FPS EN DIRECT (par jeu, façon PresentMon)...", null,
+                (s, e) => { using (var f = new FpsMonForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("⏱ Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)...", null,
+                (s, e) => { using (var f = new LiveMonForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add(new ToolStripSeparator());
+            // --- Outils système ---
             _menu.Items.Add("Composants & diagnostic du système...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Audio & enceintes (périphériques, améliorations)...", null, (s, e) => { using (var f = new AudioForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🎯 Objectif 500 FPS (écran 500 Hz)...", null, OnFps500Open);
-            _menu.Items.Add("Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)...", null,
-                (s, e) => { using (var f = new LiveMonForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("FPS EN DIRECT (par jeu, façon PresentMon)...", null,
-                (s, e) => { using (var f = new FpsMonForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
@@ -190,6 +193,8 @@ namespace BTOptimizer
                 System.Threading.Tasks.Task.Run(() => Sys.NetworkRepair(Log));
             });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add(new ToolStripSeparator());
+            // --- Maintenance ---
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
             _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
             _menu.Items.Add("Ouvrir le journal (fichier)", null, (s, e) =>
@@ -198,7 +203,7 @@ namespace BTOptimizer
                 {
                     string p = System.IO.Path.Combine(Application.StartupPath, "bt-optimizer-log.txt");
                     if (System.IO.File.Exists(p)) Process.Start("notepad.exe", "\"" + p + "\"");
-                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch { }
             });
@@ -407,11 +412,11 @@ namespace BTOptimizer
             // Zone de notification : réduire la fenêtre garde l'app (et le timer 1 ms) active.
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "BT Optimizer";
+            _tray.Text = "DesTinGOOD";
             _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("Ouvrir BT Optimizer", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
             _tray.ContextMenuStrip = trayMenu;
 
@@ -450,7 +455,7 @@ namespace BTOptimizer
                 string tip = Native.TimerActive
                     ? "Toujours actif — le timer 1 ms reste maintenu. Double-clic pour rouvrir."
                     : "Toujours actif en arrière-plan. Double-clic pour rouvrir.";
-                _tray.ShowBalloonTip(2500, "BT Optimizer", tip, ToolTipIcon.Info);
+                _tray.ShowBalloonTip(2500, "DesTinGOOD", tip, ToolTipIcon.Info);
             }
         }
 
@@ -729,7 +734,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Aucune optimisation cochée.", "BT Optimizer",
+                MessageBox.Show(this, "Aucune optimisation cochée.", "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -747,7 +752,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "BT Optimizer",
+                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -778,7 +783,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this,
                     "Une erreur est survenue avant l'application :\n\n" + res.PrepError,
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             else if (res.RebootNeeded)
             {
@@ -894,7 +899,7 @@ namespace BTOptimizer
             if (!System.IO.Directory.Exists(tools))
             {
                 MessageBox.Show(this, "Aucun dossier « tools ». Lance d'abord une capture (Mesurer latence → ETW).",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var files = new System.IO.DirectoryInfo(tools).GetFiles("dpcisr-*.txt");
@@ -902,7 +907,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this, "Il faut au moins 2 rapports DPC/ISR dans « tools » pour comparer.\n" +
                     "Fais deux captures (Mesurer latence → Oui à l'ETW), avant et après tes changements.",
-                    "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             Array.Sort(files, (a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
@@ -1000,7 +1005,7 @@ namespace BTOptimizer
                     RefreshStates();
                     Log("Réinitialisation terminée.", 1);
                     MessageBox.Show(this, "Toutes les optimisations ont été rétablies aux valeurs Windows.\nUn redémarrage est conseillé.",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -1058,7 +1063,7 @@ namespace BTOptimizer
                 if (sel.Count == 0)
                 {
                     MessageBox.Show(this, "Coche d'abord les optimisations à inclure dans ton profil,\npuis active le gardien.",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _guardEventSuppressed = true;
                     _chkGuard.Checked = false;
                     _guardEventSuppressed = false;

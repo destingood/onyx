@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Guide latence & perf";
+            Text = "DesTinGOOD — Guide latence & perf";
             ClientSize = new Size(660, 560);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 460);

@@ -1,5 +1,5 @@
 ; ============================================================================
-;  Installateur BT Optimizer (Inno Setup 6.3+)
+;  Installateur DesTinGOOD (Inno Setup 6.3+)
 ;
 ;  Compilation (le plus simple) : double-clic sur ..\Build-Installer.bat
 ;  Manuel :  1) publie l'app :  dotnet publish -c Release -o dist
@@ -10,7 +10,7 @@
 ;  et propose la page de téléchargement s'il est absent.
 ; ============================================================================
 
-#define AppName "BT Optimizer"
+#define AppName "DesTinGOOD"
 #define AppExe "BTOptimizer.exe"
 ; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
 #ifexist "..\dist\BTOptimizer.exe"
@@ -18,7 +18,7 @@
 #else
   #define AppVersion "7.9.0.0"
 #endif
-#define AppPublisher "BT Optimizer"
+#define AppPublisher "DesTinGOOD"
 #define AppURL "https://example.com"
 
 [Setup]
@@ -55,7 +55,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Components]
-Name: "app";    Description: "Application BT Optimizer";                                        Types: full compact custom; Flags: fixed
+Name: "app";    Description: "Application DesTinGOOD";                                        Types: full compact custom; Flags: fixed
 Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfileInspector)";     Types: full
 
 [Files]
@@ -126,7 +126,7 @@ begin
     Exit;
 
   case MsgBox('Le .NET Desktop Runtime 10 (x64) est requis et ne semble pas installé.' + #13#10 +
-              'BT Optimizer ne pourra pas démarrer sans lui.' + #13#10#13#10 +
+              'DesTinGOOD ne pourra pas démarrer sans lui.' + #13#10#13#10 +
               '« Oui »  : ouvrir la page de téléchargement (rubrique « .NET Desktop Runtime »),' + #13#10 +
               '             installe le runtime puis relance ce programme.' + #13#10 +
               '« Non »  : installer quand même.' + #13#10 +

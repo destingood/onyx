@@ -32,7 +32,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Analyse de latence DPC/ISR";
+            Text = "DesTinGOOD — Analyse de latence DPC/ISR";
             ClientSize = new Size(960, 660);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(760, 520);
@@ -260,7 +260,7 @@ namespace BTOptimizer
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "Lecture impossible :\n" + ex.Message, "BT Optimizer",
+                    MessageBox.Show(this, "Lecture impossible :\n" + ex.Message, "DesTinGOOD",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -282,7 +282,7 @@ namespace BTOptimizer
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "Comparaison impossible :\n" + ex.Message, "BT Optimizer",
+                    MessageBox.Show(this, "Comparaison impossible :\n" + ex.Message, "DesTinGOOD",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -310,12 +310,12 @@ namespace BTOptimizer
                         d.Module, d.DpcCount, d.DpcMaxUs, d.IsrCount, d.IsrMaxUs,
                         d.DpcTotalUs + d.IsrTotalUs, d.Description));
                 File.WriteAllText(outPath, sb.ToString(), System.Text.Encoding.UTF8);
-                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "BT Optimizer",
+                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "BT Optimizer",
+                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

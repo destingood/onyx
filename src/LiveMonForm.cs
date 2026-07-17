@@ -43,7 +43,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "BT Optimizer — Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)";
+            Text = "DesTinGOOD — Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)";
             ClientSize = new Size(980, 680);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(780, 540);
@@ -157,7 +157,7 @@ namespace BTOptimizer
                 _verdict.BackColor = Red;
                 _verdictTitle.Text = "Session noyau impossible";
                 _verdictDetail.Text = "Cause : " + (_etw.LastError ?? "inconnue")
-                    + ". Lance BT Optimizer en administrateur (clic droit → Exécuter en tant qu'administrateur).";
+                    + ". Lance DesTinGOOD en administrateur (clic droit → Exécuter en tant qu'administrateur).";
                 if (_log != null) _log("Latence en direct : session ETW refusée (" + (_etw.LastError ?? "?") + ").", 2);
                 _etw.Dispose();
                 _etw = null;
@@ -312,12 +312,12 @@ namespace BTOptimizer
                         d.DpcCount > 0 ? (double)d.DpcTotalUs / d.DpcCount : 0,
                         d.IsrCount, d.IsrMaxUs, (d.DpcTotalUs + d.IsrTotalUs) / 1000.0, d.Description));
                 File.WriteAllText(outPath, sb.ToString(), System.Text.Encoding.UTF8);
-                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "BT Optimizer",
+                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "BT Optimizer",
+                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "DesTinGOOD",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

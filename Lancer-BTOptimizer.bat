@@ -1,5 +1,5 @@
 @echo off
-title BT Optimizer
+title DesTinGOOD
 setlocal
 cd /d "%~dp0"
 

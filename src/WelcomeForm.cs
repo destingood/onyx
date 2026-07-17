@@ -19,7 +19,7 @@ namespace BTOptimizer
         {
             Choice = StartAction.Open;
 
-            Text = "Bienvenue dans BT Optimizer";
+            Text = "Bienvenue dans DesTinGOOD";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -31,7 +31,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 96, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "BT Optimizer", Location = new Point(22, 20), AutoSize = true,
+                Text = "DesTinGOOD", Location = new Point(22, 20), AutoSize = true,
                 ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 20f), BackColor = Color.Transparent
             });
             banner.Controls.Add(new Label

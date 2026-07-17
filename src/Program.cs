@@ -3,13 +3,13 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("BT Optimizer")]
-[assembly: AssemblyProduct("BT Optimizer")]
+[assembly: AssemblyTitle("DesTinGOOD Optimizer")]
+[assembly: AssemblyProduct("DesTinGOOD Optimizer")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.2.0.0")]
-[assembly: AssemblyFileVersion("10.2.0.0")]
+[assembly: AssemblyVersion("10.3.0.0")]
+[assembly: AssemblyFileVersion("10.3.0.0")]
 
 namespace BTOptimizer
 {
@@ -32,8 +32,8 @@ namespace BTOptimizer
             {
                 if (!isNew)
                 {
-                    MessageBox.Show("BT Optimizer est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
-                        "BT Optimizer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("DesTinGOOD est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -47,8 +47,8 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "BT Optimizer a rencontré une erreur et va se fermer :\n\n" + ex,
-                        "BT Optimizer — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "DesTinGOOD a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "DesTinGOOD — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 GC.KeepAlive(mutex);
             }
@@ -68,7 +68,7 @@ namespace BTOptimizer
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Sys.Init();
-            Console.WriteLine("BT Optimizer TEST — contexte :");
+            Console.WriteLine("DesTinGOOD TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
             Console.WriteLine("  SID cible      : " + Sys.TargetSid);
