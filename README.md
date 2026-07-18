@@ -88,6 +88,12 @@ boutique intégrée d'un jeu ne s'ouvre plus **ou que les jeux crashent/figent**
   AutoDownload du Store → retirées (jeux Store/Game Pass qui se connectent à nouveau).
 - **IPv6 bridé** (DisabledComponents), **proxy fantôme** (WinINET + WinHTTP),
   **heure Windows** (certificats TLS) → remis d'aplomb.
+- **Mur pare-feu tiers (SysHardener & co)** : des dizaines de règles « Bloquer » en
+  sortie, programme par programme — le jeu tourne mais ses processus web (boutique,
+  launcher, monnaies en « Connexion… ») sont coupés dans TOUS les jeux. Détection par
+  groupe de règles (jamais les règles système), **désactivation d'un clic sans rien
+  supprimer** (réactivable à l'identique). Jamais pré-coché : retirer un durcissement
+  volontaire reste ton choix.
 - **Cache web Steam** (boutique, overlay, inventaire — `htmlcache`/`httpcache`) : LE
   remède classique ; Steam est fermé proprement (`-shutdown`), le cache vidé, et il se
   reconstruit au lancement suivant. + **vidage du cache DNS** en un clic.

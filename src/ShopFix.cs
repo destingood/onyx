@@ -89,6 +89,7 @@ namespace BTOptimizer
             items.Add(CheckStorePolicy());
             items.Add(CheckIpv6());
             items.Add(CheckProxy());
+            items.Add(CheckFirewallBlocks());
             items.Add(CheckTime());
             items.Add(CheckSteamCache());
             items.Add(FlushDnsItem());
@@ -467,6 +468,104 @@ namespace BTOptimizer
                     Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings", "AutoConfigURL");
                     Sys.Run(Sys.Sys32("netsh.exe"), "winhttp reset proxy");
                     log("Proxy système désactivé (WinINET + WinHTTP remis en accès direct).", 1);
+                }
+            };
+        }
+
+        // --- 9bis. Mur pare-feu sortant posé par un durcisseur tiers ----------
+        // SysHardener & co posent des dizaines de règles « Bloquer » en sortie,
+        // programme par programme : le jeu tourne, mais ses processus web
+        // (boutique intégrée, launcher, overlay) sont muets → « boutique en
+        // cours de mise à jour » / monnaies en « Connexion... » dans TOUS les
+        // jeux. On détecte les gros groupes de blocage (jamais les règles
+        // système « @... ») et on propose de les DÉSACTIVER — rien n'est
+        // supprimé, tout est réactivable à l'identique.
+        private const string FwRulesKey =
+            @"SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\FirewallRules";
+        private const int FwWallMin = 5;   // en dessous : règles isolées, pas un « mur »
+
+        private static string FwFieldOf(string rule, string field)
+        {
+            int i = rule.IndexOf("|" + field + "=", StringComparison.OrdinalIgnoreCase);
+            if (i < 0) return null;
+            i += field.Length + 2;
+            int j = rule.IndexOf('|', i);
+            return j > i ? rule.Substring(i, j - i) : rule.Substring(i);
+        }
+
+        /// <summary>Groupes de règles sortantes « Bloquer » ACTIVES (hors groupes système « @... »).</summary>
+        private static Dictionary<string, int> OutboundBlockGroups()
+        {
+            var groups = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(FwRulesKey))
+                {
+                    if (k == null) return groups;
+                    foreach (string name in k.GetValueNames())
+                    {
+                        string rule = k.GetValue(name) as string;
+                        if (rule == null) continue;
+                        if (rule.IndexOf("|Action=Block|", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        if (rule.IndexOf("|Dir=Out|", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        if (rule.IndexOf("|Active=TRUE|", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        string group = FwFieldOf(rule, "EmbedCtxt");
+                        if (string.IsNullOrEmpty(group) || group.StartsWith("@")) continue; // règles système
+                        int n;
+                        groups.TryGetValue(group, out n);
+                        groups[group] = n + 1;
+                    }
+                }
+            }
+            catch { }
+            return groups;
+        }
+
+        private static Item CheckFirewallBlocks()
+        {
+            Dictionary<string, int> groups = OutboundBlockGroups();
+            var walls = new List<string>();
+            int total = 0;
+            foreach (KeyValuePair<string, int> g in groups)
+                if (g.Value >= FwWallMin)
+                {
+                    walls.Add("« " + g.Key + " » (" + g.Value + " règles)");
+                    total += g.Value;
+                }
+
+            bool bad = total > 0;
+            return new Item
+            {
+                Id = "fw_blocks",
+                Name = "Pare-feu : mur de blocage sortant tiers (SysHardener…)",
+                // Jamais pré-coché : ce durcissement a pu être installé exprès —
+                // le désactiver reste TON choix (Windows Defender reste actif).
+                Problem = bad, DefaultCheck = false, SecuritySensitive = bad,
+                Status = bad
+                    ? total + " règle(s) « Bloquer » en sortie : " + string.Join(" · ", walls.ToArray())
+                      + " — le jeu tourne mais ses processus web (boutique/launcher) sont coupés ; "
+                      + "coche pour DÉSACTIVER ces groupes (rien n'est supprimé, réactivable)"
+                    : "aucun mur de blocage sortant tiers détecté",
+                Repair = delegate(Action<string, int> log)
+                {
+                    int done = 0;
+                    foreach (KeyValuePair<string, int> g in OutboundBlockGroups())
+                    {
+                        if (g.Value < FwWallMin) continue;
+                        NativeResult r = Sys.Run(Sys.Sys32("netsh.exe"),
+                            "advfirewall firewall set rule group=\"" + g.Key + "\" new enable=no");
+                        if (r.ExitCode == 0)
+                        {
+                            done++;
+                            log("Pare-feu : groupe « " + g.Key + " » désactivé (" + g.Value
+                                + " règles) — réactivable avec la même commande netsh et enable=yes.", 1);
+                        }
+                        else
+                            log("Pare-feu : groupe « " + g.Key + " » — échec netsh (code " + r.ExitCode + ").", 2);
+                    }
+                    log(done > 0
+                        ? "Mur sortant désactivé, rien n'est supprimé. Quitte complètement le launcher (zone de notification) puis relance : la boutique doit charger."
+                        : "Pare-feu : aucun groupe de blocage à désactiver.", done > 0 ? 1 : 0);
                 }
             };
         }
