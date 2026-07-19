@@ -58,6 +58,23 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🌐 DNS v2 — benchmark jeux, IPv6 et filet de sécurité (v11.1)
+
+Le panneau **DNS rapide** passe en v2 :
+
+- **Benchmark parallèle « spécial jeux »** : chaque fournisseur est testé sur ses
+  **2 serveurs** × 3 domaines (google + steampowered + riotgames), en parallèle
+  (~5 s au total). Tableau trié **médiane / pire cas / filtre**, clic sur une ligne
+  = sélection ; le conseillé (le plus rapide **sans filtre**) est fléché en gras.
+- **9 résolveurs** dont les variantes **SANS filtre** que personne ne connaît :
+  Quad9 9.9.9.10, AdGuard 94.140.14.140, OpenDNS — et les filtrants clairement
+  marqués « (filtre) » avec avertissement boutiques.
+- **IPv4 + IPv6 appliqués ensemble** (netsh pour l'IPv6, échecs tolérés) — fini le
+  DNS moderne à moitié appliqué. « Automatique » remet les DEUX en DHCP.
+- **FILET DE SÉCURITÉ** : après application, l'app interroge réellement le nouveau
+  résolveur ; s'il ne répond pas depuis ton réseau, **retour automatique** aux
+  réglages précédents (photo par carte) — impossible de se retrouver sans internet.
+
 ### 📦 Bibliothèques & applis de jeu (v11.0)
 
 ☰ → **Bibliothèques de jeu manquantes (vcruntime, DirectX…) & applis** — un jeu qui

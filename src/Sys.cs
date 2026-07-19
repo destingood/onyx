@@ -1278,6 +1278,95 @@ namespace BTOptimizer
             Run(Sys32("ipconfig.exe"), "/flushdns");
         }
 
+        /// <summary>Photo des DNS IPv4 par carte (Description → serveurs ; null = automatique/DHCP).</summary>
+        public static Dictionary<string, string[]> SnapshotDns()
+        {
+            var snap = new Dictionary<string, string[]>();
+            try
+            {
+                using (var mos = new ManagementObjectSearcher(
+                    "SELECT Description, DNSServerSearchOrder FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
+                {
+                    foreach (ManagementObject mo in mos.Get())
+                    {
+                        string desc = Convert.ToString(mo["Description"]);
+                        if (string.IsNullOrEmpty(desc) || snap.ContainsKey(desc)) continue;
+                        string[] dns = mo["DNSServerSearchOrder"] as string[];
+                        snap[desc] = (dns != null && dns.Length > 0) ? dns : null;
+                    }
+                }
+            }
+            catch { }
+            return snap;
+        }
+
+        /// <summary>Restaure une photo de DNS IPv4 carte par carte (filet de sécurité du panneau DNS).</summary>
+        public static void RestoreDnsSnapshot(Dictionary<string, string[]> snap, Action<string, int> log)
+        {
+            int done = 0;
+            try
+            {
+                using (var mos = new ManagementObjectSearcher(
+                    "SELECT * FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
+                {
+                    foreach (ManagementObject mo in mos.Get())
+                    {
+                        string desc = Convert.ToString(mo["Description"]);
+                        string[] servers;
+                        if (string.IsNullOrEmpty(desc) || !snap.TryGetValue(desc, out servers)) continue;
+                        try
+                        {
+                            using (ManagementBaseObject inp = mo.GetMethodParameters("SetDNSServerSearchOrder"))
+                            {
+                                inp["DNSServerSearchOrder"] = servers; // null => automatique
+                                using (mo.InvokeMethod("SetDNSServerSearchOrder", inp, null)) { done++; }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+            FlushDns();
+            if (log != null) log("DNS précédents restaurés sur " + done + " carte(s).", done > 0 ? 1 : 2);
+        }
+
+        /// <summary>
+        /// Applique des DNS IPv6 (null = retour DHCP/RA) sur les interfaces actives via netsh.
+        /// Échecs tolérés : une interface sans IPv6 est simplement ignorée.
+        /// </summary>
+        public static void SetDnsV6(string[] servers, Action<string, int> log)
+        {
+            int done = 0;
+            try
+            {
+                foreach (System.Net.NetworkInformation.NetworkInterface ni in
+                         System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback ||
+                        ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Tunnel) continue;
+
+                    string name = ni.Name.Replace("\"", "");
+                    if (servers == null)
+                    {
+                        if (Run(Sys32("netsh.exe"),
+                                "interface ipv6 set dnsservers name=\"" + name + "\" source=dhcp").ExitCode == 0) done++;
+                        continue;
+                    }
+                    bool ok = Run(Sys32("netsh.exe"),
+                        "interface ipv6 set dnsservers name=\"" + name + "\" source=static address=" + servers[0] + " validate=no").ExitCode == 0;
+                    for (int i = 1; ok && i < servers.Length; i++)
+                        Run(Sys32("netsh.exe"),
+                            "interface ipv6 add dnsservers name=\"" + name + "\" address=" + servers[i] + " index=" + (i + 1) + " validate=no");
+                    if (ok) done++;
+                }
+            }
+            catch { }
+            if (log != null && done > 0)
+                log((servers == null ? "DNS IPv6 remis en automatique" : "DNS IPv6 appliqué") + " sur " + done + " interface(s).", 1);
+        }
+
         /// <summary>Réparation réseau standard (vide le cache DNS, réinitialise Winsock et la pile TCP/IP). Redémarrage requis.</summary>
         public static void NetworkRepair(Action<string, int> log)
         {
