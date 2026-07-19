@@ -210,6 +210,8 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
                 (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🧹 Réglages néfastes d'autres optimiseurs (à annuler)...", null,
+                (s, e) => { using (var f = new CheckupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🌡️ Températures & throttling (ta carte bride-t-elle ?)...", null,
                 (s, e) => { using (var f = new ThermalForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🔍 Qui ralentit mon PC ? (processus & logiciels de fond)...", null,

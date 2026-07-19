@@ -58,6 +58,24 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🧹 Réglages néfastes d'autres optimiseurs (v11.4)
+
+☰ → **Réglages néfastes d'autres « optimiseurs »** — l'anti-poison. Beaucoup de guides
+« boost FPS » et d'outils douteux laissent des réglages **dangereux** ; ce panneau les
+détecte (lecture locale) et remet les valeurs saines de Windows, chacun réversible :
+
+- **Timer HPET forcé** (`bcdedit useplatformclock`) — ajoute de la latence, mythe tenace.
+- **Récupération GPU désactivée** (`TdrLevel=0`) — un simple accroc GPU **fige tout** au
+  lieu de récupérer : cause directe de freezes/crashs.
+- **Windows Defender coupé par politique** (scripts « debloat ») — PC sans antivirus.
+- **Fichier d'échange désactivé** — plantages et « out of memory » en jeu.
+- **TRIM SSD désactivé** — use le SSD et ralentit les écritures.
+- **Effacer le pagefile à l'arrêt** — arrêt du PC très lent, aucun gain.
+- **Grand cache système** (`LargeSystemCache=1`) — vole de la RAM aux jeux.
+
+Les problèmes sont pré-cochés ⚠ ; « aucun réglage néfaste détecté » est aussi un bon
+résultat (ton PC n'a pas été abîmé).
+
 ### 🌡️🔍 Températures/throttling & « Qui ralentit mon PC ? » (v11.3)
 
 - **🌡️ Températures & throttling** — ☰ → surveillance EN DIRECT : température/fréquence/

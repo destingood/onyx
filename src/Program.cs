@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("11.3.0.0")]
-[assembly: AssemblyFileVersion("11.3.0.0")]
+[assembly: AssemblyVersion("11.4.0.0")]
+[assembly: AssemblyFileVersion("11.4.0.0")]
 
 namespace BTOptimizer
 {
@@ -435,6 +435,10 @@ namespace BTOptimizer
                 Console.WriteLine("  UI ThermalForm : construite OK.");
                 using (var f = new BloatForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI BloatForm : construite OK.");
+                int bad = 0; foreach (Checkup.Item it in Checkup.Analyze()) if (it.Problem) bad++;
+                Console.WriteLine("  Réglages néfastes détectés : " + bad);
+                using (var f = new CheckupForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI CheckupForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Réseau/souris/thermique ERREUR : " + ex.Message); }
 
