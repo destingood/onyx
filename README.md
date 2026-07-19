@@ -58,6 +58,15 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🖴 Optimiser les lecteurs (v11.9)
+
+☰ → **Optimiser les lecteurs (TRIM SSD / défrag HDD)** — la maintenance disque que les
+mauvais « optimiseurs » cassent souvent. Windows choisit automatiquement le **RE-TRIM**
+sur SSD (préserve les performances dans la durée) ou la **défragmentation** sur disque dur
+mécanique (chargements plus rapides), et l'app **réactive la tâche planifiée** si elle avait
+été désactivée. Le panneau **🧹 Réglages néfastes** détecte aussi désormais cette tâche
+coupée et la remet en place.
+
 ### 🎮 Priorité CPU par jeu (v11.8)
 
 ☰ → **Priorité CPU par jeu** — jusqu'ici la priorité « Haute » s'appliquait en bloc à tous

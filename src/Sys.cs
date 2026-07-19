@@ -1414,6 +1414,38 @@ namespace BTOptimizer
             log("Réparation d'intégrité Windows terminée.", 1);
         }
 
+        private const string DefragTask = @"\Microsoft\Windows\Defrag\ScheduledDefrag";
+
+        /// <summary>
+        /// Optimise tous les lecteurs fixes : defrag /O choisit tout seul le RE-TRIM (SSD) ou
+        /// la défragmentation (HDD). Réactive aussi la tâche planifiée si un « optimiseur » l'a
+        /// coupée. Peut durer plusieurs minutes sur un disque dur mécanique.
+        /// </summary>
+        public static void OptimizeDrives(Action<string, int> log)
+        {
+            // Réactive la maintenance planifiée si elle a été désactivée.
+            if (ScheduledTaskDisabled(DefragTask) == true)
+            {
+                SetScheduledTask(DefragTask, true);
+                log("Optimisation planifiée des lecteurs réactivée (elle avait été désactivée).", 1);
+            }
+
+            foreach (DriveInfo d in DriveInfo.GetDrives())
+            {
+                try
+                {
+                    if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
+                    string letter = d.Name.TrimEnd('\\');   // "C:"
+                    log("Optimisation de " + letter + " (RE-TRIM si SSD, défrag si HDD)...", 0);
+                    NativeResult r = Run(Sys32("defrag.exe"), letter + " /O");
+                    log(letter + " : " + (r.ExitCode == 0 ? "optimisé. ✔" : "code " + r.ExitCode + " (peut nécessiter un autre passage)."),
+                        r.ExitCode == 0 ? 1 : 2);
+                }
+                catch (Exception ex) { log("Optimisation lecteur : " + ex.Message, 2); }
+            }
+            log("Optimisation des lecteurs terminée.", 1);
+        }
+
         // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------

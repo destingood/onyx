@@ -39,8 +39,29 @@ namespace BTOptimizer
                 DefenderDisabled(),
                 PagefileDisabled(),
                 TrimDisabled(),
+                ScheduledDefragOff(),
                 ClearPageFile(),
                 LargeSystemCache(),
+            };
+        }
+
+        private const string DefragTask = @"\Microsoft\Windows\Defrag\ScheduledDefrag";
+
+        // Maintenance disque planifiée coupée (SSD non re-TRIMé, HDD non défragmenté) : classique des « debloat ».
+        private static Item ScheduledDefragOff()
+        {
+            bool off = Sys.ScheduledTaskDisabled(DefragTask) == true;
+            return new Item
+            {
+                Name = "Optimisation planifiée des lecteurs désactivée",
+                Problem = off,
+                Status = off ? "DÉSACTIVÉE — SSD plus re-TRIMé, HDD plus défragmenté (perfs disque qui se dégradent)"
+                             : "active (bon)",
+                Fix = delegate(Action<string, int> log)
+                {
+                    Sys.SetScheduledTask(DefragTask, true);
+                    log("Optimisation planifiée des lecteurs réactivée.", 1);
+                }
             };
         }
 

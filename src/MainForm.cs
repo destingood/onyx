@@ -219,6 +219,7 @@ namespace BTOptimizer
             _menu.Items.Add("💾 Jeux & disques (SSD/HDD, espace, chargements)...", null,
                 (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
+            _menu.Items.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
             _menu.Items.Add("🧹 Réglages néfastes d'autres optimiseurs (à annuler)...", null,
                 (s, e) => { using (var f = new CheckupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🌡️ Températures & throttling (ta carte bride-t-elle ?)...", null,
@@ -1438,6 +1439,20 @@ namespace BTOptimizer
                 _btnBoost.Text = "▶ MODE JEU";
                 _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
             }
+        }
+
+        private void OnOptimizeDrives(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Optimiser tous les lecteurs fixes ?\n\n"
+                    + "Windows choisit automatiquement : RE-TRIM sur les SSD (préserve les performances), "
+                    + "défragmentation sur les disques durs mécaniques (chargements plus rapides).\n\n"
+                    + "• Réactive aussi la maintenance planifiée si un « optimiseur » l'avait coupée.\n"
+                    + "• Quelques minutes ; peut être plus long sur un HDD. Suis le journal.",
+                    "Optimiser les lecteurs", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            Log("Optimisation des lecteurs démarrée...", 0);
+            Task.Run(() => Sys.OptimizeDrives(Log));
         }
 
         private void OnRepairWindows(object sender, EventArgs e)
