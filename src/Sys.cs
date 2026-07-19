@@ -977,6 +977,52 @@ namespace BTOptimizer
             }
         }
 
+        // ------------------------------------------------------------------
+        //  Exclusions Windows Defender (API WMI officielle, nécessite l'élévation)
+        // ------------------------------------------------------------------
+        private static ManagementScope DefenderScope()
+        {
+            var scope = new ManagementScope(@"\\.\root\Microsoft\Windows\Defender");
+            scope.Connect();
+            return scope;
+        }
+
+        /// <summary>Dossiers actuellement exclus de l'analyse Defender (vide si illisible).</summary>
+        public static List<string> DefenderExclusions()
+        {
+            var list = new List<string>();
+            try
+            {
+                using (var s = new ManagementObjectSearcher(DefenderScope(),
+                    new ObjectQuery("SELECT ExclusionPath FROM MSFT_MpPreference")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string[] paths = mo["ExclusionPath"] as string[];
+                        if (paths != null) foreach (string p in paths) if (!string.IsNullOrEmpty(p)) list.Add(p);
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        private static bool DefenderInvoke(string method, string path, Action<string, int> log)
+        {
+            try
+            {
+                using (var mc = new ManagementClass(DefenderScope(), new ManagementPath("MSFT_MpPreference"), null))
+                using (ManagementBaseObject inParams = mc.GetMethodParameters(method))
+                {
+                    inParams["ExclusionPath"] = new[] { path };
+                    using (mc.InvokeMethod(method, inParams, null)) { }
+                }
+                return true;
+            }
+            catch (Exception ex) { if (log != null) log("Defender (" + method + ") : " + ex.Message, 2); return false; }
+        }
+
+        public static bool DefenderAddExclusion(string path, Action<string, int> log) { return DefenderInvoke("Add", path, log); }
+        public static bool DefenderRemoveExclusion(string path, Action<string, int> log) { return DefenderInvoke("Remove", path, log); }
+
         public class RestorePoint { public int Seq; public string Description; public DateTime When; public int Type; }
 
         /// <summary>Liste les points de restauration système existants (plus récents d'abord).</summary>

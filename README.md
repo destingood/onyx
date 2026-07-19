@@ -58,6 +58,15 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🔐 Exclusions antivirus pour les jeux (v12.5)
+
+☰ → **Exclusions antivirus pour les jeux** — Windows Defender analyse les fichiers de jeu à
+chaque accès, ce qui cause des **micro-saccades** et rallonge les chargements. Le panneau
+liste tes **jeux détectés** (avec leur dossier), montre lesquels sont déjà exclus, et permet
+d'**exclure/ré-inclure** chaque dossier en un clic via l'API officielle Defender (WMI).
+Honnête sur le compromis : n'exclus que des installations de jeux **sûres**, et c'est
+**entièrement réversible**.
+
 ### 🧪 Benchmark rapide (v12.4)
 
 ☰ → **Benchmark rapide** — mesure la **puissance** de ton PC en ~7 s (distinct de l'analyse

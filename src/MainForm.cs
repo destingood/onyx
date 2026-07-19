@@ -218,6 +218,8 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new DisplayForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🎮 Priorité CPU par jeu (booste ton jeu principal)...", null,
                 (s, e) => { using (var f = new GameProfileForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🔐 Exclusions antivirus pour les jeux (moins de saccades)...", null,
+                (s, e) => { using (var f = new DefenderForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("💾 Jeux & disques (SSD/HDD, espace, chargements)...", null,
                 (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
