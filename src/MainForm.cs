@@ -183,6 +183,8 @@ namespace BTOptimizer
             // --- Outils système ---
             _menu.Items.Add("🏥 SANTÉ DE MON PC — le bilan en un coup d'œil (score /100)...", null,
                 (s, e) => { using (var f = new HealthForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🧪 Benchmark rapide (puissance CPU / mémoire / disque)...", null,
+                (s, e) => { using (var f = new BenchForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Composants & diagnostic du système...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Audio & enceintes (périphériques, améliorations)...", null, (s, e) => { using (var f = new AudioForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });

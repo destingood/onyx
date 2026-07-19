@@ -58,6 +58,14 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🧪 Benchmark rapide (v12.4)
+
+☰ → **Benchmark rapide** — mesure la **puissance** de ton PC en ~7 s (distinct de l'analyse
+de latence) : **CPU** sur 1 cœur et sur tous les cœurs (Mops/s), **bande passante mémoire**
+(Go/s), **disque système** en lecture/écriture (Mo/s). Verdict indicatif — détecte notamment
+un **disque dur mécanique** (lecture < 150 Mo/s → conseille le passage sur SSD). Parfait pour
+**comparer avant/après** une optimisation, ou deux PC entre eux. Résultats journalisés.
+
 ### 📄 Rapport HTML = audit complet (v12.3)
 
 Le bouton **Rapport** produit désormais un vrai **audit** exportable (page HTML autonome,
