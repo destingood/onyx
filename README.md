@@ -58,6 +58,20 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🌡️🔍 Températures/throttling & « Qui ralentit mon PC ? » (v11.3)
+
+- **🌡️ Températures & throttling** — ☰ → surveillance EN DIRECT : température/fréquence/
+  puissance GPU (nvidia-smi), charge/température CPU, et surtout les **RAISONS de bridage
+  signalées par le pilote** — ralentissement **thermique** ou **frein d'alimentation**.
+  Verdict clair : GPU trop chaud (nettoyage/flux d'air/power limit) vs alim insuffisante
+  (câbles/PSU) vs sous contrôle. C'est LA cause fréquente des « dispositif de rendu perdu »
+  et des chutes de FPS soudaines — teste en lançant un jeu à côté.
+- **🔍 Qui ralentit mon PC ?** — ☰ → top des processus par **CPU (mesuré sur 1 s)** et RAM,
+  avec repérage des **logiciels de fond connus** étiquetés par catégorie : 🎨 RGB (iCUE,
+  G HUB, Armoury Crate, Synapse, SignalRGB…), 🚀 lanceurs (Epic, EA, Ubisoft, Battle.net,
+  GOG…), 🌐 navigateurs, 💬 overlays (Overwolf, Discord), ☁️ cloud (OneDrive, Dropbox).
+  Fermeture optionnelle, confirmée, **jamais sur un process système**.
+
 ### 📶🖱️ Qualité réseau, fréquence souris, MODE JEU AUTO (v11.2)
 
 - **📶 Qualité réseau en jeu** — ☰ → mesure la latence, la **gigue** (variation du
