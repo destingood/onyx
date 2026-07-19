@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📄 Rapport HTML = audit complet (v12.3)
+
+Le bouton **Rapport** produit désormais un vrai **audit** exportable (page HTML autonome,
+thème sombre soigné, ouvrable dans le navigateur et imprimable en PDF) : en plus de l'état
+des 173 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
+crashs pilote GPU (14 j), écrans bleus, réglages néfastes à corriger, bibliothèques de jeu
+manquantes, points de restauration, espace disque — avec pastilles vertes/rouges. Le
+livrable **avant/après** idéal pour montrer ton travail à un client (généré en arrière-plan
+pour ne pas figer la fenêtre).
+
 ### 📈 Historique de santé — vois tes progrès (v12.2)
 
 Le tableau de bord **🏥 Santé de mon PC** devient évolutif : chaque bilan est **mémorisé**

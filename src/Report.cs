@@ -64,6 +64,7 @@ namespace BTOptimizer
             html.Append("</style></head><body><div class='wrap'>");
             html.Append("<header><div class='brand'>DesTinGOOD</div><div class='sub'>Rapport de configuration · ").Append(date).Append("</div></header>");
             html.Append(head);
+            html.Append(Diagnostic());
             html.Append(body);
             html.Append("<footer>Logiciel fourni « en l'état », sans garantie. Non affilié à Microsoft, NVIDIA, AMD ou Intel. Toutes les modifications sont réversibles depuis l'application.</footer>");
             html.Append("</div></body></html>");
@@ -73,6 +74,41 @@ namespace BTOptimizer
         private static string Card(string label, string value)
         {
             return "<div class='card'><div class='k'>" + value + "</div><div class='l'>" + label + "</div></div>";
+        }
+
+        // Section « Diagnostic santé » : audit rapide (crashs, réglages néfastes, bibliothèques, restauration, disque).
+        private static string Diagnostic()
+        {
+            int nvl = 0, bsod = 0, badTweaks = 0, libMissing = 0, restorePts = 0;
+            double freeGB = -1, pct = -1;
+            try { nvl = CrashScan.CountProvider("nvlddmkm", 14); } catch { }
+            try { bsod = CrashScan.Bsod(14); } catch { }
+            try { foreach (Checkup.Item it in Checkup.Analyze()) if (it.Problem) badTweaks++; } catch { }
+            try { foreach (LibScan.LibItem it in LibScan.Items()) { if (!it.Essential) continue; bool ok; try { ok = it.Installed(); } catch { ok = false; } if (!ok) libMissing++; } } catch { }
+            try { restorePts = Sys.ListRestorePoints().Count; } catch { }
+            try
+            {
+                var sys = new System.IO.DriveInfo(System.IO.Path.GetPathRoot(Environment.SystemDirectory));
+                freeGB = sys.AvailableFreeSpace / 1073741824.0;
+                pct = sys.TotalSize > 0 ? (double)sys.AvailableFreeSpace / sys.TotalSize * 100 : -1;
+            }
+            catch { }
+
+            var rows = new StringBuilder();
+            rows.Append(DiagRow("Crashs pilote GPU (14 jours)", nvl == 0 ? "aucun" : (nvl >= 200 ? "200+" : nvl.ToString()) + " erreur(s)", nvl == 0));
+            rows.Append(DiagRow("Écrans bleus (14 jours)", bsod == 0 ? "aucun" : bsod.ToString(), bsod == 0));
+            rows.Append(DiagRow("Réglages néfastes d'un ancien optimiseur", badTweaks == 0 ? "aucun" : badTweaks + " à corriger", badTweaks == 0));
+            rows.Append(DiagRow("Bibliothèques de jeu essentielles", libMissing == 0 ? "toutes présentes" : libMissing + " manquante(s)", libMissing == 0));
+            rows.Append(DiagRow("Points de restauration système", restorePts == 0 ? "aucun (protection à activer)" : restorePts.ToString(), restorePts > 0));
+            if (freeGB >= 0)
+                rows.Append(DiagRow("Espace disque système libre", freeGB.ToString("0") + " Go (" + pct.ToString("0") + " %)", pct >= 8 && freeGB >= 15));
+
+            return "<h2>Diagnostic santé</h2><table>" + rows + "</table>";
+        }
+
+        private static string DiagRow(string label, string value, bool ok)
+        {
+            return "<tr><td>" + Esc(label) + "</td><td><span class='b " + (ok ? "on'>" : "warn'>") + Esc(value) + "</span></td></tr>";
         }
 
         private static string Css()
@@ -95,6 +131,7 @@ namespace BTOptimizer
 ".b{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}" +
 ".b.on{background:rgba(0,190,120,.16);color:#3fe0a1}.b.off{background:rgba(140,150,160,.14);color:#9aa5ad}" +
 ".b.na{background:rgba(140,150,160,.10);color:#6b757d}" +
+".b.warn{background:rgba(220,90,60,.16);color:#f0906f}" +
 ".rb{font-size:11px;color:#e0a93c;margin-left:6px}" +
 "footer{color:#6b757d;font-size:12px;margin-top:34px;border-top:1px solid #262c34;padding-top:16px}";
         }

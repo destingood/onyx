@@ -1354,18 +1354,33 @@ namespace BTOptimizer
 
         private void OnReportClicked(object sender, EventArgs e)
         {
-            try
+            // La génération inclut désormais un audit (journaux, WMI) : en arrière-plan pour ne pas figer.
+            Cursor = Cursors.WaitCursor;
+            Log("Génération du rapport (audit santé en cours)...", 0);
+            HwProfile hw = _hw ?? Hardware.Detect();
+            Task.Run(() =>
             {
-                string html = Report.BuildHtml(_tweaks, _hw ?? Hardware.Detect());
-                string path = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-rapport.html");
-                System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
-                Log("Rapport HTML enregistré : " + path, 1);
-                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                Log("Rapport impossible : " + ex.Message, 3);
-            }
+                string result;
+                try
+                {
+                    string html = Report.BuildHtml(_tweaks, hw);
+                    string path = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-rapport.html");
+                    System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
+                    result = path;
+                }
+                catch (Exception ex) { result = "ERR:" + ex.Message; }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Cursor = Cursors.Default;
+                        if (result.StartsWith("ERR:")) { Log("Rapport impossible : " + result.Substring(4), 3); return; }
+                        Log("Rapport HTML enregistré : " + result, 1);
+                        try { Process.Start(new ProcessStartInfo(result) { UseShellExecute = true }); } catch { }
+                    }));
+                }
+                catch { }
+            });
         }
 
         private void OnTimerToggled(object sender, EventArgs e)
