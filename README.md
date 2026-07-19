@@ -58,6 +58,24 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🏥 Santé de mon PC — le bilan en un score (v11.6)
+
+☰ → **SANTÉ DE MON PC** — le tableau de bord qui unifie tout. Un clic lance les contrôles
+rapides de tous les panneaux et rend un **score global sur 100** (Excellent / Bon / Moyen /
+À corriger) :
+
+- Crashs & erreurs pilote GPU (14 j), signes matériels (BSOD/WHEA/coupures)
+- Réglages néfastes d'un ancien optimiseur
+- Causes de boutiques infinies / crashs (HAGS, services, OC…)
+- Bibliothèques de jeu manquantes (vcruntime, DirectX…)
+- Espace disque système
+- Stabilité réseau (gigue/perte)
+- Optimisations recommandées appliquées
+
+Chaque point à corriger est listé (les graves en haut) et **ouvre le panneau concerné en
+un double-clic**. C'est le point de départ idéal : on lit le score, on corrige ce qui est
+rouge, on rejoue.
+
 ### 💾🔧 Jeux & disques + Réparation de Windows (v11.5)
 
 - **💾 Jeux & disques** — ☰ → type (**SSD/HDD**) et espace libre de chaque disque, et sur

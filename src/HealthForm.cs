@@ -1,0 +1,255 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace BTOptimizer
+{
+    /// <summary>
+    /// 🏥 Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
+    /// les panneaux (crashs, thermique, réglages néfastes, boutiques, bibliothèques, disque,
+    /// réseau, optimisations). Chaque point à corriger ouvre le panneau concerné en un clic.
+    /// </summary>
+    internal class HealthForm : Form
+    {
+        private readonly Action<string, int> _log;
+        private Label _scoreLabel, _grade, _sub;
+        private Panel _gauge;
+        private ListView _list;
+        private Button _btnScan, _btnOpen, _btnClose;
+        private int _score = -1;
+
+        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Warn = Color.FromArgb(200, 110, 0);
+        private static readonly Color Bad = Color.FromArgb(200, 60, 40);
+
+        private class Finding
+        {
+            public string Text; public int Severity;   // 0 ok, 1 attention, 2 grave
+            public Func<Form> Open;                     // panneau à ouvrir (facultatif)
+        }
+        private readonly List<Finding> _findings = new List<Finding>();
+
+        public HealthForm(Action<string, int> log)
+        {
+            _log = log;
+            Build();
+            Scan();
+            Theme.Apply(this);
+        }
+
+        private void Build()
+        {
+            Text = "DesTinGOOD — Santé de mon PC";
+            ClientSize = new Size(680, 520);
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false; MinimizeBox = false;
+            BackColor = Color.FromArgb(245, 246, 248);
+            Font = new Font("Segoe UI", 9f);
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+
+            var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
+            banner.Controls.Add(new Label
+            {
+                Text = "  🏥 Santé de mon PC — le bilan en un coup d'œil",
+                Dock = DockStyle.Fill, ForeColor = Color.White,
+                Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
+            });
+            Controls.Add(banner);
+
+            // Jauge de score (gros nombre à gauche).
+            _gauge = new Panel { Location = new Point(18, 66), Size = new Size(180, 120), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            _scoreLabel = new Label { Text = "…", Location = new Point(0, 14), Size = new Size(180, 62), Font = new Font("Segoe UI", 42f, FontStyle.Bold), ForeColor = Accent, TextAlign = ContentAlignment.MiddleCenter };
+            _grade = new Label { Text = "", Location = new Point(0, 80), Size = new Size(180, 30), Font = new Font("Segoe UI Semibold", 13f), ForeColor = Color.FromArgb(60, 64, 72), TextAlign = ContentAlignment.MiddleCenter };
+            _gauge.Controls.Add(_scoreLabel); _gauge.Controls.Add(_grade);
+            Controls.Add(_gauge);
+
+            _sub = new Label
+            {
+                Location = new Point(212, 74), Size = new Size(450, 108), ForeColor = Color.FromArgb(60, 64, 72),
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            Controls.Add(_sub);
+
+            _list = new ListView
+            {
+                Location = new Point(18, 200), Size = new Size(644, 258),
+                View = View.Details, FullRowSelect = true, GridLines = false, MultiSelect = false
+            };
+            _list.Columns.Add("État", 52);
+            _list.Columns.Add("Contrôle", 592);
+            _list.DoubleClick += (s, e) => OpenSelected();
+            Controls.Add(_list);
+
+            _btnScan = MakeBtn("Refaire le bilan", 18, 470, 150, 38, false);
+            _btnScan.Click += (s, e) => Scan();
+            _btnOpen = MakeBtn("Ouvrir le panneau du point sélectionné", 178, 470, 320, 38, true);
+            _btnOpen.Click += (s, e) => OpenSelected();
+            _btnClose = MakeBtn("Fermer", 572, 470, 90, 38, false);
+            _btnClose.Click += (s, e) => Close();
+            Controls.Add(_btnScan); Controls.Add(_btnOpen); Controls.Add(_btnClose);
+        }
+
+        private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
+        {
+            var b = new Button
+            {
+                Text = text, Location = new Point(x, y), Size = new Size(w, h), FlatStyle = FlatStyle.Flat,
+                BackColor = primary ? Accent : Color.White, ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52),
+                Font = primary ? new Font("Segoe UI Semibold", 9.5f) : new Font("Segoe UI", 9f)
+            };
+            b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            return b;
+        }
+
+        private void SetBusy(bool busy)
+        {
+            Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
+            _btnScan.Enabled = !busy; _btnOpen.Enabled = !busy; _list.Enabled = !busy;
+        }
+
+        private void OpenSelected()
+        {
+            if (_list.SelectedItems.Count != 1) return;
+            var f = _list.SelectedItems[0].Tag as Finding;
+            if (f == null || f.Open == null) return;
+            try { using (Form panel = f.Open()) panel.ShowDialog(this); }
+            catch (Exception ex) { if (_log != null) _log("Ouverture du panneau : " + ex.Message, 2); }
+            Scan();
+        }
+
+        private void Scan()
+        {
+            SetBusy(true);
+            _scoreLabel.Text = "…"; _grade.Text = ""; _sub.Text = "Bilan en cours (crashs, thermique, réglages, disque, réseau)...";
+            _list.Items.Clear();
+            Task.Run(() =>
+            {
+                var findings = Compute(out _score);
+                try { BeginInvoke((Action)(() => Render(findings))); } catch { }
+            });
+        }
+
+        // ------------------------------------------------------------------
+        //  Calcul du score (contrôles rapides, agrégés)
+        // ------------------------------------------------------------------
+        private List<Finding> Compute(out int score)
+        {
+            var f = new List<Finding>();
+            int s = 100;
+
+            // 1. Crashs & pilote GPU (14 j)
+            int nvl = CrashScan.CountProvider("nvlddmkm", 14);
+            int bsod = CrashScan.Bsod(14), whea = CrashScan.Whea(14), hard = CrashScan.HardResets(14);
+            if (nvl > 0) { s -= 15; f.Add(New(2, "Pilote GPU : " + (nvl >= 200 ? "200+" : nvl.ToString()) + " erreur(s) en 14 j — piste n°1 des crashs de jeux", () => new StabilityForm(_log))); }
+            if (bsod > 0 || whea > 0 || hard > 0) { s -= 15; f.Add(New(2, "Signes matériels : " + bsod + " écran(s) bleu(s), " + whea + " WHEA, " + hard + " coupure(s) brute(s)", () => new StabilityForm(_log))); }
+            if (nvl == 0 && bsod == 0 && whea == 0 && hard == 0) f.Add(New(0, "Stabilité : aucun crash ni signe matériel sur 14 jours", () => new StabilityForm(_log)));
+
+            // 2. Réglages néfastes
+            int bad = 0; try { foreach (Checkup.Item it in Checkup.Analyze()) if (it.Problem) bad++; } catch { }
+            if (bad > 0) { s -= Math.Min(25, bad * 10); f.Add(New(2, bad + " réglage(s) néfaste(s) d'un ancien optimiseur (à annuler)", () => new CheckupForm(_log))); }
+            else f.Add(New(0, "Aucun réglage néfaste laissé par un autre outil", () => new CheckupForm(_log)));
+
+            // 3. Boutiques / crashs (causes logicielles)
+            int shop = 0; try { foreach (ShopFix.Item it in ShopFix.Analyze()) if (it.Problem) shop++; } catch { }
+            if (shop > 0) { s -= Math.Min(12, shop * 3); f.Add(New(1, shop + " cause(s) possible(s) de boutiques infinies / crashs (HAGS, services, OC...)", () => new ShopFixForm(_log))); }
+            else f.Add(New(0, "Boutiques & lancement des jeux : rien à signaler", () => new ShopFixForm(_log)));
+
+            // 4. Bibliothèques de jeu essentielles manquantes
+            int libMissing = 0;
+            try { foreach (LibScan.LibItem it in LibScan.Items()) { if (!it.Essential) continue; bool ok; try { ok = it.Installed(); } catch { ok = false; } if (!ok) libMissing++; } } catch { }
+            if (libMissing > 0) { s -= Math.Min(12, libMissing * 4); f.Add(New(1, libMissing + " bibliothèque(s) de jeu manquante(s) (vcruntime, DirectX...) — jeux qui refusent de démarrer", () => new LibsForm(_log))); }
+            else f.Add(New(0, "Bibliothèques de jeu essentielles : toutes présentes", () => new LibsForm(_log)));
+
+            // 5. Espace disque système
+            bool lowDisk = false; string diskDetail = "";
+            try
+            {
+                var sys = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory));
+                double freeGB = sys.AvailableFreeSpace / 1073741824.0;
+                double pct = sys.TotalSize > 0 ? (double)sys.AvailableFreeSpace / sys.TotalSize * 100 : 100;
+                if (pct < 8 || freeGB < 15) { lowDisk = true; diskDetail = sys.Name + " " + freeGB.ToString("0") + " Go libres (" + pct.ToString("0") + " %)"; }
+            }
+            catch { }
+            if (lowDisk) { s -= 10; f.Add(New(1, "Disque système presque plein : " + diskDetail + " — Windows ralentit", () => new DiskForm(_log))); }
+            else f.Add(New(0, "Espace disque système : suffisant", () => new DiskForm(_log)));
+
+            // 6. Réseau (petit test de gigue/perte)
+            int loss; double jitter, avg;
+            QuickPing("1.1.1.1", out avg, out jitter, out loss);
+            if (loss >= 5 || jitter > 15 || avg < 0) { s -= 10; f.Add(New(1, "Réseau instable : " + (avg < 0 ? "injoignable" : avg.ToString("0") + " ms, gigue " + jitter.ToString("0.#") + " ms, perte " + loss + " %"), () => new NetworkForm(_log))); }
+            else f.Add(New(0, "Réseau : latence stable (gigue " + jitter.ToString("0.#") + " ms, perte " + loss + " %)", () => new NetworkForm(_log)));
+
+            // 7. Optimisations recommandées appliquées (informatif, léger)
+            int reco = 0, recoOn = 0;
+            try { foreach (Tweak t in Catalog.All()) if (t.Recommended) { reco++; try { if (t.Check != null && t.Check() == true) recoOn++; } catch { } } } catch { }
+            if (reco > 0 && recoOn < reco / 2) { s -= 8; f.Add(New(1, "Optimisations recommandées : " + recoOn + "/" + reco + " appliquées — clique sur ⚡ TOUT OPTIMISER", null)); }
+            else f.Add(New(0, "Optimisations recommandées : " + recoOn + "/" + reco + " appliquées", null));
+
+            score = Math.Max(0, Math.Min(100, s));
+            // Graves d'abord, puis attention, puis OK.
+            return f.OrderByDescending(x => x.Severity).ToList();
+        }
+
+        private static Finding New(int sev, string text, Func<Form> open) { return new Finding { Severity = sev, Text = text, Open = open }; }
+
+        private static void QuickPing(string host, out double avg, out double jitter, out int lossPct)
+        {
+            var times = new List<long>(); int loss = 0;
+            try
+            {
+                using (var ping = new Ping())
+                    for (int i = 0; i < 8; i++)
+                    {
+                        try { PingReply r = ping.Send(host, 800); if (r != null && r.Status == IPStatus.Success) times.Add(r.RoundtripTime); else loss++; }
+                        catch { loss++; }
+                    }
+            }
+            catch { }
+            lossPct = loss * 100 / 8;
+            if (times.Count == 0) { avg = -1; jitter = 0; return; }
+            avg = times.Average();
+            double j = 0; for (int i = 1; i < times.Count; i++) j += Math.Abs(times[i] - times[i - 1]);
+            jitter = times.Count > 1 ? j / (times.Count - 1) : 0;
+        }
+
+        // ------------------------------------------------------------------
+        //  Rendu
+        // ------------------------------------------------------------------
+        private void Render(List<Finding> findings)
+        {
+            _findings.Clear(); _findings.AddRange(findings);
+
+            Color c = _score >= 90 ? Accent : _score >= 75 ? Color.FromArgb(90, 150, 60) : _score >= 55 ? Warn : Bad;
+            string grade = _score >= 90 ? "Excellent" : _score >= 75 ? "Bon" : _score >= 55 ? "Moyen" : "À corriger";
+            _scoreLabel.Text = _score.ToString(); _scoreLabel.ForeColor = c;
+            _grade.Text = grade; _grade.ForeColor = c;
+            _gauge.BackColor = Color.White;
+
+            int graves = findings.Count(x => x.Severity == 2);
+            int attn = findings.Count(x => x.Severity == 1);
+            _sub.Text = graves + attn == 0
+                ? "✔ Ton PC est en pleine forme pour jouer. Rien à corriger — profite du jeu.\n\nAstuce : refais ce bilan après une grosse mise à jour Windows ou de pilote."
+                : (graves > 0 ? graves + " point(s) GRAVE(S)" : "") + (graves > 0 && attn > 0 ? " et " : "") + (attn > 0 ? attn + " point(s) d'attention" : "")
+                  + ".\n\nDouble-clique un point (ou sélectionne-le et « Ouvrir le panneau ») pour aller le corriger. "
+                  + "Les points graves sont en haut.";
+
+            _list.Items.Clear();
+            foreach (Finding fi in findings)
+            {
+                var it = new ListViewItem(fi.Severity == 2 ? "⛔" : fi.Severity == 1 ? "⚠" : "✔") { Tag = fi };
+                it.SubItems.Add(fi.Text + (fi.Open != null ? "   →" : ""));
+                it.ForeColor = fi.Severity == 2 ? Bad : fi.Severity == 1 ? Warn : Color.FromArgb(40, 44, 52);
+                _list.Items.Add(it);
+            }
+            if (_log != null) _log("Bilan santé PC : score " + _score + "/100 (" + grade + "), "
+                + graves + " grave(s), " + attn + " attention(s).", graves > 0 ? 2 : (attn > 0 ? 0 : 1));
+            SetBusy(false);
+        }
+    }
+}
