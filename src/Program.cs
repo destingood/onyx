@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("11.1.0.0")]
-[assembly: AssemblyFileVersion("11.1.0.0")]
+[assembly: AssemblyVersion("11.2.0.0")]
+[assembly: AssemblyFileVersion("11.2.0.0")]
 
 namespace BTOptimizer
 {
@@ -423,6 +423,16 @@ namespace BTOptimizer
                 Console.WriteLine("  UI TournamentForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Stabilité ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Réseau / souris (UI, lecture seule)...");
+            try
+            {
+                using (var f = new NetworkForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI NetworkForm : construite OK.");
+                using (var f = new MouseForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI MouseForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Réseau/souris ERREUR : " + ex.Message); }
 
             Console.WriteLine("Bibliothèques de jeu (détection locale, lecture seule)...");
             try

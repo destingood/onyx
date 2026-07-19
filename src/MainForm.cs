@@ -19,6 +19,9 @@ namespace BTOptimizer
         private CheckBox _chkPoint;
         private CheckBox _chkTimer;
         private CheckBox _chkAutoTimer;
+        private CheckBox _chkAutoBoost;
+        private bool _autoBoostEngaged;   // le MODE JEU a été enclenché automatiquement (à couper seul)
+        private bool _boostBusy;          // une (dé)activation est en cours
         private CheckBox _chkGuard;
         private bool _guardEventSuppressed;
         private RichTextBox _log;
@@ -115,7 +118,7 @@ namespace BTOptimizer
         private void BuildUi()
         {
             Text = "DesTinGOOD Optimizer " + AppVer + " — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
-            ClientSize = new Size(900, 840);
+            ClientSize = new Size(900, 868);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -207,6 +210,10 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
                 (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("📶 Qualité réseau en jeu (le lag vient de chez toi ou du FAI ?)...", null,
+                (s, e) => { using (var f = new NetworkForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🖱️ Fréquence réelle de la souris (ton 1000 Hz est-il vrai ?)...", null,
+                (s, e) => { using (var f = new MouseForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             // --- Maintenance ---
@@ -367,27 +374,32 @@ namespace BTOptimizer
             _chkAutoTimer.Checked = true;   // par défaut : le timer 1 ms suit les jeux tout seul
             _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
+            _chkAutoBoost = new CheckBox();
+            _chkAutoBoost.Text = "MODE JEU AUTO : active/coupe le mode jeu tout seul quand un jeu passe en plein écran";
+            _chkAutoBoost.SetBounds(16, 592, 868, 22);
+            _chkAutoBoost.Checked = false;   // opt-in : il suspend des services de fond
+
             // Boutons d'action
-            _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 598, 268, 44, true);
+            _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 624, 268, 44, true);
             _btnApply.Font = new Font("Segoe UI Semibold", 10.5f);
-            _btnRevert = MakeButton("Rétablir (sélection)", 292, 598, 176, 44, false);
-            _btnOpen = MakeButton("Sauvegardes", 476, 598, 104, 44, false);
-            _btnReport = MakeButton("Rapport", 588, 598, 96, 44, false);
-            _btnLatency = MakeButton("Analyse latence", 692, 598, 192, 44, false);
+            _btnRevert = MakeButton("Rétablir (sélection)", 292, 624, 176, 44, false);
+            _btnOpen = MakeButton("Sauvegardes", 476, 624, 104, 44, false);
+            _btnReport = MakeButton("Rapport", 588, 624, 96, 44, false);
+            _btnLatency = MakeButton("Analyse latence", 692, 624, 192, 44, false);
             _btnLatency.ForeColor = Accent;
 
             // Ligne outils
-            _btnMonitor = MakeButton("Moniteur matériel", 16, 650, 210, 32, false);
+            _btnMonitor = MakeButton("Moniteur matériel", 16, 676, 210, 32, false);
             _btnMonitor.ForeColor = Accent;
-            _btnOverclock = MakeButton("Overclock auto", 234, 650, 150, 32, false);
+            _btnOverclock = MakeButton("Overclock auto", 234, 676, 150, 32, false);
             _btnOverclock.ForeColor = Color.FromArgb(180, 70, 20);
-            _btnDns = MakeButton("DNS rapide", 392, 650, 130, 32, false);
+            _btnDns = MakeButton("DNS rapide", 392, 676, 130, 32, false);
             _btnDns.ForeColor = Accent;
-            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 650, 354, 32, false);
+            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 676, 354, 32, false);
 
             // Journal : console posée dans une carte arrondie.
             var logCard = new Panel();
-            logCard.SetBounds(16, 690, 868, 138);
+            logCard.SetBounds(16, 716, 868, 138);
             logCard.Padding = new Padding(8, 6, 8, 6);
             logCard.Paint += OnPaintLogCard;
             logCard.Resize += (s, e) => logCard.Invalidate();
@@ -462,7 +474,7 @@ namespace BTOptimizer
             // Toutes les 2 s : résolution timer réelle + détection jeu plein écran (mode AUTO).
             _uiTimer = new Timer();
             _uiTimer.Interval = 2000;
-            _uiTimer.Tick += (s, e) => { UpdateTimerState(); UpdateTimerLabel(); };
+            _uiTimer.Tick += (s, e) => { UpdateTimerState(); UpdateTimerLabel(); UpdateAutoBoost(); };
             _uiTimer.Start();
             UpdateTimerLabel();
 
@@ -470,7 +482,7 @@ namespace BTOptimizer
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
                 _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search, _btnOneClick,
-                panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
+                panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer, _chkAutoBoost,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, logCard
             });
@@ -1264,6 +1276,8 @@ namespace BTOptimizer
 
         private void OnBoostToggle(object sender, EventArgs e)
         {
+            // Bascule MANUELLE : l'auto ne doit plus « posséder » cet état (ne pas le couper tout seul).
+            _autoBoostEngaged = false;
             _btnBoost.Enabled = false;
             bool activating = !GameBoost.IsActive;
             Task.Run(() =>
@@ -1354,6 +1368,61 @@ namespace BTOptimizer
                 Log("Timer Windows forcé à 1 ms.", 1);
             else
                 Log("Timer Windows rendu au système.", 0);
+        }
+
+        private int _fsStableTicks;   // ticks consécutifs avec jeu plein écran (anti-clignotement)
+
+        /// <summary>
+        /// MODE JEU AUTO : enclenche le mode jeu quand un jeu tient le plein écran depuis 2 ticks
+        /// (≈4 s) et le coupe seul au retour au bureau. Ne touche jamais à une activation MANUELLE.
+        /// </summary>
+        private void UpdateAutoBoost()
+        {
+            if (_chkAutoBoost == null || !_chkAutoBoost.Checked || _boostBusy) return;
+
+            bool fullscreen = Native.IsGameFullscreen();
+            _fsStableTicks = fullscreen ? Math.Min(_fsStableTicks + 1, 10) : 0;
+
+            // Enclenche : jeu stable en plein écran + mode jeu pas déjà actif.
+            if (_fsStableTicks >= 2 && !GameBoost.IsActive)
+            {
+                _boostBusy = true;
+                Task.Run(() =>
+                {
+                    GameBoost.Activate(Log);
+                    try { BeginInvoke((Action)(() => { _autoBoostEngaged = true; _boostBusy = false; SyncBoostButton();
+                        Log("MODE JEU AUTO : jeu plein écran détecté → mode jeu activé.", 1); })); }
+                    catch { _boostBusy = false; }
+                });
+            }
+            // Coupe : plus de plein écran ET c'est NOUS qui l'avions activé (jamais une activation manuelle).
+            else if (!fullscreen && GameBoost.IsActive && _autoBoostEngaged)
+            {
+                _boostBusy = true;
+                Task.Run(() =>
+                {
+                    GameBoost.Deactivate(Log);
+                    try { BeginInvoke((Action)(() => { _autoBoostEngaged = false; _boostBusy = false; SyncBoostButton();
+                        Log("MODE JEU AUTO : retour au bureau → mode jeu coupé.", 0); })); }
+                    catch { _boostBusy = false; }
+                });
+            }
+        }
+
+        /// <summary>Aligne le bouton MODE JEU sur l'état réel (après une bascule automatique).</summary>
+        private void SyncBoostButton()
+        {
+            if (_btnBoost == null) return;
+            if (GameBoost.IsActive)
+            {
+                _btnBoost.Text = "■ MODE JEU ACTIF";
+                _btnBoost.BackColor = Color.FromArgb(200, 60, 40);
+            }
+            else
+            {
+                _btnBoost.Text = "▶ MODE JEU";
+                _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+            }
         }
 
         private void OnGuardToggled(object sender, EventArgs e)

@@ -58,6 +58,23 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📶🖱️ Qualité réseau, fréquence souris, MODE JEU AUTO (v11.2)
+
+- **📶 Qualité réseau en jeu** — ☰ → mesure la latence, la **gigue** (variation du
+  ping, ce qui compte vraiment en jeu) et la **perte de paquets** vers **ta box** ET
+  vers internet (20 pings par segment). L'écart entre les deux **désigne le
+  coupable** : gigue dès la box → c'est ton Wi-Fi/câble (passe en Ethernet) ;
+  box saine mais internet instable → FAI ou hébergeur du jeu. Bouton de réparation
+  réseau intégré.
+- **🖱️ Fréquence réelle de la souris** — ☰ → mesure EN DIRECT le taux de rapport
+  (polling rate) via l'entrée brute Windows (raw input, aucune injection) : bouge la
+  souris en cercles, l'app affiche les Hz réels et compare au palier gaming (1000 Hz).
+  Vérifie que ton « 1000 Hz » n'est pas resté à 125 Hz par défaut.
+- **MODE JEU AUTO** (case sous la liste, opt-in) — active le mode jeu (RAM libérée,
+  services de fond suspendus, timer 1 ms) **tout seul** quand un jeu passe en plein
+  écran, et le **coupe seul** au retour au bureau. Ne touche jamais à une activation
+  manuelle du bouton MODE JEU.
+
 ### 🌐 DNS v2 — benchmark jeux, IPv6 et filet de sécurité (v11.1)
 
 Le panneau **DNS rapide** passe en v2 :
