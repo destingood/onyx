@@ -74,6 +74,11 @@ boutique intégrée d'un jeu ne s'ouvre plus **ou que les jeux crashent/figent**
   et power limit **constructeur** (`nvidia-smi -rgc` / `-pl` défaut), fichiers OC purgés
   (sauvegarde `.bak`), tâches retirées. Pré-coché seulement si des erreurs pilote
   récentes prouvent l'instabilité.
+- **HAGS — « Votre dispositif de rendu a été perdu »** : la planification GPU
+  matérielle (activée par le tweak `hags` des presets eSport) est la cause classique
+  de ce message (Overwatch & co). Quand HAGS est actif **et** que le journal montre
+  des erreurs pilote récentes, le point est pré-coché : réparer le désactive
+  explicitement (`HwSchMode=1`, redémarrage requis).
 - **DNS filtrant** (AdGuard anti-pub, Cloudflare anti-malware, Quad9…) : un domaine de
   boutique/CDN bloqué par le résolveur = page qui tourne à l'infini → retour au DNS
   automatique. Le panneau **DNS rapide** marque désormais ces résolveurs « (filtre) »,

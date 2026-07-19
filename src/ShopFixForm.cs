@@ -184,7 +184,7 @@ namespace BTOptimizer
                         Populate(after);
                         if (needReboot)
                             MessageBox.Show(this,
-                                "Réparation terminée. Redémarre le PC pour appliquer le point IPv6.",
+                                "Réparation terminée. Redémarre le PC pour appliquer les points qui le demandent (IPv6, HAGS...).",
                                 "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }

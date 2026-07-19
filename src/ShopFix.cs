@@ -78,8 +78,10 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static List<Item> Analyze()
         {
+            int drvErrors = NvlddmkmErrors7d(); // partagé par les points GPU (une seule lecture du journal)
             var items = new List<Item>();
-            items.Add(CheckGpuOc());
+            items.Add(CheckGpuOc(drvErrors));
+            items.Add(CheckHags(drvErrors));
             items.Add(CheckDnsFilter());
             items.Add(CheckHosts());
             items.Add(CheckStoreServices());
@@ -121,7 +123,7 @@ namespace BTOptimizer
             return n;
         }
 
-        private static Item CheckGpuOc()
+        private static Item CheckGpuOc(int drvErrors)
         {
             Sys.GpuOcInfo gpu = Sys.QueryGpuOc();
             bool plRaised = gpu.Ok && gpu.PowerDefault > 0 && gpu.PowerCur > gpu.PowerDefault + 1;
@@ -141,7 +143,6 @@ namespace BTOptimizer
 
             bool ocTask = Sys.OcGuardExists();
             bool plTask = Sys.Run(Sys.Sys32("schtasks.exe"), "/query /tn GPU-PowerLimit-400W").ExitCode == 0;
-            int drvErrors = NvlddmkmErrors7d();
 
             bool ocDetected = plRaised || ocFile || ocTask || plTask;
             var parts = new List<string>();
@@ -156,8 +157,8 @@ namespace BTOptimizer
                 status = string.Join(" + ", parts.ToArray())
                        + " — réparer remet fréquences et power limit constructeur et retire la ré-application au démarrage";
             else if (drvErrors > 0)
-                status = drvErrors + " erreur(s) pilote NVIDIA (7 j) sans OC de l'outil — suspecter pilote, jeu ou RAM/XMP ; "
-                       + "retire aussi le profil NVIDIA « perf max » (panneau 🎯 500 FPS) si ça persiste";
+                status = drvErrors + " erreur(s) pilote NVIDIA (7 j) sans OC de l'outil — vois le point HAGS ci-dessous ; "
+                       + "sinon pilote propre, RAM/XMP, et profil NVIDIA « perf max » (panneau 🎯 500 FPS) à retirer";
             else
                 status = "aucun overclock appliqué par l'outil, aucune erreur pilote récente";
 
@@ -189,6 +190,40 @@ namespace BTOptimizer
                         log("Tâche GPU-PowerLimit-400W supprimée (power limit constructeur au prochain démarrage).", 1);
                     log("GPU remis aux valeurs constructeur. Si les jeux crashent encore : pilote NVIDIA propre, "
                         + "RAM/XMP, et retirer le profil NVIDIA « perf max » (panneau 🎯 500 FPS).", 0);
+                }
+            };
+        }
+
+        // --- 0 bis. HAGS (planification GPU matérielle) -----------------------
+        // HAGS (HwSchMode=2, activé par le tweak « hags » des presets eSport) est la
+        // cause classique du message « Votre dispositif de rendu a été perdu »
+        // (Overwatch & co) : quand le journal montre des erreurs pilote récentes,
+        // on propose de le désactiver explicitement (HwSchMode=1, redémarrage).
+        private static Item CheckHags(int drvErrors)
+        {
+            bool hagsOn = Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode"), 2);
+            bool bad = hagsOn && drvErrors > 0;
+
+            string status;
+            if (bad)
+                status = "activé + " + drvErrors + " erreur(s) pilote NVIDIA (7 j) — cause classique du "
+                       + "« dispositif de rendu perdu » (Overwatch…) ; réparer le désactive (redémarrage)";
+            else if (hagsOn)
+                status = "activé, aucune erreur pilote récente — rien à faire";
+            else
+                status = "désactivé";
+
+            return new Item
+            {
+                Id = "hags_crash",
+                Name = "HAGS (planification GPU matérielle) — « dispositif de rendu perdu »",
+                Problem = bad, DefaultCheck = bad, NeedReboot = true,
+                Status = status,
+                Repair = delegate(Action<string, int> log)
+                {
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 1, RegistryValueKind.DWord);
+                    log("HAGS désactivé (HwSchMode=1). Redémarrage nécessaire — la case « Activer la planification "
+                        + "GPU (HAGS) » de la fenêtre principale repassera à « non actif ».", 2);
                 }
             };
         }

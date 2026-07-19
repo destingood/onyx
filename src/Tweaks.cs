@@ -150,7 +150,7 @@ namespace BTOptimizer
             {
                 Id = "hags", Category = Cat.Gpu, Esport = true, Reboot = true,
                 Name = "Activer la planification GPU accélérée par matériel (HAGS)",
-                Desc = "Réduit la latence de la file de rendu sur GPU récents (NVIDIA GTX 10xx+/RTX, AMD RX 5000+). À éviter sur GPU anciens.",
+                Desc = "Réduit la latence de la file de rendu sur GPU récents (NVIDIA GTX 10xx+/RTX, AMD RX 5000+). À éviter sur GPU anciens. Si un jeu affiche « dispositif de rendu perdu » (Overwatch…) : décoche, ou ☰ → Boutiques/crashs pour le couper avec preuve à l'appui.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" },
                 Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode"),
