@@ -719,6 +719,12 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache Windows Update", Path = Path.Combine(win, @"SoftwareDistribution\Download") },
                 new CleanTarget { Name = "Prefetch", Path = Path.Combine(win, "Prefetch") },
                 new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
+                // Caches de shaders : à vider après une MAJ de pilote ou en cas de stutters —
+                // les jeux les recompilent au prochain lancement (saccades passagères normales).
+                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Path = Path.Combine(local, @"NVIDIA\DXCache") },
+                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache") },
+                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache") },
+                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache") },
                 new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true },
             };
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);

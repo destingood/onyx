@@ -58,6 +58,30 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🩺🏁🛡 Stabilité, checklist match, anti-régression (v10.9)
+
+Quatre fonctions nées du terrain :
+
+- **🩺 Stabilité (14 jours)** — ☰ → *Stabilité : qu'est-ce qui a planté sur ce PC ?*
+  Lit les journaux Windows (lecture seule) : crashs/blocages d'applis **taggés 🎮
+  quand c'est un jeu connu**, erreurs pilote GPU (`nvlddmkm`), écrans bleus
+  (BugCheck), coupures brutales (Kernel-Power 41), erreurs matérielles (WHEA) —
+  puis rend un **verdict** : pilote GPU → bouton réparation ; signes matériels →
+  températures/XMP/alim ; crashs isolés → intégrité des fichiers du jeu.
+- **🏁 Prêt pour le match ?** — ☰ → checklist de 30 s avant de jouer : **ping/gigue/
+  perte** (10 pings), timer 1 ms, MODE JEU (activable direct), erreurs pilote 24 h,
+  téléchargements Windows en fond, espace disque, optimisations clés appliquées.
+  Verdict « ✔ PRÊT POUR LE MATCH » quand tout est vert.
+- **🛡 Anti-régression Windows Update** — au lancement, l'app vérifie en fond si des
+  optimisations de ton profil ont été **annulées par une mise à jour** (journal +
+  bulle de notification), et ☰ → *Mon profil a-t-il été annulé ?* les ré-applique
+  en un clic (seulement celles qui ont dérivé, sauvegarde .reg).
+- **📤 Export / import de profil** — partage ta sélection entre PC (fichier .txt
+  d'identifiants) ; les identifiants inconnus sont ignorés proprement.
+- **🧹 Caches de shaders dans le Nettoyage disque** (NVIDIA DXCache/GLCache,
+  D3DSCache, AMD) — LE réflexe anti-stutters après une mise à jour de pilote
+  (recompilation au prochain lancement, c'est normal).
+
 ### ⚡ TOUT OPTIMISER — 1 clic (v10.8)
 
 Le gros bouton vert sous les presets : **un seul clic** et l'app fait tout —

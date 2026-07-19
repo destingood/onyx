@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.8.0.0")]
-[assembly: AssemblyFileVersion("10.8.0.0")]
+[assembly: AssemblyVersion("10.9.0.0")]
+[assembly: AssemblyFileVersion("10.9.0.0")]
 
 namespace BTOptimizer
 {
@@ -407,6 +407,22 @@ namespace BTOptimizer
                 Console.WriteLine("  UI ShopFixForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Boutiques ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Stabilité & checklist match (lecture seule)...");
+            try
+            {
+                var recent = CrashScan.Recent(14);
+                Console.WriteLine("  14 j : applis/jeux=" + recent.Count
+                    + " | nvlddmkm=" + CrashScan.CountProvider("nvlddmkm", 14)
+                    + " | BSOD=" + CrashScan.Bsod(14)
+                    + " | coupures=" + CrashScan.HardResets(14)
+                    + " | WHEA=" + CrashScan.Whea(14));
+                using (var f = new StabilityForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI StabilityForm : construite OK.");
+                using (var f = new TournamentForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI TournamentForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Stabilité ERREUR : " + ex.Message); }
 
             Console.WriteLine("Overclock (sonde)...");
             try

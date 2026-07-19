@@ -76,6 +76,7 @@ namespace BTOptimizer
             RefreshStates();
             Theme.Apply(this);
             Shown += OnShownWelcome;
+            CheckProfileDriftAtStartup();   // anti-régression : profil annulé par une MAJ Windows ?
         }
 
         private void OnShownWelcome(object sender, EventArgs e)
@@ -200,11 +201,18 @@ namespace BTOptimizer
             });
             _menu.Items.Add("🛒 Boutiques qui chargent à l'infini / jeux qui crashent (Steam / Game Pass)...", null,
                 (s, e) => { using (var f = new ShopFixForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🩺 Stabilité : qu'est-ce qui a planté sur ce PC ? (14 jours)...", null,
+                (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
+                (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             // --- Maintenance ---
             _menu.Items.Add("Re-vérifier l'état des optimisations (re-scan)", null,
                 (s, e) => { RefreshStates(); Log("États re-vérifiés : les mentions [déjà actif] sont à jour.", 0); });
+            _menu.Items.Add("🛡 Mon profil a-t-il été annulé (Windows Update) ? — vérifier / ré-appliquer", null, OnCheckDrift);
+            _menu.Items.Add("Exporter mon profil d'optimisations (fichier)...", null, OnExportProfile);
+            _menu.Items.Add("Importer un profil d'optimisations...", null, OnImportProfile);
             _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
             _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
             _menu.Items.Add("Ouvrir le journal (fichier)", null, (s, e) =>
@@ -871,6 +879,130 @@ namespace BTOptimizer
             _chkTimer.Checked = true;    // timer 1 ms immédiat (case existante)
             RunOperation(sel, true);
             Task.Run(() => Sys.CleanMemory(Log));
+        }
+
+        // ------------------------------------------------------------------
+        //  Profil : anti-régression Windows Update + export / import
+        // ------------------------------------------------------------------
+
+        /// <summary>Optimisations du profil enregistré dont l'état réel a dérivé (annulées).</summary>
+        private List<Tweak> DriftedTweaks()
+        {
+            var drifted = new List<Tweak>();
+            List<string> ids = Sys.LoadProfile();
+            if (ids.Count == 0) return drifted;
+            foreach (Tweak t in _tweaks)
+            {
+                if (!ids.Contains(t.Id)) continue;
+                // Dérive seulement si le Check est franchement FAUX (null = état illisible : on ne touche pas).
+                try { if (t.Check != null && t.Check() == false) drifted.Add(t); } catch { }
+            }
+            return drifted;
+        }
+
+        /// <summary>Au démarrage : signale (sans bloquer) si une MAJ Windows a annulé le profil.</summary>
+        private void CheckProfileDriftAtStartup()
+        {
+            Task.Run(() =>
+            {
+                List<Tweak> drifted = DriftedTweaks();
+                if (drifted.Count == 0) return;
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Log("🛡 " + drifted.Count + " optimisation(s) de ton profil ne sont PLUS actives "
+                            + "(mise à jour Windows ?) — menu ☰ → « Mon profil a-t-il été annulé ? » pour les ré-appliquer.", 2);
+                        if (_tray != null)
+                            _tray.ShowBalloonTip(4000, "DesTinGOOD",
+                                drifted.Count + " optimisation(s) annulée(s) par Windows — ré-application possible (menu ☰).",
+                                ToolTipIcon.Warning);
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        private void OnCheckDrift(object sender, EventArgs e)
+        {
+            if (Sys.LoadProfile().Count == 0)
+            {
+                MessageBox.Show(this,
+                    "Aucun profil enregistré pour l'instant.\n\nLe profil se crée automatiquement à chaque "
+                    + "« APPLIQUER LA SÉLECTION » (ou ⚡ TOUT OPTIMISER).",
+                    "Profil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            Cursor = Cursors.WaitCursor;
+            List<Tweak> drifted = DriftedTweaks();
+            Cursor = Cursors.Default;
+            if (drifted.Count == 0)
+            {
+                MessageBox.Show(this, "Ton profil est intact : aucune optimisation annulée. ✔",
+                    "Profil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            string names = string.Join("\n", drifted.Take(8).Select(t => "  • " + t.Name).ToArray())
+                         + (drifted.Count > 8 ? "\n  • … et " + (drifted.Count - 8) + " autre(s)" : "");
+            if (MessageBox.Show(this,
+                    drifted.Count + " optimisation(s) de ton profil ont été ANNULÉES (mise à jour Windows, "
+                    + "pilote, autre outil ?) :\n\n" + names + "\n\nLes ré-appliquer maintenant ? (sauvegarde .reg automatique)",
+                    "🛡 Profil annulé en partie", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+            ApplyPreset(t => drifted.Contains(t));
+            _chkBackup.Checked = true;
+            RunOperation(drifted, true);
+        }
+
+        private void OnExportProfile(object sender, EventArgs e)
+        {
+            List<Tweak> sel = Selection();
+            if (sel.Count == 0)
+            {
+                MessageBox.Show(this, "Coche d'abord les optimisations à exporter (ou utilise un preset).",
+                    "Exporter", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (var d = new SaveFileDialog
+            {
+                Filter = "Profil DesTinGOOD (*.txt)|*.txt", FileName = "destingood-profil.txt",
+                Title = "Exporter le profil (" + sel.Count + " optimisations cochées)"
+            })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    System.IO.File.WriteAllLines(d.FileName, sel.Select(t => t.Id).ToArray());
+                    Log("Profil exporté (" + sel.Count + " optimisation(s)) : " + d.FileName, 1);
+                }
+                catch (Exception ex) { Log("Export impossible : " + ex.Message, 3); }
+            }
+        }
+
+        private void OnImportProfile(object sender, EventArgs e)
+        {
+            using (var d = new OpenFileDialog
+            {
+                Filter = "Profil DesTinGOOD (*.txt)|*.txt|Tous les fichiers (*.*)|*.*",
+                Title = "Importer un profil d'optimisations"
+            })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var ids = new HashSet<string>(
+                        System.IO.File.ReadAllLines(d.FileName)
+                            .Select(l => l.Trim())
+                            .Where(l => l.Length > 0 && !l.StartsWith("#")),
+                        StringComparer.OrdinalIgnoreCase);
+                    int known = _tweaks.Count(t => ids.Contains(t.Id));
+                    ApplyPreset(t => ids.Contains(t.Id));
+                    Log("Profil importé : " + known + " optimisation(s) cochée(s)"
+                        + (ids.Count > known ? " (" + (ids.Count - known) + " inconnue(s) ignorée(s))" : "")
+                        + " — vérifie la sélection puis APPLIQUER.", 1);
+                }
+                catch (Exception ex) { Log("Import impossible : " + ex.Message, 3); }
+            }
         }
 
         private void FilterTweaks(string query)
