@@ -58,6 +58,17 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 💾🔧 Jeux & disques + Réparation de Windows (v11.5)
+
+- **💾 Jeux & disques** — ☰ → type (**SSD/HDD**) et espace libre de chaque disque, et sur
+  **quel disque** sont installés tes jeux détectés. Un jeu sur disque dur mécanique =
+  chargements lents et saccades de streaming de textures → conseil de le déplacer sur SSD
+  (avec la marche à suivre Steam). Alerte aussi si un disque système est presque plein.
+- **🔧 Réparer l'intégrité de Windows** — ☰ → lance **DISM /RestoreHealth** puis
+  **SFC /scannow** en arrière-plan (10-20 min, suivi dans le journal) : répare les
+  fichiers système corrompus, cause fréquente de crashs qui persistent **malgré** toutes
+  les optimisations. Le dernier recours, propre et officiel.
+
 ### 🧹 Réglages néfastes d'autres optimiseurs (v11.4)
 
 ☰ → **Réglages néfastes d'autres « optimiseurs »** — l'anti-poison. Beaucoup de guides

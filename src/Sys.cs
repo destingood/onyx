@@ -1385,6 +1385,35 @@ namespace BTOptimizer
             log("Réparation réseau terminée. Un REDÉMARRAGE est nécessaire.", 2);
         }
 
+        /// <summary>
+        /// Répare l'intégrité de Windows : DISM /RestoreHealth (répare l'image) puis SFC /scannow
+        /// (répare les fichiers système). Long (10-20 min). Utile quand des crashs persistent.
+        /// </summary>
+        public static void RepairWindows(Action<string, int> log)
+        {
+            log("Réparation de l'image Windows (DISM /RestoreHealth) — patiente, cela peut prendre 10-20 min...", 0);
+            NativeResult dism = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /RestoreHealth");
+            string do_ = (dism.Output ?? "").ToLowerInvariant();
+            if (dism.ExitCode == 0 || do_.Contains("terminée") || do_.Contains("completed successfully"))
+                log("DISM : image Windows vérifiée/réparée.", 1);
+            else
+                log("DISM : code " + dism.ExitCode + " (voir plus haut). On lance quand même SFC.", 2);
+
+            log("Vérification des fichiers système (SFC /scannow) — encore quelques minutes...", 0);
+            NativeResult sfc = Run(Sys32("sfc.exe"), "/scannow");
+            string so = (sfc.Output ?? "").ToLowerInvariant();
+            if (so.Contains("did not find any integrity violations") || so.Contains("n'a trouvé aucune violation"))
+                log("SFC : aucun fichier système corrompu. ✔", 1);
+            else if (so.Contains("successfully repaired") || so.Contains("réparé"))
+                log("SFC : fichiers corrompus trouvés et RÉPARÉS. Redémarre le PC.", 1);
+            else if (so.Contains("unable to fix") || so.Contains("n'a pas pu réparer") || so.Contains("impossible de réparer"))
+                log("SFC : des fichiers n'ont pas pu être réparés — relance après un redémarrage, ou envisage une réparation de Windows.", 2);
+            else
+                log("SFC terminé (code " + sfc.ExitCode + "). Redémarre le PC si des réparations ont eu lieu.", 0);
+
+            log("Réparation d'intégrité Windows terminée.", 1);
+        }
+
         // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------

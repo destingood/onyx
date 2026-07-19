@@ -44,6 +44,7 @@ namespace BTOptimizer
             public string SteamFolder;   // dossier steamapps\common (si jeu Steam)
             public string[] Dirs;        // dossiers d'installation classiques
             public string[] Keywords;    // mots-clés dans les clés de désinstallation
+            public string InstallPath;   // dossier d'installation résolu (si trouvé sur disque)
         }
 
         /// <summary>Jeux connus + réglage FPS exact (le déblocage se fait DANS chaque jeu).</summary>
@@ -138,11 +139,14 @@ namespace BTOptimizer
                 {
                     if (g.SteamFolder != null)
                         foreach (string common in steamCommons)
-                            if (Directory.Exists(Path.Combine(common, g.SteamFolder))) { g.Detected = true; break; }
+                        {
+                            string full = Path.Combine(common, g.SteamFolder);
+                            if (Directory.Exists(full)) { g.Detected = true; g.InstallPath = full; break; }
+                        }
 
                     if (!g.Detected && g.Dirs != null)
                         foreach (string d in g.Dirs)
-                            if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) { g.Detected = true; break; }
+                            if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) { g.Detected = true; g.InstallPath = d; break; }
 
                     if (!g.Detected && g.Keywords != null)
                         foreach (string name in uninstall)

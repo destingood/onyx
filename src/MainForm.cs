@@ -210,6 +210,9 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
                 (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("💾 Jeux & disques (SSD/HDD, espace, chargements)...", null,
+                (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
             _menu.Items.Add("🧹 Réglages néfastes d'autres optimiseurs (à annuler)...", null,
                 (s, e) => { using (var f = new CheckupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🌡️ Températures & throttling (ta carte bride-t-elle ?)...", null,
@@ -1429,6 +1432,21 @@ namespace BTOptimizer
                 _btnBoost.Text = "▶ MODE JEU";
                 _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
             }
+        }
+
+        private void OnRepairWindows(object sender, EventArgs e)
+        {
+            if (MessageBox.Show(this,
+                    "Réparer l'intégrité de Windows ?\n\n"
+                    + "Lance DISM /RestoreHealth puis SFC /scannow : répare les fichiers système corrompus, "
+                    + "cause fréquente de crashs qui persistent malgré tout le reste.\n\n"
+                    + "• Dure 10 à 20 minutes (connexion internet conseillée pour DISM).\n"
+                    + "• Tu peux continuer à utiliser le PC ; suis l'avancement dans le journal.\n"
+                    + "• Un redémarrage peut être nécessaire si des réparations ont lieu.",
+                    "Réparer Windows", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            Log("Réparation d'intégrité Windows démarrée (10-20 min)...", 0);
+            Task.Run(() => Sys.RepairWindows(Log));
         }
 
         private void OnGuardToggled(object sender, EventArgs e)
