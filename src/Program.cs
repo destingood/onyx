@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.9.0.0")]
-[assembly: AssemblyFileVersion("10.9.0.0")]
+[assembly: AssemblyVersion("11.0.0.0")]
+[assembly: AssemblyFileVersion("11.0.0.0")]
 
 namespace BTOptimizer
 {
@@ -423,6 +423,23 @@ namespace BTOptimizer
                 Console.WriteLine("  UI TournamentForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Stabilité ERREUR : " + ex.Message); }
+
+            Console.WriteLine("Bibliothèques de jeu (détection locale, lecture seule)...");
+            try
+            {
+                int present = 0, missing = 0;
+                foreach (LibScan.LibItem it in LibScan.Items())
+                {
+                    bool here; try { here = it.Installed(); } catch { here = false; }
+                    if (here) present++; else missing++;
+                    Console.WriteLine("  " + (here ? "[ok]" : "[--]") + " " + it.Name);
+                }
+                Console.WriteLine("  → présentes=" + present + " absentes=" + missing
+                    + " | winget : " + (LibScan.WingetPath() != null ? "disponible" : "ABSENT"));
+                using (var f = new LibsForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI LibsForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Bibliothèques ERREUR : " + ex.Message); }
 
             Console.WriteLine("Overclock (sonde)...");
             try

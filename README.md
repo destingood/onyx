@@ -58,6 +58,25 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📦 Bibliothèques & applis de jeu (v11.0)
+
+☰ → **Bibliothèques de jeu manquantes (vcruntime, DirectX…) & applis** — un jeu qui
+refuse de se lancer, c'est presque toujours une bibliothèque manquante :
+
+- **Détection locale instantanée** (fichiers/registre, sans réseau) des runtimes que
+  les jeux réclament : **Visual C++ 2010/2012/2013/2015-2022** (64 et 32 bits —
+  le fameux `vcruntime140.dll manquant`), **DirectX runtime juin 2010**
+  (`d3dx9_43.dll`, `xaudio2_7.dll`, `xinput1_3.dll` — tous les jeux DX9-DX11
+  d'avant 2015), **.NET Desktop Runtime 8**, **OpenAL**. Les manquantes sont
+  pré-cochées ⚠.
+- **Installation en un clic via WINGET**, le gestionnaire de paquets **officiel
+  Microsoft** (aucun téléchargement douteux, licences acceptées proprement,
+  journalisé). Si winget est absent, l'app explique comment l'obtenir (App
+  Installer du Store).
+- **Applis utiles en option** (jamais pré-cochées) : 7-Zip (mods/archives),
+  **OBS Studio** (clips/stream — remplace le Game DVR que l'optimiseur coupe),
+  Discord.
+
 ### 🩺🏁🛡 Stabilité, checklist match, anti-régression (v10.9)
 
 Quatre fonctions nées du terrain :

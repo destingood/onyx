@@ -201,6 +201,8 @@ namespace BTOptimizer
             });
             _menu.Items.Add("🛒 Boutiques qui chargent à l'infini / jeux qui crashent (Steam / Game Pass)...", null,
                 (s, e) => { using (var f = new ShopFixForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("📦 Bibliothèques de jeu manquantes (vcruntime, DirectX...) & applis...", null,
+                (s, e) => { using (var f = new LibsForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🩺 Stabilité : qu'est-ce qui a planté sur ce PC ? (14 jours)...", null,
                 (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
