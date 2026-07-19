@@ -2238,6 +2238,17 @@ namespace BTOptimizer
                 Check  = () => Sys.ServiceDisabled("PcaSvc")
             });
 
+            list.Add(new Tweak
+            {
+                Id = "toast_notifications_off", Category = Cat.Rapidite,
+                Name = "Désactiver les notifications (bulles) — plus d'interruptions en jeu",
+                Desc = "Coupe les notifications « toast » de Windows : plus de bulle qui vole le focus ou provoque une micro-saccade en pleine partie. « Rétablir » les réactive. (Les notifications restent visibles dans le centre de notifications.)",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\PushNotifications" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled"), 0)
+            });
+
             return list;
         }
     }

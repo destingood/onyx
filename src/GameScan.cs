@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
@@ -20,6 +21,24 @@ namespace BTOptimizer
         /// Exécutables des jeux compétitifs pour la priorité CPU « Haute » (PerfOptions).
         /// javaw.exe (Minecraft) est volontairement exclu : trop générique (toutes les applis Java).
         /// </summary>
+        /// <summary>Nom du processus d'un jeu connu en cours d'exécution, ou null. Pour le MODE JEU AUTO précis.</summary>
+        public static string RunningKnownGame()
+        {
+            try
+            {
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string exe in PriorityExes()) names.Add(Path.GetFileNameWithoutExtension(exe));
+                foreach (Process p in Process.GetProcesses())
+                {
+                    try { if (names.Contains(p.ProcessName)) return p.ProcessName; }
+                    catch { }
+                    finally { try { p.Dispose(); } catch { } }
+                }
+            }
+            catch { }
+            return null;
+        }
+
         public static string[] PriorityExes()
         {
             return new[]

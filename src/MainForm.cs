@@ -393,7 +393,7 @@ namespace BTOptimizer
             _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
             _chkAutoBoost = new CheckBox();
-            _chkAutoBoost.Text = "MODE JEU AUTO : active/coupe le mode jeu tout seul quand un jeu passe en plein écran";
+            _chkAutoBoost.Text = "MODE JEU AUTO : active/coupe le mode jeu tout seul dès qu'un jeu est lancé (détection par jeu + plein écran)";
             _chkAutoBoost.SetBounds(16, 592, 868, 22);
             _chkAutoBoost.Checked = false;   // opt-in : il suspend des services de fond
 
@@ -1398,23 +1398,27 @@ namespace BTOptimizer
         {
             if (_chkAutoBoost == null || !_chkAutoBoost.Checked || _boostBusy) return;
 
+            // Détection PRÉCISE : un jeu connu qui tourne (immédiat, pas de faux positif sur une vidéo)
+            // OU, en repli, une appli plein écran stable (couvre les jeux non listés).
+            string game = GameScan.RunningKnownGame();
             bool fullscreen = Native.IsGameFullscreen();
             _fsStableTicks = fullscreen ? Math.Min(_fsStableTicks + 1, 10) : 0;
+            bool engage = game != null || _fsStableTicks >= 2;
 
-            // Enclenche : jeu stable en plein écran + mode jeu pas déjà actif.
-            if (_fsStableTicks >= 2 && !GameBoost.IsActive)
+            if (engage && !GameBoost.IsActive)
             {
+                string reason = game != null ? "jeu détecté (" + game + ")" : "jeu plein écran détecté";
                 _boostBusy = true;
                 Task.Run(() =>
                 {
                     GameBoost.Activate(Log);
                     try { BeginInvoke((Action)(() => { _autoBoostEngaged = true; _boostBusy = false; SyncBoostButton();
-                        Log("MODE JEU AUTO : jeu plein écran détecté → mode jeu activé.", 1); })); }
+                        Log("MODE JEU AUTO : " + reason + " → mode jeu activé.", 1); })); }
                     catch { _boostBusy = false; }
                 });
             }
-            // Coupe : plus de plein écran ET c'est NOUS qui l'avions activé (jamais une activation manuelle).
-            else if (!fullscreen && GameBoost.IsActive && _autoBoostEngaged)
+            // Coupe : plus aucun jeu (ni process connu, ni plein écran) ET c'est NOUS qui l'avions activé.
+            else if (game == null && !fullscreen && GameBoost.IsActive && _autoBoostEngaged)
             {
                 _boostBusy = true;
                 Task.Run(() =>

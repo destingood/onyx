@@ -58,6 +58,17 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### ⏱️ MODE JEU AUTO précis + notification (v12.1)
+
+- **MODE JEU AUTO plus intelligent** : au lieu de se déclencher sur n'importe quelle appli
+  en plein écran (y compris une vidéo), il détecte maintenant **le processus d'un vrai jeu**
+  (CS2, Valorant, Fortnite, Overwatch, Apex, CoD, LoL, R6…) — activation **immédiate et sans
+  faux positif**, et coupure au retour au bureau. Le plein écran reste un repli pour les jeux
+  non listés. Le journal indique quel jeu a déclenché le mode.
+- **+1 optimisation** (opt-in) : « Désactiver les notifications (bulles) » — plus de toast
+  qui vole le focus ou provoque une micro-saccade en pleine partie (réversible ; volontairement
+  hors du 1 clic pour ne pas couper tes notifications par surprise).
+
 ### 🔁 Points de restauration (v12.0)
 
 ☰ → **Points de restauration** — le filet de sécurité ultime. Un point de restauration est
