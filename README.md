@@ -58,6 +58,14 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📈 Historique de santé — vois tes progrès (v12.2)
+
+Le tableau de bord **🏥 Santé de mon PC** devient évolutif : chaque bilan est **mémorisé**
+(date + score, fichier local), et le panneau affiche la **tendance** — « ▲ +7 depuis le
+dernier bilan » et la suite de tes derniers scores (ex. `78 → 85 → 92`). Tu **vois
+concrètement** l'effet de tes optimisations dans le temps : tu corriges ce qui est rouge,
+tu refais le bilan, le score monte.
+
 ### ⏱️ MODE JEU AUTO précis + notification (v12.1)
 
 - **MODE JEU AUTO plus intelligent** : au lieu de se déclencher sur n'importe quelle appli

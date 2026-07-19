@@ -239,6 +239,20 @@ namespace BTOptimizer
                   + ".\n\nDouble-clique un point (ou sélectionne-le et « Ouvrir le panneau ») pour aller le corriger. "
                   + "Les points graves sont en haut.";
 
+            // Historique : compare au bilan précédent AVANT d'enregistrer celui-ci.
+            List<int> previous = LoadHistory();
+            string trend = "";
+            if (previous.Count > 0)
+            {
+                int delta = _score - previous[previous.Count - 1];
+                string arrow = delta > 0 ? "▲ +" + delta : delta < 0 ? "▼ " + delta : "= stable";
+                var last = previous.GetRange(Math.Max(0, previous.Count - 5), Math.Min(5, previous.Count));
+                trend = "\n\nÉvolution : " + arrow + " depuis le dernier bilan  ·  scores récents : "
+                      + string.Join(" → ", last.ConvertAll(v => v.ToString()).ToArray()) + " → " + _score;
+            }
+            _sub.Text += trend;
+            SaveHistory(_score);
+
             _list.Items.Clear();
             foreach (Finding fi in findings)
             {
@@ -250,6 +264,48 @@ namespace BTOptimizer
             if (_log != null) _log("Bilan santé PC : score " + _score + "/100 (" + grade + "), "
                 + graves + " grave(s), " + attn + " attention(s).", graves > 0 ? 2 : (attn > 0 ? 0 : 1));
             SetBusy(false);
+        }
+
+        // ------------------------------------------------------------------
+        //  Historique des scores (fichier local, à côté de l'app)
+        // ------------------------------------------------------------------
+        private static string HistoryPath()
+        {
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-health-history.txt");
+        }
+
+        private static List<int> LoadHistory()
+        {
+            var scores = new List<int>();
+            try
+            {
+                string p = HistoryPath();
+                if (!File.Exists(p)) return scores;
+                foreach (string line in File.ReadAllLines(p))
+                {
+                    string[] parts = line.Split('\t');
+                    int v;
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out v)) scores.Add(v);
+                }
+            }
+            catch { }
+            return scores;
+        }
+
+        private static void SaveHistory(int score)
+        {
+            try
+            {
+                // Horodatage lisible sans dépendre d'une date interdite : via WMI heure locale.
+                File.AppendAllText(HistoryPath(), Now() + "\t" + score + Environment.NewLine);
+            }
+            catch { }
+        }
+
+        private static string Now()
+        {
+            try { return DateTime.Now.ToString("yyyy-MM-dd HH:mm"); }
+            catch { return "?"; }
         }
     }
 }
