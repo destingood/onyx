@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🎮 Priorité CPU par jeu (v11.8)
+
+☰ → **Priorité CPU par jeu** — jusqu'ici la priorité « Haute » s'appliquait en bloc à tous
+les jeux compétitifs ; ce panneau donne le **contrôle par jeu**. Coche uniquement ton jeu
+principal (ou plusieurs) : quand le CPU sature, ce jeu passe devant les tâches de fond.
+Mécanisme **officiel Windows** (Image File Execution Options) — aucune injection, compatible
+anticheat. Les jeux **détectés** sur le PC sont marqués 🎮 ; l'état « priorité haute active »
+est affiché par jeu ; entièrement **réversible** (décoche et applique). `javaw.exe`
+volontairement exclu (partagé par toutes les apps Java).
+
 ### 🖥️ Réglages d'écran gaming (v11.7)
 
 ☰ → **Réglages d'écran** — le piège le plus courant : un écran 144/240 Hz resté à **60 Hz**
