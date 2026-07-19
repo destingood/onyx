@@ -220,6 +220,8 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
             _menu.Items.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
+            _menu.Items.Add("🔁 Points de restauration (filet de sécurité système)...", null,
+                (s, e) => { using (var f = new RestoreForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🧹 Réglages néfastes d'autres optimiseurs (à annuler)...", null,
                 (s, e) => { using (var f = new CheckupForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🌡️ Températures & throttling (ta carte bride-t-elle ?)...", null,

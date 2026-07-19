@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🔁 Points de restauration (v12.0)
+
+☰ → **Points de restauration** — le filet de sécurité ultime. Un point de restauration est
+une **photo du système Windows** à un instant T (tes fichiers personnels ne sont pas
+touchés). Le panneau **liste les points existants** (date, description), permet d'en
+**créer un maintenant** en un clic (à faire avant de gros changements), ouvre la
+**restauration Windows** (`rstrui`) pour revenir en arrière, et **active la restauration
+système** si un outil l'avait désactivée. Parfait complément du ⚡ TOUT OPTIMISER qui, lui,
+crée déjà un point automatiquement.
+
 ### 🖴 Optimiser les lecteurs (v11.9)
 
 ☰ → **Optimiser les lecteurs (TRIM SSD / défrag HDD)** — la maintenance disque que les

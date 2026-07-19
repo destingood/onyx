@@ -943,6 +943,11 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static void CreateRestorePoint(Action<string, int> log)
         {
+            CreateRestorePoint("DesTinGOOD", log);
+        }
+
+        public static void CreateRestorePoint(string description, Action<string, int> log)
+        {
             log("Création d'un point de restauration système (peut prendre une minute)...", 0);
             try
             {
@@ -951,7 +956,7 @@ namespace BTOptimizer
                 using (ManagementClass mc = new ManagementClass(scope, path, new ObjectGetOptions()))
                 using (ManagementBaseObject inParams = mc.GetMethodParameters("CreateRestorePoint"))
                 {
-                    inParams["Description"] = "DesTinGOOD";
+                    inParams["Description"] = string.IsNullOrEmpty(description) ? "DesTinGOOD" : description;
                     inParams["RestorePointType"] = (uint)12; // MODIFY_SETTINGS
                     inParams["EventType"] = (uint)100;       // BEGIN_SYSTEM_CHANGE
                     using (ManagementBaseObject outParams = mc.InvokeMethod("CreateRestorePoint", inParams, null))
@@ -970,6 +975,72 @@ namespace BTOptimizer
             {
                 log("Point de restauration impossible : " + ex.Message, 2);
             }
+        }
+
+        public class RestorePoint { public int Seq; public string Description; public DateTime When; public int Type; }
+
+        /// <summary>Liste les points de restauration système existants (plus récents d'abord).</summary>
+        public static List<RestorePoint> ListRestorePoints()
+        {
+            var list = new List<RestorePoint>();
+            try
+            {
+                using (var s = new ManagementObjectSearcher(@"\\.\root\default", "SELECT * FROM SystemRestore"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        var rp = new RestorePoint();
+                        try { rp.Seq = Convert.ToInt32(mo["SequenceNumber"]); } catch { }
+                        rp.Description = Convert.ToString(mo["Description"]);
+                        try { rp.Type = Convert.ToInt32(mo["RestorePointType"]); } catch { }
+                        string ct = Convert.ToString(mo["CreationTime"]);   // yyyyMMddHHmmss.xxxxxx±zzz
+                        rp.When = ParseWmiDate(ct);
+                        list.Add(rp);
+                    }
+            }
+            catch { }
+            list.Sort((a, b) => b.When.CompareTo(a.When));
+            return list;
+        }
+
+        private static DateTime ParseWmiDate(string s)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(s) && s.Length >= 14)
+                    return new DateTime(
+                        int.Parse(s.Substring(0, 4)), int.Parse(s.Substring(4, 2)), int.Parse(s.Substring(6, 2)),
+                        int.Parse(s.Substring(8, 2)), int.Parse(s.Substring(10, 2)), int.Parse(s.Substring(12, 2)));
+            }
+            catch { }
+            return DateTime.MinValue;
+        }
+
+        /// <summary>Active la restauration système sur le lecteur Windows (si un « optimiseur » l'a coupée).</summary>
+        public static bool EnableSystemRestore(Action<string, int> log)
+        {
+            bool ok = false;
+            try
+            {
+                // Retire d'abord la politique de blocage éventuelle.
+                DelMachine(@"SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore", "DisableSR");
+                ManagementScope scope = new ManagementScope(@"\\.\root\default");
+                ManagementPath path = new ManagementPath("SystemRestore");
+                using (ManagementClass mc = new ManagementClass(scope, path, new ObjectGetOptions()))
+                using (ManagementBaseObject inParams = mc.GetMethodParameters("Enable"))
+                {
+                    inParams["Drive"] = Path.GetPathRoot(Environment.SystemDirectory);   // "C:\"
+                    inParams["WaitTillEnabled"] = true;
+                    using (ManagementBaseObject outParams = mc.InvokeMethod("Enable", inParams, null))
+                    {
+                        uint rv = Convert.ToUInt32(outParams["ReturnValue"]);
+                        ok = rv == 0;
+                        log(ok ? "Restauration système activée sur le lecteur Windows."
+                               : "Activation de la restauration système : code " + rv + ".", ok ? 1 : 2);
+                    }
+                }
+            }
+            catch (Exception ex) { log("Restauration système : " + ex.Message, 2); }
+            return ok;
         }
 
         // ------------------------------------------------------------------
