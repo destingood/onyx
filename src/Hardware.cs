@@ -330,6 +330,22 @@ namespace BTOptimizer
             return ids;
         }
 
+        /// <summary>
+        /// Réglages écartés du bouton « ⚡ TOUT OPTIMISER » : causes prouvées de crashs
+        /// (HAGS → « dispositif de rendu perdu ») ou de boutiques en jeu cassées
+        /// (applis UWP de fond, tunnels IPv6). Ils restent cochables à la main.
+        /// </summary>
+        public static readonly string[] OneClickExcluded = { "hags", "bg_apps", "ipv6_tunnels_off" };
+
+        /// <summary>Sélection du bouton « ⚡ TOUT OPTIMISER » : l'auto-tune du niveau donné,
+        /// moins les réglages à risque de compatibilité jeux/boutiques.</summary>
+        public static HashSet<string> OneClickIds(List<Tweak> all, HwProfile hw, int level)
+        {
+            HashSet<string> ids = AutoTuneIds(all, hw, level);
+            foreach (string id in OneClickExcluded) ids.Remove(id);
+            return ids;
+        }
+
         /// <summary>Preset Benchmark : tout SAUF les tweaks qui réduisent la sécurité.</summary>
         public static HashSet<string> BenchmarkIds(List<Tweak> all)
         {

@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("10.7.0.0")]
-[assembly: AssemblyFileVersion("10.7.0.0")]
+[assembly: AssemblyVersion("10.8.0.0")]
+[assembly: AssemblyFileVersion("10.8.0.0")]
 
 namespace BTOptimizer
 {
@@ -372,6 +372,11 @@ namespace BTOptimizer
                 // Cohérence attendue : prudent <= équilibré <= agressif <= benchmark
                 if (!(prudent.Count <= equil.Count && equil.Count <= aggro.Count && aggro.Count <= bench.Count))
                 { errors++; Console.WriteLine("  [!] Ordre des niveaux incohérent."); }
+                var oneclick = Hardware.OneClickIds(Catalog.All(), hw, Hardware.LevelAggressive);
+                Console.WriteLine("  ⚡ 1 clic (Agressif) = " + oneclick.Count
+                    + " — écartés compat : " + string.Join(", ", Hardware.OneClickExcluded));
+                foreach (string id in Hardware.OneClickExcluded)
+                    if (oneclick.Contains(id)) { errors++; Console.WriteLine("  [!] 1 clic contient un réglage écarté : " + id); }
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Matériel ERREUR : " + ex.Message); }
 

@@ -58,6 +58,29 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### ⚡ TOUT OPTIMISER — 1 clic (v10.8)
+
+Le gros bouton vert sous les presets : **un seul clic** et l'app fait tout —
+
+1. **Détection du matériel** (SSD/HDD, RAM, GPU, portable/fixe, Windows 10/11,
+   écran haute fréquence, imprimante, tactile…).
+2. **Niveau choisi automatiquement** : PC fixe → Agressif (max sûr), portable →
+   Équilibré (batterie/chaleur préservées).
+3. **Sélection auto-tune cochée puis appliquée** avec **sauvegarde .reg forcée**
+   (+ point de restauration si coché), **timer 1 ms activé** et **RAM libérée**.
+4. **Réglages à risque écartés d'office** (retour d'expérience des réparations) :
+   HAGS (« dispositif de rendu perdu »), applis UWP en fond (boutiques Store),
+   tunnels IPv6 — cochables à la main ; sécurité (Spectre/VBS) et OC jamais inclus.
+
+Tout est réversible : « Rétablir (sélection) » ou ☰ → Réinitialiser TOUTES les
+optimisations.
+
+**+6 optimisations sûres au catalogue (v10.8)** : tâches planifiées de télémétrie
+coupées (Compatibility Appraiser, CEIP, DiskDiagnostic — gros pics disque au repos
+en moins), pas de relance des applis à l'ouverture de session, **Windows Recall
+désactivé** (Win11 24H2+), suggestions de frappe analysées coupées, OneDrive hors
+démarrage (optionnel), Assistant Compatibilité PcaSvc (optionnel).
+
 ### 🛒 Boutiques à l'infini / jeux qui crashent (v10.7)
 
 Menu ☰ → **Boutiques qui chargent à l'infini / jeux qui crashent (Steam / Game Pass)…** —

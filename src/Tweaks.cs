@@ -13,6 +13,16 @@ namespace BTOptimizer
         private const string AudioKey = MMKey + @"\Tasks\Audio";
         private const string ProAudioKey = MMKey + @"\Tasks\Pro Audio";
 
+        // Tâches planifiées de télémétrie/diagnostic connues pour leurs pics disque/CPU au repos.
+        private static readonly string[] TelemetryTasks =
+        {
+            @"\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser",
+            @"\Microsoft\Windows\Application Experience\ProgramDataUpdater",
+            @"\Microsoft\Windows\Customer Experience Improvement Program\Consolidator",
+            @"\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip",
+            @"\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector"
+        };
+
         public static List<Tweak> All()
         {
             var list = new List<Tweak>();
@@ -2154,6 +2164,78 @@ namespace BTOptimizer
                             return false;
                     return true;
                 }
+            });
+
+            // ================= LOT v10.8 =================
+
+            list.Add(new Tweak
+            {
+                Id = "telemetry_tasks_off", Category = Cat.Services, Recommended = true, Esport = true,
+                Name = "Désactiver les tâches planifiées de télémétrie (Compatibility Appraiser…)",
+                Desc = "Coupe les tâches Windows qui analysent le PC en arrière-plan (Microsoft Compatibility Appraiser, CEIP, DiskDiagnostic) : gros pics disque/CPU au repos en moins. « Rétablir » les réactive.",
+                Apply = () => { foreach (string t in TelemetryTasks) Sys.SetScheduledTask(t, false); },
+                Revert = () => { foreach (string t in TelemetryTasks) Sys.SetScheduledTask(t, true); },
+                Check = () => Sys.ScheduledTaskDisabled(TelemetryTasks[0]) == true
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "restart_apps_off", Category = Cat.Rapidite, Recommended = true,
+                Name = "Ne pas relancer les applications à l'ouverture de session",
+                Desc = "Windows ne rouvre plus automatiquement les applis de la session précédente : ouverture de session plus rapide et plus propre avant de jouer. « Rétablir » remet le comportement Windows.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows NT\CurrentVersion\Winlogon", "RestartApps", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Windows NT\CurrentVersion\Winlogon", "RestartApps"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows NT\CurrentVersion\Winlogon", "RestartApps"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "recall_off", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Name = "Désactiver Windows Recall / analyse IA des captures (Windows 11 24H2+)",
+                Desc = "Empêche Recall de capturer et d'analyser l'écran en continu (disque, CPU et confidentialité). Sans effet si Recall est absent du PC. « Rétablir » retire la politique.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "typing_insights_off", Category = Cat.Privacy, Recommended = true,
+                Name = "Désactiver les suggestions de frappe basées sur l'analyse (Typing Insights)",
+                Desc = "Windows n'analyse plus ta frappe pour ses statistiques et suggestions. « Rétablir » réactive.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Input\Settings" },
+                Apply  = () => Sys.SetUser(@"Software\Microsoft\Input\Settings", "InsightsEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelUser(@"Software\Microsoft\Input\Settings", "InsightsEnabled"),
+                Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Input\Settings", "InsightsEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "onedrive_autostart_off", Category = Cat.Services,
+                Name = "Empêcher OneDrive de démarrer avec Windows (si tu ne t'en sers pas)",
+                Desc = "Retire OneDrive du démarrage automatique : RAM et réseau libérés. Ne désinstalle rien — OneDrive reste lançable à la main ; la synchro ne tourne plus en fond. « Rétablir » remet le démarrage automatique.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Run" },
+                Apply = () => Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Run", "OneDrive"),
+                Revert = () =>
+                {
+                    string exe = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Microsoft\OneDrive\OneDrive.exe");
+                    if (System.IO.File.Exists(exe))
+                        Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Run", "OneDrive",
+                            "\"" + exe + "\" /background", RegistryValueKind.String);
+                },
+                Check = () => Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Run", "OneDrive") == null
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "pca_off", Category = Cat.Services,
+                Name = "Désactiver l'Assistant Compatibilité des programmes (PcaSvc)",
+                Desc = "Coupe le service qui surveille chaque lancement d'application pour détecter les problèmes de compatibilité. Un service de fond en moins ; à éviter si tu installes souvent de très vieux logiciels. Réversible.",
+                Apply  = () => Sys.ConfigureService("PcaSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("PcaSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("PcaSvc")
             });
 
             return list;

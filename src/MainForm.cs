@@ -26,6 +26,7 @@ namespace BTOptimizer
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
         private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin, _btnFps500;
+        private Button _btnOneClick;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _miPro;
         private TextBox _search;
@@ -113,7 +114,7 @@ namespace BTOptimizer
         private void BuildUi()
         {
             Text = "DesTinGOOD Optimizer " + AppVer + " — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
-            ClientSize = new Size(900, 800);
+            ClientSize = new Size(900, 840);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -269,9 +270,21 @@ namespace BTOptimizer
             _search.PlaceholderText = "Rechercher une optimisation (nom, catégorie, description)...";
             _search.TextChanged += (s, e) => FilterTweaks(_search.Text);
 
+            // ⚡ LE bouton : tout optimiser en 1 clic (niveau choisi selon le matériel,
+            // sauvegarde forcée, réglages à risque jeux/boutiques écartés d'office).
+            _btnOneClick = new Button();
+            _btnOneClick.Text = "⚡ TOUT OPTIMISER MON PC  —  1 clic : détection du matériel, sauvegarde automatique, 100 % réversible";
+            _btnOneClick.SetBounds(16, 138, 868, 34);
+            _btnOneClick.FlatStyle = FlatStyle.Flat;
+            _btnOneClick.FlatAppearance.BorderSize = 0;
+            _btnOneClick.BackColor = Accent;
+            _btnOneClick.ForeColor = Color.White;
+            _btnOneClick.Font = new Font("Segoe UI Semibold", 10f);
+            _btnOneClick.Click += OnOneClickOptimize;
+
             // Zone déroulante des optimisations
             var panel = new Panel();
-            panel.SetBounds(16, 138, 868, 358);
+            panel.SetBounds(16, 178, 868, 358);
             panel.AutoScroll = true;
             panel.BackColor = Color.White;
 
@@ -319,52 +332,52 @@ namespace BTOptimizer
             // Options
             _chkBackup = new CheckBox();
             _chkBackup.Text = "Sauvegarde .reg avant modification";
-            _chkBackup.SetBounds(16, 504, 240, 22);
+            _chkBackup.SetBounds(16, 544, 240, 22);
             _chkBackup.Checked = true;
 
             _chkPoint = new CheckBox();
             _chkPoint.Text = "Point de restauration système";
-            _chkPoint.SetBounds(262, 504, 210, 22);
+            _chkPoint.SetBounds(262, 544, 210, 22);
             _chkPoint.Checked = true;
 
             _chkGuard = new CheckBox();
             _chkGuard.Text = "GARDIEN : ré-appliquer mon profil à chaque démarrage";
-            _chkGuard.SetBounds(478, 504, 406, 22);
+            _chkGuard.SetBounds(478, 544, 406, 22);
             _chkGuard.Checked = Sys.GuardExists();
             _chkGuard.CheckedChanged += OnGuardToggled;
 
             _chkTimer = new CheckBox();
             _chkTimer.Text = "Timer Windows 1 ms tant que l'app est ouverte (actif aussi réduite en zone de notification)";
-            _chkTimer.SetBounds(16, 528, 550, 22);
+            _chkTimer.SetBounds(16, 568, 550, 22);
             _chkTimer.CheckedChanged += OnTimerToggled;
 
             _chkAutoTimer = new CheckBox();
             _chkAutoTimer.Text = "Timer 1 ms AUTO en jeu plein écran";
-            _chkAutoTimer.SetBounds(572, 528, 312, 22);
+            _chkAutoTimer.SetBounds(572, 568, 312, 22);
             _chkAutoTimer.Checked = true;   // par défaut : le timer 1 ms suit les jeux tout seul
             _chkAutoTimer.CheckedChanged += OnTimerToggled;
 
             // Boutons d'action
-            _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 558, 268, 44, true);
+            _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 598, 268, 44, true);
             _btnApply.Font = new Font("Segoe UI Semibold", 10.5f);
-            _btnRevert = MakeButton("Rétablir (sélection)", 292, 558, 176, 44, false);
-            _btnOpen = MakeButton("Sauvegardes", 476, 558, 104, 44, false);
-            _btnReport = MakeButton("Rapport", 588, 558, 96, 44, false);
-            _btnLatency = MakeButton("Analyse latence", 692, 558, 192, 44, false);
+            _btnRevert = MakeButton("Rétablir (sélection)", 292, 598, 176, 44, false);
+            _btnOpen = MakeButton("Sauvegardes", 476, 598, 104, 44, false);
+            _btnReport = MakeButton("Rapport", 588, 598, 96, 44, false);
+            _btnLatency = MakeButton("Analyse latence", 692, 598, 192, 44, false);
             _btnLatency.ForeColor = Accent;
 
             // Ligne outils
-            _btnMonitor = MakeButton("Moniteur matériel", 16, 610, 210, 32, false);
+            _btnMonitor = MakeButton("Moniteur matériel", 16, 650, 210, 32, false);
             _btnMonitor.ForeColor = Accent;
-            _btnOverclock = MakeButton("Overclock auto", 234, 610, 150, 32, false);
+            _btnOverclock = MakeButton("Overclock auto", 234, 650, 150, 32, false);
             _btnOverclock.ForeColor = Color.FromArgb(180, 70, 20);
-            _btnDns = MakeButton("DNS rapide", 392, 610, 130, 32, false);
+            _btnDns = MakeButton("DNS rapide", 392, 650, 130, 32, false);
             _btnDns.ForeColor = Accent;
-            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 610, 354, 32, false);
+            _btnAutoCompare = MakeButton("Comparer les 2 dernières mesures", 530, 650, 354, 32, false);
 
             // Journal : console posée dans une carte arrondie.
             var logCard = new Panel();
-            logCard.SetBounds(16, 650, 868, 138);
+            logCard.SetBounds(16, 690, 868, 138);
             logCard.Padding = new Padding(8, 6, 8, 6);
             logCard.Paint += OnPaintLogCard;
             logCard.Resize += (s, e) => logCard.Invalidate();
@@ -446,7 +459,7 @@ namespace BTOptimizer
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
-                _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search,
+                _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search, _btnOneClick,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, logCard
@@ -818,6 +831,48 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>
+        /// ⚡ TOUT OPTIMISER : un seul clic. Niveau choisi selon le châssis (fixe → Agressif,
+        /// portable → Équilibré), sélection auto-tune adaptée au matériel MOINS les réglages
+        /// à risque jeux/boutiques (HAGS, UWP fond, tunnels IPv6), sauvegarde .reg forcée,
+        /// timer 1 ms activé et RAM libérée. Tout reste réversible.
+        /// </summary>
+        private void OnOneClickOptimize(object sender, EventArgs e)
+        {
+            if (_hw == null) _hw = Hardware.Detect();
+            int level = _hw.IsLaptop ? Hardware.LevelBalanced : Hardware.LevelAggressive;
+            Sys.SaveAutoLevel(level);
+            var ids = Hardware.OneClickIds(_tweaks, _hw, level);
+            ApplyPreset(t => ids.Contains(t.Id));
+
+            string niveau = _hw.IsLaptop ? "Équilibré (portable : batterie/chaleur préservées)"
+                                         : "Agressif (PC fixe : max sûr)";
+            Log("⚡ TOUT OPTIMISER — niveau " + niveau + " choisi automatiquement.", 1);
+            Log("Matériel : " + _hw.Summary(), 0);
+            Log("Écartés d'office (retours crashs/boutiques) : HAGS, applis UWP en fond, tunnels IPv6"
+                + " — cochables à la main. Sécurité (Spectre/VBS) et OC jamais inclus.", 2);
+
+            List<Tweak> sel = Selection();
+            if (sel.Count == 0)
+            {
+                Log("Tout est déjà optimisé : rien à appliquer.", 1);
+                return;
+            }
+            string msg = "Optimiser tout le PC maintenant ?\n\n"
+                       + "• " + sel.Count + " optimisations adaptées à ton matériel (" + niveau + ")\n"
+                       + "• Sauvegarde .reg automatique" + (_chkPoint.Checked ? " + point de restauration" : "") + "\n"
+                       + "• Timer Windows 1 ms activé, RAM libérée\n"
+                       + "• 100 % réversible (« Rétablir (sélection) » ou menu ☰ → Réinitialiser TOUT)";
+            if (MessageBox.Show(this, msg, "⚡ TOUT OPTIMISER",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+
+            _chkBackup.Checked = true;   // le 1 clic garde toujours un filet de sécurité
+            _chkTimer.Checked = true;    // timer 1 ms immédiat (case existante)
+            RunOperation(sel, true);
+            Task.Run(() => Sys.CleanMemory(Log));
+        }
+
         private void FilterTweaks(string query)
         {
             string q = (query ?? "").Trim().ToLowerInvariant();
@@ -917,7 +972,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin, _btnFps500 };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin, _btnFps500, _btnOneClick };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }
