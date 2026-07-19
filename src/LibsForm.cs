@@ -70,7 +70,7 @@ namespace BTOptimizer
                         }
                         catch { return false; }
                     } },
-                new LibItem { Name = "OpenAL (audio 3D)", Essential = true, WingetId = "OpenAL.OpenAL",
+                new LibItem { Name = "OpenAL (audio 3D)", Essential = true, WingetId = "CreativeTechnology.OpenAL",
                     Why = "audio de nombreux jeux (OpenAL32.dll)",
                     Installed = () => File.Exists(Sys32("OpenAL32.dll")) || File.Exists(WowDir("OpenAL32.dll")) },
 
@@ -98,15 +98,94 @@ namespace BTOptimizer
             catch { return null; }
         }
 
-        /// <summary>Installe un paquet winget en silencieux ; vrai si OK (ou déjà présent).</summary>
+        /// <summary>Rafraîchit l'index de la source winget (une fois par série ; échec toléré).</summary>
+        public static void RefreshSource(string winget, Action<string, int> log)
+        {
+            log("Mise à jour de l'index winget...", 0);
+            Sys.Run(winget, "source update --disable-interactivity");
+        }
+
+        private static string InstallArgs(string id, string scope)
+        {
+            return "install --id " + id + " -e --silent --source winget"
+                 + " --accept-source-agreements --accept-package-agreements --disable-interactivity"
+                 + (scope == null ? "" : " --scope " + scope);
+        }
+
+        /// <summary>Raison d'échec lisible : code winget décodé + dernières lignes de sa sortie.</summary>
+        private static string WingetReason(NativeResult r)
+        {
+            uint code = unchecked((uint)r.ExitCode);
+            string known = code == 0x8A150014 ? "paquet introuvable dans la source"
+                         : code == 0x8A15002B ? "aucun installeur applicable dans ce contexte"
+                         : null;
+            string tail = "";
+            try
+            {
+                string[] lines = (r.Output ?? "").Split('\n');
+                for (int i = lines.Length - 1; i >= 0 && tail.Length < 160; i--)
+                {
+                    string l = lines[i].Trim().Trim('\b', '-', '\\', '|', '/');
+                    if (l.Length < 4) continue;
+                    tail = (tail.Length == 0) ? l : l + " | " + tail;
+                    if (tail.Length > 40) break;
+                }
+            }
+            catch { }
+            return " (code 0x" + code.ToString("X8")
+                 + (known != null ? " — " + known : "")
+                 + (tail.Length > 0 ? " ; winget : " + tail : "") + ")";
+        }
+
+        /// <summary>
+        /// Plan B pour les Visual C++ : téléchargement de l'installeur OFFICIEL via
+        /// « winget download » (hash vérifié par winget) puis exécution directe en
+        /// silencieux — contourne les refus d'installation de winget en contexte élevé.
+        /// </summary>
+        private static bool DownloadAndRunRedist(string winget, LibItem item, Action<string, int> log)
+        {
+            try
+            {
+                string dir = Path.Combine(Path.GetTempPath(), @"destingood-libs\" + item.WingetId.Replace('+', '_'));
+                Directory.CreateDirectory(dir);
+                log(item.Name + " : plan B — téléchargement vérifié (winget download) puis installation directe...", 0);
+                NativeResult d = Sys.Run(winget,
+                    "download --id " + item.WingetId + " -e --accept-source-agreements --accept-package-agreements -d \"" + dir + "\"");
+                if (d.ExitCode != 0) { log(item.Name + " : téléchargement impossible" + WingetReason(d), 2); return false; }
+
+                string exe = null;
+                foreach (string f in Directory.GetFiles(dir, "*.exe")) exe = f;
+                if (exe == null) { log(item.Name + " : installeur téléchargé introuvable.", 2); return false; }
+
+                NativeResult inst = Sys.Run(exe, "/install /quiet /norestart");
+                bool ok = inst.ExitCode == 0 || inst.ExitCode == 3010 || item.Installed();
+                if (!ok) log(item.Name + " : l'installeur a retourné le code " + inst.ExitCode + ".", 2);
+                return ok;
+            }
+            catch (Exception ex) { log(item.Name + " : plan B impossible — " + ex.Message, 2); return false; }
+        }
+
+        /// <summary>Installe un paquet ; vrai si OK (ou déjà présent). Journalise la vraie raison en cas d'échec.</summary>
         public static bool Install(string winget, LibItem item, Action<string, int> log)
         {
             log("Installation de " + item.Name + " (winget " + item.WingetId + ")...", 0);
-            NativeResult r = Sys.Run(winget,
-                "install --id " + item.WingetId + " -e --silent --accept-source-agreements --accept-package-agreements --disable-interactivity");
+            NativeResult r = Sys.Run(winget, InstallArgs(item.WingetId, null));
+
+            // Bibliothèques : nouvel essai en portée machine (certains manifests l'exigent en contexte admin).
+            if (r.ExitCode != 0 && !item.Installed() && item.Essential)
+            {
+                log(item.Name + " : premier essai refusé" + WingetReason(r) + " — nouvel essai portée machine...", 0);
+                r = Sys.Run(winget, InstallArgs(item.WingetId, "machine"));
+            }
+
             bool ok = r.ExitCode == 0 || item.Installed();
+
+            // Visual C++ : plan B téléchargement vérifié + exécution directe (l'app est déjà admin).
+            if (!ok && item.WingetId.StartsWith("Microsoft.VCRedist", StringComparison.OrdinalIgnoreCase))
+                ok = DownloadAndRunRedist(winget, item, log);
+
             log(ok ? item.Name + " : installé. ✔"
-                   : item.Name + " : échec winget (code " + r.ExitCode + ") — réessaie ou installe-le depuis le site officiel.",
+                   : item.Name + " : échec" + WingetReason(r) + " — installe-le depuis le site officiel de l'éditeur.",
                 ok ? 1 : 2);
             return ok;
         }
@@ -277,6 +356,7 @@ namespace BTOptimizer
             string winget = _winget;
             Task.Run(() =>
             {
+                LibScan.RefreshSource(winget, _log);   // index à jour (échec toléré)
                 int ok = 0;
                 foreach (LibScan.LibItem it in sel)
                     if (LibScan.Install(winget, it, _log)) ok++;
