@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🖥️ Réglages d'écran gaming (v11.7)
+
+☰ → **Réglages d'écran** — le piège le plus courant : un écran 144/240 Hz resté à **60 Hz**
+sans que le joueur le sache. Le panneau liste chaque écran (résolution, fréquence actuelle
+vs max, principal), signale ceux **sous leur fréquence max** et les passe tous au maximum
+en **un clic** (test avant application, réversible). Il rappelle aussi les réglages qui se
+font dans Windows/NVIDIA — **VRR/G-Sync**, **HDR**, **mise à l'échelle** — avec les
+raccourcis pour ouvrir les réglages d'affichage Windows et le panneau NVIDIA (honnête :
+ces états ne se lisent pas de façon fiable depuis une app).
+
 ### 🏥 Santé de mon PC — le bilan en un score (v11.6)
 
 ☰ → **SANTÉ DE MON PC** — le tableau de bord qui unifie tout. Un clic lance les contrôles

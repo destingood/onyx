@@ -212,6 +212,8 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
                 (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🖥️ Réglages d'écran (fréquence max, VRR/G-Sync, HDR)...", null,
+                (s, e) => { using (var f = new DisplayForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("💾 Jeux & disques (SSD/HDD, espace, chargements)...", null,
                 (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
