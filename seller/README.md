@@ -1,6 +1,6 @@
 # Dossier VENDEUR — ne pas livrer aux clients
 
-Ce dossier contient les outils de commercialisation de BT Optimizer. **Rien ici ne doit
+Ce dossier contient les outils de commercialisation de DesTinGOOD. **Rien ici ne doit
 être inclus dans le paquet distribué aux clients**, en particulier `private.xml`.
 
 ## 1. Générer une clé de licence Pro
@@ -53,9 +53,12 @@ Test local seulement (auto-signé, non reconnu ailleurs) : `.\sign.ps1 -SelfSign
 
 ## Split Gratuit / Pro (actuel)
 
-- **Gratuit** : les 62 optimisations en manuel, preset Recommandé, sauvegarde, point de
-  restauration, mesure de latence, moniteur matériel, réinitialisation.
-- **Pro** : auto-tune matériel, presets eSport/Benchmark, overclock GPU, profil pilote
-  NVIDIA, gardien de démarrage, outils DNS.
+- **Gratuit** : les 173 optimisations en manuel, preset Recommandé, toute la suite de
+  diagnostic (bilan Santé /100, assistant « J'ai un problème… », crashs/stabilité, réseau,
+  disque, mesure FPS/latence, benchmark, rapport HTML), sauvegarde, point de restauration,
+  réinitialisation.
+- **Pro** : bouton ⚡ TOUT OPTIMISER (auto-tune matériel), presets eSport/Benchmark, MODE JEU
+  auto, overclock GPU + profil pilote NVIDIA, gardien de démarrage & surveillance en fond,
+  DNS rapide & réglages réseau avancés.
 
 Pour changer ce partage : voir les appels `RequirePro(...)` dans `src\MainForm.cs`.
