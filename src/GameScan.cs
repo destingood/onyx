@@ -41,17 +41,29 @@ namespace BTOptimizer
 
         public static string[] PriorityExes()
         {
+            // Noms d'exécutables DISTINCTIFS uniquement (évite les faux positifs du MODE JEU AUTO).
             return new[]
             {
                 "cs2.exe",                                     // Counter-Strike 2
                 "VALORANT-Win64-Shipping.exe",                 // VALORANT
                 "FortniteClient-Win64-Shipping.exe",           // Fortnite
                 "Overwatch.exe",                               // Overwatch 2
-                "r5apex.exe",                                  // Apex Legends
-                "cod.exe", "cod22-cod.exe", "cod23-cod.exe",   // Call of Duty (HQ / MWII / MWIII)
+                "r5apex.exe", "r5apex_dx12.exe",               // Apex Legends (DX11 / DX12)
+                "cod.exe", "cod22-cod.exe", "cod23-cod.exe", "cod24-cod.exe", // Call of Duty (HQ / MWII / MWIII / BO6)
                 "League of Legends.exe",                       // League of Legends
                 "RocketLeague.exe",                            // Rocket League
-                "RainbowSix.exe", "RainbowSix_Vulkan.exe"      // Rainbow Six Siege (DX11 / Vulkan)
+                "RainbowSix.exe", "RainbowSix_Vulkan.exe",     // Rainbow Six Siege (DX11 / Vulkan)
+                "dota2.exe",                                   // Dota 2
+                "TslGame.exe",                                 // PUBG
+                "MarvelRivals.exe",                            // Marvel Rivals
+                "helldivers2.exe",                             // Helldivers 2
+                "destiny2.exe",                                // Destiny 2
+                "RustClient.exe",                              // Rust
+                "Warframe.x64.exe",                            // Warframe
+                "eldenring.exe",                               // Elden Ring
+                "GTA5.exe", "GTA5_Enhanced.exe",               // GTA V (Legacy / Enhanced)
+                "BF2042.exe",                                  // Battlefield 2042
+                "FactoryGame-Win64-Shipping.exe"               // Satisfactory
             };
         }
 

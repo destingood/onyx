@@ -86,6 +86,14 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎮 Plus de jeux détectés (v14.1)
+
+La liste des jeux reconnus s'étoffe (exes **distinctifs** uniquement, pour éviter les faux
+positifs) : Dota 2, PUBG, Marvel Rivals, Helldivers 2, Destiny 2, Rust, Warframe, Elden Ring,
+GTA V (Legacy + Enhanced), Battlefield 2042, Satisfactory, + variantes DX12/BO6. Ça améliore
+d'un coup le **MODE JEU AUTO** (détection par processus), la **priorité CPU par jeu** et la
+détection d'installation (disques, exclusions antivirus).
+
 ### 🟢🔴 Diagnostic GPU multi-constructeur — NVIDIA / AMD / Intel (v14.0)
 
 Jusqu'ici, la détection des **crashs pilote GPU** ne couvrait que NVIDIA (`nvlddmkm`) : un
