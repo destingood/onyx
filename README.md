@@ -58,6 +58,15 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🛰️ Analyse du trajet réseau — traceroute (v13.1)
+
+☰ → **Analyse du trajet réseau** — complète « Qualité réseau » (box vs internet) en montrant
+**chaque saut** entre ton PC et une destination (1.1.1.1 par défaut, ou l'IP d'un serveur de
+jeu), avec la latence à chaque étape et le **saut où le ping bondit**. Verdict clair : bond
+dès le 1er saut = ta box/ton Wi-Fi ; au 2e = sortie FAI ; plus loin = peering/hébergeur (hors
+de ton contrôle). Implémenté en ICMP pur (TTL croissant) — **indépendant de la langue** de
+Windows, contrairement à `tracert`.
+
 ### 📡 Optimiser la carte réseau — latence (v13.0)
 
 ☰ → **Optimiser la carte réseau** — les cartes réseau ont des réglages qui économisent

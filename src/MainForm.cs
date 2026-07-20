@@ -242,6 +242,8 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new NetworkForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("📡 Optimiser la carte réseau (latence : interruptions, flux, EEE)...", null,
                 (s, e) => { using (var f = new NetAdapterForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🛰️ Analyse du trajet réseau (traceroute : où le lag apparaît)...", null,
+                (s, e) => { using (var f = new NetRouteForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🖱️ Fréquence réelle de la souris (ton 1000 Hz est-il vrai ?)...", null,
                 (s, e) => { using (var f = new MouseForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
