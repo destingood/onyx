@@ -157,6 +157,22 @@
   .plan li::before { content: "▸"; color: var(--signal); }
   .plan .btn { margin-top: auto; }
 
+  /* download */
+  .dl { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; max-width: 900px; }
+  .dl-main, .dl-side { border: 1px solid var(--line); border-radius: 16px; padding: 30px; background: var(--panel); }
+  .dl-main { border-color: color-mix(in srgb, var(--signal) 46%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--signal) 8%, var(--panel)), var(--panel)); }
+  .dl-tier { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem; color: var(--signal); }
+  .dl-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 6px; }
+  .dl-main > p { color: var(--ink-dim); font-size: 0.95rem; margin: 0 0 22px; }
+  .dl-main .btn { width: fit-content; }
+  .dl-alt { font-size: 0.86rem; color: var(--ink-faint); margin: 16px 0 0; }
+  .dl-alt a { color: var(--signal); text-decoration: none; }
+  .dl-alt a:hover { text-decoration: underline; }
+  .dl-req { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; }
+  .dl-req li { display: flex; gap: 10px; font-size: 0.9rem; color: var(--ink-dim); }
+  .dl-req li::before { content: "▸"; color: var(--signal); }
+  .dl-note { font-size: 0.74rem; color: var(--ink-faint); line-height: 1.55; border-top: 1px solid var(--line); padding-top: 14px; margin: 0; }
+
   /* disclaimer */
   .note { border: 1px solid var(--line); border-left: 3px solid var(--signal); border-radius: 12px; padding: 22px 24px; background: var(--panel-2); color: var(--ink-dim); font-size: 0.9rem; }
   .note b { color: var(--ink); }
@@ -167,7 +183,7 @@
   @media (max-width: 860px) {
     .hero-grid { grid-template-columns: 1fr; gap: 34px; }
     .statbar { grid-template-columns: repeat(2,1fr); }
-    .ba, .feat, .price { grid-template-columns: 1fr; }
+    .ba, .feat, .price, .dl { grid-template-columns: 1fr; }
     .nav-links a:not(.btn) { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -180,7 +196,7 @@
       <a href="#mesure">Mesure</a>
       <a href="#fonctions">Fonctions</a>
       <a href="#tarifs">Tarifs</a>
-      <a class="btn btn-primary" href="#tarifs">Télécharger</a>
+      <a class="btn btn-primary" href="#telecharger">Télécharger</a>
     </div>
   </div>
 </nav>
@@ -192,7 +208,7 @@
       <h1>Ton PC de jeu, <span class="accent">optimisé</span> — et surtout <span class="accent">diagnostiqué</span>.</h1>
       <p class="lede">173 optimisations réversibles <em>plus</em> une suite de diagnostic complète : pourquoi ça crashe, ça rame ou ça lag — avec un verdict et le bon outil pour chaque symptôme. Bouton <b>⚡ TOUT OPTIMISER</b> en un clic, et la preuve chiffrée avant/après.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="#tarifs">Essayer gratuitement</a>
+        <a class="btn btn-primary" href="#telecharger">Télécharger gratuitement</a>
         <a class="btn btn-ghost" href="#fonctions">Voir la suite</a>
         <span class="cta-note">Windows 10/11 · réversible · aucune injection · sauvegarde auto</span>
       </div>
@@ -211,8 +227,8 @@
   <div class="wrap">
     <div class="statbar tnum">
       <div class="stat"><div class="k">173</div><div class="l">optimisations réversibles</div></div>
-      <div class="stat"><div class="k">25<b>+</b></div><div class="l">outils de diagnostic</div></div>
-      <div class="stat"><div class="k"><b>/</b>100</div><div class="l">bilan santé du PC</div></div>
+      <div class="stat"><div class="k">30<b>+</b></div><div class="l">panneaux de diagnostic</div></div>
+      <div class="stat"><div class="k">39</div><div class="l">outils reliés, en 1 clic</div></div>
       <div class="stat"><div class="k"><b>1</b>-clic</div><div class="l">tout optimiser · tout rétablir</div></div>
     </div>
   </div>
@@ -249,15 +265,44 @@
     <div class="sec-head">
       <p class="eyebrow">Ce qu'il fait</p>
       <h2>Un atelier de réglage <em>et</em> de diagnostic complet.</h2>
-      <p class="sub">Deux portes d'entrée — un bilan santé /100 et un assistant « J'ai un problème… » — puis 25+ panneaux rangés par thème. Chaque symptôme a son outil, avec un verdict actionnable.</p>
+      <p class="sub">Deux portes d'entrée — un bilan santé /100 et un assistant « J'ai un problème… » — puis 30+ panneaux rangés par thème. Chaque symptôme a son verdict <em>et</em> le bon outil, installable en un clic depuis le panneau.</p>
     </div>
     <div class="feat">
       <div class="card"><div class="ix">01 · EN 1 CLIC</div><h3>⚡ Tout optimiser</h3><p>173 optimisations réversibles ; le bouton unique détecte ton matériel (SSD/HDD, GPU, RAM, écran) et coche la meilleure sélection — sauvegarde .reg + point de restauration automatiques.</p></div>
       <div class="card"><div class="ix">02 · DIAGNOSTIC</div><h3>🏥 Santé /100</h3><p>Un bilan global agrégeant crashs, thermique, réseau, disque et réglages néfastes, avec graphique de tendance et accès direct au panneau qui corrige chaque point.</p></div>
       <div class="card"><div class="ix">03 · CRASHS</div><h3>🩺 Pourquoi ça plante</h3><p>Lit les journaux Windows (crashs, pilote GPU, écrans bleus), détecte le throttling thermique et le « dispositif de rendu perdu », et annule les réglages néfastes laissés par d'autres « optimiseurs ».</p></div>
       <div class="card"><div class="ix">04 · RÉSEAU</div><h3>📡 Suite complète</h3><p>Qualité (gigue/perte, chez toi ou le FAI ?), traceroute, réglages TCP/IP qui débloquent les téléchargements, carte réseau basse latence et DNS benchmarké.</p></div>
-      <div class="card"><div class="ix">05 · MESURE</div><h3>📈 La preuve chiffrée</h3><p>FPS en direct façon PresentMon, latence DPC/ISR façon LatencyMon, benchmark CPU/mémoire/disque — applique un profil, relance, compare. Rapport HTML exportable.</p></div>
+      <div class="card"><div class="ix">05 · MESURE</div><h3>📈 La preuve chiffrée</h3><p>FPS en direct façon PresentMon, latence DPC/ISR façon LatencyMon, benchmark CPU/mémoire/disque. Et les outils de référence (HWiNFO, GPU-Z, OCCT, CapFrameX, Process Lasso…) s'installent en un clic depuis le panneau concerné.</p></div>
       <div class="card"><div class="ix">06 · SÛR</div><h3>🔒 Honnête par conception</h3><p>Aucune injection (compatible anticheat), tout réversible, aucun « faux tweak » dangereux. Un panneau annule même les dégâts des mauvais outils.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="telecharger">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Téléchargement</p>
+      <h2>Prête à installer — <em>sans aucun prérequis</em>.</h2>
+      <p class="sub">Un seul fichier, Windows 10 ou 11 (64 bits). Tout est réversible : une sauvegarde du registre et un point de restauration sont créés avant toute modification.</p>
+    </div>
+    <div class="dl">
+      <div class="dl-main">
+        <div class="dl-tier">Édition autonome · recommandée</div>
+        <div class="dl-title">DesTinGOOD Setup <span class="mono">v14.15</span></div>
+        <p>Runtime .NET inclus : s'installe et démarre sans rien installer d'autre. Environ 37 Mo.</p>
+        <!-- TODO diffusion : remplace href="#" par l'URL réelle de ton installateur héberge. -->
+        <a class="btn btn-primary" href="#" download>⬇ Télécharger (.exe · 64 bits)</a>
+        <p class="dl-alt">PC déjà équipé du .NET Desktop 10 ? <a href="#">Version légère (~6 Mo)</a>.</p>
+      </div>
+      <div class="dl-side">
+        <ul class="dl-req">
+          <li>Windows 10 / 11 · x64</li>
+          <li>Droits administrateur (pour appliquer les réglages)</li>
+          <li>~120 Mo une fois installé · désinstallation propre</li>
+          <li>Aucune injection · compatible anticheat</li>
+        </ul>
+        <p class="dl-note">Au 1<sup>er</sup> lancement, Windows peut afficher « éditeur inconnu » → « Informations complémentaires » → « Exécuter quand même ». La signature de code est en cours.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -279,7 +324,7 @@
           <li>Mesure FPS / latence &amp; moniteur matériel</li>
           <li>Sauvegarde .reg + point de restauration · tout rétablir</li>
         </ul>
-        <a class="btn btn-ghost" href="#">Télécharger</a>
+        <a class="btn btn-ghost" href="#telecharger">Télécharger</a>
       </div>
       <div class="plan pro">
         <span class="tier">Pro</span>
@@ -308,7 +353,7 @@
 <footer>
   <div class="wrap foot-in">
     <div>© DesTinGOOD — Optimiseur &amp; diagnostic gaming pour Windows.</div>
-    <div class="mono">v13.5 · Windows 10/11 · x64</div>
+    <div class="mono">v14.15 · Windows 10/11 · x64</div>
   </div>
 </footer>
 
