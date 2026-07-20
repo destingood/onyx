@@ -33,17 +33,18 @@ namespace BTOptimizer
             banner.Paint += (s, e) => Theme.DrawWordmark(e.Graphics, brandFont, 22, 18);
             banner.Controls.Add(new Label
             {
-                Text = "Réduire la latence et l'input lag, en 1 clic ou à la carte.",
-                Location = new Point(24, 60), Size = new Size(500, 20),
+                Text = "Optimise ton PC de jeu — et diagnostique pourquoi ça crashe, rame ou lag.",
+                Location = new Point(24, 60), Size = new Size(510, 20),
                 ForeColor = Color.FromArgb(170, 175, 185), BackColor = Color.Transparent, Font = new Font("Segoe UI", 9.5f)
             });
             Controls.Add(banner);
 
             Controls.Add(new Label
             {
-                Text = Catalog.All().Count + " optimisations réversibles, mesure de latence, overclock GPU, DNS et bien plus. "
-                     + "Toutes les modifications sont sauvegardées et annulables en un clic.",
-                Location = new Point(24, 112), Size = new Size(512, 44), ForeColor = Color.FromArgb(60, 64, 72)
+                Text = Catalog.All().Count + " optimisations réversibles + une suite de diagnostic complète (bilan Santé /100, "
+                     + "crashs, réseau, disque, mesure FPS/latence). Tout est sauvegardé et annulable. "
+                     + "Astuce : menu ☰ → 🏥 Santé de mon PC et 🧭 J'ai un problème…",
+                Location = new Point(24, 112), Size = new Size(512, 48), ForeColor = Color.FromArgb(60, 64, 72)
             });
 
             var reco = BigButton("⚡  Optimiser automatiquement",
