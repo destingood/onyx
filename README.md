@@ -58,6 +58,21 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### ⚙️ Réglages TCP/IP — jeu + téléchargements (v13.2)
+
+☰ → **Réglages TCP/IP** — boucle avec le problème d'origine (Steam qui charge/télécharge à
+l'infini). Le panneau affiche l'**état réel** de ta pile TCP et applique en un clic les bons
+réglages **jeu + téléchargements** :
+
+- **Réglage automatique de la fenêtre TCP → « normal »** : le point crucial. Désactivé par de
+  mauvais guides « boost », il **bride les téléchargements** (Steam, MAJ Windows) et fait
+  **caler des connexions**. On le remet à sa valeur correcte.
+- **RSS activé** (réseau réparti sur plusieurs cœurs), **ECN / horodatages / RSC** ajustés
+  pour la latence.
+
+Commandes `netsh` **indépendantes de la langue**, et bouton **« Rétablir les valeurs
+Windows »**. À faire tourner si tes téléchargements sont anormalement lents.
+
 ### 🛰️ Analyse du trajet réseau — traceroute (v13.1)
 
 ☰ → **Analyse du trajet réseau** — complète « Qualité réseau » (box vs internet) en montrant
