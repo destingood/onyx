@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🩺 Outils intégrés en 1er — santé disque native (v14.17)
+
+Les outils vivent DANS l'app, dans son style — pas en programmes externes. Rappel : la latence
+(**Latence en direct** = LatencyMon), les capteurs (**Moniteur matériel** = HWiNFO), le **FPS**
+(façon PresentMon) et les **températures** sont déjà intégrés. Cette version comble le dernier
+manque courant :
+
+- **Santé S.M.A.R.T. des disques, native** (comme CrystalDiskInfo, mais via WMI — **aucun pilote
+  noyau**) : le panneau **Jeux & disques** affiche désormais l'état de chaque disque
+  (**Sain / ⚠ Attention / ✗ Défaillant**), plus température et usure SSD quand le disque les
+  expose. Un verdict fort prévient de sauvegarder si un disque se dégrade.
+- Les boutons des panneaux qui SONT déjà l'outil (Latence, FPS, disque) sont repositionnés en
+  « **Aller plus loin** » : l'outil intégré est la réponse principale, l'appli de bureau reste
+  une option pour l'accès matériel bas niveau (température GPU AMD/Intel, undervolt…) — ce que
+  l'app n'imite pas volontairement (compatible anticheat, zéro injection).
+
 ### 🧩 Applis unifiées avec l'optimiseur (v14.16)
 
 Les applis ne sont plus un module à côté : elles font partie du cœur de l'optimisation.

@@ -56,11 +56,12 @@ namespace BTOptimizer
                 Location = new Point(18, 82), Size = new Size(644, 128),
                 View = View.Details, FullRowSelect = true, GridLines = false
             };
-            _drives.Columns.Add("Disque", 130);
-            _drives.Columns.Add("Type", 120);
-            _drives.Columns.Add("Libre", 130, HorizontalAlignment.Right);
-            _drives.Columns.Add("Total", 130, HorizontalAlignment.Right);
-            _drives.Columns.Add("% libre", 120, HorizontalAlignment.Right);
+            _drives.Columns.Add("Disque", 116);
+            _drives.Columns.Add("Type", 94);
+            _drives.Columns.Add("Santé (S.M.A.R.T.)", 156);
+            _drives.Columns.Add("Libre", 96, HorizontalAlignment.Right);
+            _drives.Columns.Add("Total", 96, HorizontalAlignment.Right);
+            _drives.Columns.Add("% libre", 72, HorizontalAlignment.Right);
             Controls.Add(_drives);
 
             var l2 = new Label { Text = "Jeux détectés", Location = new Point(18, 218), AutoSize = true, Font = new Font("Segoe UI Semibold", 9.5f) };
@@ -86,9 +87,11 @@ namespace BTOptimizer
             _btnScan = MakeBtn("Ré-analyser", 18, 470, 130, 38, false);
             _btnScan.Click += (s, e) => Scan();
             // Lien fonction → outil : santé S.M.A.R.T. + vitesse + occupation de l'espace.
-            var btnTools = MakeBtn("💾 Outils disque", 158, 470, 330, 38, false);
-            LibScan.WireToolButton(btnTools, this, _log, "💾 Outils disque : CrystalDiskInfo / WizTree",
-                new[] { "CrystalDewWorld.CrystalDiskInfo", "AntibodySoftware.WizTree", "CrystalDewWorld.CrystalDiskMark" });
+            // La santé S.M.A.R.T. est désormais affichée NATIVEMENT ci-dessus. Le bouton n'est
+            // qu'un « aller plus loin » : WizTree (carte de l'espace), CrystalDiskMark (vitesse).
+            var btnTools = MakeBtn("💾 Aller plus loin : WizTree / benchmark", 158, 470, 330, 38, false);
+            LibScan.WireToolButton(btnTools, this, _log, "💾 Aller plus loin : WizTree / benchmark",
+                new[] { "AntibodySoftware.WizTree", "CrystalDewWorld.CrystalDiskMark", "CrystalDewWorld.CrystalDiskInfo" });
             _btnClose = MakeBtn("Fermer", 572, 470, 90, 38, true);
             _btnClose.Click += (s, e) => Close();
             Controls.Add(_btnScan); Controls.Add(btnTools); Controls.Add(_btnClose);
@@ -106,21 +109,66 @@ namespace BTOptimizer
             return b;
         }
 
-        // Lettre de lecteur -> "SSD" / "HDD" / "?" (via MSFT_Partition -> MSFT_PhysicalDisk).
-        private static Dictionary<char, string> LetterTypes()
+        /// <summary>Santé S.M.A.R.T. native d'un disque (comme CrystalDiskInfo, mais via WMI —
+        /// aucun pilote noyau) : type, état, température et usure SSD si le disque les expose.</summary>
+        internal class DiskMeta
         {
-            var diskType = new Dictionary<int, string>();   // numéro de disque -> type
-            var result = new Dictionary<char, string>();
+            public string Type = "?";
+            public string Health;   // "Sain" / "⚠ Attention" / "✗ Défaillant" / null (inconnu)
+            public int TempC = -1;
+            public int Wear = -1;   // % d'usure (SSD) quand disponible
+        }
+
+        private static string HealthLabel(object h)
+        {
+            if (h == null) return null;
+            try
+            {
+                switch (Convert.ToInt32(h))
+                {
+                    case 0: return "Sain";
+                    case 1: return "⚠ Attention";
+                    case 2: return "✗ Défaillant";
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // Lettre de lecteur -> métadonnées disque (type + santé S.M.A.R.T.), via l'espace Storage.
+        private static Dictionary<char, DiskMeta> LetterInfo()
+        {
+            var byNum = new Dictionary<int, DiskMeta>();     // numéro de disque -> méta
+            var result = new Dictionary<char, DiskMeta>();
             try
             {
                 using (var pd = new ManagementObjectSearcher(
-                    @"root\Microsoft\Windows\Storage", "SELECT DeviceId, MediaType FROM MSFT_PhysicalDisk"))
+                    @"root\Microsoft\Windows\Storage", "SELECT DeviceId, MediaType, HealthStatus FROM MSFT_PhysicalDisk"))
                     foreach (ManagementObject mo in pd.Get())
                     {
                         int num; if (!int.TryParse(Convert.ToString(mo["DeviceId"]), out num)) continue;
+                        var m = new DiskMeta();
                         int mt = mo["MediaType"] == null ? 0 : Convert.ToInt32(mo["MediaType"]);
-                        diskType[num] = mt == 4 ? "SSD" : mt == 3 ? "HDD (mécanique)" : mt == 5 ? "SSD (SCM)" : "?";
+                        m.Type = mt == 4 ? "SSD" : mt == 3 ? "HDD (mécanique)" : mt == 5 ? "SSD (SCM)" : "?";
+                        m.Health = HealthLabel(mo["HealthStatus"]);
+                        byNum[num] = m;
                     }
+
+                // Compteurs de fiabilité (S.M.A.R.T. moderne) : température + usure, best-effort.
+                try
+                {
+                    using (var rc = new ManagementObjectSearcher(
+                        @"root\Microsoft\Windows\Storage", "SELECT DeviceId, Temperature, Wear FROM MSFT_StorageReliabilityCounter"))
+                        foreach (ManagementObject mo in rc.Get())
+                        {
+                            int num; if (!int.TryParse(Convert.ToString(mo["DeviceId"]), out num)) continue;
+                            DiskMeta m; if (!byNum.TryGetValue(num, out m)) continue;
+                            try { if (mo["Temperature"] != null) { int t = Convert.ToInt32(mo["Temperature"]); if (t > 0 && t < 120) m.TempC = t; } } catch { }
+                            try { if (mo["Wear"] != null) { int w = Convert.ToInt32(mo["Wear"]); if (w >= 0 && w <= 100) m.Wear = w; } } catch { }
+                        }
+                }
+                catch { }
+
                 using (var part = new ManagementObjectSearcher(
                     @"root\Microsoft\Windows\Storage", "SELECT DiskNumber, DriveLetter FROM MSFT_Partition"))
                     foreach (ManagementObject mo in part.Get())
@@ -130,7 +178,7 @@ namespace BTOptimizer
                         char letter = Convert.ToChar(dl);
                         if (letter == '\0') continue;
                         int dn = Convert.ToInt32(mo["DiskNumber"]);
-                        string t; if (diskType.TryGetValue(dn, out t)) result[char.ToUpperInvariant(letter)] = t;
+                        DiskMeta m; if (byNum.TryGetValue(dn, out m)) result[char.ToUpperInvariant(letter)] = m;
                     }
             }
             catch { }
@@ -144,34 +192,42 @@ namespace BTOptimizer
             _verdict.Text = "Analyse des disques et des jeux...";
             Task.Run(() =>
             {
-                Dictionary<char, string> types = LetterTypes();
+                Dictionary<char, DiskMeta> metas = LetterInfo();
                 var games = GameScan.Known();
                 GameScan.Detect(games);
-                try { BeginInvoke((Action)(() => Populate(types, games))); } catch { }
+                try { BeginInvoke((Action)(() => Populate(metas, games))); } catch { }
             });
         }
 
-        private void Populate(Dictionary<char, string> types, List<GameScan.GameInfo> games)
+        private void Populate(Dictionary<char, DiskMeta> metas, List<GameScan.GameInfo> games)
         {
             _drives.Items.Clear();
-            bool lowSpace = false;
+            bool lowSpace = false, badHealth = false;
             foreach (DriveInfo d in DriveInfo.GetDrives())
             {
                 try
                 {
                     if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
                     char letter = char.ToUpperInvariant(d.Name[0]);
-                    string type; if (!types.TryGetValue(letter, out type)) type = "?";
+                    DiskMeta m; if (!metas.TryGetValue(letter, out m)) m = new DiskMeta();
                     double freeGB = d.AvailableFreeSpace / 1073741824.0;
                     double totGB = d.TotalSize / 1073741824.0;
                     double pct = totGB > 0 ? freeGB / totGB * 100 : 0;
 
+                    // Colonne Santé native (S.M.A.R.T.) : état + température + usure quand exposés.
+                    string health = m.Health ?? "n/d";
+                    if (m.TempC >= 0) health += "  " + m.TempC + "°C";
+                    if (m.Wear >= 0) health += "  usure " + m.Wear + "%";
+                    bool unhealthy = m.Health != null && m.Health != "Sain";
+
                     var it = new ListViewItem(d.Name + "  " + (string.IsNullOrEmpty(d.VolumeLabel) ? "" : d.VolumeLabel));
-                    it.SubItems.Add(type);
+                    it.SubItems.Add(m.Type);
+                    it.SubItems.Add(health);
                     it.SubItems.Add(freeGB.ToString("N0") + " Go");
                     it.SubItems.Add(totGB.ToString("N0") + " Go");
                     it.SubItems.Add(pct.ToString("0") + " %");
-                    if (pct < 8 || freeGB < 15) { it.ForeColor = Color.FromArgb(200, 60, 40); lowSpace = true; }
+                    if (unhealthy) { it.ForeColor = Color.FromArgb(200, 60, 40); badHealth = true; }
+                    else if (pct < 8 || freeGB < 15) { it.ForeColor = Color.FromArgb(200, 60, 40); lowSpace = true; }
                     else if (pct < 15) it.ForeColor = Color.FromArgb(200, 110, 0);
                     _drives.Items.Add(it);
                 }
@@ -189,7 +245,7 @@ namespace BTOptimizer
                 {
                     char letter = char.ToUpperInvariant(g.InstallPath[0]);
                     drive = letter + ":";
-                    types.TryGetValue(letter, out type);
+                    DiskMeta gm; if (metas.TryGetValue(letter, out gm)) type = gm.Type;
                     if (type == null) type = "?";
                 }
                 var it = new ListViewItem(g.Name);
@@ -201,7 +257,13 @@ namespace BTOptimizer
                 _games.Items.Add(it);
             }
 
-            if (onHdd > 0)
+            if (badHealth)
+            {
+                _verdict.ForeColor = Color.FromArgb(200, 60, 40);
+                _verdict.Text = "⚠ Un disque signale un état S.M.A.R.T. dégradé (« Attention » ou « Défaillant ») : SAUVEGARDE "
+                    + "tes données maintenant et prévois son remplacement. C'est le disque, pas un réglage.";
+            }
+            else if (onHdd > 0)
             {
                 _verdict.ForeColor = Color.FromArgb(200, 110, 0);
                 _verdict.Text = "→ " + onHdd + " jeu(x) sur disque dur mécanique : les déplacer sur un SSD réduit fortement les temps "
@@ -227,7 +289,8 @@ namespace BTOptimizer
             }
 
             if (_log != null) _log("Disques : " + detected + " jeu(x) détecté(s), " + onHdd + " sur HDD"
-                + (lowSpace ? ", disque presque plein" : "") + ".", (onHdd > 0 || lowSpace) ? 2 : 0);
+                + (lowSpace ? ", disque presque plein" : "") + (badHealth ? ", SANTÉ S.M.A.R.T. dégradée" : "") + ".",
+                (badHealth || onHdd > 0 || lowSpace) ? 2 : 0);
             _btnScan.Enabled = true;
             Cursor = Cursors.Default;
         }

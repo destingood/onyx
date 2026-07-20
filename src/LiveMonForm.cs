@@ -96,10 +96,11 @@ namespace BTOptimizer
             var btnExport = MakeBtn("Exporter le résumé…", 170);
             btnExport.Dock = DockStyle.Left;
             btnExport.Click += OnExport;
-            // Lien fonction → outil : LatencyMon, la référence de l'analyse DPC/ISR.
-            var btnTool = MakeBtn("⏱ LatencyMon", 150);
+            // Cette fenêtre EST la mesure de latence intégrée (comme LatencyMon). Le bouton
+            // n'est qu'un « aller plus loin » optionnel vers l'outil de bureau.
+            var btnTool = MakeBtn("Aller plus loin : LatencyMon", 210);
             btnTool.Dock = DockStyle.Left;
-            LibScan.WireToolButton(btnTool, this, _log, "⏱ LatencyMon", new[] { "Resplendence.LatencyMon" });
+            LibScan.WireToolButton(btnTool, this, _log, "Aller plus loin : LatencyMon", new[] { "Resplendence.LatencyMon" });
             var btnClose = MakeBtn("Fermer", 110);
             btnClose.Dock = DockStyle.Right;
             btnClose.Click += (s, e) => Close();
