@@ -33,11 +33,19 @@ namespace BTOptimizer
             _stopped.Clear();
             foreach (string svc in Suspendable)
             {
-                if (Sys.GetServiceStart(svc) < 0) continue;      // absent
-                if (Sys.GetServiceStart(svc) == 4) continue;     // déjà désactivé (on n'y touche pas)
-                if (!Sys.IsServiceRunning(svc)) continue;        // déjà arrêté
-                Sys.StopService(svc);
-                _stopped.Add(svc);
+                // Chaque service isolé : un service récalcitrant ne doit NI faire échouer le mode
+                // jeu, NI laisser les autres à moitié suspendus. Un service n'est enregistré dans
+                // _stopped que si son arrêt a réussi (sinon on n'essaiera pas de le relancer).
+                try
+                {
+                    int start = Sys.GetServiceStart(svc);
+                    if (start < 0) continue;                   // absent
+                    if (start == 4) continue;                  // déjà désactivé (on n'y touche pas)
+                    if (!Sys.IsServiceRunning(svc)) continue;  // déjà arrêté
+                    Sys.StopService(svc);
+                    _stopped.Add(svc);
+                }
+                catch { }
             }
 
             IsActive = true;
@@ -49,12 +57,17 @@ namespace BTOptimizer
         {
             if (!IsActive) return;
 
+            // Restauration ROBUSTE : un service qui refuse de redémarrer ne doit pas empêcher de
+            // relancer les autres ni de rendre le timer. On sort TOUJOURS de l'état « mode jeu ».
+            int restored = 0;
             foreach (string svc in _stopped)
-                Sys.StartService(svc);
-            int restored = _stopped.Count;
+            {
+                try { Sys.StartService(svc); restored++; }
+                catch { }
+            }
             _stopped.Clear();
 
-            if (!_timerWasActive) Native.SetTimer1ms(false);
+            try { if (!_timerWasActive) Native.SetTimer1ms(false); } catch { }
 
             IsActive = false;
             log("Mode Jeu désactivé : " + restored + " service(s) relancé(s), timer rendu au système.", 0);

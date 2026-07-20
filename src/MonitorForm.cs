@@ -106,7 +106,7 @@ namespace BTOptimizer
             Controls.Add(bottom);
             Controls.Add(flow);
 
-            FormClosing += (s, e) => { _timer.Stop(); _mon.Dispose(); };
+            FormClosing += (s, e) => { _timer.Stop(); _timer.Dispose(); _mon.Dispose(); };
         }
 
         private Panel Tile(string key, string caption, string value)

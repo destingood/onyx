@@ -1166,8 +1166,12 @@ namespace BTOptimizer
                 },
                 Revert = () =>
                 {
-                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity", 1, RegistryValueKind.DWord);
-                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled", 1, RegistryValueKind.DWord);
+                    // SUPPRIME les surcharges (retour à « non configuré », l'état d'origine sur la
+                    // plupart des PC de jeu) au lieu de FORCER VBS/HVCI à 1 : forcer l'activation
+                    // pouvait bloquer les anti-triche noyau et réintroduire des DPC hyperviseur sur
+                    // une machine qui n'avait jamais eu VBS. La photo .reg (BackupKeys) garde l'état exact.
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity");
+                    Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
                 },
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled"), 0)
             });
@@ -1693,6 +1697,7 @@ namespace BTOptimizer
                 Id = "msi_usb", Category = Cat.Souris, Esport = true, Reboot = true,
                 Name = "Mode MSI sur les contrôleurs USB (latence souris/clavier)",
                 Desc = "Passe les contrôleurs USB en interruptions par message (MSI) au lieu des IRQ classiques : traitement plus direct des périphériques USB, dont ta souris et ton clavier. Réduit la latence et le jitter d'entrée. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
                 Apply  = () => Sys.SetMsiForClass(Sys.MsiUsbClass, true, null),
                 Revert = () => Sys.SetMsiForClass(Sys.MsiUsbClass, false, null),
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiUsbClass)
@@ -1703,6 +1708,7 @@ namespace BTOptimizer
                 Id = "msi_network", Category = Cat.Reseau, Reboot = true,
                 Name = "Mode MSI sur les cartes réseau (latence réseau)",
                 Desc = "Passe les cartes réseau en interruptions par message (MSI) : traitement des paquets plus direct, moins de DPC réseau. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
                 Apply  = () => Sys.SetMsiForClass(Sys.MsiNetClass, true, null),
                 Revert = () => Sys.SetMsiForClass(Sys.MsiNetClass, false, null),
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiNetClass)
@@ -1713,6 +1719,7 @@ namespace BTOptimizer
                 Id = "msi_storage", Category = Cat.Systeme, Reboot = true,
                 Name = "Mode MSI sur les contrôleurs de stockage (avancé)",
                 Desc = "Passe les contrôleurs NVMe/SATA en interruptions par message (MSI) : moins de latence disque sous charge. AVANCÉ : sur de rares configurations, un contrôleur gère mal le MSI — teste au redémarrage ; si souci, « Rétablir » depuis l'app (ou Mode sans échec). Redémarrage requis.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
                 Apply  = () => Sys.SetMsiForClass(Sys.MsiStorageClass, true, null),
                 Revert = () => Sys.SetMsiForClass(Sys.MsiStorageClass, false, null),
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiStorageClass)

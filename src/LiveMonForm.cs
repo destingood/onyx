@@ -27,6 +27,11 @@ namespace BTOptimizer
         private long _lastEvents;
         private DateTime _lastTick = DateTime.UtcNow;
 
+        // Tuiles construites UNE fois, mises à jour par tick (évite une fuite de handles GDI :
+        // avant, Repaint recréait 6 Panel + 12 Label + 12 Font chaque seconde sans les libérer).
+        private Label[] _capLbl, _valLbl;
+        private Font _tileCapFont, _tileValFont, _boldRow;
+
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Green  = Color.FromArgb(0, 150, 90);
         private static readonly Color Orange = Color.FromArgb(205, 133, 0);
@@ -109,6 +114,12 @@ namespace BTOptimizer
 
             Controls.Add(_grid);
             Controls.Add(_tiles);
+
+            // Polices partagées + tuiles bâties une fois (anti-fuite GDI, voir BuildTiles).
+            _tileCapFont = new Font("Segoe UI", 8.5f);
+            _tileValFont = new Font("Segoe UI Semibold", 14f);
+            _boldRow = new Font(_grid.Font, FontStyle.Bold);
+            BuildTiles();
             Controls.Add(_verdict);
             Controls.Add(bottom);
         }
@@ -124,23 +135,39 @@ namespace BTOptimizer
             return b;
         }
 
-        private Panel MakeTile(string caption, string value, Color valueColor)
+        // Construit les 6 tuiles UNE seule fois ; Repaint ne fait ensuite que changer le texte.
+        private void BuildTiles()
         {
-            var p = new Panel { Size = new Size(183, 74), Margin = new Padding(4, 2, 4, 2), BackColor = TileBg };
-            var cap = new Label
+            _capLbl = new Label[6];
+            _valLbl = new Label[6];
+            _tiles.SuspendLayout();
+            _tiles.Controls.Clear();
+            for (int i = 0; i < 6; i++)
             {
-                Text = caption, Dock = DockStyle.Top, Height = 24,
-                ForeColor = Color.FromArgb(165, 170, 180), Font = new Font("Segoe UI", 8.5f),
-                Padding = new Padding(10, 6, 6, 0)
-            };
-            var val = new Label
-            {
-                Text = value, Dock = DockStyle.Fill, ForeColor = valueColor,
-                Font = new Font("Segoe UI Semibold", 14f), Padding = new Padding(10, 0, 6, 6)
-            };
-            p.Controls.Add(val);
-            p.Controls.Add(cap);
-            return p;
+                var p = new Panel { Size = new Size(183, 74), Margin = new Padding(4, 2, 4, 2), BackColor = TileBg };
+                var cap = new Label
+                {
+                    Dock = DockStyle.Top, Height = 24, ForeColor = Color.FromArgb(165, 170, 180),
+                    Font = _tileCapFont, Padding = new Padding(10, 6, 6, 0)
+                };
+                var val = new Label
+                {
+                    Dock = DockStyle.Fill, ForeColor = Color.White,
+                    Font = _tileValFont, Padding = new Padding(10, 0, 6, 6)
+                };
+                p.Controls.Add(val);
+                p.Controls.Add(cap);
+                _capLbl[i] = cap; _valLbl[i] = val;
+                _tiles.Controls.Add(p);
+            }
+            _tiles.ResumeLayout();
+        }
+
+        private void SetTile(int i, string caption, string value, Color valueColor)
+        {
+            _capLbl[i].Text = caption;
+            _valLbl[i].Text = value;
+            _valLbl[i].ForeColor = valueColor;
         }
 
         // ------------------------------------------------------------------
@@ -201,17 +228,14 @@ namespace BTOptimizer
             if (_probe != null) _probe.Read(out probeMax, out probeAvg, out probeP99);
             EtwLive.HardFaultInfo hf = _etw.HardFaults();
 
-            _tiles.SuspendLayout();
-            _tiles.Controls.Clear();
-            _tiles.Controls.Add(MakeTile("Pire DPC — " + rep.MaxDpcModule, rep.MaxDpcUs.ToString("0") + " µs", TileColor(rep.MaxDpcUs)));
-            _tiles.Controls.Add(MakeTile("Pire ISR — " + rep.MaxIsrModule, rep.MaxIsrUs.ToString("0") + " µs", TileColor(rep.MaxIsrUs)));
-            _tiles.Controls.Add(MakeTile("Défauts de page durs" + (hf.Count > 0 ? " — pire " + hf.WorstMs.ToString("0.0") + " ms" : ""),
-                hf.Count.ToString("#,0"), HardFaultColor(hf)));
-            _tiles.Controls.Add(MakeTile("Réveil 1 ms (p99 · max)",
-                probeP99.ToString("0") + " · " + probeMax.ToString("0") + " µs", TileColor(probeP99 > 0 ? probeP99 : probeMax)));
-            _tiles.Controls.Add(MakeTile("Événements / s", rate.ToString("#,0"), Color.White));
-            _tiles.Controls.Add(MakeTile("Durée", rep.DurationSec.ToString("0") + " s", Color.White));
-            _tiles.ResumeLayout();
+            SetTile(0, "Pire DPC — " + rep.MaxDpcModule, rep.MaxDpcUs.ToString("0") + " µs", TileColor(rep.MaxDpcUs));
+            SetTile(1, "Pire ISR — " + rep.MaxIsrModule, rep.MaxIsrUs.ToString("0") + " µs", TileColor(rep.MaxIsrUs));
+            SetTile(2, "Défauts de page durs" + (hf.Count > 0 ? " — pire " + hf.WorstMs.ToString("0.0") + " ms" : ""),
+                hf.Count.ToString("#,0"), HardFaultColor(hf));
+            SetTile(3, "Réveil 1 ms (p99 · max)",
+                probeP99.ToString("0") + " · " + probeMax.ToString("0") + " µs", TileColor(probeP99 > 0 ? probeP99 : probeMax));
+            SetTile(4, "Événements / s", rate.ToString("#,0"), Color.White);
+            SetTile(5, "Durée", rep.DurationSec.ToString("0") + " s", Color.White);
 
             // Tableau des pilotes
             _grid.BeginUpdate();
@@ -226,7 +250,7 @@ namespace BTOptimizer
                 it.SubItems.Add(d.IsrCount.ToString("#,0"));
                 it.SubItems.Add(d.IsrMaxUs > 0 ? d.IsrMaxUs.ToString("0") : "-");
                 it.SubItems.Add(((d.DpcTotalUs + d.IsrTotalUs) / 1000.0).ToString("0.0"));
-                if (d.WorstUs > 1000) { it.ForeColor = Red; it.Font = new Font(_grid.Font, FontStyle.Bold); }
+                if (d.WorstUs > 1000) { it.ForeColor = Red; it.Font = _boldRow; }
                 else if (d.WorstUs > 500) it.ForeColor = Orange;
                 _grid.Items.Add(it);
             }
@@ -345,6 +369,9 @@ namespace BTOptimizer
                 if (_refresh != null) { _refresh.Stop(); _refresh.Dispose(); _refresh = null; }
                 if (_probe != null) { _probe.Dispose(); _probe = null; }
                 if (_etw != null) { _etw.Dispose(); _etw = null; if (_log != null) _log("Latence en direct : session ETW arrêtée.", 0); }
+                if (_tileCapFont != null) { _tileCapFont.Dispose(); _tileCapFont = null; }
+                if (_tileValFont != null) { _tileValFont.Dispose(); _tileValFont = null; }
+                if (_boldRow != null) { _boldRow.Dispose(); _boldRow = null; }
                 if (!_timerWasActive) Native.SetTimer1ms(false);
             }
             base.Dispose(disposing);

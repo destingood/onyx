@@ -1366,10 +1366,12 @@ namespace BTOptimizer
         {
             if (MessageBox.Show(this,
                     "Tout réinitialiser ?\n\n"
+                    + "• Sauvegarde du registre + point de restauration créés D'ABORD (filet de sécurité)\n"
                     + "• Rétablit les " + _tweaks.Count + " optimisations aux valeurs par défaut de Windows\n"
                     + "• Retire le gardien de démarrage et l'OC GPU persistant\n"
                     + "• Réinitialise le GPU (power limit / fréquences constructeur)\n\n"
-                    + "Utile pour repartir d'un état propre. Un redémarrage peut être nécessaire.",
+                    + "Utile pour repartir d'un état propre. La sauvegarde prend un instant ; "
+                    + "un redémarrage peut être nécessaire.",
                     "Réinitialiser toutes les optimisations",
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
@@ -1380,7 +1382,7 @@ namespace BTOptimizer
             List<Tweak> all = new List<Tweak>(_tweaks);
             Task.Run(() =>
             {
-                Engine.Run(all, false, false, false, Log);
+                Engine.Run(all, false, true, true, Log);   // sauvegarde + point de restauration AVANT de tout rétablir
                 try { Sys.SetGuard(false, exe, Log); } catch { }
                 try { Sys.SetOcGuard(false, exe, Log); } catch { }
                 try { Sys.ResetGpuLocks(Log); } catch { }
@@ -1637,16 +1639,24 @@ namespace BTOptimizer
                 }
                 Sys.SaveProfile(sel.Select(t => t.Id).ToList());
                 Log("Profil enregistré (" + sel.Count + " optimisation(s)) : " + Sys.ProfilePath, 0);
-                if (!Sys.SetGuard(true, Application.ExecutablePath, Log))
+                // SetGuard crée une tâche planifiée (schtasks) : hors fil d'interface — sinon un
+                // schtasks lent figerait la fenêtre. On décoche seulement en cas d'échec réel.
+                string exe = Application.ExecutablePath;
+                System.Threading.Tasks.Task.Run(() =>
                 {
-                    _guardEventSuppressed = true;
-                    _chkGuard.Checked = false;
-                    _guardEventSuppressed = false;
-                }
+                    bool ok;
+                    try { ok = Sys.SetGuard(true, exe, Log); } catch { ok = false; }
+                    if (!ok)
+                        try { BeginInvoke((Action)(() =>
+                        {
+                            _guardEventSuppressed = true; _chkGuard.Checked = false; _guardEventSuppressed = false;
+                        })); } catch { }
+                });
             }
             else
             {
-                Sys.SetGuard(false, Application.ExecutablePath, Log);
+                string exe = Application.ExecutablePath;
+                System.Threading.Tasks.Task.Run(() => { try { Sys.SetGuard(false, exe, Log); } catch { } });
             }
         }
     }

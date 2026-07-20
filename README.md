@@ -86,6 +86,30 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔬 2ᵉ vague d'audits croisés — fuites, sécurité, sauvegardes (v14.8)
+
+Trois nouveaux audits (fuites GDI/ressources · cohérence des tweaks · moteur de sauvegarde)
++ 3 applis majeures. Corrigés :
+
+- **Fuite mémoire (plantage possible) — Latence EN DIRECT** : le panneau recréait 6 tuiles +
+  12 libellés + 12 polices **chaque seconde** sans les libérer → épuisement des handles GDI
+  en quelques minutes. Tuiles désormais construites **une fois** et mises à jour (comme le
+  panneau FPS). Idem sparkline Santé et timer du Moniteur (fuites plus lentes) corrigés.
+- **Sécurité — « Rétablir » de VBS/HVCI** : le rétablissement **forçait** VBS à s'activer (au
+  lieu de revenir à « non configuré ») — il pouvait **bloquer les anti-triche noyau** sur un PC
+  qui n'avait jamais eu VBS. Corrigé : on supprime la surcharge (la photo .reg garde l'état exact).
+- **Filet de sécurité — Réinitialiser TOUTES les optimisations** : ne prenait **aucune
+  sauvegarde** avant de tout rétablir (or plusieurs « Rétablir » réimposent une valeur en dur).
+  Désormais **sauvegarde du registre + point de restauration créés d'abord**.
+- **Sauvegardes MSI** : `msi_usb` / `msi_network` / `msi_storage` déclarent enfin leur clé de
+  sauvegarde (comme `gpu_msi`) — appliqués seuls, ils produisaient un backup vide.
+- **MODE JEU AUTO plus robuste** : un service qui refuse de s'arrêter/redémarrer ne bloque plus
+  la suspension ni la **restauration** des autres — on sort toujours proprement du mode jeu.
+- **Gardien de démarrage** : l'activation (tâche planifiée) ne se fait plus sur le fil d'interface.
+
+**3 applis de plus** (37 au total) : **Process Lasso** (priorité/affinité CPU auto, ProBalance),
+**ISLC** (anti-stutter par nettoyage de la standby list RAM), **CrystalDiskMark** (benchmark disque).
+
 ### 🛠️ Correctifs de relecture (3 audits croisés) (v14.7)
 
 Trois relectures indépendantes (pipeline d'installation, cœur récent PDH/sélection, blocages

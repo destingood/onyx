@@ -30,12 +30,17 @@ namespace BTOptimizer
             string verb = apply ? "Appliqué" : "Rétabli";
             try
             {
-                if (apply && doBackup)
+                // Sauvegarde AVANT toute modification — y compris en RÉTABLISSEMENT : plusieurs
+                // Revert() ré-imposent une valeur en dur (ex. type de service), ils écrasent donc
+                // l'état courant tout autant qu'un Apply. Le filet de sécurité doit valoir dans les
+                // deux sens (auparavant conditionné à apply : la réinitialisation globale n'avait
+                // AUCUNE sauvegarde).
+                if (doBackup)
                 {
                     result.BackupDir = Sys.ExportBackup(selection, log);
                     log("Sauvegarde du registre créée : " + result.BackupDir, 1);
                 }
-                if (apply && doRestorePoint)
+                if (doRestorePoint)
                 {
                     Sys.CreateRestorePoint(log);
                 }

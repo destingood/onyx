@@ -147,6 +147,17 @@ namespace BTOptimizer
                 new LibItem { Name = "WizTree (analyse l'espace disque)", WingetId = "AntibodySoftware.WizTree",
                     Why = "trouve en 2 s ce qui remplit ton SSD (jeux, caches de shaders, captures) — bien plus rapide que l'Explorateur",
                     Installed = () => File.Exists(Path.Combine(pf, @"WizTree\WizTree.exe")) || File.Exists(Path.Combine(pf86, @"WizTree\WizTree.exe")) || Uninstall("WizTree") },
+                new LibItem { Name = "CrystalDiskMark (benchmark disque)", WingetId = "CrystalDewWorld.CrystalDiskMark",
+                    Why = "mesure la vitesse RÉELLE de ton SSD/HDD (lecture/écriture) — complément de CrystalDiskInfo qui, lui, surveille la santé",
+                    Installed = () => Uninstall("CrystalDiskMark") || WingetPkg("CrystalDewWorld.CrystalDiskMark") },
+
+                // ---- Optimisation avancée (experts, à la main) ----
+                new LibItem { Name = "Process Lasso (priorité/affinité CPU auto)", WingetId = "BitSum.ProcessLasso",
+                    Why = "ProBalance empêche un process de fond de faire saccader ton jeu ; gère priorité, affinité et core parking automatiquement",
+                    Installed = () => Uninstall("Process Lasso") || WingetPkg("BitSum.ProcessLasso") },
+                new LibItem { Name = "ISLC — nettoyeur de liste de veille mémoire", WingetId = "Wagnardsoft.ISLC",
+                    Why = "vide la « standby list » RAM automatiquement : remède connu aux micro-saccades (stutter) en session de jeu prolongée",
+                    Installed = () => Uninstall("Intelligent standby") || WingetPkg("Wagnardsoft.ISLC") },
 
                 // ---- Lanceurs de jeux (regroupe toute ta bibliothèque) ----
                 new LibItem { Name = "GOG Galaxy", WingetId = "GOG.Galaxy",

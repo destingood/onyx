@@ -326,9 +326,10 @@ namespace BTOptimizer
                     g.FillEllipse(br, x - (last ? 3.5f : 2f), y - (last ? 3.5f : 2f), last ? 7 : 4, last ? 7 : 4);
             }
             using (var f = new Font("Segoe UI Semibold", 8.5f))
+            using (var lineBrush = new SolidBrush(line))
             {
                 g.DrawString("100", f, Brushes.Silver, w - padR - 22, padT - 2);
-                g.DrawString(recent[recent.Count - 1].ToString(), f, new SolidBrush(line), padL + 2, padT - 2);
+                g.DrawString(recent[recent.Count - 1].ToString(), f, lineBrush, padL + 2, padT - 2);
             }
         }
 
