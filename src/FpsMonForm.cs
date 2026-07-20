@@ -517,6 +517,7 @@ namespace BTOptimizer
             {
                 if (_refresh != null) { _refresh.Stop(); _refresh.Dispose(); _refresh = null; }
                 if (_etw != null) { _etw.Dispose(); _etw = null; if (_log != null) _log("FPS en direct : mesure arrêtée.", 0); }
+                if (_boldRow != null) { _boldRow.Dispose(); _boldRow = null; }
             }
             base.Dispose(disposing);
         }

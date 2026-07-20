@@ -86,6 +86,20 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧰 Suite des correctifs d'audit — plans, sauvegardes, DNS (v14.9)
+
+- **« Rétablir » du plan d'alimentation** : `power_ultimate` mémorise le plan actif AVANT de
+  basculer sur « Performances ultimes » et y **revient exactement** (Économie d'énergie sur
+  portable, plan OEM/perso…) au lieu d'imposer « Utilisation normale ».
+- **Sauvegarde honnête** : l'export du registre distingue enfin « clé réellement absente »
+  (bénin) d'un « export refusé alors que la clé existe » (vrai trou de sauvegarde, signalé en
+  rouge) — plus de faux « sauvegarde créée » quand une clé n'a pas pu être capturée.
+- **Retour arrière DNS honnête** : le message précise désormais que l'IPv4 est restauré à
+  l'identique et l'IPv6 remis en automatique (état sûr), au lieu de promettre une restauration
+  intégrale que le filet IPv4 ne couvrait pas.
+- **Robustesse** : garde `null` sur le journal de `SetGpuMsi` ; police en gras du panneau FPS
+  libérée à la fermeture.
+
 ### 🔬 2ᵉ vague d'audits croisés — fuites, sécurité, sauvegardes (v14.8)
 
 Trois nouveaux audits (fuites GDI/ressources · cohérence des tweaks · moteur de sauvegarde)

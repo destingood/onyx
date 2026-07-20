@@ -260,9 +260,9 @@ namespace BTOptimizer
                     if (p.Servers != null && !ResolversAnswer(p.Servers))
                     {
                         reverted = true;
-                        if (_log != null) _log("Le résolveur choisi ne répond PAS depuis ce réseau — retour automatique aux réglages précédents.", 3);
+                        if (_log != null) _log("Le résolveur choisi ne répond PAS depuis ce réseau — retour arrière : IPv4 restauré à l'exact précédent, IPv6 remis en automatique.", 3);
                         Sys.RestoreDnsSnapshot(snap, _log);
-                        Sys.SetDnsV6(null, _log);
+                        Sys.SetDnsV6(null, _log);   // IPv6 : automatique = état sûr et joignable (le snapshot ne couvre que l'IPv4)
                     }
                 }
                 catch (Exception ex) { if (_log != null) _log("DNS : " + ex.Message, 3); }
@@ -274,7 +274,7 @@ namespace BTOptimizer
                         SetBusy(false);
                         MessageBox.Show(this,
                             reverted
-                                ? "Ce résolveur est injoignable depuis ton réseau : tes réglages précédents ont été restaurés.\nRien n'est cassé."
+                                ? "Ce résolveur est injoignable depuis ton réseau.\n\n• IPv4 : tes réglages précédents ont été restaurés à l'identique.\n• IPv6 : remis en automatique (état sûr et joignable).\n\nRien n'est cassé."
                                 : "DNS mis à jour (IPv4 + IPv6).",
                             "DesTinGOOD", MessageBoxButtons.OK,
                             reverted ? MessageBoxIcon.Warning : MessageBoxIcon.Information);

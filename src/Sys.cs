@@ -215,8 +215,35 @@ namespace BTOptimizer
         private static readonly Regex GuidRx = new Regex(
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
 
+        // Plan actif AVANT l'activation d'« Ultimate » — pour rétablir EXACTEMENT ce plan-là
+        // (Économie d'énergie sur portable, plan OEM/perso…) et non un « Utilisation normale » imposé.
+        private static string PrevPlanPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-prev-powerplan.txt"); }
+        }
+
+        private static string GetActiveSchemeGuid()
+        {
+            NativeResult r = Run(Sys32("powercfg.exe"), "/getactivescheme");
+            if (r.ExitCode != 0) return null;
+            Match m = GuidRx.Match(r.Output ?? "");
+            return m.Success ? m.Value : null;
+        }
+
         public static void EnableUltimatePlan()
         {
+            // Mémorise le plan actif AVANT de basculer (sauf s'il est déjà Ultimate) : « Rétablir »
+            // reviendra à CE plan précis au lieu d'imposer « Utilisation normale ».
+            try
+            {
+                if (!UltimateActive())
+                {
+                    string prev = GetActiveSchemeGuid();
+                    if (prev != null) File.WriteAllText(PrevPlanPath, prev);
+                }
+            }
+            catch { }
+
             // Détection par GUID (indépendant de la langue) ; duplication vers un GUID
             // fixe pour rester idempotent (pas d'accumulation de plans en double).
             string list = RunThrow(Sys32("powercfg.exe"), "/list", "Lecture des plans d'alimentation");
@@ -247,7 +274,22 @@ namespace BTOptimizer
 
         public static void RestoreBalancedPlan()
         {
-            RunThrow(Sys32("powercfg.exe"), "/setactive " + BalancedGuid, "Retour au plan Utilisation normale");
+            // Rétablit le plan mémorisé avant l'activation d'Ultimate ; à défaut (ou si la photo
+            // pointe vers un plan Ultimate), retombe sur « Utilisation normale ».
+            string target = BalancedGuid;
+            try
+            {
+                if (File.Exists(PrevPlanPath))
+                {
+                    string saved = File.ReadAllText(PrevPlanPath).Trim();
+                    if (GuidRx.IsMatch(saved)
+                        && saved.IndexOf("e9a42b02-d5df-448d-aa00-03f14749eb6", StringComparison.OrdinalIgnoreCase) < 0)
+                        target = saved;
+                }
+            }
+            catch { }
+            RunThrow(Sys32("powercfg.exe"), "/setactive " + target, "Retour au plan d'alimentation précédent");
+            try { if (File.Exists(PrevPlanPath)) File.Delete(PrevPlanPath); } catch { }
         }
 
         public static bool UltimateActive()
@@ -415,7 +457,7 @@ namespace BTOptimizer
             int count = 0;
             using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
             {
-                if (pci == null) { log("Enum PCI introuvable.", 2); return; }
+                if (pci == null) { if (log != null) log("Enum PCI introuvable.", 2); return; }
                 foreach (string devId in pci.GetSubKeyNames())
                 {
                     using (RegistryKey dev = pci.OpenSubKey(devId))
@@ -973,6 +1015,7 @@ namespace BTOptimizer
 
             List<string> keys = tweaks.SelectMany(t => t.BackupKeys)
                                       .Distinct().OrderBy(k => k).ToList();
+            int failed = 0;
             foreach (string key in keys)
             {
                 // reg.exe ignore les vues .NET : on vise la vraie ruche utilisateur.
@@ -984,8 +1027,21 @@ namespace BTOptimizer
                 NativeResult r = Run(Sys32("reg.exe"),
                     "export \"" + exportKey + "\" \"" + file + "\" /y");
                 if (r.ExitCode != 0)
-                    log("Clé absente (rien à sauvegarder) : " + exportKey, 2);
+                {
+                    // Distinguer « clé réellement absente » (bénin) de « présente mais export
+                    // refusé » (ACL, chemin trop long…) : ce dernier est un VRAI trou de sauvegarde.
+                    NativeResult q = Run(Sys32("reg.exe"), "query \"" + exportKey + "\"");
+                    if (q.ExitCode == 0)
+                    {
+                        failed++;
+                        log("ÉCHEC sauvegarde : " + exportKey + " (clé présente mais export refusé) — non restaurable.", 3);
+                    }
+                    else
+                        log("Clé absente (rien à sauvegarder) : " + exportKey, 0);
+                }
             }
+            if (failed > 0)
+                log("Attention : " + failed + " clé(s) n'ont PAS pu être sauvegardées — restauration incomplète pour celles-ci.", 2);
 
             NativeResult plan = Run(Sys32("powercfg.exe"), "/getactivescheme");
             File.WriteAllText(Path.Combine(dir, "plan-alimentation.txt"), plan.Output);
