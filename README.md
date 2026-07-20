@@ -86,6 +86,21 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧹 Fin de l'audit — conflit clavier + fuites de polices (v14.10)
+
+- **Conflit de raccourci clavier corrigé** : deux réglages écrivaient des valeurs différentes
+  au même endroit (`ToggleKeys\Flags` : « 58 » vs « 38 »). Le second réactivait par erreur le
+  raccourci « Touches bascules » que le premier venait de couper — d'où un pop-up possible en
+  jeu malgré l'optimisation. Les deux utilisent désormais « 58 » (raccourci réellement coupé).
+- **Dernières fuites de polices** : les panneaux **Santé** et **Moniteur matériel** ne libéraient
+  pas leurs polices à la fermeture (chaque `Control` ne libère pas sa `Font`). Corrigé (motif
+  `Own()` + `Dispose`). Le Moniteur nettoie aussi son timer/capteur sur `Dispose()` direct et
+  attend une lecture de fond avant de fermer le handle PDH (même sûreté que le panneau Températures).
+
+Reste **volontairement** non modifié, faute de référence Windows propre : `audio_proaudio_mmcss`
+(la valeur par défaut « Pro Audio » de SFIO Priority est ambiguë — la sauvegarde .reg couvre le
+vrai état) et l'exclusion du contrôleur de démarrage pour `msi_storage` (déjà manuel-seul + averti).
+
 ### 🧰 Suite des correctifs d'audit — plans, sauvegardes, DNS (v14.9)
 
 - **« Rétablir » du plan d'alimentation** : `power_ultimate` mémorise le plan actif AVANT de

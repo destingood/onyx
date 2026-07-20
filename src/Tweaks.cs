@@ -1341,7 +1341,9 @@ namespace BTOptimizer
                 Apply = () =>
                 {
                     Sys.SetUser(@"Control Panel\Accessibility\Keyboard Response", "Flags", "122", RegistryValueKind.String);
-                    Sys.SetUser(@"Control Panel\Accessibility\ToggleKeys", "Flags", "38", RegistryValueKind.String);
+                    // "58" (hotkey ToggleKeys COUPÉ) et non "38" : "38" garde le raccourci actif
+                    // (bit 0x04) — il aurait écrasé le "58" de sticky_keys_off et réactivé le pop-up.
+                    Sys.SetUser(@"Control Panel\Accessibility\ToggleKeys", "Flags", "58", RegistryValueKind.String);
                 },
                 Revert = () =>
                 {

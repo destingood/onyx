@@ -43,6 +43,17 @@ namespace BTOptimizer
             Theme.Apply(this);
         }
 
+        // Polices possédées par la fenêtre, libérées à la fermeture (les Control ne libèrent
+        // PAS leur Font eux-mêmes) : évite une fuite de handles à chaque ouverture du bilan.
+        private readonly System.Collections.Generic.List<Font> _fonts = new System.Collections.Generic.List<Font>();
+        private Font Own(Font f) { _fonts.Add(f); return f; }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) { foreach (Font f in _fonts) { try { f.Dispose(); } catch { } } _fonts.Clear(); }
+            base.Dispose(disposing);
+        }
+
         private void Build()
         {
             Text = "DesTinGOOD — Santé de mon PC";
@@ -51,7 +62,7 @@ namespace BTOptimizer
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             BackColor = Color.FromArgb(245, 246, 248);
-            Font = new Font("Segoe UI", 9f);
+            Font = Own(new Font("Segoe UI", 9f));
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
@@ -59,21 +70,21 @@ namespace BTOptimizer
             {
                 Text = "  🏥 Santé de mon PC — le bilan en un coup d'œil",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
-                Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
+                Font = Own(new Font("Segoe UI Semibold", 12.5f)), TextAlign = ContentAlignment.MiddleLeft
             });
             Controls.Add(banner);
 
             // Jauge de score (gros nombre à gauche).
             _gauge = new Panel { Location = new Point(18, 66), Size = new Size(180, 120), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            _scoreLabel = new Label { Text = "…", Location = new Point(0, 14), Size = new Size(180, 62), Font = new Font("Segoe UI", 42f, FontStyle.Bold), ForeColor = Accent, TextAlign = ContentAlignment.MiddleCenter };
-            _grade = new Label { Text = "", Location = new Point(0, 80), Size = new Size(180, 30), Font = new Font("Segoe UI Semibold", 13f), ForeColor = Color.FromArgb(60, 64, 72), TextAlign = ContentAlignment.MiddleCenter };
+            _scoreLabel = new Label { Text = "…", Location = new Point(0, 14), Size = new Size(180, 62), Font = Own(new Font("Segoe UI", 42f, FontStyle.Bold)), ForeColor = Accent, TextAlign = ContentAlignment.MiddleCenter };
+            _grade = new Label { Text = "", Location = new Point(0, 80), Size = new Size(180, 30), Font = Own(new Font("Segoe UI Semibold", 13f)), ForeColor = Color.FromArgb(60, 64, 72), TextAlign = ContentAlignment.MiddleCenter };
             _gauge.Controls.Add(_scoreLabel); _gauge.Controls.Add(_grade);
             Controls.Add(_gauge);
 
             _sub = new Label
             {
                 Location = new Point(212, 70), Size = new Size(450, 56), ForeColor = Color.FromArgb(60, 64, 72),
-                Font = new Font("Segoe UI", 9.5f)
+                Font = Own(new Font("Segoe UI", 9.5f))
             };
             Controls.Add(_sub);
 
@@ -101,13 +112,13 @@ namespace BTOptimizer
             Controls.Add(_btnScan); Controls.Add(_btnOpen); Controls.Add(_btnClose);
         }
 
-        private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
+        private Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
         {
             var b = new Button
             {
                 Text = text, Location = new Point(x, y), Size = new Size(w, h), FlatStyle = FlatStyle.Flat,
                 BackColor = primary ? Accent : Color.White, ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52),
-                Font = primary ? new Font("Segoe UI Semibold", 9.5f) : new Font("Segoe UI", 9f)
+                Font = Own(primary ? new Font("Segoe UI Semibold", 9.5f) : new Font("Segoe UI", 9f))
             };
             b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             return b;

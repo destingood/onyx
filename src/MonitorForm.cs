@@ -13,6 +13,9 @@ namespace BTOptimizer
         private readonly HwMonitor _mon = new HwMonitor();
         private readonly Timer _timer = new Timer();
         private bool _busy;
+        private bool _stopped;
+        private readonly List<Font> _fonts = new List<Font>();
+        private Font Own(Font f) { _fonts.Add(f); return f; }
 
         private readonly Dictionary<string, Label> _vals = new Dictionary<string, Label>();
         private readonly Queue<double> _cpuHist = new Queue<double>();
@@ -43,7 +46,7 @@ namespace BTOptimizer
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(600, 420);
             BackColor = Bg;
-            Font = new Font("Segoe UI", 9f);
+            Font = Own(new Font("Segoe UI", 9f));
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
             var flow = new FlowLayoutPanel();
@@ -106,7 +109,27 @@ namespace BTOptimizer
             Controls.Add(bottom);
             Controls.Add(flow);
 
-            FormClosing += (s, e) => { _timer.Stop(); _timer.Dispose(); _mon.Dispose(); };
+            FormClosing += (s, e) => StopAll();
+        }
+
+        // Idempotent, appelé par FormClosing ET Dispose (le harnais ferme par Dispose, pas Close).
+        // Attend la fin d'un Tick de fond avant de libérer le HwMonitor (handle PDH partagé).
+        private void StopAll()
+        {
+            if (_stopped) return;
+            _stopped = true;
+            try { _timer.Stop(); _timer.Dispose(); } catch { }
+            int waited = 0;
+            while (_busy && waited < 2000) { System.Threading.Thread.Sleep(20); waited += 20; }
+            try { _mon.Dispose(); } catch { }
+            foreach (Font f in _fonts) { try { f.Dispose(); } catch { } }
+            _fonts.Clear();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) StopAll();
+            base.Dispose(disposing);
         }
 
         private Panel Tile(string key, string caption, string value)
@@ -121,14 +144,14 @@ namespace BTOptimizer
             cap.Dock = DockStyle.Top;
             cap.Height = 22;
             cap.ForeColor = Color.FromArgb(150, 155, 165);
-            cap.Font = new Font("Segoe UI", 8f);
+            cap.Font = Own(new Font("Segoe UI", 8f));
             cap.Padding = new Padding(9, 6, 4, 0);
 
             var val = new Label();
             val.Text = value;
             val.Dock = DockStyle.Fill;
             val.ForeColor = Color.White;
-            val.Font = new Font("Segoe UI Semibold", 13.5f);
+            val.Font = Own(new Font("Segoe UI Semibold", 13.5f));
             val.Padding = new Padding(9, 0, 4, 6);
 
             _vals[key] = val;
@@ -262,7 +285,7 @@ namespace BTOptimizer
             if (!_vals.TryGetValue(key, out l)) return;
             l.Text = text;
             l.ForeColor = c;
-            if (Math.Abs(l.Font.Size - size) > 0.1f) l.Font = new Font("Segoe UI Semibold", size);
+            if (Math.Abs(l.Font.Size - size) > 0.1f) l.Font = Own(new Font("Segoe UI Semibold", size));
         }
 
         private static Color Heat(double v, double warn, double hot)
