@@ -157,53 +157,54 @@ namespace BTOptimizer
             _btnMenu.Click += (s, e) => _menu.Show(_btnMenu, new Point(0, _btnMenu.Height));
 
             _menu = new ContextMenuStrip();
-            _menu.Items.Add("À propos de DesTinGOOD", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
-            _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
+
+            // Helpers : ouvrir un formulaire (modal) et remplir un sous-menu proprement.
+            Func<Func<Form>, EventHandler> open = maker => (s, e) =>
             {
-                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
-                UpdateProUi();
-            });
-            _menu.Items.Add(_miPro);
-            _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
-            _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
-            var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
+                try { using (Form f = maker()) f.ShowDialog(this); }
+                catch (Exception ex) { Log("Ouverture du panneau : " + ex.Message, 2); }
+            };
+            Func<string, ToolStripMenuItem> group = title =>
             {
-                Theme.Toggle();
-                ((ToolStripMenuItem)s).Checked = Theme.Dark;
-                Theme.Apply(this);
-            });
-            miDark.Checked = Theme.Dark;
-            _menu.Items.Add(miDark);
+                var m = new ToolStripMenuItem(title);
+                _menu.Items.Add(m);
+                return m;
+            };
+
+            // --- Portes d'entrée (tout en haut) ---
+            _menu.Items.Add("🧭 J'ai un problème…  (assistant : quel outil pour quoi)", null, open(() => new HelpNavForm(Log)));
+            _menu.Items.Add("🏥 Santé de mon PC  (bilan /100)", null, open(() => new HealthForm(Log)));
             _menu.Items.Add(new ToolStripSeparator());
-            // --- Les panneaux vedettes (500 FPS, mesure temps réel) ---
-            _menu.Items.Add("🎯 Objectif 500 FPS (écran 500 Hz)...", null, OnFps500Open);
-            _menu.Items.Add("📈 FPS EN DIRECT (par jeu, façon PresentMon)...", null,
-                (s, e) => { using (var f = new FpsMonForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("⏱ Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)...", null,
-                (s, e) => { using (var f = new LiveMonForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add(new ToolStripSeparator());
-            // --- Outils système ---
-            _menu.Items.Add("🧭 J'AI UN PROBLÈME… — quel outil pour quoi (assistant)...", null,
-                (s, e) => { using (var f = new HelpNavForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🏥 SANTÉ DE MON PC — le bilan en un coup d'œil (score /100)...", null,
-                (s, e) => { using (var f = new HealthForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🧪 Benchmark rapide (puissance CPU / mémoire / disque)...", null,
-                (s, e) => { using (var f = new BenchForm(Log)) f.ShowDialog(this); });
-            _miWatch = new ToolStripMenuItem("🛡 Surveillance en fond : m'alerter si le GPU chauffe / le pilote plante", null, OnWatchToggle);
+
+            // --- ⚡ Performance & FPS ---
+            var mPerf = group("⚡  Performance & FPS");
+            mPerf.DropDownItems.Add("🎯 Objectif 500 FPS (écran haute fréquence)...", null, OnFps500Open);
+            mPerf.DropDownItems.Add("📈 FPS en direct (par jeu, façon PresentMon)...", null, open(() => new FpsMonForm(Log)));
+            mPerf.DropDownItems.Add("⏱ Latence en direct (DPC/ISR par pilote)...", null, open(() => new LiveMonForm(Log)));
+            mPerf.DropDownItems.Add("🧪 Benchmark rapide (CPU / mémoire / disque)...", null, open(() => new BenchForm(Log)));
+            mPerf.DropDownItems.Add("🔍 Qui ralentit mon PC ? (processus de fond)...", null, open(() => new BloatForm(Log)));
+            mPerf.DropDownItems.Add("🏁 Prêt pour le match ? (checklist)...", null, open(() => new TournamentForm(Log)));
+            mPerf.DropDownItems.Add("Guide latence & perf (checklist input lag)...", null, open(() => new LatencyGuideForm(Log)));
+
+            // --- 🩺 Crashs & stabilité ---
+            var mCrash = group("🩺  Crashs & stabilité");
+            mCrash.DropDownItems.Add("🩺 Stabilité : qu'est-ce qui a planté ? (14 j)...", null, open(() => new StabilityForm(Log)));
+            mCrash.DropDownItems.Add("🌡️ Températures & throttling...", null, open(() => new ThermalForm(Log)));
+            mCrash.DropDownItems.Add("🛒 Boutiques infinies / jeux qui crashent...", null, open(() => new ShopFixForm(Log)));
+            mCrash.DropDownItems.Add("🧹 Réglages néfastes d'autres optimiseurs...", null, open(() => new CheckupForm(Log)));
+            mCrash.DropDownItems.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC)...", null, OnRepairWindows);
+            _miWatch = new ToolStripMenuItem("🛡 Surveillance en fond (alerte GPU chaud / pilote)", null, OnWatchToggle);
             _miWatch.CheckOnClick = true;
-            _menu.Items.Add(_miWatch);
-            _menu.Items.Add("Composants & diagnostic du système...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Audio & enceintes (périphériques, améliorations)...", null, (s, e) => { using (var f = new AudioForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Programmes au démarrage...", null, (s, e) => { using (var f = new StartupForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Services Windows...", null, (s, e) => { using (var f = new ServicesForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
-            {
-                Log("Nettoyage de la mémoire...", 0);
-                System.Threading.Tasks.Task.Run(() => Sys.CleanMemory(Log));
-            });
-            _menu.Items.Add("Réparer le réseau (Winsock / TCP-IP)...", null, (s, e) =>
+            mCrash.DropDownItems.Add(_miWatch);
+
+            // --- 📡 Réseau ---
+            var mNet = group("📡  Réseau");
+            mNet.DropDownItems.Add("📶 Qualité réseau (chez toi ou le FAI ?)...", null, open(() => new NetworkForm(Log)));
+            mNet.DropDownItems.Add("🛰️ Trajet réseau (traceroute : où le lag apparaît)...", null, open(() => new NetRouteForm(Log)));
+            mNet.DropDownItems.Add("⚙️ Réglages TCP/IP (jeu + téléchargements)...", null, open(() => new NetTuneForm(Log)));
+            mNet.DropDownItems.Add("📡 Carte réseau (latence : interruptions, flux, EEE)...", null, open(() => new NetAdapterForm(Log)));
+            mNet.DropDownItems.Add("🌐 DNS rapide (résolveur, IPv4+IPv6)...", null, open(() => new DnsForm(Log)));
+            mNet.DropDownItems.Add("Réparer le réseau (Winsock / TCP-IP)...", null, (s, e) =>
             {
                 if (MessageBox.Show(this,
                         "Réinitialiser la connexion réseau ?\n\n"
@@ -214,53 +215,45 @@ namespace BTOptimizer
                 Log("Réparation réseau...", 0);
                 System.Threading.Tasks.Task.Run(() => Sys.NetworkRepair(Log));
             });
-            _menu.Items.Add("🛒 Boutiques qui chargent à l'infini / jeux qui crashent (Steam / Game Pass)...", null,
-                (s, e) => { using (var f = new ShopFixForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("📦 Bibliothèques de jeu manquantes (vcruntime, DirectX...) & applis...", null,
-                (s, e) => { using (var f = new LibsForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🩺 Stabilité : qu'est-ce qui a planté sur ce PC ? (14 jours)...", null,
-                (s, e) => { using (var f = new StabilityForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🏁 Prêt pour le match ? (checklist réseau / timer / GPU)...", null,
-                (s, e) => { using (var f = new TournamentForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🖥️ Réglages d'écran (fréquence max, VRR/G-Sync, HDR)...", null,
-                (s, e) => { using (var f = new DisplayForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🎮 Priorité CPU par jeu (booste ton jeu principal)...", null,
-                (s, e) => { using (var f = new GameProfileForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🔐 Exclusions antivirus pour les jeux (moins de saccades)...", null,
-                (s, e) => { using (var f = new DefenderForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("💾 Jeux & disques (SSD/HDD, espace, chargements)...", null,
-                (s, e) => { using (var f = new DiskForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC, si crashs persistants)...", null, OnRepairWindows);
-            _menu.Items.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
-            _menu.Items.Add("🔁 Points de restauration (filet de sécurité système)...", null,
-                (s, e) => { using (var f = new RestoreForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🧹 Réglages néfastes d'autres optimiseurs (à annuler)...", null,
-                (s, e) => { using (var f = new CheckupForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🌡️ Températures & throttling (ta carte bride-t-elle ?)...", null,
-                (s, e) => { using (var f = new ThermalForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🔍 Qui ralentit mon PC ? (processus & logiciels de fond)...", null,
-                (s, e) => { using (var f = new BloatForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("📶 Qualité réseau en jeu (le lag vient de chez toi ou du FAI ?)...", null,
-                (s, e) => { using (var f = new NetworkForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("📡 Optimiser la carte réseau (latence : interruptions, flux, EEE)...", null,
-                (s, e) => { using (var f = new NetAdapterForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🛰️ Analyse du trajet réseau (traceroute : où le lag apparaît)...", null,
-                (s, e) => { using (var f = new NetRouteForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("⚙️ Réglages TCP/IP (jeu + téléchargements — débloque l'autotuning)...", null,
-                (s, e) => { using (var f = new NetTuneForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("🖱️ Fréquence réelle de la souris (ton 1000 Hz est-il vrai ?)...", null,
-                (s, e) => { using (var f = new MouseForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add("Nettoyage disque (fichiers temporaires)...", null, (s, e) => { using (var f = new CleanupForm(Log)) f.ShowDialog(this); });
-            _menu.Items.Add(new ToolStripSeparator());
-            // --- Maintenance ---
-            _menu.Items.Add("Re-vérifier l'état des optimisations (re-scan)", null,
+
+            // --- 🎮 Jeux & écran ---
+            var mGame = group("🎮  Jeux & écran");
+            mGame.DropDownItems.Add("📦 Bibliothèques de jeu manquantes & applis...", null, open(() => new LibsForm(Log)));
+            mGame.DropDownItems.Add("🎮 Priorité CPU par jeu...", null, open(() => new GameProfileForm(Log)));
+            mGame.DropDownItems.Add("🔐 Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
+            mGame.DropDownItems.Add("🖥️ Réglages d'écran (fréquence max, VRR/HDR)...", null, open(() => new DisplayForm(Log)));
+            mGame.DropDownItems.Add("🖱️ Fréquence réelle de la souris...", null, open(() => new MouseForm(Log)));
+
+            // --- 💾 Disque & entretien ---
+            var mDisk = group("💾  Disque & entretien");
+            mDisk.DropDownItems.Add("💾 Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
+            mDisk.DropDownItems.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
+            mDisk.DropDownItems.Add("Nettoyage disque (temporaires, caches...)...", null, open(() => new CleanupForm(Log)));
+            mDisk.DropDownItems.Add("🔁 Points de restauration (filet de sécurité)...", null, open(() => new RestoreForm(Log)));
+            mDisk.DropDownItems.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
+            {
+                Log("Nettoyage de la mémoire...", 0);
+                System.Threading.Tasks.Task.Run(() => Sys.CleanMemory(Log));
+            });
+
+            // --- 🔧 Système & matériel ---
+            var mSys = group("🔧  Système & matériel");
+            mSys.DropDownItems.Add("Composants & diagnostic du système...", null, open(() => new SystemInfoForm(Log)));
+            mSys.DropDownItems.Add("Audio & enceintes (périphériques, améliorations)...", null, open(() => new AudioForm(Log)));
+            mSys.DropDownItems.Add("Gestionnaire de périphériques (erreurs)...", null, open(() => new DeviceManagerForm(Log)));
+            mSys.DropDownItems.Add("Programmes au démarrage...", null, open(() => new StartupForm(Log)));
+            mSys.DropDownItems.Add("Services Windows...", null, open(() => new ServicesForm(Log)));
+
+            // --- 🗂 Mon profil ---
+            var mProfile = group("🗂  Mon profil d'optimisations");
+            mProfile.DropDownItems.Add("Re-vérifier l'état des optimisations (re-scan)", null,
                 (s, e) => { RefreshStates(); Log("États re-vérifiés : les mentions [déjà actif] sont à jour.", 0); });
-            _menu.Items.Add("🛡 Mon profil a-t-il été annulé (Windows Update) ? — vérifier / ré-appliquer", null, OnCheckDrift);
-            _menu.Items.Add("Exporter mon profil d'optimisations (fichier)...", null, OnExportProfile);
-            _menu.Items.Add("Importer un profil d'optimisations...", null, OnImportProfile);
-            _menu.Items.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
-            _menu.Items.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
-            _menu.Items.Add("Ouvrir le journal (fichier)", null, (s, e) =>
+            mProfile.DropDownItems.Add("🛡 Mon profil a-t-il été annulé (Windows Update) ?...", null, OnCheckDrift);
+            mProfile.DropDownItems.Add("Exporter mon profil (fichier)...", null, OnExportProfile);
+            mProfile.DropDownItems.Add("Importer un profil...", null, OnImportProfile);
+            mProfile.DropDownItems.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
+            mProfile.DropDownItems.Add("Ouvrir le dossier des sauvegardes", null, (s, e) => OnOpenClicked(s, e));
+            mProfile.DropDownItems.Add("Ouvrir le journal (fichier)", null, (s, e) =>
             {
                 try
                 {
@@ -270,6 +263,26 @@ namespace BTOptimizer
                 }
                 catch { }
             });
+
+            _menu.Items.Add(new ToolStripSeparator());
+            // --- Application ---
+            _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
+            _menu.Items.Add("À propos de DesTinGOOD", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
+            {
+                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
+                UpdateProUi();
+            });
+            _menu.Items.Add(_miPro);
+            _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
+            var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
+            {
+                Theme.Toggle();
+                ((ToolStripMenuItem)s).Checked = Theme.Dark;
+                Theme.Apply(this);
+            });
+            miDark.Checked = Theme.Dark;
+            _menu.Items.Add(miDark);
 
             _lblCount = new Label();
             _lblCount.Text = "";

@@ -58,6 +58,20 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### ✨ Finition « ultra pro » — menu réorganisé (v13.4)
+
+Le menu ☰ passe d'une longue liste à plat à une organisation **claire et professionnelle** :
+
+- En haut, les **deux portes d'entrée** : 🧭 J'ai un problème… et 🏥 Santé de mon PC.
+- Puis **6 sous-menus thématiques** : ⚡ Performance & FPS · 🩺 Crashs & stabilité ·
+  📡 Réseau · 🎮 Jeux & écran · 💾 Disque & entretien · 🔧 Système & matériel.
+- Un sous-menu **🗂 Mon profil d'optimisations** (re-scan, anti-régression, export/import,
+  réinitialiser, sauvegardes, journal).
+- En bas, la section **application** : guide, à propos, activation Pro, conditions, thème.
+
+Tout est thémé (clair/sombre) et rangé par intention — on trouve le bon outil en 2 clics au
+lieu de dérouler 30 lignes. La puce de version de l'en-tête est dynamique (suit l'app).
+
 ### 🧭 Assistant « J'ai un problème… » (v13.3)
 
 ☰ → **J'AI UN PROBLÈME…** — la porte d'entrée de toute la suite. Avec 25+ panneaux, ce
