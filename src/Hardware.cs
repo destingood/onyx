@@ -191,10 +191,20 @@ namespace BTOptimizer
 
         public const int LevelPrudent = 0, LevelBalanced = 1, LevelAggressive = 2;
 
+        /// <summary>
+        /// Réglages EXPÉRIMENTAUX / haute chaleur (état CPU 100 % permanent, C-States off) :
+        /// JAMAIS inclus dans une sélection automatique — ni Auto (Prudent/Équilibré/Agressif),
+        /// ni ⚡ TOUT OPTIMISER, ni preset eSport, ni packs Latence/500 FPS, ni Benchmark.
+        /// L'utilisateur doit les cocher lui-même (demande explicite). Restent disponibles à la
+        /// main, via « Tout cocher », et — pour l'état 100 % — via le bouton « Boost CPU maximal »
+        /// de l'overclock (qui les affiche noir sur blanc avant application).
+        /// </summary>
+        public static readonly string[] NeverAuto = { "proc_min_100", "cpu_idle_disable" };
+
         // Extras sûrs et réversibles ajoutés au niveau Agressif (le matériel filtre ensuite).
         private static readonly string[] AggroExtras =
         {
-            "cpu_idle_disable", "input_queues", "dynamic_tick", "disk_timeout_off",
+            "input_queues", "dynamic_tick", "disk_timeout_off",
             "ssdp_off", "wcncsvc_off", "dot3svc_off", "wfds_off", "diag_collector_off", "ajrouter_off",
             "fax_off", "wallet_service_off", "wisvc_off", "wmp_network_off", "dmwappush_off", "retail_demo_off",
             "semgr_off", "ndu_off", "geo_service_off", "phone_service_off", "smartcard_off",
@@ -310,7 +320,6 @@ namespace BTOptimizer
             ids.Remove("vbs_off");
             ids.Remove("wsearch_off");
             ids.Remove("msi_storage");
-            if (level == LevelPrudent) ids.Remove("cpu_idle_disable");   // sécurité : jamais en prudent
 
             // --- Écran très haute fréquence (240 Hz+) : on vise les très hauts FPS ---
             // Dès Équilibré (jamais en Prudent : redémarrage/consommation) ; le portable
@@ -319,12 +328,12 @@ namespace BTOptimizer
             {
                 ids.Add("input_queues");             // files souris/clavier courtes (neutre batterie)
                 if (!hw.IsLaptop)
-                {
                     ids.Add("dynamic_tick");         // tick noyau fixe : frame pacing plus régulier
-                    if (hw.MaxHz >= 360)
-                        ids.Add("cpu_idle_disable"); // C-States off : réveil CPU instantané (consomme/chauffe plus)
-                }
             }
+
+            // EXPÉRIMENTAL / haute chaleur : JAMAIS en auto, quel que soit le niveau ou l'écran.
+            // Filet de sécurité final — même si une branche ci-dessus les avait ajoutés.
+            foreach (string id in NeverAuto) ids.Remove(id);
 
             ids.RemoveWhere(id => !have.Contains(id));
             return ids;
@@ -346,13 +355,15 @@ namespace BTOptimizer
             return ids;
         }
 
-        /// <summary>Preset Benchmark : tout SAUF les tweaks qui réduisent la sécurité.</summary>
+        /// <summary>Preset Benchmark : tout SAUF les tweaks qui réduisent la sécurité et
+        /// les réglages expérimentaux/haute chaleur (jamais appliqués automatiquement).</summary>
         public static HashSet<string> BenchmarkIds(List<Tweak> all)
         {
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Tweak t in all) ids.Add(t.Id);
             ids.Remove("spectre_off");
             ids.Remove("vbs_off");
+            foreach (string id in NeverAuto) ids.Remove(id);
             return ids;
         }
     }

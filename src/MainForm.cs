@@ -771,7 +771,7 @@ namespace BTOptimizer
                 + sel.Count + " optimisations orientées input lag + performances :\n"
                 + "• souris/clavier en prise directe (accélération off, file d'attente)\n"
                 + "• timer 1 ms + tick fixe, priorité planificateur aux jeux\n"
-                + "• alimentation maximale (CPU 100 %, pas de veille/throttling)\n"
+                + "• alimentation : plan « Performances ultimes » + bridage d'alim (throttling) coupé\n"
                 + "• GPU en mode MSI, HAGS, Game Mode, MPO off\n"
                 + "• réseau réactif (Nagle off, throttling off, RSC/QoS)\n\n"
                 + "Tout est réversible (sauvegarde .reg automatique)."
@@ -890,9 +890,8 @@ namespace BTOptimizer
                 Log("  ! " + _hw.ScreensBelowMax + " écran(s) SOUS leur fréquence max — ouvre 🎯 Objectif 500 FPS (bouton ⬆ Passer à la fréquence max).", 2);
             if (_hw.HypervisorActive)
                 Log("  • Hyperviseur/VBS actif : coûte quelques % de CPU en jeu — désactivable via Composants & diagnostic (compromis sécurité, ton choix).", 0);
-            bool idleIncluded = ids.Contains("cpu_idle_disable");
-            Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), recherche Windows, MSI stockage"
-                + (idleIncluded ? "." : ", CPU sans veille."), 2);
+            Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), recherche Windows, MSI stockage, "
+                + "et les 2 réglages CPU expérimentaux — état minimal 100 % et C-States off — à cocher soi-même.", 2);
             Log("Sélection auto : " + ids.Count + " optimisation(s) cochée(s).", 1);
 
             List<Tweak> sel = Selection();

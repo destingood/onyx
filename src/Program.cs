@@ -8,7 +8,7 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("14.3.0.0")]
+[assembly: AssemblyVersion("14.4.0.0")]
 [assembly: AssemblyFileVersion("14.2.0.0")]
 
 namespace BTOptimizer
@@ -377,6 +377,15 @@ namespace BTOptimizer
                     + " — écartés compat : " + string.Join(", ", Hardware.OneClickExcluded));
                 foreach (string id in Hardware.OneClickExcluded)
                     if (oneclick.Contains(id)) { errors++; Console.WriteLine("  [!] 1 clic contient un réglage écarté : " + id); }
+                // EXPÉRIMENTAL / haute chaleur : ne doit JAMAIS apparaître en auto (aucun niveau,
+                // ni 1 clic, ni Benchmark) — l'utilisateur les coche à la main.
+                int naLeaks = 0;
+                foreach (string id in Hardware.NeverAuto)
+                    if (prudent.Contains(id) || equil.Contains(id) || aggro.Contains(id)
+                        || oneclick.Contains(id) || bench.Contains(id))
+                    { errors++; naLeaks++; Console.WriteLine("  [!] Réglage manuel-seul en auto : " + id); }
+                Console.WriteLine("  Manuel-seul (jamais en auto) : " + string.Join(", ", Hardware.NeverAuto)
+                    + (naLeaks == 0 ? " — OK, absents de tous les modes." : " — FUITE détectée !"));
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Matériel ERREUR : " + ex.Message); }
 

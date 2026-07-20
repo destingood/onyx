@@ -86,6 +86,19 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🛡️ Deux réglages CPU expérimentaux : jamais en auto (v14.4)
+
+L'**état minimal du processeur à 100 %** et la **désactivation des C-States (EXPÉRIMENTAL)** ne
+sont **plus jamais cochés automatiquement** : ni par **Auto** (Prudent / Équilibré / Agressif),
+ni par **⚡ TOUT OPTIMISER**, ni par le preset **eSport**, ni par les packs **Latence minimale**
+et **500 FPS**, ni par le preset **Benchmark**. Ces deux réglages font grimper chaleur et
+consommation ; ils restent **cochables à la main** (un par un, ou via « Tout cocher »), et l'état
+100 % reste applicable via le bouton **⚡ Boost CPU maximal** de l'overclock — qui l'affiche noir
+sur blanc avant d'appliquer. Un **filet de sécurité** dans le moteur de sélection (`NeverAuto`) les
+retire en dernier quel que soit le niveau ou la fréquence d'écran, et le harnais **vérifie
+automatiquement** leur absence de tous les modes. Réglage demandé pour éviter toute activation
+silencieuse.
+
 ### 📊 Capteurs GPU AMD / Intel en direct (v14.3)
 
 Le **Moniteur matériel** et le panneau **Températures** n'affichaient de valeurs en direct

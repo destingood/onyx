@@ -1079,9 +1079,9 @@ namespace BTOptimizer
             // ---- Alimentation & CPU (avancé) ----
             list.Add(new Tweak
             {
-                Id = "proc_min_100", Category = Cat.Alim, Esport = true,
+                Id = "proc_min_100", Category = Cat.Alim,
                 Name = "État minimal du processeur à 100 % (pas de sous-cadençage)",
-                Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %.",
+                Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 100),
                 Revert = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 5, 5),
                 Check  = () => Sys.PowerAcEquals(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100)
@@ -1089,9 +1089,9 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "cpu_idle_disable", Category = Cat.Alim, Esport = true,
+                Id = "cpu_idle_disable", Category = Cat.Alim,
                 Name = "Désactiver les états de repos du CPU (C-States) — EXPÉRIMENTAL",
-                Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos.",
+                Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
                 Revert = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 0, 0),
                 Check  = () => Sys.PowerAcEquals(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1)
