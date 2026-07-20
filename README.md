@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🧭 Assistant « J'ai un problème… » (v13.3)
+
+☰ → **J'AI UN PROBLÈME…** — la porte d'entrée de toute la suite. Avec 25+ panneaux, ce
+navigateur part du **symptôme** et ouvre directement le bon outil : « mes jeux crashent »,
+« ça rame », « ça lag en ligne », « un jeu ne démarre pas », « boutique infinie »,
+« téléchargements lents », « écran bloqué à 60 Hz », « souris pas à 1000 Hz », « PC lent au
+démarrage »… Les problèmes sont **groupés par thème** (crashs, performance, réseau, jeux,
+écran/périphériques, entretien) ; double-clic = ouverture du panneau qui traite ça. C'est ce
+qui rend l'app utilisable par un non-expert — ou par un client à qui tu la confies.
+
 ### ⚙️ Réglages TCP/IP — jeu + téléchargements (v13.2)
 
 ☰ → **Réglages TCP/IP** — boucle avec le problème d'origine (Steam qui charge/télécharge à
