@@ -185,7 +185,24 @@ namespace BTOptimizer
             if (lowDisk) { s -= 10; f.Add(New(1, "Disque système presque plein : " + diskDetail + " — Windows ralentit", () => new DiskForm(_log))); }
             else f.Add(New(0, "Espace disque système : suffisant", () => new DiskForm(_log)));
 
-            // 6. Réseau (petit test de gigue/perte)
+            // 6. Écran sous sa fréquence max (60 Hz sur un 144/240 Hz : gros gain de fluidité manqué)
+            try
+            {
+                var modes = DisplayInfo.Query();
+                var below = modes.Where(m => m.BelowMax).ToList();
+                if (below.Count > 0)
+                {
+                    s -= 8;
+                    DisplayInfo.DisplayMode m0 = below[0];
+                    f.Add(New(1, below.Count + " écran(s) sous leur fréquence max (ex. " + m0.CurrentHz + " Hz au lieu de "
+                        + m0.MaxHz + ") — fluidité perdue", () => new DisplayForm(_log)));
+                }
+                else if (modes.Count > 0)
+                    f.Add(New(0, "Écran(s) à leur fréquence maximale", () => new DisplayForm(_log)));
+            }
+            catch { }
+
+            // 7. Réseau (petit test de gigue/perte)
             int loss; double jitter, avg;
             QuickPing("1.1.1.1", out avg, out jitter, out loss);
             if (loss >= 5 || jitter > 15 || avg < 0) { s -= 10; f.Add(New(1, "Réseau instable : " + (avg < 0 ? "injoignable" : avg.ToString("0") + " ms, gigue " + jitter.ToString("0.#") + " ms, perte " + loss + " %"), () => new NetworkForm(_log))); }

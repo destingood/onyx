@@ -78,6 +78,13 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📈 Bilan santé plus complet (v13.6)
+
+Le tableau de bord **🏥 Santé** intègre désormais un contrôle **écran** : il détecte un
+moniteur resté **sous sa fréquence max** (le classique 60 Hz sur un 144/240 Hz — une grosse
+perte de fluidité invisible) et route directement vers le panneau 🖥️ Réglages d'écran pour
+le corriger. Le score reflète mieux l'expérience réelle de jeu.
+
 ### 🔒 Revue QA — 3 correctifs (v13.5)
 
 Passe de qualité sur les panneaux qui modifient le système (revue de code dédiée) :
