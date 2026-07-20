@@ -302,17 +302,14 @@ namespace BTOptimizer
         {
             btn.Text = baseText;
             btn.Click += (s, e) => OpenTools(owner, log, wingetIds);
-            System.Threading.Tasks.Task.Run(() =>
+            // Différé à l'affichage de la fenêtre : garantit que le handle du bouton EXISTE avant
+            // le BeginInvoke (pas de course), et le calcul (accès registre/disque) reste en fond.
+            owner.Shown += (s, e) => System.Threading.Tasks.Task.Run(() =>
             {
                 int missing = MissingCount(wingetIds);
-                try
-                {
-                    btn.BeginInvoke((Action)(() =>
-                    {
-                        btn.Text = baseText + (missing == 0 ? "  ✔" : "  ○ " + missing);
-                    }));
-                }
-                catch { }
+                string txt = baseText + (missing == 0 ? "  ✔" : "  ○ " + missing);
+                try { btn.BeginInvoke((Action)(() => { try { btn.Text = txt; } catch { } })); }
+                catch { }   // fenêtre fermée entre-temps : sans conséquence
             });
         }
 

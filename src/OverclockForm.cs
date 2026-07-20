@@ -242,6 +242,11 @@ namespace BTOptimizer
             });
             y += 50;
 
+            // Lien fonction → outil : overlay OC/FPS (Afterburner+RTSS) et capteurs GPU (GPU-Z).
+            var btnTools = MakeButton("🎛️ Afterburner / GPU-Z", 20, y, 300, 32, false);
+            LibScan.WireToolButton(btnTools, this, _log, "🎛️ Afterburner / GPU-Z",
+                new[] { "Guru3D.Afterburner", "TechPowerUp.GPU-Z" });
+            Controls.Add(btnTools);
             var close = MakeButton("Fermer", 470, y, 170, 32, false);
             close.Click += (s, e) => Close();
             Controls.Add(close);

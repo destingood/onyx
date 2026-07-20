@@ -86,6 +86,12 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎛️ Overclock relié + pastille fiabilisée (v14.13)
+
+- **Overclock GPU** → **🎛️ Afterburner / GPU-Z** (overlay OC/FPS + capteurs). 7ᵉ panneau relié.
+- **Pastille d'état fiabilisée** : le calcul est désormais déclenché à l'**affichage** de la
+  fenêtre (le handle du bouton existe → plus de course possible avec le `BeginInvoke` de fond).
+
 ### 🔗 Pastille d'état + plus de liens outils (v14.12)
 
 Chaque bouton « outil conseillé » affiche maintenant son **état d'installation** (calculé en
