@@ -248,8 +248,8 @@ namespace BTOptimizer
             _btnRepair = MakeBtn("🛒 Réparation boutiques / crashs", 136, 448, 250, 38, true);
             _btnRepair.Click += (s, e) => { using (var f = new ShopFixForm(_log)) f.ShowDialog(this); Scan(); };
             // Lien fonction → outil : éprouver la stabilité pour reproduire/confirmer un crash.
-            var btnStress = MakeBtn("🧪 Stress-test (OCCT/FurMark)", 396, 448, 168, 38, false);
-            btnStress.Click += (s, e) => LibScan.OpenTools(this, _log,
+            var btnStress = MakeBtn("🧪 Stress-test", 396, 448, 168, 38, false);
+            LibScan.WireToolButton(btnStress, this, _log, "🧪 Stress-test",
                 new[] { "OCBase.OCCT.Personal", "Geeks3D.FurMark.2", "REALiX.HWiNFO" });
             _btnClose = MakeBtn("Fermer", 572, 448, 90, 38, false);
             _btnClose.Click += (s, e) => Close();

@@ -84,7 +84,7 @@ namespace BTOptimizer
                 Font = new Font("Segoe UI", 9f)
             };
             btnTools.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
-            btnTools.Click += (s, e) => LibScan.OpenTools(this, _log,
+            LibScan.WireToolButton(btnTools, this, _log, "🌡️ Outils température & stress",
                 new[] { "REALiX.HWiNFO", "TechPowerUp.GPU-Z", "CPUID.HWMonitor", "TechPowerUp.ThrottleStop", "OCBase.OCCT.Personal" });
             Controls.Add(btnTools);
 

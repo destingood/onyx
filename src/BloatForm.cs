@@ -151,8 +151,8 @@ namespace BTOptimizer
             _btnKill.ForeColor = Color.FromArgb(180, 70, 20);
             _btnKill.Click += OnKill;
             // Lien fonction → outil : automatiser durablement les priorités/affinités des fâcheux.
-            var btnLasso = MakeBtn("⚙️ Process Lasso", 446, 448, 138, 38, false);
-            btnLasso.Click += (s, e) => LibScan.OpenTools(this, _log, new[] { "BitSum.ProcessLasso" });
+            var btnLasso = MakeBtn("⚙️ Process Lasso", 436, 448, 148, 38, false);
+            LibScan.WireToolButton(btnLasso, this, _log, "⚙️ Process Lasso", new[] { "BitSum.ProcessLasso" });
             _btnClose = MakeBtn("Fermer", 592, 448, 90, 38, true);
             _btnClose.Click += (s, e) => Close();
             Controls.Add(_btnScan); Controls.Add(_btnKill); Controls.Add(btnLasso); Controls.Add(_btnClose);

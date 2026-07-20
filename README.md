@@ -86,6 +86,18 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔗 Pastille d'état + plus de liens outils (v14.12)
+
+Chaque bouton « outil conseillé » affiche maintenant son **état d'installation** (calculé en
+arrière-plan, sans figer) : **✔** si tout est là, **○ N** s'il reste N outils à installer. Et
+deux panneaux de plus sont reliés :
+
+- **Latence en direct (DPC/ISR)** → **⏱ LatencyMon** (la référence qu'émule le panneau).
+- **FPS en direct** → **📊 CapFrameX** (capture de frametimes, 1 %/0,1 % low).
+
+Sous le capot : `LibScan.WireToolButton` (bouton + pastille d'état en fond, réutilisable) et
+`MissingCount`. Six panneaux relient désormais leur fonction au bon outil.
+
 ### 🔗 Les outils reliés aux diagnostics (v14.11)
 
 Les applis ne sont plus qu'une liste : chaque panneau de diagnostic **propose directement le bon

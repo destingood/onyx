@@ -275,6 +275,47 @@ namespace BTOptimizer
             try { using (var f = new LibsForm(log, wingetIds)) f.ShowDialog(owner); } catch { }
         }
 
+        /// <summary>Nombre d'outils (parmi wingetIds) NON installés. Construit le catalogue une
+        /// seule fois. À appeler en arrière-plan (accès registre/disque).</summary>
+        public static int MissingCount(string[] wingetIds)
+        {
+            int missing = 0;
+            try
+            {
+                List<LibItem> items = Items();
+                foreach (string id in wingetIds)
+                {
+                    bool inst = false;
+                    foreach (LibItem it in items)
+                        if (string.Equals(it.WingetId, id, StringComparison.OrdinalIgnoreCase))
+                        { try { inst = it.Installed(); } catch { inst = false; } break; }
+                    if (!inst) missing++;
+                }
+            }
+            catch { }
+            return missing;
+        }
+
+        /// <summary>Câble un bouton « outils conseillés » : clic → ouverture ciblée des Bibliothèques ;
+        /// et en fond, ajoute une pastille d'état (✔ tous là / ○ N à installer). Réutilisable.</summary>
+        public static void WireToolButton(Button btn, Form owner, Action<string, int> log, string baseText, string[] wingetIds)
+        {
+            btn.Text = baseText;
+            btn.Click += (s, e) => OpenTools(owner, log, wingetIds);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                int missing = MissingCount(wingetIds);
+                try
+                {
+                    btn.BeginInvoke((Action)(() =>
+                    {
+                        btn.Text = baseText + (missing == 0 ? "  ✔" : "  ○ " + missing);
+                    }));
+                }
+                catch { }
+            });
+        }
+
         /// <summary>Chemin de winget, ou null s'il est absent (App Installer non présent).</summary>
         public static string WingetPath()
         {

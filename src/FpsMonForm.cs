@@ -137,6 +137,10 @@ namespace BTOptimizer
             _btnCsv = MakeBtn("Exporter CSV", 112);
             _btnCsv.Dock = DockStyle.Left;
             _btnCsv.Click += (s, e) => ExportCsv();
+            // Lien fonction → outil : CapFrameX, capture de frametimes (1%/0,1% low façon labo).
+            var btnCfx = MakeBtn("📊 CapFrameX", 130);
+            btnCfx.Dock = DockStyle.Left;
+            LibScan.WireToolButton(btnCfx, this, _log, "📊 CapFrameX", new[] { "CXWorld.CapFrameX" });
             _btnCompact = MakeBtn("Mode compact 📌", 138);
             _btnCompact.Dock = DockStyle.Right;
             _btnCompact.Click += (s, e) => ToggleCompact();
@@ -150,6 +154,7 @@ namespace BTOptimizer
                 Text = "FPS présentés (côté CPU, façon PresentMon) · clique une ligne pour suivre cette application"
             };
             _bottom.Controls.Add(_footer);
+            _bottom.Controls.Add(btnCfx);
             _bottom.Controls.Add(_btnCsv);
             _bottom.Controls.Add(_btnReset);
             _bottom.Controls.Add(_btnAuto);
