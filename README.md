@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 📊 Capteurs GPU AMD / Intel en direct (v14.3)
+
+Le **Moniteur matériel** et le panneau **Températures** n'affichaient de valeurs en direct
+que pour les cartes **NVIDIA** (via `nvidia-smi`). Désormais, sur **AMD** et **Intel**, l'app
+lit la **charge 3D (%)** et la **VRAM dédiée utilisée** directement depuis les compteurs de
+performance Windows (**PDH** : « GPU Engine » / « GPU Adapter Memory » — la même source que
+le Gestionnaire des tâches, **tous constructeurs**, aucune dépendance externe, aucune injection).
+
+La **température**, elle, n'est pas exposée par Windows pour les GPU AMD/Intel (elle ne l'est
+que via les SDK constructeur). L'app est **honnête** sur ce point : elle affiche la charge et
+la VRAM réelles, et pour la température renvoie clairement vers **HWiNFO** (installable depuis
+📦 Bibliothèques) ou **AMD Adrenalin / Intel Arc Control** — plutôt qu'un chiffre inventé. Le
+verdict du panneau Températures s'adapte : pas de fausse promesse « températures sous contrôle »
+quand le capteur n'est pas lisible. La lecture PDH tourne **hors du thread interface** (règle
+anti-freeze déjà en place).
+
 ### 🔍 « Qui ralentit mon PC » enrichi (v14.2)
 
 Plus de gros consommateurs de fond repérés : **Wallpaper Engine / Lively** (fonds d'écran
@@ -678,8 +694,14 @@ Bouton **`Overclock automatique`** — panneau dédié :
 
 Bouton **`Moniteur matériel`** : fenêtre qui rafraîchit chaque seconde —
 tuiles **charge CPU** (PDH), **RAM utilisée/totale**, **température CPU** (zone ACPI, si
-exposée), **timer système**, et pour le **GPU NVIDIA** (via `nvidia-smi`) : nom,
-température, charge, fréquences cœur/mémoire, consommation en watts et **VRAM**.
+exposée), **timer système**, et pour le **GPU** :
+- **NVIDIA** (via `nvidia-smi`) : nom, température, charge, fréquences cœur/mémoire,
+  consommation en watts et **VRAM** ;
+- **AMD / Intel** (via compteurs **PDH** « GPU Engine » / « GPU Adapter Memory », v14.3) :
+  nom, **charge 3D (%)** et **VRAM dédiée utilisée** — même source que le Gestionnaire des
+  tâches. La **température** n'est pas exposée par Windows pour ces cartes : l'app le dit et
+  renvoie vers **HWiNFO** / Adrenalin / Arc Control plutôt que d'inventer un chiffre.
+
 Deux **sparklines** tracent l'historique charge CPU (cyan) et charge GPU (vert).
 Aucune dépendance externe : PDH + `GlobalMemoryStatusEx` + WMI + l'outil NVIDIA déjà
 présent (la lib LibreHardwareMonitor du dossier cible .NET 10, incompatible avec le

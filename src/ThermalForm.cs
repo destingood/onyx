@@ -137,7 +137,8 @@ namespace BTOptimizer
                 try
                 {
                     HwSample s = _mon.Sample();
-                    bool doReasons = s.Gpu != null && s.Gpu.Ok && tick % 2 == 1;
+                    // Raisons de bridage = nvidia-smi : seulement pour NVIDIA (température connue).
+                    bool doReasons = s.Gpu != null && s.Gpu.Ok && !double.IsNaN(s.Gpu.TempC) && tick % 2 == 1;
                     bool thermal = false, powerBrake = false;
                     if (doReasons)
                     {
@@ -160,15 +161,23 @@ namespace BTOptimizer
         // Sur le thread UI : applique la mesure aux libellés (toutes les mutations de champs ici).
         private void ApplySample(HwSample s, bool didReasons, bool thermal, bool powerBrake)
         {
-            if (s.Gpu != null && s.Gpu.Ok)
+            Color normal = Color.FromArgb(40, 44, 52);
+            if (s.Gpu != null && s.Gpu.Ok && !double.IsNaN(s.Gpu.TempC))
             {
+                // Chemin NVIDIA (nvidia-smi) : température + fréquences + puissance.
                 if (s.Gpu.TempC > _gpuMax) _gpuMax = s.Gpu.TempC;
                 _gpu.Text = string.Format("GPU  {0}\n {1:0}°C (max {2:0})   {3:0} MHz   {4:0} W   charge {5:0} %",
                     s.Gpu.Name, s.Gpu.TempC, _gpuMax, s.Gpu.CoreMhz, s.Gpu.PowerW, s.Gpu.Util);
-                _gpu.ForeColor = s.Gpu.TempC >= 83 ? Bad : (s.Gpu.TempC >= 75 ? Warn : Color.FromArgb(40, 44, 52));
+                _gpu.ForeColor = s.Gpu.TempC >= 83 ? Bad : (s.Gpu.TempC >= 75 ? Warn : normal);
             }
-            else _gpu.Text = "GPU non-NVIDIA : température/fréquences non lisibles sans outil constructeur.\n "
-                + "Installe HWiNFO (menu ☰ → 📦 Bibliothèques) ou utilise AMD Adrenalin / Intel Arc Control.";
+            else if (s.Gpu != null && s.Gpu.Ok)
+            {
+                // Chemin AMD / Intel (PDH) : charge + VRAM ; température non exposée par Windows.
+                _gpu.Text = string.Format("GPU  {0}\n charge {1:0} %   VRAM utilisée {2:N0} Mo   ·   température : n/d (HWiNFO)",
+                    s.Gpu.Name, s.Gpu.Util, s.Gpu.VramUsedMB);
+                _gpu.ForeColor = normal;
+            }
+            else _gpu.Text = "GPU : capteurs indisponibles sur ce système.";
 
             if (s.CpuLoad >= 0)
             {
@@ -187,11 +196,18 @@ namespace BTOptimizer
                 _throttle.Text = "Bridage (pilote)\n "
                     + (thermal ? "⚠ RALENTISSEMENT THERMIQUE actif" : "thermique : non")
                     + "   ·   " + (powerBrake ? "⚠ FREIN D'ALIMENTATION actif" : "alim : non");
-                _throttle.ForeColor = (thermal || powerBrake) ? Bad : Color.FromArgb(40, 44, 52);
+                _throttle.ForeColor = (thermal || powerBrake) ? Bad : normal;
             }
 
+            _noGpuTemp = s.Gpu != null && s.Gpu.Ok && double.IsNaN(s.Gpu.TempC);
+            if (_noGpuTemp)
+            {
+                _throttle.Text = "Bridage (pilote)\n n/d (raisons de throttling réservées à NVIDIA). Pour AMD/Intel : HWiNFO.";
+                _throttle.ForeColor = normal;
+            }
             UpdateVerdict();
         }
+        private bool _noGpuTemp;
 
         private void UpdateVerdict()
         {
@@ -214,6 +230,13 @@ namespace BTOptimizer
                 _verdict.Text = "→ Températures ÉLEVÉES (GPU " + _gpuMax.ToString("0") + "°C / CPU "
                     + (_cpuMax > 0 ? _cpuMax.ToString("0") + "°C" : "n/d") + ") mais pas encore de bridage. "
                     + "Surveille en charge ; améliore le refroidissement si ça grimpe encore.";
+            }
+            else if (_noGpuTemp)
+            {
+                _verdict.ForeColor = Color.FromArgb(60, 64, 72);
+                _verdict.Text = "→ Charge GPU visible en direct, mais Windows n'expose pas la température des cartes "
+                    + "AMD/Intel. Pour la surveiller (et le throttling), installe HWiNFO (☰ → 📦 Bibliothèques) "
+                    + "ou utilise AMD Adrenalin / Intel Arc Control.";
             }
             else
             {

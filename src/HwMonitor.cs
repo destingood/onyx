@@ -37,8 +37,88 @@ namespace BTOptimizer
         [DllImport("pdh.dll")] private static extern uint PdhCollectQueryData(IntPtr q);
         [DllImport("pdh.dll")] private static extern uint PdhGetFormattedCounterValue(IntPtr c, uint fmt, IntPtr res, out PdhValue v);
         [DllImport("pdh.dll")] private static extern uint PdhCloseQuery(IntPtr q);
+        [DllImport("pdh.dll", CharSet = CharSet.Unicode)]
+        private static extern uint PdhGetFormattedCounterArray(IntPtr counter, uint fmt, ref uint bufSize, out uint itemCount, IntPtr buffer);
         [StructLayout(LayoutKind.Sequential)] private struct PdhValue { public uint CStatus; public double Value; }
+        [StructLayout(LayoutKind.Sequential)] private struct PdhItemDouble { public IntPtr szName; public uint CStatus; public double Value; }
         private const uint PDH_FMT_DOUBLE = 0x00000200;
+        private const uint PDH_MORE_DATA = 0x800007D2;
+
+        /// <summary>
+        /// Charge 3D GPU (%) et VRAM dédiée utilisée (Mo) via les compteurs PDH « GPU Engine » /
+        /// « GPU Adapter Memory » — TOUS constructeurs (NVIDIA/AMD/Intel), comme le Gestionnaire
+        /// des tâches. Retourne false si indisponible (Windows &lt; 1709). Sans température (réservée
+        /// aux SDK constructeur).
+        /// </summary>
+        public static bool TryReadGpuPerf(out double load3dPct, out long vramUsedMB)
+        {
+            load3dPct = 0; vramUsedMB = 0;
+            IntPtr q = IntPtr.Zero;
+            try
+            {
+                if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out q) != 0) return false;
+                IntPtr cUtil, cMem;
+                bool haveUtil = PdhAddEnglishCounter(q, @"\GPU Engine(*)\Utilization Percentage", IntPtr.Zero, out cUtil) == 0;
+                bool haveMem  = PdhAddEnglishCounter(q, @"\GPU Adapter Memory(*)\Dedicated Usage", IntPtr.Zero, out cMem) == 0;
+                if (!haveUtil && !haveMem) return false;
+                PdhCollectQueryData(q);
+                System.Threading.Thread.Sleep(200);
+                PdhCollectQueryData(q);
+                if (haveUtil) load3dPct = SumCounterArray(cUtil, "engtype_3d", true);
+                if (haveMem) vramUsedMB = (long)(SumCounterArray(cMem, null, false) / (1024.0 * 1024.0));
+                return true;
+            }
+            catch { return false; }
+            finally { if (q != IntPtr.Zero) PdhCloseQuery(q); }
+        }
+
+        // Somme les valeurs d'un compteur à instances multiples ; filtre par sous-chaîne de nom (facultatif).
+        private static double SumCounterArray(IntPtr counter, string nameFilterLower, bool cap100)
+        {
+            uint size = 0, count = 0;
+            if (PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, IntPtr.Zero) != PDH_MORE_DATA || size == 0)
+                return 0;
+            IntPtr buf = Marshal.AllocHGlobal((int)size);
+            try
+            {
+                if (PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, buf) != 0) return 0;
+                int itemSize = Marshal.SizeOf(typeof(PdhItemDouble));
+                double sum = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    var it = (PdhItemDouble)Marshal.PtrToStructure((IntPtr)(buf.ToInt64() + (long)i * itemSize), typeof(PdhItemDouble));
+                    if (it.CStatus != 0) continue;
+                    if (nameFilterLower != null)
+                    {
+                        string nm = it.szName == IntPtr.Zero ? "" : (Marshal.PtrToStringUni(it.szName) ?? "");
+                        if (nm.ToLowerInvariant().IndexOf(nameFilterLower, StringComparison.Ordinal) < 0) continue;
+                    }
+                    sum += it.Value;
+                }
+                return (cap100 && sum > 100) ? 100 : sum;
+            }
+            finally { Marshal.FreeHGlobal(buf); }
+        }
+
+        private static string _gpuNameWmi;
+        private static string GpuNameWmi()
+        {
+            if (_gpuNameWmi != null) return _gpuNameWmi;
+            string best = "GPU";
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string n = Convert.ToString(mo["Name"]);
+                        if (!string.IsNullOrEmpty(n) && n.IndexOf("microsoft", StringComparison.OrdinalIgnoreCase) < 0)
+                        { best = n; break; }
+                    }
+            }
+            catch { }
+            _gpuNameWmi = best;
+            return best;
+        }
 
         private IntPtr _query, _cpu;
         private bool _pdhReady;
@@ -95,6 +175,7 @@ namespace BTOptimizer
 
             s.CpuTempC = ReadCpuTemp();
             if (_nvsmi != null) s.Gpu = ReadGpu();
+            else s.Gpu = ReadGpuPdh();   // AMD / Intel : charge + VRAM via PDH (pas de température)
             return s;
         }
 
@@ -158,6 +239,20 @@ namespace BTOptimizer
             s = s.Trim();
             if (double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out v)) return v;
             return 0;
+        }
+
+        // GPU non-NVIDIA : charge 3D + VRAM via PDH ; température inconnue (NaN → « n/d »).
+        private GpuInfo ReadGpuPdh()
+        {
+            var g = new GpuInfo();
+            double load; long vram;
+            if (!TryReadGpuPerf(out load, out vram)) return g;   // g.Ok reste false
+            g.Name = GpuNameWmi();
+            g.Util = load;
+            g.VramUsedMB = vram;
+            g.TempC = double.NaN;   // pas de température sans outil constructeur
+            g.Ok = true;
+            return g;
         }
 
         public void Dispose()

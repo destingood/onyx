@@ -8,7 +8,7 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("14.2.0.0")]
+[assembly: AssemblyVersion("14.3.0.0")]
 [assembly: AssemblyFileVersion("14.2.0.0")]
 
 namespace BTOptimizer
@@ -519,6 +519,13 @@ namespace BTOptimizer
                         hs.Gpu.CoreMhz, hs.Gpu.MemMhz, hs.Gpu.PowerW,
                         hs.Gpu.VramUsedMB / 1024.0, hs.Gpu.VramTotalMB / 1024.0));
                 }
+                // Sonde directe du chemin PDH « GPU Engine » (AMD/Intel) : sur une machine NVIDIA,
+                // Sample() passe par nvidia-smi, donc on teste ici le marshalling PDH explicitement.
+                double gpuLoad; long gpuVram;
+                bool pdhOk = HwMonitor.TryReadGpuPerf(out gpuLoad, out gpuVram);
+                Console.WriteLine(string.Format(
+                    "  PDH GPU (tous constructeurs) : {0} — charge 3D={1:0}% VRAM={2:0.0}Go",
+                    pdhOk ? "OK" : "indisponible", gpuLoad, gpuVram / 1024.0));
                 using (var f = new MonitorForm()) { f.CreateControl(); }
                 Console.WriteLine("  UI MonitorForm : construite OK.");
             }
