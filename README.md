@@ -86,6 +86,28 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🛠️ Correctifs de relecture (3 audits croisés) (v14.7)
+
+Trois relectures indépendantes (pipeline d'installation, cœur récent PDH/sélection, blocages
+du fil d'interface) ont remonté des défauts concrets, tous corrigés :
+
+- **Anti-freeze — panneau « Composants & diagnostic »** : son chargement (~15 requêtes WMI +
+  nvidia-smi) tournait **sur le fil d'interface** → gel de plusieurs secondes à chaque
+  ouverture / rafraîchissement / correction. Déporté en tâche de fond (les mutations d'UI
+  restent sur le bon fil). Idem pour les corrections Samsung CoreSync / Display Manager.
+- **Crash potentiel évité (GPU)** : à la fermeture du panneau Températures, le handle PDH
+  pouvait être fermé **pendant** une lecture de fond encore en cours (course → plantage natif
+  non rattrapable). On attend désormais la fin de la lecture avant de libérer.
+- **Fuite de handle PDH** corrigée (handle laissé ouvert si l'ajout du compteur échouait) + le
+  panneau Températures se nettoie aussi sur `Dispose()` direct (plus de timer fantôme).
+- **Installation d'applis** : le code de sortie **3010** (installé, redémarrage requis) est
+  désormais un succès ; la détection de **FurMark 2** ne confond plus avec l'ancien FurMark 1.
+- **Portable exclu sur PC portable** : le tick noyau fixe (`dynamic_tick`) n'est plus ajouté en
+  niveau Agressif sur un portable (cohérent avec les autres protections batterie/chaleur).
+
+Les relectures ont aussi **confirmé** que l'invariant « jamais en auto » (v14.4) et le
+marshalling PDH (v14.3) sont corrects.
+
 ### 🔩 Renforcement (relecture applis + fonctions) (v14.6)
 
 Passe de durcissement sur les applis **et** le moteur du logiciel :

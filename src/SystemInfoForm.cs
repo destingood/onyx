@@ -143,10 +143,31 @@ namespace BTOptimizer
             if (_diagTable != null) _diagTable.Enabled = !busy;
         }
 
+        private volatile bool _busy;
+
         private void Reload()
         {
-            Cursor = Cursors.WaitCursor;
+            if (_busy) return;
+            _busy = true;
+            SetBusy(true);
+            // Collecte LOURDE (≈15 requêtes WMI + nvidia-smi) déportée hors du thread interface :
+            // sinon la fenêtre gèle plusieurs secondes à l'ouverture, à chaque « Rafraîchir » et
+            // après chaque correction. Les mutations de contrôles restent sur le thread interface.
+            Task.Run(() =>
+            {
+                List<Diagnostics.Finding> findings;
+                List<ComponentInfo.Section> sections;
+                try { findings = new List<Diagnostics.Finding>(Diagnostics.Run()); }
+                catch { findings = new List<Diagnostics.Finding>(); }
+                try { sections = ComponentInfo.Gather(); }
+                catch { sections = new List<ComponentInfo.Section>(); }
+                try { BeginInvoke((Action)(() => ApplyReload(findings, sections))); } catch { }
+            });
+        }
 
+        // Sur le thread interface uniquement : constats (Labels/Boutons) + inventaire (ListView).
+        private void ApplyReload(List<Diagnostics.Finding> findings, List<ComponentInfo.Section> sections)
+        {
             // ---- Diagnostic ----
             _diagTable.SuspendLayout();
             // Libère les anciens contrôles : Controls.Clear() détache sans disposer
@@ -161,7 +182,7 @@ namespace BTOptimizer
             int r = 0;
             try
             {
-                foreach (Diagnostics.Finding fd in Diagnostics.Run())
+                foreach (Diagnostics.Finding fd in findings)
                 {
                     string icon = fd.Level == 2 ? "✗" : (fd.Level == 1 ? "!" : "✓");
                     db.AppendLine("  [" + icon + "] " + fd.Text);
@@ -189,7 +210,7 @@ namespace BTOptimizer
             _list.BeginUpdate();
             _list.Items.Clear();
             _list.Groups.Clear();
-            _sections = ComponentInfo.Gather();
+            _sections = sections;
             foreach (ComponentInfo.Section sec in _sections)
             {
                 var g = new ListViewGroup(sec.Title) { HeaderAlignment = HorizontalAlignment.Left };
@@ -202,7 +223,8 @@ namespace BTOptimizer
                 }
             }
             _list.EndUpdate();
-            Cursor = Cursors.Default;
+            SetBusy(false);
+            _busy = false;
         }
 
         private void OnFix(Diagnostics.Finding fd)
@@ -297,17 +319,27 @@ namespace BTOptimizer
                     + "• Réversible : relance l'appli CoreSync, ou réactive-la dans Gestionnaire des tâches → Applications de démarrage.",
                     "Samsung CoreSync", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
-            int n = 0;
-            try { n = CoreSyncCheck.Disable(_log); }
-            catch (Exception ex) { if (_log != null) _log("CoreSync : échec (" + ex.Message + ").", 3); }
-            if (n > 0)
-                MessageBox.Show(this, "Samsung CoreSync neutralisé (" + n + " action(s)) : appli fermée et/ou démarrage automatique coupé.",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            else
-                MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
-                    + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            Reload();
+            // Disable() ferme l'appli (Kill + WaitForExit) et touche démarrage/registre :
+            // hors thread interface pour ne pas figer la fenêtre ~3 s après le clic.
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = CoreSyncCheck.Disable(_log); }
+                catch (Exception ex) { if (_log != null) _log("CoreSync : échec (" + ex.Message + ").", 3); }
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    if (n > 0)
+                        MessageBox.Show(this, "Samsung CoreSync neutralisé (" + n + " action(s)) : appli fermée et/ou démarrage automatique coupé.",
+                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else
+                        MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
+                            + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
+                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         private void DisableSdm()
@@ -320,14 +352,22 @@ namespace BTOptimizer
                     + "• Réversible : relance l'appli, réactive la tâche dans le Planificateur, ou remets le service en « Manuel » (services.msc).",
                     "Samsung Display Manager", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
-            int n = 0;
-            try { n = SdmCheck.Disable(_log); }
-            catch (Exception ex) { if (_log != null) _log("SDM : échec (" + ex.Message + ").", 3); }
-            MessageBox.Show(this,
-                n > 0 ? "Samsung Display Manager neutralisé (" + n + " action(s))."
-                      : "Rien à faire : l'appli ne tournait pas et aucun démarrage automatique ni service MAPT n'a été trouvé.",
-                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            Reload();
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = SdmCheck.Disable(_log); }
+                catch (Exception ex) { if (_log != null) _log("SDM : échec (" + ex.Message + ").", 3); }
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this,
+                        n > 0 ? "Samsung Display Manager neutralisé (" + n + " action(s))."
+                              : "Rien à faire : l'appli ne tournait pas et aucun démarrage automatique ni service MAPT n'a été trouvé.",
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         private void DisableVbs()

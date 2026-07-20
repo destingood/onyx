@@ -8,7 +8,7 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("14.6.0.0")]
+[assembly: AssemblyVersion("14.7.0.0")]
 [assembly: AssemblyFileVersion("14.2.0.0")]
 
 namespace BTOptimizer

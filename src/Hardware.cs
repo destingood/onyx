@@ -284,6 +284,7 @@ namespace BTOptimizer
                 ids.Remove("usb_suspend");
                 ids.Remove("pcie_aspm_off");
                 ids.Remove("disk_timeout_off");
+                ids.Remove("dynamic_tick");   // tick noyau fixe = conso/chaleur : jamais sur portable
             }
             else if (!hw.HasTouch && level >= LevelBalanced)
             {

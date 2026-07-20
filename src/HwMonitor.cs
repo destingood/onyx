@@ -257,7 +257,11 @@ namespace BTOptimizer
 
         public void Dispose()
         {
-            if (_pdhReady) { PdhCloseQuery(_query); _pdhReady = false; }
+            // Fermer dès que le handle est ouvert — même si l'ajout du compteur CPU a échoué
+            // (sinon _pdhReady reste faux et le handle PDH fuit à chaque construction, sur les
+            // Windows « débloatés » où les compteurs de perf sont parfois corrompus).
+            if (_query != IntPtr.Zero) { PdhCloseQuery(_query); _query = IntPtr.Zero; }
+            _pdhReady = false;
         }
     }
 }

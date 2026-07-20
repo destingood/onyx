@@ -1542,9 +1542,14 @@ namespace BTOptimizer
         {
             if (_miWatch.Checked)
             {
-                // Référence : on n'alerte que sur les NOUVELLES erreurs pilote après activation.
-                try { _nvlSeen = CrashScan.GpuDriverErrors(1); } catch { _nvlSeen = -1; }
                 _watchTick = 0; _watchCooldown = 0;
+                _nvlSeen = -1;
+                // Référence (n'alerte que sur les NOUVELLES erreurs pilote) : GpuDriverErrors lance
+                // wevtutil (process bloquant) → EN FOND, sinon la fenêtre gèle ~1-3 s à l'activation.
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { _nvlSeen = CrashScan.GpuDriverErrors(1); } catch { _nvlSeen = -1; }
+                });
                 Log("🛡 Surveillance en fond activée : alerte si le GPU dépasse 85 °C ou si le pilote signale une erreur.", 1);
             }
             else Log("🛡 Surveillance en fond désactivée.", 0);

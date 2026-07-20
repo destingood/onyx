@@ -140,7 +140,7 @@ namespace BTOptimizer
                     Installed = () => Directory.Exists(Path.Combine(pf, "Resplendence")) || Uninstall("LatencyMon") },
                 new LibItem { Name = "FurMark 2 (stress-test GPU)", WingetId = "Geeks3D.FurMark.2",
                     Why = "pousse le GPU à fond pour révéler surchauffe/instabilité (crashs « dispositif de rendu perdu »)",
-                    Installed = () => Uninstall("FurMark") || WingetPkg("Geeks3D.FurMark.2") },
+                    Installed = () => Uninstall("FurMark 2") || WingetPkg("Geeks3D.FurMark.2") },
                 new LibItem { Name = "OCCT (stress CPU/GPU/RAM/alim)", WingetId = "OCBase.OCCT.Personal",
                     Why = "test de stabilité complet : démasque une alim (PSU) faiblarde, une RAM instable ou un OC bancal",
                     Installed = () => Uninstall("OCCT") || WingetPkg("OCBase.OCCT.Personal") },
@@ -330,7 +330,9 @@ namespace BTOptimizer
                 r = Sys.Run(winget, InstallArgs(item.WingetId, "machine"));
             }
 
-            bool ok = r.ExitCode == 0 || item.Installed();
+            // 3010 = installé mais redémarrage requis (souvent VC++/DirectX) : c'est un SUCCÈS,
+            // pas un échec — cohérent avec le plan B ci-dessous qui traite déjà 3010 ainsi.
+            bool ok = r.ExitCode == 0 || r.ExitCode == 3010 || item.Installed();
 
             // Visual C++ : plan B téléchargement vérifié + exécution directe (l'app est déjà admin).
             if (!ok && item.WingetId.StartsWith("Microsoft.VCRedist", StringComparison.OrdinalIgnoreCase))

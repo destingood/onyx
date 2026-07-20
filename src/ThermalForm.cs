@@ -246,15 +246,39 @@ namespace BTOptimizer
             }
         }
 
+        private bool _stopped;
+
+        // Arrête le timer PUIS attend qu'une lecture de fond (Task.Run) libère le HwMonitor
+        // avant de fermer son handle PDH : sinon PdhCloseQuery court-circuiterait un
+        // PdhCollectQueryData encore en vol sur le même handle natif → crash (non rattrapable
+        // sur CoreCLR). Idempotent : sûr d'être appelé par OnFormClosed ET par Dispose().
+        private void StopMonitoring()
+        {
+            if (_stopped) return;
+            _stopped = true;
+            try { if (_timer != null) { _timer.Stop(); _timer.Dispose(); } } catch { }
+            int waited = 0;
+            while (_thBusy && waited < 2000) { System.Threading.Thread.Sleep(20); waited += 20; }
+            try { if (_mon != null) _mon.Dispose(); } catch { }
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            try { if (_timer != null) { _timer.Stop(); _timer.Dispose(); } } catch { }
-            try { if (_mon != null) _mon.Dispose(); } catch { }
+            StopMonitoring();
             if (_log != null && _gpuMax > 0)
                 _log("Thermique : GPU max " + _gpuMax.ToString("0") + "°C"
                      + (_sawThermal ? " — throttling thermique VU" : "")
                      + (_sawPower ? " — frein d'alim VU" : "") + ".", (_sawThermal || _sawPower) ? 2 : 0);
             base.OnFormClosed(e);
+        }
+
+        // Filet : une fermeture par Dispose() direct (ex. le harnais BTTEST : using(...))
+        // ne déclenche pas OnFormClosed. Sans ça, le timer continuerait de tourner (fenêtre
+        // native propre) et relancerait des lectures/nvidia-smi contre une fenêtre détruite.
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) StopMonitoring();
+            base.Dispose(disposing);
         }
     }
 }
