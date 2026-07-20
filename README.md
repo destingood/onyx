@@ -86,6 +86,16 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🟢🔴 Diagnostic GPU multi-constructeur — NVIDIA / AMD / Intel (v14.0)
+
+Jusqu'ici, la détection des **crashs pilote GPU** ne couvrait que NVIDIA (`nvlddmkm`) : un
+joueur **Radeon** ou **Arc** ne voyait aucune erreur, même s'il en avait. Désormais l'app
+détecte le constructeur de ta carte et lit le **bon journal pilote** — NVIDIA (`nvlddmkm`),
+AMD (`amdkmdag`/`amdwddmg`/`atikmdag`), Intel (`igfxn`/`igdkmd64`). Résultat : **Stabilité,
+Santé, Gardien en fond et Rapport diagnostiquent les crashs GPU pour toutes les cartes**.
+Le panneau Températures indique clairement, pour un GPU non-NVIDIA, comment lire ses capteurs
+(HWiNFO — installable depuis 📦 Bibliothèques — ou Adrenalin / Arc Control).
+
 ### 🔒 Revue QA (2ᵉ passe) — panneau Thermique fluidifié (v13.9)
 
 Extension de la revue aux panneaux en lecture seule : le panneau **🌡️ Températures &

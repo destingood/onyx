@@ -65,6 +65,49 @@ namespace BTOptimizer
         /// <summary>Erreurs matérielles WHEA (CPU/RAM/PCIe).</summary>
         public static int Whea(int days) { return CountProvider("Microsoft-Windows-WHEA-Logger", days); }
 
+        // ---- Erreurs du pilote GPU, multi-constructeur (NVIDIA / AMD / Intel) ----
+        private static string[] _gpuProviders;
+
+        /// <summary>Fournisseurs de journal correspondant au(x) pilote(s) GPU détecté(s) sur ce PC.</summary>
+        public static string[] GpuDriverProviders()
+        {
+            if (_gpuProviders != null) return _gpuProviders;
+            var provs = new List<string>();
+            try
+            {
+                using (var s = new System.Management.ManagementObjectSearcher("SELECT Name FROM Win32_VideoController"))
+                    foreach (System.Management.ManagementObject mo in s.Get())
+                    {
+                        string n = (Convert.ToString(mo["Name"]) ?? "").ToLowerInvariant();
+                        if (n.Contains("nvidia") || n.Contains("geforce") || n.Contains("rtx") || n.Contains("gtx"))
+                            Add(provs, "nvlddmkm");
+                        else if (n.Contains("amd") || n.Contains("radeon"))
+                            { Add(provs, "amdkmdag"); Add(provs, "amdwddmg"); Add(provs, "atikmdag"); }
+                        else if (n.Contains("intel") || n.Contains("arc"))
+                            { Add(provs, "igfxn"); Add(provs, "igdkmd64"); Add(provs, "igfx"); }
+                    }
+            }
+            catch { }
+            // Repli : si le nom est inconnu, on couvre les trois familles.
+            if (provs.Count == 0) { Add(provs, "nvlddmkm"); Add(provs, "amdkmdag"); Add(provs, "amdwddmg"); }
+            _gpuProviders = provs.ToArray();
+            return _gpuProviders;
+        }
+
+        private static void Add(List<string> l, string s) { if (!l.Contains(s)) l.Add(s); }
+
+        /// <summary>Total des erreurs du pilote GPU (toutes familles présentes) sur N jours.</summary>
+        public static int GpuDriverErrors(int days)
+        {
+            int total = 0;
+            foreach (string p in GpuDriverProviders())
+            {
+                int c = CountProvider(p, days);
+                if (c > 0) total += c;
+            }
+            return total;
+        }
+
         // Bruit de développement à ignorer dans la liste des crashs applicatifs.
         private static readonly string[] NoiseExe =
         {
@@ -229,7 +272,7 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 List<CrashEvent> events = CrashScan.Recent(Days);
-                int nvl = CrashScan.CountProvider("nvlddmkm", Days);
+                int nvl = CrashScan.GpuDriverErrors(Days);
                 int bsod = CrashScan.Bsod(Days);
                 int hard = CrashScan.HardResets(Days);
                 int whea = CrashScan.Whea(Days);

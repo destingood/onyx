@@ -167,7 +167,8 @@ namespace BTOptimizer
                     s.Gpu.Name, s.Gpu.TempC, _gpuMax, s.Gpu.CoreMhz, s.Gpu.PowerW, s.Gpu.Util);
                 _gpu.ForeColor = s.Gpu.TempC >= 83 ? Bad : (s.Gpu.TempC >= 75 ? Warn : Color.FromArgb(40, 44, 52));
             }
-            else _gpu.Text = "GPU : non NVIDIA ou nvidia-smi indisponible (surveille la température via l'OSD du jeu).";
+            else _gpu.Text = "GPU non-NVIDIA : température/fréquences non lisibles sans outil constructeur.\n "
+                + "Installe HWiNFO (menu ☰ → 📦 Bibliothèques) ou utilise AMD Adrenalin / Intel Arc Control.";
 
             if (s.CpuLoad >= 0)
             {

@@ -1544,7 +1544,7 @@ namespace BTOptimizer
             if (_miWatch.Checked)
             {
                 // Référence : on n'alerte que sur les NOUVELLES erreurs pilote après activation.
-                try { _nvlSeen = CrashScan.CountProvider("nvlddmkm", 1); } catch { _nvlSeen = -1; }
+                try { _nvlSeen = CrashScan.GpuDriverErrors(1); } catch { _nvlSeen = -1; }
                 _watchTick = 0; _watchCooldown = 0;
                 Log("🛡 Surveillance en fond activée : alerte si le GPU dépasse 85 °C ou si le pilote signale une erreur.", 1);
             }
@@ -1582,7 +1582,7 @@ namespace BTOptimizer
                     if (tick % 30 == 0)   // ~60 s : erreurs pilote
                     {
                         int now = -1;
-                        try { now = CrashScan.CountProvider("nvlddmkm", 1); } catch { }
+                        try { now = CrashScan.GpuDriverErrors(1); } catch { }
                         if (_nvlSeen >= 0 && now > _nvlSeen)
                             TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre 🩺 Stabilité pour le verdict.");
                         if (now >= 0) _nvlSeen = now;

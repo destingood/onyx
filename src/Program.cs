@@ -8,8 +8,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("13.11.0.0")]
-[assembly: AssemblyFileVersion("13.11.0.0")]
+[assembly: AssemblyVersion("14.0.0.0")]
+[assembly: AssemblyFileVersion("14.0.0.0")]
 
 namespace BTOptimizer
 {
@@ -413,7 +413,7 @@ namespace BTOptimizer
             {
                 var recent = CrashScan.Recent(14);
                 Console.WriteLine("  14 j : applis/jeux=" + recent.Count
-                    + " | nvlddmkm=" + CrashScan.CountProvider("nvlddmkm", 14)
+                    + " | pilote GPU=" + CrashScan.GpuDriverErrors(14)
                     + " | BSOD=" + CrashScan.Bsod(14)
                     + " | coupures=" + CrashScan.HardResets(14)
                     + " | WHEA=" + CrashScan.Whea(14));

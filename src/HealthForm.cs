@@ -150,7 +150,7 @@ namespace BTOptimizer
             int s = 100;
 
             // 1. Crashs & pilote GPU (14 j)
-            int nvl = CrashScan.CountProvider("nvlddmkm", 14);
+            int nvl = CrashScan.GpuDriverErrors(14);
             int bsod = CrashScan.Bsod(14), whea = CrashScan.Whea(14), hard = CrashScan.HardResets(14);
             if (nvl > 0) { s -= 15; f.Add(New(2, "Pilote GPU : " + (nvl >= 200 ? "200+" : nvl.ToString()) + " erreur(s) en 14 j — piste n°1 des crashs de jeux", () => new StabilityForm(_log))); }
             if (bsod > 0 || whea > 0 || hard > 0) { s -= 15; f.Add(New(2, "Signes matériels : " + bsod + " écran(s) bleu(s), " + whea + " WHEA, " + hard + " coupure(s) brute(s)", () => new StabilityForm(_log))); }

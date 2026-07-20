@@ -81,7 +81,7 @@ namespace BTOptimizer
         {
             int nvl = 0, bsod = 0, badTweaks = 0, libMissing = 0, restorePts = 0;
             double freeGB = -1, pct = -1;
-            try { nvl = CrashScan.CountProvider("nvlddmkm", 14); } catch { }
+            try { nvl = CrashScan.GpuDriverErrors(14); } catch { }
             try { bsod = CrashScan.Bsod(14); } catch { }
             try { foreach (Checkup.Item it in Checkup.Analyze()) if (it.Problem) badTweaks++; } catch { }
             try { foreach (LibScan.LibItem it in LibScan.Items()) { if (!it.Essential) continue; bool ok; try { ok = it.Installed(); } catch { ok = false; } if (!ok) libMissing++; } } catch { }

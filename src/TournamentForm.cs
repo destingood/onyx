@@ -159,7 +159,7 @@ namespace BTOptimizer
             res.Add(new CheckResult("MODE JEU (services suspendus, RAM libérée)", GameBoost.IsActive,
                 GameBoost.IsActive ? "actif" : "inactif — bouton ci-dessous ou Ctrl+Alt+G"));
 
-            int nvl = CrashScan.CountProvider("nvlddmkm", 1);
+            int nvl = CrashScan.GpuDriverErrors(1);
             res.Add(new CheckResult("Pilote GPU (dernières 24 h)", nvl == 0,
                 nvl <= 0 ? "aucune erreur" : nvl + " erreur(s) — vois 🩺 Stabilité / réparation avant de jouer"));
 
