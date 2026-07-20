@@ -128,22 +128,22 @@ namespace BTOptimizer
                 // ---- Diagnostic, thermiques & test de stabilité (surveille et éprouve ton PC) ----
                 new LibItem { Name = "Fan Control (courbes de ventilation)", WingetId = "Rem0o.FanControl",
                     Why = "pilote les ventilos selon la température CPU/GPU — le meilleur outil GRATUIT contre le throttling thermique et le bruit",
-                    Installed = () => Uninstall("Fan Control") || Directory.Exists(Path.Combine(local, "FanControl")) },
+                    Installed = () => Uninstall("Fan Control") || WingetPkg("Rem0o.FanControl") || Directory.Exists(Path.Combine(local, "FanControl")) },
                 new LibItem { Name = "CPU-Z (infos CPU / RAM / carte mère)", WingetId = "CPUID.CPU-Z",
                     Why = "vérifie la vitesse RAM RÉELLE (profil XMP/EXPO actif ?) et le modèle exact de tes composants",
                     Installed = () => File.Exists(Path.Combine(pf, @"CPUID\CPU-Z\cpuz.exe")) || Uninstall("CPU-Z") },
                 new LibItem { Name = "GPU-Z (capteurs GPU + lien PCIe)", WingetId = "TechPowerUp.GPU-Z",
                     Why = "température/charge GPU AMD/Intel (que Windows n'expose pas) et contrôle du lien PCIe (x16 Gen4 vs bridé)",
-                    Installed = () => Uninstall("GPU-Z") },
+                    Installed = () => Uninstall("GPU-Z") || WingetPkg("TechPowerUp.GPU-Z") },
                 new LibItem { Name = "LatencyMon (latence DPC / micro-coupures)", WingetId = "Resplendence.LatencyMon",
                     Why = "identifie le pilote qui provoque grésillements audio et micro-freezes (DPC trop élevés)",
                     Installed = () => Directory.Exists(Path.Combine(pf, "Resplendence")) || Uninstall("LatencyMon") },
                 new LibItem { Name = "FurMark 2 (stress-test GPU)", WingetId = "Geeks3D.FurMark.2",
                     Why = "pousse le GPU à fond pour révéler surchauffe/instabilité (crashs « dispositif de rendu perdu »)",
-                    Installed = () => Uninstall("FurMark") },
+                    Installed = () => Uninstall("FurMark") || WingetPkg("Geeks3D.FurMark.2") },
                 new LibItem { Name = "OCCT (stress CPU/GPU/RAM/alim)", WingetId = "OCBase.OCCT.Personal",
                     Why = "test de stabilité complet : démasque une alim (PSU) faiblarde, une RAM instable ou un OC bancal",
-                    Installed = () => Uninstall("OCCT") },
+                    Installed = () => Uninstall("OCCT") || WingetPkg("OCBase.OCCT.Personal") },
                 new LibItem { Name = "WizTree (analyse l'espace disque)", WingetId = "AntibodySoftware.WizTree",
                     Why = "trouve en 2 s ce qui remplit ton SSD (jeux, caches de shaders, captures) — bien plus rapide que l'Explorateur",
                     Installed = () => File.Exists(Path.Combine(pf, @"WizTree\WizTree.exe")) || File.Exists(Path.Combine(pf86, @"WizTree\WizTree.exe")) || Uninstall("WizTree") },
@@ -206,6 +206,24 @@ namespace BTOptimizer
             }
             catch { }
             return false;
+        }
+
+        // Vrai si winget a installé ce paquet en mode PORTABLE / archive (aucune clé de
+        // désinstallation créée : Fan Control, GPU-Z, OCCT, FurMark…). winget dépose alors
+        // le dossier dans %LOCALAPPDATA%\Microsoft\WinGet\Packages\<Id>_...
+        private static string _wingetPkgDir;
+        private static bool WingetPkg(string wingetId)
+        {
+            try
+            {
+                if (_wingetPkgDir == null)
+                    _wingetPkgDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        @"Microsoft\WinGet\Packages");
+                return Directory.Exists(_wingetPkgDir)
+                    && Directory.GetDirectories(_wingetPkgDir, wingetId + "_*").Length > 0;
+            }
+            catch { return false; }
         }
 
         // Vrai si un runtime .NET Desktop de la version demandée (ex. "6.", "9.") est présent.
@@ -303,8 +321,10 @@ namespace BTOptimizer
             log("Installation de " + item.Name + " (winget " + item.WingetId + ")...", 0);
             NativeResult r = Sys.Run(winget, InstallArgs(item.WingetId, null));
 
-            // Bibliothèques : nouvel essai en portée machine (certains manifests l'exigent en contexte admin).
-            if (r.ExitCode != 0 && !item.Installed() && item.Essential)
+            // Nouvel essai en portée machine — pour TOUTE appli, pas seulement les bibliothèques :
+            // en contexte élevé, l'installeur « utilisateur » est souvent refusé (0x8A15002B) alors
+            // que la portée machine passe. Sans risque : on ne réessaie que si le 1er essai a échoué.
+            if (r.ExitCode != 0 && !item.Installed())
             {
                 log(item.Name + " : premier essai refusé" + WingetReason(r) + " — nouvel essai portée machine...", 0);
                 r = Sys.Run(winget, InstallArgs(item.WingetId, "machine"));

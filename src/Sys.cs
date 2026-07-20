@@ -148,7 +148,19 @@ namespace BTOptimizer
             return Path.Combine(Environment.SystemDirectory, exeName);
         }
 
+        // Délai par défaut : borne les processus BLOQUÉS (winget en attente d'une invite,
+        // nvidia-smi figé, tracert vers un hôte injoignable, wevtutil sur un journal géant…)
+        // sans jamais couper une installation légitime. Les opérations réellement longues
+        // (DISM/SFC/defrag) passent explicitement LongRunTimeoutMs.
+        private const int DefaultRunTimeoutMs = 600000;    // 10 min
+        public  const int LongRunTimeoutMs    = 3600000;   // 60 min
+
         public static NativeResult Run(string exe, string args)
+        {
+            return Run(exe, args, DefaultRunTimeoutMs);
+        }
+
+        public static NativeResult Run(string exe, string args, int timeoutMs)
         {
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = exe;
@@ -159,14 +171,31 @@ namespace BTOptimizer
             psi.RedirectStandardError = true;
             using (Process p = Process.Start(psi))
             {
+                // Les DEUX flux en asynchrone : un processus qui garde stdout ouvert bloquerait
+                // ReadToEnd() AVANT même WaitForExit — le délai ne servirait alors à rien.
+                var outTask = p.StandardOutput.ReadToEndAsync();
                 var errTask = p.StandardError.ReadToEndAsync();
-                string outText = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
                 NativeResult r = new NativeResult();
+
+                if (!p.WaitForExit(timeoutMs))
+                {
+                    try { p.Kill(true); } catch { }        // tue aussi les processus enfants (winget…)
+                    try { p.WaitForExit(3000); } catch { }
+                    r.ExitCode = -1;
+                    r.Output = SafeResult(outTask) + SafeResult(errTask)
+                             + "\n[délai dépassé : processus arrêté après " + (timeoutMs / 1000) + " s]";
+                    return r;
+                }
+
                 r.ExitCode = p.ExitCode;
-                r.Output = outText + errTask.Result;
+                r.Output = SafeResult(outTask) + SafeResult(errTask);
                 return r;
             }
+        }
+
+        private static string SafeResult(System.Threading.Tasks.Task<string> t)
+        {
+            try { return t.Result ?? ""; } catch { return ""; }
         }
 
         public static string RunThrow(string exe, string args, string label)
@@ -1567,7 +1596,7 @@ namespace BTOptimizer
         public static void RepairWindows(Action<string, int> log)
         {
             log("Réparation de l'image Windows (DISM /RestoreHealth) — patiente, cela peut prendre 10-20 min...", 0);
-            NativeResult dism = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /RestoreHealth");
+            NativeResult dism = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /RestoreHealth", LongRunTimeoutMs);
             string do_ = (dism.Output ?? "").ToLowerInvariant();
             if (dism.ExitCode == 0 || do_.Contains("terminée") || do_.Contains("completed successfully"))
                 log("DISM : image Windows vérifiée/réparée.", 1);
@@ -1575,7 +1604,7 @@ namespace BTOptimizer
                 log("DISM : code " + dism.ExitCode + " (voir plus haut). On lance quand même SFC.", 2);
 
             log("Vérification des fichiers système (SFC /scannow) — encore quelques minutes...", 0);
-            NativeResult sfc = Run(Sys32("sfc.exe"), "/scannow");
+            NativeResult sfc = Run(Sys32("sfc.exe"), "/scannow", LongRunTimeoutMs);
             string so = (sfc.Output ?? "").ToLowerInvariant();
             if (so.Contains("did not find any integrity violations") || so.Contains("n'a trouvé aucune violation"))
                 log("SFC : aucun fichier système corrompu. ✔", 1);
@@ -1612,7 +1641,7 @@ namespace BTOptimizer
                     if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
                     string letter = d.Name.TrimEnd('\\');   // "C:"
                     log("Optimisation de " + letter + " (RE-TRIM si SSD, défrag si HDD)...", 0);
-                    NativeResult r = Run(Sys32("defrag.exe"), letter + " /O");
+                    NativeResult r = Run(Sys32("defrag.exe"), letter + " /O", LongRunTimeoutMs);
                     log(letter + " : " + (r.ExitCode == 0 ? "optimisé. ✔" : "code " + r.ExitCode + " (peut nécessiter un autre passage)."),
                         r.ExitCode == 0 ? 1 : 2);
                 }

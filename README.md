@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔩 Renforcement (relecture applis + fonctions) (v14.6)
+
+Passe de durcissement sur les applis **et** le moteur du logiciel :
+
+- **Aucun processus ne peut plus figer une action** : `Sys.Run` (le point de passage de *tous* les
+  outils — winget, nvidia-smi, wevtutil, powercfg, tracert…) attendait sans limite. Désormais
+  **délai borné** (10 min par défaut, 60 min pour DISM/SFC/défrag) et, en cas de blocage, le
+  processus **et ses enfants sont arrêtés** proprement — plus de panneau coincé sur « en cours… ».
+- **Installation d'applis plus fiable** : le nouvel essai en **portée machine** (utile en contexte
+  élevé, erreur `0x8A15002B`) s'applique maintenant à **toutes** les applis, plus seulement aux
+  bibliothèques.
+- **Détection « portable » winget** : Fan Control, GPU-Z, OCCT, FurMark s'installent souvent sans
+  clé de désinstallation ; on détecte aussi leur dossier `WinGet\Packages\<Id>_…`, sinon ils
+  s'affichaient « absent » à vie.
+- **34 identifiants winget re-vérifiés** un par un contre le catalogue en ligne : aucun ID mort.
+
 ### 📦 11 applis de plus dans les Bibliothèques (v14.5)
 
 Le panneau **📦 Bibliothèques & applis** s'enrichit d'outils que beaucoup de joueurs ne
