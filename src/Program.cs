@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.22.0.0")]
-[assembly: AssemblyFileVersion("14.22.0.0")]
+[assembly: AssemblyVersion("14.23.0.0")]
+[assembly: AssemblyFileVersion("14.23.0.0")]
 
 namespace BTOptimizer
 {
@@ -542,11 +542,12 @@ namespace BTOptimizer
                 // Relevé GPU NATIF complet (LibreHardwareMonitor, GPU seul, sans pilote noyau).
                 GpuReading gr = GpuSensors.Read();
                 Console.WriteLine(string.Format(
-                    "  GPU natif (LHM, sans pilote) : {0} — {1}°C · charge {2}% · {3} MHz · {4} W · VRAM {5}/{6} Mo",
+                    "  GPU natif (LHM, sans pilote, en-process) : {0} — {1}°C · charge {2}% · {3}/{4} MHz · {5} W · VRAM {6}/{7} Mo",
                     gr.Ok ? gr.Name : "n/d",
                     double.IsNaN(gr.TempC) ? "?" : gr.TempC.ToString("0"),
                     double.IsNaN(gr.LoadPct) ? "?" : gr.LoadPct.ToString("0"),
                     double.IsNaN(gr.CoreMhz) ? "?" : gr.CoreMhz.ToString("0"),
+                    double.IsNaN(gr.MemMhz) ? "?" : gr.MemMhz.ToString("0"),
                     double.IsNaN(gr.PowerW) ? "?" : gr.PowerW.ToString("0"),
                     gr.VramUsedMB < 0 ? "?" : gr.VramUsedMB.ToString(),
                     gr.VramTotalMB < 0 ? "?" : gr.VramTotalMB.ToString()));

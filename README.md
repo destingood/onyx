@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### ⚡ Moniteur GPU NVIDIA 100 % EN-PROCESS (fini le processus externe) (v14.23)
+
+Suite logique : le GPU **NVIDIA** passe lui aussi en lecture **native, dans l'app**. Avant, chaque
+rafraîchissement lançait `nvidia-smi.exe` (un processus externe, ~100-300 ms) — d'où le besoin de
+tout mettre en tâche de fond pour éviter les à-coups. Maintenant, température / charge / fréquences
+cœur+mémoire / puissance / VRAM sont lues **en-process** via **LibreHardwareMonitor en mode GPU-seul**
+(API NVAPI user-mode, **aucun pilote noyau, aucun `.exe` lancé chaque seconde**).
+
+`nvidia-smi` ne sert plus que de **repli** (si la lib ne rend rien) et pour les **raisons détaillées
+de bridage** (thermique / frein d'alim), qui restent propres à NVIDIA. Tous constructeurs (NVIDIA /
+AMD / Intel) partagent enfin **un seul chemin natif**.
+
+Vérifié sur cette machine (RTX 4080 SUPER) : lecture **52 °C · 38 % · 255/12002 MHz · 44 W ·
+2088/16376 Mo**, mapping capteur par capteur confirmé, harnais vert, et **aucun service pilote
+noyau** créé avant/pendant l'ouverture → la promesse **anticheat-safe** tient.
+
 ### 🌡️ Température GPU AMD/Intel enfin NATIVE (sans pilote noyau) (v14.22)
 
 Le dernier gros manque « natif » est comblé : la **température GPU AMD et Intel** — que Windows

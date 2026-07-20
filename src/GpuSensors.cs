@@ -8,7 +8,7 @@ namespace BTOptimizer
     {
         public bool Ok;
         public string Name;
-        public double TempC = double.NaN, LoadPct = double.NaN, CoreMhz = double.NaN, PowerW = double.NaN;
+        public double TempC = double.NaN, LoadPct = double.NaN, CoreMhz = double.NaN, MemMhz = double.NaN, PowerW = double.NaN;
         public long VramUsedMB = -1, VramTotalMB = -1;
     }
 
@@ -75,10 +75,13 @@ namespace BTOptimizer
                                     if (v > 0 && v < 150 && (Has(n, "Core") || double.IsNaN(r.TempC))) r.TempC = v;
                                     break;
                                 case SensorType.Load:
-                                    if (Has(n, "Core") || double.IsNaN(r.LoadPct)) r.LoadPct = v;
+                                    // UNIQUEMENT « GPU Core » = utilisation GPU réelle. Ne jamais
+                                    // prendre « GPU Memory Controller / Bus / Power » (autres charges).
+                                    if (Has(n, "Core")) r.LoadPct = v;
                                     break;
                                 case SensorType.Clock:
                                     if (Has(n, "Core")) r.CoreMhz = v;
+                                    else if (Has(n, "Memory")) r.MemMhz = v;
                                     break;
                                 case SensorType.Power:
                                     if (Has(n, "Package") || Has(n, "GPU Power") || double.IsNaN(r.PowerW)) r.PowerW = v;

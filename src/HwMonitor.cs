@@ -27,7 +27,9 @@ namespace BTOptimizer
     /// <summary>
     /// Monitoring matériel léger, sans dépendance externe incompatible :
     /// CPU (PDH), RAM (GlobalMemoryStatusEx), température CPU (WMI ACPI, best-effort)
-    /// et GPU NVIDIA via nvidia-smi (l'outil officiel NVIDIA présent sur la machine).
+    /// et GPU tous constructeurs EN-PROCESS via LibreHardwareMonitor (mode GPU seul, API
+    /// user-mode NVAPI/ADL/IGCL — AUCUN pilote noyau). nvidia-smi ne sert plus que de repli
+    /// et pour les raisons détaillées de bridage (réservées à NVIDIA).
     /// </summary>
     internal class HwMonitor : IDisposable
     {
@@ -174,8 +176,8 @@ namespace BTOptimizer
             }
 
             s.CpuTempC = ReadCpuTemp();
-            if (_nvsmi != null) s.Gpu = ReadGpu();
-            else s.Gpu = ReadGpuPdh();   // AMD / Intel : charge + VRAM via PDH (pas de température)
+            if (_nvsmi != null) s.Gpu = ReadGpuNvidia();   // NVIDIA : capteurs EN-PROCESS (LHM), repli nvidia-smi
+            else s.Gpu = ReadGpuPdh();                      // AMD / Intel : charge + VRAM (PDH) + température (LHM)
             return s;
         }
 
@@ -212,6 +214,31 @@ namespace BTOptimizer
             return null;
         }
 
+        // GPU NVIDIA : source PRINCIPALE = LibreHardwareMonitor EN-PROCESS (mode GPU seul, API
+        // NVAPI user-mode — AUCUN pilote noyau, AUCUN processus externe lancé chaque seconde).
+        // On garde CoreMhz renseigné (fréquence connue) → branche d'affichage NVIDIA « riche ».
+        // Repli automatique sur nvidia-smi (outil officiel) si la lib ne rend aucune valeur.
+        private GpuInfo ReadGpuNvidia()
+        {
+            GpuReading r = GpuSensors.Read();
+            if (r.Ok && !double.IsNaN(r.TempC) && !double.IsNaN(r.CoreMhz))
+            {
+                var g = new GpuInfo();
+                g.Name = string.IsNullOrEmpty(r.Name) ? "GPU NVIDIA" : r.Name;
+                g.TempC = r.TempC;
+                g.CoreMhz = r.CoreMhz;                          // > 0 → branche NVIDIA (temp + fréq + puissance)
+                if (!double.IsNaN(r.MemMhz)) g.MemMhz = r.MemMhz;
+                if (!double.IsNaN(r.LoadPct)) g.Util = r.LoadPct;
+                if (!double.IsNaN(r.PowerW)) g.PowerW = r.PowerW;
+                if (r.VramUsedMB >= 0) g.VramUsedMB = r.VramUsedMB;
+                if (r.VramTotalMB >= 0) g.VramTotalMB = r.VramTotalMB;
+                g.Ok = true;
+                return g;
+            }
+            return ReadGpu();   // repli : outil officiel nvidia-smi
+        }
+
+        // ---- Repli GPU NVIDIA via nvidia-smi (outil officiel) ----
         private GpuInfo ReadGpu()
         {
             var g = new GpuInfo();
