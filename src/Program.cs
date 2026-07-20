@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.21.0.0")]
-[assembly: AssemblyFileVersion("14.21.0.0")]
+[assembly: AssemblyVersion("14.22.0.0")]
+[assembly: AssemblyFileVersion("14.22.0.0")]
 
 namespace BTOptimizer
 {
@@ -539,6 +539,10 @@ namespace BTOptimizer
                 Console.WriteLine(string.Format(
                     "  PDH GPU (tous constructeurs) : {0} — charge 3D={1:0}% VRAM={2:0.0}Go",
                     pdhOk ? "OK" : "indisponible", gpuLoad, gpuVram / 1024.0));
+                // Température GPU NATIVE tous constructeurs (LibreHardwareMonitor, GPU seul, sans pilote).
+                string lhmName; double lhmTemp = GpuSensors.ReadGpuTempC(out lhmName);
+                Console.WriteLine("  Temp GPU native (LHM, sans pilote noyau) : "
+                    + (double.IsNaN(lhmTemp) ? "n/d" : lhmName + " " + lhmTemp.ToString("0") + "°C"));
                 using (var f = new MonitorForm()) { f.CreateControl(); }
                 Console.WriteLine("  UI MonitorForm : construite OK.");
             }

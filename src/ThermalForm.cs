@@ -176,7 +176,7 @@ namespace BTOptimizer
         private void ApplySample(HwSample s, bool didReasons, bool thermal, bool powerBrake)
         {
             Color normal = Color.FromArgb(40, 44, 52);
-            if (s.Gpu != null && s.Gpu.Ok && !double.IsNaN(s.Gpu.TempC))
+            if (s.Gpu != null && s.Gpu.Ok && !double.IsNaN(s.Gpu.TempC) && s.Gpu.CoreMhz > 0)
             {
                 // Chemin NVIDIA (nvidia-smi) : température + fréquences + puissance.
                 if (s.Gpu.TempC > _gpuMax) _gpuMax = s.Gpu.TempC;
@@ -186,10 +186,14 @@ namespace BTOptimizer
             }
             else if (s.Gpu != null && s.Gpu.Ok)
             {
-                // Chemin AMD / Intel (PDH) : charge + VRAM ; température non exposée par Windows.
-                _gpu.Text = string.Format("GPU  {0}\n charge {1:0} %   VRAM utilisée {2:N0} Mo   ·   température : n/d (HWiNFO)",
-                    s.Gpu.Name, s.Gpu.Util, s.Gpu.VramUsedMB);
-                _gpu.ForeColor = normal;
+                // Chemin AMD / Intel : charge + VRAM (PDH) + température NATIVE (LibreHardwareMonitor,
+                // API constructeur user-mode, SANS pilote noyau) — plus besoin d'un outil externe.
+                bool hasT = !double.IsNaN(s.Gpu.TempC);
+                if (hasT && s.Gpu.TempC > _gpuMax) _gpuMax = s.Gpu.TempC;
+                string tempStr = hasT ? string.Format("{0:0}°C (max {1:0})", s.Gpu.TempC, _gpuMax) : "température n/d";
+                _gpu.Text = string.Format("GPU  {0}\n charge {1:0} %   VRAM {2:N0} Mo   ·   {3}",
+                    s.Gpu.Name, s.Gpu.Util, s.Gpu.VramUsedMB, tempStr);
+                _gpu.ForeColor = hasT ? (s.Gpu.TempC >= 83 ? Bad : s.Gpu.TempC >= 75 ? Warn : normal) : normal;
             }
             else _gpu.Text = "GPU : capteurs indisponibles sur ce système.";
 
@@ -213,10 +217,12 @@ namespace BTOptimizer
                 _throttle.ForeColor = (thermal || powerBrake) ? Bad : normal;
             }
 
-            _noGpuTemp = s.Gpu != null && s.Gpu.Ok && double.IsNaN(s.Gpu.TempC);
+            // GPU non-NVIDIA (AMD/Intel) : les RAISONS détaillées de throttling sont réservées à
+            // nvidia-smi ; la température, elle, est désormais lue nativement ci-dessus.
+            _noGpuTemp = s.Gpu != null && s.Gpu.Ok && !(s.Gpu.CoreMhz > 0);
             if (_noGpuTemp)
             {
-                _throttle.Text = "Bridage (pilote)\n n/d (raisons de throttling réservées à NVIDIA). Pour AMD/Intel : HWiNFO.";
+                _throttle.Text = "Bridage (pilote)\n raisons détaillées réservées à NVIDIA — surveille la température GPU ci-dessus.";
                 _throttle.ForeColor = normal;
             }
             UpdateVerdict();
@@ -247,10 +253,9 @@ namespace BTOptimizer
             }
             else if (_noGpuTemp)
             {
-                _verdict.ForeColor = Color.FromArgb(60, 64, 72);
-                _verdict.Text = "→ Charge GPU visible en direct, mais Windows n'expose pas la température des cartes "
-                    + "AMD/Intel. Pour la surveiller (et le throttling), installe HWiNFO (☰ → 📦 Bibliothèques) "
-                    + "ou utilise AMD Adrenalin / Intel Arc Control.";
+                _verdict.ForeColor = Accent;
+                _verdict.Text = "✔ GPU AMD/Intel : charge, VRAM et température lues nativement dans l'app (sans outil "
+                    + "externe). Les RAISONS détaillées de throttling restent réservées aux cartes NVIDIA.";
             }
             else
             {

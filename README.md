@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🌡️ Température GPU AMD/Intel enfin NATIVE (sans pilote noyau) (v14.22)
+
+Le dernier gros manque « natif » est comblé : la **température GPU AMD et Intel** — que Windows
+n'expose pas — est désormais lue **dans l'app**, via **LibreHardwareMonitorLib en mode GPU-seul**.
+C'est la clé : en n'activant que le GPU (CPU/carte mère désactivés), le **pilote noyau de la lib
+n'est JAMAIS chargé** (il ne sert qu'au CPU/carte mère). Les températures GPU passent par les
+**API user-mode des constructeurs** (NVAPI / ADL / IGCL) → **zéro injection, anticheat-safe**.
+
+Vérifié sur cette machine : lecture GPU **53 °C** et **aucun service pilote** (Ring0/WinRing0)
+créé. Le panneau Températures affiche maintenant la temp GPU AMD/Intel (fini le « n/d — installe
+HWiNFO »), et le Moniteur matériel en profite aussi.
+
+**Ce qui reste vraiment impossible sans pilote noyau** (donc refusé) : température CPU **par cœur**,
+**vitesse des ventilateurs**, **tensions**, **undervolt**. Ceux-là, l'app te les installe/ouvre en
+1 clic (v14.20-21). La frontière est nette et honnête.
+
 ### 🚀 …et l'app OUVRE les outils installés (cycle natif complet) (v14.21)
 
 L'app ne fait plus qu'installer : elle **ouvre** aussi les outils, depuis DesTinGOOD. Cycle

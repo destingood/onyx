@@ -250,7 +250,11 @@ namespace BTOptimizer
             g.Name = GpuNameWmi();
             g.Util = load;
             g.VramUsedMB = vram;
-            g.TempC = double.NaN;   // pas de température sans outil constructeur
+            // Température NATIVE tous constructeurs via LibreHardwareMonitor en mode GPU seul
+            // (API user-mode NVAPI/ADL/IGCL, AUCUN pilote noyau) — comble le manque AMD/Intel.
+            string lhmName;
+            g.TempC = GpuSensors.ReadGpuTempC(out lhmName);
+            if (!string.IsNullOrEmpty(lhmName)) g.Name = lhmName;
             g.Ok = true;
             return g;
         }

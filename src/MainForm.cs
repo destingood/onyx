@@ -548,6 +548,7 @@ namespace BTOptimizer
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
             try { if (_watchMon != null) _watchMon.Dispose(); } catch { }
+            try { GpuSensors.Shutdown(); } catch { }   // ferme l'instance LibreHardwareMonitor (capteurs GPU natifs)
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         }
 
