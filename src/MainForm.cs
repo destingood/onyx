@@ -35,6 +35,7 @@ namespace BTOptimizer
         private ToolStripMenuItem _miWatch;
         private HwMonitor _watchMon;
         private int _watchTick, _watchCooldown, _nvlSeen = -1;
+        private volatile bool _guardBusy;
         private TextBox _search;
         private readonly List<GroupBox> _groups = new List<GroupBox>();
         private HwProfile _hw;
@@ -1540,42 +1541,58 @@ namespace BTOptimizer
 
         private void GuardianTick()
         {
-            if (_miWatch == null || !_miWatch.Checked) return;
+            if (_miWatch == null || !_miWatch.Checked || _guardBusy) return;
             _watchTick++;
             if (_watchTick % 15 != 0) return;   // ~30 s
-            try
+            // Les mesures (nvidia-smi, wevtutil) lancent des process bloquants : JAMAIS sur le
+            // thread UI (sinon la fenêtre « ne répond pas » en pleine partie). Fond + garde.
+            int tick = _watchTick;
+            _guardBusy = true;
+            System.Threading.Tasks.Task.Run(() =>
             {
-                if (_watchCooldown > 0) _watchCooldown--;
-
-                bool gaming = false;
-                try { gaming = GameScan.RunningKnownGame() != null || Native.IsGameFullscreen(); } catch { }
-                if (gaming)
+                try
                 {
-                    if (_watchMon == null) _watchMon = new HwMonitor();
-                    HwSample s = _watchMon.Sample();
-                    if (s.Gpu != null && s.Gpu.Ok && s.Gpu.TempC >= 85 && _watchCooldown <= 0)
+                    if (_watchCooldown > 0) _watchCooldown--;
+
+                    bool gaming = false;
+                    try { gaming = GameScan.RunningKnownGame() != null || Native.IsGameFullscreen(); } catch { }
+                    if (gaming)
                     {
-                        TrayWarn("GPU à " + s.Gpu.TempC.ToString("0") + " °C — surveille le refroidissement (risque de throttling / crash).");
-                        _watchCooldown = 10;   // ~5 min avant la prochaine alerte thermique
+                        if (_watchMon == null) _watchMon = new HwMonitor();
+                        HwSample s = _watchMon.Sample();
+                        if (s.Gpu != null && s.Gpu.Ok && s.Gpu.TempC >= 85 && _watchCooldown <= 0)
+                        {
+                            TrayWarn("GPU à " + s.Gpu.TempC.ToString("0") + " °C — surveille le refroidissement (risque de throttling / crash).");
+                            _watchCooldown = 10;   // ~5 min avant la prochaine alerte thermique
+                        }
+                    }
+
+                    if (tick % 30 == 0)   // ~60 s : erreurs pilote
+                    {
+                        int now = -1;
+                        try { now = CrashScan.CountProvider("nvlddmkm", 1); } catch { }
+                        if (_nvlSeen >= 0 && now > _nvlSeen)
+                            TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre 🩺 Stabilité pour le verdict.");
+                        if (now >= 0) _nvlSeen = now;
                     }
                 }
-
-                if (_watchTick % 30 == 0)   // ~60 s : erreurs pilote
-                {
-                    int now = -1;
-                    try { now = CrashScan.CountProvider("nvlddmkm", 1); } catch { }
-                    if (_nvlSeen >= 0 && now > _nvlSeen)
-                        TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre 🩺 Stabilité pour le verdict.");
-                    if (now >= 0) _nvlSeen = now;
-                }
-            }
-            catch { }
+                catch { }
+                finally { _guardBusy = false; }
+            });
         }
 
+        // Appelable depuis un thread de fond : marshalle la bulle (NotifyIcon n'est pas thread-safe).
         private void TrayWarn(string msg)
         {
-            Log("🛡 " + msg, 2);
-            try { if (_tray != null) _tray.ShowBalloonTip(5000, "DesTinGOOD — surveillance", msg, ToolTipIcon.Warning); }
+            Log("🛡 " + msg, 2);   // Log se re-dispatche déjà via InvokeRequired
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try { if (_tray != null) _tray.ShowBalloonTip(5000, "DesTinGOOD — surveillance", msg, ToolTipIcon.Warning); }
+                    catch { }
+                }));
+            }
             catch { }
         }
 

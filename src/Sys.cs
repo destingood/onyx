@@ -1459,14 +1459,15 @@ namespace BTOptimizer
             try
             {
                 using (var mos = new ManagementObjectSearcher(
-                    "SELECT Description, DNSServerSearchOrder FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
+                    "SELECT SettingID, DNSServerSearchOrder FROM Win32_NetworkAdapterConfiguration WHERE IPEnabled=true"))
                 {
                     foreach (ManagementObject mo in mos.Get())
                     {
-                        string desc = Convert.ToString(mo["Description"]);
-                        if (string.IsNullOrEmpty(desc) || snap.ContainsKey(desc)) continue;
+                        // SettingID = GUID unique par carte (Description n'est PAS unique : cartes double-port).
+                        string id = Convert.ToString(mo["SettingID"]);
+                        if (string.IsNullOrEmpty(id) || snap.ContainsKey(id)) continue;
                         string[] dns = mo["DNSServerSearchOrder"] as string[];
-                        snap[desc] = (dns != null && dns.Length > 0) ? dns : null;
+                        snap[id] = (dns != null && dns.Length > 0) ? dns : null;
                     }
                 }
             }
@@ -1485,9 +1486,9 @@ namespace BTOptimizer
                 {
                     foreach (ManagementObject mo in mos.Get())
                     {
-                        string desc = Convert.ToString(mo["Description"]);
+                        string id = Convert.ToString(mo["SettingID"]);
                         string[] servers;
-                        if (string.IsNullOrEmpty(desc) || !snap.TryGetValue(desc, out servers)) continue;
+                        if (string.IsNullOrEmpty(id) || !snap.TryGetValue(id, out servers)) continue;
                         try
                         {
                             using (ManagementBaseObject inp = mo.GetMethodParameters("SetDNSServerSearchOrder"))

@@ -179,7 +179,7 @@ namespace BTOptimizer
                         try
                         {
                             if (!File.Exists(f)) continue;
-                            File.Copy(f, f + ".destingood.bak", true);
+                            if (!File.Exists(f + ".destingood.bak")) File.Copy(f, f + ".destingood.bak"); // garde l'original
                             File.Delete(f);
                             log("Fichier OC retiré : " + f + " (sauvegarde .destingood.bak).", 1);
                         }
@@ -311,7 +311,8 @@ namespace BTOptimizer
                     try { lines = File.ReadAllLines(path); }
                     catch (Exception ex) { log("hosts illisible : " + ex.Message, 3); return; }
 
-                    try { File.Copy(path, path + ".destingood.bak", true); }
+                    // Ne pas écraser un backup existant : le 1er = le vrai hosts d'origine (avant DesTinGOOD).
+                    try { if (!File.Exists(path + ".destingood.bak")) File.Copy(path, path + ".destingood.bak"); }
                     catch (Exception ex) { log("Sauvegarde hosts impossible : " + ex.Message, 3); return; }
 
                     int fixedCount = 0;

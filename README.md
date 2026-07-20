@@ -78,6 +78,19 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🔒 Revue QA — 3 correctifs (v13.5)
+
+Passe de qualité sur les panneaux qui modifient le système (revue de code dédiée) :
+
+- **Gardien en fond** : les mesures (nvidia-smi, journaux) tournaient sur le thread de
+  l'interface → micro-freezes de la fenêtre en pleine partie. Passées **en arrière-plan**
+  avec garde anti-réentrance ; la bulle d'alerte est marshallée proprement vers l'UI.
+- **Filet de sécurité DNS** : la photo des DNS était indexée par le nom de la carte (pas
+  unique sur les cartes double-port) → risque de restaurer le mauvais adaptateur. Désormais
+  indexée par **GUID unique** (`SettingID`).
+- **Sauvegardes de réparation** (hosts, OC GPU) : le `.bak` n'est plus **écrasé** aux
+  réparations suivantes → l'original d'avant DesTinGOOD est préservé.
+
 ### ✨ Finition « ultra pro » — menu réorganisé (v13.4)
 
 Le menu ☰ passe d'une longue liste à plat à une organisation **claire et professionnelle** :
