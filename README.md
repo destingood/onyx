@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🧹 Nettoyage disque étendu (v12.8)
+
+Le **Nettoyage disque** récupère bien plus d'espace, en restant 100 % sûr (dossiers qui se
+régénèrent) : **caches des navigateurs** (Chrome, Edge, Brave, Firefox — **tous les profils**,
+détectés automatiquement ; le cache seul, pas tes mots de passe ni cookies), **rapports de
+plantage** (CrashDumps + minidumps d'anciens écrans bleus), **cache de livraison des mises à
+jour** (Delivery Optimization P2P) et **journaux d'installation Windows (CBS)** souvent
+volumineux — en plus des temporaires, du cache Windows Update et des caches de shaders déjà
+présents.
+
 ### 🛡 Gardien en fond — alertes GPU chaud / pilote (v12.7)
 
 ☰ → **Surveillance en fond** (case à cocher du menu, opt-in). Une fois activée, l'app veille

@@ -725,10 +725,67 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache") },
                 new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache") },
                 new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache") },
-                new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true },
+                // Rapports de plantage : minidumps et vidages, aucun intérêt à les garder.
+                new CleanTarget { Name = "Rapports de plantage (CrashDumps)", Path = Path.Combine(local, "CrashDumps") },
+                new CleanTarget { Name = "Minidumps Windows (écrans bleus passés)", Path = Path.Combine(win, "Minidump") },
+                // Cache de livraison des mises à jour (P2P) : se reconstitue tout seul.
+                new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
+                // Journaux d'installation de composants (souvent volumineux).
+                new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
             };
+            AddBrowserCaches(list, local);
+            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true });
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
             return list;
+        }
+
+        // Caches des navigateurs (tous profils) : Chrome, Edge, Brave (dossier Cache) et Firefox (cache2).
+        private static void AddBrowserCaches(System.Collections.Generic.List<CleanTarget> list, string local)
+        {
+            try
+            {
+                var chromium = new[]
+                {
+                    new[] { "Chrome", Path.Combine(local, @"Google\Chrome\User Data") },
+                    new[] { "Edge",   Path.Combine(local, @"Microsoft\Edge\User Data") },
+                    new[] { "Brave",  Path.Combine(local, @"BraveSoftware\Brave-Browser\User Data") },
+                };
+                foreach (string[] b in chromium)
+                {
+                    string userData = b[1];
+                    if (!Directory.Exists(userData)) continue;
+                    foreach (string profile in ProfileDirs(userData))
+                    {
+                        string cache = Path.Combine(profile, "Cache");
+                        if (Directory.Exists(cache))
+                            list.Add(new CleanTarget { Name = "Cache " + b[0] + " (" + Path.GetFileName(profile) + ")", Path = cache });
+                    }
+                }
+
+                string ff = Path.Combine(local, @"Mozilla\Firefox\Profiles");
+                if (Directory.Exists(ff))
+                    foreach (string profile in Directory.GetDirectories(ff))
+                    {
+                        string cache = Path.Combine(profile, "cache2");
+                        if (Directory.Exists(cache))
+                            list.Add(new CleanTarget { Name = "Cache Firefox (" + Path.GetFileName(profile) + ")", Path = cache });
+                    }
+            }
+            catch { }
+        }
+
+        // Profils d'un navigateur Chromium : "Default" + "Profile N".
+        private static System.Collections.Generic.IEnumerable<string> ProfileDirs(string userData)
+        {
+            var dirs = new System.Collections.Generic.List<string>();
+            try
+            {
+                string def = Path.Combine(userData, "Default");
+                if (Directory.Exists(def)) dirs.Add(def);
+                foreach (string d in Directory.GetDirectories(userData, "Profile *")) dirs.Add(d);
+            }
+            catch { }
+            return dirs;
         }
 
         private static long MeasureTarget(CleanTarget t)
