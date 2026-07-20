@@ -196,6 +196,17 @@ namespace BTOptimizer
             if (lowDisk) { s -= 10; f.Add(New(1, "Disque système presque plein : " + diskDetail + " — Windows ralentit", () => new DiskForm(_log))); }
             else f.Add(New(0, "Espace disque système : suffisant", () => new DiskForm(_log)));
 
+            // 5b. Santé S.M.A.R.T. des disques (natif, sans pilote noyau) : un disque en fin de
+            //     vie est un RISQUE DE PERTE DE DONNÉES — la pénalité la plus lourde du bilan.
+            try
+            {
+                string diskBad;
+                int badDisks = DiskForm.UnhealthyDisks(out diskBad);
+                if (badDisks > 0) { s -= 25; f.Add(New(2, "Disque en fin de vie (S.M.A.R.T. : " + diskBad + ") — SAUVEGARDE tes données et remplace-le", () => new DiskForm(_log))); }
+                else f.Add(New(0, "Santé S.M.A.R.T. des disques : tous sains", () => new DiskForm(_log)));
+            }
+            catch { }
+
             // 6. Écran sous sa fréquence max (60 Hz sur un 144/240 Hz : gros gain de fluidité manqué)
             try
             {

@@ -86,6 +86,15 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🩺 Santé disque native dans tout le diagnostic (v14.18)
+
+La santé S.M.A.R.T. native (v14.17) irrigue maintenant **tout le système de diagnostic**, pas
+seulement le panneau disque :
+- **Bilan Santé /100** : un disque en fin de vie coûte **−25 points** (la pénalité la plus lourde —
+  c'est un risque de perte de données) et pointe directement vers le panneau disque.
+- **Rapport HTML** : nouvelle ligne « Santé S.M.A.R.T. des disques » dans l'audit complet.
+- Helper natif réutilisable `DiskForm.UnhealthyDisks` (MSFT_PhysicalDisk, sans pilote noyau).
+
 ### 🩺 Outils intégrés en 1er — santé disque native (v14.17)
 
 Les outils vivent DANS l'app, dans son style — pas en programmes externes. Rappel : la latence

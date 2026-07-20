@@ -135,6 +135,32 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>Nombre de disques physiques dont l'état S.M.A.R.T. est DÉGRADÉ (Attention ou
+        /// Défaillant), avec un libellé. 0 = tous sains. Source native MSFT_PhysicalDisk (aucun
+        /// pilote noyau). Réutilisé par le bilan Santé /100. À appeler en arrière-plan (WMI).</summary>
+        public static int UnhealthyDisks(out string detail)
+        {
+            detail = "";
+            int bad = 0;
+            var names = new List<string>();
+            try
+            {
+                using (var pd = new ManagementObjectSearcher(
+                    @"root\Microsoft\Windows\Storage", "SELECT FriendlyName, HealthStatus FROM MSFT_PhysicalDisk"))
+                    foreach (ManagementObject mo in pd.Get())
+                    {
+                        int hs; try { hs = Convert.ToInt32(mo["HealthStatus"]); } catch { continue; }
+                        if (hs != 1 && hs != 2) continue;
+                        bad++;
+                        string nm = Convert.ToString(mo["FriendlyName"]);
+                        names.Add((string.IsNullOrEmpty(nm) ? "disque" : nm) + (hs == 2 ? " (défaillant)" : " (attention)"));
+                    }
+            }
+            catch { }
+            detail = string.Join(", ", names.ToArray());
+            return bad;
+        }
+
         // Lettre de lecteur -> métadonnées disque (type + santé S.M.A.R.T.), via l'espace Storage.
         private static Dictionary<char, DiskMeta> LetterInfo()
         {

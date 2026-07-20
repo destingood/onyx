@@ -86,6 +86,8 @@ namespace BTOptimizer
             try { foreach (Checkup.Item it in Checkup.Analyze()) if (it.Problem) badTweaks++; } catch { }
             try { foreach (LibScan.LibItem it in LibScan.Items()) { if (!it.Essential) continue; bool ok; try { ok = it.Installed(); } catch { ok = false; } if (!ok) libMissing++; } } catch { }
             try { restorePts = Sys.ListRestorePoints().Count; } catch { }
+            int badDisks = 0; string diskBad = "";
+            try { badDisks = DiskForm.UnhealthyDisks(out diskBad); } catch { }
             try
             {
                 var sys = new System.IO.DriveInfo(System.IO.Path.GetPathRoot(Environment.SystemDirectory));
@@ -102,6 +104,7 @@ namespace BTOptimizer
             rows.Append(DiagRow("Points de restauration système", restorePts == 0 ? "aucun (protection à activer)" : restorePts.ToString(), restorePts > 0));
             if (freeGB >= 0)
                 rows.Append(DiagRow("Espace disque système libre", freeGB.ToString("0") + " Go (" + pct.ToString("0") + " %)", pct >= 8 && freeGB >= 15));
+            rows.Append(DiagRow("Santé S.M.A.R.T. des disques", badDisks == 0 ? "tous sains" : diskBad, badDisks == 0));
 
             return "<h2>Diagnostic santé</h2><table>" + rows + "</table>";
         }
