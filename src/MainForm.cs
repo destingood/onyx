@@ -541,6 +541,8 @@ namespace BTOptimizer
 
         private void OnFormClosingCleanup(object sender, FormClosingEventArgs e)
         {
+            // Arrêt du timer AVANT tout : plus aucun tick (auto-boost / gardien) pendant la fermeture.
+            try { if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; } } catch { }
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);

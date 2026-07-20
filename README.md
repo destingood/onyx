@@ -78,6 +78,14 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🧴 Audit des ressources (v13.10)
+
+Passe systématique sur les fuites potentielles : **Timers** (tous stoppés/disposés à la
+fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y compris le
+code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
+timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
+tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
 ### 🔒 Revue QA (2ᵉ passe) — panneau Thermique fluidifié (v13.9)
 
 Extension de la revue aux panneaux en lecture seule : le panneau **🌡️ Températures &
