@@ -85,9 +85,13 @@ namespace BTOptimizer
 
             _btnScan = MakeBtn("Ré-analyser", 18, 470, 130, 38, false);
             _btnScan.Click += (s, e) => Scan();
+            // Lien fonction → outil : santé S.M.A.R.T. + vitesse + occupation de l'espace.
+            var btnTools = MakeBtn("💾 Outils disque : CrystalDiskInfo / WizTree", 158, 470, 330, 38, false);
+            btnTools.Click += (s, e) => LibScan.OpenTools(this, _log,
+                new[] { "CrystalDewWorld.CrystalDiskInfo", "AntibodySoftware.WizTree", "CrystalDewWorld.CrystalDiskMark" });
             _btnClose = MakeBtn("Fermer", 572, 470, 90, 38, true);
             _btnClose.Click += (s, e) => Close();
-            Controls.Add(_btnScan); Controls.Add(_btnClose);
+            Controls.Add(_btnScan); Controls.Add(btnTools); Controls.Add(_btnClose);
         }
 
         private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)

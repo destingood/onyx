@@ -74,9 +74,23 @@ namespace BTOptimizer
             };
             Controls.Add(_verdict);
 
+            // Lien fonction → outil : la température des GPU AMD/Intel n'est pas exposée par Windows
+            // (cf. le capteur PDH), et un stress-test aide à révéler le throttling. On propose donc
+            // les bons outils, avec leur état d'installation, en un clic.
+            var btnTools = new Button
+            {
+                Text = "🌡️ Outils de température & stress", Location = new Point(18, 358), Size = new Size(300, 32),
+                FlatStyle = FlatStyle.Flat, BackColor = Color.White, ForeColor = Color.FromArgb(40, 44, 52),
+                Font = new Font("Segoe UI", 9f)
+            };
+            btnTools.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            btnTools.Click += (s, e) => LibScan.OpenTools(this, _log,
+                new[] { "REALiX.HWiNFO", "TechPowerUp.GPU-Z", "CPUID.HWMonitor", "TechPowerUp.ThrottleStop", "OCBase.OCCT.Personal" });
+            Controls.Add(btnTools);
+
             _btnClose = new Button
             {
-                Text = "Fermer", Location = new Point(250, 358), Size = new Size(100, 32), FlatStyle = FlatStyle.Flat,
+                Text = "Fermer", Location = new Point(482, 358), Size = new Size(100, 32), FlatStyle = FlatStyle.Flat,
                 BackColor = Accent, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 9.5f)
             };
             _btnClose.FlatAppearance.BorderSize = 0;

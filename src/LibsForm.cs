@@ -138,6 +138,12 @@ namespace BTOptimizer
                 new LibItem { Name = "LatencyMon (latence DPC / micro-coupures)", WingetId = "Resplendence.LatencyMon",
                     Why = "identifie le pilote qui provoque grésillements audio et micro-freezes (DPC trop élevés)",
                     Installed = () => Directory.Exists(Path.Combine(pf, "Resplendence")) || Uninstall("LatencyMon") },
+                new LibItem { Name = "HWMonitor (capteurs, léger)", WingetId = "CPUID.HWMonitor",
+                    Why = "températures / tensions / vitesses de ventilos en un coup d'œil — plus léger que HWiNFO",
+                    Installed = () => File.Exists(Path.Combine(pf, @"CPUID\HWMonitor\HWMonitor_x64.exe")) || Uninstall("HWMonitor") || WingetPkg("CPUID.HWMonitor") },
+                new LibItem { Name = "ThrottleStop (Intel : throttling / undervolt)", WingetId = "TechPowerUp.ThrottleStop",
+                    Why = "diagnostique et lève le bridage thermique des CPU Intel (undervolt, limites de puissance) — surtout sur portable",
+                    Installed = () => Uninstall("ThrottleStop") || WingetPkg("TechPowerUp.ThrottleStop") },
                 new LibItem { Name = "FurMark 2 (stress-test GPU)", WingetId = "Geeks3D.FurMark.2",
                     Why = "pousse le GPU à fond pour révéler surchauffe/instabilité (crashs « dispositif de rendu perdu »)",
                     Installed = () => Uninstall("FurMark 2") || WingetPkg("Geeks3D.FurMark.2") },
@@ -246,6 +252,27 @@ namespace BTOptimizer
                 return Directory.Exists(d) && Directory.GetDirectories(d, prefix + "*").Length > 0;
             }
             catch { return false; }
+        }
+
+        /// <summary>Vrai si l'appli d'ID winget donné est détectée installée localement.
+        /// Permet à un panneau de diagnostic de savoir si l'outil qu'il conseille est déjà là.</summary>
+        public static bool InstalledById(string wingetId)
+        {
+            try
+            {
+                foreach (LibItem it in Items())
+                    if (string.Equals(it.WingetId, wingetId, StringComparison.OrdinalIgnoreCase))
+                    { try { return it.Installed(); } catch { return false; } }
+            }
+            catch { }
+            return false;
+        }
+
+        /// <summary>Ouvre le panneau Bibliothèques focalisé sur des outils conseillés par un autre
+        /// panneau (met en avant + pré-coche s'ils manquent) : le lien fonction → outil.</summary>
+        public static void OpenTools(Form owner, Action<string, int> log, string[] wingetIds)
+        {
+            try { using (var f = new LibsForm(log, wingetIds)) f.ShowDialog(owner); } catch { }
         }
 
         /// <summary>Chemin de winget, ou null s'il est absent (App Installer non présent).</summary>
@@ -368,9 +395,16 @@ namespace BTOptimizer
 
         private static readonly Color Accent = Color.FromArgb(0, 150, 90);
 
-        public LibsForm(Action<string, int> log)
+        private readonly string[] _highlight;
+
+        public LibsForm(Action<string, int> log) : this(log, null) { }
+
+        /// <summary>Ouvre le panneau en mettant en avant (et pré-cochant si absents) des outils
+        /// conseillés par un autre panneau — le « lien » entre une fonction et son outil.</summary>
+        public LibsForm(Action<string, int> log, string[] highlightWingetIds)
         {
             _log = log;
+            _highlight = highlightWingetIds;
             Build();
             Scan();
             Theme.Apply(this);
@@ -471,21 +505,29 @@ namespace BTOptimizer
             _items = items;
             _winget = winget;
             _list.Items.Clear();
-            int missing = 0;
+            int missing = 0, firstHi = -1;
             for (int i = 0; i < items.Count; i++)
             {
                 LibScan.LibItem it = items[i];
                 bool here = installed[i];
                 if (!here && it.Essential) missing++;
-                string prefix = here ? "✔  " : (it.Essential ? "⚠  " : "•  ");
+                bool hi = _highlight != null && Array.IndexOf(_highlight, it.WingetId) >= 0;
+                if (hi && firstHi < 0) firstHi = i;
+                string prefix = here ? "✔  " : (hi ? "➡  " : (it.Essential ? "⚠  " : "•  "));
                 string state = here ? "installé" : "absent";
+                // Pré-coché si bibliothèque essentielle absente OU outil conseillé absent.
                 _list.Items.Add(prefix + it.Name + "   —   " + state + " · " + it.Why,
-                    !here && it.Essential);
+                    !here && (it.Essential || hi));
             }
-            _summary.Text = (missing == 0
+            _summary.Text = (_highlight != null
+                ? "Outils conseillés (➡) mis en avant et pré-cochés s'ils manquent. "
+                : "")
+                + (missing == 0
                 ? "Toutes les bibliothèques de jeu essentielles sont présentes. ✔"
                 : missing + " bibliothèque(s) essentielle(s) MANQUANTE(S) — cause classique des jeux qui ne se lancent pas.")
                 + (winget == null ? "   (winget ABSENT : installe « App Installer » depuis le Microsoft Store)" : "");
+            if (firstHi >= 0 && firstHi < _list.Items.Count)
+                try { _list.TopIndex = firstHi; } catch { }
             SetBusy(false);
         }
 

@@ -243,13 +243,17 @@ namespace BTOptimizer
             };
             Controls.Add(_verdict);
 
-            _btnScan = MakeBtn("Ré-analyser", 18, 448, 130, 38, false);
+            _btnScan = MakeBtn("Ré-analyser", 18, 448, 110, 38, false);
             _btnScan.Click += (s, e) => Scan();
-            _btnRepair = MakeBtn("🛒 Ouvrir la réparation (boutiques / crashs)", 158, 448, 310, 38, true);
+            _btnRepair = MakeBtn("🛒 Réparation boutiques / crashs", 136, 448, 250, 38, true);
             _btnRepair.Click += (s, e) => { using (var f = new ShopFixForm(_log)) f.ShowDialog(this); Scan(); };
+            // Lien fonction → outil : éprouver la stabilité pour reproduire/confirmer un crash.
+            var btnStress = MakeBtn("🧪 Stress-test (OCCT/FurMark)", 396, 448, 168, 38, false);
+            btnStress.Click += (s, e) => LibScan.OpenTools(this, _log,
+                new[] { "OCBase.OCCT.Personal", "Geeks3D.FurMark.2", "REALiX.HWiNFO" });
             _btnClose = MakeBtn("Fermer", 572, 448, 90, 38, false);
             _btnClose.Click += (s, e) => Close();
-            Controls.Add(_btnScan); Controls.Add(_btnRepair); Controls.Add(_btnClose);
+            Controls.Add(_btnScan); Controls.Add(_btnRepair); Controls.Add(btnStress); Controls.Add(_btnClose);
         }
 
         private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)

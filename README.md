@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔗 Les outils reliés aux diagnostics (v14.11)
+
+Les applis ne sont plus qu'une liste : chaque panneau de diagnostic **propose directement le bon
+outil**, avec un bouton qui ouvre les Bibliothèques en **mettant en avant et pré-cochant** ce qui
+manque (➡). Le lien fonction → outil :
+
+- **Températures & throttling** → « 🌡️ Outils de température & stress » : HWiNFO, GPU-Z (température
+  AMD/Intel que Windows n'expose pas), HWMonitor, **ThrottleStop** (throttling/undervolt Intel), OCCT.
+- **Stabilité / crashs** → « 🧪 Stress-test » : OCCT (CPU/RAM/alim) et FurMark (GPU) pour reproduire
+  et confirmer une instabilité.
+- **Jeux & disques** → « 💾 Outils disque » : CrystalDiskInfo (santé S.M.A.R.T.), WizTree (espace),
+  CrystalDiskMark (vitesse).
+- **Qui ralentit mon PC** → « ⚙️ Process Lasso » : automatiser durablement priorités et affinités.
+
+**2 applis de plus (39 au total)** : **ThrottleStop** (Intel : bridage/undervolt) et **HWMonitor**
+(capteurs légers). Nouveau moteur : `LibScan.InstalledById` (un panneau sait si l'outil qu'il
+conseille est déjà là) et ouverture ciblée des Bibliothèques.
+
 ### 🧹 Fin de l'audit — conflit clavier + fuites de polices (v14.10)
 
 - **Conflit de raccourci clavier corrigé** : deux réglages écrivaient des valeurs différentes
