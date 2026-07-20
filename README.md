@@ -86,6 +86,26 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧪 Stress-test CPU intégré + carte du natif (v14.19)
+
+Nouveau **test de stress CPU natif** (comme la partie CPU d'OCCT/Prime95, mais **sans pilote,
+sans injection**) : sature tous les cœurs, surveille charge + température en direct, **arrêt de
+sécurité à 100 °C**. Menu *Crashs & stabilité* ou bouton du panneau Stabilité. Un cran de plus
+vers « tout en natif ».
+
+**Carte de ce qui est natif — dans l'app, dans son style :**
+
+| Outil | Natif dans l'app ? |
+|---|---|
+| LatencyMon (DPC/ISR) · PresentMon (FPS) · HWiNFO (charge/temp/VRAM) | ✅ oui |
+| CrystalDiskInfo (santé S.M.A.R.T.) | ✅ oui (v14.17-18) |
+| OCCT / Prime95 (stress **CPU**) | ✅ oui (v14.19) |
+| WizTree (espace) · benchmark disque | ✅ espace/benchmark natifs (extras : WizTree/CrystalDiskMark) |
+| Température GPU **AMD/Intel**, ventilos, tensions, undervolt, stress **GPU**, overlay en jeu | ⚠️ **non** — nécessite un **pilote noyau** ou de l'**injection**, que l'app refuse **volontairement** (compatible anticheat, zéro injection). Ces rares cas pointent vers l'outil de bureau. |
+
+C'est la limite honnête : rendre ces derniers points « natifs » transformerait DesTinGOOD en
+logiciel à pilote noyau — et lui ferait perdre son argument n°1 (sûr avec les anticheats).
+
 ### 🩺 Santé disque native dans tout le diagnostic (v14.18)
 
 La santé S.M.A.R.T. native (v14.17) irrigue maintenant **tout le système de diagnostic**, pas

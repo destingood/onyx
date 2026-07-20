@@ -192,6 +192,7 @@ namespace BTOptimizer
             var mCrash = group("🩺  Crashs & stabilité");
             mCrash.DropDownItems.Add("🩺 Stabilité : qu'est-ce qui a planté ? (14 j)...", null, open(() => new StabilityForm(Log)));
             mCrash.DropDownItems.Add("🌡️ Températures & throttling...", null, open(() => new ThermalForm(Log)));
+            mCrash.DropDownItems.Add("🧪 Test de stress CPU (intégré)...", null, open(() => new StressForm(Log)));
             mCrash.DropDownItems.Add("🛒 Boutiques infinies / jeux qui crashent...", null, open(() => new ShopFixForm(Log)));
             mCrash.DropDownItems.Add("🧹 Réglages néfastes d'autres optimiseurs...", null, open(() => new CheckupForm(Log)));
             mCrash.DropDownItems.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC)...", null, OnRepairWindows);
