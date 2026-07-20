@@ -275,6 +275,58 @@ namespace BTOptimizer
             try { using (var f = new LibsForm(log, wingetIds)) f.ShowDialog(owner); } catch { }
         }
 
+        /// <summary>Installe UN outil directement (sans ouvrir la liste) : l'app s'en charge en un
+        /// clic via winget, en arrière-plan, avec confirmation et compte-rendu. « Installe les apps
+        /// pour toi » = intégration transparente depuis le panneau qui en a besoin.</summary>
+        public static void QuickInstall(Form owner, Action<string, int> log, string wingetId)
+        {
+            LibItem item = null;
+            try { foreach (LibItem it in Items()) if (string.Equals(it.WingetId, wingetId, StringComparison.OrdinalIgnoreCase)) { item = it; break; } }
+            catch { }
+            if (item == null) { OpenTools(owner, log, new[] { wingetId }); return; }
+
+            bool installed = false; try { installed = item.Installed(); } catch { }
+            if (installed)
+            {
+                MessageBox.Show(owner, item.Name + " est déjà installé. ✔\n\nOuvre-le depuis le menu Démarrer.",
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string winget = WingetPath();
+            if (winget == null)
+            {
+                MessageBox.Show(owner,
+                    "winget est introuvable.\n\nInstalle « App Installer » (gratuit, Microsoft) depuis le Microsoft Store, puis réessaie.",
+                    "winget requis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (MessageBox.Show(owner,
+                    "Installer « " + item.Name + " » maintenant ?\n\n" + item.Why + "\n\n"
+                    + "L'app s'en occupe : installation via winget (Microsoft), en arrière-plan.",
+                    "Installer l'outil", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+
+            if (log != null) log("Installation de " + item.Name + " (winget)...", 0);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                bool ok = false;
+                try { ok = Install(winget, item, log); } catch { }
+                bool res = ok;
+                try
+                {
+                    owner.BeginInvoke((Action)(() =>
+                    {
+                        MessageBox.Show(owner,
+                            res ? item.Name + " installé. ✔\n\nTu peux l'ouvrir depuis le menu Démarrer."
+                                : item.Name + " : l'installation a échoué (voir le journal). Réessaie, ou installe-le depuis le site de l'éditeur.",
+                            "DesTinGOOD", MessageBoxButtons.OK, res ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                    }));
+                }
+                catch { }
+            });
+        }
+
         /// <summary>Nombre d'outils (parmi wingetIds) NON installés. Construit le catalogue une
         /// seule fois. À appeler en arrière-plan (accès registre/disque).</summary>
         public static int MissingCount(string[] wingetIds)
@@ -301,7 +353,13 @@ namespace BTOptimizer
         public static void WireToolButton(Button btn, Form owner, Action<string, int> log, string baseText, string[] wingetIds)
         {
             btn.Text = baseText;
-            btn.Click += (s, e) => OpenTools(owner, log, wingetIds);
+            // Un seul outil -> l'app l'installe DIRECTEMENT (transparent, natif). Plusieurs -> la
+            // liste ciblée, pour choisir.
+            btn.Click += (s, e) =>
+            {
+                if (wingetIds != null && wingetIds.Length == 1) QuickInstall(owner, log, wingetIds[0]);
+                else OpenTools(owner, log, wingetIds);
+            };
             // Différé à l'affichage de la fenêtre : garantit que le handle du bouton EXISTE avant
             // le BeginInvoke (pas de course), et le calcul (accès registre/disque) reste en fond.
             owner.Shown += (s, e) => System.Threading.Tasks.Task.Run(() =>

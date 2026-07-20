@@ -86,6 +86,15 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### ⬇️ L'app installe les outils elle-même, en 1 clic (v14.20)
+
+Pour les outils qui **ne peuvent pas** être natifs (pilote noyau/injection), l'app les rend
+quand même transparents : elle **les installe pour toi**. Les boutons à **un seul outil**
+(Process Lasso, LatencyMon, CapFrameX…) déclenchent désormais une **installation directe**
+(`LibScan.QuickInstall`) — confirmation, puis winget en arrière-plan, compte-rendu — au lieu
+d'ouvrir la liste. Plus besoin d'aller chercher/installer quoi que ce soit : un clic depuis le
+panneau qui en a besoin. (Les boutons à plusieurs outils ouvrent la liste ciblée, pour choisir.)
+
 ### 🧪 Stress-test CPU intégré + carte du natif (v14.19)
 
 Nouveau **test de stress CPU natif** (comme la partie CPU d'OCCT/Prime95, mais **sans pilote,
