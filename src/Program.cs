@@ -539,10 +539,17 @@ namespace BTOptimizer
                 Console.WriteLine(string.Format(
                     "  PDH GPU (tous constructeurs) : {0} — charge 3D={1:0}% VRAM={2:0.0}Go",
                     pdhOk ? "OK" : "indisponible", gpuLoad, gpuVram / 1024.0));
-                // Température GPU NATIVE tous constructeurs (LibreHardwareMonitor, GPU seul, sans pilote).
-                string lhmName; double lhmTemp = GpuSensors.ReadGpuTempC(out lhmName);
-                Console.WriteLine("  Temp GPU native (LHM, sans pilote noyau) : "
-                    + (double.IsNaN(lhmTemp) ? "n/d" : lhmName + " " + lhmTemp.ToString("0") + "°C"));
+                // Relevé GPU NATIF complet (LibreHardwareMonitor, GPU seul, sans pilote noyau).
+                GpuReading gr = GpuSensors.Read();
+                Console.WriteLine(string.Format(
+                    "  GPU natif (LHM, sans pilote) : {0} — {1}°C · charge {2}% · {3} MHz · {4} W · VRAM {5}/{6} Mo",
+                    gr.Ok ? gr.Name : "n/d",
+                    double.IsNaN(gr.TempC) ? "?" : gr.TempC.ToString("0"),
+                    double.IsNaN(gr.LoadPct) ? "?" : gr.LoadPct.ToString("0"),
+                    double.IsNaN(gr.CoreMhz) ? "?" : gr.CoreMhz.ToString("0"),
+                    double.IsNaN(gr.PowerW) ? "?" : gr.PowerW.ToString("0"),
+                    gr.VramUsedMB < 0 ? "?" : gr.VramUsedMB.ToString(),
+                    gr.VramTotalMB < 0 ? "?" : gr.VramTotalMB.ToString()));
                 using (var f = new MonitorForm()) { f.CreateControl(); }
                 Console.WriteLine("  UI MonitorForm : construite OK.");
             }
