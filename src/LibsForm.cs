@@ -37,6 +37,7 @@ namespace BTOptimizer
         public static List<LibItem> Items()
         {
             string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
             string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return new List<LibItem>
             {
@@ -73,6 +74,17 @@ namespace BTOptimizer
                 new LibItem { Name = "OpenAL (audio 3D)", Essential = true, WingetId = "CreativeTechnology.OpenAL",
                     Why = "audio de nombreux jeux (OpenAL32.dll)",
                     Installed = () => File.Exists(Sys32("OpenAL32.dll")) || File.Exists(WowDir("OpenAL32.dll")) },
+                new LibItem { Name = ".NET Desktop Runtime 6", Essential = true, WingetId = "Microsoft.DotNet.DesktopRuntime.6",
+                    Why = "beaucoup de lanceurs et d'outils de jeu (encore très répandu)",
+                    Installed = () => DotNetDesktop(pf, "6.") },
+
+                // ---- Runtimes optionnels (selon tes jeux) ----
+                new LibItem { Name = ".NET Desktop Runtime 9", WingetId = "Microsoft.DotNet.DesktopRuntime.9",
+                    Why = "jeux/outils tout récents en .NET 9",
+                    Installed = () => DotNetDesktop(pf, "9.") },
+                new LibItem { Name = "Java (Temurin 21 JRE)", WingetId = "EclipseAdoptium.Temurin.21.JRE",
+                    Why = "Minecraft Java et jeux/mods en Java",
+                    Installed = () => Directory.Exists(Path.Combine(pf, "Eclipse Adoptium")) },
 
                 // ---- Applis utiles (jamais pré-cochées : ton choix) ----
                 new LibItem { Name = "7-Zip (archives / mods)", WingetId = "7zip.7zip",
@@ -84,7 +96,45 @@ namespace BTOptimizer
                 new LibItem { Name = "Discord", WingetId = "Discord.Discord",
                     Why = "vocal d'équipe",
                     Installed = () => Directory.Exists(Path.Combine(local, "Discord")) },
+                new LibItem { Name = "Steam", WingetId = "Valve.Steam",
+                    Why = "la plateforme de jeux PC de référence",
+                    Installed = () => Sys.GetUser(@"Software\Valve\Steam", "SteamPath") != null || File.Exists(Path.Combine(pf86, @"Steam\steam.exe")) },
+                new LibItem { Name = "Epic Games Launcher", WingetId = "EpicGames.EpicGamesLauncher",
+                    Why = "Fortnite, Rocket League et les jeux gratuits Epic",
+                    Installed = () => Directory.Exists(Path.Combine(pf86, @"Epic Games")) || Directory.Exists(Path.Combine(pf, @"Epic Games")) },
+                new LibItem { Name = "MSI Afterburner (OC + overlay FPS)", WingetId = "Guru3D.Afterburner",
+                    Why = "réglage GPU + overlay FPS/temp en jeu (avec RivaTuner)",
+                    Installed = () => File.Exists(Path.Combine(pf86, @"MSI Afterburner\MSIAfterburner.exe")) },
+                new LibItem { Name = "HWiNFO (surveillance matérielle)", WingetId = "REALiX.HWiNFO",
+                    Why = "capteurs détaillés (températures, tensions, horloges)",
+                    Installed = () => File.Exists(Path.Combine(pf, @"HWiNFO64\HWiNFO64.exe")) },
+                new LibItem { Name = "CapFrameX (capture de frametimes)", WingetId = "CXWorld.CapFrameX",
+                    Why = "mesure 1%/0,1% low façon labo pour comparer tes réglages",
+                    Installed = () => Directory.Exists(Path.Combine(local, "CapFrameX")) },
+                new LibItem { Name = "CrystalDiskInfo (santé SSD/HDD)", WingetId = "CrystalDewWorld.CrystalDiskInfo",
+                    Why = "état S.M.A.R.T. de tes disques (usure, température)",
+                    Installed = () => Directory.Exists(Path.Combine(pf, "CrystalDiskInfo")) || Directory.Exists(Path.Combine(pf86, "CrystalDiskInfo")) },
+                new LibItem { Name = "Display Driver Uninstaller (DDU)", WingetId = "Wagnardsoft.DisplayDriverUninstaller",
+                    Why = "désinstalle proprement un pilote GPU (crashs après mise à jour de pilote)",
+                    Installed = () => false },
+                new LibItem { Name = "PowerToys (utilitaires Windows)", WingetId = "Microsoft.PowerToys",
+                    Why = "outils avancés (FancyZones, Awake pour éviter la veille en jeu…)",
+                    Installed = () => Directory.Exists(Path.Combine(local, @"Microsoft\PowerToys")) || Directory.Exists(Path.Combine(pf, "PowerToys")) },
+                new LibItem { Name = "Playnite (bibliothèque de jeux unifiée)", WingetId = "Playnite.Playnite",
+                    Why = "regroupe Steam/Epic/GOG/Xbox dans une seule bibliothèque",
+                    Installed = () => Directory.Exists(Path.Combine(local, "Playnite")) },
             };
+        }
+
+        // Vrai si un runtime .NET Desktop de la version demandée (ex. "6.", "9.") est présent.
+        private static bool DotNetDesktop(string programFiles, string prefix)
+        {
+            try
+            {
+                string d = Path.Combine(programFiles, @"dotnet\shared\Microsoft.WindowsDesktop.App");
+                return Directory.Exists(d) && Directory.GetDirectories(d, prefix + "*").Length > 0;
+            }
+            catch { return false; }
         }
 
         /// <summary>Chemin de winget, ou null s'il est absent (App Installer non présent).</summary>

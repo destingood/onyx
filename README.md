@@ -58,6 +58,18 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📦 Bibliothèques & applis enrichies (v12.6)
+
+Le panneau **Bibliothèques & applis de jeu** s'étoffe (identifiants winget tous vérifiés) :
+
+- **+ runtimes** : **.NET Desktop Runtime 6** (essentiel — encore très répandu dans les
+  lanceurs), **.NET Desktop Runtime 9** et **Java (Temurin 21 JRE)** en optionnels.
+- **+ applis gamer** (optionnelles, détection locale) : **Steam**, **Epic Games Launcher**,
+  **MSI Afterburner** (OC + overlay FPS), **HWiNFO** (capteurs), **CapFrameX** (frametimes
+  façon labo), **CrystalDiskInfo** (santé S.M.A.R.T. des disques), **Display Driver
+  Uninstaller / DDU** (pilote GPU propre après crashs), **PowerToys**, **Playnite**
+  (bibliothèque de jeux unifiée). Installation en un clic via winget, comme le reste.
+
 ### 🔐 Exclusions antivirus pour les jeux (v12.5)
 
 ☰ → **Exclusions antivirus pour les jeux** — Windows Defender analyse les fichiers de jeu à
