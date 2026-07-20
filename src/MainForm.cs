@@ -122,7 +122,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer " + AppVer + " — 500 FPS, latence minimale, input lag, overclock & DNS (Windows 10/11)";
+            Text = "DesTinGOOD Optimizer " + AppVer + " — optimise, diagnostique & répare ton PC de jeu (Windows 10/11)";
             ClientSize = new Size(900, 868);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -1367,7 +1367,7 @@ namespace BTOptimizer
         {
             if (MessageBox.Show(this,
                     "Tout réinitialiser ?\n\n"
-                    + "• Rétablit les 62 optimisations aux valeurs par défaut de Windows\n"
+                    + "• Rétablit les " + _tweaks.Count + " optimisations aux valeurs par défaut de Windows\n"
                     + "• Retire le gardien de démarrage et l'OC GPU persistant\n"
                     + "• Réinitialise le GPU (power limit / fréquences constructeur)\n\n"
                     + "Utile pour repartir d'un état propre. Un redémarrage peut être nécessaire.",
