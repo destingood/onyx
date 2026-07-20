@@ -78,6 +78,14 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🔒 Revue QA (2ᵉ passe) — panneau Thermique fluidifié (v13.9)
+
+Extension de la revue aux panneaux en lecture seule : le panneau **🌡️ Températures &
+throttling** lançait jusqu'à **6 appels `nvidia-smi` sur le thread de l'interface** à chaque
+tick → il se figeait toutes les 2 s. Les mesures passent en **arrière-plan** (garde
+anti-réentrance, application UI marshallée) — le panneau reste fluide. Vérification faite sur
+tous les panneaux à timer : c'était le dernier concerné.
+
 ### 🔁 Boucle optimise → vérifie + fenêtres à jour (v13.8)
 
 - Après **⚡ TOUT OPTIMISER**, l'app propose d'ouvrir directement le **bilan Santé** : tu vois

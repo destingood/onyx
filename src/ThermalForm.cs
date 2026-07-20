@@ -21,6 +21,7 @@ namespace BTOptimizer
         private double _gpuMax = 0, _cpuMax = 0;
         private bool _sawThermal, _sawPower;
         private int _ticks;
+        private volatile bool _thBusy;
 
         private static readonly Color Accent = Color.FromArgb(0, 150, 90);
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
@@ -123,11 +124,42 @@ namespace BTOptimizer
             return System.IO.File.Exists(p) ? p : "nvidia-smi.exe";
         }
 
+        // Chaque tick : les mesures nvidia-smi (jusqu'à 6 lancements de process) tournent EN
+        // ARRIÈRE-PLAN — jamais sur le thread UI, sinon le panneau se fige toutes les 2 s.
         private void Refresh2()
         {
+            if (_thBusy) return;
+            _thBusy = true;
             _ticks++;
-            HwSample s = _mon.Sample();
+            int tick = _ticks;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    HwSample s = _mon.Sample();
+                    bool doReasons = s.Gpu != null && s.Gpu.Ok && tick % 2 == 1;
+                    bool thermal = false, powerBrake = false;
+                    if (doReasons)
+                    {
+                        string nv = NvSmi();
+                        bool hwTherm = ReasonActive("clocks_event_reasons.hw_thermal_slowdown", nv)
+                                    || ReasonActive("clocks_throttle_reasons.hw_thermal_slowdown", nv);
+                        bool swTherm = ReasonActive("clocks_event_reasons.sw_thermal_slowdown", nv)
+                                    || ReasonActive("clocks_throttle_reasons.sw_thermal_slowdown", nv);
+                        thermal = hwTherm || swTherm;
+                        powerBrake = ReasonActive("clocks_event_reasons.hw_power_brake_slowdown", nv)
+                                  || ReasonActive("clocks_throttle_reasons.hw_power_brake_slowdown", nv);
+                    }
+                    try { BeginInvoke((Action)(() => ApplySample(s, doReasons, thermal, powerBrake))); } catch { }
+                }
+                catch { }
+                finally { _thBusy = false; }
+            });
+        }
 
+        // Sur le thread UI : applique la mesure aux libellés (toutes les mutations de champs ici).
+        private void ApplySample(HwSample s, bool didReasons, bool thermal, bool powerBrake)
+        {
             if (s.Gpu != null && s.Gpu.Ok)
             {
                 if (s.Gpu.TempC > _gpuMax) _gpuMax = s.Gpu.TempC;
@@ -147,20 +179,10 @@ namespace BTOptimizer
                                  (!double.IsNaN(s.CpuTempC) && s.CpuTempC >= 80) ? Warn : Color.FromArgb(40, 44, 52);
             }
 
-            // Bridage GPU : on n'interroge le pilote qu'une fois sur deux (léger).
-            if (s.Gpu != null && s.Gpu.Ok && _ticks % 2 == 1)
+            if (didReasons)
             {
-                string nv = NvSmi();
-                bool hwTherm = ReasonActive("clocks_event_reasons.hw_thermal_slowdown", nv)
-                            || ReasonActive("clocks_throttle_reasons.hw_thermal_slowdown", nv);
-                bool swTherm = ReasonActive("clocks_event_reasons.sw_thermal_slowdown", nv)
-                            || ReasonActive("clocks_throttle_reasons.sw_thermal_slowdown", nv);
-                bool powerBrake = ReasonActive("clocks_event_reasons.hw_power_brake_slowdown", nv)
-                               || ReasonActive("clocks_throttle_reasons.hw_power_brake_slowdown", nv);
-                bool thermal = hwTherm || swTherm;
                 if (thermal) _sawThermal = true;
                 if (powerBrake) _sawPower = true;
-
                 _throttle.Text = "Bridage (pilote)\n "
                     + (thermal ? "⚠ RALENTISSEMENT THERMIQUE actif" : "thermique : non")
                     + "   ·   " + (powerBrake ? "⚠ FREIN D'ALIMENTATION actif" : "alim : non");
