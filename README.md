@@ -86,6 +86,13 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔍 « Qui ralentit mon PC » enrichi (v14.2)
+
+Plus de gros consommateurs de fond repérés : **Wallpaper Engine / Lively** (fonds d'écran
+animés — de vrais tueurs de FPS que beaucoup ignorent), **Medal / Streamlabs / WeMod**
+(capture & overlays), **Teams / Slack** (comms), **NZXT CAM / Razer Cortex**, **MEGAsync**.
+Étiquetés par catégorie, fermables en un clic (jamais un process système).
+
 ### 🎮 Plus de jeux détectés (v14.1)
 
 La liste des jeux reconnus s'étoffe (exes **distinctifs** uniquement, pour éviter les faux

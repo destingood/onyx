@@ -58,9 +58,20 @@ namespace BTOptimizer
             { "battle.net", new Known("🚀 lanceur", "Battle.net — fermable en jeu (sauf jeux Blizzard)") },
             { "galaxyclient", new Known("🚀 lanceur", "GOG Galaxy — fermable en jeu") },
             { "riotclientservices", new Known("🚀 lanceur", "Riot — nécessaire pour LoL/Valo, sinon fermable") },
-            // Overlays / comms / stream
+            { "razer cortex", new Known("🎨 RGB", "Razer Cortex — « booster » de fond, souvent inutile") },
+            { "nzxt cam", new Known("🎨 RGB", "NZXT CAM — monitoring/RGB, lourd, fermable en jeu") },
+            // Fonds d'écran animés & overlays (gros consommateurs GPU)
+            { "wallpaper32", new Known("🖼️ fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
+            { "wallpaper64", new Known("🖼️ fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
+            { "lively", new Known("🖼️ fond animé", "Lively Wallpaper — fond animé, à couper en jeu") },
+            // Overlays / comms / stream / capture
             { "overwolf", new Known("💬 overlay", "Overwolf — overlay lourd, fermable en jeu") },
             { "discord", new Known("💬 comms", "Discord — l'overlay peut coûter des FPS") },
+            { "medal", new Known("💬 capture", "Medal.tv — capture de clips en continu, coûte des FPS") },
+            { "wemod", new Known("💬 overlay", "WeMod — overlay de triche/trainer, à couper en compétitif") },
+            { "streamlabs", new Known("💬 stream", "Streamlabs — overlay/stream lourd, fermable si tu ne streames pas") },
+            { "ms-teams", new Known("💬 comms", "Microsoft Teams — tourne souvent en fond, fermable en jeu") },
+            { "slack", new Known("💬 comms", "Slack — fermable en jeu") },
             { "spotify", new Known("🎵 audio", "Spotify — fermable en jeu (musique en fond)") },
             // Navigateurs
             { "chrome", new Known("🌐 navigateur", "Chrome — gros consommateur RAM/CPU, ferme les onglets") },
@@ -72,6 +83,7 @@ namespace BTOptimizer
             { "onedrive", new Known("☁️ cloud", "OneDrive — synchro en fond (voir optimisation dédiée)") },
             { "dropbox", new Known("☁️ cloud", "Dropbox — synchro en fond, fermable en jeu") },
             { "googledrivefs", new Known("☁️ cloud", "Google Drive — synchro en fond, fermable en jeu") },
+            { "megasync", new Known("☁️ cloud", "MEGAsync — synchro en fond, fermable en jeu") },
         };
 
         private class Row
