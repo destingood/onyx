@@ -31,6 +31,9 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
+rem Signature du binaire de l'app (sans effet si aucun certificat configure).
+call "%~dp0Sign.bat" "dist\BTOptimizer.exe"
+
 echo === 3/4  Recherche d'Inno Setup (ISCC.exe) ===
 set "ISCC="
 for %%P in (
@@ -71,6 +74,9 @@ if %errorlevel% neq 0 (
     echo [X] Echec de la compilation de l'installateur.
     pause & exit /b 1
 )
+
+rem Signature de l'installateur genere (sans effet si aucun certificat configure).
+for %%F in ("installer\Output\*.exe") do call "%~dp0Sign.bat" "%%~fF"
 
 echo.
 echo [OK] Installateur cree dans  installer\Output\

@@ -86,6 +86,17 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🔏 Signature de code prête à brancher (v14.15)
+
+Le dernier frein à une diffusion propre (SmartScreen « éditeur inconnu ») est outillé :
+`Sign.bat` signe **l'app ET l'installateur** avec `signtool` (SDK Windows), et les deux scripts
+de build l'appellent automatiquement. **Sans certificat configuré, le build fonctionne quand
+même** (il prévient juste que le binaire n'est pas signé) — zéro friction tant que tu n'as pas
+de certificat. Pour l'activer : copie `signing.cfg.example` → `signing.local.cfg` (gitignoré,
+comme les `.pfx`) et renseigne ton **.pfx + mot de passe** ou l'**empreinte** d'un certificat du
+magasin Windows (idéal pour un token EV). Horodatage inclus (la signature reste valide après
+expiration du certificat).
+
 ### 📦 Packaging prêt à diffuser — 2 modes d'installateur (v14.14)
 
 L'installateur Inno Setup est finalisé et **compile-testé dans les deux modes** :

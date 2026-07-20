@@ -12,6 +12,11 @@ dist/
 tools/LibreHardwareMonitor/
 tools/npi/
 
+# SIGNATURE DE CODE - NE JAMAIS COMMITER (certificat + mot de passe)
+signing.local.cfg
+*.pfx
+*.p12
+
 # CLE PRIVEE DE LICENCE - NE JAMAIS COMMITER NI DISTRIBUER
 seller/private.xml
 seller/bin/

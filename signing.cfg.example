@@ -1,0 +1,23 @@
+rem ============================================================================
+rem  MODELE de configuration de signature de code.
+rem
+rem  1) Copie ce fichier en  "signing.local.cfg"  (a cote, meme dossier).
+rem  2) Renseigne UNE des deux methodes ci-dessous.
+rem  3) Les scripts Build-*.bat signeront alors l'app ET l'installateur.
+rem
+rem  signing.local.cfg est IGNORE par git (ne sera jamais commite/diffuse).
+rem  Ne commite JAMAIS ton .pfx ni ton mot de passe.
+rem ============================================================================
+
+rem --- Serveur d'horodatage (laisse tel quel ou choisis ton fournisseur) ---
+set "SIGN_TS=http://timestamp.digicert.com"
+
+rem --- METHODE A : fichier PFX + mot de passe -------------------------------
+rem set "SIGN_PFX=C:\chemin\vers\mon-certificat.pfx"
+rem set "SIGN_PASS=mon-mot-de-passe"
+
+rem --- METHODE B : certificat du magasin Windows par empreinte (thumbprint) --
+rem  (recommande pour un certificat EV sur token materiel)
+rem  Empreinte visible dans certmgr.msc -> Details -> Empreinte numerique
+rem  (colle-la SANS espaces).
+rem set "SIGN_THUMB=0123456789ABCDEF0123456789ABCDEF01234567"
