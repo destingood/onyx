@@ -6,8 +6,11 @@
 ;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
 ;  Résultat :  installer\Output\BTOptimizer-Setup-<version>.exe
 ;
-;  Prérequis côté client : .NET Desktop Runtime 10.x (x64). Le script le vérifie
-;  et propose la page de téléchargement s'il est absent.
+;  Deux modes de diffusion, détectés AUTOMATIQUEMENT selon le contenu de ..\dist :
+;   • Dépendant du runtime (Build-Installer.bat) : ~16 Mo, exige .NET Desktop 10 (x64)
+;     côté client -> le script le vérifie et propose la page de téléchargement s'il manque.
+;   • AUTONOME / self-contained (Build-Standalone.bat) : ~120 Mo, runtime embarqué,
+;     s'installe et tourne SANS aucun prérequis. Idéal pour une diffusion grand public.
 ; ============================================================================
 
 #define AppName "DesTinGOOD"
@@ -19,10 +22,17 @@
   #define AppVersion "7.9.0.0"
 #endif
 #define AppPublisher "DesTinGOOD"
+; TODO diffusion : renseigne l'URL réelle du produit/support (ou laisse vide).
 #define AppURL "https://example.com"
 
+; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained) : coreclr.dll n'est
+; présent que dans ce mode. Si oui, le runtime .NET est embarqué -> on n'exige rien du client.
+#ifexist "..\dist\coreclr.dll"
+  #define SelfContained
+#endif
+
 [Setup]
-AppId={{9F1C7A20-BT01-4E5A-9C3D-BTOPTIMIZER0001}
+AppId={{2B539D2F-3B49-466B-B095-FEB9A1123E65}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
@@ -97,6 +107,9 @@ Type: dirifempty; Name: "{app}\tools"
 Type: dirifempty; Name: "{app}"
 
 [Code]
+// La vérification du runtime .NET ne sert QUE pour une publication dépendante du runtime.
+// En mode AUTONOME (self-contained), tout est embarqué -> aucune vérification nécessaire.
+#ifndef SelfContained
 // Détecte un runtime .NET Desktop 10.x (x64) installé.
 function HasNet10Desktop(): Boolean;
 var
@@ -142,3 +155,4 @@ begin
       Result := False;
   end;
 end;
+#endif

@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 📦 Packaging prêt à diffuser — 2 modes d'installateur (v14.14)
+
+L'installateur Inno Setup est finalisé et **compile-testé dans les deux modes** :
+
+- **Autonome (`Build-Standalone.bat`)** : runtime .NET **embarqué**, installe et tourne **sans
+  aucun prérequis** côté client (~37 Mo de setup). Idéal grand public. Le `.iss` détecte
+  automatiquement ce mode (présence de `coreclr.dll`) et **désactive** la vérification .NET.
+- **Dépendant du runtime (`Build-Installer.bat`)** : ~5,7 Mo de setup ; exige .NET Desktop 10
+  (x64), que l'installateur vérifie et propose de télécharger s'il manque.
+
+Corrigé aussi : **`AppId` = vrai GUID** (détection de mise à jour fiable) ; **dérive de version
+supprimée** (la version de FICHIER suivait 14.2 alors que l'app était en 14.x — les deux
+attributs sont désormais synchronisés, l'installateur affiche la bonne version) ; chaque build
+**repart d'un `dist/` propre** (aucun mélange entre les deux modes).
+
+> Avant diffusion : renseigne l'`AppURL` réelle dans `installer/BTOptimizer.iss` (placeholder),
+> et — pour éviter l'alerte SmartScreen — envisage une **signature de code** (certificat OV/EV).
+
 ### 🎛️ Overclock relié + pastille fiabilisée (v14.13)
 
 - **Overclock GPU** → **🎛️ Afterburner / GPU-Z** (overlay OC/FPS + capteurs). 7ᵉ panneau relié.

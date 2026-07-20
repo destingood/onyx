@@ -8,8 +8,10 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
-[assembly: AssemblyVersion("14.13.0.0")]
-[assembly: AssemblyFileVersion("14.2.0.0")]
+// Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
+// version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
+[assembly: AssemblyVersion("14.14.0.0")]
+[assembly: AssemblyFileVersion("14.14.0.0")]
 
 namespace BTOptimizer
 {

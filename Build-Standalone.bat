@@ -1,7 +1,14 @@
 @echo off
-title Construction de l'installateur BT Optimizer
+title Construction de l'installateur DesTinGOOD - AUTONOME (sans .NET requis)
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
+
+rem ============================================================================
+rem  Version AUTONOME (self-contained) : le runtime .NET est EMBARQUE.
+rem  L'installateur (~120 Mo) s'installe et tourne sur n'importe quel Windows 10/11
+rem  x64 SANS que le client ait besoin d'installer quoi que ce soit.
+rem  -> Ideal pour une diffusion grand public. Sinon, voir Build-Installer.bat (~16 Mo).
+rem ============================================================================
 
 rem --- Elevation (fermer l'app + ecrire dans dist) ------------------------------
 whoami /groups | find "S-1-16-12288" >nul 2>&1
@@ -19,13 +26,12 @@ if %errorlevel% neq 0 (
 
 echo === 1/4  Fermeture de l'app si elle tourne ===
 taskkill /IM BTOptimizer.exe /F >nul 2>&1
-taskkill /IM dotnet.exe /FI "WINDOWTITLE eq BT Optimizer*" /F >nul 2>&1
 
-echo === 2/4  Publication (.NET 10, dependant du runtime) ===
-rem Repart d'un dist propre : retire l'etat/symboles ET tout reste d'une publication
-rem AUTONOME precedente (coreclr.dll) qui ferait sauter a tort la verif .NET du .iss.
+echo === 2/4  Publication AUTONOME (.NET embarque, win-x64) ===
+rem Repart d'un dist propre : evite tout melange avec une publication dependante
+rem du runtime (sinon coreclr.dll resterait et fausserait la detection cote .iss).
 if exist dist rmdir /s /q dist
-dotnet publish BTOptimizer.csproj -c Release -o dist --nologo -p:DebugType=none
+dotnet publish BTOptimizer.csproj -c Release -r win-x64 --self-contained true -o dist --nologo -p:DebugType=none
 if %errorlevel% neq 0 (
     echo [X] Echec de la publication.
     pause & exit /b 1
@@ -61,11 +67,11 @@ if not defined ISCC (
     echo        winget install -e --id JRSoftware.InnoSetup
     echo     ou telechargement : https://jrsoftware.org/isdl.php
     echo.
-    echo Le binaire est pret dans  dist\  ^(tu peux aussi diffuser un ZIP portable^).
+    echo Le binaire autonome est pret dans  dist\  ^(diffusable aussi en ZIP portable^).
     pause & exit /b 1
 )
 
-echo === 4/4  Compilation de l'installateur ===
+echo === 4/4  Compilation de l'installateur (mode autonome auto-detecte) ===
 "%ISCC%" "installer\BTOptimizer.iss"
 if %errorlevel% neq 0 (
     echo [X] Echec de la compilation de l'installateur.
@@ -73,6 +79,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [OK] Installateur cree dans  installer\Output\
+echo [OK] Installateur AUTONOME cree dans  installer\Output\
+echo      Il s'installe sans aucun prerequis .NET cote client.
 explorer "installer\Output"
 pause
