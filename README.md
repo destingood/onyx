@@ -9,6 +9,26 @@ et la **latence**, avec **cases à cocher** : chaque optimisation est optionnell
 réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**. Thème
 sombre par défaut (basculable dans le menu ☰).
 
+## En un coup d'œil
+
+- **173 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
+- **Deux portes d'entrée** : 🏥 **Santé de mon PC** (bilan /100 avec graphique de tendance) et
+  🧭 **J'ai un problème…** (assistant symptôme → bon outil).
+- **Suite de diagnostic** (menu ☰, rangée en 6 sous-menus) — chaque symptôme a son panneau
+  avec un verdict actionnable :
+
+| Domaine | Outils |
+|---|---|
+| ⚡ Performance & FPS | 🎯 Objectif 500 FPS · 📈 FPS en direct · ⏱ Latence en direct · 🧪 Benchmark · 🔍 Qui ralentit mon PC · 🏁 Checklist match |
+| 🩺 Crashs & stabilité | 🩺 Stabilité (14 j) · 🌡️ Températures/throttling · 🛒 Boutiques/crashs · 🧹 Réglages néfastes · 🔧 Réparer Windows · 🛡 Gardien en fond |
+| 📡 Réseau | 📶 Qualité réseau · 🛰️ Trajet (traceroute) · ⚙️ Réglages TCP/IP · 📡 Carte réseau · 🌐 DNS |
+| 🎮 Jeux & écran | 📦 Bibliothèques (winget) · 🎮 Priorité par jeu · 🔐 Exclusions antivirus · 🖥️ Écran · 🖱️ Souris |
+| 💾 Disque & entretien | 💾 Jeux & disques · 🖴 Optimiser lecteurs · 🧹 Nettoyage · 🔁 Points de restauration |
+
+- **Honnête et sûr** : aucune injection (compatible anticheat), tout réversible, sauvegardes
+  .reg + point de restauration, et un panneau qui **annule les dégâts** des mauvais optimiseurs.
+- **Rapport HTML** exportable (audit avant/après) — livrable client.
+
 ## ⭐ Lancement : `Lancer-BTOptimizer.bat`  (compatible Smart App Control)
 
 **Double-clique sur `Lancer-BTOptimizer.bat`** → UAC (Oui) → la fenêtre s'ouvre.
