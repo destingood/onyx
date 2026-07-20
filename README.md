@@ -58,6 +58,13 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📉 Graphique de tendance santé (v12.9)
+
+Le tableau de bord **🏥 Santé de mon PC** affiche maintenant un vrai **mini-graphique** de
+l'évolution de tes scores (les 20 derniers bilans) à côté de la jauge : courbe colorée selon
+le niveau, dernier point mis en avant, grille de repère 0-100. Ta progression se lit d'un
+coup d'œil — un bel argument visuel à montrer avant/après une session d'optimisation.
+
 ### 🧹 Nettoyage disque étendu (v12.8)
 
 Le **Nettoyage disque** récupère bien plus d'espace, en restant 100 % sûr (dossiers qui se

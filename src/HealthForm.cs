@@ -18,7 +18,8 @@ namespace BTOptimizer
     {
         private readonly Action<string, int> _log;
         private Label _scoreLabel, _grade, _sub;
-        private Panel _gauge;
+        private Panel _gauge, _chart;
+        private List<int> _history = new List<int>();
         private ListView _list;
         private Button _btnScan, _btnOpen, _btnClose;
         private int _score = -1;
@@ -71,10 +72,15 @@ namespace BTOptimizer
 
             _sub = new Label
             {
-                Location = new Point(212, 74), Size = new Size(450, 108), ForeColor = Color.FromArgb(60, 64, 72),
+                Location = new Point(212, 70), Size = new Size(450, 56), ForeColor = Color.FromArgb(60, 64, 72),
                 Font = new Font("Segoe UI", 9.5f)
             };
             Controls.Add(_sub);
+
+            // Mini-graphique de tendance des scores (historique).
+            _chart = new Panel { Location = new Point(212, 128), Size = new Size(450, 58), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            _chart.Paint += DrawHistoryChart;
+            Controls.Add(_chart);
 
             _list = new ListView
             {
@@ -241,17 +247,15 @@ namespace BTOptimizer
 
             // Historique : compare au bilan précédent AVANT d'enregistrer celui-ci.
             List<int> previous = LoadHistory();
-            string trend = "";
             if (previous.Count > 0)
             {
                 int delta = _score - previous[previous.Count - 1];
                 string arrow = delta > 0 ? "▲ +" + delta : delta < 0 ? "▼ " + delta : "= stable";
-                var last = previous.GetRange(Math.Max(0, previous.Count - 5), Math.Min(5, previous.Count));
-                trend = "\n\nÉvolution : " + arrow + " depuis le dernier bilan  ·  scores récents : "
-                      + string.Join(" → ", last.ConvertAll(v => v.ToString()).ToArray()) + " → " + _score;
+                _sub.Text += "\n\nÉvolution : " + arrow + " depuis le dernier bilan (voir le graphique).";
             }
-            _sub.Text += trend;
             SaveHistory(_score);
+            _history = LoadHistory();          // inclut le score qu'on vient d'enregistrer
+            if (_chart != null) _chart.Invalidate();
 
             _list.Items.Clear();
             foreach (Finding fi in findings)
@@ -264,6 +268,51 @@ namespace BTOptimizer
             if (_log != null) _log("Bilan santé PC : score " + _score + "/100 (" + grade + "), "
                 + graves + " grave(s), " + attn + " attention(s).", graves > 0 ? 2 : (attn > 0 ? 0 : 1));
             SetBusy(false);
+        }
+
+        // Mini-graphique : courbe des derniers scores (0-100), point courant mis en avant.
+        private void DrawHistoryChart(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            int w = _chart.ClientSize.Width, h = _chart.ClientSize.Height;
+            int padL = 6, padR = 6, padT = 6, padB = 6;
+
+            using (var grid = new Pen(Color.FromArgb(232, 235, 238)))
+                for (int i = 0; i <= 4; i++) { int y = padT + (h - padT - padB) * i / 4; g.DrawLine(grid, padL, y, w - padR, y); }
+
+            var pts = _history;
+            if (pts == null || pts.Count == 0)
+            {
+                using (var f = new Font("Segoe UI", 8.5f))
+                    g.DrawString("Aucun historique — refais un bilan pour voir la tendance.", f, Brushes.Gray, padL + 2, h / 2 - 8);
+                return;
+            }
+
+            int n = Math.Min(20, pts.Count);
+            var recent = pts.GetRange(pts.Count - n, n);
+            float plotW = w - padL - padR, plotH = h - padT - padB;
+            Func<int, float> xAt = i => n <= 1 ? padL + plotW / 2 : padL + plotW * i / (n - 1);
+            Func<int, float> yAt = v => padT + plotH * (100 - Math.Max(0, Math.Min(100, v))) / 100f;
+
+            Color line = recent[recent.Count - 1] >= 75 ? Accent : recent[recent.Count - 1] >= 55 ? Warn : Bad;
+            if (n >= 2)
+                using (var pen = new Pen(line, 2f))
+                    for (int i = 1; i < n; i++)
+                        g.DrawLine(pen, xAt(i - 1), yAt(recent[i - 1]), xAt(i), yAt(recent[i]));
+
+            for (int i = 0; i < n; i++)
+            {
+                float x = xAt(i), y = yAt(recent[i]);
+                bool last = i == n - 1;
+                using (var br = new SolidBrush(last ? line : Color.FromArgb(150, line)))
+                    g.FillEllipse(br, x - (last ? 3.5f : 2f), y - (last ? 3.5f : 2f), last ? 7 : 4, last ? 7 : 4);
+            }
+            using (var f = new Font("Segoe UI Semibold", 8.5f))
+            {
+                g.DrawString("100", f, Brushes.Silver, w - padR - 22, padT - 2);
+                g.DrawString(recent[recent.Count - 1].ToString(), f, new SolidBrush(line), padL + 2, padT - 2);
+            }
         }
 
         // ------------------------------------------------------------------
