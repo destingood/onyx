@@ -58,6 +58,15 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🛡 Gardien en fond — alertes GPU chaud / pilote (v12.7)
+
+☰ → **Surveillance en fond** (case à cocher du menu, opt-in). Une fois activée, l'app veille
+discrètement pendant que tu joues (app réduite en zone de notification) : si le **GPU dépasse
+85 °C** ou si le **pilote GPU signale une erreur**, tu reçois une **bulle d'alerte** — avant
+que ça ne tourne au throttling ou au crash « dispositif de rendu perdu ». Léger et
+respectueux : la température n'est mesurée que lorsqu'un jeu tourne, avec un délai anti-spam
+entre deux alertes. Ne prévient que des **nouvelles** erreurs pilote après activation.
+
 ### 📦 Bibliothèques & applis enrichies (v12.6)
 
 Le panneau **Bibliothèques & applis de jeu** s'étoffe (identifiants winget tous vérifiés) :

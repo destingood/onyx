@@ -32,6 +32,9 @@ namespace BTOptimizer
         private Button _btnOneClick;
         private ContextMenuStrip _menu;
         private ToolStripMenuItem _miPro;
+        private ToolStripMenuItem _miWatch;
+        private HwMonitor _watchMon;
+        private int _watchTick, _watchCooldown, _nvlSeen = -1;
         private TextBox _search;
         private readonly List<GroupBox> _groups = new List<GroupBox>();
         private HwProfile _hw;
@@ -185,6 +188,9 @@ namespace BTOptimizer
                 (s, e) => { using (var f = new HealthForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("🧪 Benchmark rapide (puissance CPU / mémoire / disque)...", null,
                 (s, e) => { using (var f = new BenchForm(Log)) f.ShowDialog(this); });
+            _miWatch = new ToolStripMenuItem("🛡 Surveillance en fond : m'alerter si le GPU chauffe / le pilote plante", null, OnWatchToggle);
+            _miWatch.CheckOnClick = true;
+            _menu.Items.Add(_miWatch);
             _menu.Items.Add("Composants & diagnostic du système...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Audio & enceintes (périphériques, améliorations)...", null, (s, e) => { using (var f = new AudioForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Gestionnaire de périphériques (détecte les erreurs)...", null, (s, e) => { using (var f = new DeviceManagerForm(Log)) f.ShowDialog(this); });
@@ -496,7 +502,7 @@ namespace BTOptimizer
             // Toutes les 2 s : résolution timer réelle + détection jeu plein écran (mode AUTO).
             _uiTimer = new Timer();
             _uiTimer.Interval = 2000;
-            _uiTimer.Tick += (s, e) => { UpdateTimerState(); UpdateTimerLabel(); UpdateAutoBoost(); };
+            _uiTimer.Tick += (s, e) => { UpdateTimerState(); UpdateTimerLabel(); UpdateAutoBoost(); GuardianTick(); };
             _uiTimer.Start();
             UpdateTimerLabel();
 
@@ -515,6 +521,7 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
+            try { if (_watchMon != null) _watchMon.Dispose(); } catch { }
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         }
 
@@ -1493,6 +1500,62 @@ namespace BTOptimizer
                 return;
             Log("Réparation d'intégrité Windows démarrée (10-20 min)...", 0);
             Task.Run(() => Sys.RepairWindows(Log));
+        }
+
+        // ------------------------------------------------------------------
+        //  🛡 Gardien en fond : alerte GPU chaud / erreur pilote pendant le jeu
+        // ------------------------------------------------------------------
+        private void OnWatchToggle(object sender, EventArgs e)
+        {
+            if (_miWatch.Checked)
+            {
+                // Référence : on n'alerte que sur les NOUVELLES erreurs pilote après activation.
+                try { _nvlSeen = CrashScan.CountProvider("nvlddmkm", 1); } catch { _nvlSeen = -1; }
+                _watchTick = 0; _watchCooldown = 0;
+                Log("🛡 Surveillance en fond activée : alerte si le GPU dépasse 85 °C ou si le pilote signale une erreur.", 1);
+            }
+            else Log("🛡 Surveillance en fond désactivée.", 0);
+        }
+
+        private void GuardianTick()
+        {
+            if (_miWatch == null || !_miWatch.Checked) return;
+            _watchTick++;
+            if (_watchTick % 15 != 0) return;   // ~30 s
+            try
+            {
+                if (_watchCooldown > 0) _watchCooldown--;
+
+                bool gaming = false;
+                try { gaming = GameScan.RunningKnownGame() != null || Native.IsGameFullscreen(); } catch { }
+                if (gaming)
+                {
+                    if (_watchMon == null) _watchMon = new HwMonitor();
+                    HwSample s = _watchMon.Sample();
+                    if (s.Gpu != null && s.Gpu.Ok && s.Gpu.TempC >= 85 && _watchCooldown <= 0)
+                    {
+                        TrayWarn("GPU à " + s.Gpu.TempC.ToString("0") + " °C — surveille le refroidissement (risque de throttling / crash).");
+                        _watchCooldown = 10;   // ~5 min avant la prochaine alerte thermique
+                    }
+                }
+
+                if (_watchTick % 30 == 0)   // ~60 s : erreurs pilote
+                {
+                    int now = -1;
+                    try { now = CrashScan.CountProvider("nvlddmkm", 1); } catch { }
+                    if (_nvlSeen >= 0 && now > _nvlSeen)
+                        TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre 🩺 Stabilité pour le verdict.");
+                    if (now >= 0) _nvlSeen = now;
+                }
+            }
+            catch { }
+        }
+
+        private void TrayWarn(string msg)
+        {
+            Log("🛡 " + msg, 2);
+            try { if (_tray != null) _tray.ShowBalloonTip(5000, "DesTinGOOD — surveillance", msg, ToolTipIcon.Warning); }
+            catch { }
         }
 
         private void OnGuardToggled(object sender, EventArgs e)
