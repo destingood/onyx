@@ -86,6 +86,19 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🚀 …et l'app OUVRE les outils installés (cycle natif complet) (v14.21)
+
+L'app ne fait plus qu'installer : elle **ouvre** aussi les outils, depuis DesTinGOOD. Cycle
+complet : **installe → ouvre**, sans jamais aller fouiller le menu Démarrer.
+- Après une installation (ou si déjà installé), l'app propose **« L'ouvrir maintenant ? »**.
+- Dans le panneau Bibliothèques, **double-clic** sur un outil installé (✔) → il s'ouvre.
+- Résolution robuste de l'exe via le `DisplayIcon` de la base de désinstallation (+ dossier
+  winget pour les portables) : `LibScan.TryLaunch`. Aucun chemin codé en dur par outil.
+
+De ton point de vue, l'outil externe se comporte comme une fonction de l'app : un clic pour
+l'avoir, un clic pour l'ouvrir — la seule chose que l'app ne réimplémente pas nativement (par
+choix : anticheat/zéro injection), elle te la rend transparente.
+
 ### ⬇️ L'app installe les outils elle-même, en 1 clic (v14.20)
 
 Pour les outils qui **ne peuvent pas** être natifs (pilote noyau/injection), l'app les rend

@@ -243,6 +243,102 @@ namespace BTOptimizer
             catch { return false; }
         }
 
+        // ---- Lancement des outils installés (cycle natif : installer PUIS ouvrir depuis l'app) ----
+
+        // Nom court d'un outil (avant " (", " —", " :") pour retrouver son entrée de désinstallation.
+        private static string ShortName(LibItem it)
+        {
+            string n = it.Name ?? "";
+            int cut = n.Length;
+            foreach (string sep in new[] { " (", " —", " -", " :" })
+            {
+                int i = n.IndexOf(sep, StringComparison.Ordinal);
+                if (i > 0 && i < cut) cut = i;
+            }
+            return n.Substring(0, cut).Trim();
+        }
+
+        // Exe principal via le DisplayIcon de la base de désinstallation ("C:\...\app.exe,0").
+        private static string UninstallDisplayIcon(string namePart)
+        {
+            string[] roots =
+            {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            };
+            RegistryKey[] hives = { Registry.LocalMachine, Registry.CurrentUser };
+            foreach (string root in roots)
+                foreach (RegistryKey hive in hives)
+                {
+                    try
+                    {
+                        using (RegistryKey k = hive.OpenSubKey(root))
+                        {
+                            if (k == null) continue;
+                            foreach (string sub in k.GetSubKeyNames())
+                            {
+                                try
+                                {
+                                    using (RegistryKey s = k.OpenSubKey(sub))
+                                    {
+                                        if (s == null) continue;
+                                        string n = Convert.ToString(s.GetValue("DisplayName"));
+                                        if (string.IsNullOrEmpty(n) || n.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                                        string icon = Convert.ToString(s.GetValue("DisplayIcon"));
+                                        if (string.IsNullOrEmpty(icon)) continue;
+                                        icon = icon.Trim().Trim('"');
+                                        int comma = icon.LastIndexOf(',');
+                                        if (comma > 2) icon = icon.Substring(0, comma).Trim().Trim('"');   // retire ",0"
+                                        if (icon.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(icon)) return icon;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            return null;
+        }
+
+        // Résout l'exe à lancer : DisplayIcon (installés classiques) puis dossier winget (portables).
+        private static string ResolveExe(LibItem it)
+        {
+            try { string byIcon = UninstallDisplayIcon(ShortName(it)); if (byIcon != null) return byIcon; }
+            catch { }
+            try
+            {
+                string pkg = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    @"Microsoft\WinGet\Packages");
+                if (Directory.Exists(pkg))
+                    foreach (string dir in Directory.GetDirectories(pkg, it.WingetId + "_*"))
+                        foreach (string ex in Directory.GetFiles(dir, "*.exe", SearchOption.AllDirectories))
+                        {
+                            string b = Path.GetFileName(ex).ToLowerInvariant();
+                            if (b.Contains("unins") || b.Contains("setup") || b.Contains("install")) continue;
+                            return ex;
+                        }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>Ouvre un outil installé depuis l'app (cycle natif : install puis lancement).
+        /// Vrai si lancé.</summary>
+        public static bool TryLaunch(LibItem it)
+        {
+            string exe = ResolveExe(it);
+            if (exe == null) return false;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe)
+                { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe) });
+                return true;
+            }
+            catch { return false; }
+        }
+
         // Vrai si un runtime .NET Desktop de la version demandée (ex. "6.", "9.") est présent.
         private static bool DotNetDesktop(string programFiles, string prefix)
         {
@@ -288,8 +384,10 @@ namespace BTOptimizer
             bool installed = false; try { installed = item.Installed(); } catch { }
             if (installed)
             {
-                MessageBox.Show(owner, item.Name + " est déjà installé. ✔\n\nOuvre-le depuis le menu Démarrer.",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (MessageBox.Show(owner, item.Name + " est déjà installé. ✔\n\nL'ouvrir maintenant ?",
+                        "DesTinGOOD", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
+                    MessageBox.Show(owner, "Impossible de le localiser automatiquement — ouvre-le depuis le menu Démarrer.",
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -317,10 +415,17 @@ namespace BTOptimizer
                 {
                     owner.BeginInvoke((Action)(() =>
                     {
-                        MessageBox.Show(owner,
-                            res ? item.Name + " installé. ✔\n\nTu peux l'ouvrir depuis le menu Démarrer."
-                                : item.Name + " : l'installation a échoué (voir le journal). Réessaie, ou installe-le depuis le site de l'éditeur.",
-                            "DesTinGOOD", MessageBoxButtons.OK, res ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                        if (res)
+                        {
+                            if (MessageBox.Show(owner, item.Name + " installé. ✔\n\nL'ouvrir maintenant ?",
+                                    "DesTinGOOD", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
+                                MessageBox.Show(owner, "Installé — ouvre-le depuis le menu Démarrer.",
+                                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                            MessageBox.Show(owner,
+                                item.Name + " : l'installation a échoué (voir le journal). Réessaie, ou installe-le depuis le site de l'éditeur.",
+                                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }));
                 }
                 catch { }
@@ -550,7 +655,7 @@ namespace BTOptimizer
             {
                 Text = "Un jeu qui refuse de se lancer, c'est presque toujours une bibliothèque manquante. "
                      + "Détection locale instantanée ; installation par WINGET (gestionnaire officiel Microsoft) — "
-                     + "aucun téléchargement douteux. Les bibliothèques manquantes sont pré-cochées.",
+                     + "aucun téléchargement douteux. Manquantes = pré-cochées · double-clic sur un outil ✔ pour l'OUVRIR.",
                 Location = new Point(18, 58), Size = new Size(644, 46), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(intro);
@@ -561,6 +666,7 @@ namespace BTOptimizer
                 BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 9.5f), IntegralHeight = false,
                 HorizontalScrollbar = true
             };
+            _list.DoubleClick += OnListDoubleClick;   // double-clic sur un outil installé -> l'ouvrir depuis l'app
             Controls.Add(_list);
 
             _summary = new Label
@@ -645,6 +751,19 @@ namespace BTOptimizer
             if (firstHi >= 0 && firstHi < _list.Items.Count)
                 try { _list.TopIndex = firstHi; } catch { }
             SetBusy(false);
+        }
+
+        // Double-clic sur un outil DÉJÀ installé -> l'ouvrir depuis l'app (cycle natif).
+        private void OnListDoubleClick(object sender, EventArgs e)
+        {
+            int i = _list.SelectedIndex;
+            if (i < 0 || i >= _items.Count) return;
+            LibScan.LibItem it = _items[i];
+            bool here = false; try { here = it.Installed(); } catch { }
+            if (!here) return;   // pas installé : le double-clic sert juste à cocher pour installer
+            if (!LibScan.TryLaunch(it))
+                MessageBox.Show(this, it.Name + " est installé mais introuvable automatiquement — ouvre-le depuis le menu Démarrer.",
+                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnInstall(object sender, EventArgs e)
