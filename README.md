@@ -78,6 +78,13 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 🔁 Boucle optimise → vérifie + fenêtres à jour (v13.8)
+
+- Après **⚡ TOUT OPTIMISER**, l'app propose d'ouvrir directement le **bilan Santé** : tu vois
+  ton nouveau score et sa progression sur le graphique, juste après avoir optimisé.
+- **À propos** et **premier lancement** rafraîchis : compteur d'optimisations dynamique et
+  positionnement « optimiseur **+ diagnostic** » au lieu du seul input lag.
+
 ### 📈 Bilan santé plus complet (v13.6)
 
 Le tableau de bord **🏥 Santé** intègre désormais un contrôle **écran** : il détecte un

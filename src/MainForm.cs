@@ -36,6 +36,7 @@ namespace BTOptimizer
         private HwMonitor _watchMon;
         private int _watchTick, _watchCooldown, _nvlSeen = -1;
         private volatile bool _guardBusy;
+        private bool _offerHealthAfter;   // après ⚡ TOUT OPTIMISER : proposer le bilan Santé
         private TextBox _search;
         private readonly List<GroupBox> _groups = new List<GroupBox>();
         private HwProfile _hw;
@@ -942,6 +943,7 @@ namespace BTOptimizer
 
             _chkBackup.Checked = true;   // le 1 clic garde toujours un filet de sécurité
             _chkTimer.Checked = true;    // timer 1 ms immédiat (case existante)
+            _offerHealthAfter = true;    // boucle : proposer le bilan Santé une fois fini
             RunOperation(sel, true);
             Task.Run(() => Sys.CleanMemory(Log));
         }
@@ -1152,18 +1154,26 @@ namespace BTOptimizer
         {
             SetBusy(false);
             RefreshStates();
+            bool offerHealth = _offerHealthAfter;
+            _offerHealthAfter = false;
             if (res.PrepFailed)
             {
                 MessageBox.Show(this,
                     "Une erreur est survenue avant l'application :\n\n" + res.PrepError,
                     "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            else if (res.RebootNeeded)
+            if (res.RebootNeeded)
             {
                 MessageBox.Show(this,
                     "Certaines modifications nécessitent un redémarrage pour prendre effet.",
                     "Redémarrage conseillé", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            // Boucle optimise → vérifie : après le 1 clic, montrer le nouveau score Santé.
+            if (offerHealth && MessageBox.Show(this,
+                    "Optimisations appliquées ✔\n\nVoir ton nouveau score « Santé de mon PC » ?",
+                    "DesTinGOOD", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                using (var f = new HealthForm(Log)) f.ShowDialog(this);
         }
 
         private void SetBusy(bool busy)
