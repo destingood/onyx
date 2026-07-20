@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 📦 11 applis de plus dans les Bibliothèques (v14.5)
+
+Le panneau **📦 Bibliothèques & applis** s'enrichit d'outils que beaucoup de joueurs ne
+connaissent pas — tous installés via **winget** (IDs vérifiés un par un) et détectés en local
+via la base de désinstallation Windows :
+
+- **Diagnostic & thermiques** : **Fan Control** (courbes de ventilation, l'anti-throttling
+  gratuit de référence), **CPU-Z** (vérifie la vitesse RAM réelle / XMP-EXPO), **GPU-Z**
+  (température GPU AMD/Intel que Windows n'expose pas + contrôle du lien PCIe), **LatencyMon**
+  (traque le pilote responsable des micro-coupures / grésillements).
+- **Test de stabilité** : **FurMark 2** (stress GPU → révèle les « dispositif de rendu perdu »),
+  **OCCT** (stress CPU/GPU/RAM/**alim** → démasque une alimentation faiblarde), **WizTree**
+  (trouve en 2 s ce qui remplit le SSD).
+- **Lanceurs de jeux** : **GOG Galaxy**, **EA app**, **Ubisoft Connect**, **Battle.net** —
+  pour regrouper toute la bibliothèque à côté de Steam/Epic déjà présents.
+
+Aucune n'est pré-cochée (ton choix) ; la détection distingue bien ce qui est déjà installé.
+
 ### 🛡️ Deux réglages CPU expérimentaux : jamais en auto (v14.4)
 
 L'**état minimal du processeur à 100 %** et la **désactivation des C-States (EXPÉRIMENTAL)** ne

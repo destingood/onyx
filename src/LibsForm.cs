@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace BTOptimizer
 {
@@ -123,7 +124,88 @@ namespace BTOptimizer
                 new LibItem { Name = "Playnite (bibliothèque de jeux unifiée)", WingetId = "Playnite.Playnite",
                     Why = "regroupe Steam/Epic/GOG/Xbox dans une seule bibliothèque",
                     Installed = () => Directory.Exists(Path.Combine(local, "Playnite")) },
+
+                // ---- Diagnostic, thermiques & test de stabilité (surveille et éprouve ton PC) ----
+                new LibItem { Name = "Fan Control (courbes de ventilation)", WingetId = "Rem0o.FanControl",
+                    Why = "pilote les ventilos selon la température CPU/GPU — le meilleur outil GRATUIT contre le throttling thermique et le bruit",
+                    Installed = () => Uninstall("Fan Control") || Directory.Exists(Path.Combine(local, "FanControl")) },
+                new LibItem { Name = "CPU-Z (infos CPU / RAM / carte mère)", WingetId = "CPUID.CPU-Z",
+                    Why = "vérifie la vitesse RAM RÉELLE (profil XMP/EXPO actif ?) et le modèle exact de tes composants",
+                    Installed = () => File.Exists(Path.Combine(pf, @"CPUID\CPU-Z\cpuz.exe")) || Uninstall("CPU-Z") },
+                new LibItem { Name = "GPU-Z (capteurs GPU + lien PCIe)", WingetId = "TechPowerUp.GPU-Z",
+                    Why = "température/charge GPU AMD/Intel (que Windows n'expose pas) et contrôle du lien PCIe (x16 Gen4 vs bridé)",
+                    Installed = () => Uninstall("GPU-Z") },
+                new LibItem { Name = "LatencyMon (latence DPC / micro-coupures)", WingetId = "Resplendence.LatencyMon",
+                    Why = "identifie le pilote qui provoque grésillements audio et micro-freezes (DPC trop élevés)",
+                    Installed = () => Directory.Exists(Path.Combine(pf, "Resplendence")) || Uninstall("LatencyMon") },
+                new LibItem { Name = "FurMark 2 (stress-test GPU)", WingetId = "Geeks3D.FurMark.2",
+                    Why = "pousse le GPU à fond pour révéler surchauffe/instabilité (crashs « dispositif de rendu perdu »)",
+                    Installed = () => Uninstall("FurMark") },
+                new LibItem { Name = "OCCT (stress CPU/GPU/RAM/alim)", WingetId = "OCBase.OCCT.Personal",
+                    Why = "test de stabilité complet : démasque une alim (PSU) faiblarde, une RAM instable ou un OC bancal",
+                    Installed = () => Uninstall("OCCT") },
+                new LibItem { Name = "WizTree (analyse l'espace disque)", WingetId = "AntibodySoftware.WizTree",
+                    Why = "trouve en 2 s ce qui remplit ton SSD (jeux, caches de shaders, captures) — bien plus rapide que l'Explorateur",
+                    Installed = () => File.Exists(Path.Combine(pf, @"WizTree\WizTree.exe")) || File.Exists(Path.Combine(pf86, @"WizTree\WizTree.exe")) || Uninstall("WizTree") },
+
+                // ---- Lanceurs de jeux (regroupe toute ta bibliothèque) ----
+                new LibItem { Name = "GOG Galaxy", WingetId = "GOG.Galaxy",
+                    Why = "jeux GOG (sans DRM) + regroupe Steam/Epic/Xbox dans une seule interface",
+                    Installed = () => Directory.Exists(Path.Combine(pf86, "GOG Galaxy")) || Uninstall("GOG Galaxy") },
+                new LibItem { Name = "EA app", WingetId = "ElectronicArts.EADesktop",
+                    Why = "jeux EA (Battlefield, Apex Legends, EA Sports FC, Les Sims)",
+                    Installed = () => Directory.Exists(Path.Combine(pf, "Electronic Arts")) || Uninstall("EA app") || Uninstall("EA Desktop") },
+                new LibItem { Name = "Ubisoft Connect", WingetId = "Ubisoft.Connect",
+                    Why = "jeux Ubisoft (Rainbow Six Siege, Assassin's Creed, Far Cry)",
+                    Installed = () => Directory.Exists(Path.Combine(pf86, @"Ubisoft\Ubisoft Game Launcher")) || Uninstall("Ubisoft Connect") },
+                new LibItem { Name = "Battle.net (Blizzard)", WingetId = "Blizzard.BattleNet",
+                    Why = "jeux Blizzard/Activision (Overwatch 2, Diablo, Call of Duty, WoW)",
+                    Installed = () => File.Exists(Path.Combine(pf86, @"Battle.net\Battle.net.exe")) || Uninstall("Battle.net") },
             };
+        }
+
+        /// <summary>Vrai si un programme dont le nom d'affichage contient <paramref name="namePart"/>
+        /// figure dans les clés de désinstallation (HKLM/HKCU, 64 et 32 bits). Détection fiable
+        /// quel que soit le dossier d'installation.</summary>
+        private static bool Uninstall(string namePart)
+        {
+            string[] roots =
+            {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            };
+            foreach (string root in roots)
+            {
+                if (UninstallIn(Registry.LocalMachine, root, namePart)) return true;
+                if (UninstallIn(Registry.CurrentUser, root, namePart)) return true;
+            }
+            return false;
+        }
+
+        private static bool UninstallIn(RegistryKey hive, string root, string namePart)
+        {
+            try
+            {
+                using (RegistryKey k = hive.OpenSubKey(root))
+                {
+                    if (k == null) return false;
+                    foreach (string sub in k.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using (RegistryKey s = k.OpenSubKey(sub))
+                            {
+                                string n = s == null ? null : Convert.ToString(s.GetValue("DisplayName"));
+                                if (!string.IsNullOrEmpty(n) && n.IndexOf(namePart, StringComparison.OrdinalIgnoreCase) >= 0)
+                                    return true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+            return false;
         }
 
         // Vrai si un runtime .NET Desktop de la version demandée (ex. "6.", "9.") est présent.
