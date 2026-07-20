@@ -58,6 +58,16 @@ seul), mais selon l'humeur de SAC il peut être bloqué : **préfère le `.bat`*
 - **Conditions d'utilisation** affichées et à accepter au **premier lancement**
   (avertissement risques/sécurité, aucune garantie, non affilié aux constructeurs).
 
+### 📡 Optimiser la carte réseau — latence (v13.0)
+
+☰ → **Optimiser la carte réseau** — les cartes réseau ont des réglages qui économisent
+l'énergie **au prix de la latence** : modération d'interruptions, contrôle de flux, Ethernet
+écoénergétique (EEE), Green Ethernet. Le panneau lit **uniquement les réglages réellement
+exposés par ta carte** (souvent en Ethernet ; le Wi-Fi en expose peu), montre leur état, et
+les passe en « latence minimale » en un clic. **Valeurs d'origine sauvegardées** → bouton
+« Rétablir » ; l'effet s'applique après un **redémarrage de la carte** (bref, proposé et
+confirmé) ou du PC. Utile surtout en Ethernet pour gagner quelques ms de ping/gigue.
+
 ### 📉 Graphique de tendance santé (v12.9)
 
 Le tableau de bord **🏥 Santé de mon PC** affiche maintenant un vrai **mini-graphique** de
