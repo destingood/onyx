@@ -937,6 +937,7 @@ namespace BTOptimizer
                        + "• " + sel.Count + " optimisations adaptées à ton matériel (" + niveau + ")\n"
                        + "• Sauvegarde .reg automatique" + (_chkPoint.Checked ? " + point de restauration" : "") + "\n"
                        + "• Timer Windows 1 ms activé, RAM libérée\n"
+                       + "• Puis vérification des bibliothèques de jeu essentielles (VC++, DirectX, .NET)\n"
                        + "• 100 % réversible (« Rétablir (sélection) » ou menu ☰ → Réinitialiser TOUT)";
             if (MessageBox.Show(this, msg, "⚡ TOUT OPTIMISER",
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
@@ -1170,9 +1171,31 @@ namespace BTOptimizer
                     "Certaines modifications nécessitent un redémarrage pour prendre effet.",
                     "Redémarrage conseillé", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            // Boucle optimise → vérifie : après le 1 clic, montrer le nouveau score Santé.
-            if (offerHealth && MessageBox.Show(this,
-                    "Optimisations appliquées ✔\n\nVoir ton nouveau score « Santé de mon PC » ?",
+            // Boucle optimise → ÉQUIPE → vérifie : après le 1 clic, on unifie les applis avec
+            // l'optimiseur — un PC « optimisé » doit aussi avoir ses runtimes de jeu. Détection
+            // des bibliothèques essentielles manquantes EN FOND (I/O), puis offres enchaînées.
+            if (offerHealth)
+                Task.Run(() =>
+                {
+                    int missingLibs = 0;
+                    try { missingLibs = LibScan.MissingEssentialCount(); } catch { }
+                    try { BeginInvoke((Action)(() => OfferPostOptimize(missingLibs))); } catch { }
+                });
+        }
+
+        // Enchaînement post-⚡ : (1) installer les bibliothèques de jeu essentielles manquantes,
+        // (2) montrer le nouveau bilan Santé. Sur le thread interface (dialogues).
+        private void OfferPostOptimize(int missingLibs)
+        {
+            if (missingLibs > 0 && MessageBox.Show(this,
+                    "Optimisations appliquées ✔\n\n" + missingLibs + " bibliothèque(s) de jeu ESSENTIELLE(S) manquent "
+                    + "(Visual C++, DirectX, .NET…) — c'est la cause n°1 d'un jeu qui refuse de démarrer.\n\n"
+                    + "Les installer maintenant pour finir de rendre le PC prêt à jouer ?",
+                    "PC prêt à jouer", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                using (var f = new LibsForm(Log)) f.ShowDialog(this);   // essentiels pré-cochés
+
+            if (MessageBox.Show(this,
+                    "Voir ton nouveau score « Santé de mon PC » ?",
                     "DesTinGOOD", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 using (var f = new HealthForm(Log)) f.ShowDialog(this);
         }

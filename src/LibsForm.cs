@@ -313,6 +313,26 @@ namespace BTOptimizer
             });
         }
 
+        /// <summary>Nombre de bibliothèques ESSENTIELLES (runtimes réclamés par les jeux : VC++,
+        /// DirectX, .NET…) absentes du PC. Sert à unifier les applis avec ⚡ TOUT OPTIMISER :
+        /// un PC « optimisé » doit aussi avoir ses runtimes. À appeler en arrière-plan (I/O).</summary>
+        public static int MissingEssentialCount()
+        {
+            int n = 0;
+            try
+            {
+                foreach (LibItem it in Items())
+                {
+                    if (!it.Essential) continue;
+                    bool here;
+                    try { here = it.Installed(); } catch { here = true; }   // en cas de doute : ne pas alerter
+                    if (!here) n++;
+                }
+            }
+            catch { }
+            return n;
+        }
+
         /// <summary>Chemin de winget, ou null s'il est absent (App Installer non présent).</summary>
         public static string WingetPath()
         {

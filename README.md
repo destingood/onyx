@@ -86,6 +86,20 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧩 Applis unifiées avec l'optimiseur (v14.16)
+
+Les applis ne sont plus un module à côté : elles font partie du cœur de l'optimisation.
+**⚡ TOUT OPTIMISER** ne se contente plus d'appliquer les réglages — il **finit de rendre le PC
+prêt à jouer** : juste après les tweaks, il détecte (en arrière-plan) les **bibliothèques de jeu
+essentielles manquantes** (Visual C++, DirectX, .NET — la cause n°1 d'un jeu qui refuse de
+démarrer) et propose de les installer, avant d'enchaîner sur le nouveau bilan Santé. La boucle
+devient **optimise → équipe → vérifie**. (`LibScan.MissingEssentialCount`, détection hors fil
+d'interface ; le panneau Bibliothèques pré-coche déjà les essentiels manquants.)
+
+Avec les 7 panneaux de diagnostic reliés à leurs outils (v14.11-14.13) et le bilan Santé qui
+compte déjà les runtimes manquants, les applis sont désormais **cousues dans tout le parcours**,
+plus jamais isolées.
+
 ### 🔏 Signature de code prête à brancher (v14.15)
 
 Le dernier frein à une diffusion propre (SmartScreen « éditeur inconnu ») est outillé :
