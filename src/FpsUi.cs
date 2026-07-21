@@ -35,6 +35,7 @@ namespace BTOptimizer
         public static readonly Font H3    = new Font("Segoe UI Semibold", 10.5f);
         public static readonly Font Body  = new Font("Segoe UI", 9.5f);
         public static readonly Font Small = new Font("Segoe UI", 8.5f);
+        public static readonly Font Tiny  = new Font("Segoe UI", 7.5f);
         public static readonly Font Num   = new Font("Segoe UI Semibold", 20f);
         public static readonly Font Glyph = new Font("Segoe UI Emoji", 15f);
 

@@ -207,8 +207,8 @@ namespace BTOptimizer
 
             if (t.Reboot)
             {
-                var rb = FpsUi.Text("redémarrage requis", FpsUi.Small, FpsUi.Warn);
-                rb.Location = new Point(16, 128); rb.Font = new Font("Segoe UI", 7.5f);
+                var rb = FpsUi.Text("redémarrage requis", FpsUi.Tiny, FpsUi.Warn);
+                rb.Location = new Point(16, 128);
                 card.Controls.Add(rb);
             }
             return card;
