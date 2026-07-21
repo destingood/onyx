@@ -58,10 +58,15 @@ namespace BTOptimizer
 
         private void DoLayout()
         {
-            int L = 34, top = 110, gap = 18;
-            int cols = 3;
+            int L = 34, top = 110, gap = 18, cols = 3;
             int w = (ClientSize.Width - L * 2 - gap * (cols - 1)) / cols;
-            int hgt = 200;
+            int count = 0;
+            foreach (Control c in Controls) if (c.Tag is string && (string)c.Tag == "labcard") count++;
+            int rows = Math.Max(1, (count + cols - 1) / cols);
+            // Hauteur des cartes calculée pour remplir l'espace AU-DESSUS de la mascotte
+            // (coin bas-droit) : plus de chevauchement de la dernière rangée en fenêtre basse.
+            int bottom = Host != null ? Host.ContentBottom(20) : ClientSize.Height - 20;
+            int hgt = Math.Max(150, (bottom - top - gap * (rows - 1)) / rows);
             int i = 0;
             foreach (Control c in Controls)
             {

@@ -33,11 +33,13 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, top - 30), FpsUi.Ink, TextFormatFlags.NoPadding);
             using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, top - 6, gx + 64, top - 6);
             int cell = 78, gap = 14, cols = 7;
+            // Limite droite : évite de peindre des emplacements sous la mascotte (coin bas-droit).
+            int right = Host != null ? Host.ContentRight(34) : ClientSize.Width - 34;
             for (int i = 0; i < 12; i++)
             {
                 int col = i % cols, row = i / cols;
                 var r = new Rectangle(gx + col * (cell + gap), gy + row * (cell + gap), cell, cell);
-                if (gx + col * (cell + gap) + cell > ClientSize.Width - 34) continue;
+                if (gx + col * (cell + gap) + cell > right) continue;
                 FpsUi.PaintCard(g, r, Color.FromArgb(20, 22, 21), FpsUi.Border, 10f);
             }
             TextRenderer.DrawText(g, "Débloque des badges en appliquant des optimisations et en lançant des Check Up+.",
