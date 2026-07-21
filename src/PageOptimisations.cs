@@ -150,6 +150,8 @@ namespace BTOptimizer
         private void Populate()
         {
             _flow.SuspendLayout();
+            var old = new Control[_flow.Controls.Count];
+            _flow.Controls.CopyTo(old, 0);
             _flow.Controls.Clear();
             _toggles.Clear();
             foreach (Tweak t in _tweaks)
@@ -159,6 +161,7 @@ namespace BTOptimizer
                 _flow.Controls.Add(MakeCard(t));
             }
             _flow.ResumeLayout();
+            foreach (Control c in old) { try { c.Dispose(); } catch { } }  // libère les handles GDI des anciennes cartes
         }
 
         private Control MakeCard(Tweak t)
