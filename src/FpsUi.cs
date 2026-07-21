@@ -38,6 +38,8 @@ namespace BTOptimizer
         public static readonly Font Tiny  = new Font("Segoe UI", 7.5f);
         public static readonly Font Num   = new Font("Segoe UI Semibold", 20f);
         public static readonly Font Glyph = new Font("Segoe UI Emoji", 15f);
+        public static readonly Font GlyphL  = new Font("Segoe UI Emoji", 30f);
+        public static readonly Font GlyphXL = new Font("Segoe UI Emoji", 42f);
 
         public static GraphicsPath Round(RectangleF r, float radius)
         {

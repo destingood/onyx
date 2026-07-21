@@ -41,9 +41,8 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, title, FpsUi.H2, new Point(22, 20), ink, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, sub, FpsUi.Small, new Rectangle(22, 48, r.Width - 44, 20), FpsUi.Dim, TextFormatFlags.NoPadding);
                 // Grande icone centrale.
-                using (var f = new Font("Segoe UI Emoji", 42f))
-                    TextRenderer.DrawText(g, glyph, f, new Rectangle(0, 40, r.Width, r.Height - 40), soon ? FpsUi.Dim2 : FpsUi.Ink,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                TextRenderer.DrawText(g, glyph, FpsUi.GlyphXL, new Rectangle(0, 40, r.Width, r.Height - 40), soon ? FpsUi.Dim2 : FpsUi.Ink,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 if (soon)
                 {
                     string tag = "ARRIVE BIENTÔT";

@@ -77,9 +77,8 @@ namespace BTOptimizer
                 var r = ((Panel)s).ClientRectangle;
                 FpsUi.PaintCard(gr, r, detected ? FpsUi.Card : Color.FromArgb(13, 15, 14), detected ? FpsUi.Border : Color.FromArgb(26, 28, 27), 12f);
                 gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                using (var f = new Font("Segoe UI Emoji", 30f))
-                    TextRenderer.DrawText(gr, "🎮", f, new Rectangle(0, 14, r.Width, 50), detected ? FpsUi.Neon : FpsUi.Dim2,
-                        TextFormatFlags.HorizontalCenter);
+                TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, new Rectangle(0, 14, r.Width, 50), detected ? FpsUi.Neon : FpsUi.Dim2,
+                    TextFormatFlags.HorizontalCenter);
                 TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 74, r.Width - 20, 40), detected ? FpsUi.Ink : FpsUi.Dim,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak);
                 string tag = detected ? "DÉTECTÉ" : "non installé";
