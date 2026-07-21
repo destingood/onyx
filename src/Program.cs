@@ -737,7 +737,7 @@ namespace BTOptimizer
                 f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
                 f.Show();
-                Pump(1200);   // laisse le OnLoad peupler la fenêtre
+                Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
                 {
                     using (var g = System.Drawing.Graphics.FromImage(bmp))
