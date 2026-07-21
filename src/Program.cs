@@ -108,6 +108,16 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_REPORT=<fichier> : génère le rapport de santé HTML et sort (vérif sans effet de bord).
+            string repOut = Environment.GetEnvironmentVariable("BT_REPORT");
+            if (!string.IsNullOrEmpty(repOut))
+            {
+                string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
+                System.IO.File.WriteAllText(repOut, html, new System.Text.UTF8Encoding(false));
+                Console.WriteLine("RAPPORT écrit : " + repOut + " (" + html.Length + " octets)");
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.

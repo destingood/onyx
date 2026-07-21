@@ -18,7 +18,7 @@ namespace BTOptimizer
         private const int Hist = 80;
         private bool _sampling;
         private HwSample _last;
-        private Button _btnComp;
+        private Button _btnComp, _btnReport;
 
         public PageSystem(DashboardForm host) : base(host)
         {
@@ -28,10 +28,18 @@ namespace BTOptimizer
             _btnComp.Size = new Size(200, 30);
             _btnComp.Click += (s, e) => Host.OpenDialog(new SystemInfoForm(Host.Log));
             Controls.Add(_btnComp);
+            _btnReport = FpsUi.GhostButton("Rapport de santé");
+            _btnReport.Size = new Size(150, 30);
+            _btnReport.Click += (s, e) => Host.GenerateHealthReport();
+            Controls.Add(_btnReport);
             Resize += (s, e) => { PlaceBtn(); Invalidate(); };
         }
 
-        private void PlaceBtn() { if (_btnComp != null) _btnComp.Location = new Point(ClientSize.Width - 34 - _btnComp.Width, 22); }
+        private void PlaceBtn()
+        {
+            if (_btnComp != null) _btnComp.Location = new Point(ClientSize.Width - 34 - _btnComp.Width, 22);
+            if (_btnReport != null && _btnComp != null) _btnReport.Location = new Point(_btnComp.Left - 12 - _btnReport.Width, 22);
+        }
 
         public override void OnShown() { PlaceBtn(); Sample(); _timer.Start(); }
         protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (!Visible) { try { _timer.Stop(); } catch { } } }

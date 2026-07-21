@@ -121,6 +121,7 @@ namespace BTOptimizer
             diag.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
             diag.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
             diag.DropDownItems.Add("Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
+            diag.DropDownItems.Add("Rapport de santé (HTML, à partager)", null, (s, e) => GenerateHealthReport());
             m.Add(diag);
 
             var net = new ToolStripMenuItem("🌐  Réseau");
@@ -324,6 +325,39 @@ namespace BTOptimizer
         }
 
         public void Goto(int idx) { ShowPage(idx); }
+
+        /// <summary>Génère un rapport de santé HTML (état + optimisations actives + matériel),
+        /// l'enregistre sur le Bureau et l'ouvre dans le navigateur. Lecture seule, partageable.</summary>
+        public void GenerateHealthReport()
+        {
+            Cursor = Cursors.WaitCursor;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string path = null, err = null;
+                try
+                {
+                    string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
+                    string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    path = System.IO.Path.Combine(dir, "DesTinGOOD-rapport-sante.html");
+                    System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
+                }
+                catch (Exception ex) { err = ex.Message; }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Cursor = Cursors.Default;
+                        if (path != null)
+                        {
+                            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
+                            catch { MessageBox.Show(this, "Rapport enregistré sur le Bureau :\n" + path, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                        }
+                        else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                }
+                catch { }
+            });
+        }
     }
 
     // ----------------------------------------------------------------------
