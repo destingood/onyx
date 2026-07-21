@@ -103,38 +103,9 @@ namespace BTOptimizer
 
         private void Fill()
         {
-            Action<string, int> L = _log;
-
-            Add("Crashs & instabilité", "Bilan complet : je ne sais pas par où commencer", "Santé de mon PC", () => new HealthForm(L));
-            Add("Crashs & instabilité", "Mes jeux crashent ou se ferment tout seuls", "Stabilité (14 j)", () => new StabilityForm(L));
-            Add("Crashs & instabilité", "« Votre dispositif de rendu a été perdu » / freeze", "Boutiques / crashs", () => new ShopFixForm(L));
-            Add("Crashs & instabilité", "Le PC ou le GPU chauffe / bride (throttling)", "Températures & throttling", () => new ThermalForm(L));
-            Add("Crashs & instabilité", "Un ancien « optimiseur » a peut-être cassé des réglages", "Réglages néfastes", () => new CheckupForm(L));
-            Add("Crashs & instabilité", "Crashs qui persistent malgré tout", "Réparer Windows (via menu ☰)", () => new HealthForm(L));
-
-            Add("Performance & fluidité", "Ça rame / ça saccade en jeu", "Qui ralentit mon PC", () => new BloatForm(L));
-            Add("Performance & fluidité", "Mes FPS sont bas", "FPS en direct", () => new FpsMonForm(L));
-            Add("Performance & fluidité", "Je veux mesurer la puissance de mon PC", "Benchmark rapide", () => new BenchForm(L));
-            Add("Performance & fluidité", "Chargements longs / mes jeux sont sur le bon disque ?", "Jeux & disques", () => new DiskForm(L));
-            Add("Performance & fluidité", "Input lag / réactivité de la souris", "⏱ Latence en direct", () => new LiveMonForm(L));
-
-            Add("Réseau & ping", "Ça lag en ligne (ping, gigue, décrochages)", "Qualité réseau", () => new NetworkForm(L));
-            Add("Réseau & ping", "Je veux voir OÙ le lag apparaît sur le trajet", "Trajet réseau", () => new NetRouteForm(L));
-            Add("Réseau & ping", "Téléchargements lents / Steam charge à l'infini", "⚙️ Réglages TCP/IP", () => new NetTuneForm(L));
-            Add("Réseau & ping", "Réduire la latence de ma carte réseau", "Carte réseau", () => new NetAdapterForm(L));
-            Add("Réseau & ping", "Changer/tester mon DNS", "DNS rapide", () => new DnsForm(L));
-
-            Add("Jeux & lancement", "Un jeu refuse de démarrer (dll manquante)", "Bibliothèques de jeu", () => new LibsForm(L));
-            Add("Jeux & lancement", "Boutique en jeu vide / qui tourne à l'infini", "Boutiques / crashs", () => new ShopFixForm(L));
-            Add("Jeux & lancement", "Booster mon jeu principal (priorité CPU)", "Priorité par jeu", () => new GameProfileForm(L));
-            Add("Jeux & lancement", "Moins de saccades (analyse antivirus des jeux)", "Exclusions antivirus", () => new DefenderForm(L));
-
-            Add("Écran & périphériques", "Mon écran semble bloqué à 60 Hz", "Réglages d'écran", () => new DisplayForm(L));
-            Add("Écran & périphériques", "Ma souris est-elle vraiment à 1000 Hz ?", "Fréquence de la souris", () => new MouseForm(L));
-
-            Add("Entretien & sécurité", "PC lent à démarrer (trop de programmes au boot)", "Programmes au démarrage", () => new StartupForm(L));
-            Add("Entretien & sécurité", "Libérer de l'espace disque", "Nettoyage disque", () => new CleanupForm(L));
-            Add("Entretien & sécurité", "Faire une sauvegarde avant de bidouiller", "Points de restauration", () => new RestoreForm(L));
+            // Source unique partagée avec la page Consultation du shell (HelpCatalog).
+            foreach (HelpCatalog.Entry e in HelpCatalog.Entries(_log))
+                Add(e.Group, e.Symptom, e.Tool, e.Open);
         }
 
         private void OpenSelected()
