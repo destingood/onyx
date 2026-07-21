@@ -68,7 +68,7 @@ namespace BTOptimizer
                 || (t.Category != null && t.Category.ToLowerInvariant().Contains(_query));
         }
 
-        private Button _bReco, _bEsport, _bReset;
+        private Button _bAuto, _bReco, _bEsport, _bReset;
 
         private void BuildPresets()
         {
@@ -78,7 +78,22 @@ namespace BTOptimizer
             _bEsport.Click += (s, e) => { if (Pro("Preset eSport")) Batch(t => t.Esport, true, "eSport"); };
             _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
             _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
-            Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+            _bAuto = FpsUi.NeonButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
+            _bAuto.Click += (s, e) => ApplyAuto();
+            Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+        }
+
+        // Auto-tune : détecte le matériel et applique la sélection adaptée (niveau équilibré).
+        private void ApplyAuto()
+        {
+            if (!Pro("Auto-tune (adapté à ton PC)")) return;
+            Cursor = Cursors.WaitCursor;
+            Task.Run(() =>
+            {
+                var ids = new HashSet<string>();
+                try { HwProfile hw = Hardware.Detect(); ids = Hardware.AutoTuneIds(_tweaks, hw, Hardware.LevelBalanced); } catch { }
+                try { BeginInvoke((Action)(() => { Cursor = Cursors.Default; Batch(t => ids.Contains(t.Id), true, "Auto — adapté à ton PC"); })); } catch { }
+            });
         }
 
         private bool Pro(string feat)
@@ -95,11 +110,11 @@ namespace BTOptimizer
             if (list.Count == 0) return;
             if (MessageBox.Show(FindForm(), (apply ? "Appliquer" : "Rétablir") + " " + list.Count + " optimisation(s) — " + label + " ?",
                 "DesTinGOOD", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
-            _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
+            _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
             Task.Run(() =>
             {
                 try { Engine.Run(list, apply, apply, false, Host.Log); } catch { }  // backup .reg oui, point de restauration non (trop lent)
-                try { BeginInvoke((Action)(() => { _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
+                try { BeginInvoke((Action)(() => { _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
             });
         }
 
@@ -241,8 +256,9 @@ namespace BTOptimizer
                 int rx = ClientSize.Width - 34;
                 _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
                 _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
-                _bReco.Location = new Point(rx - _bReco.Width, 22);
-                if (_search != null) _search.SetBounds(Math.Max(180, _bReco.Left - 12 - 220), 24, 220, 26);
+                _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
+                _bAuto.Location = new Point(rx - _bAuto.Width, 22);
+                if (_search != null) _search.SetBounds(Math.Max(180, _bAuto.Left - 12 - 220), 24, 220, 26);
             }
         }
 

@@ -145,8 +145,8 @@ namespace BTOptimizer
                 case 3:
                     string rec = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent");
                     return "Historique Windows : " + CleanDirs(new[] { rec }) + " nettoyé(s).";
-                case 4: Console("cmd.exe", "/k sfc /scannow ^& DISM /Online /Cleanup-Image /RestoreHealth", true); return "Réparation système lancée (console SFC + DISM).";
-                case 5: Console("cmd.exe", "/c ipconfig /flushdns ^& netsh interface ip delete arpcache", false); return "Cache DNS et ARP vidés.";
+                case 4: Console("cmd.exe", "/k sfc /scannow & DISM /Online /Cleanup-Image /RestoreHealth", true); return "Réparation système lancée (console SFC + DISM).";
+                case 5: Console("cmd.exe", "/c ipconfig /flushdns & netsh interface ip delete arpcache", false); return "Cache DNS et ARP vidés.";
                 default: return "Routine inconnue.";
             }
         }
