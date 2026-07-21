@@ -110,7 +110,8 @@ namespace BTOptimizer
             var perf = new ToolStripMenuItem("📈  Performances & FPS");
             perf.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
             perf.DropDownItems.Add("FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
-            perf.DropDownItems.Add("Benchmark rapide", null, (s, e) => OpenDialog(new BenchForm(Log)));
+            perf.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
+            perf.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
             perf.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
             m.Add(perf);
 

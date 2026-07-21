@@ -740,6 +740,7 @@ namespace BTOptimizer
                 case "ControllerForm": return new ControllerForm(log);
                 case "StatsOverlayForm": return new StatsOverlayForm(log);
                 case "StatsOverlayWindow": return new StatsOverlayWindow();
+                case "BenchmarkFpsForm": return new BenchmarkFpsForm(log);
                 default: return null;
             }
         }
@@ -752,6 +753,7 @@ namespace BTOptimizer
                 f.Location = new System.Drawing.Point(-5000, -5000);
                 f.Show();
                 if (f is StatsOverlayWindow sw) sw.SeedDemo();   // données de démo pour l'inspection visuelle hors jeu
+                if (f is BenchmarkFpsForm bf) bf.SeedDemo();
                 Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
                 {
@@ -904,6 +906,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SpeedTestForm", () => new SpeedTestForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;
