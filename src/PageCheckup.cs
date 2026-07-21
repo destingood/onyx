@@ -154,20 +154,31 @@ namespace BTOptimizer
         private static string CleanDirs(string[] dirs)
         {
             long freed = 0;
-            foreach (string d in dirs)
-            {
-                try
-                {
-                    if (!Directory.Exists(d)) continue;
-                    foreach (string f in Directory.GetFiles(d, "*", SearchOption.AllDirectories))
-                    {
-                        try { var fi = new FileInfo(f); long sz = fi.Length; fi.Delete(); freed += sz; } catch { }
-                    }
-                }
-                catch { }
-            }
+            foreach (string d in dirs) freed += CleanOne(d);
             double mb = freed / (1024.0 * 1024.0);
             return mb >= 1 ? mb.ToString("0.0") + " Mo" : (freed / 1024.0).ToString("0") + " Ko";
+        }
+
+        // Parcours récursif résilient : un sous-dossier protégé (accès refusé) n'interrompt
+        // pas tout le nettoyage (contrairement à GetFiles(AllDirectories) qui lève et abandonne).
+        private static long CleanOne(string dir)
+        {
+            long freed = 0;
+            if (!Directory.Exists(dir)) return 0;
+            try
+            {
+                foreach (string f in Directory.EnumerateFiles(dir))
+                {
+                    try { var fi = new FileInfo(f); long sz = fi.Length; fi.Delete(); freed += sz; } catch { }
+                }
+            }
+            catch { }
+            try
+            {
+                foreach (string sub in Directory.EnumerateDirectories(dir)) freed += CleanOne(sub);
+            }
+            catch { }
+            return freed;
         }
 
         private static void Console(string exe, string args, bool keepOpen)
