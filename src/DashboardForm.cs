@@ -214,9 +214,18 @@ namespace BTOptimizer
         public void ShowPage(int idx)
         {
             if (idx < 0 || idx >= _pages.Length) return;
-            for (int i = 0; i < _nav.Count; i++) _nav[i].Active = (i == idx);
 
-            if (_pages[idx] == null) _pages[idx] = CreatePage(idx);
+            if (_pages[idx] == null)
+            {
+                try { _pages[idx] = CreatePage(idx); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Impossible d'ouvrir cette page :\n\n" + ex.Message,
+                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            for (int i = 0; i < _nav.Count; i++) _nav[i].Active = (i == idx);
             FpsPage page = _pages[idx];
 
             _host.SuspendLayout();
