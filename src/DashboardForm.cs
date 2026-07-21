@@ -52,7 +52,7 @@ namespace BTOptimizer
             _mascot.SizeMode = PictureBoxSizeMode.Zoom;
             _mascot.BackColor = Color.Transparent;
             try { _mascot.Image = Assets.DoctorFinger; } catch { }
-            _mascot.Size = new Size(220, 250);
+            _mascot.Size = new Size(196, 220);
             _mascot.Enabled = false;
             Controls.Add(_mascot);
             _mascot.BringToFront();
@@ -227,7 +227,8 @@ namespace BTOptimizer
             _host.ResumeLayout();
             _current = idx;
             try { page.OnShown(); } catch { }
-            _mascot.Visible = (idx != 1); // Optimisations : liste dense, on masque la mascotte
+            // Mascotte seulement sur les pages aérées (évite de recouvrir des contrôles).
+            _mascot.Visible = (idx == 0 || idx == 4 || idx == 5 || idx == 6);
             PlaceMascot();
         }
 

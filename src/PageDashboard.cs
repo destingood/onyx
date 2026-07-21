@@ -90,8 +90,9 @@ namespace BTOptimizer
                 }
             }
             if (_graph != null) _graph.SetBounds(L, top + 146, statsW, 250);
+            // Bouton premium sous le graphe (bas-gauche) : évite la mascotte (coin bas-droit).
             var prem = Controls["prem"];
-            if (prem != null) prem.SetBounds(rightX, top + 396 + 16, rightW, 46);
+            if (prem != null) prem.SetBounds(L, top + 146 + 250 + 16, statsW, 46);
         }
 
         protected override void OnPaint(PaintEventArgs e)
