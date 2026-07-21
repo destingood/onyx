@@ -703,7 +703,7 @@ namespace BTOptimizer
                     }
                     catch (Exception ex) { Console.WriteLine("  shot " + names[p] + " : " + ex.Message); }
                 }
-                try { dash.Close(); dash.Dispose(); } catch { }
+                try { dash.Hide(); dash.Dispose(); } catch { }
                 Pump(120);
             }
             Console.WriteLine("  Captures écrites dans " + dir);
