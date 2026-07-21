@@ -22,6 +22,7 @@ namespace BTOptimizer
             AddCard("⚡", "OVERCLOCK GPU", "Overclock automatique et sûr de la carte.", false, () => Host.OpenDialog(new OverclockForm(Host.Log)));
             AddCard("🚄", "SPEED TEST", "Débit descendant + latence réels.", false, () => Host.OpenDialog(new SpeedTestForm(Host.Log)));
             AddCard("🎮", "TEST MANETTE", "Détection + polling rate réel de ta manette.", false, () => Host.OpenDialog(new ControllerForm(Host.Log)));
+            AddCard("📊", "OVERLAY STATS", "CPU/GPU/temps en surimpression du jeu.", false, () => Host.OpenDialog(new StatsOverlayForm(Host.Log)));
             Resize += (s, e) => DoLayout();
         }
 

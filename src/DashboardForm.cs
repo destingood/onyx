@@ -64,7 +64,14 @@ namespace BTOptimizer
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
 
-            Shown += (s, e) => { SetDark(); ShowPage(0); PlaceMascot(); };
+            Shown += (s, e) =>
+            {
+                SetDark(); ShowPage(0); PlaceMascot();
+                // Rétablit les overlays activés au dernier lancement (le shell remplace MainForm
+                // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
+                try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
+                try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
+            };
             FormClosing += (s, e) => Cleanup();
         }
 
@@ -201,6 +208,8 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
             try { Native.SetTimer1ms(false); } catch { }
+            try { Crosshair.Hide(); } catch { }
+            try { StatsOverlayManager.Hide(); } catch { }
             try { if (_sysTimer != null) _sysTimer.Stop(); } catch { }
             try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
         }

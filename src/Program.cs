@@ -738,6 +738,8 @@ namespace BTOptimizer
                 case "LicenseKeyForm": return new LicenseKeyForm("");
                 case "SpeedTestForm": return new SpeedTestForm(log);
                 case "ControllerForm": return new ControllerForm(log);
+                case "StatsOverlayForm": return new StatsOverlayForm(log);
+                case "StatsOverlayWindow": return new StatsOverlayWindow();
                 default: return null;
             }
         }
@@ -749,6 +751,7 @@ namespace BTOptimizer
                 f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
                 f.Show();
+                if (f is StatsOverlayWindow sw) sw.BeginSampling();   // démarre l'échantillonnage HW pour la capture
                 Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
                 {
@@ -900,6 +903,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SpeedTestForm", () => new SpeedTestForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;
