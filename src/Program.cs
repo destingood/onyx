@@ -727,6 +727,7 @@ namespace BTOptimizer
                 case "AboutForm": return new AboutForm();
                 case "LicenseKeyForm": return new LicenseKeyForm("");
                 case "SpeedTestForm": return new SpeedTestForm(log);
+                case "ControllerForm": return new ControllerForm(log);
                 default: return null;
             }
         }

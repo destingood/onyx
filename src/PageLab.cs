@@ -21,7 +21,7 @@ namespace BTOptimizer
             AddCard("📈", "COMPTEUR FPS", "FPS en direct par jeu (façon PresentMon).", false, () => Host.OpenDialog(new FpsMonForm(Host.Log)));
             AddCard("⚡", "OVERCLOCK GPU", "Overclock automatique et sûr de la carte.", false, () => Host.OpenDialog(new OverclockForm(Host.Log)));
             AddCard("🚄", "SPEED TEST", "Débit descendant + latence réels.", false, () => Host.OpenDialog(new SpeedTestForm(Host.Log)));
-            AddCard("🎮", "OVERCLOCK MANETTE", "Polling rate manette optimisé.", true, null);
+            AddCard("🎮", "TEST MANETTE", "Détection + polling rate réel de ta manette.", false, () => Host.OpenDialog(new ControllerForm(Host.Log)));
             Resize += (s, e) => DoLayout();
         }
 
