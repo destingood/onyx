@@ -11,24 +11,33 @@ namespace BTOptimizer
     /// <summary>
     /// Thème clair/sombre appliqué récursivement + habillage « pro » global :
     /// barre de titre sombre fusionnée au bandeau (DWM), menus contextuels assortis,
-    /// boutons plats redessinés en boutons arrondis (survol/pression/focus/désactivé),
+    /// boutons plats redessinés en pilules (survol/pression/focus/désactivé),
     /// GroupBox en cartes arrondies, en-têtes de tableaux plats, liseré dégradé
     /// signature sous chaque bandeau. L'applicateur reconnaît les conventions de
     /// couleur déjà présentes dans l'app (bannières sombres, boutons accent, tuiles)
     /// et mémorise le rôle de chaque contrôle à la première visite pour que les
     /// bascules de thème successives restent stables.
+    /// Identité visuelle façon fpsdoctor.com : noir profond, vert néon #00FF88
+    /// (texte noir sur les boutons accent), cartes sombres à bordure discrète.
     /// </summary>
     internal static class Theme
     {
         public static bool Dark { get; private set; }
 
-        // Repères des couleurs codées en dur dans les fenêtres.
-        private static readonly Color HeaderBg = Color.FromArgb(28, 30, 38);
+        // Repères des couleurs codées en dur dans les fenêtres (détection des rôles).
+        private static readonly Color HeaderRef = Color.FromArgb(28, 30, 38);
         private static readonly Color AccentRef = Color.FromArgb(0, 150, 90);
 
-        // Liseré signature sous les bandeaux (identité DesTinGOOD).
-        private static readonly Color BrandA = Color.FromArgb(0, 205, 130);
-        private static readonly Color BrandB = Color.FromArgb(0, 140, 235);
+        // Peinture réelle des bandeaux/tuiles : quasi-noir (site FPSDoctor).
+        private static readonly Color HeaderBg = Color.FromArgb(8, 10, 9);
+
+        // Accent vert néon #00FF88 + fin de dégradé #01C86F (CTA du site).
+        private static readonly Color Neon = Color.FromArgb(0, 255, 136);
+        private static readonly Color NeonDeep = Color.FromArgb(1, 200, 111);
+
+        // Liseré signature sous les bandeaux (dégradé vert néon).
+        private static readonly Color BrandA = Neon;
+        private static readonly Color BrandB = NeonDeep;
 
         // Tokens (basculent avec le thème).
         private static Color Bg, Panel, Ink, InkDim, Line, GroupInk, FieldBg;
@@ -40,7 +49,8 @@ namespace BTOptimizer
         public static Color PanelColor { get { return Panel; } }
         public static Color FieldColor { get { return FieldBg; } }
         public static Color LineColor { get { return Line; } }
-        public static Color OkColor { get { return Dark ? Color.FromArgb(70, 200, 130) : Color.FromArgb(0, 130, 0); } }
+        public static Color AccentColor { get { return Neon; } }
+        public static Color OkColor { get { return Dark ? Neon : Color.FromArgb(0, 130, 0); } }
 
         private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-theme.txt"); } }
 
@@ -64,12 +74,12 @@ namespace BTOptimizer
         {
             if (Dark)
             {
-                Bg = Color.FromArgb(22, 24, 29); Panel = Color.FromArgb(30, 33, 40);
-                Ink = Color.FromArgb(212, 218, 224); InkDim = Color.FromArgb(140, 147, 156);
-                Line = Color.FromArgb(56, 61, 71); GroupInk = Color.FromArgb(120, 150, 210);
-                FieldBg = Color.FromArgb(26, 29, 35);
-                MenuBg = Color.FromArgb(32, 35, 42); MenuHot = Color.FromArgb(52, 58, 70);
-                MenuLine = Color.FromArgb(64, 70, 82);
+                Bg = Color.FromArgb(5, 6, 6); Panel = Color.FromArgb(13, 15, 14);
+                Ink = Color.FromArgb(246, 246, 247); InkDim = Color.FromArgb(148, 151, 163);
+                Line = Color.FromArgb(46, 48, 47); GroupInk = Color.FromArgb(126, 128, 143);
+                FieldBg = Color.FromArgb(10, 12, 11);
+                MenuBg = Color.FromArgb(14, 16, 15); MenuHot = Color.FromArgb(30, 36, 33);
+                MenuLine = Color.FromArgb(46, 48, 47);
             }
             else
             {
@@ -112,6 +122,12 @@ namespace BTOptimizer
             return Math.Abs(c.R - c.G) < 18 && Math.Abs(c.G - c.B) < 18;
         }
 
+        /// <summary>Famille des verts « accent » de l'app (boutons/compteurs) à unifier sur le néon.</summary>
+        private static bool IsGreen(Color c)
+        {
+            return c.G >= 120 && c.G >= c.R + 50 && c.G >= c.B + 40;
+        }
+
         private static Color Blend(Color a, Color b, float t)
         {
             return Color.FromArgb(
@@ -139,7 +155,7 @@ namespace BTOptimizer
                 using (var br = new SolidBrush(Color.White))
                     g.DrawString("DesTin", font, br, x, y, sf);
                 var gr = new RectangleF(x + a.Width, y, b.Width + 2f, b.Height);
-                using (var lg = new LinearGradientBrush(gr, Color.FromArgb(0, 225, 140), Color.FromArgb(0, 170, 255), 0f))
+                using (var lg = new LinearGradientBrush(gr, BrandA, BrandB, 0f))
                     g.DrawString("GOOD", font, lg, x + a.Width, y, sf);
                 w = a.Width + b.Width;
             }
@@ -217,9 +233,9 @@ namespace BTOptimizer
             public override Color MenuItemPressedGradientEnd { get { return MenuBg; } }
             public override Color SeparatorDark { get { return MenuLine; } }
             public override Color SeparatorLight { get { return MenuBg; } }
-            public override Color CheckBackground { get { return AccentRef; } }
-            public override Color CheckSelectedBackground { get { return AccentRef; } }
-            public override Color CheckPressedBackground { get { return AccentRef; } }
+            public override Color CheckBackground { get { return Neon; } }
+            public override Color CheckSelectedBackground { get { return Neon; } }
+            public override Color CheckPressedBackground { get { return Neon; } }
             public override Color ToolStripBorder { get { return MenuLine; } }
         }
 
@@ -280,7 +296,7 @@ namespace BTOptimizer
             RoleInfo r;
             if (Roles.TryGetValue(c, out r)) return r;
             r = new RoleInfo();
-            if (c is Panel && Near(c.BackColor, HeaderBg))
+            if (c is Panel && (Near(c.BackColor, HeaderRef) || Near(c.BackColor, HeaderBg)))
             {
                 r.Banner = true;
                 // Seuls les bandeaux en tête de fenêtre reçoivent le liseré (pas les tuiles).
@@ -333,8 +349,24 @@ namespace BTOptimizer
             if (header)
             {
                 if (c is Panel) c.BackColor = HeaderBg;
+                var hb = c as Button;
+                if (hb != null)
+                {
+                    if (IsGreen(hb.BackColor)) { hb.BackColor = Neon; hb.ForeColor = Color.Black; }
+                    else if (Near(hb.BackColor, HeaderRef) || Near(hb.BackColor, HeaderBg))
+                    {
+                        hb.BackColor = HeaderBg; hb.ForeColor = Color.White;
+                        try { hb.FlatAppearance.BorderColor = Color.FromArgb(58, 62, 60); } catch { }
+                    }
+                }
                 if (c is Label)
-                    c.ForeColor = (c.Font != null && c.Font.Size >= 12.5f) ? Color.White : Color.FromArgb(170, 175, 185);
+                {
+                    if (Near(c.BackColor, HeaderRef)) c.BackColor = HeaderBg;
+                    if (IsGreen(c.ForeColor))
+                        c.ForeColor = Neon; // compteurs/statuts verts unifiés sur le néon
+                    else if (IsGrayish(c.ForeColor) || c.ForeColor.GetBrightness() > 0.82f)
+                        c.ForeColor = (c.Font != null && c.Font.Size >= 12.5f) ? Color.White : Color.FromArgb(158, 160, 173);
+                }
             }
             else if (c is Form)
             {
@@ -373,9 +405,15 @@ namespace BTOptimizer
             else if (c is Button)
             {
                 var b = (Button)c;
-                if (!role.AccentBtn) // laisse les boutons accent (couleur pleine) tels quels
+                if (IsGreen(b.BackColor))
                 {
-                    b.BackColor = Panel; b.ForeColor = Ink;
+                    // Accent façon FPSDoctor : fond néon, texte noir.
+                    b.BackColor = Neon; b.ForeColor = Color.Black;
+                }
+                else if (!role.AccentBtn) // laisse les autres boutons accent (orange, bleu...) tels quels
+                {
+                    b.BackColor = Panel;
+                    b.ForeColor = IsGreen(b.ForeColor) ? (Dark ? Neon : AccentRef) : Ink;
                     try { b.FlatAppearance.BorderColor = Line; } catch { }
                 }
             }
@@ -391,8 +429,10 @@ namespace BTOptimizer
             }
             else if (c is Label)
             {
-                // On ne touche qu'au texte "par défaut" (gris/noir), pas aux libellés colorés (accent/statut).
-                if (IsGrayish(c.ForeColor)) c.ForeColor = c.ForeColor.GetBrightness() < 0.5f ? Ink : InkDim;
+                // Texte "par défaut" (gris/noir) suivant le thème ; les verts de statut
+                // s'alignent sur le néon en sombre (les autres libellés colorés restent).
+                if (IsGreen(c.ForeColor)) c.ForeColor = Dark ? Neon : AccentRef;
+                else if (IsGrayish(c.ForeColor)) c.ForeColor = c.ForeColor.GetBrightness() < 0.5f ? Ink : InkDim;
             }
             else if (c is Panel || c is FlowLayoutPanel || c is TableLayoutPanel)
             {
@@ -462,8 +502,8 @@ namespace BTOptimizer
             else if (st.Down) back = Hover(back, 2);
             else if (st.Hover) back = Hover(back, 1);
 
-            float rad = Dpi(b, 8f);
-            if (rad > r.Height / 2f - 1f) rad = r.Height / 2f - 1f;
+            // Pilule complète (identité FPSDoctor : border-radius maximal).
+            float rad = r.Height / 2f - 1f;
             var rf = new RectangleF(r.X + 0.5f, r.Y + 0.5f, r.Width - 1f, r.Height - 1f);
             SmoothingMode old = g.SmoothingMode;
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -536,14 +576,14 @@ namespace BTOptimizer
             var rf = new RectangleF(0.5f, 0.5f, r.Width - 1f, r.Height - 1f);
             SmoothingMode old = g.SmoothingMode;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (GraphicsPath path = RoundPath(rf, Dpi(gb, 9f)))
+            using (GraphicsPath path = RoundPath(rf, Dpi(gb, 12f)))
             {
                 using (var br = new SolidBrush(Panel)) g.FillPath(br, path);
                 using (var pen = new Pen(Line)) g.DrawPath(pen, path);
             }
             g.SmoothingMode = old;
 
-            Color bar = Dark ? Color.FromArgb(0, 190, 120) : AccentRef;
+            Color bar = Dark ? Neon : AccentRef;
             using (var br = new SolidBrush(bar))
                 g.FillRectangle(br, 12, 6, 3, 11);
             TextRenderer.DrawText(g, gb.Text, gb.Font,
@@ -570,7 +610,7 @@ namespace BTOptimizer
         {
             var lv = (ListView)sender;
             Rectangle r = e.Bounds;
-            using (var br = new SolidBrush(Dark ? Color.FromArgb(36, 40, 48) : Color.FromArgb(240, 242, 245)))
+            using (var br = new SolidBrush(Dark ? Color.FromArgb(16, 18, 17) : Color.FromArgb(240, 242, 245)))
                 e.Graphics.FillRectangle(br, r);
             using (var pen = new Pen(Line))
                 e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);

@@ -285,14 +285,14 @@ namespace BTOptimizer
         {
             if (st.OnePctLowFps <= 0) return Color.White;
             double r = st.Fps > 0 ? st.OnePctLowFps / st.Fps : 1;
-            if (r >= 0.7) return Color.FromArgb(120, 230, 170);
+            if (r >= 0.7) return Theme.AccentColor;
             if (r >= 0.4) return Color.FromArgb(245, 190, 90);
             return Color.FromArgb(245, 120, 120);   // gros écart moyenne/1% low = stutter
         }
 
         private static Color WorstColor(double ms)
         {
-            if (ms <= 8) return Color.FromArgb(120, 230, 170);
+            if (ms <= 8) return Theme.AccentColor;
             if (ms <= 25) return Color.White;
             if (ms <= 50) return Color.FromArgb(245, 190, 90);
             return Color.FromArgb(245, 120, 120);
@@ -319,10 +319,10 @@ namespace BTOptimizer
             if (target > 0)
             {
                 float ty = (float)(rc.Height - (target / max) * (rc.Height - 6)) - 3;
-                using (var pen = new Pen(Color.FromArgb(90, 0, 200, 120), 1f) { DashStyle = DashStyle.Dash })
+                using (var pen = new Pen(Color.FromArgb(90, Theme.OkColor), 1f) { DashStyle = DashStyle.Dash })
                     g.DrawLine(pen, 0, ty, rc.Width, ty);
                 TextRenderer.DrawText(g, target.ToString("0.0") + " ms (" + _screenHz + " Hz)",
-                    new Font("Segoe UI", 7.5f), new Point(4, (int)ty - 15), Color.FromArgb(0, 200, 120));
+                    new Font("Segoe UI", 7.5f), new Point(4, (int)ty - 15), Theme.OkColor);
             }
 
             float w = Math.Max(1f, (float)rc.Width / _graphData.Length);

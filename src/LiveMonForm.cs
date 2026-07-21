@@ -242,14 +242,14 @@ namespace BTOptimizer
         private static Color TileColor(double us)
         {
             if (us <= 0) return Color.White;
-            if (us <= 500) return Color.FromArgb(120, 230, 170);
+            if (us <= 500) return Theme.AccentColor;
             if (us <= 1000) return Color.FromArgb(245, 190, 90);
             return Color.FromArgb(245, 120, 120);
         }
 
         private static Color HardFaultColor(EtwLive.HardFaultInfo hf)
         {
-            if (hf.Count == 0) return Color.FromArgb(120, 230, 170);         // aucun accès disque forcé
+            if (hf.Count == 0) return Theme.AccentColor;                     // aucun accès disque forcé
             if (hf.WorstMs >= 50) return Color.FromArgb(245, 120, 120);      // gros stutter potentiel
             if (hf.WorstMs >= 10) return Color.FromArgb(245, 190, 90);
             return Color.White;

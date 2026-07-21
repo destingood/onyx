@@ -132,7 +132,7 @@ namespace BTOptimizer
                         if (bestIdx >= 0)
                         {
                             _combo.SelectedIndex = bestIdx;
-                            _results.ForeColor = Color.FromArgb(0, 120, 60);
+                            _results.ForeColor = Theme.OkColor;
                         }
                         _btnTest.Enabled = true; _btnApply.Enabled = true;
                         Cursor = Cursors.Default;

@@ -118,7 +118,7 @@ namespace BTOptimizer
             bool d = Theme.Dark;
             if (level == 2) return d ? Color.FromArgb(240, 100, 100) : Color.FromArgb(200, 40, 40);
             if (level == 1) return d ? Color.FromArgb(240, 185, 70) : Color.FromArgb(190, 120, 0);
-            return d ? Color.FromArgb(90, 205, 150) : Color.FromArgb(0, 140, 80);
+            return d ? Theme.AccentColor : Color.FromArgb(0, 140, 80);
         }
 
         private Button MakeFixButton(Diagnostics.Finding fd)

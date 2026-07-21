@@ -200,7 +200,7 @@ namespace BTOptimizer
         private static Color TileColor(double us)
         {
             if (us <= 0) return Color.White;
-            if (us <= 500) return Color.FromArgb(120, 230, 170);
+            if (us <= 500) return Theme.AccentColor;
             if (us <= 1000) return Color.FromArgb(245, 190, 90);
             return Color.FromArgb(245, 120, 120);
         }
