@@ -28,6 +28,13 @@
     <Compile Include="src\**\*.cs" />
   </ItemGroup>
 
+  <!-- Assets FPSDoctor (mascotte, badges) embarques comme ressources. -->
+  <ItemGroup>
+    <EmbeddedResource Include="src\assets\*.png">
+      <LogicalName>%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.4" />

@@ -44,7 +44,7 @@ namespace BTOptimizer
                 {
                     Sys.Init();
                     if (!LicenseForm.EnsureAccepted()) return;
-                    Application.Run(new MainForm());
+                    Application.Run(new DashboardForm());
                 }
                 catch (Exception ex)
                 {
