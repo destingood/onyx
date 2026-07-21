@@ -176,39 +176,39 @@ namespace BTOptimizer
             };
 
             // --- Portes d'entrée (tout en haut) ---
-            _menu.Items.Add("🧭 J'ai un problème…  (assistant : quel outil pour quoi)", null, open(() => new HelpNavForm(Log)));
-            _menu.Items.Add("🏥 Santé de mon PC  (bilan /100)", null, open(() => new HealthForm(Log)));
+            _menu.Items.Add("J'ai un problème…  (assistant : quel outil pour quoi)", null, open(() => new HelpNavForm(Log)));
+            _menu.Items.Add("Santé de mon PC  (bilan /100)", null, open(() => new HealthForm(Log)));
             _menu.Items.Add(new ToolStripSeparator());
 
             // --- ⚡ Performance & FPS ---
             var mPerf = group("⚡  Performance & FPS");
-            mPerf.DropDownItems.Add("🎯 Objectif 500 FPS (écran haute fréquence)...", null, OnFps500Open);
-            mPerf.DropDownItems.Add("📈 FPS en direct (par jeu, façon PresentMon)...", null, open(() => new FpsMonForm(Log)));
+            mPerf.DropDownItems.Add("Objectif 500 FPS (écran haute fréquence)...", null, OnFps500Open);
+            mPerf.DropDownItems.Add("FPS en direct (par jeu, façon PresentMon)...", null, open(() => new FpsMonForm(Log)));
             mPerf.DropDownItems.Add("⏱ Latence en direct (DPC/ISR par pilote)...", null, open(() => new LiveMonForm(Log)));
-            mPerf.DropDownItems.Add("🧪 Benchmark rapide (CPU / mémoire / disque)...", null, open(() => new BenchForm(Log)));
-            mPerf.DropDownItems.Add("🔍 Qui ralentit mon PC ? (processus de fond)...", null, open(() => new BloatForm(Log)));
-            mPerf.DropDownItems.Add("🏁 Prêt pour le match ? (checklist)...", null, open(() => new TournamentForm(Log)));
+            mPerf.DropDownItems.Add("Benchmark rapide (CPU / mémoire / disque)...", null, open(() => new BenchForm(Log)));
+            mPerf.DropDownItems.Add("Qui ralentit mon PC ? (processus de fond)...", null, open(() => new BloatForm(Log)));
+            mPerf.DropDownItems.Add("Prêt pour le match ? (checklist)...", null, open(() => new TournamentForm(Log)));
             mPerf.DropDownItems.Add("Guide latence & perf (checklist input lag)...", null, open(() => new LatencyGuideForm(Log)));
 
-            // --- 🩺 Crashs & stabilité ---
-            var mCrash = group("🩺  Crashs & stabilité");
-            mCrash.DropDownItems.Add("🩺 Stabilité : qu'est-ce qui a planté ? (14 j)...", null, open(() => new StabilityForm(Log)));
-            mCrash.DropDownItems.Add("🌡️ Températures & throttling...", null, open(() => new ThermalForm(Log)));
-            mCrash.DropDownItems.Add("🧪 Test de stress CPU (intégré)...", null, open(() => new StressForm(Log)));
-            mCrash.DropDownItems.Add("🛒 Boutiques infinies / jeux qui crashent...", null, open(() => new ShopFixForm(Log)));
-            mCrash.DropDownItems.Add("🧹 Réglages néfastes d'autres optimiseurs...", null, open(() => new CheckupForm(Log)));
-            mCrash.DropDownItems.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC)...", null, OnRepairWindows);
-            _miWatch = new ToolStripMenuItem("🛡 Surveillance en fond (alerte GPU chaud / pilote)", null, OnWatchToggle);
+            // --- Crashs & stabilité ---
+            var mCrash = group(" Crashs & stabilité");
+            mCrash.DropDownItems.Add("Stabilité : qu'est-ce qui a planté ? (14 j)...", null, open(() => new StabilityForm(Log)));
+            mCrash.DropDownItems.Add("Températures & throttling...", null, open(() => new ThermalForm(Log)));
+            mCrash.DropDownItems.Add("Test de stress CPU (intégré)...", null, open(() => new StressForm(Log)));
+            mCrash.DropDownItems.Add("Boutiques infinies / jeux qui crashent...", null, open(() => new ShopFixForm(Log)));
+            mCrash.DropDownItems.Add("Réglages néfastes d'autres optimiseurs...", null, open(() => new CheckupForm(Log)));
+            mCrash.DropDownItems.Add("Réparer l'intégrité de Windows (DISM + SFC)...", null, OnRepairWindows);
+            _miWatch = new ToolStripMenuItem("Surveillance en fond (alerte GPU chaud / pilote)", null, OnWatchToggle);
             _miWatch.CheckOnClick = true;
             mCrash.DropDownItems.Add(_miWatch);
 
-            // --- 📡 Réseau ---
-            var mNet = group("📡  Réseau");
-            mNet.DropDownItems.Add("📶 Qualité réseau (chez toi ou le FAI ?)...", null, open(() => new NetworkForm(Log)));
-            mNet.DropDownItems.Add("🛰️ Trajet réseau (traceroute : où le lag apparaît)...", null, open(() => new NetRouteForm(Log)));
+            // --- Réseau ---
+            var mNet = group(" Réseau");
+            mNet.DropDownItems.Add("Qualité réseau (chez toi ou le FAI ?)...", null, open(() => new NetworkForm(Log)));
+            mNet.DropDownItems.Add("Trajet réseau (traceroute : où le lag apparaît)...", null, open(() => new NetRouteForm(Log)));
             mNet.DropDownItems.Add("⚙️ Réglages TCP/IP (jeu + téléchargements)...", null, open(() => new NetTuneForm(Log)));
-            mNet.DropDownItems.Add("📡 Carte réseau (latence : interruptions, flux, EEE)...", null, open(() => new NetAdapterForm(Log)));
-            mNet.DropDownItems.Add("🌐 DNS rapide (résolveur, IPv4+IPv6)...", null, open(() => new DnsForm(Log)));
+            mNet.DropDownItems.Add("Carte réseau (latence : interruptions, flux, EEE)...", null, open(() => new NetAdapterForm(Log)));
+            mNet.DropDownItems.Add("DNS rapide (résolveur, IPv4+IPv6)...", null, open(() => new DnsForm(Log)));
             mNet.DropDownItems.Add("Réparer le réseau (Winsock / TCP-IP)...", null, (s, e) =>
             {
                 if (MessageBox.Show(this,
@@ -221,41 +221,41 @@ namespace BTOptimizer
                 System.Threading.Tasks.Task.Run(() => Sys.NetworkRepair(Log));
             });
 
-            // --- 🎮 Jeux & écran ---
-            var mGame = group("🎮  Jeux & écran");
-            mGame.DropDownItems.Add("📦 Bibliothèques de jeu manquantes & applis...", null, open(() => new LibsForm(Log)));
-            mGame.DropDownItems.Add("🎮 Priorité CPU par jeu...", null, open(() => new GameProfileForm(Log)));
-            mGame.DropDownItems.Add("🔐 Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
-            mGame.DropDownItems.Add("🖥️ Réglages d'écran (fréquence max, VRR/HDR)...", null, open(() => new DisplayForm(Log)));
-            mGame.DropDownItems.Add("🖱️ Fréquence réelle de la souris...", null, open(() => new MouseForm(Log)));
-            mGame.DropDownItems.Add("🎯 Viseur (crosshair) personnalisé...", null, open(() => new CrosshairForm(Log)));
-            mGame.DropDownItems.Add("🎨 Filtre couleur / vibrance...", null, open(() => new ColorFilterForm(Log)));
+            // --- Jeux & écran ---
+            var mGame = group(" Jeux & écran");
+            mGame.DropDownItems.Add("Bibliothèques de jeu manquantes & applis...", null, open(() => new LibsForm(Log)));
+            mGame.DropDownItems.Add("Priorité CPU par jeu...", null, open(() => new GameProfileForm(Log)));
+            mGame.DropDownItems.Add("Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
+            mGame.DropDownItems.Add("Réglages d'écran (fréquence max, VRR/HDR)...", null, open(() => new DisplayForm(Log)));
+            mGame.DropDownItems.Add("Fréquence réelle de la souris...", null, open(() => new MouseForm(Log)));
+            mGame.DropDownItems.Add("Viseur (crosshair) personnalisé...", null, open(() => new CrosshairForm(Log)));
+            mGame.DropDownItems.Add("Filtre couleur / vibrance...", null, open(() => new ColorFilterForm(Log)));
 
-            // --- 💾 Disque & entretien ---
-            var mDisk = group("💾  Disque & entretien");
-            mDisk.DropDownItems.Add("💾 Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
-            mDisk.DropDownItems.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
+            // --- Disque & entretien ---
+            var mDisk = group(" Disque & entretien");
+            mDisk.DropDownItems.Add("Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
+            mDisk.DropDownItems.Add("Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
             mDisk.DropDownItems.Add("Nettoyage disque (temporaires, caches...)...", null, open(() => new CleanupForm(Log)));
-            mDisk.DropDownItems.Add("🔁 Points de restauration (filet de sécurité)...", null, open(() => new RestoreForm(Log)));
+            mDisk.DropDownItems.Add("Points de restauration (filet de sécurité)...", null, open(() => new RestoreForm(Log)));
             mDisk.DropDownItems.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
             {
                 Log("Nettoyage de la mémoire...", 0);
                 System.Threading.Tasks.Task.Run(() => Sys.CleanMemory(Log));
             });
 
-            // --- 🔧 Système & matériel ---
-            var mSys = group("🔧  Système & matériel");
+            // --- Système & matériel ---
+            var mSys = group(" Système & matériel");
             mSys.DropDownItems.Add("Composants & diagnostic du système...", null, open(() => new SystemInfoForm(Log)));
             mSys.DropDownItems.Add("Audio & enceintes (périphériques, améliorations)...", null, open(() => new AudioForm(Log)));
             mSys.DropDownItems.Add("Gestionnaire de périphériques (erreurs)...", null, open(() => new DeviceManagerForm(Log)));
             mSys.DropDownItems.Add("Programmes au démarrage...", null, open(() => new StartupForm(Log)));
             mSys.DropDownItems.Add("Services Windows...", null, open(() => new ServicesForm(Log)));
 
-            // --- 🗂 Mon profil ---
-            var mProfile = group("🗂  Mon profil d'optimisations");
+            // --- Mon profil ---
+            var mProfile = group(" Mon profil d'optimisations");
             mProfile.DropDownItems.Add("Re-vérifier l'état des optimisations (re-scan)", null,
                 (s, e) => { RefreshStates(); Log("États re-vérifiés : les mentions [déjà actif] sont à jour.", 0); });
-            mProfile.DropDownItems.Add("🛡 Mon profil a-t-il été annulé (Windows Update) ?...", null, OnCheckDrift);
+            mProfile.DropDownItems.Add("Mon profil a-t-il été annulé (Windows Update) ?...", null, OnCheckDrift);
             mProfile.DropDownItems.Add("Exporter mon profil (fichier)...", null, OnExportProfile);
             mProfile.DropDownItems.Add("Importer un profil...", null, OnImportProfile);
             mProfile.DropDownItems.Add("Réinitialiser TOUTES les optimisations (valeurs Windows)", null, OnResetAll);
@@ -332,7 +332,7 @@ namespace BTOptimizer
             _btnLatMin.Font = new Font("Segoe UI Semibold", 9f);
             _btnLatMin.FlatAppearance.BorderSize = 0;
             _btnLatMin.Click += OnLatencyMinimal;
-            _btnFps500 = MakeButton("🎯 500 FPS", 636, 104, 106, 28, false);
+            _btnFps500 = MakeButton("500 FPS", 636, 104, 106, 28, false);
             _btnFps500.BackColor = Color.FromArgb(200, 80, 0);
             _btnFps500.ForeColor = Color.White;
             _btnFps500.Font = new Font("Segoe UI Semibold", 9f);
@@ -816,10 +816,10 @@ namespace BTOptimizer
                 + "• CPU : Performances ultimes, turbo agressif, zéro throttling\n"
                 + "• planificateur : priorité au jeu, timer 1 ms, MMCSS réactif\n\n"
                 + "Rappel honnête : les 500 FPS se DÉBLOQUENT ensuite dans chaque jeu\n"
-                + "(limite de FPS → 500/illimitée, V-Sync off) — le panneau 🎯 te guide jeu par jeu.\n\n"
+                + "(limite de FPS → 500/illimitée, V-Sync off) — le panneau te guide jeu par jeu.\n\n"
                 + "Tout est réversible (sauvegarde .reg automatique)."
                 + (reboot > 0 ? "\n" + reboot + " réglage(s) nécessitent un redémarrage." : "");
-            if (MessageBox.Show(this, msg, "🎯 Objectif 500 FPS",
+            if (MessageBox.Show(this, msg, "Objectif 500 FPS",
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
             Log("Application du pack 500 FPS (" + sel.Count + " optimisations)...", 0);
@@ -894,7 +894,7 @@ namespace BTOptimizer
                 Log("  ! RAM à " + _hw.RamRunningMTs + " MT/s alors que tes barrettes gèrent " + _hw.RamRatedMTs
                     + " : active le profil XMP/EXPO dans le BIOS — gain de FPS gratuit.", 2);
             if (_hw.ScreensBelowMax > 0)
-                Log("  ! " + _hw.ScreensBelowMax + " écran(s) SOUS leur fréquence max — ouvre 🎯 Objectif 500 FPS (bouton ⬆ Passer à la fréquence max).", 2);
+                Log("  ! " + _hw.ScreensBelowMax + " écran(s) SOUS leur fréquence max — ouvre Objectif 500 FPS (bouton ⬆ Passer à la fréquence max).", 2);
             if (_hw.HypervisorActive)
                 Log("  • Hyperviseur/VBS actif : coûte quelques % de CPU en jeu — désactivable via Composants & diagnostic (compromis sécurité, ton choix).", 0);
             Log("  • Écartés (choix explicite) : sécurité (Spectre/VBS), recherche Windows, MSI stockage, "
@@ -987,7 +987,7 @@ namespace BTOptimizer
                 {
                     BeginInvoke((Action)(() =>
                     {
-                        Log("🛡 " + drifted.Count + " optimisation(s) de ton profil ne sont PLUS actives "
+                        Log("" + drifted.Count + " optimisation(s) de ton profil ne sont PLUS actives "
                             + "(mise à jour Windows ?) — menu ☰ → « Mon profil a-t-il été annulé ? » pour les ré-appliquer.", 2);
                         if (_tray != null)
                             _tray.ShowBalloonTip(4000, "DesTinGOOD",
@@ -1023,7 +1023,7 @@ namespace BTOptimizer
             if (MessageBox.Show(this,
                     drifted.Count + " optimisation(s) de ton profil ont été ANNULÉES (mise à jour Windows, "
                     + "pilote, autre outil ?) :\n\n" + names + "\n\nLes ré-appliquer maintenant ? (sauvegarde .reg automatique)",
-                    "🛡 Profil annulé en partie", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    "Profil annulé en partie", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             ApplyPreset(t => drifted.Contains(t));
             _chkBackup.Checked = true;
@@ -1568,7 +1568,7 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
-        //  🛡 Gardien en fond : alerte GPU chaud / erreur pilote pendant le jeu
+        //  Gardien en fond : alerte GPU chaud / erreur pilote pendant le jeu
         // ------------------------------------------------------------------
         private void OnWatchToggle(object sender, EventArgs e)
         {
@@ -1582,9 +1582,9 @@ namespace BTOptimizer
                 {
                     try { _nvlSeen = CrashScan.GpuDriverErrors(1); } catch { _nvlSeen = -1; }
                 });
-                Log("🛡 Surveillance en fond activée : alerte si le GPU dépasse 85 °C ou si le pilote signale une erreur.", 1);
+                Log("Surveillance en fond activée : alerte si le GPU dépasse 85 °C ou si le pilote signale une erreur.", 1);
             }
-            else Log("🛡 Surveillance en fond désactivée.", 0);
+            else Log("Surveillance en fond désactivée.", 0);
         }
 
         private void GuardianTick()
@@ -1620,7 +1620,7 @@ namespace BTOptimizer
                         int now = -1;
                         try { now = CrashScan.GpuDriverErrors(1); } catch { }
                         if (_nvlSeen >= 0 && now > _nvlSeen)
-                            TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre 🩺 Stabilité pour le verdict.");
+                            TrayWarn("Le pilote GPU vient de signaler une erreur — ouvre Stabilité pour le verdict.");
                         if (now >= 0) _nvlSeen = now;
                     }
                 }
@@ -1632,7 +1632,7 @@ namespace BTOptimizer
         // Appelable depuis un thread de fond : marshalle la bulle (NotifyIcon n'est pas thread-safe).
         private void TrayWarn(string msg)
         {
-            Log("🛡 " + msg, 2);   // Log se re-dispatche déjà via InvokeRequired
+            Log("" + msg, 2);   // Log se re-dispatche déjà via InvokeRequired
             try
             {
                 BeginInvoke((Action)(() =>

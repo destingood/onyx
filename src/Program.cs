@@ -86,6 +86,28 @@ namespace BTOptimizer
                 return;
             }
 
+            // BT_FORMSHOT=Nom1,Nom2 : capture chaque fenêtre nommée du menu ⋯ hors-écran (une par
+            // une, avec log de progression pour repérer un éventuel blocage). BT_UISHOT=<dossier>.
+            string fshot = Environment.GetEnvironmentVariable("BT_FORMSHOT");
+            if (!string.IsNullOrEmpty(fshot))
+            {
+                try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+                string dir = Environment.GetEnvironmentVariable("BT_UISHOT");
+                if (string.IsNullOrEmpty(dir)) dir = System.IO.Path.GetTempPath();
+                try { System.IO.Directory.CreateDirectory(dir); } catch { }
+                foreach (string raw in fshot.Split(','))
+                {
+                    string name = raw.Trim();
+                    if (name.Length == 0) continue;
+                    Console.WriteLine("start " + name); Console.Out.Flush();
+                    var f = MakeMenuForm(name);
+                    if (f == null) { Console.WriteLine("  ? inconnu"); continue; }
+                    CaptureFormShot(dir, name, f);
+                    Console.WriteLine("done " + name); Console.Out.Flush();
+                }
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
@@ -664,6 +686,71 @@ namespace BTOptimizer
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < ms) { Application.DoEvents(); System.Threading.Thread.Sleep(15); }
+        }
+
+        // Fabrique une fenêtre du menu ⋯ par son nom (pour la capture BT_FORMSHOT).
+        private static System.Windows.Forms.Form MakeMenuForm(string name)
+        {
+            Action<string, int> log = delegate (string m, int l) { };
+            switch (name)
+            {
+                case "MainForm": return new MainForm();
+                case "GameProfileForm": return new GameProfileForm(log);
+                case "NetworkForm": return new NetworkForm(log);
+                case "DiskForm": return new DiskForm(log);
+                case "ShopFixForm": return new ShopFixForm(log);
+                case "LibsForm": return new LibsForm(log);
+                case "DefenderForm": return new DefenderForm(log);
+                case "TournamentForm": return new TournamentForm(log);
+                case "Fps500Form": return new Fps500Form(log);
+                case "BenchForm": return new BenchForm(log);
+                case "DisplayForm": return new DisplayForm(log);
+                case "LatencyGuideForm": return new LatencyGuideForm(log);
+                case "HealthForm": return new HealthForm(log);
+                case "BloatForm": return new BloatForm(log);
+                case "CheckupForm": return new CheckupForm(log);
+                case "StabilityForm": return new StabilityForm(log);
+                case "StressForm": return new StressForm(log);
+                case "ThermalForm": return new ThermalForm(log);
+                case "MonitorForm": return new MonitorForm();
+                case "SystemInfoForm": return new SystemInfoForm(log);
+                case "DnsForm": return new DnsForm(log);
+                case "NetTuneForm": return new NetTuneForm(log);
+                case "NetRouteForm": return new NetRouteForm(log);
+                case "MouseForm": return new MouseForm(log);
+                case "AudioForm": return new AudioForm(log);
+                case "DeviceManagerForm": return new DeviceManagerForm(log);
+                case "StartupForm": return new StartupForm(log);
+                case "ServicesForm": return new ServicesForm(log);
+                case "RestoreForm": return new RestoreForm(log);
+                case "HelpNavForm": return new HelpNavForm(log);
+                case "AboutForm": return new AboutForm();
+                case "LicenseKeyForm": return new LicenseKeyForm("");
+                default: return null;
+            }
+        }
+
+        private static void CaptureFormShot(string dir, string name, System.Windows.Forms.Form f)
+        {
+            try
+            {
+                f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show();
+                Pump(1200);   // laisse le OnLoad peupler la fenêtre
+                using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
+                {
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); }
+                    }
+                    bmp.Save(System.IO.Path.Combine(dir, "form-" + name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+                f.Hide();   // Hide (pas Close) : Close du dernier form détruit le contexte UI du thread
+            }
+            catch (Exception ex) { Console.WriteLine("  formshot " + name + " ERREUR : " + ex.Message); }
+            finally { try { f.Dispose(); } catch { } }
         }
 
         /// <summary>BT_UISHOT=&lt;dossier&gt; : montre le shell HORS de l'écran visible (-5000,-5000)

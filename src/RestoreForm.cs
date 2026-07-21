@@ -8,7 +8,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🔁 Points de restauration système : le filet de sécurité ultime. Crée un point AVANT
+    /// Points de restauration système : le filet de sécurité ultime. Crée un point AVANT
     /// de bidouiller, liste les points existants, et ouvre la restauration Windows pour
     /// revenir en arrière si besoin. Active la restauration système si un outil l'a coupée.
     /// </summary>
@@ -43,7 +43,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🔁 Points de restauration — reviens en arrière en sécurité",
+                Text = "  Points de restauration — reviens en arrière en sécurité",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

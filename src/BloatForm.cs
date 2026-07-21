@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🔍 Qui ralentit mon PC ? — top des processus par CPU (échantillonné) et RAM, avec
+    /// Qui ralentit mon PC ? — top des processus par CPU (échantillonné) et RAM, avec
     /// repérage des logiciels de fond connus (RGB, lanceurs, overlays, navigateurs, cloud)
     /// qui grignotent tes perfs pendant le jeu. Lecture seule ; fermeture optionnelle,
     /// confirmée, jamais sur un process système.
@@ -36,49 +36,49 @@ namespace BTOptimizer
         private static readonly Dictionary<string, Known> Bloat = new Dictionary<string, Known>(StringComparer.OrdinalIgnoreCase)
         {
             // RGB / périphériques
-            { "icue", new Known("🎨 RGB", "Corsair iCUE — fermable en jeu") },
-            { "lghub", new Known("🎨 RGB", "Logitech G HUB — fermable en jeu") },
-            { "logioptionsplus", new Known("🎨 RGB", "Logi Options+ — fermable en jeu") },
-            { "armourycrate", new Known("🎨 RGB", "ASUS Armoury Crate — lourd, fermable en jeu") },
-            { "armstrong", new Known("🎨 RGB", "ASUS/AsusService — fermable en jeu") },
-            { "razer synapse", new Known("🎨 RGB", "Razer Synapse — fermable en jeu") },
-            { "razer central", new Known("🎨 RGB", "Razer Central — fermable en jeu") },
-            { "msi center", new Known("🎨 RGB", "MSI Center — fermable en jeu") },
-            { "signalrgbcore", new Known("🎨 RGB", "SignalRGB — fermable en jeu") },
-            { "signalrgb", new Known("🎨 RGB", "SignalRGB — fermable en jeu") },
-            { "openrgb", new Known("🎨 RGB", "OpenRGB — fermable en jeu") },
-            { "lightingservice", new Known("🎨 RGB", "service RGB — fermable en jeu") },
-            { "aac ambient lighting", new Known("🎨 RGB", "ASUS Aura — fermable en jeu") },
+            { "icue", new Known("RGB", "Corsair iCUE — fermable en jeu") },
+            { "lghub", new Known("RGB", "Logitech G HUB — fermable en jeu") },
+            { "logioptionsplus", new Known("RGB", "Logi Options+ — fermable en jeu") },
+            { "armourycrate", new Known("RGB", "ASUS Armoury Crate — lourd, fermable en jeu") },
+            { "armstrong", new Known("RGB", "ASUS/AsusService — fermable en jeu") },
+            { "razer synapse", new Known("RGB", "Razer Synapse — fermable en jeu") },
+            { "razer central", new Known("RGB", "Razer Central — fermable en jeu") },
+            { "msi center", new Known("RGB", "MSI Center — fermable en jeu") },
+            { "signalrgbcore", new Known("RGB", "SignalRGB — fermable en jeu") },
+            { "signalrgb", new Known("RGB", "SignalRGB — fermable en jeu") },
+            { "openrgb", new Known("RGB", "OpenRGB — fermable en jeu") },
+            { "lightingservice", new Known("RGB", "service RGB — fermable en jeu") },
+            { "aac ambient lighting", new Known("RGB", "ASUS Aura — fermable en jeu") },
             // Lanceurs
-            { "epicgameslauncher", new Known("🚀 lanceur", "Epic — fermable en jeu (sauf jeux Epic)") },
-            { "eadesktop", new Known("🚀 lanceur", "EA App — fermable en jeu (sauf jeux EA)") },
-            { "eabackgroundservice", new Known("🚀 lanceur", "EA (service de fond)") },
-            { "ubisoftconnect", new Known("🚀 lanceur", "Ubisoft Connect — fermable en jeu") },
-            { "upc", new Known("🚀 lanceur", "Ubisoft Connect — fermable en jeu") },
-            { "battle.net", new Known("🚀 lanceur", "Battle.net — fermable en jeu (sauf jeux Blizzard)") },
-            { "galaxyclient", new Known("🚀 lanceur", "GOG Galaxy — fermable en jeu") },
-            { "riotclientservices", new Known("🚀 lanceur", "Riot — nécessaire pour LoL/Valo, sinon fermable") },
-            { "razer cortex", new Known("🎨 RGB", "Razer Cortex — « booster » de fond, souvent inutile") },
-            { "nzxt cam", new Known("🎨 RGB", "NZXT CAM — monitoring/RGB, lourd, fermable en jeu") },
+            { "epicgameslauncher", new Known("lanceur", "Epic — fermable en jeu (sauf jeux Epic)") },
+            { "eadesktop", new Known("lanceur", "EA App — fermable en jeu (sauf jeux EA)") },
+            { "eabackgroundservice", new Known("lanceur", "EA (service de fond)") },
+            { "ubisoftconnect", new Known("lanceur", "Ubisoft Connect — fermable en jeu") },
+            { "upc", new Known("lanceur", "Ubisoft Connect — fermable en jeu") },
+            { "battle.net", new Known("lanceur", "Battle.net — fermable en jeu (sauf jeux Blizzard)") },
+            { "galaxyclient", new Known("lanceur", "GOG Galaxy — fermable en jeu") },
+            { "riotclientservices", new Known("lanceur", "Riot — nécessaire pour LoL/Valo, sinon fermable") },
+            { "razer cortex", new Known("RGB", "Razer Cortex — « booster » de fond, souvent inutile") },
+            { "nzxt cam", new Known("RGB", "NZXT CAM — monitoring/RGB, lourd, fermable en jeu") },
             // Fonds d'écran animés & overlays (gros consommateurs GPU)
-            { "wallpaper32", new Known("🖼️ fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
-            { "wallpaper64", new Known("🖼️ fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
-            { "lively", new Known("🖼️ fond animé", "Lively Wallpaper — fond animé, à couper en jeu") },
+            { "wallpaper32", new Known("fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
+            { "wallpaper64", new Known("fond animé", "Wallpaper Engine — fond d'écran animé, VRAI tueur de FPS en jeu") },
+            { "lively", new Known("fond animé", "Lively Wallpaper — fond animé, à couper en jeu") },
             // Overlays / comms / stream / capture
-            { "overwolf", new Known("💬 overlay", "Overwolf — overlay lourd, fermable en jeu") },
-            { "discord", new Known("💬 comms", "Discord — l'overlay peut coûter des FPS") },
-            { "medal", new Known("💬 capture", "Medal.tv — capture de clips en continu, coûte des FPS") },
-            { "wemod", new Known("💬 overlay", "WeMod — overlay de triche/trainer, à couper en compétitif") },
-            { "streamlabs", new Known("💬 stream", "Streamlabs — overlay/stream lourd, fermable si tu ne streames pas") },
-            { "ms-teams", new Known("💬 comms", "Microsoft Teams — tourne souvent en fond, fermable en jeu") },
-            { "slack", new Known("💬 comms", "Slack — fermable en jeu") },
-            { "spotify", new Known("🎵 audio", "Spotify — fermable en jeu (musique en fond)") },
+            { "overwolf", new Known("overlay", "Overwolf — overlay lourd, fermable en jeu") },
+            { "discord", new Known("comms", "Discord — l'overlay peut coûter des FPS") },
+            { "medal", new Known("capture", "Medal.tv — capture de clips en continu, coûte des FPS") },
+            { "wemod", new Known("overlay", "WeMod — overlay de triche/trainer, à couper en compétitif") },
+            { "streamlabs", new Known("stream", "Streamlabs — overlay/stream lourd, fermable si tu ne streames pas") },
+            { "ms-teams", new Known("comms", "Microsoft Teams — tourne souvent en fond, fermable en jeu") },
+            { "slack", new Known("comms", "Slack — fermable en jeu") },
+            { "spotify", new Known("audio", "Spotify — fermable en jeu (musique en fond)") },
             // Navigateurs
-            { "chrome", new Known("🌐 navigateur", "Chrome — gros consommateur RAM/CPU, ferme les onglets") },
-            { "msedge", new Known("🌐 navigateur", "Edge — ferme-le en jeu") },
-            { "firefox", new Known("🌐 navigateur", "Firefox — ferme-le en jeu") },
-            { "opera", new Known("🌐 navigateur", "Opera — ferme-le en jeu") },
-            { "brave", new Known("🌐 navigateur", "Brave — ferme-le en jeu") },
+            { "chrome", new Known("navigateur", "Chrome — gros consommateur RAM/CPU, ferme les onglets") },
+            { "msedge", new Known("navigateur", "Edge — ferme-le en jeu") },
+            { "firefox", new Known("navigateur", "Firefox — ferme-le en jeu") },
+            { "opera", new Known("navigateur", "Opera — ferme-le en jeu") },
+            { "brave", new Known("navigateur", "Brave — ferme-le en jeu") },
             // Cloud
             { "onedrive", new Known("☁️ cloud", "OneDrive — synchro en fond (voir optimisation dédiée)") },
             { "dropbox", new Known("☁️ cloud", "Dropbox — synchro en fond, fermable en jeu") },
@@ -113,7 +113,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🔍 Qui ralentit mon PC ? — les gourmands de fond",
+                Text = "  Qui ralentit mon PC ? — les gourmands de fond",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

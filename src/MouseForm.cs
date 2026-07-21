@@ -7,7 +7,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🖱️ Fréquence réelle de la souris : mesure le taux de rapport (polling rate) EN DIRECT
+    /// Fréquence réelle de la souris : mesure le taux de rapport (polling rate) EN DIRECT
     /// via l'entrée brute Windows (raw input WM_INPUT) — vérifie que ton « 1000 Hz » est bien
     /// à 1000 Hz. Aucune injection, aucun pilote : on écoute les rapports HID de la souris.
     /// </summary>
@@ -57,7 +57,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🖱️ Fréquence de la souris — ton 1000 Hz est-il vrai ?",
+                Text = "  Fréquence de la souris — ton 1000 Hz est-il vrai ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

@@ -9,7 +9,7 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🎮 Profils de priorité par jeu : donne à chaque jeu (individuellement) la priorité
+    /// Profils de priorité par jeu : donne à chaque jeu (individuellement) la priorité
     /// processeur « Haute » via le mécanisme officiel Windows (Image File Execution Options —
     /// aucune injection, compatible anticheat). Quand le CPU sature, le jeu coché passe devant
     /// les tâches de fond. Entièrement réversible, par jeu.
@@ -73,7 +73,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🎮 Priorité CPU par jeu — booste ton jeu principal",
+                Text = "  Priorité CPU par jeu — booste ton jeu principal",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -83,7 +83,7 @@ namespace BTOptimizer
             {
                 Text = "Coche les jeux à lancer en priorité processeur « Haute » (mécanisme officiel Windows, aucune "
                      + "injection — compatible anticheat). Utile surtout si ton PC est limité par le CPU. "
-                     + "Les jeux détectés sur ce PC sont marqués 🎮. Réversible : décoche et applique.",
+                     + "Les jeux détectés sur ce PC sont marqués . Réversible : décoche et applique.",
                 Location = new Point(18, 58), Size = new Size(584, 46), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(intro);
@@ -166,7 +166,7 @@ namespace BTOptimizer
             {
                 if (g.HighPriority) on++;
                 if (g.Detected) detected++;
-                _list.Items.Add((g.Detected ? "🎮 " : "     ") + g.Name
+                _list.Items.Add((g.Detected ? "" : "     ") + g.Name
                     + (g.HighPriority ? "   — priorité HAUTE active" : ""), g.HighPriority);
             }
             _summary.Text = on + " jeu(x) en priorité haute · " + detected + " détecté(s) sur ce PC.";

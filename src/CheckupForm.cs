@@ -9,7 +9,7 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🧹 Réglages néfastes d'autres optimiseurs : détecte les tweaks DANGEREUX laissés par
+    /// Réglages néfastes d'autres optimiseurs : détecte les tweaks DANGEREUX laissés par
     /// de mauvais guides / outils « boost FPS » (timer HPET forcé, récupération GPU désactivée,
     /// Defender coupé, fichier d'échange désactivé, TRIM SSD off…) et les remet aux valeurs
     /// saines de Windows. Tout est vérifié en local et réversible.
@@ -264,7 +264,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🧹 Réglages néfastes laissés par d'autres « optimiseurs »",
+                Text = "  Réglages néfastes laissés par d'autres « optimiseurs »",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f), TextAlign = ContentAlignment.MiddleLeft
             });

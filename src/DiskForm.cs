@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 💾 Jeux & disques : type (SSD/HDD) et espace libre de chaque disque, et sur QUEL disque
+    /// Jeux & disques : type (SSD/HDD) et espace libre de chaque disque, et sur QUEL disque
     /// sont installés tes jeux. Un jeu sur disque dur mécanique = chargements lents et saccades
     /// de streaming ; un disque système presque plein = Windows qui rame. Lecture seule.
     /// </summary>
@@ -43,7 +43,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  💾 Jeux & disques — tes jeux sont-ils sur le bon disque ?",
+                Text = "  Jeux & disques — tes jeux sont-ils sur le bon disque ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -89,8 +89,8 @@ namespace BTOptimizer
             // Lien fonction → outil : santé S.M.A.R.T. + vitesse + occupation de l'espace.
             // La santé S.M.A.R.T. est désormais affichée NATIVEMENT ci-dessus. Le bouton n'est
             // qu'un « aller plus loin » : WizTree (carte de l'espace), CrystalDiskMark (vitesse).
-            var btnTools = MakeBtn("💾 Aller plus loin : WizTree / benchmark", 158, 470, 330, 38, false);
-            LibScan.WireToolButton(btnTools, this, _log, "💾 Aller plus loin : WizTree / benchmark",
+            var btnTools = MakeBtn("Aller plus loin : WizTree / benchmark", 158, 470, 330, 38, false);
+            LibScan.WireToolButton(btnTools, this, _log, "Aller plus loin : WizTree / benchmark",
                 new[] { "AntibodySoftware.WizTree", "CrystalDewWorld.CrystalDiskMark", "CrystalDewWorld.CrystalDiskInfo" });
             _btnClose = MakeBtn("Fermer", 572, 470, 90, 38, true);
             _btnClose.Click += (s, e) => Close();

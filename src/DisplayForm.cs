@@ -8,7 +8,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🖥️ Réglages d'écran gaming : vérifie que chaque écran tourne à sa fréquence MAX
+    /// Réglages d'écran gaming : vérifie que chaque écran tourne à sa fréquence MAX
     /// (le piège classique : un 144/240 Hz resté à 60 Hz), avec correction en un clic.
     /// Rappelle aussi les réglages qui se font dans Windows/NVIDIA (VRR/G-Sync, HDR, échelle),
     /// avec les raccourcis pour y aller. Réversible (SetHz teste avant d'appliquer).
@@ -46,7 +46,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🖥️ Réglages d'écran — ton écran tourne-t-il à sa fréquence max ?",
+                Text = "  Réglages d'écran — ton écran tourne-t-il à sa fréquence max ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f), TextAlign = ContentAlignment.MiddleLeft
             });

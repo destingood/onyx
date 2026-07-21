@@ -645,7 +645,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  📦 Bibliothèques & applis de jeu — « vcruntime140.dll manquant », plus jamais",
+                Text = "  Bibliothèques & applis de jeu — « vcruntime140.dll manquant », plus jamais",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f), TextAlign = ContentAlignment.MiddleLeft
             });

@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🧪 Benchmark rapide de PERFORMANCE (différent de l'analyse de latence) : mesure la
+    /// Benchmark rapide de PERFORMANCE (différent de l'analyse de latence) : mesure la
     /// puissance CPU (1 cœur et tous cœurs), la bande passante mémoire, et la vitesse du
     /// disque système. Indicatif — utile pour comparer avant/après optimisation ou entre PC.
     /// </summary>
@@ -158,7 +158,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🧪 Benchmark rapide — la puissance de ton PC",
+                Text = "  Benchmark rapide — la puissance de ton PC",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

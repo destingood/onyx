@@ -142,7 +142,7 @@ namespace BTOptimizer
             var btnCfx = MakeBtn("Aller plus loin : CapFrameX", 200);
             btnCfx.Dock = DockStyle.Left;
             LibScan.WireToolButton(btnCfx, this, _log, "Aller plus loin : CapFrameX", new[] { "CXWorld.CapFrameX" });
-            _btnCompact = MakeBtn("Mode compact 📌", 138);
+            _btnCompact = MakeBtn("Mode compact ", 138);
             _btnCompact.Dock = DockStyle.Right;
             _btnCompact.Click += (s, e) => ToggleCompact();
             var btnClose = MakeBtn("Fermer", 92);
@@ -294,7 +294,7 @@ namespace BTOptimizer
                     {
                         _banner.BackColor = Orange;
                         _bannerDetail.Text = (ratio * 100).ToString("0") + " % de l'écran " + _screenHz
-                            + " Hz — vérifie la limite de FPS du jeu (panneau 🎯), sinon c'est le CPU/GPU qui plafonne · " + lows + ".";
+                            + " Hz — vérifie la limite de FPS du jeu (panneau ), sinon c'est le CPU/GPU qui plafonne · " + lows + ".";
                     }
                     else
                     {
@@ -479,7 +479,7 @@ namespace BTOptimizer
                 TopMost = false;
                 MinimumSize = new Size(760, 520);
                 Bounds = _prevBounds;
-                _btnCompact.Text = "Mode compact 📌";
+                _btnCompact.Text = "Mode compact ";
             }
         }
 

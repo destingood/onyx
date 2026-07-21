@@ -10,7 +10,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🏥 Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
+    /// Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
     /// les panneaux (crashs, thermique, réglages néfastes, boutiques, bibliothèques, disque,
     /// réseau, optimisations). Chaque point à corriger ouvre le panneau concerné en un clic.
     /// </summary>
@@ -68,7 +68,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🏥 Santé de mon PC — le bilan en un coup d'œil",
+                Text = "  Santé de mon PC — le bilan en un coup d'œil",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = Own(new Font("Segoe UI Semibold", 12.5f)), TextAlign = ContentAlignment.MiddleLeft
             });

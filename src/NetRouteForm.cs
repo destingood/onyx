@@ -9,7 +9,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🛰️ Analyse du trajet réseau (traceroute) : montre chaque saut entre ton PC et une
+    /// Analyse du trajet réseau (traceroute) : montre chaque saut entre ton PC et une
     /// destination, avec la latence à chaque étape, pour voir OÙ le lag apparaît (ta box, ton
     /// FAI, ou au-delà). Implémenté en ICMP (TTL croissant) — indépendant de la langue Windows.
     /// </summary>
@@ -48,7 +48,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🛰️ Trajet réseau — où le lag apparaît-il ?",
+                Text = "  Trajet réseau — où le lag apparaît-il ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

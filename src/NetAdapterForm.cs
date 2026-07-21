@@ -11,7 +11,7 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 📡 Optimisation de la carte réseau : désactive les réglages du pilote qui ajoutent de
+    /// Optimisation de la carte réseau : désactive les réglages du pilote qui ajoutent de
     /// la latence (modération d'interruptions, contrôle de flux, Ethernet écoénergétique).
     /// Ne touche QU'AUX réglages réellement exposés par ta carte, valeurs d'origine sauvegardées,
     /// entièrement réversible. L'effet s'applique au redémarrage de la carte.
@@ -66,7 +66,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  📡 Carte réseau — moins de latence en jeu",
+                Text = "  Carte réseau — moins de latence en jeu",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🌡️ Surveillance thermique & throttling EN DIRECT : température/fréquence/puissance GPU
+    /// Surveillance thermique & throttling EN DIRECT : température/fréquence/puissance GPU
     /// (nvidia-smi), charge/température CPU, et surtout les RAISONS de bridage signalées par le
     /// pilote (ralentissement thermique, frein d'alimentation). Un « dispositif de rendu perdu »
     /// ou des chutes de FPS soudaines viennent très souvent d'ici.
@@ -48,7 +48,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🌡️ Températures & throttling — ta carte bride-t-elle ?",
+                Text = "  Températures & throttling — ta carte bride-t-elle ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -79,12 +79,12 @@ namespace BTOptimizer
             // les bons outils, avec leur état d'installation, en un clic.
             var btnTools = new Button
             {
-                Text = "🌡️ Outils de température & stress", Location = new Point(18, 358), Size = new Size(300, 32),
+                Text = "Outils de température & stress", Location = new Point(18, 358), Size = new Size(300, 32),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.White, ForeColor = Color.FromArgb(40, 44, 52),
                 Font = new Font("Segoe UI", 9f)
             };
             btnTools.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
-            LibScan.WireToolButton(btnTools, this, _log, "🌡️ Outils température & stress",
+            LibScan.WireToolButton(btnTools, this, _log, "Outils température & stress",
                 new[] { "REALiX.HWiNFO", "TechPowerUp.GPU-Z", "CPUID.HWMonitor", "TechPowerUp.ThrottleStop", "OCBase.OCCT.Personal" });
             Controls.Add(btnTools);
 

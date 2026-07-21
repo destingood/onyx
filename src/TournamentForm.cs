@@ -51,7 +51,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🏁 Prêt pour le match ? — checklist avant de jouer",
+                Text = "  Prêt pour le match ? — checklist avant de jouer",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -161,7 +161,7 @@ namespace BTOptimizer
 
             int nvl = CrashScan.GpuDriverErrors(1);
             res.Add(new CheckResult("Pilote GPU (dernières 24 h)", nvl == 0,
-                nvl <= 0 ? "aucune erreur" : nvl + " erreur(s) — vois 🩺 Stabilité / réparation avant de jouer"));
+                nvl <= 0 ? "aucune erreur" : nvl + " erreur(s) — vois Stabilité / réparation avant de jouer"));
 
             bool dl = Sys.IsServiceRunning("DoSvc") || Sys.IsServiceRunning("BITS") || Sys.IsServiceRunning("wuauserv");
             res.Add(new CheckResult("Téléchargements Windows en fond", !dl,

@@ -52,7 +52,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🎯 Objectif 500 FPS — écran 500 Hz", Dock = DockStyle.Fill, ForeColor = Color.White,
+                Text = "  Objectif 500 FPS — écran 500 Hz", Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = Own(new Font("Segoe UI Semibold", 13f)), TextAlign = ContentAlignment.MiddleLeft
             });
 
