@@ -83,22 +83,63 @@ namespace BTOptimizer
         private void BuildTools()
         {
             _toolsMenu = new ContextMenuStrip();
-            _toolsMenu.Items.Add("🛠  Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
-            _toolsMenu.Items.Add(new ToolStripSeparator());
-            _toolsMenu.Items.Add("🎯  Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
-            _toolsMenu.Items.Add("📈  FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
-            _toolsMenu.Items.Add("⏱  Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
-            _toolsMenu.Items.Add("🧭  Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
-            _toolsMenu.Items.Add(new ToolStripSeparator());
-            _toolsMenu.Items.Add("🌐  DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
-            _toolsMenu.Items.Add("🔊  Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
-            _toolsMenu.Items.Add("🧩  Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
-            _toolsMenu.Items.Add("🚀  Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
-            _toolsMenu.Items.Add("🧹  Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
-            _toolsMenu.Items.Add("🩺  Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
-            _toolsMenu.Items.Add(new ToolStripSeparator());
-            _toolsMenu.Items.Add("ℹ  À propos de DesTinGOOD", null, (s, e) => OpenDialog(new AboutForm()));
-            _toolsMenu.Items.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+            var m = _toolsMenu.Items;
+
+            m.Add("🛠  Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
+            m.Add(new ToolStripSeparator());
+
+            var jeux = new ToolStripMenuItem("🎮  Jeux");
+            jeux.DropDownItems.Add("Priorité CPU par jeu", null, (s, e) => OpenDialog(new GameProfileForm(Log)));
+            jeux.DropDownItems.Add("Qualité réseau en jeu", null, (s, e) => OpenDialog(new NetworkForm(Log)));
+            jeux.DropDownItems.Add("Jeux & disques", null, (s, e) => OpenDialog(new DiskForm(Log)));
+            jeux.DropDownItems.Add("Boutiques & contenu en jeu", null, (s, e) => OpenDialog(new ShopFixForm(Log)));
+            jeux.DropDownItems.Add("Bibliothèques & applis de jeu", null, (s, e) => OpenDialog(new LibsForm(Log)));
+            jeux.DropDownItems.Add("Exclusions antivirus (jeux)", null, (s, e) => OpenDialog(new DefenderForm(Log)));
+            jeux.DropDownItems.Add("Prêt pour le match ?", null, (s, e) => OpenDialog(new TournamentForm(Log)));
+            m.Add(jeux);
+
+            var perf = new ToolStripMenuItem("📈  Performances & FPS");
+            perf.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
+            perf.DropDownItems.Add("FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
+            perf.DropDownItems.Add("Benchmark rapide", null, (s, e) => OpenDialog(new BenchForm(Log)));
+            perf.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
+            m.Add(perf);
+
+            var lat = new ToolStripMenuItem("⏱  Latence");
+            lat.DropDownItems.Add("Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
+            lat.DropDownItems.Add("Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
+            m.Add(lat);
+
+            var diag = new ToolStripMenuItem("🩺  Diagnostic & santé");
+            diag.DropDownItems.Add("Santé de mon PC", null, (s, e) => OpenDialog(new HealthForm(Log)));
+            diag.DropDownItems.Add("Qui ralentit mon PC ?", null, (s, e) => OpenDialog(new BloatForm(Log)));
+            diag.DropDownItems.Add("Réglages néfastes", null, (s, e) => OpenDialog(new CheckupForm(Log)));
+            diag.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
+            diag.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
+            diag.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
+            diag.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
+            diag.DropDownItems.Add("Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
+            m.Add(diag);
+
+            var net = new ToolStripMenuItem("🌐  Réseau");
+            net.DropDownItems.Add("DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
+            net.DropDownItems.Add("Réglages TCP/IP", null, (s, e) => OpenDialog(new NetTuneForm(Log)));
+            net.DropDownItems.Add("Trajet réseau", null, (s, e) => OpenDialog(new NetRouteForm(Log)));
+            m.Add(net);
+
+            var reg = new ToolStripMenuItem("⚙  Réglages système");
+            reg.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));
+            reg.DropDownItems.Add("Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
+            reg.DropDownItems.Add("Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
+            reg.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
+            reg.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            m.Add(reg);
+
+            m.Add("🔁  Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
+            m.Add(new ToolStripSeparator());
+            m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
+            m.Add("ℹ  À propos de DesTinGOOD", null, (s, e) => OpenDialog(new AboutForm()));
+            m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
         }
 
         private void BuildTray()
