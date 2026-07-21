@@ -888,6 +888,8 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SpeedTestForm", () => new SpeedTestForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;
