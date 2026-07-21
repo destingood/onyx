@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.23.0.0")]
-[assembly: AssemblyFileVersion("14.23.0.0")]
+[assembly: AssemblyVersion("14.24.0.0")]
+[assembly: AssemblyFileVersion("14.24.0.0")]
 
 namespace BTOptimizer
 {
@@ -444,6 +444,11 @@ namespace BTOptimizer
                 Console.WriteLine("  UI NetworkForm : construite OK.");
                 using (var f = new MouseForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI MouseForm : construite OK.");
+                using (var f = new CrosshairForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                try { Crosshair.Hide(); } catch { }   // nettoyage si l'overlay a été montré (réglage activé)
+                Console.WriteLine("  UI CrosshairForm : construite OK.");
+                using (var f = new ColorFilterForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI ColorFilterForm : construite OK.");
                 using (var f = new ThermalForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI ThermalForm : construite OK.");
                 using (var f = new BloatForm(delegate(string m, int l) { })) { f.CreateControl(); }

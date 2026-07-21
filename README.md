@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎯 Viseur (crosshair) + filtre couleur (vibrance) intégrés (v14.24)
+
+Deux fonctions « confort de jeu » récupérées d'une autre branche et **portées dans la v14** :
+
+- **🎯 Viseur (crosshair) personnalisé** — un réticule au centre de l'écran, par-dessus les jeux
+  fenêtrés / sans bordure (utile quand le jeu n'a pas de viseur). Overlay **transparent et
+  « click-through »**, formes (croix / point / cercle), taille / épaisseur / écart / opacité /
+  contour réglables, **aperçu en direct**. Réglages persistés (`bt-crosshair.txt`), ré-affiché
+  au démarrage s'il était activé, retiré proprement à la fermeture.
+- **🎨 Filtre couleur / vibrance** — booste les couleurs de l'écran façon panneau NVIDIA/AMD
+  (« digital vibrance »), via la **rampe gamma GDI** de l'écran principal. **100 % réversible**
+  (retour rampe linéaire), sans pilote, tous GPU. Presets + intensité + mode « vivid »,
+  persisté (`bt-colorfilter.txt`) et **ré-appliqué au démarrage**.
+
+Les deux vivent dans le menu **🎮 Jeux & écran**. Zéro dépendance externe (P/Invoke GDI +
+fichiers), même identité visuelle (thème noir/néon), harnais vert (les deux fenêtres
+construites OK).
+
 ### ⚡ Moniteur GPU NVIDIA 100 % EN-PROCESS (fini le processus externe) (v14.23)
 
 Suite logique : le GPU **NVIDIA** passe lui aussi en lecture **native, dans l'app**. Avant, chaque

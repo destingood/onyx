@@ -82,8 +82,10 @@ namespace BTOptimizer
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
             Log("Prêt. Aucune modification n'est faite avant de cliquer sur APPLIQUER.", 0);
             RefreshStates();
+            try { ColorFilter.ReapplyOnStartup(Log); } catch { }   // ré-applique le filtre couleur sauvegardé
             Theme.Apply(this);
             Shown += OnShownWelcome;
+            Shown += (s, e) => { try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { } };   // viseur si activé au dernier lancement
             CheckProfileDriftAtStartup();   // anti-régression : profil annulé par une MAJ Windows ?
         }
 
@@ -226,6 +228,8 @@ namespace BTOptimizer
             mGame.DropDownItems.Add("🔐 Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
             mGame.DropDownItems.Add("🖥️ Réglages d'écran (fréquence max, VRR/HDR)...", null, open(() => new DisplayForm(Log)));
             mGame.DropDownItems.Add("🖱️ Fréquence réelle de la souris...", null, open(() => new MouseForm(Log)));
+            mGame.DropDownItems.Add("🎯 Viseur (crosshair) personnalisé...", null, open(() => new CrosshairForm(Log)));
+            mGame.DropDownItems.Add("🎨 Filtre couleur / vibrance...", null, open(() => new ColorFilterForm(Log)));
 
             // --- 💾 Disque & entretien ---
             var mDisk = group("💾  Disque & entretien");
@@ -547,6 +551,7 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
+            try { Crosshair.Hide(); } catch { }   // retire l'overlay viseur
             try { if (_watchMon != null) _watchMon.Dispose(); } catch { }
             try { GpuSensors.Shutdown(); } catch { }   // ferme l'instance LibreHardwareMonitor (capteurs GPU natifs)
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
