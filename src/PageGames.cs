@@ -38,8 +38,10 @@ namespace BTOptimizer
             _flow.Padding = new Padding(28, 6, 20, 20);
             Controls.Add(_flow);
 
+            // Ligne de statut placée SOUS le titre et AU-DESSUS de la grille (évite le
+            // chevauchement avec la première rangée de cartes qui commence à y=112).
             _empty = FpsUi.Text("Analyse des jeux installés...", FpsUi.Body, FpsUi.Dim);
-            _empty.AutoSize = false; _empty.SetBounds(40, 130, 400, 24);
+            _empty.AutoSize = false; _empty.SetBounds(40, 84, 500, 22);
             Controls.Add(_empty); _empty.BringToFront();
 
             Resize += (s, e) => DoLayout();
