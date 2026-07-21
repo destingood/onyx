@@ -38,8 +38,9 @@ namespace BTOptimizer
             var hist = Controls["hist"]; var input = Controls["input"];
             if (hist == null) return;
             int L = 34, top = 96;
+            int right = Host != null ? Host.ContentRight(34) : ClientSize.Width - 34;
             hist.SetBounds(L, top, 300, ClientSize.Height - top - 34);
-            if (input != null) input.SetBounds(L + 320, ClientSize.Height - 62, ClientSize.Width - L - 320 - 34, 30);
+            if (input != null) input.SetBounds(L + 320, ClientSize.Height - 62, Math.Max(140, right - (L + 320)), 30);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -47,8 +48,9 @@ namespace BTOptimizer
             base.OnPaint(e);
             Graphics g = e.Graphics;
             PaintTitle(g, "CONSULTATIONS", null);
+            int right = Host != null ? Host.ContentRight(34) : ClientSize.Width - 34;
             TextRenderer.DrawText(g, "Le Doc est réservé aux offres Traitement Intensif et Accès à Vie.",
-                FpsUi.Body, new Rectangle(354, ClientSize.Height - 96, ClientSize.Width - 354 - 34, 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
+                FpsUi.Body, new Rectangle(354, ClientSize.Height - 96, Math.Max(160, right - 354), 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
         }
     }
 }

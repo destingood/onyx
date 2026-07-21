@@ -52,7 +52,7 @@ namespace BTOptimizer
             _mascot.SizeMode = PictureBoxSizeMode.Zoom;
             _mascot.BackColor = Color.Transparent;
             try { _mascot.Image = Assets.DoctorFinger; } catch { }
-            _mascot.Size = new Size(196, 220);
+            _mascot.Size = new Size(180, 200);
             _mascot.Enabled = false;
             Controls.Add(_mascot);
             _mascot.BringToFront();
@@ -204,6 +204,22 @@ namespace BTOptimizer
             _mascot.BringToFront();
         }
 
+        /// <summary>Y maximal utilisable par une page avant d'atteindre la mascotte (coin bas-droit).</summary>
+        public int ContentBottom(int margin)
+        {
+            int b = ClientSize.Height - margin;
+            if (_mascot != null && _mascot.Visible) b = Math.Min(b, _mascot.Top - 10);
+            return b;
+        }
+
+        /// <summary>X maximal utilisable par du contenu bas-droit avant d'atteindre la mascotte.</summary>
+        public int ContentRight(int margin)
+        {
+            int r = ClientSize.Width - margin;
+            if (_mascot != null && _mascot.Visible) r = Math.Min(r, _mascot.Left - 12);
+            return r;
+        }
+
         private void SetDark() { try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { } }
 
         public void Log(string m, int l) { }
@@ -276,10 +292,11 @@ namespace BTOptimizer
             page.BringToFront();
             _host.ResumeLayout();
             _current = idx;
-            try { page.OnShown(); } catch { }
             // Mascotte seulement sur les pages aérées (évite de recouvrir des contrôles).
+            // Visibilité fixée AVANT OnShown pour que la page réserve la bonne zone au layout.
             _mascot.Visible = (idx == 0 || idx == 4 || idx == 5 || idx == 6);
             PlaceMascot();
+            try { page.OnShown(); } catch { }
         }
 
         private FpsPage CreatePage(int idx)

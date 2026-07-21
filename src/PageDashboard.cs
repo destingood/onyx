@@ -49,7 +49,7 @@ namespace BTOptimizer
         private void Build()
         {
             _nOpti = MakeStat("🚀", "Optimisations actives", "OPTIMISATIONS", () => Host.Goto(1), 0);
-            _nCheck = MakeStat("💉", "Check Up+ expirés", "CHECK UP+", () => Host.Goto(3), 1);
+            _nCheck = MakeStat("💊", "Optimisations au total", "VOIR TOUT", () => Host.Goto(1), 1);
             _nJeux = MakeStat("🎮", "Jeux boostés", "JEUX", () => Host.Goto(2), 2);
 
             _graph = new Panel();
@@ -72,10 +72,10 @@ namespace BTOptimizer
             card.Tag = "stat" + slot;
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
-            var ic = FpsUi.Text(icon, FpsUi.Glyph, FpsUi.Ink); ic.SetBounds(16, 14, 34, 34); ic.AutoSize = false;
-            var num = FpsUi.Text("—", FpsUi.Num, FpsUi.Ink); num.SetBounds(56, 12, 130, 36); num.AutoSize = false;
-            var lab = FpsUi.Text(label, FpsUi.Body, FpsUi.Dim); lab.SetBounds(18, 54, 230, 20); lab.AutoSize = false;
-            var b = FpsUi.GhostButton(btn); b.SetBounds(16, 84, 210, 32); b.Click += (s, e) => click();
+            var ic = FpsUi.Text(icon, FpsUi.Glyph, FpsUi.Ink); ic.Name = "ic"; ic.SetBounds(16, 14, 34, 34); ic.AutoSize = false;
+            var num = FpsUi.Text("—", FpsUi.Num, FpsUi.Ink); num.Name = "num"; num.SetBounds(56, 12, 130, 36); num.AutoSize = false;
+            var lab = FpsUi.Text(label, FpsUi.Body, FpsUi.Dim); lab.Name = "lab"; lab.SetBounds(18, 54, 230, 20); lab.AutoSize = false;
+            var b = FpsUi.GhostButton(btn); b.Name = "btn"; b.SetBounds(16, 84, 210, 32); b.Click += (s, e) => click();
 
             card.Controls.Add(ic); card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(b);
             Controls.Add(card);
@@ -94,12 +94,24 @@ namespace BTOptimizer
                 {
                     int slot = int.Parse(((string)c.Tag).Substring(4));
                     c.SetBounds(L + slot * (cardW + gap), top, cardW, 130);
+                    LayoutStat(c);
                 }
             }
             if (_graph != null) _graph.SetBounds(L, top + 146, statsW, 250);
             // Bouton premium sous le graphe (bas-gauche) : évite la mascotte (coin bas-droit).
             var prem = Controls["prem"];
             if (prem != null) prem.SetBounds(L, top + 146 + 250 + 16, statsW, 46);
+        }
+
+        // Ajuste les enfants d'une carte stat à sa largeur réelle (évite tout débordement
+        // quand la fenêtre est étroite : les cartes rétrécissent, les contrôles suivent).
+        private static void LayoutStat(Control card)
+        {
+            int w = card.Width;
+            var ic = card.Controls["ic"]; if (ic != null) ic.SetBounds(16, 14, 34, 34);
+            var num = card.Controls["num"]; if (num != null) num.SetBounds(56, 12, Math.Max(60, w - 72), 36);
+            var lab = card.Controls["lab"]; if (lab != null) lab.SetBounds(18, 54, Math.Max(60, w - 32), 22);
+            var b = card.Controls["btn"]; if (b != null) b.SetBounds(16, 84, Math.Max(60, w - 32), 32);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -119,31 +131,41 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, name + " !", FpsUi.H1, new Point(L + wHi - 6, 30), FpsUi.Neon, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "Bienvenue dans le bloc opératoire.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
 
-            int gs = 118, gx = ClientSize.Width - 34 - gs, gy = 22;
-            DrawHealth(g, gx, gy, gs);
-
             int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
-            DrawPatient(g, rightX, 118, rightW, 396);
+            int patientTop = 118;
+            int patientBottom = Host != null ? Host.ContentBottom(34) : ClientSize.Height - 34;
+            int patientH = Math.Max(320, patientBottom - patientTop);
+            DrawPatient(g, rightX, patientTop, rightW, patientH);
         }
 
-        private void DrawHealth(Graphics g, int x, int y, int size)
-        {
-            int h = _health < 0 ? 0 : _health;
-            var rf = new RectangleF(x + 8, y + 8, size - 16, size - 16);
-            using (var back = new Pen(Color.FromArgb(38, 40, 39), 8f)) g.DrawArc(back, rf, 0, 360);
-            Color arc = h < 30 ? FpsUi.Err : (h < 60 ? FpsUi.Warn : FpsUi.Neon);
-            using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * h / 100f); }
-            TextRenderer.DrawText(g, "SANTÉ", FpsUi.Small, new Rectangle(x, y + 34, size, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(g, h + "%", FpsUi.Num, new Rectangle(x, y + 50, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
-        }
-
+        // Carte patient unifiée : titre + anneau de SANTÉ + badge + statut, hauteur dynamique.
         private void DrawPatient(Graphics g, int x, int y, int w, int h)
         {
             FpsUi.PaintCard(g, new Rectangle(x, y, w, h), FpsUi.Card, FpsUi.Border, 14f);
-            TextRenderer.DrawText(g, "STATUT DU PATIENT", FpsUi.H3, new Rectangle(x, y + 22, w, 22), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, "SANTÉ DU PATIENT", FpsUi.H3, new Rectangle(x, y + 20, w, 22), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+
+            int ring = 132;
+            DrawHealthRing(g, x + (w - ring) / 2, y + 52, ring);
+
+            // Badge centré sous l'anneau ; ne s'affiche que si la carte est assez haute.
+            int by = y + 52 + ring + 12;
+            int statusY = y + h - 34;
             Image badge = Assets.BadgePremierSoin;
-            if (badge != null) { int bs = 170; g.DrawImage(badge, x + (w - bs) / 2, y + 66, bs, bs); }
-            TextRenderer.DrawText(g, "Premiers Soins", FpsUi.H2, new Rectangle(x, y + h - 58, w, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            int bs = Math.Min(120, statusY - by - 6);
+            if (bs >= 60 && badge != null) g.DrawImage(badge, x + (w - bs) / 2, by, bs, bs);
+
+            TextRenderer.DrawText(g, "Premiers Soins", FpsUi.H2, new Rectangle(x, statusY, w, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+        }
+
+        private void DrawHealthRing(Graphics g, int x, int y, int size)
+        {
+            int hp = _health < 0 ? 0 : _health;
+            var rf = new RectangleF(x + 6, y + 6, size - 12, size - 12);
+            using (var back = new Pen(Color.FromArgb(38, 40, 39), 8f)) g.DrawArc(back, rf, 0, 360);
+            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Neon);
+            using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * hp / 100f); }
+            TextRenderer.DrawText(g, hp + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, "SANTÉ", FpsUi.Small, new Rectangle(x, y + size / 2 + 14, size, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
         }
 
         private void PaintGraph(object sender, PaintEventArgs e)
@@ -210,7 +232,7 @@ namespace BTOptimizer
                 try { var tw = Catalog.All(); total = tw.Count; foreach (var t in tw) { if (t.Check == null) continue; bool? st = null; try { st = t.Check(); } catch { } if (st == true) active++; } }
                 catch { }
                 int health = total > 0 ? (int)Math.Round(100.0 * active / total) : 0;
-                try { BeginInvoke((Action)(() => { _activeOpti = active; _health = health; if (_nOpti != null) _nOpti.Text = active.ToString(); if (_nCheck != null) _nCheck.Text = "0"; if (_nJeux != null) _nJeux.Text = GameBoost.IsActive ? "1" : "0"; Invalidate(); })); }
+                try { BeginInvoke((Action)(() => { _activeOpti = active; _health = health; if (_nOpti != null) _nOpti.Text = active.ToString(); if (_nCheck != null) _nCheck.Text = total.ToString(); if (_nJeux != null) _nJeux.Text = GameBoost.IsActive ? "1" : "0"; Invalidate(); })); }
                 catch { }
             });
         }
