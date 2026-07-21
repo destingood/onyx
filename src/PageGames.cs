@@ -11,6 +11,7 @@ namespace BTOptimizer
     {
         private FlowLayoutPanel _flow;
         private Button _mode;
+        private Button _prio;
         private Label _empty;
         private bool _loaded;
 
@@ -25,6 +26,11 @@ namespace BTOptimizer
             _mode.Width = 150; _mode.Height = 34;
             _mode.Click += (s, e) => ToggleBoost();
             Controls.Add(_mode);
+
+            _prio = FpsUi.GhostButton("⚙  Priorité par jeu");
+            _prio.Width = 160; _prio.Height = 34;
+            _prio.Click += (s, e) => Host.OpenDialog(new GameProfileForm(Host.Log));
+            Controls.Add(_prio);
 
             _flow = new FlowLayoutPanel();
             _flow.AutoScroll = true;
@@ -125,6 +131,7 @@ namespace BTOptimizer
             if (_flow == null) return;
             _flow.SetBounds(20, 112, ClientSize.Width - 40, ClientSize.Height - 112);
             if (_mode != null) _mode.Location = new Point(ClientSize.Width - 34 - _mode.Width, 22);
+            if (_prio != null && _mode != null) _prio.Location = new Point(_mode.Left - 12 - _prio.Width, 22);
             if (_empty != null) _empty.BringToFront();
         }
 
