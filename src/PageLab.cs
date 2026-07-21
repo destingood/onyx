@@ -20,7 +20,7 @@ namespace BTOptimizer
             AddCard("🎨", "FILTRE DE COULEUR", "Vibrance / saturation façon panneau NVIDIA.", false, () => Host.OpenDialog(new ColorFilterForm(Host.Log)));
             AddCard("📈", "COMPTEUR FPS", "FPS en direct par jeu (façon PresentMon).", false, () => Host.OpenDialog(new FpsMonForm(Host.Log)));
             AddCard("⚡", "OVERCLOCK GPU", "Overclock automatique et sûr de la carte.", false, () => Host.OpenDialog(new OverclockForm(Host.Log)));
-            AddCard("🚄", "SPEED TEST", "Test de débit réseau.", true, null);
+            AddCard("🚄", "SPEED TEST", "Débit descendant + latence réels.", false, () => Host.OpenDialog(new SpeedTestForm(Host.Log)));
             AddCard("🎮", "OVERCLOCK MANETTE", "Polling rate manette optimisé.", true, null);
             Resize += (s, e) => DoLayout();
         }
