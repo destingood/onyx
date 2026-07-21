@@ -73,6 +73,9 @@ namespace BTOptimizer
         private HwSample _last;
         private bool _sampling;
         private int _corner = 1;
+        private FpsEtw _fps;
+        private double _lastFps = double.NaN;
+        private string _fpsName;
 
         private const int WS_EX_LAYERED = 0x80000, WS_EX_TRANSPARENT = 0x20, WS_EX_TOOLWINDOW = 0x80,
                           WS_EX_NOACTIVATE = 0x8000000, WS_EX_TOPMOST = 0x8;
@@ -91,7 +94,7 @@ namespace BTOptimizer
             BackColor = Bg;
             Opacity = 0.82;
             DoubleBuffered = true;
-            ClientSize = new Size(212, 120);
+            ClientSize = new Size(222, 152);
             try { Region = RoundedRegion(ClientRectangle, 12); } catch { }
 
             _timer.Interval = 1000;
@@ -115,6 +118,9 @@ namespace BTOptimizer
 
         public void BeginSampling()
         {
+            // Session ETW pour les FPS du jeu au premier plan (nécessite l'élévation ; échoue en
+            // silence sinon → l'overlay affiche « FPS — » et garde les autres stats).
+            if (_fps == null) { try { _fps = new FpsEtw(); _fps.Start(); } catch { } }
             Sample();
             if (!_timer.Enabled) _timer.Start();
         }
@@ -139,7 +145,7 @@ namespace BTOptimizer
             if (!Visible) { try { _timer.Stop(); } catch { } }
         }
 
-        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
+        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); if (_fps != null) _fps.Dispose(); } catch { } base.OnHandleDestroyed(e); }
 
         private void Sample()
         {
@@ -149,7 +155,17 @@ namespace BTOptimizer
             {
                 HwSample s = null;
                 try { s = _mon.Sample(); } catch { }
-                try { BeginInvoke((Action)(() => { _last = s; _sampling = false; Invalidate(); })); } catch { _sampling = false; }
+                double fps = double.NaN; string fname = null;
+                try
+                {
+                    if (_fps != null && _fps.Running)
+                    {
+                        var ps = _fps.Snapshot(1000);
+                        if (ps != null && ps.Count > 0) { fps = ps[0].Fps; fname = ps[0].Name; }   // trié par FPS desc : le jeu
+                    }
+                }
+                catch { }
+                try { BeginInvoke((Action)(() => { _last = s; _lastFps = fps; _fpsName = fname; _sampling = false; Invalidate(); })); } catch { _sampling = false; }
             });
         }
 
@@ -176,11 +192,33 @@ namespace BTOptimizer
 
             // Liseré néon fin.
             using (var pen = new Pen(Color.FromArgb(70, 0, 255, 136))) g.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
-            using (var f = new Font("Segoe UI Semibold", 8f))
-                TextRenderer.DrawText(g, "DesTinGOOD", f, new Point(12, 8), Neon, TextFormatFlags.NoPadding);
+
+            // En-tête : marque + nom du jeu détecté (à droite).
+            using (var hf = new Font("Segoe UI Semibold", 8f))
+            {
+                TextRenderer.DrawText(g, "DesTinGOOD", hf, new Point(12, 7), Neon, TextFormatFlags.NoPadding);
+                if (!string.IsNullOrEmpty(_fpsName))
+                {
+                    string nm = _fpsName; if (nm.Length > 18) nm = nm.Substring(0, 17) + "…";
+                    TextRenderer.DrawText(g, nm, hf, new Rectangle(90, 7, r.Width - 98, 14), Dim,
+                        TextFormatFlags.Right | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                }
+            }
+
+            // FPS (métrique héros).
+            string fv = double.IsNaN(_lastFps) ? "—" : _lastFps.ToString("0");
+            Color fc = double.IsNaN(_lastFps) ? Dim : _lastFps >= 100 ? Neon : _lastFps >= 55 ? Color.FromArgb(230, 175, 45) : Color.FromArgb(232, 84, 74);
+            using (var big = new Font("Segoe UI", 26f, FontStyle.Bold))
+            using (var unit = new Font("Segoe UI Semibold", 11f))
+            {
+                var sz = TextRenderer.MeasureText(g, fv, big, Size.Empty, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, fv, big, new Point(10, 20), fc, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "FPS", unit, new Point(16 + sz.Width, 40), fc, TextFormatFlags.NoPadding);
+            }
+            using (var pen = new Pen(Color.FromArgb(40, 43, 41))) g.DrawLine(pen, 12, 64, r.Width - 12, 64);
 
             HwSample s = _last;
-            int y = 30;
+            int y = 72;
             using (var lab = new Font("Segoe UI", 8.5f))
             using (var val = new Font("Segoe UI Semibold", 10.5f))
             {

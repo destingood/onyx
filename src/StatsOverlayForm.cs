@@ -42,8 +42,8 @@ namespace BTOptimizer
 
             var intro = new Label
             {
-                Text = "Affiche CPU / GPU / RAM / températures en direct, en surimpression du jeu (fenêtré ou "
-                     + "sans bordure). L'overlay est « click-through » : il n'intercepte jamais tes clics.",
+                Text = "Affiche les FPS du jeu + CPU / GPU / RAM / températures en direct, en surimpression "
+                     + "(fenêtré ou sans bordure). « Click-through » : il n'intercepte jamais tes clics.",
                 Location = new Point(18, 62), Size = new Size(444, 46), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(intro);
