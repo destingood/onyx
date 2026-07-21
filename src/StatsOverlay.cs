@@ -75,7 +75,10 @@ namespace BTOptimizer
         private int _corner = 1;
         private FpsEtw _fps;
         private double _lastFps = double.NaN;
+        private double _lastLow = double.NaN;
         private string _fpsName;
+        private readonly System.Collections.Generic.Queue<double> _fpsHist = new System.Collections.Generic.Queue<double>();
+        private const int HistMax = 46;
 
         private const int WS_EX_LAYERED = 0x80000, WS_EX_TRANSPARENT = 0x20, WS_EX_TOOLWINDOW = 0x80,
                           WS_EX_NOACTIVATE = 0x8000000, WS_EX_TOPMOST = 0x8;
@@ -94,7 +97,7 @@ namespace BTOptimizer
             BackColor = Bg;
             Opacity = 0.82;
             DoubleBuffered = true;
-            ClientSize = new Size(222, 152);
+            ClientSize = new Size(222, 178);
             try { Region = RoundedRegion(ClientRectangle, 12); } catch { }
 
             _timer.Interval = 1000;
@@ -123,6 +126,20 @@ namespace BTOptimizer
             if (_fps == null) { try { _fps = new FpsEtw(); _fps.Start(); } catch { } }
             Sample();
             if (!_timer.Enabled) _timer.Start();
+        }
+
+        /// <summary>Alimente l'overlay avec des données de démonstration (pour l'inspection
+        /// visuelle hors jeu). Fige l'échantillonnage pour que le rendu reste stable.</summary>
+        internal void SeedDemo()
+        {
+            try { _timer.Stop(); } catch { }
+            _lastFps = 144; _lastLow = 118; _fpsName = "Counter-Strike 2";
+            _last = new HwSample { CpuLoad = 38, RamLoad = 46, CpuTempC = 58 };
+            _last.Gpu = new GpuInfo { Ok = true, Util = 72, TempC = 64 };
+            _fpsHist.Clear();
+            int[] demo = { 120, 132, 140, 138, 144, 150, 146, 142, 139, 148, 152, 144, 141, 137, 145, 150, 148, 144, 142, 146, 151, 149, 143, 140, 147, 152, 146, 141 };
+            foreach (int v in demo) _fpsHist.Enqueue(v);
+            Invalidate();
         }
 
         public void SetCorner(int corner)
@@ -155,17 +172,26 @@ namespace BTOptimizer
             {
                 HwSample s = null;
                 try { s = _mon.Sample(); } catch { }
-                double fps = double.NaN; string fname = null;
+                double fps = double.NaN, low = double.NaN; string fname = null;
                 try
                 {
                     if (_fps != null && _fps.Running)
                     {
                         var ps = _fps.Snapshot(1000);
-                        if (ps != null && ps.Count > 0) { fps = ps[0].Fps; fname = ps[0].Name; }   // trié par FPS desc : le jeu
+                        if (ps != null && ps.Count > 0) { fps = ps[0].Fps; low = ps[0].OnePctLowFps; fname = ps[0].Name; }   // trié par FPS desc : le jeu
                     }
                 }
                 catch { }
-                try { BeginInvoke((Action)(() => { _last = s; _lastFps = fps; _fpsName = fname; _sampling = false; Invalidate(); })); } catch { _sampling = false; }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _last = s; _lastFps = fps; _lastLow = low; _fpsName = fname;
+                        if (!double.IsNaN(fps)) { _fpsHist.Enqueue(fps); while (_fpsHist.Count > HistMax) _fpsHist.Dequeue(); }
+                        _sampling = false; Invalidate();
+                    }));
+                }
+                catch { _sampling = false; }
             });
         }
 
@@ -210,10 +236,19 @@ namespace BTOptimizer
             Color fc = double.IsNaN(_lastFps) ? Dim : _lastFps >= 100 ? Neon : _lastFps >= 55 ? Color.FromArgb(230, 175, 45) : Color.FromArgb(232, 84, 74);
             using (var big = new Font("Segoe UI", 26f, FontStyle.Bold))
             using (var unit = new Font("Segoe UI Semibold", 11f))
+            using (var lowLab = new Font("Segoe UI", 7.5f))
+            using (var lowVal = new Font("Segoe UI Semibold", 13f))
             {
                 var sz = TextRenderer.MeasureText(g, fv, big, Size.Empty, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, fv, big, new Point(10, 20), fc, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, "FPS", unit, new Point(16 + sz.Width, 40), fc, TextFormatFlags.NoPadding);
+                // 1% low : indicateur de micro-saccades (le plus parlant en compétitif).
+                if (!double.IsNaN(_lastLow) && _lastLow > 0)
+                {
+                    Color lc = _lastLow >= 80 ? Neon : _lastLow >= 45 ? Color.FromArgb(230, 175, 45) : Color.FromArgb(232, 84, 74);
+                    TextRenderer.DrawText(g, "1% LOW", lowLab, new Rectangle(r.Width - 80, 24, 68, 12), Dim, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+                    TextRenderer.DrawText(g, _lastLow.ToString("0"), lowVal, new Rectangle(r.Width - 80, 36, 68, 22), lc, TextFormatFlags.Right | TextFormatFlags.NoPadding);
+                }
             }
             using (var pen = new Pen(Color.FromArgb(40, 43, 41))) g.DrawLine(pen, 12, 64, r.Width - 12, 64);
 
@@ -230,6 +265,22 @@ namespace BTOptimizer
                 Row(g, lab, val, ref y, "GPU", double.IsNaN(gu) ? "—" : gu.ToString("0") + " %",
                     double.IsNaN(gt) ? null : gt.ToString("0") + "°", double.IsNaN(gu) ? Dim : LoadColor(gu));
                 Row(g, lab, val, ref y, "RAM", s == null ? "—" : s.RamLoad.ToString("0") + " %", null, s == null ? Dim : LoadColor(s.RamLoad));
+            }
+
+            // Mini-historique des FPS (sparkline).
+            if (_fpsHist.Count >= 2)
+            {
+                var plot = new Rectangle(12, r.Height - 22, r.Width - 24, 14);
+                double[] arr = _fpsHist.ToArray();
+                double max = 1; foreach (double v in arr) if (v > max) max = v;
+                var pts = new PointF[arr.Length];
+                for (int i = 0; i < arr.Length; i++)
+                {
+                    float px = plot.Left + (float)i / (HistMax - 1) * plot.Width;
+                    float py = plot.Bottom - (float)(arr[i] / max) * plot.Height;
+                    pts[i] = new PointF(px, py);
+                }
+                using (var pen = new Pen(Color.FromArgb(190, 0, 255, 136), 1.4f)) g.DrawLines(pen, pts);
             }
         }
 

@@ -751,7 +751,7 @@ namespace BTOptimizer
                 f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
                 f.Show();
-                if (f is StatsOverlayWindow sw) sw.BeginSampling();   // démarre l'échantillonnage HW pour la capture
+                if (f is StatsOverlayWindow sw) sw.SeedDemo();   // données de démo pour l'inspection visuelle hors jeu
                 Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
                 {
