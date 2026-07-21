@@ -30,6 +30,7 @@ namespace BTOptimizer
         public MonitorForm()
         {
             Build();
+            Theme.Apply(this);   // identité FPSDoctor (noir + néon) comme les autres fenêtres
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Tick();
             _timer.Start();

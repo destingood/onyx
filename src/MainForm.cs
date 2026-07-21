@@ -61,8 +61,10 @@ namespace BTOptimizer
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
             Log("Prêt. Aucune modification n'est faite avant de cliquer sur APPLIQUER.", 0);
             RefreshStates();
+            try { ColorFilter.ReapplyOnStartup(Log); } catch { }
             Theme.Apply(this);
             Shown += OnShownWelcome;
+            Shown += (s, e) => { try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { } };
         }
 
         private void OnShownWelcome(object sender, EventArgs e)
@@ -162,6 +164,10 @@ namespace BTOptimizer
             _menu.Items.Add("⏱ Latence EN DIRECT (DPC/ISR par pilote, précision LatencyMon)...", null,
                 (s, e) => { using (var f = new LiveMonForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add("Guide latence & perf (checklist input lag)...", null, (s, e) => { using (var f = new LatencyGuideForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add(new ToolStripSeparator());
+            // --- Confort de jeu (viseur & couleurs) ---
+            _menu.Items.Add("🎯 Viseur (crosshair) personnalisé...", null, (s, e) => { using (var f = new CrosshairForm(Log)) f.ShowDialog(this); });
+            _menu.Items.Add("🎨 Filtre couleur / vibrance...", null, (s, e) => { using (var f = new ColorFilterForm(Log)) f.ShowDialog(this); });
             _menu.Items.Add(new ToolStripSeparator());
             // --- Outils système ---
             _menu.Items.Add("Composants & diagnostic du système...", null, (s, e) => { using (var f = new SystemInfoForm(Log)) f.ShowDialog(this); });
@@ -444,6 +450,7 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
+            try { Crosshair.Hide(); } catch { }
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
         }
 
