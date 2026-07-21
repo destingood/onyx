@@ -1,0 +1,327 @@
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
+namespace BTOptimizer
+{
+    // ----------------------------------------------------------------------
+    //  Shell facon FPSDoctor : fenetre unique, barre laterale a icones qui
+    //  echange le contenu (pages), mascotte docteur toujours visible.
+    // ----------------------------------------------------------------------
+    internal class DashboardForm : Form
+    {
+        private Panel _rail, _host;
+        private PictureBox _mascot;
+        private readonly System.Collections.Generic.List<NavCell> _nav = new System.Collections.Generic.List<NavCell>();
+        private readonly FpsPage[] _pages = new FpsPage[8];
+        private int _current = -1;
+
+        [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int val, int sz);
+        [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
+        [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
+        private const int HotkeyId = 0xB71, WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
+        private NotifyIcon _tray;
+        private ContextMenuStrip _toolsMenu;
+        private Timer _sysTimer;
+        private bool _trayShown;
+
+        public DashboardForm()
+        {
+            Text = "DesTinGOOD — Bloc opératoire";
+            ClientSize = new Size(1200, 760);
+            MinimumSize = new Size(1040, 680);
+            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = FpsUi.BgMain;
+            Font = FpsUi.Body;
+            DoubleBuffered = true;
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+
+            _host = new Panel();
+            _host.Dock = DockStyle.Fill;
+            _host.BackColor = FpsUi.BgMain;
+            Controls.Add(_host);
+
+            BuildTools();
+            BuildRail();
+            Controls.Add(_rail);
+
+            _mascot = new PictureBox();
+            _mascot.SizeMode = PictureBoxSizeMode.Zoom;
+            _mascot.BackColor = Color.Transparent;
+            try { _mascot.Image = Assets.DoctorFinger; } catch { }
+            _mascot.Size = new Size(220, 250);
+            _mascot.Enabled = false;
+            Controls.Add(_mascot);
+            _mascot.BringToFront();
+
+            BuildTray();
+            Resize += OnResizeShell;
+
+            _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
+
+            Shown += (s, e) => { SetDark(); ShowPage(0); PlaceMascot(); };
+            FormClosing += (s, e) => Cleanup();
+        }
+
+        private void OnResizeShell(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                Hide(); _tray.Visible = true;
+                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "DesTinGOOD", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
+                return;
+            }
+            PlaceMascot();
+        }
+
+        // ------------------------------------------------------------------
+        //  Outils avancés (accès à TOUTES les fonctions de l'app).
+        // ------------------------------------------------------------------
+        private void BuildTools()
+        {
+            _toolsMenu = new ContextMenuStrip();
+            _toolsMenu.Items.Add("🛠  Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
+            _toolsMenu.Items.Add(new ToolStripSeparator());
+            _toolsMenu.Items.Add("🎯  Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
+            _toolsMenu.Items.Add("📈  FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
+            _toolsMenu.Items.Add("⏱  Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
+            _toolsMenu.Items.Add("🧭  Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
+            _toolsMenu.Items.Add(new ToolStripSeparator());
+            _toolsMenu.Items.Add("🌐  DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
+            _toolsMenu.Items.Add("🔊  Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
+            _toolsMenu.Items.Add("🧩  Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
+            _toolsMenu.Items.Add("🚀  Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
+            _toolsMenu.Items.Add("🧹  Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            _toolsMenu.Items.Add("🩺  Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
+            _toolsMenu.Items.Add(new ToolStripSeparator());
+            _toolsMenu.Items.Add("ℹ  À propos de DesTinGOOD", null, (s, e) => OpenDialog(new AboutForm()));
+            _toolsMenu.Items.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        private void BuildTray()
+        {
+            _tray = new NotifyIcon();
+            try { _tray.Icon = Icon; } catch { }
+            _tray.Text = "DesTinGOOD"; _tray.Visible = false;
+            _tray.DoubleClick += (s, e) => RestoreFromTray();
+            var m = new ContextMenuStrip();
+            m.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
+            m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
+            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
+            _tray.ContextMenuStrip = m;
+        }
+
+        private void RestoreFromTray() { Show(); WindowState = FormWindowState.Normal; Activate(); _tray.Visible = false; }
+
+        private void ToggleBoost()
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { if (GameBoost.IsActive) GameBoost.Deactivate(Log); else GameBoost.Activate(Log); } catch { }
+            });
+        }
+
+        private void AutoTimer()
+        {
+            try
+            {
+                bool wanted = Native.IsGameFullscreen();
+                if (wanted != Native.TimerActive) Native.SetTimer1ms(wanted);
+            }
+            catch { }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try { RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'); } catch { }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) ToggleBoost();
+            base.WndProc(ref m);
+        }
+
+        private void Cleanup()
+        {
+            try { UnregisterHotKey(Handle, HotkeyId); } catch { }
+            try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
+            try { Native.SetTimer1ms(false); } catch { }
+            try { if (_sysTimer != null) _sysTimer.Stop(); } catch { }
+            try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
+        }
+
+        private void PlaceMascot()
+        {
+            if (_mascot == null) return;
+            _mascot.Location = new Point(ClientSize.Width - _mascot.Width - 8, ClientSize.Height - _mascot.Height - 4);
+            _mascot.BringToFront();
+        }
+
+        private void SetDark() { try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { } }
+
+        public void Log(string m, int l) { }
+
+        // ------------------------------------------------------------------
+        //  Barre laterale
+        // ------------------------------------------------------------------
+        private void BuildRail()
+        {
+            _rail = new Panel();
+            _rail.Dock = DockStyle.Left;
+            _rail.Width = 66;
+            _rail.BackColor = FpsUi.RailBg;
+            _rail.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, _rail.Width - 1, 0, _rail.Width - 1, _rail.Height); };
+
+            var brand = new Label();
+            brand.Text = "DTG"; brand.Font = new Font("Segoe UI Black", 9f);
+            brand.ForeColor = FpsUi.Neon; brand.TextAlign = ContentAlignment.MiddleCenter;
+            brand.Dock = DockStyle.Bottom; brand.Height = 42;
+            _rail.Controls.Add(brand);
+
+            string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
+            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            int y = 58;
+            for (int i = 0; i < glyphs.Length; i++)
+            {
+                var cell = new NavCell(glyphs[i], tips[i]);
+                cell.SetBounds(9, y, 48, 48);
+                int idx = i;
+                cell.Click += (s, e) => ShowPage(idx);
+                _nav.Add(cell);
+                _rail.Controls.Add(cell);
+                y += 56;
+            }
+
+            var tools = new Label();
+            tools.Text = "⋯"; tools.Font = new Font("Segoe UI", 15f);
+            tools.ForeColor = FpsUi.Dim; tools.TextAlign = ContentAlignment.MiddleCenter;
+            tools.Cursor = Cursors.Hand; tools.BackColor = Color.Transparent;
+            tools.SetBounds(9, y + 4, 48, 40);
+            var ttip = new ToolTip(); ttip.SetToolTip(tools, "Outils avancés (optimiseur complet, latence, DNS…)");
+            tools.Click += (s, e) => _toolsMenu.Show(tools, new Point(tools.Width, 0));
+            _rail.Controls.Add(tools);
+        }
+
+        // ------------------------------------------------------------------
+        //  Navigation par pages
+        // ------------------------------------------------------------------
+        public void ShowPage(int idx)
+        {
+            if (idx < 0 || idx >= _pages.Length) return;
+            for (int i = 0; i < _nav.Count; i++) _nav[i].Active = (i == idx);
+
+            if (_pages[idx] == null) _pages[idx] = CreatePage(idx);
+            FpsPage page = _pages[idx];
+
+            _host.SuspendLayout();
+            if (_current >= 0 && _pages[_current] != null) _pages[_current].Visible = false;
+            if (!_host.Controls.Contains(page)) _host.Controls.Add(page);
+            page.Visible = true;
+            page.BringToFront();
+            _host.ResumeLayout();
+            _current = idx;
+            try { page.OnShown(); } catch { }
+            _mascot.Visible = (idx != 1); // Optimisations : liste dense, on masque la mascotte
+            PlaceMascot();
+        }
+
+        private FpsPage CreatePage(int idx)
+        {
+            switch (idx)
+            {
+                case 0: return new PageDashboard(this);
+                case 1: return new PageOptimisations(this);
+                case 2: return new PageGames(this);
+                case 3: return new PageCheckup(this);
+                case 4: return new PageLab(this);
+                case 5: return new PageCollection(this);
+                case 6: return new PageConsultation(this);
+                case 7: return new PageSystem(this);
+                default: return new PageDashboard(this);
+            }
+        }
+
+        public void OpenDialog(Form f)
+        {
+            try { using (f) f.ShowDialog(this); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        }
+
+        public void Goto(int idx) { ShowPage(idx); }
+    }
+
+    // ----------------------------------------------------------------------
+    //  Page de base.
+    // ----------------------------------------------------------------------
+    internal class FpsPage : UserControl
+    {
+        protected readonly DashboardForm Host;
+
+        public FpsPage(DashboardForm host)
+        {
+            Host = host;
+            Dock = DockStyle.Fill;
+            BackColor = FpsUi.BgMain;
+            DoubleBuffered = true;
+        }
+
+        public virtual void OnShown() { }
+
+        /// <summary>Titre de page souligne neon.</summary>
+        protected void PaintTitle(Graphics g, string title, string subtitle)
+        {
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            TextRenderer.DrawText(g, title, FpsUi.H3, new Point(34, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
+            int w = TextRenderer.MeasureText(g, title, FpsUi.H3).Width;
+            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, 34, 50, 34 + w, 50);
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 34, 51, Width - 34, 51);
+            if (!string.IsNullOrEmpty(subtitle))
+                TextRenderer.DrawText(g, subtitle, FpsUi.Body, new Point(34, 64), FpsUi.Dim, TextFormatFlags.NoPadding);
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    //  Icone de navigation.
+    // ----------------------------------------------------------------------
+    internal class NavCell : Panel
+    {
+        private readonly string _glyph;
+        private bool _active, _hover;
+
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool Active { get { return _active; } set { _active = value; Invalidate(); } }
+
+        public NavCell(string glyph, string tip)
+        {
+            _glyph = glyph;
+            DoubleBuffered = true; BackColor = Color.Transparent; Cursor = Cursors.Hand;
+            var tt = new ToolTip(); tt.SetToolTip(this, tip);
+            MouseEnter += (s, e) => { _hover = true; Invalidate(); };
+            MouseLeave += (s, e) => { _hover = false; Invalidate(); };
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var rf = new RectangleF(1.5f, 1.5f, Width - 3f, Height - 3f);
+            if (_active || _hover)
+            {
+                using (var path = FpsUi.Round(rf, 12f))
+                {
+                    using (var br = new SolidBrush(_active ? Color.FromArgb(20, 40, 30) : FpsUi.Card)) g.FillPath(br, path);
+                    if (_active) using (var pen = new Pen(FpsUi.Neon)) g.DrawPath(pen, path);
+                }
+            }
+            TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle, _active ? FpsUi.Neon : FpsUi.Dim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        }
+    }
+}
