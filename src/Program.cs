@@ -86,6 +86,17 @@ namespace BTOptimizer
                 return;
             }
 
+            // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
+            // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
+            // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
+            if (Environment.GetEnvironmentVariable("BT_UITEST") == "1")
+            {
+                int uiErr = 0;
+                TestShellUi(ref uiErr);
+                Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
+                Environment.Exit(uiErr == 0 ? 0 : 1);
+            }
+
             Console.WriteLine("DesTinGOOD TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
@@ -630,6 +641,8 @@ namespace BTOptimizer
                     }
                 }
             }
+            TestShellUi(ref errors);
+
             Console.WriteLine("TEST TERMINÉ — " + i + " optimisations chargées, " + errors + " erreur(s).");
             Environment.Exit(errors == 0 ? 0 : 1);
         }
@@ -638,6 +651,53 @@ namespace BTOptimizer
         {
             try { return DnsBench.QueryMs(server, "www.google.com", 800, 3); }
             catch { return -1; }
+        }
+
+        /// <summary>Construit le shell FPSDoctor et rend chacune des 8 pages hors-écran, à trois
+        /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
+        /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
+        /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
+        private static void TestShellUi(ref int errors)
+        {
+            Console.WriteLine("Shell FPSDoctor (dashboard + 8 pages, rendu hors-écran)...");
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
+            // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
+            try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+
+            DashboardForm dash = null;
+            try { dash = new DashboardForm(); dash.CreateControl(); }
+            catch (Exception ex) { errors++; Console.WriteLine("  DashboardForm ERREUR : " + ex); return; }
+
+            var sizes = new System.Drawing.Size[]
+            {
+                new System.Drawing.Size(1200, 760),   // défaut
+                new System.Drawing.Size(1040, 680),   // minimum
+                new System.Drawing.Size(1680, 960),   // large
+            };
+            foreach (var sz in sizes)
+            {
+                dash.ClientSize = sz;
+                for (int p = 0; p < 8; p++)
+                {
+                    try
+                    {
+                        dash.Goto(p);                  // CreatePage + OnShown, chaîne de parents réelle
+                        Application.DoEvents();
+                        int bw = Math.Max(1, dash.Width), bh = Math.Max(1, dash.Height);
+                        using (var bmp = new System.Drawing.Bitmap(bw, bh))
+                            dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bw, bh)); // rail + mascotte + page
+                    }
+                    catch (Exception exp)
+                    {
+                        errors++;
+                        Console.WriteLine("  [!] " + names[p] + " @ " + sz.Width + "x" + sz.Height
+                            + " : " + exp.GetType().Name + " — " + exp.Message);
+                    }
+                }
+            }
+            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail + mascotte compris.");
+            try { dash.Dispose(); } catch { }
         }
 
         /// <summary>Latence en direct : modules noyau, session ETW (2,5 s si admin), UI, sonde de réveil.</summary>

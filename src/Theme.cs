@@ -60,6 +60,11 @@ namespace BTOptimizer
             try { ToolStripManager.Renderer = new MenuRenderer(); } catch { }
         }
 
+        /// <summary>Force l'initialisation statique (moteur de rendu des menus sombre) au
+        /// démarrage, même si aucune fenêtre v14 n'a encore été ouverte. Sans cet appel, le
+        /// menu ⋯ / tray du shell s'affichait avec le rendu clair par défaut de Windows.</summary>
+        public static void Prime() { }
+
         private static void LoadTokens()
         {
             if (Dark)

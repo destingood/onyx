@@ -38,6 +38,8 @@ namespace BTOptimizer
             Font = FpsUi.Body;
             DoubleBuffered = true;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+            // Garantit le rendu sombre des menus (⋯, tray) dès le démarrage.
+            try { Theme.Prime(); } catch { }
 
             _host = new Panel();
             _host.Dock = DockStyle.Fill;
