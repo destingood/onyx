@@ -10,7 +10,7 @@ namespace BTOptimizer
         public PageConsultation(DashboardForm host) : base(host)
         {
             var hist = new Panel();
-            hist.Tag = "hist"; hist.BackColor = Color.Transparent;
+            hist.Name = "hist"; hist.BackColor = Color.Transparent;   // Name (pas Tag) : DoLayout fait Controls["hist"]
             hist.Paint += (s, e) =>
             {
                 var r = ((Panel)s).ClientRectangle;

@@ -24,7 +24,7 @@ namespace BTOptimizer
         {
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Sample();
-            _btnComp = FpsUi.GhostButton("🩺  Composants détaillés");
+            _btnComp = FpsUi.GhostButton("Composants détaillés");
             _btnComp.Size = new Size(200, 30);
             _btnComp.Click += (s, e) => Host.OpenDialog(new SystemInfoForm(Host.Log));
             Controls.Add(_btnComp);

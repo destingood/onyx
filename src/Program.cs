@@ -94,6 +94,8 @@ namespace BTOptimizer
                 int uiErr = 0;
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                string shot = Environment.GetEnvironmentVariable("BT_UISHOT");
+                if (!string.IsNullOrEmpty(shot)) { try { CaptureShellShots(shot); } catch (Exception ex) { Console.WriteLine("  Capture ERREUR : " + ex.Message); } }
                 Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
@@ -654,6 +656,59 @@ namespace BTOptimizer
             catch { return -1; }
         }
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
+        private const uint PW_RENDERFULLCONTENT = 2;
+
+        private static void Pump(int ms)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < ms) { Application.DoEvents(); System.Threading.Thread.Sleep(15); }
+        }
+
+        /// <summary>BT_UISHOT=&lt;dossier&gt; : montre le shell HORS de l'écran visible (-5000,-5000)
+        /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
+        /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
+        /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureShellShots(string dir)
+        {
+            try { System.IO.Directory.CreateDirectory(dir); } catch { }
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme" };
+            var sizes = new System.Drawing.Size[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
+            foreach (var sz in sizes)
+            {
+                var dash = new DashboardForm();
+                dash.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);   // hors de tout écran visible
+                dash.Show();
+                dash.ClientSize = sz;
+                Pump(450);
+                for (int p = 0; p < 8; p++)
+                {
+                    dash.Goto(p);
+                    Pump(350);
+                    try
+                    {
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p" + p + "-" + names[p] + "-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                    catch (Exception ex) { Console.WriteLine("  shot " + names[p] + " : " + ex.Message); }
+                }
+                try { dash.Close(); dash.Dispose(); } catch { }
+                Pump(120);
+            }
+            Console.WriteLine("  Captures écrites dans " + dir);
+        }
+
         /// <summary>Construit le shell FPSDoctor et rend chacune des 8 pages hors-écran, à trois
         /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
         /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
@@ -687,7 +742,7 @@ namespace BTOptimizer
                         Application.DoEvents();
                         int bw = Math.Max(1, dash.Width), bh = Math.Max(1, dash.Height);
                         using (var bmp = new System.Drawing.Bitmap(bw, bh))
-                            dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bw, bh)); // rail + mascotte + page
+                            dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bw, bh)); // exerce OnPaint (détecte les crashes)
                     }
                     catch (Exception exp)
                     {

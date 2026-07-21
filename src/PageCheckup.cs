@@ -46,7 +46,7 @@ namespace BTOptimizer
             _heart.Paint += PaintHeart;
             Controls.Add(_heart);
 
-            _run = FpsUi.GhostButton("💉   LANCER LE CHECK UP+");
+            _run = FpsUi.GhostButton("▶   LANCER LE CHECK UP+");
             _run.Font = FpsUi.H3; _run.Height = 56;
             _run.Click += (s, e) => RunSelected();
             Controls.Add(_run);
@@ -127,7 +127,7 @@ namespace BTOptimizer
                 {
                     try { report.AppendLine("• " + RunOne(id)); } catch (Exception ex) { report.AppendLine("• Erreur : " + ex.Message); }
                 }
-                try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "💉   LANCER LE CHECK UP+";
+                try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "▶   LANCER LE CHECK UP+";
                     MessageBox.Show(FindForm(), report.ToString(), "Check Up+ terminé", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
                 catch { }
             });

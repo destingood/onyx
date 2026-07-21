@@ -38,7 +38,11 @@ namespace BTOptimizer
                 FpsUi.PaintCard(g, r, soon ? Color.FromArgb(13, 15, 14) : FpsUi.Card, FpsUi.Border, 14f);
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 Color ink = soon ? FpsUi.Dim2 : FpsUi.Ink;
-                TextRenderer.DrawText(g, title, FpsUi.H2, new Point(22, 20), ink, TextFormatFlags.NoPadding);
+                // Titre borné : sur les cartes « soon », il s'arrête avant la puce ARRIVE BIENTÔT
+                // (sinon un titre long comme « OVERCLOCK MANETTE » passait sous la puce).
+                int titleRight = soon ? r.Width - 122 : r.Width - 20;
+                TextRenderer.DrawText(g, title, FpsUi.H2, new Rectangle(22, 18, Math.Max(40, titleRight - 22), 24), ink,
+                    TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
                 TextRenderer.DrawText(g, sub, FpsUi.Small, new Rectangle(22, 48, r.Width - 44, 20), FpsUi.Dim, TextFormatFlags.NoPadding);
                 // Grande icone centrale.
                 TextRenderer.DrawText(g, glyph, FpsUi.GlyphXL, new Rectangle(0, 40, r.Width, r.Height - 40), soon ? FpsUi.Dim2 : FpsUi.Ink,

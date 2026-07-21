@@ -17,7 +17,7 @@ namespace BTOptimizer
         {
             base.OnPaint(e);
             Graphics g = e.Graphics;
-            PaintTitle(g, "COLLECTION", "Ta vitrine de succès et de badges gagnés en optimisant ton PC.");
+            PaintTitle(g, "COLLECTION", "Ta vitrine de succès et de badges.");
 
             int L = 34, top = 96;
             // Vitrine (gauche).
@@ -29,9 +29,10 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, "Badge débloqué", FpsUi.Small, new Rectangle(L, top + 236, vw, 20), FpsUi.Neon, TextFormatFlags.HorizontalCenter);
 
             // Grille de slots (droite).
-            int gx = L + vw + 30, gy = top + 20;
-            TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, top - 30), FpsUi.Ink, TextFormatFlags.NoPadding);
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, top - 6, gx + 64, top - 6);
+            // En-tête BADGES sous le sous-titre (évite la collision avec le texte de PaintTitle).
+            int gx = L + vw + 30, gy = top + 22;
+            TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, top - 6), FpsUi.Ink, TextFormatFlags.NoPadding);
+            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, top + 14, gx + 64, top + 14);
             int cell = 78, gap = 14, cols = 7;
             // Limite droite : évite de peindre des emplacements sous la mascotte (coin bas-droit).
             int right = Host != null ? Host.ContentRight(34) : ClientSize.Width - 34;
