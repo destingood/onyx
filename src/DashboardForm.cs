@@ -166,6 +166,8 @@ namespace BTOptimizer
             var m = new ContextMenuStrip();
             m.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
+            m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
+            m.Items.Add("Rapport de santé (HTML)", null, (s, e) => GenerateHealthReport());
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
             _tray.ContextMenuStrip = m;
@@ -179,6 +181,17 @@ namespace BTOptimizer
             {
                 try { if (GameBoost.IsActive) GameBoost.Deactivate(Log); else GameBoost.Activate(Log); } catch { }
             });
+        }
+
+        private void ToggleOverlay()
+        {
+            try
+            {
+                var s = StatsOverlaySettings.Load();
+                StatsOverlayManager.Toggle(s);
+                s.Enabled = StatsOverlayManager.IsVisible; s.Save();   // persiste l'état pour le prochain lancement
+            }
+            catch { }
         }
 
         private void AutoTimer()
