@@ -169,7 +169,7 @@ namespace BTOptimizer
             dl.Text = (Math.Abs(d) < 0.5) ? "stable" : d.ToString("+0;-0") + unit;
             dl.Dock = DockStyle.Fill;
             dl.ForeColor = (Math.Abs(d) < 0.5) ? Color.FromArgb(165, 170, 180)
-                        : (d < 0 ? Color.FromArgb(120, 230, 170) : Color.FromArgb(245, 150, 110));
+                        : (d < 0 ? Theme.AccentColor : Color.FromArgb(245, 150, 110));
             dl.Font = new Font("Segoe UI", 9f);
             dl.Padding = new Padding(10, 0, 6, 4);
 

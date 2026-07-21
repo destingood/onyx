@@ -543,9 +543,9 @@ namespace BTOptimizer
 
             // Puces : version, puis édition (PRO / essai) si active.
             int cx = x + (int)wm + 14;
-            cx += DrawChip(g, cx, 13, "v10.6", Color.FromArgb(0, 210, 130), false) + 6;
+            cx += DrawChip(g, cx, 13, "v10.6", Theme.AccentColor, false) + 6;
             if (License.IsPro)
-                DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
+                DrawChip(g, cx, 13, "PRO", Theme.AccentColor, true);
             else if (License.TrialActive)
                 DrawChip(g, cx, 13, "ESSAI " + License.TrialDaysLeft + " J", Color.FromArgb(235, 180, 60), false);
 
@@ -573,7 +573,7 @@ namespace BTOptimizer
             }
             g.SmoothingMode = old;
             TextRenderer.DrawText(g, text, _fontChip, new Rectangle(x, y, w, h),
-                filled ? Color.White : tone,
+                filled ? Color.Black : tone,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             return w;
         }
@@ -1073,11 +1073,13 @@ namespace BTOptimizer
                     {
                         _btnBoost.Text = "■ MODE JEU ACTIF";
                         _btnBoost.BackColor = Color.FromArgb(200, 60, 40);
+                        _btnBoost.ForeColor = Color.White;
                     }
                     else
                     {
                         _btnBoost.Text = "▶ MODE JEU";
-                        _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                        _btnBoost.BackColor = Theme.AccentColor;
+                        _btnBoost.ForeColor = Color.Black;
                     }
                 })); } catch { }
             });

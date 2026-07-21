@@ -95,7 +95,7 @@ namespace BTOptimizer
                 {
                     Text = desc, AutoSize = false, Size = new Size(470, 20), Location = new Point(16, 36),
                     BackColor = Color.Transparent, Font = new Font("Segoe UI", 8.5f),
-                    ForeColor = primary ? Color.FromArgb(220, 245, 235) : Color.FromArgb(110, 115, 125)
+                    ForeColor = primary ? Color.FromArgb(6, 42, 24) : Color.FromArgb(110, 115, 125)
                 };
                 b.Text = title;
                 b.TextAlign = ContentAlignment.TopLeft;

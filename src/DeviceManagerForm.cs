@@ -146,7 +146,7 @@ namespace BTOptimizer
             foreach (DeviceInfo.Device d in _devices) if (d.IsProblem) problems++;
             _summary.Text = _devices.Count + " périphériques · "
                 + (problems == 0 ? "aucun problème détecté ✓" : problems + " en erreur ✗");
-            _summary.ForeColor = problems == 0 ? Color.FromArgb(0, 140, 80) : Color.FromArgb(200, 40, 40);
+            _summary.ForeColor = problems == 0 ? Theme.OkColor : Color.FromArgb(200, 40, 40);
 
             _list.BeginUpdate();
             _list.Items.Clear();

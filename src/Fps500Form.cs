@@ -132,7 +132,7 @@ namespace BTOptimizer
         private void Add(ListViewGroup g, int level, string name, string advice)
         {
             string icon = level == 0 ? "✓ " : (level == 1 ? "! " : "• ");
-            Color c = level == 0 ? Color.FromArgb(0, 140, 80)
+            Color c = level == 0 ? Theme.OkColor
                     : (level == 1 ? Color.FromArgb(190, 120, 0) : Color.FromArgb(90, 95, 105));
             var it = new ListViewItem(icon + name) { Group = g, UseItemStyleForSubItems = false, ForeColor = c, ToolTipText = advice };
             if (level != 2) it.Font = _bold;

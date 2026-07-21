@@ -86,7 +86,7 @@ namespace BTOptimizer
             }
             else if (License.TrialActive)
             {
-                _status.ForeColor = Color.FromArgb(0, 120, 60);
+                _status.ForeColor = Theme.OkColor;
                 _status.Text = "Essai en cours : " + License.TrialDaysLeft + " jour(s) restant(s).";
             }
             else if (License.TrialUsed)

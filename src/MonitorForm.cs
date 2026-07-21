@@ -237,7 +237,7 @@ namespace BTOptimizer
                 System.IO.File.WriteAllText(_csvPath,
                     "horodatage;cpu_pct;ram_mo;cpu_temp_c;timer_ms;gpu_temp_c;gpu_pct;gpu_core_mhz;gpu_w;vram_mo" + Environment.NewLine);
                 _btnCsv.Text = "Enregistrer CSV : ON";
-                _btnCsv.ForeColor = Color.FromArgb(120, 230, 150);
+                _btnCsv.ForeColor = Theme.AccentColor;
                 Text = "DesTinGOOD — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
             }
             else
@@ -270,7 +270,7 @@ namespace BTOptimizer
             if (v < 0) return Color.Gray;
             if (v >= hot) return Color.FromArgb(240, 110, 110);
             if (v >= warn) return Color.FromArgb(240, 190, 90);
-            return Color.FromArgb(120, 230, 150);
+            return Theme.AccentColor;
         }
 
         private void DrawSparklines(object sender, PaintEventArgs e)
