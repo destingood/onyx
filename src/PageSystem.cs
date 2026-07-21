@@ -27,6 +27,7 @@ namespace BTOptimizer
         }
 
         public override void OnShown() { Sample(); _timer.Start(); }
+        protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (!Visible) { try { _timer.Stop(); } catch { } } }
         protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
 
         private void Sample()

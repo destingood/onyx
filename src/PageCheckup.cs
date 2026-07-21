@@ -29,6 +29,7 @@ namespace BTOptimizer
         }
 
         public override void OnShown() { DoLayout(); _beat.Start(); }
+        protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (!Visible) { try { _beat.Stop(); } catch { } } }
         protected override void OnHandleDestroyed(EventArgs e) { try { _beat.Stop(); } catch { } base.OnHandleDestroyed(e); }
 
         private void Build()

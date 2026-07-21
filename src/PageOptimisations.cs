@@ -17,6 +17,8 @@ namespace BTOptimizer
         private readonly List<Button> _chipBtns = new List<Button>();
         private readonly Dictionary<string, ToggleSwitch> _toggles = new Dictionary<string, ToggleSwitch>();
         private bool _built;
+        private TextBox _search;
+        private string _query = "";
 
         public PageOptimisations(DashboardForm host) : base(host)
         {
@@ -26,6 +28,7 @@ namespace BTOptimizer
 
         public override void OnShown()
         {
+            DoLayout();
             if (!_built) { Populate(); _built = true; }
             RefreshStatesAsync();
         }
@@ -43,10 +46,26 @@ namespace BTOptimizer
             _flow.Padding = new Padding(28, 4, 20, 20);
             Controls.Add(_flow);
 
+            _search = new TextBox();
+            try { _search.PlaceholderText = "Rechercher une optimisation…"; } catch { }
+            _search.BackColor = FpsUi.Card; _search.ForeColor = FpsUi.Ink;
+            _search.BorderStyle = BorderStyle.FixedSingle; _search.Font = FpsUi.Small;
+            _search.SetBounds(400, 24, 220, 26);
+            _search.TextChanged += (s, e) => { _query = _search.Text.Trim().ToLowerInvariant(); if (_built) { Populate(); RefreshStatesAsync(); } };
+            Controls.Add(_search);
+
             BuildPresets();
             BuildChips();
             Resize += (s, e) => DoLayout();
             DoLayout();
+        }
+
+        private bool Match(Tweak t)
+        {
+            if (_query.Length == 0) return true;
+            return (t.Name != null && t.Name.ToLowerInvariant().Contains(_query))
+                || (t.Desc != null && t.Desc.ToLowerInvariant().Contains(_query))
+                || (t.Category != null && t.Category.ToLowerInvariant().Contains(_query));
         }
 
         private Button _bReco, _bEsport, _bReset;
@@ -79,7 +98,7 @@ namespace BTOptimizer
             _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
             Task.Run(() =>
             {
-                try { Engine.Run(list, apply, apply, apply, Host.Log); } catch { }
+                try { Engine.Run(list, apply, apply, false, Host.Log); } catch { }  // backup .reg oui, point de restauration non (trop lent)
                 try { BeginInvoke((Action)(() => { _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
             });
         }
@@ -136,6 +155,7 @@ namespace BTOptimizer
             foreach (Tweak t in _tweaks)
             {
                 if (_filter != null && t.Category != _filter) continue;
+                if (!Match(t)) continue;
                 _flow.Controls.Add(MakeCard(t));
             }
             _flow.ResumeLayout();
@@ -219,6 +239,7 @@ namespace BTOptimizer
                 _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
                 _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
                 _bReco.Location = new Point(rx - _bReco.Width, 22);
+                if (_search != null) _search.SetBounds(Math.Max(180, _bReco.Left - 12 - 220), 24, 220, 26);
             }
         }
 

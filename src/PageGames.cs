@@ -41,6 +41,7 @@ namespace BTOptimizer
 
         public override void OnShown()
         {
+            DoLayout();
             UpdateModeButton();
             if (_loaded) return;
             _loaded = true;
