@@ -93,6 +93,7 @@ namespace BTOptimizer
             {
                 int uiErr = 0;
                 TestShellUi(ref uiErr);
+                TestMenuForms(ref uiErr);
                 Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
@@ -698,6 +699,69 @@ namespace BTOptimizer
             }
             if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail + mascotte compris.");
             try { dash.Dispose(); } catch { }
+        }
+
+        /// <summary>Construit hors-écran chaque fenêtre exposée par le menu ⋯ Outils (le point
+        /// d'entrée de toutes les fonctions FPSDoctor). Détecte les crashes de construction sans
+        /// effet de bord : les monitorings (ETW/FPS) ne démarrent que sur l'événement Load (Show),
+        /// jamais sur CreateControl ; MainForm n'est que construite (pas de handle) par prudence.</summary>
+        private static void TestMenuForms(ref int errors)
+        {
+            Console.WriteLine("Forms du menu Outils (construction hors-écran, sans effet de bord)...");
+            Action<string, int> log = delegate (string m, int l) { };
+            var forms = new System.Collections.Generic.List<System.Tuple<string, Func<System.Windows.Forms.Form>, bool>>
+            {
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameProfileForm", () => new GameProfileForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetworkForm", () => new NetworkForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DiskForm", () => new DiskForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ShopFixForm", () => new ShopFixForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LibsForm", () => new LibsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DefenderForm", () => new DefenderForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("TournamentForm", () => new TournamentForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("Fps500Form", () => new Fps500Form(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("FpsMonForm", () => new FpsMonForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchForm", () => new BenchForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DisplayForm", () => new DisplayForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LiveMonForm", () => new LiveMonForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LatencyGuideForm", () => new LatencyGuideForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HealthForm", () => new HealthForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BloatForm", () => new BloatForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("CheckupForm", () => new CheckupForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StabilityForm", () => new StabilityForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StressForm", () => new StressForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ThermalForm", () => new ThermalForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MonitorForm", () => new MonitorForm(), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SystemInfoForm", () => new SystemInfoForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DnsForm", () => new DnsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetTuneForm", () => new NetTuneForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetRouteForm", () => new NetRouteForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MouseForm", () => new MouseForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AudioForm", () => new AudioForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DeviceManagerForm", () => new DeviceManagerForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StartupForm", () => new StartupForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ServicesForm", () => new ServicesForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("RestoreForm", () => new RestoreForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
+            };
+            int ok = 0;
+            foreach (var it in forms)
+            {
+                try
+                {
+                    using (var f = it.Item2())
+                        if (it.Item3) f.CreateControl();
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    Console.WriteLine("  [!] " + it.Item1 + " : " + ex.GetType().Name + " — " + ex.Message);
+                }
+            }
+            Console.WriteLine("  " + ok + "/" + forms.Count + " forms du menu construites sans exception.");
         }
 
         /// <summary>Latence en direct : modules noyau, session ETW (2,5 s si admin), UI, sonde de réveil.</summary>
