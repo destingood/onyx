@@ -18,15 +18,22 @@ namespace BTOptimizer
         private const int Hist = 80;
         private bool _sampling;
         private HwSample _last;
+        private Button _btnComp;
 
         public PageSystem(DashboardForm host) : base(host)
         {
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Sample();
-            Resize += (s, e) => Invalidate();
+            _btnComp = FpsUi.GhostButton("🩺  Composants détaillés");
+            _btnComp.Size = new Size(200, 30);
+            _btnComp.Click += (s, e) => Host.OpenDialog(new SystemInfoForm(Host.Log));
+            Controls.Add(_btnComp);
+            Resize += (s, e) => { PlaceBtn(); Invalidate(); };
         }
 
-        public override void OnShown() { Sample(); _timer.Start(); }
+        private void PlaceBtn() { if (_btnComp != null) _btnComp.Location = new Point(ClientSize.Width - 34 - _btnComp.Width, 22); }
+
+        public override void OnShown() { PlaceBtn(); Sample(); _timer.Start(); }
         protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (!Visible) { try { _timer.Stop(); } catch { } } }
         protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
 
