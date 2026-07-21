@@ -139,6 +139,11 @@ namespace BTOptimizer
             m.Add(reg);
 
             m.Add("🔁  Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
+
+            var prof = new ToolStripMenuItem("💾  Profil d'optimisations");
+            prof.DropDownItems.Add("Exporter mon profil…", null, (s, e) => ExportProfile());
+            prof.DropDownItems.Add("Importer un profil…", null, (s, e) => ImportProfile());
+            m.Add(prof);
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de DesTinGOOD", null, (s, e) => OpenDialog(new AboutForm()));
@@ -355,6 +360,68 @@ namespace BTOptimizer
                         else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
+                catch { }
+            });
+        }
+
+        /// <summary>Exporte le profil : les IDs des optimisations ACTUELLEMENT actives, dans un
+        /// fichier choisi (.dtg). Lecture seule — pour sauvegarder ou partager sa config.</summary>
+        public void ExportProfile()
+        {
+            string file;
+            using (var dlg = new SaveFileDialog { Filter = "Profil DesTinGOOD (*.dtg)|*.dtg", FileName = "mon-profil-destingood.dtg", Title = "Exporter mon profil d'optimisations" })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                file = dlg.FileName;
+            }
+            Cursor = Cursors.WaitCursor;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var ids = new System.Collections.Generic.List<string>();
+                try { foreach (Tweak t in Catalog.All()) { bool? c = null; try { if (t.Check != null) c = t.Check(); } catch { } if (c == true) ids.Add(t.Id); } }
+                catch { }
+                string err = null;
+                try { System.IO.File.WriteAllLines(file, ids); } catch (Exception ex) { err = ex.Message; }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Cursor = Cursors.Default;
+                        if (err == null) MessageBox.Show(this, ids.Count + " optimisation(s) active(s) exportée(s) :\n" + file, "Profil exporté", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        else MessageBox.Show(this, "Échec de l'export :\n\n" + err, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        /// <summary>Importe un profil (.dtg) et applique les optimisations qu'il liste, après
+        /// confirmation. Une sauvegarde .reg automatique est faite avant application.</summary>
+        public void ImportProfile()
+        {
+            string file;
+            using (var dlg = new OpenFileDialog { Filter = "Profil DesTinGOOD (*.dtg)|*.dtg|Tous les fichiers|*.*", Title = "Importer un profil d'optimisations" })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                file = dlg.FileName;
+            }
+            var wanted = new System.Collections.Generic.HashSet<string>();
+            try { foreach (string line in System.IO.File.ReadAllLines(file)) { string id = line.Trim(); if (id.Length > 0) wanted.Add(id); } }
+            catch (Exception ex) { MessageBox.Show(this, "Lecture impossible :\n\n" + ex.Message, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+
+            var list = new System.Collections.Generic.List<Tweak>();
+            try { foreach (Tweak t in Catalog.All()) if (wanted.Contains(t.Id)) list.Add(t); } catch { }
+            if (list.Count == 0) { MessageBox.Show(this, "Aucune optimisation reconnue dans ce fichier.", "Profil", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+
+            if (MessageBox.Show(this, "Appliquer " + list.Count + " optimisation(s) de ce profil ?\n\nUne sauvegarde .reg automatique est réalisée avant.",
+                "Importer un profil", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+
+            Cursor = Cursors.WaitCursor;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { Engine.Run(list, true, true, false, Log); } catch { }   // apply=true, backup .reg=true
+                try { BeginInvoke((Action)(() => { Cursor = Cursors.Default;
+                    MessageBox.Show(this, list.Count + " optimisation(s) du profil appliquée(s).", "Profil importé", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
                 catch { }
             });
         }
