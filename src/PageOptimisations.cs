@@ -43,9 +43,45 @@ namespace BTOptimizer
             _flow.Padding = new Padding(28, 4, 20, 20);
             Controls.Add(_flow);
 
+            BuildPresets();
             BuildChips();
             Resize += (s, e) => DoLayout();
             DoLayout();
+        }
+
+        private Button _bReco, _bEsport, _bReset;
+
+        private void BuildPresets()
+        {
+            _bReco = FpsUi.NeonButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
+            _bReco.Click += (s, e) => Batch(t => t.Recommended, true, "Recommandé");
+            _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Neon;
+            _bEsport.Click += (s, e) => { if (Pro("Preset eSport")) Batch(t => t.Esport, true, "eSport"); };
+            _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
+            _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
+            Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+        }
+
+        private bool Pro(string feat)
+        {
+            if (License.ProUnlocked) return true;
+            using (var f = new LicenseKeyForm(feat)) f.ShowDialog(FindForm());
+            return License.ProUnlocked;
+        }
+
+        private void Batch(Func<Tweak, bool> selector, bool apply, string label)
+        {
+            var list = new List<Tweak>();
+            foreach (Tweak t in _tweaks) if (selector(t)) list.Add(t);
+            if (list.Count == 0) return;
+            if (MessageBox.Show(FindForm(), (apply ? "Appliquer" : "Rétablir") + " " + list.Count + " optimisation(s) — " + label + " ?",
+                "DesTinGOOD", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
+            Task.Run(() =>
+            {
+                try { Engine.Run(list, apply, apply, apply, Host.Log); } catch { }
+                try { BeginInvoke((Action)(() => { _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
+            });
         }
 
         private void BuildChips()
@@ -177,6 +213,13 @@ namespace BTOptimizer
         {
             if (_flow == null) return;
             _flow.SetBounds(20, 112, ClientSize.Width - 40, ClientSize.Height - 112);
+            if (_bReset != null)
+            {
+                int rx = ClientSize.Width - 34;
+                _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
+                _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
+                _bReco.Location = new Point(rx - _bReco.Width, 22);
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
