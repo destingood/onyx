@@ -59,6 +59,65 @@ namespace BTOptimizer
             Theme.Apply(this);
         }
 
+        // add_manual_game (FPSDoctor) : jeux ajoutés à la main, persistés (nom|exe par ligne).
+        private static string ManualPath { get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-manual-games.txt"); } }
+
+        private static List<Game> ManualGames()
+        {
+            var list = new List<Game>();
+            try
+            {
+                if (System.IO.File.Exists(ManualPath))
+                    foreach (string line in System.IO.File.ReadAllLines(ManualPath))
+                    {
+                        string[] p = line.Split('|');
+                        if (p.Length >= 2 && p[0].Trim().Length > 0 && p[1].Trim().Length > 0)
+                            list.Add(new Game(p[0].Trim(), p[1].Trim()));
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        private static void AddManual(string name, string exe)
+        {
+            try { System.IO.File.AppendAllText(ManualPath, name.Replace("|", " ") + "|" + exe.Replace("|", " ") + Environment.NewLine); } catch { }
+        }
+
+        private void OnAddManual(object sender, EventArgs e)
+        {
+            string exe;
+            using (var dlg = new OpenFileDialog { Filter = "Exécutable du jeu (*.exe)|*.exe", Title = "Sélectionne l'exécutable du jeu" })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                exe = System.IO.Path.GetFileName(dlg.FileName);
+            }
+            string name = Prompt("Nom du jeu à afficher :", System.IO.Path.GetFileNameWithoutExtension(exe));
+            if (string.IsNullOrWhiteSpace(name)) return;
+            AddManual(name.Trim(), exe);
+            if (_log != null) _log("Jeu ajouté : " + name.Trim() + " (" + exe + ").", 0);
+            Scan();
+        }
+
+        private string Prompt(string label, string def)
+        {
+            using (var f = new Form
+            {
+                Text = "DesTinGOOD — Ajouter un jeu", ClientSize = new Size(380, 132), FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent, MaximizeBox = false, MinimizeBox = false, Font = new Font("Segoe UI", 9f)
+            })
+            {
+                var l = new Label { Text = label, Location = new Point(16, 16), AutoSize = true };
+                var tb = new TextBox { Text = def, Location = new Point(16, 42), Width = 348 };
+                var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(200, 86), Width = 76, FlatStyle = FlatStyle.Flat };
+                var ca = new Button { Text = "Annuler", DialogResult = DialogResult.Cancel, Location = new Point(286, 86), Width = 78, FlatStyle = FlatStyle.Flat };
+                f.Controls.Add(l); f.Controls.Add(tb); f.Controls.Add(ok); f.Controls.Add(ca);
+                f.AcceptButton = ok; f.CancelButton = ca;
+                try { Theme.Apply(f); } catch { }
+                return f.ShowDialog(this) == DialogResult.OK ? tb.Text : null;
+            }
+        }
+
         private void Build()
         {
             Text = "DesTinGOOD — Priorité par jeu";
@@ -97,10 +156,14 @@ namespace BTOptimizer
 
             _summary = new Label
             {
-                Location = new Point(18, 384), Size = new Size(584, 22),
+                Location = new Point(18, 388), Size = new Size(378, 22),
                 Font = new Font("Segoe UI Semibold", 9.5f), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(_summary);
+
+            var add = MakeBtn("＋  Ajouter un jeu…", 410, 380, 192, 30, false);
+            add.Click += OnAddManual;
+            Controls.Add(add);
 
             _btnAllDetected = MakeBtn("Cocher les jeux détectés", 18, 414, 200, 36, false);
             _btnAllDetected.Click += (s, e) => { for (int i = 0; i < _games.Count; i++) if (_games[i].Detected) _list.SetItemChecked(i, true); };
@@ -153,6 +216,12 @@ namespace BTOptimizer
                 {
                     g.Detected = detectedNames.Contains(g.Name);
                     g.HighPriority = g.Exes.All(ExeHasHighPriority);
+                }
+                foreach (Game g in ManualGames())   // jeux ajoutés à la main : considérés « détectés »
+                {
+                    g.Detected = true;
+                    g.HighPriority = g.Exes.All(ExeHasHighPriority);
+                    _games.Add(g);
                 }
                 try { BeginInvoke((Action)Populate); } catch { }
             });
