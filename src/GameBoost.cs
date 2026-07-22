@@ -21,6 +21,41 @@ namespace BTOptimizer
             "SysMain", "WSearch", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice"
         };
 
+        /// <summary>Liste des services que le Mode Jeu peut suspendre (pour l'écran d'exclusions).</summary>
+        public static IReadOnlyList<string> SuspendableServices { get { return Suspendable; } }
+
+        /// <summary>Libellé lisible d'un service suspendable.</summary>
+        public static string FriendlyName(string svc)
+        {
+            switch (svc)
+            {
+                case "SysMain": return "SysMain (Superfetch — préchargement)";
+                case "WSearch": return "Windows Search (indexation des fichiers)";
+                case "Spooler": return "Spouleur d'impression";
+                case "DiagTrack": return "Télémétrie / diagnostics (DiagTrack)";
+                case "WMPNetworkSvc": return "Partage réseau Windows Media";
+                case "MapsBroker": return "Cartes hors ligne (MapsBroker)";
+                case "dmwappushservice": return "WAP Push (télémétrie)";
+                default: return svc;
+            }
+        }
+
+        private static string ExclPath { get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gamemode-excl.txt"); } }
+
+        /// <summary>Services EXCLUS du Mode Jeu (laissés tourner) — choix persisté de l'utilisateur.</summary>
+        public static HashSet<string> LoadExclusions()
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try { if (System.IO.File.Exists(ExclPath)) foreach (string l in System.IO.File.ReadAllLines(ExclPath)) { string s = l.Trim(); if (s.Length > 0) set.Add(s); } }
+            catch { }
+            return set;
+        }
+
+        public static void SaveExclusions(IEnumerable<string> excluded)
+        {
+            try { System.IO.File.WriteAllLines(ExclPath, new List<string>(excluded)); } catch { }
+        }
+
         public static void Activate(Action<string, int> log)
         {
             if (IsActive) return;
@@ -31,8 +66,10 @@ namespace BTOptimizer
             long freed = Sys.CleanMemory(log);
 
             _stopped.Clear();
+            HashSet<string> excl = LoadExclusions();
             foreach (string svc in Suspendable)
             {
+                if (excl.Contains(svc)) continue;   // exclu par l'utilisateur : laissé tourner
                 // Chaque service isolé : un service récalcitrant ne doit NI faire échouer le mode
                 // jeu, NI laisser les autres à moitié suspendus. Un service n'est enregistré dans
                 // _stopped que si son arrêt a réussi (sinon on n'essaiera pas de le relancer).

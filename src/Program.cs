@@ -756,6 +756,7 @@ namespace BTOptimizer
                 case "StatsOverlayForm": return new StatsOverlayForm(log);
                 case "StatsOverlayWindow": return new StatsOverlayWindow();
                 case "BenchmarkFpsForm": return new BenchmarkFpsForm(log);
+                case "GameModeForm": return new GameModeForm(log);
                 default: return null;
             }
         }
@@ -922,6 +923,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameModeForm", () => new GameModeForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;
