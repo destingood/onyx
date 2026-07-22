@@ -86,6 +86,61 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎯 Correctif critique du viseur — plus aucune perte de FPS (v14.27)
+
+Bug découvert **en conditions réelles** (grosse chute de FPS sur Overwatch, diagnostiquée
+sur cette machine par chronologie des fichiers d'état + test A/B) : la fenêtre du viseur
+couvrait **tout l'écran** (`Bounds = Screen.PrimaryScreen.Bounds`). Un overlay layered
+plein écran fait perdre aux jeux sans bordure le **flip indépendant** DWM → composition
+forcée → chute de FPS massive, qui **persiste jusqu'au redémarrage du jeu** (c'est le
+piège : désactiver le viseur en cours de partie ne suffit pas, ce qui innocente à tort
+le viseur lors d'un test « à chaud »).
+
+- **Correctif** : la fenêtre overlay est réduite à l'**encombrement exact du réticule**
+  (quelques dizaines de pixels, centrés) — `CenteredBounds()` recalculé à chaque
+  changement de réglage. Plus d'occlusion de l'écran → le jeu garde sa voie rapide.
+- La contrainte est documentée en tête de `Crosshair.cs` : **jamais plein écran**.
+- Reproduction de l'ancien bug : viseur activé → jeu sans bordure → FPS en chute ;
+  retour à la normale seulement après redémarrage complet du jeu.
+
+### 💰 Tarifs alignés sur le marché (−15 %) + clés à expiration (v14.26)
+
+Décision produit : mêmes paliers que le concurrent direct, 15 % moins cher — Gratuit
+inchangé (173 optimisations), **Pro Annuel 49 €/an**, **Pro à Vie 127 €** (le marché :
+59 €/an · 150 € à vie).
+
+- **Clés à expiration signées** : la partie signée de la clé peut encoder
+  « Nom␞AAAA-MM-JJ » — la date est DANS la chaîne signée RSA, donc infalsifiable. Sans
+  date = à vie : toutes les clés déjà émises restent valides. Clé expirée → refus avec
+  message clair (« Clé expirée le… renouvelle l'abonnement »), statut « licence expirée
+  le… », retour propre en édition gratuite. Contrôle au démarrage et à l'activation.
+- **Keygen** (`seller/`) : `dotnet run -- "Nom"` (à vie) ou `dotnet run -- "Nom" 365`
+  (abonnement) ; le renouvellement = une nouvelle clé 365 à chaque échéance.
+- **Fenêtre Pro** : le lien d'achat affiche les deux offres et ouvre la boutique ; la
+  confirmation d'activation précise « à vie » ou « jusqu'au … » ; l'erreur de clé passe
+  en boîte de dialogue quand le bouton d'essai masque le label (bug préexistant :
+  l'erreur était invisible dans ce cas).
+- **Landing** : grille 3 colonnes (Gratuit / Annuel 49 €/an / À Vie 127 € mise en
+  avant) + note « 15 % sous le marché » ; plan de lancement et posts recalculés
+  (3 produits Gumroad dont un Membership, marges nettes ~34 €/an et ~89 €/vente à vie,
+  workflow de renouvellement des clés).
+
+### 💶 Funnel de vente branché — l'app mène à l'achat (v14.25)
+
+Préparation du lancement commercial (rien ne change pour l'utilisateur gratuit) :
+
+- **Lien d'achat dans la fenêtre Pro** (`LicenseKeyForm`) : toutes les fonctions verrouillées
+  passent par cette fenêtre, qui propose désormais « 🛒 Acheter la licence Pro — 19 €, à
+  vie » (ouvre la page de paiement dans le navigateur). Jusqu'ici, un utilisateur convaincu
+  n'avait **aucun chemin pour payer** depuis l'app.
+- **Landing reliée** : les boutons Télécharger et « Passer à la version Pro » de
+  `marketing/landing.html` pointent sur les pages de vente (permaliens `gratuit` / `pro`)
+  au lieu de `href="#"` ; numéros de version affichés remis à jour.
+- **Kit de lancement** dans `marketing/` : `PLAN-LANCEMENT.md` (étapes concrètes — statut,
+  boutique, hébergement de la landing, livraison des clés, distribution J1→J7, attentes
+  réalistes) et `posts-lancement.md` (fiches produit, email de livraison de clé, posts
+  Reddit/forum/X, scripts TikTok, message Discord — prêts à coller).
+
 ### 🎯 Viseur (crosshair) + filtre couleur (vibrance) intégrés (v14.24)
 
 Deux fonctions « confort de jeu » récupérées d'une autre branche et **portées dans la v14** :

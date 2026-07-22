@@ -7,12 +7,18 @@ Ce dossier contient les outils de commercialisation de DesTinGOOD. **Rien ici ne
 
 ```
 cd seller
-dotnet run -- "Nom du client"
+dotnet run -- "Nom du client"          →  licence À VIE (127 €)
+dotnet run -- "Nom du client" 365      →  ABONNEMENT annuel (49 €/an, expire dans N jours)
 ```
 
 La commande affiche une **clé** à envoyer à l'acheteur. Le client la colle dans
-l'app (menu ☰ → « Activer la version Pro »). La clé encode le nom du client + une
-signature RSA-2048 ; l'app la vérifie avec la clé **publique** embarquée.
+l'app (menu ☰ → « Activer la version Pro »). La clé encode le nom du client
+(+ la date d'expiration pour un abonnement, incluse dans la partie signée donc
+infalsifiable) + une signature RSA-2048 ; l'app la vérifie avec la clé **publique**
+embarquée. Les clés sans date (générées avant l'abonnement) restent valides à vie.
+
+**Renouvellement** : à chaque échéance annuelle (email Gumroad), génère une nouvelle
+clé `365` et envoie-la au client — l'ancienne expire d'elle-même.
 
 - `private.xml` = clé **privée** : elle seule permet de créer des clés valides.
   **Garde-la secrète et sauvegardée.** Si elle fuite, n'importe qui peut générer des
