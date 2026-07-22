@@ -86,6 +86,28 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎚 Mode SIMPLE : la gestion des optimisations façon « FPS doctor » (v14.27)
+
+Nouveau bouton **🎚 MODE SIMPLE** à côté de TOUT OPTIMISER (aussi dans ☰ → Mon profil) : une
+fenêtre où chaque optimisation est un **interrupteur à effet immédiat** — un clic = appliqué
+ou rétabli sur-le-champ, **sauvegarde .reg automatique à chaque geste**, état réel affiché en
+vert (re-scan en fond à l'ouverture, certains états passent par `netsh`).
+
+- **L'essentiel seulement** : les réglages Recommandé ∪ eSport (≈65), groupés par catégorie —
+  pas les 177 d'un coup. Le mode expert (fenêtre principale) garde tout : sélection fine,
+  presets Auto/Benchmark, profil exportable.
+- **Deux boosts façon FPS doctor** : « ⚡ Boost léger (sûr) » (les Recommandé) et « 🚀 Boost
+  complet » (Recommandé + eSport, édition Pro comme le preset eSport) — chacun n'applique que
+  ce qui manque, avec sauvegarde + point de restauration. « ↩ Tout rétablir » éteint tout ce
+  qui est ON (ordre inverse géré par le moteur).
+- **Verrou anti-réentrance** (équivalent du `isBusy` FPSDoctor) : une seule opération à la
+  fois, interface gelée pendant l'application, fermeture bloquée en cours d'opération. Au
+  retour dans le mode expert, les mentions *[déjà actif]* sont resynchronisées.
+
+Harnais complet passé sur machine réelle : **177 optimisations scannées, 0 erreur**, fenêtre
+construite, états des nouveaux réglages corrects (CTCP lu via token `netsh`, ULPS « n/a »
+sans GPU AMD).
+
 ### 🎯 Viseur AUTO en jeu (v14.26)
 
 Le viseur sait maintenant **se montrer tout seul** : nouvelle case « **AUTO en jeu** » dans la

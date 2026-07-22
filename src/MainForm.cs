@@ -25,7 +25,7 @@ namespace BTOptimizer
         private CheckBox _chkGuard;
         private bool _guardEventSuppressed;
         private RichTextBox _log;
-        private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore;
+        private Button _btnReco, _btnEsport, _btnAll, _btnNone, _btnRestore, _btnSimple;
         private Button _btnApply, _btnRevert, _btnOpen, _btnReport, _btnMeasure, _btnLatency;
         private Button _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns;
         private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin, _btnFps500;
@@ -253,6 +253,7 @@ namespace BTOptimizer
 
             // --- 🗂 Mon profil ---
             var mProfile = group("🗂  Mon profil d'optimisations");
+            mProfile.DropDownItems.Add("🎚 Mode SIMPLE (interrupteurs immédiats)...", null, (s, e) => OpenSimpleMode());
             mProfile.DropDownItems.Add("Re-vérifier l'état des optimisations (re-scan)", null,
                 (s, e) => { RefreshStates(); Log("États re-vérifiés : les mentions [déjà actif] sont à jour.", 0); });
             mProfile.DropDownItems.Add("🛡 Mon profil a-t-il été annulé (Windows Update) ?...", null, OnCheckDrift);
@@ -346,14 +347,25 @@ namespace BTOptimizer
             // ⚡ LE bouton : tout optimiser en 1 clic (niveau choisi selon le matériel,
             // sauvegarde forcée, réglages à risque jeux/boutiques écartés d'office).
             _btnOneClick = new Button();
-            _btnOneClick.Text = "⚡ TOUT OPTIMISER MON PC  —  1 clic : détection du matériel, sauvegarde automatique, 100 % réversible";
-            _btnOneClick.SetBounds(16, 138, 868, 34);
+            _btnOneClick.Text = "⚡ TOUT OPTIMISER MON PC  —  1 clic : sauvegarde auto, 100 % réversible";
+            _btnOneClick.SetBounds(16, 138, 700, 34);
             _btnOneClick.FlatStyle = FlatStyle.Flat;
             _btnOneClick.FlatAppearance.BorderSize = 0;
             _btnOneClick.BackColor = Accent;
             _btnOneClick.ForeColor = Color.White;
             _btnOneClick.Font = new Font("Segoe UI Semibold", 10f);
             _btnOneClick.Click += OnOneClickOptimize;
+
+            // Mode SIMPLE : la gestion façon « FPS doctor » (interrupteurs immédiats).
+            _btnSimple = new Button();
+            _btnSimple.Text = "🎚 MODE SIMPLE";
+            _btnSimple.SetBounds(722, 138, 162, 34);
+            _btnSimple.FlatStyle = FlatStyle.Flat;
+            _btnSimple.FlatAppearance.BorderSize = 0;
+            _btnSimple.BackColor = Color.FromArgb(0, 150, 90);
+            _btnSimple.ForeColor = Color.White;
+            _btnSimple.Font = new Font("Segoe UI Semibold", 10f);
+            _btnSimple.Click += (s, e) => OpenSimpleMode();
 
             // Zone déroulante des optimisations
             var panel = new Panel();
@@ -537,7 +549,7 @@ namespace BTOptimizer
             Controls.AddRange(new Control[]
             {
                 header, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnRestore,
-                _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search, _btnOneClick,
+                _btnAuto, _btnBench, _btnLatMin, _btnFps500, _search, _btnOneClick, _btnSimple,
                 panel, _chkBackup, _chkPoint, _chkGuard, _chkTimer, _chkAutoTimer, _chkAutoBoost,
                 _btnApply, _btnRevert, _btnOpen, _btnReport, _btnLatency,
                 _btnMonitor, _btnOverclock, _btnDns, _btnAutoCompare, logCard
@@ -833,6 +845,18 @@ namespace BTOptimizer
             using (var f = new LicenseKeyForm(feature)) f.ShowDialog(this);
             if (License.ProUnlocked) { UpdateProUi(); return true; }
             return false;
+        }
+
+        /// <summary>Ouvre le mode SIMPLE (interrupteurs immédiats) puis resynchronise les [déjà actif].</summary>
+        private void OpenSimpleMode()
+        {
+            try
+            {
+                using (var f = new SimpleOptiForm(_tweaks, () => RequirePro("Boost complet (mode simple)"), Log))
+                    f.ShowDialog(this);
+            }
+            catch (Exception ex) { Log("Mode simple : " + ex.Message, 2); }
+            RefreshStates();
         }
 
         private void UpdateProUi()
@@ -1210,7 +1234,7 @@ namespace BTOptimizer
         private void SetBusy(bool busy)
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin, _btnFps500, _btnOneClick };
+            Button[] buttons = { _btnApply, _btnRevert, _btnRestore, _btnReco, _btnEsport, _btnAll, _btnNone, _btnMeasure, _btnReport, _btnLatency, _btnMonitor, _btnAutoCompare, _btnOverclock, _btnDns, _btnAuto, _btnBench, _btnBoost, _btnLatMin, _btnFps500, _btnOneClick, _btnSimple };
             foreach (Button b in buttons) b.Enabled = !busy;
             _chkTimer.Enabled = !busy;
         }
