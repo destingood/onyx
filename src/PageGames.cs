@@ -164,10 +164,15 @@ namespace BTOptimizer
                     }
                     else
                     {
-                        using (var bg = new SolidBrush(detected ? FpsUi.Card : Color.FromArgb(13, 15, 14))) gr.FillRectangle(bg, rr);
-                        TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, new Rectangle(0, 66, rr.Width, 54), detected ? FpsUi.Neon : FpsUi.Dim2,
-                            TextFormatFlags.HorizontalCenter);
-                        TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 126, rr.Width - 20, 80), detected ? FpsUi.Ink : FpsUi.Dim,
+                        // Placeholder soigné pour les jeux hors Steam (Riot/Epic/Blizzard…) : dégradé +
+                        // pastille ronde à la manette + nom bien lisible (au lieu d'une boîte vide).
+                        using (var lg = new LinearGradientBrush(rr, Color.FromArgb(26, 31, 28), Color.FromArgb(12, 15, 13), 90f)) gr.FillRectangle(lg, rr);
+                        Color ac = detected ? FpsUi.Neon : FpsUi.Dim2;
+                        int d = 78; var circ = new Rectangle((rr.Width - d) / 2, 40, d, d);
+                        using (var cb = new SolidBrush(Color.FromArgb(detected ? 34 : 22, ac.R, ac.G, ac.B))) gr.FillEllipse(cb, circ);
+                        using (var cp = new Pen(Color.FromArgb(detected ? 130 : 60, ac.R, ac.G, ac.B), 1.5f)) gr.DrawEllipse(cp, circ);
+                        TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, circ, ac, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                        TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 138, rr.Width - 20, 68), detected ? FpsUi.Ink : FpsUi.Dim,
                             TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
                     }
                     gr.Clip = save; save.Dispose();
