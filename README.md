@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧰 Outils CAPET au catalogue + audit du doc-index complet (v14.36)
+
+Analyse du **document maître CAPET** (index de ses 15 vidéos d'optimisation). Croisement de
+chaque réglage concret cité avec les 179 tweaks : **tout est déjà couvert** (SystemResponsiveness,
+dynamic tick, HPET/useplatformclock, GameDVR/GameBar ×40, alimentation, veille USB, carte réseau…),
+ou hors-logiciel (réglages BIOS AMD/Intel), ou déjà présent en tweak expert **non-recommandé**
+(prefetch, NDU — que le doc déconseille aussi : cohérent).
+
+Un seul réglage registre était absent — la clé **GameBar `PresenceWriter`** — **volontairement
+NON ajoutée** : clé protégée (TrustedInstaller, nécessite une prise de possession façon NSUDO),
+incompatible avec la réversibilité propre du produit, et GameBar est déjà neutralisé 4 autres
+façons plus sûres.
+
+**Ce qui a été ajouté** : les **outils que CAPET recommande**, branchés au catalogue installable
+en 1 clic (winget, IDs **vérifiés**) — **Process Lasso** (priorité/affinité CPU par jeu), **f.lux**
+(confort visuel), **Autoruns** (démarrage, Sysinternals). ISLC n'est pas sur winget (téléchargement
+direct Wagnardsoft) — laissé de côté ; le nettoyage mémoire est déjà natif dans l'app.
+
 ### 🎥 Guide « Streamer sans lag » (doc CAPET intégrée) (v14.35)
 
 La doc CAPET « jouer et streamer sans lag des jeux peu optimisés » **ne contenait aucune clé de

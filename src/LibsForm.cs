@@ -125,6 +125,17 @@ namespace BTOptimizer
                     Why = "regroupe Steam/Epic/GOG/Xbox dans une seule bibliothèque",
                     Installed = () => Directory.Exists(Path.Combine(local, "Playnite")) },
 
+                // ---- Outils recommandés par les guides d'optimisation (Process Lasso, f.lux, Autoruns) ----
+                new LibItem { Name = "Process Lasso (priorité & affinité CPU par jeu)", WingetId = "BitSum.ProcessLasso",
+                    Why = "règle automatiquement la priorité et l'affinité CPU des jeux (ProBalance) — moins de micro-freezes sur les jeux mal optimisés",
+                    Installed = () => Uninstall("Process Lasso") || File.Exists(Path.Combine(pf, @"Process Lasso\ProcessLasso.exe")) },
+                new LibItem { Name = "f.lux (confort visuel, moins de fatigue)", WingetId = "flux.flux",
+                    Why = "adapte la température de couleur de l'écran à l'heure — repos des yeux lors des longues sessions",
+                    Installed = () => Directory.Exists(Path.Combine(local, "FluxSoftware")) || Uninstall("f.lux") },
+                new LibItem { Name = "Autoruns (gestionnaire de démarrage Sysinternals)", WingetId = "Microsoft.Sysinternals.Autoruns",
+                    Why = "voit et coupe TOUT ce qui se lance au démarrage (plus complet que le Gestionnaire des tâches) — outil Microsoft officiel",
+                    Installed = () => WingetPkg("Microsoft.Sysinternals.Autoruns") },
+
                 // ---- Diagnostic, thermiques & test de stabilité (surveille et éprouve ton PC) ----
                 new LibItem { Name = "Fan Control (courbes de ventilation)", WingetId = "Rem0o.FanControl",
                     Why = "pilote les ventilos selon la température CPU/GPU — le meilleur outil GRATUIT contre le throttling thermique et le bruit",
