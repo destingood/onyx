@@ -134,7 +134,9 @@ namespace BTOptimizer
             int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
             int patientTop = 118;
             int patientBottom = Host != null ? Host.ContentBottom(34) : ClientSize.Height - 34;
-            int patientH = Math.Max(320, patientBottom - patientTop);
+            // Carte à hauteur proportionnée (plafonnée) — évite un panneau étiré maintenant que la
+            // mascotte ne réserve plus le coin bas-droit.
+            int patientH = Math.Min(440, Math.Max(320, patientBottom - patientTop));
             DrawPatient(g, rightX, patientTop, rightW, patientH);
         }
 
