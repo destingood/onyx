@@ -11,7 +11,7 @@ sombre par défaut (basculable dans le menu ☰).
 
 ## En un coup d'œil
 
-- **177 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
+- **178 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
 - **Deux portes d'entrée** : 🏥 **Santé de mon PC** (bilan /100 avec graphique de tendance) et
   🧭 **J'ai un problème…** (assistant symptôme → bon outil).
 - **Suite de diagnostic** (menu ☰, rangée en 6 sous-menus) — chaque symptôme a son panneau
@@ -85,6 +85,25 @@ fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y
 code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
+### 🖱️ Menu clic droit classique W11 (pack d'optimisation vidéo analysé) (v14.33)
+
+Analyse du **pack « OPTI W11 CAPET »** (les ressources d'un tuto d'optimisation Windows 11
+gaming, 4 dossiers `.reg`/`.bat`/outils) : croisement **clé de registre par clé de registre**
+avec le catalogue de l'app. Verdict — **95 % était déjà couvert** (GameDVR/GameBar, accélération
+souris MarkC, profil `Tasks\Games` GPU/SFIO/Scheduling, AutoEndTasks, Hung/WaitToKill,
+MenuShowDelay, apps en arrière-plan, maintenance auto, extensions de fichiers…) ; le reste est
+des utilitaires externes (ISLC, MSI-util, Autoruns, Windows Update Blocker…).
+
+**Un seul réglage registre manquait — il est ajouté** : le **menu clic droit classique de
+Windows 11** (fin de « Afficher plus d'options » → le menu contextuel complet façon Windows 10,
+directement). Clé `CLSID {86ca1aa0…}\InprocServer32` vide, **100 % réversible** (« Rétablir »
+supprime la clé), prend effet après un redémarrage de l'Explorateur. Recommandé, dans la
+catégorie 🚀 Rapidité. Catalogue : **178 optimisations**.
+
+> Rien n'a été « deviné » depuis la vidéo : seuls des `.reg` **lus en local** (valeurs exactes,
+> vérifiées, avec leur inverse) ont servi de source — cohérent avec la règle de sécurité du
+> produit (aucun tweak registre non vérifié dans un logiciel commercial).
 
 ### ⚙️ Prérequis des jeux : installation automatique, réglable en 1 écran (v14.32)
 
@@ -769,7 +788,7 @@ un **disque dur mécanique** (lecture < 150 Mo/s → conseille le passage sur SS
 
 Le bouton **Rapport** produit désormais un vrai **audit** exportable (page HTML autonome,
 thème sombre soigné, ouvrable dans le navigateur et imprimable en PDF) : en plus de l'état
-des 177 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
+des 178 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
 crashs pilote GPU (14 j), écrans bleus, réglages néfastes à corriger, bibliothèques de jeu
 manquantes, points de restauration, espace disque — avec pastilles vertes/rouges. Le
 livrable **avant/après** idéal pour montrer ton travail à un client (généré en arrière-plan

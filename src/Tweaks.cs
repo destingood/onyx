@@ -2308,6 +2308,24 @@ namespace BTOptimizer
                 Check  = () => Sys.AmdUlpsDisabled()
             });
 
+            // Menu contextuel classique de Windows 11 (pack d'optimisation CAPET « OPTI W11 »,
+            // seul réglage registre pas déjà couvert par le catalogue). Restaure le clic droit
+            // complet façon Windows 10 : une clé CLSID à InprocServer32 vide neutralise le menu
+            // réduit. Réversible en supprimant la clé.
+            list.Add(new Tweak
+            {
+                Id = "classic_context_menu", Category = Cat.Rapidite, Recommended = true,
+                Name = "Menu clic droit classique (fin de « Afficher plus d'options »)",
+                Desc = "Restaure le menu contextuel COMPLET de Windows 10 au clic droit : toutes les entrées "
+                     + "directement, sans passer par « Afficher plus d'options ». Prend effet après un "
+                     + "redémarrage de l'Explorateur (Gestionnaire des tâches → « Redémarrer l'Explorateur », "
+                     + "ou déconnexion/reconnexion). « Rétablir » remet le menu réduit de Windows 11.",
+                BackupKeys = new[] { @"HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" },
+                Apply  = () => Sys.SetUser(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32", "", "", RegistryValueKind.String),
+                Revert = () => Sys.DelUserSubKeyTree(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}"),
+                Check  = () => Sys.UserKeyExists(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32")
+            });
+
             return list;
         }
     }

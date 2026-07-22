@@ -112,6 +112,19 @@ namespace BTOptimizer
                 if (k != null) k.DeleteValue(name, false);
         }
 
+        /// <summary>Supprime une sous-clé et toute sa descendance (rétablissement d'un tweak « clé entière »).</summary>
+        public static void DelUserSubKeyTree(string sub)
+        {
+            try { UserBase().DeleteSubKeyTree(UserPrefix() + sub, false); } catch { }
+        }
+
+        /// <summary>Vrai si la sous-clé utilisateur existe (Check d'un tweak « présence de clé »).</summary>
+        public static bool UserKeyExists(string sub)
+        {
+            using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub))
+                return k != null;
+        }
+
         public static void SetMachine(string sub, string name, object val, RegistryValueKind kind)
         {
             using (RegistryKey k = Registry.LocalMachine.CreateSubKey(sub))
