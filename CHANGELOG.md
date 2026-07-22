@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.27 — Durcissement fiabilité (relectures croisées)
+Passe de correctifs issue de relectures croisées parallèles (formulaires, monitoring, capteurs).
+Aucun changement visible ; l'app résiste mieux aux cas limites.
+- **Course « fenêtre fermée pendant un scan »** (le plus important) : fermer un panneau pendant
+  qu'un `Task.Run` de fond tournait pouvait faire planter (mise à jour marshalée sur des contrôles
+  déjà libérés) ou figer le panneau. Nouveau helper `UiSafe.Post` (garde avant ET pendant le
+  callback) appliqué à NetRoute (traceroute ~90 s), Stabilité, Disque, Réseau, Réglages néfastes,
+  Carte réseau, DNS, Santé, Températures **et l'overlay perfs**. Le calcul est englobé pour toujours
+  débloquer l'UI même si un sous-système lève.
+- **Overlay perfs (course critique du code neuf)** : `_busy` libéré côté thread de fond et attente
+  `while(_busy)` avant de fermer les handles PDH/ETW — plus de `PdhCloseQuery` qui court-circuite une
+  lecture en vol (crash CoreCLR). Même garde éprouvée que Températures/Moniteur.
+- **Capteurs GPU** : un simple hoquet pilote (TDR, bascule iGPU/dGPU) ne coupe plus les capteurs pour
+  TOUTE la session — backoff qui retente ; plus de résurrection d'instance après la fermeture.
+- **Registre tolérant** : lecture d'une clé sous ACL restreinte (PC verrouillé / GPO) renvoie
+  « indéterminé » au lieu de planter un panneau entier.
+- **Tri des colonnes** (Latence en direct) robuste à l'espace fine insécable U+202F (séparateur de
+  milliers réel de fr-FR sous .NET/ICU) : les nombres > 999 se triaient en texte.
+- Divers handles `Process` libérés (suivi des défauts de page ETW).
+
 ## v14.26 — Reset shaders GPU + corrections d'audit
 - **🎮 Réparer les micro-saccades (reset shaders GPU)** : nouvelle action 1 clic qui vide
   TOUS les caches de shaders (DirectX, NVIDIA, AMD, **Intel Arc/iGPU**, Vulkan/OpenGL) —
