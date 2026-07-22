@@ -176,7 +176,7 @@ namespace BTOptimizer
         private const int WS_EX_TOPMOST = 0x8;
 
         private const int Pad = 10;          // marges internes de la boîte
-        private const int Margin = 14;       // distance au bord de l'écran
+        private const int EdgeMargin = 14;   // distance au bord de l'écran (évite de masquer Form.Margin)
 
         public PerfOverlayWindow()
         {
@@ -430,8 +430,8 @@ namespace BTOptimizer
             try { scr = Screen.PrimaryScreen.Bounds; }
             catch { scr = new Rectangle(0, 0, 1920, 1080); }
 
-            int x = (_s.Corner == 0 || _s.Corner == 2) ? scr.Left + Margin : scr.Right - Margin - w;
-            int y = (_s.Corner == 0 || _s.Corner == 1) ? scr.Top + Margin : scr.Bottom - Margin - h;
+            int x = (_s.Corner == 0 || _s.Corner == 2) ? scr.Left + EdgeMargin : scr.Right - EdgeMargin - w;
+            int y = (_s.Corner == 0 || _s.Corner == 1) ? scr.Top + EdgeMargin : scr.Bottom - EdgeMargin - h;
             Bounds = new Rectangle(x, y, w, h);
         }
 

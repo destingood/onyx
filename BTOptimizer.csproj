@@ -20,8 +20,12 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
 
-    <!-- Projet cible Windows : les APIs Windows-only sont attendues. -->
-    <NoWarn>CA1416</NoWarn>
+    <!-- CA1416 : projet cible Windows, les APIs Windows-only sont attendues.
+         WFO0003 : le DPI est déclaré volontairement dans app.manifest (dpiAware=true,
+         DPI système) — cohérent avec les fenêtres à disposition pixel-perfect (SetBounds
+         absolus) et avec le manifeste déjà requis (élévation admin + common controls).
+         Migrer vers ApplicationHighDpiMode changerait le point de config sans bénéfice ici. -->
+    <NoWarn>CA1416;WFO0003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
