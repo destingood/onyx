@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.Win32;
+
+namespace BTOptimizer
+{
+    /// <summary>
+    /// Scanner générique multi-plateforme : énumère TOUS les jeux réellement installés
+    /// (pas seulement un catalogue connu) en lisant les manifestes / le registre LOCAUX de
+    /// chaque launcher. Aucune connexion réseau, aucun login. Chaque scanner est isolé : un
+    /// launcher absent ou un fichier cassé n'empêche jamais les autres de fonctionner.
+    /// </summary>
+    internal static class GameLibrary
+    {
+        public sealed class InstalledGame
+        {
+            public string Name;         // nom affiché
+            public string Launcher;     // STEAM / EPIC / GOG / UBISOFT / EA / BATTLE.NET / XBOX / RIOT
+            public string InstallDir;   // dossier d'installation (peut être null)
+            public string Exe;          // exécutable principal si connu (sinon null)
+            public int SteamAppId;      // AppID Steam pour la jaquette officielle (0 sinon)
+        }
+
+        /// <summary>Agrège tous les launchers puis dédoublonne par (launcher + nom).</summary>
+        public static List<InstalledGame> ScanAll()
+        {
+            var all = new List<InstalledGame>();
+            var scanners = new Func<List<InstalledGame>>[]
+            {
+                ScanSteam, ScanEpic, ScanGog, ScanUbisoft, ScanRiot, ScanBlizzard, ScanEa, ScanXbox
+            };
+            foreach (Func<List<InstalledGame>> scan in scanners)
+            {
+                try { all.AddRange(scan() ?? new List<InstalledGame>()); }
+                catch { }   // un launcher qui casse ne doit jamais faire tomber le scan complet
+            }
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new List<InstalledGame>();
+            foreach (InstalledGame g in all)
+            {
+                if (string.IsNullOrWhiteSpace(g.Name)) continue;
+                string key = (g.Launcher ?? "") + "|" + g.Name.Trim().ToLowerInvariant();
+                if (seen.Add(key)) result.Add(g);
+            }
+            result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            return result;
+        }
+
+        // =========================================================== STEAM (.acf)
+        private static List<InstalledGame> ScanSteam()
+        {
+            var games = new List<InstalledGame>();
+            string root = GameScan.SteamRoot();
+            if (root == null) return games;
+
+            foreach (string lib in SteamLibraries(root))
+            {
+                string apps = Path.Combine(lib, "steamapps");
+                if (!Directory.Exists(apps)) continue;
+                foreach (string acf in Directory.GetFiles(apps, "appmanifest_*.acf"))
+                {
+                    try
+                    {
+                        string txt = File.ReadAllText(acf);
+                        string name = VdfValue(txt, "name");
+                        if (string.IsNullOrWhiteSpace(name)) continue;
+                        string dir = VdfValue(txt, "installdir");
+                        int id; int.TryParse(VdfValue(txt, "appid"), out id);
+                        // On saute les outils/redist Steam (Steamworks Common Redistributables, etc.).
+                        if (name.IndexOf("Redistributable", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                        string install = dir != null ? Path.Combine(apps, "common", dir) : null;
+                        games.Add(new InstalledGame { Name = name, Launcher = "STEAM", InstallDir = install, SteamAppId = id });
+                    }
+                    catch { }
+                }
+            }
+            return games;
+        }
+
+        // Bibliothèque principale + secondaires (libraryfolders.vdf).
+        private static IEnumerable<string> SteamLibraries(string root)
+        {
+            var libs = new List<string> { root };
+            try
+            {
+                string vdf = Path.Combine(root, "steamapps", "libraryfolders.vdf");
+                if (File.Exists(vdf))
+                    foreach (Match m in Regex.Matches(File.ReadAllText(vdf), "\"path\"\\s*\"([^\"]+)\""))
+                    {
+                        string p = m.Groups[1].Value.Replace("\\\\", "\\");
+                        if (Directory.Exists(p)) libs.Add(p);
+                    }
+            }
+            catch { }
+            return libs.Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        // Extrait "clé" "valeur" d'un fichier VDF/ACF (format KeyValues de Valve).
+        private static string VdfValue(string txt, string key)
+        {
+            Match m = Regex.Match(txt, "\"" + Regex.Escape(key) + "\"\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups[1].Value : null;
+        }
+
+        // =========================================================== EPIC (.item JSON)
+        private static List<InstalledGame> ScanEpic()
+        {
+            var games = new List<InstalledGame>();
+            string dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                @"Epic\EpicGamesLauncher\Data\Manifests");
+            if (!Directory.Exists(dir)) return games;
+
+            foreach (string item in Directory.GetFiles(dir, "*.item"))
+            {
+                try
+                {
+                    using (JsonDocument doc = JsonDocument.Parse(File.ReadAllText(item)))
+                    {
+                        JsonElement r = doc.RootElement;
+                        string name = GetStr(r, "DisplayName");
+                        if (string.IsNullOrWhiteSpace(name)) continue;
+                        games.Add(new InstalledGame
+                        {
+                            Name = name,
+                            Launcher = "EPIC",
+                            InstallDir = GetStr(r, "InstallLocation"),
+                            Exe = GetStr(r, "LaunchExecutable")
+                        });
+                    }
+                }
+                catch { }
+            }
+            return games;
+        }
+
+        private static string GetStr(JsonElement e, string prop)
+        {
+            JsonElement v;
+            return e.TryGetProperty(prop, out v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+        }
+
+        // =========================================================== GOG (registre)
+        private static List<InstalledGame> ScanGog()
+        {
+            var games = new List<InstalledGame>();
+            try
+            {
+                using (RegistryKey baseK = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
+                using (RegistryKey root = baseK.OpenSubKey(@"SOFTWARE\GOG.com\Games"))
+                {
+                    if (root == null) return games;
+                    foreach (string sub in root.GetSubKeyNames())
+                        using (RegistryKey g = root.OpenSubKey(sub))
+                        {
+                            if (g == null) continue;
+                            string name = Convert.ToString(g.GetValue("gameName"));
+                            if (string.IsNullOrWhiteSpace(name)) continue;
+                            games.Add(new InstalledGame
+                            {
+                                Name = name,
+                                Launcher = "GOG",
+                                InstallDir = Convert.ToString(g.GetValue("path")),
+                                Exe = Convert.ToString(g.GetValue("exe"))
+                            });
+                        }
+                }
+            }
+            catch { }
+            return games;
+        }
+
+        // =========================================================== UBISOFT CONNECT (registre)
+        private static List<InstalledGame> ScanUbisoft()
+        {
+            var games = new List<InstalledGame>();
+            try
+            {
+                using (RegistryKey baseK = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
+                using (RegistryKey installs = baseK.OpenSubKey(@"SOFTWARE\Ubisoft\Launcher\Installs"))
+                {
+                    if (installs == null) return games;
+                    foreach (string id in installs.GetSubKeyNames())
+                        using (RegistryKey g = installs.OpenSubKey(id))
+                        {
+                            string dir = g == null ? null : Convert.ToString(g.GetValue("InstallDir"));
+                            if (string.IsNullOrWhiteSpace(dir)) continue;
+                            dir = dir.Replace('/', '\\').TrimEnd('\\');
+                            // Le registre Ubisoft ne stocke pas le nom lisible → on prend le dossier.
+                            games.Add(new InstalledGame { Name = Path.GetFileName(dir), Launcher = "UBISOFT", InstallDir = dir });
+                        }
+                }
+            }
+            catch { }
+            return games;
+        }
+
+        // =========================================================== RIOT (dossiers)
+        private static List<InstalledGame> ScanRiot()
+        {
+            var games = new List<InstalledGame>();
+            foreach (string drive in FixedDrives())
+            {
+                string root = Path.Combine(drive, "Riot Games");
+                if (!Directory.Exists(root)) continue;
+                foreach (string sub in Directory.GetDirectories(root))
+                {
+                    string name = Path.GetFileName(sub);
+                    if (name.IndexOf("Riot Client", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                    games.Add(new InstalledGame { Name = name, Launcher = "RIOT", InstallDir = sub });
+                }
+            }
+            return games;
+        }
+
+        // =========================================================== BLIZZARD / BATTLE.NET
+        private static List<InstalledGame> ScanBlizzard()
+        {
+            return FromUninstall("Blizzard Entertainment", "BATTLE.NET");
+        }
+
+        // =========================================================== EA (ex-Origin)
+        private static List<InstalledGame> ScanEa()
+        {
+            return FromUninstall("Electronic Arts", "EA");
+        }
+
+        // Parcourt les clés de désinstallation Windows et retient celles d'un éditeur donné.
+        // Sert de fallback pour les launchers sans manifeste propre lisible (EA, Blizzard).
+        private static readonly string[] LauncherNoise =
+        {
+            "Battle.net", "EA app", "EA Desktop", "Origin", "Uplay", "Ubisoft Connect", "Redistributable", "DirectX", "Runtime"
+        };
+
+        private static List<InstalledGame> FromUninstall(string publisherContains, string launcher)
+        {
+            var games = new List<InstalledGame>();
+            string[] roots =
+            {
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            };
+            foreach (string root in roots)
+            {
+                try
+                {
+                    using (RegistryKey k = Registry.LocalMachine.OpenSubKey(root))
+                    {
+                        if (k == null) continue;
+                        foreach (string sub in k.GetSubKeyNames())
+                            using (RegistryKey e = k.OpenSubKey(sub))
+                            {
+                                if (e == null) continue;
+                                string pub = Convert.ToString(e.GetValue("Publisher"));
+                                if (pub == null || pub.IndexOf(publisherContains, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                                string name = Convert.ToString(e.GetValue("DisplayName"));
+                                if (string.IsNullOrWhiteSpace(name)) continue;
+                                if (LauncherNoise.Any(n => name.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                                games.Add(new InstalledGame
+                                {
+                                    Name = name.Trim(),
+                                    Launcher = launcher,
+                                    InstallDir = Convert.ToString(e.GetValue("InstallLocation"))
+                                });
+                            }
+                    }
+                }
+                catch { }
+            }
+            return games;
+        }
+
+        // =========================================================== XBOX / GAME PASS
+        // Les jeux Xbox/GamePass s'installent dans un dossier "XboxGames" par disque
+        // (+ éventuellement un Content\). On énumère ces dossiers (best-effort, sans WinRT).
+        private static List<InstalledGame> ScanXbox()
+        {
+            var games = new List<InstalledGame>();
+            foreach (string drive in FixedDrives())
+            {
+                string root = Path.Combine(drive, "XboxGames");
+                if (!Directory.Exists(root)) continue;
+                foreach (string sub in Directory.GetDirectories(root))
+                {
+                    string name = Path.GetFileName(sub);
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    string content = Path.Combine(sub, "Content");
+                    games.Add(new InstalledGame
+                    {
+                        Name = name,
+                        Launcher = "XBOX",
+                        InstallDir = Directory.Exists(content) ? content : sub
+                    });
+                }
+            }
+            return games;
+        }
+
+        // ----------------------------------------------------------- utilitaires
+        private static IEnumerable<string> FixedDrives()
+        {
+            DriveInfo[] drives;
+            try { drives = DriveInfo.GetDrives(); }
+            catch { yield break; }
+            foreach (DriveInfo d in drives)
+            {
+                bool ok = false;
+                try { ok = d.DriveType == DriveType.Fixed && d.IsReady; } catch { }
+                if (ok) yield return d.RootDirectory.FullName;
+            }
+        }
+    }
+}
