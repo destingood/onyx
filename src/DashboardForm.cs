@@ -504,16 +504,22 @@ namespace BTOptimizer
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            var rf = new RectangleF(1.5f, 1.5f, Width - 3f, Height - 3f);
-            if (_active || _hover)
+            var rf = new RectangleF(5f, 2f, Width - 8f, Height - 4f);
+            if (_active)
+            {
+                // Pastille néon-teintée + BARRE néon à gauche (indicateur d'onglet actif, façon FPS Doctor).
+                using (var path = FpsUi.Round(rf, 12f))
+                using (var br = new SolidBrush(Color.FromArgb(26, 0, 255, 136))) g.FillPath(br, path);
+                using (var bar = FpsUi.Round(new RectangleF(0f, Height / 2f - 13f, 3.5f, 26f), 1.75f))
+                using (var br = new SolidBrush(FpsUi.Neon)) g.FillPath(br, bar);
+            }
+            else if (_hover)
             {
                 using (var path = FpsUi.Round(rf, 12f))
-                {
-                    using (var br = new SolidBrush(_active ? Color.FromArgb(20, 40, 30) : FpsUi.Card)) g.FillPath(br, path);
-                    if (_active) using (var pen = new Pen(FpsUi.Neon)) g.DrawPath(pen, path);
-                }
+                using (var br = new SolidBrush(Color.FromArgb(16, 255, 255, 255))) g.FillPath(br, path);
             }
-            TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle, _active ? FpsUi.Neon : FpsUi.Dim,
+            TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle,
+                _active ? FpsUi.Neon : (_hover ? FpsUi.Ink : FpsUi.Dim),
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
     }

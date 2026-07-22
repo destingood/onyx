@@ -59,7 +59,14 @@ namespace BTOptimizer
             return p;
         }
 
-        /// <summary>Peint une carte arrondie (fond + bordure) sur toute la surface donnée.</summary>
+        private static Color Lighten(Color c, int by)
+        {
+            return Color.FromArgb(c.A, Math.Min(255, c.R + by), Math.Min(255, c.G + by), Math.Min(255, c.B + by));
+        }
+
+        /// <summary>Peint une carte arrondie (fond + bordure) sur toute la surface donnée. Léger dégradé
+        /// vertical (haut plus clair) + liseré haut : donne de la PROFONDEUR sur fond noir (pas d'ombre
+        /// possible sur du noir pur).</summary>
         public static void PaintCard(Graphics g, Rectangle r, Color fill, Color border, float radius)
         {
             if (r.Width < 4 || r.Height < 4) return;
@@ -67,8 +74,12 @@ namespace BTOptimizer
             var rf = new RectangleF(r.X + 0.5f, r.Y + 0.5f, r.Width - 1f, r.Height - 1f);
             using (var path = Round(rf, radius))
             {
-                using (var br = new SolidBrush(fill)) g.FillPath(br, path);
+                using (var br = new LinearGradientBrush(new RectangleF(rf.X, rf.Y - 1, rf.Width, rf.Height + 2), Lighten(fill, 8), fill, 90f))
+                    g.FillPath(br, path);
                 using (var pen = new Pen(border)) g.DrawPath(pen, path);
+                // liseré supérieur légèrement plus clair = arête éclairée.
+                using (var pen = new Pen(Color.FromArgb(22, 255, 255, 255)))
+                    g.DrawLine(pen, rf.X + radius, rf.Y + 1f, rf.Right - radius, rf.Y + 1f);
             }
         }
 
