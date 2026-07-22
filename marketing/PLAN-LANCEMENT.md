@@ -132,7 +132,7 @@ Relevé sur fpsdoctor.com le 22/07/2026 (à re-vérifier avant d'utiliser les ch
 
 | | FPSDoctor | DesTinGOOD |
 |---|---|---|
-| Gratuit | 13 optimisations, analyse de base | **173 optimisations** + toute la suite de diagnostic |
+| Gratuit | 13 optimisations, analyse de base | **174 optimisations** + toute la suite de diagnostic |
 | Payant | 59 €/an (abonnement) · 150 € à vie | **49 €/an · 127 € à vie** (mêmes paliers, −15 %) |
 | Preuves | Témoignages « +380 FPS », « 3x stabilité garantie » | **Mesure avant/après sur TON PC** (FPS, latence, score /100) |
 | Anticheat / réversibilité | non mentionnés sur le site | cœur du produit (zéro injection, tout réversible, sauvegardes) |
