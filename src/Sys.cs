@@ -102,8 +102,15 @@ namespace BTOptimizer
 
         public static object GetUser(string sub, string name)
         {
-            using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub))
-                return k == null ? null : k.GetValue(name);
+            // Tolérant : une clé sous ACL restreinte (GPO / PC verrouillé) lève SecurityException/
+            // IOException. On renvoie null (= « indéterminé ») au lieu de propager — sinon un Reload()
+            // de panneau (évalué en argument) plantait avant même le try/catch de l'appelant.
+            try
+            {
+                using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub))
+                    return k == null ? null : k.GetValue(name);
+            }
+            catch { return null; }
         }
 
         public static void DelUser(string sub, string name)
@@ -120,8 +127,13 @@ namespace BTOptimizer
 
         public static object GetMachine(string sub, string name)
         {
-            using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub))
-                return k == null ? null : k.GetValue(name);
+            // Tolérant (cf. GetUser) : lecture HKLM sous ACL restreinte → null au lieu de propager.
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub))
+                    return k == null ? null : k.GetValue(name);
+            }
+            catch { return null; }
         }
 
         public static void DelMachine(string sub, string name)

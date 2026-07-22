@@ -238,8 +238,16 @@ namespace BTOptimizer
             }
             private static bool TryNum(string s, out double v)
             {
-                s = s.Replace(" ", "").Replace(",", "").Replace("-", "0");
-                return double.TryParse(s, System.Globalization.NumberStyles.Any,
+                // Extrait le nombre chiffre par chiffre : robuste à tous les séparateurs de milliers
+                // (espace normal / U+00A0 / U+202F fr-FR ICU) ; sinon un nombre > 999 se triait en texte.
+                var sb = new System.Text.StringBuilder(s.Length);
+                foreach (char ch in s)
+                {
+                    if (ch >= '0' && ch <= '9') sb.Append(ch);
+                    else if (ch == '.') sb.Append(ch);
+                }
+                string t = sb.Length == 0 ? "0" : sb.ToString();
+                return double.TryParse(t, System.Globalization.NumberStyles.Any,
                     System.Globalization.CultureInfo.InvariantCulture, out v);
             }
         }
