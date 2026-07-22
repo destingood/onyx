@@ -16,6 +16,7 @@ namespace BTOptimizer
         private ScrollWheelFilter _wheel;
         private BadgeCatalog.Stats _stats;
         private bool _greeted;
+        private bool _seeded;
 
         public PageConsultation(DashboardForm host) : base(host)
         {
@@ -49,6 +50,8 @@ namespace BTOptimizer
             DoLayout();
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Greet(); })); } catch { } });
             Greet();
+            // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
+            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame et ça saccade en jeu"); } } catch { }
         }
 
         private void Greet()
@@ -86,27 +89,29 @@ namespace BTOptimizer
             ("Libérer de l'espace", "libérer de l'espace disque"),
         };
 
+        private const int AV = 36, GAP = 10;
+
         private void AddBubble(bool doc, string text, DocAssistant.Reply reply)
         {
             string body = doc && reply != null ? reply.Text : text;
-            int maxTextW = Math.Max(240, _flow.ClientSize.Width - 160);
+            int flowW = _flow.ClientSize.Width;
+            int maxTextW = Math.Min(520, Math.Max(220, flowW - AV - GAP - 150));
 
-            var bubble = new Panel
-            {
-                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = doc ? FpsUi.Card : Color.FromArgb(16, 30, 23),
-                Margin = new Padding(doc ? 4 : 60, 6, 12, 6), Padding = new Padding(14, 10, 16, 12)
-            };
-            bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 12)) bubble.Region = new Region(p); } catch { } };
+            // Bulle auto-dimensionnée : Doc sombre / Toi vert accent, coins arrondis + liseré.
+            Color bg = doc ? Color.FromArgb(17, 19, 18) : Color.FromArgb(0, 46, 29);
+            Color bord = doc ? FpsUi.Border : Color.FromArgb(0, 96, 60);
+            var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(14, 10, 16, 12), Margin = new Padding(0) };
+            bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
+            bubble.Paint += (s, e) => { try { using (var pen = new Pen(bord)) using (var p = Round(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14)) e.Graphics.DrawPath(pen, p); } catch { } };
 
             var col = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
-            col.Controls.Add(new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = doc ? FpsUi.Neon : FpsUi.Dim, BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 4), Text = doc ? "●  LE DOC" : "TOI" });
+            col.Controls.Add(new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = doc ? FpsUi.Neon : Color.FromArgb(150, 255, 200), BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 4), Text = doc ? "LE DOC" : "TOI" });
             col.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" });
 
             if (reply != null && reply.Tool != null)
             {
                 var btn = FpsUi.NeonButton("Ouvrir « " + reply.Tool.Tool + " »  →");
-                btn.AutoSize = false; btn.Size = new Size(Math.Min(maxTextW, 320), 34); btn.Margin = new Padding(0, 8, 0, 0);
+                btn.AutoSize = false; btn.Size = new Size(Math.Min(maxTextW, 320), 34); btn.Margin = new Padding(0, 8, 0, 2);
                 var entry = reply.Tool;
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
                 col.Controls.Add(btn);
@@ -114,17 +119,41 @@ namespace BTOptimizer
             if (reply != null && reply.ShowStarters)
             {
                 var chips = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, MaximumSize = new Size(maxTextW, 0), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
-                foreach (var st in Starters)
-                {
-                    var c = Chip(st.Item1); string sendText = st.Item2;
-                    c.Click += (s, e) => Send(sendText);
-                    chips.Controls.Add(c);
-                }
+                foreach (var st in Starters) { var c = Chip(st.Item1); string sendText = st.Item2; c.Click += (s, e) => Send(sendText); chips.Controls.Add(c); }
                 col.Controls.Add(chips);
             }
             bubble.Controls.Add(col);
-            _flow.Controls.Add(bubble);
-            try { _flow.ScrollControlIntoView(bubble); } catch { }
+            Size bs = bubble.PreferredSize;
+
+            // Avatar rond : Doc = logo néon (croix+éclair), Toi = frimousse.
+            var avatar = new Panel { Size = new Size(AV, AV), BackColor = Color.Transparent };
+            avatar.Paint += (s, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+                var rr = new Rectangle(0, 0, AV - 1, AV - 1);
+                using (var br = new SolidBrush(doc ? Color.FromArgb(0, 34, 22) : Color.FromArgb(26, 28, 26))) g.FillEllipse(br, rr);
+                using (var pen = new Pen(doc ? FpsUi.Neon : FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
+                if (doc) Logo.Draw(g, new RectangleF(8, 8, AV - 16, AV - 16), FpsUi.Neon, false);
+                else TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            };
+
+            // Ligne avatar+bulle : Doc à GAUCHE, Toi à DROITE (vraie messagerie).
+            int rowW = AV + GAP + bs.Width, rowH = Math.Max(AV, bs.Height);
+            var row = new Panel { Size = new Size(rowW, rowH), BackColor = Color.Transparent, Tag = doc ? "doc" : "user", Margin = new Padding(doc ? 6 : Math.Max(6, flowW - rowW - 28), 7, 10, 7) };
+            if (doc) { avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0); }
+            else { bubble.Location = new Point(0, 0); avatar.Location = new Point(bs.Width + GAP, 0); }
+            row.Controls.Add(avatar); row.Controls.Add(bubble);
+            _flow.Controls.Add(row);
+            try { _flow.ScrollControlIntoView(row); } catch { }
+        }
+
+        // Ré-aligne les bulles « Toi » à droite quand la largeur change.
+        private void RealignUserRows()
+        {
+            if (_flow == null) return;
+            int flowW = _flow.ClientSize.Width;
+            foreach (Control c in _flow.Controls)
+                if ((c.Tag as string) == "user") { var m = c.Margin; m.Left = Math.Max(6, flowW - c.Width - 28); c.Margin = m; }
         }
 
         private static Button Chip(string text)
@@ -149,6 +178,7 @@ namespace BTOptimizer
             _flow.SetBounds(20, 96, ClientSize.Width - 40, Math.Max(120, ClientSize.Height - 96 - inputH - 24));
             if (_send != null) _send.SetBounds(ClientSize.Width - m - 120, bottom - inputH, 120, inputH);
             if (_input != null) _input.SetBounds(m, bottom - inputH + 6, Math.Max(120, ClientSize.Width - m - 120 - 12 - m), inputH - 12);
+            RealignUserRows();
         }
 
         private static GraphicsPath Round(Rectangle r, int rad)
