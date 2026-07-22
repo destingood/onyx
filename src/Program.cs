@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.31.0.0")]
-[assembly: AssemblyFileVersion("14.31.0.0")]
+[assembly: AssemblyVersion("14.32.0.0")]
+[assembly: AssemblyFileVersion("14.32.0.0")]
 
 namespace BTOptimizer
 {
@@ -458,6 +458,9 @@ namespace BTOptimizer
                 using (var f = new BoostConfigForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI BoostConfigForm : construite OK (exclusions mode jeu, "
                     + GameBoost.AffectedServices.Length + " services).");
+                using (var f = new AutoInstallForm(delegate(string m, int l) { })) { f.CreateControl(); }
+                Console.WriteLine("  UI AutoInstallForm : construite OK (prérequis, "
+                    + AutoInstall.MissingEssentials().Count + " manquant(s) · mode " + AutoInstall.Mode + ").");
                 using (var f = new ThermalForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI ThermalForm : construite OK.");
                 using (var f = new BloatForm(delegate(string m, int l) { })) { f.CreateControl(); }

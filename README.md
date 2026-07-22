@@ -86,6 +86,23 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### ⚙️ Prérequis des jeux : installation automatique, réglable en 1 écran (v14.32)
+
+Les **bibliothèques indispensables aux jeux** (Visual C++, DirectX, .NET, OpenAL) manquantes
+s'installent maintenant **toutes seules**, via winget (Microsoft) — plus de « vcruntime140.dll
+manquant » au lancement d'un jeu. Trois modes, réglables en un écran (☰ → Jeux & écran →
+**Prérequis & installation automatique**) :
+
+- **Proposer au démarrage** (défaut) — si des prérequis manquent, l'app le propose avec un
+  bouton **« installer les N manquants »** ; ne s'affiche **que** s'il manque réellement
+  quelque chose.
+- **Automatique, sans demander** — installe les prérequis manquants en silence au démarrage.
+- **Ne rien faire**.
+
+Tout réutilise le moteur d'installation existant (`LibScan` : détection locale + winget,
+gestionnaire officiel Microsoft, aucun téléchargement douteux). L'écran liste chaque prérequis
+avec son état ✔/○ ; le choix est mémorisé (`bt-autoinstall.txt`).
+
 ### 🚀 Cap commercialisation : beta gratuite honnête + garde-fou sécurité (v14.31)
 
 Décisions de mise sur le marché (issues d'une session de stress-test du plan), traduites en code :

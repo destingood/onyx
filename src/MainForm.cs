@@ -86,6 +86,7 @@ namespace BTOptimizer
             Theme.Apply(this);
             Shown += OnShownWelcome;
             Shown += (s, e) => { try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { } };   // viseur si activé au dernier lancement
+            Shown += OnAutoInstallStartup;   // prérequis des jeux : propose ou installe selon le réglage
             CheckProfileDriftAtStartup();   // anti-régression : profil annulé par une MAJ Windows ?
         }
 
@@ -95,6 +96,34 @@ namespace BTOptimizer
             if (WelcomeForm.AlreadyShown) return;
             WelcomeForm.MarkShown();
             ShowWelcome();
+        }
+
+        /// <summary>
+        /// Au démarrage : selon le réglage « prérequis des jeux », installe en silence les
+        /// bibliothèques manquantes (auto), les propose en 1 clic (ask, défaut) ou ne fait rien
+        /// (off). Ne s'affiche QUE s'il manque réellement quelque chose.
+        /// </summary>
+        private void OnAutoInstallStartup(object sender, EventArgs e)
+        {
+            try
+            {
+                string mode = AutoInstall.Mode;
+                if (mode == AutoInstall.ModeOff) return;
+                List<LibScan.LibItem> missing = AutoInstall.MissingEssentials();
+                if (missing.Count == 0) return;
+
+                if (mode == AutoInstall.ModeAuto)
+                {
+                    Log("Installation automatique des prérequis manquants (" + missing.Count + ") via winget...", 0);
+                    AutoInstall.InstallInBackground(this, missing, Log,
+                        (ok, total) => Log("Prérequis : " + ok + "/" + total + " installé(s).", ok == total ? 1 : 2));
+                }
+                else   // « ask » : l'écran de proposition est aussi l'écran de réglage
+                {
+                    using (var f = new AutoInstallForm(Log)) f.ShowDialog(this);
+                }
+            }
+            catch { }
         }
 
         private void ShowWelcome()
@@ -226,6 +255,7 @@ namespace BTOptimizer
             mGame.DropDownItems.Add("🕹️ Mes jeux (boost par jeu : léger / complet)...", null, open(() => new GamesForm(Log)));
             mGame.DropDownItems.Add("⚙️ Mode jeu : services coupés & exclusions...", null, open(() => new BoostConfigForm(Log)));
             mGame.DropDownItems.Add("📦 Bibliothèques de jeu manquantes & applis...", null, open(() => new LibsForm(Log)));
+            mGame.DropDownItems.Add("⚙️ Prérequis & installation automatique...", null, open(() => new AutoInstallForm(Log)));
             mGame.DropDownItems.Add("🎮 Priorité CPU par jeu...", null, open(() => new GameProfileForm(Log)));
             mGame.DropDownItems.Add("🔐 Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
             mGame.DropDownItems.Add("🖥️ Réglages d'écran (fréquence max, VRR/HDR)...", null, open(() => new DisplayForm(Log)));
