@@ -872,7 +872,7 @@ namespace BTOptimizer
                     }
                 }
             }
-            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail + mascotte compris.");
+            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail compris.");
             try { dash.Dispose(); } catch { }
         }
 

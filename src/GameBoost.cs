@@ -86,6 +86,7 @@ namespace BTOptimizer
             }
 
             IsActive = true;
+            try { BadgeStore.MarkBoostUsed(); } catch { }   // badge « Mode Jeu » (persistant)
             log("Mode Jeu ACTIVÉ : timer 1 ms, ~" + Math.Max(0, freed) + " Mo RAM libérés, "
                 + _stopped.Count + " service(s) de fond suspendu(s).", 1);
         }

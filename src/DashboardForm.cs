@@ -13,7 +13,6 @@ namespace BTOptimizer
     internal class DashboardForm : Form
     {
         private Panel _rail, _host;
-        private PictureBox _mascot;
         private readonly System.Collections.Generic.List<NavCell> _nav = new System.Collections.Generic.List<NavCell>();
         private readonly FpsPage[] _pages = new FpsPage[8];
         private int _current = -1;
@@ -50,15 +49,6 @@ namespace BTOptimizer
             BuildRail();
             Controls.Add(_rail);
 
-            _mascot = new PictureBox();
-            _mascot.SizeMode = PictureBoxSizeMode.Zoom;
-            _mascot.BackColor = Color.Transparent;
-            try { _mascot.Image = Assets.DoctorFinger; } catch { }
-            _mascot.Size = new Size(180, 200);
-            _mascot.Enabled = false;
-            Controls.Add(_mascot);
-            _mascot.BringToFront();
-
             BuildTray();
             Resize += OnResizeShell;
 
@@ -66,7 +56,7 @@ namespace BTOptimizer
 
             Shown += (s, e) =>
             {
-                SetDark(); ShowPage(0); PlaceMascot();
+                SetDark(); ShowPage(0);
                 // Rétablit les overlays activés au dernier lancement (le shell remplace MainForm
                 // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
@@ -83,7 +73,6 @@ namespace BTOptimizer
                 if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "DesTinGOOD", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
                 return;
             }
-            PlaceMascot();
         }
 
         // ------------------------------------------------------------------
@@ -243,28 +232,11 @@ namespace BTOptimizer
             try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
         }
 
-        private void PlaceMascot()
-        {
-            if (_mascot == null) return;
-            _mascot.Location = new Point(ClientSize.Width - _mascot.Width - 8, ClientSize.Height - _mascot.Height - 4);
-            _mascot.BringToFront();
-        }
+        /// <summary>Y maximal utilisable par une page (plus de mascotte : plein cadre).</summary>
+        public int ContentBottom(int margin) { return ClientSize.Height - margin; }
 
-        /// <summary>Y maximal utilisable par une page avant d'atteindre la mascotte (coin bas-droit).</summary>
-        public int ContentBottom(int margin)
-        {
-            int b = ClientSize.Height - margin;
-            if (_mascot != null && _mascot.Visible) b = Math.Min(b, _mascot.Top - 10);
-            return b;
-        }
-
-        /// <summary>X maximal utilisable par du contenu bas-droit avant d'atteindre la mascotte.</summary>
-        public int ContentRight(int margin)
-        {
-            int r = ClientSize.Width - margin;
-            if (_mascot != null && _mascot.Visible) r = Math.Min(r, _mascot.Left - 12);
-            return r;
-        }
+        /// <summary>X maximal utilisable par du contenu (plus de mascotte : plein cadre).</summary>
+        public int ContentRight(int margin) { return ClientSize.Width - margin; }
 
         private void SetDark() { try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { } }
 
@@ -338,10 +310,6 @@ namespace BTOptimizer
             page.BringToFront();
             _host.ResumeLayout();
             _current = idx;
-            // Mascotte seulement sur les pages aérées (évite de recouvrir des contrôles).
-            // Visibilité fixée AVANT OnShown pour que la page réserve la bonne zone au layout.
-            _mascot.Visible = (idx == 0 || idx == 4 || idx == 5 || idx == 6);
-            PlaceMascot();
             try { page.OnShown(); } catch { }
         }
 
