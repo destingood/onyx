@@ -850,7 +850,7 @@ namespace BTOptimizer
                 for (int p = 0; p < 8; p++)
                 {
                     dash.Goto(p);
-                    Pump(350);
+                    Pump(names[p] == "Jeux" ? 3000 : 350);   // Jeux : laisse charger les jaquettes (cache Steam local)
                     try
                     {
                         using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))

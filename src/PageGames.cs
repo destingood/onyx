@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -123,36 +124,97 @@ namespace BTOptimizer
 
         private Control Card(GameScan.GameInfo g, bool detected)
         {
+            // Tuile « affiche » verticale (comme la bibliothèque Steam) : jaquette officielle 600x900.
             var card = new Panel();
-            card.Size = new Size(220, 150);
-            card.Margin = new Padding(10);
+            card.Size = new Size(170, 252);
+            card.Margin = new Padding(9);
             card.BackColor = Color.Transparent;
             card.Paint += (s, e) =>
             {
                 Graphics gr = e.Graphics;
-                var r = ((Panel)s).ClientRectangle;
-                FpsUi.PaintCard(gr, r, detected ? FpsUi.Card : Color.FromArgb(13, 15, 14), detected ? FpsUi.Border : Color.FromArgb(26, 28, 27), 12f);
+                gr.SmoothingMode = SmoothingMode.AntiAlias;
                 gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                var rr = new Rectangle(0, 0, ((Panel)s).ClientRectangle.Width - 1, ((Panel)s).ClientRectangle.Height - 1);
 
-                // Pastille du launcher (jeux détectés uniquement).
-                if (detected && !string.IsNullOrEmpty(g.Store))
-                    TextRenderer.DrawText(gr, g.Store, FpsUi.Tiny, new Rectangle(10, 10, r.Width - 20, 14), FpsUi.NeonDim,
-                        TextFormatFlags.Left | TextFormatFlags.NoPrefix);
+                Image img = g.SteamId > 0
+                    ? GameArt.Get(g.SteamId, () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } })
+                    : null;
 
-                TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, new Rectangle(0, 22, r.Width, 46), detected ? FpsUi.Neon : FpsUi.Dim2,
-                    TextFormatFlags.HorizontalCenter);
-                TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 74, r.Width - 20, 40), detected ? FpsUi.Ink : FpsUi.Dim,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                string tag = detected ? "DÉTECTÉ" : "non installé";
+                using (var clip = Round(rr, 12))
+                {
+                    var save = gr.Clip; gr.SetClip(clip);
+                    if (img != null)
+                    {
+                        DrawCover(gr, img, rr);
+                        if (!detected) using (var veil = new SolidBrush(Color.FromArgb(155, 9, 11, 10))) gr.FillRectangle(veil, rr);
+                        var scrim = new Rectangle(0, rr.Height - 54, rr.Width + 1, 55);   // dégradé bas → statut lisible
+                        using (var lg = new LinearGradientBrush(scrim, Color.FromArgb(0, 9, 11, 10), Color.FromArgb(210, 9, 11, 10), 90f))
+                            gr.FillRectangle(lg, scrim);
+                    }
+                    else
+                    {
+                        using (var bg = new SolidBrush(detected ? FpsUi.Card : Color.FromArgb(13, 15, 14))) gr.FillRectangle(bg, rr);
+                        TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, new Rectangle(0, 66, rr.Width, 54), detected ? FpsUi.Neon : FpsUi.Dim2,
+                            TextFormatFlags.HorizontalCenter);
+                        TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 126, rr.Width - 20, 80), detected ? FpsUi.Ink : FpsUi.Dim,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                    }
+                    gr.Clip = save; save.Dispose();
+                }
+
+                // Statut en bas (sur le dégradé).
+                string tag = detected ? "● DÉTECTÉ" : "non installé";
                 Color tc = detected ? FpsUi.Neon : FpsUi.Dim2;
-                TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, r.Height - 26, r.Width, 18), tc, TextFormatFlags.HorizontalCenter);
+                TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, rr.Height - 26, rr.Width, 18), tc,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+
+                // Pastille du launcher (coin haut-gauche).
+                if (detected && !string.IsNullOrEmpty(g.Store))
+                {
+                    Size ts = TextRenderer.MeasureText(g.Store, FpsUi.Tiny);
+                    var chip = new Rectangle(8, 8, ts.Width + 12, 17);
+                    using (var b = new SolidBrush(Color.FromArgb(200, 0, 0, 0))) gr.FillRectangle(b, chip);
+                    TextRenderer.DrawText(gr, g.Store, FpsUi.Tiny, chip, FpsUi.Neon,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                }
+
+                using (var pen = new Pen(detected ? FpsUi.Border : Color.FromArgb(26, 28, 27), 1f))
+                using (var bp = Round(rr, 12)) gr.DrawPath(pen, bp);
             };
-            var tt = new ToolTip(); tt.SetToolTip(card, g.Uncap ?? g.Name);
+            var tt = new ToolTip(); tt.SetToolTip(card, g.Name + " — " + (g.Uncap ?? ""));
             card.Cursor = Cursors.Hand;
             card.Click += (s, e) => MessageBox.Show(FindForm(),
                 g.Name + "\n\n" + (g.Uncap ?? "Passe la limite de FPS à 500/illimité et coupe la V-Sync dans les options du jeu."),
                 "Débloquer les FPS", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return card;
+        }
+
+        // Rectangle à coins arrondis (les 4).
+        private static GraphicsPath Round(Rectangle r, int rad)
+        {
+            var p = new GraphicsPath();
+            int d = rad * 2;
+            p.AddArc(r.X, r.Y, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure();
+            return p;
+        }
+
+        // Dessine l'image en « cover » (remplit dst, recadrage centré).
+        private static void DrawCover(Graphics g, Image img, Rectangle dst)
+        {
+            try
+            {
+                float sc = Math.Max((float)dst.Width / img.Width, (float)dst.Height / img.Height);
+                int w = (int)Math.Ceiling(img.Width * sc), h = (int)Math.Ceiling(img.Height * sc);
+                int x = dst.X + (dst.Width - w) / 2, y = dst.Y + (dst.Height - h) / 2;
+                var old = g.InterpolationMode; g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(img, new Rectangle(x, y, w, h));
+                g.InterpolationMode = old;
+            }
+            catch { }
         }
 
         private void ToggleBoost()
