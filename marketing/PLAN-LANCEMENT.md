@@ -69,8 +69,9 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
 - ✅ `AppURL` renseignée dans `installer/BTOptimizer.iss` (la boutique ; remplace-la par
   l'URL de la landing quand elle sera hébergée).
-- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.26.0.0.exe`**
-  (~38 Mo) → c'est LE fichier à uploader sur les **trois** produits Gumroad.
+- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.27.0.0.exe`**
+  (~38 Mo, inclut le correctif critique du viseur) → c'est LE fichier à uploader sur les
+  **trois** produits Gumroad.
 - ✅ Vérifié : **aucun binaire tiers embarqué** dans cet installateur (le composant NVIDIA
   optionnel est vide tant que `tools/npi/` n'existe pas) — case juridique de la checklist réglée.
 - ✅ Cycle des clés **testé automatiquement contre le vrai `License.cs`** (avec ta clé
