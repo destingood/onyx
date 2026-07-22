@@ -15,11 +15,11 @@ namespace BTOptimizer
         public sealed class Badge
         {
             public string Id, Glyph, Name, Crit;
-            public int Tier, Shape, Target;
+            public int Tier, Shape, Target, Page;   // Page = page du shell pour progresser (1 opti · 2 jeux · 3 check up)
             public Func<Stats, int> Metric;   // valeur courante (comparée à Target)
 
-            public Badge(string id, string g, string n, string c, int tier, int shape, int target, Func<Stats, int> metric)
-            { Id = id; Glyph = g; Name = n; Crit = c; Tier = tier; Shape = shape; Target = target; Metric = metric; }
+            public Badge(string id, string g, string n, string c, int tier, int shape, int target, int page, Func<Stats, int> metric)
+            { Id = id; Glyph = g; Name = n; Crit = c; Tier = tier; Shape = shape; Target = target; Page = page; Metric = metric; }
 
             public bool Ok(Stats s) { return s != null && Metric(s) >= Target; }
             public float Progress(Stats s)
@@ -39,17 +39,17 @@ namespace BTOptimizer
 
         public static readonly Badge[] All =
         {
-            new Badge("premiers",   "🩹", "Premiers Soins",  "Applique 1 optimisation",    1, 0, 1,  s => s.OptiActive),
-            new Badge("optimiseur", "🚀", "Optimiseur",      "15 optimisations actives",   1, 0, 15, s => s.OptiActive),
-            new Badge("chirurgien", "🔧", "Chirurgien",      "40 optimisations actives",   2, 2, 40, s => s.OptiActive),
-            new Badge("blinde",     "🛡", "Blindé",          "Santé du PC ≥ 60 %",         1, 2, 60, s => s.Health),
-            new Badge("perfect",    "🏆", "Perfectionniste", "Santé du PC ≥ 85 %",         3, 3, 85, s => s.Health),
-            new Badge("joueur",     "🎮", "Joueur",          "1 jeu détecté",              1, 1, 1,  s => s.GamesDet),
-            new Badge("ludo",       "📚", "Ludothèque",      "4 jeux détectés",            2, 1, 4,  s => s.GamesDet),
-            new Badge("modejeu",    "⚡", "Mode Jeu",        "Active le Mode Jeu",         1, 0, 1,  s => s.Boost ? 1 : 0),
-            new Badge("infirmier",  "🩺", "Infirmier",       "1 Check Up réalisé",         1, 1, 1,  s => s.Checkups),
-            new Badge("routine",    "💊", "Routine",         "5 Check Up réalisés",        2, 0, 5,  s => s.Checkups),
-            new Badge("legende",    "💎", "Légende",         "40 opti · 85 % · jeu · Check Up", 3, 4, 4,
+            new Badge("premiers",   "🩹", "Premiers Soins",  "Applique 1 optimisation",    1, 0, 1,  1, s => s.OptiActive),
+            new Badge("optimiseur", "🚀", "Optimiseur",      "15 optimisations actives",   1, 0, 15, 1, s => s.OptiActive),
+            new Badge("chirurgien", "🔧", "Chirurgien",      "40 optimisations actives",   2, 2, 40, 1, s => s.OptiActive),
+            new Badge("blinde",     "🛡", "Blindé",          "Santé du PC ≥ 60 %",         1, 2, 60, 1, s => s.Health),
+            new Badge("perfect",    "🏆", "Perfectionniste", "Santé du PC ≥ 85 %",         3, 3, 85, 1, s => s.Health),
+            new Badge("joueur",     "🎮", "Joueur",          "1 jeu détecté",              1, 1, 1,  2, s => s.GamesDet),
+            new Badge("ludo",       "📚", "Ludothèque",      "4 jeux détectés",            2, 1, 4,  2, s => s.GamesDet),
+            new Badge("modejeu",    "⚡", "Mode Jeu",        "Active le Mode Jeu",         1, 0, 1,  2, s => s.Boost ? 1 : 0),
+            new Badge("infirmier",  "🩺", "Infirmier",       "1 Check Up réalisé",         1, 1, 1,  3, s => s.Checkups),
+            new Badge("routine",    "💊", "Routine",         "5 Check Up réalisés",        2, 0, 5,  3, s => s.Checkups),
+            new Badge("legende",    "💎", "Légende",         "40 opti · 85 % · jeu · Check Up", 3, 4, 4, 1,
                 s => (s.OptiActive >= 40 ? 1 : 0) + (s.Health >= 85 ? 1 : 0) + (s.GamesDet >= 1 ? 1 : 0) + (s.Checkups >= 1 ? 1 : 0)),
         };
 

@@ -16,6 +16,7 @@ namespace BTOptimizer
         private BadgeCatalog.Stats _s;
         private bool _computing;
         private Button _btnExport;
+        private readonly List<KeyValuePair<Rectangle, BadgeCatalog.Badge>> _hits = new List<KeyValuePair<Rectangle, BadgeCatalog.Badge>>();
 
         public PageCollection(DashboardForm host) : base(host)
         {
@@ -23,7 +24,26 @@ namespace BTOptimizer
             _btnExport.Size = new Size(160, 30);
             _btnExport.Click += (s, e) => ExportShowcase();
             Controls.Add(_btnExport);
+            MouseClick += OnBadgeClick;
+            MouseMove += (s, e) =>
+            {
+                bool over = false;
+                foreach (var kv in _hits) if (kv.Key.Contains(e.Location)) { over = true; break; }
+                Cursor = over ? Cursors.Hand : Cursors.Default;
+            };
             Resize += (s, e) => { PlaceBtn(); Invalidate(); };
+        }
+
+        private void OnBadgeClick(object sender, MouseEventArgs e)
+        {
+            foreach (var kv in _hits)
+                if (kv.Key.Contains(e.Location))
+                {
+                    var b = kv.Value;
+                    using (var f = new BadgeDetailForm(b, _s, IsUnlocked(b), () => Host.Goto(b.Page)))
+                        f.ShowDialog(FindForm());
+                    return;
+                }
         }
 
         private void PlaceBtn() { if (_btnExport != null) _btnExport.Location = new Point(ClientSize.Width - 34 - _btnExport.Width, 22); }
@@ -131,7 +151,7 @@ namespace BTOptimizer
             FpsUi.PaintCard(g, new Rectangle(L, top, vw, vh), FpsUi.Card, FpsUi.Border, 14f);
             BadgeCatalog.Badge best = null;
             for (int i = BadgeCatalog.All.Length - 1; i >= 0; i--) if (IsUnlocked(BadgeCatalog.All[i])) { best = BadgeCatalog.All[i]; break; }
-            DrawBadgeShape(g, L + (vw - 150) / 2, top + 40, 150, best != null ? best.Glyph : "🩺",
+            BadgeRender.DrawShape(g, L + (vw - 150) / 2, top + 40, 150, best != null ? best.Glyph : "🩺",
                 best != null, best != null ? BadgeCatalog.TierColor[best.Tier - 1] : FpsUi.Dim2, best != null ? best.Shape : 0, true);
             string vname = _s == null ? "Analyse en cours…" : best != null ? best.Name : "Aucun badge";
             string vsub = _s == null ? "" : best != null ? "Ton badge le plus élevé" : "Applique une optimisation pour commencer";
@@ -146,13 +166,18 @@ namespace BTOptimizer
 
             int cellW = 150, cellH = 132, gap = 14, gy = top + 26;
             int cols = Math.Max(1, (right - gx + gap) / (cellW + gap));
+            _hits.Clear();
             for (int i = 0; i < BadgeCatalog.All.Length; i++)
             {
                 int col = i % cols, row = i / cols;
                 int cx = gx + col * (cellW + gap), cy = gy + row * (cellH + gap);
                 if (cx + cellW > right + 2) continue;
+                var rc = new Rectangle(cx, cy, cellW, cellH);
+                _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(rc, BadgeCatalog.All[i]));
                 DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), false);
             }
+            // Vitrine cliquable = badge le plus élevé.
+            if (best != null) _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(new Rectangle(L, top, vw, vh), best));
         }
 
         // Carte d'un badge : cadre + forme/glyphe + nom + critère.
@@ -162,7 +187,7 @@ namespace BTOptimizer
             Color tier = BadgeCatalog.TierColor[b.Tier - 1];
             var cell = new Rectangle(cx, cy, cellW, cellH);
             FpsUi.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
-            DrawBadgeShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape, false);
+            BadgeRender.DrawShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape, false);
             TextRenderer.DrawText(g, b.Name, FpsUi.H3, new Rectangle(cx + 4, cy + 70, cellW - 8, 18),
                 ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
 
@@ -188,66 +213,5 @@ namespace BTOptimizer
             }
         }
 
-        // Forme du badge (hexagone/cercle/bouclier/étoile/losange) + emoji au centre.
-        private void DrawBadgeShape(Graphics g, int x, int y, int size, string glyph, bool unlocked, Color tier, int shape, bool large)
-        {
-            Color fill = unlocked ? Color.FromArgb(30, tier.R, tier.G, tier.B) : Color.FromArgb(20, 22, 21);
-            Color edge = unlocked ? tier : FpsUi.Border;
-            using (var path = ShapePath(x, y, size, shape))
-            using (var br = new SolidBrush(fill))
-            using (var pen = new Pen(edge, unlocked ? 2f : 1f))
-            {
-                g.FillPath(br, path);
-                g.DrawPath(pen, path);
-            }
-            TextRenderer.DrawText(g, glyph, large ? FpsUi.GlyphXL : FpsUi.GlyphL, new Rectangle(x, y, size, size),
-                unlocked ? tier : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        }
-
-        private static GraphicsPath ShapePath(int x, int y, int size, int shape)
-        {
-            var p = new GraphicsPath();
-            var c = new PointF(x + size / 2f, y + size / 2f);
-            float r = size / 2f - 2;
-            switch (shape)
-            {
-                case 1: // cercle
-                    p.AddEllipse(c.X - r, c.Y - r, r * 2, r * 2);
-                    break;
-                case 2: // bouclier
-                    {
-                        float w = r * 1.7f, h = r * 2f, l = c.X - w / 2, t = c.Y - h / 2;
-                        p.AddArc(l, t, w * 0.5f, h * 0.5f, 180, 90);
-                        p.AddArc(l + w * 0.5f, t, w * 0.5f, h * 0.5f, 270, 90);
-                        p.AddLine(l + w, t + h * 0.45f, c.X, t + h);
-                        p.AddLine(c.X, t + h, l, t + h * 0.45f);
-                        p.CloseFigure();
-                        break;
-                    }
-                case 3: // étoile 5 branches
-                    {
-                        var pts = new PointF[10];
-                        for (int i = 0; i < 10; i++)
-                        {
-                            double a = Math.PI / 5 * i - Math.PI / 2;
-                            float rr = (i % 2 == 0) ? r : r * 0.44f;
-                            pts[i] = new PointF(c.X + (float)Math.Cos(a) * rr, c.Y + (float)Math.Sin(a) * rr);
-                        }
-                        p.AddPolygon(pts);
-                        break;
-                    }
-                case 4: // losange
-                    p.AddPolygon(new[] { new PointF(c.X, c.Y - r), new PointF(c.X + r, c.Y), new PointF(c.X, c.Y + r), new PointF(c.X - r, c.Y) });
-                    break;
-                default: // hexagone (pointe en haut)
-                    {
-                        var pts = new PointF[6];
-                        for (int i = 0; i < 6; i++) { double a = Math.PI / 180 * (60 * i - 90); pts[i] = new PointF(c.X + (float)Math.Cos(a) * r, c.Y + (float)Math.Sin(a) * r); }
-                        p.AddPolygon(pts);
-                        break;
-                    }
-            }
-            return p;
-        }
     }
 }

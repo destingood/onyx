@@ -156,6 +156,27 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_BADGEDETAIL=<fichier> : rend la fiche d'un badge verrouillé (démo) et sort.
+            string bdOut = Environment.GetEnvironmentVariable("BT_BADGEDETAIL");
+            if (!string.IsNullOrEmpty(bdOut))
+            {
+                var st = new BadgeCatalog.Stats { OptiActive = 44, Health = 72, GamesDet = 3, Checkups = 2 };
+                using (var f = new BadgeDetailForm(BadgeCatalog.ById("perfect"), st, false, null))
+                {
+                    f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    f.Location = new System.Drawing.Point(-5000, -5000);
+                    f.Show(); f.Refresh(); Pump(600); f.Refresh();
+                    using (var bmp = new System.Drawing.Bitmap(f.Width, f.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(bdOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("BADGEDETAIL écrit : " + bdOut);
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
