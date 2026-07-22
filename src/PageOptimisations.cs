@@ -17,6 +17,7 @@ namespace BTOptimizer
         private readonly List<Button> _chipBtns = new List<Button>();
         private readonly Dictionary<string, ToggleSwitch> _toggles = new Dictionary<string, ToggleSwitch>();
         private bool _built;
+        private bool _statesLoaded;
         private TextBox _search;
         private string _query = "";
 
@@ -36,7 +37,7 @@ namespace BTOptimizer
         private void Build()
         {
             _chips = new Panel();
-            _chips.SetBounds(34, 66, 10, 40);
+            _chips.SetBounds(34, 90, 10, 40);   // sous le sous-titre (compteur d'actives) dessiné à y=64
             _chips.BackColor = Color.Transparent;
             Controls.Add(_chips);
 
@@ -182,20 +183,27 @@ namespace BTOptimizer
 
         private Control MakeCard(Tweak t)
         {
+            const int pad = 16, nameW = 258, descW = 316;
             var card = new Panel();
-            card.Size = new Size(348, 150);
             card.Margin = new Padding(10);
             card.BackColor = Color.Transparent;
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
+            // Hauteurs mesurées (retour à la ligne) : la carte s'adapte au texte au lieu de le rogner.
+            var wrap = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
+            int nameH = TextRenderer.MeasureText(t.Name ?? "", FpsUi.H3, new Size(nameW, 0), wrap).Height;
+            if (nameH < 40) nameH = 40;
             var name = new Label();
             name.Text = t.Name;
             name.Font = FpsUi.H3; name.ForeColor = FpsUi.Ink; name.BackColor = Color.Transparent;
-            name.SetBounds(16, 14, 258, 44);
+            name.SetBounds(pad, 14, nameW, nameH);
 
+            int descY = 14 + nameH + 6;
+            int descH = TextRenderer.MeasureText(t.Desc ?? "", FpsUi.Small, new Size(descW, 0), wrap).Height + 2;
+            if (descH < 34) descH = 34;
             var desc = new Label();
             desc.Text = t.Desc; desc.Font = FpsUi.Small; desc.ForeColor = FpsUi.Dim; desc.BackColor = Color.Transparent;
-            desc.SetBounds(16, 62, 316, 74);
+            desc.SetBounds(pad, descY, descW, descH);
 
             var tog = new ToggleSwitch();
             tog.Location = new Point(288, 16);
@@ -206,12 +214,15 @@ namespace BTOptimizer
 
             card.Controls.Add(name); card.Controls.Add(desc); card.Controls.Add(tog);
 
+            int y = descY + descH + 8;
             if (t.Reboot)
             {
                 var rb = FpsUi.Text("redémarrage requis", FpsUi.Tiny, FpsUi.Warn);
-                rb.Location = new Point(16, 128);
+                rb.Location = new Point(pad, y);
                 card.Controls.Add(rb);
+                y += 18;
             }
+            card.Size = new Size(348, Math.Max(132, y + 8));
             return card;
         }
 
@@ -232,7 +243,7 @@ namespace BTOptimizer
                 try { AppStats.Invalidate(); } catch { }  // une opti a changé : invalide le cache partagé
                 bool? st = null; try { st = t.Check != null ? t.Check() : (bool?)apply; } catch { }
                 bool final = st ?? apply;
-                try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; })); } catch { }
+                try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; Invalidate(); })); } catch { }
             });
         }
 
@@ -244,7 +255,7 @@ namespace BTOptimizer
             {
                 var res = new Dictionary<string, bool>();
                 foreach (Tweak t in snapshot) { bool? st = null; try { st = t.Check != null ? t.Check() : null; } catch { } if (st.HasValue) res[t.Id] = st.Value; }
-                try { BeginInvoke((Action)(() => { foreach (var kv in res) if (_toggles.ContainsKey(kv.Key)) _toggles[kv.Key].On = kv.Value; })); }
+                try { BeginInvoke((Action)(() => { foreach (var kv in res) if (_toggles.ContainsKey(kv.Key)) _toggles[kv.Key].On = kv.Value; _statesLoaded = true; Invalidate(); })); }
                 catch { }
             });
         }
@@ -252,7 +263,7 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            _flow.SetBounds(20, 112, ClientSize.Width - 40, ClientSize.Height - 112);
+            _flow.SetBounds(20, 138, ClientSize.Width - 40, ClientSize.Height - 138);
             if (_bReset != null)
             {
                 int rx = ClientSize.Width - 34;
@@ -267,7 +278,23 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "OPTIMISATIONS", null);
+            PaintTitle(e.Graphics, "OPTIMISATIONS", Subtitle());
+        }
+
+        // Sous-titre vivant : nombre d'optimisations actives (vue complète) ou nombre affiché (vue filtrée).
+        private string Subtitle()
+        {
+            if (!_built || _flow == null) return null;
+            int shown = _flow.Controls.Count;
+            if (_filter == null && _query.Length == 0)
+            {
+                if (!_statesLoaded) return shown + " optimisations";
+                int active = 0; foreach (var kv in _toggles) if (kv.Value.On) active++;
+                return active + " / " + shown + " optimisations actives";
+            }
+            string s = shown + (shown > 1 ? " optimisations affichées" : " optimisation affichée");
+            if (_query.Length > 0 && _search != null) s += "  ·  « " + _search.Text.Trim() + " »";
+            return s;
         }
     }
 }
