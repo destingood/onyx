@@ -471,6 +471,17 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "chrome_bg_off", Category = Cat.Rapidite,
+                Name = "Empêcher Google Chrome de tourner en arrière-plan",
+                Desc = "Chrome continue de tourner (processus + GPU) même fenêtre fermée. Cette politique coupe le mode arrière-plan : moins de ressources volées en jeu. Sans effet si tu n'as pas Chrome. « Rétablir » l'annule.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Google\Chrome" },
+                Apply = () => Sys.SetMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled"),
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "widgets_off", Category = Cat.Rapidite,
                 Name = "Désactiver les Widgets (Windows 11) / Actualités (Windows 10)",
                 Desc = "Supprime le processus Widgets/Actualités qui tourne en permanence en arrière-plan. Plein effet à la prochaine session.",

@@ -187,6 +187,7 @@ namespace BTOptimizer
             mPerf.DropDownItems.Add("⏱ Latence en direct (DPC/ISR par pilote)...", null, open(() => new LiveMonForm(Log)));
             mPerf.DropDownItems.Add("🧪 Benchmark rapide (CPU / mémoire / disque)...", null, open(() => new BenchForm(Log)));
             mPerf.DropDownItems.Add("🔍 Qui ralentit mon PC ? (processus de fond)...", null, open(() => new BloatForm(Log)));
+            mPerf.DropDownItems.Add("⚡ Apps qui plombent tes FPS (overlays, arrière-plan)...", null, open(() => new AppFpsForm(Log)));
             mPerf.DropDownItems.Add("🏁 Prêt pour le match ? (checklist)...", null, open(() => new TournamentForm(Log)));
             mPerf.DropDownItems.Add("Guide latence & perf (checklist input lag)...", null, open(() => new LatencyGuideForm(Log)));
 
@@ -233,6 +234,7 @@ namespace BTOptimizer
 
             // --- 💾 Disque & entretien ---
             var mDisk = group("💾  Disque & entretien");
+            mDisk.DropDownItems.Add("🩺 Routines d'entretien (1 clic : temp, disques, cache GPU, réseau…)...", null, open(() => new MaintenanceForm(Log)));
             mDisk.DropDownItems.Add("💾 Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
             mDisk.DropDownItems.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
             mDisk.DropDownItems.Add("Nettoyage disque (temporaires, caches...)...", null, open(() => new CleanupForm(Log)));

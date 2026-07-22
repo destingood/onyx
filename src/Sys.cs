@@ -1707,6 +1707,105 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Suppression de l'historique Windows (récents, Jump Lists, miniatures)
+        // ------------------------------------------------------------------
+        /// <summary>
+        /// Efface l'historique local de l'Explorateur : documents récents, listes de
+        /// raccourcis (Jump Lists) et cache des miniatures/icônes. Sans risque : Windows
+        /// reconstruit ces caches à l'usage. Les fichiers verrouillés par explorer.exe sont
+        /// simplement ignorés.
+        /// </summary>
+        public static void CleanWindowsHistory(Action<string, int> log)
+        {
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            long items = 0;
+
+            // 1) Documents récents + Jump Lists (Automatic/CustomDestinations vivent sous Recent).
+            items += HistDeleteContents(Path.Combine(appData, @"Microsoft\Windows\Recent"), true);
+
+            // 2) Cache des miniatures et des icônes (souvent verrouillé -> best-effort).
+            string explorer = Path.Combine(local, @"Microsoft\Windows\Explorer");
+            items += HistDeleteByPattern(explorer, "thumbcache_*.db");
+            items += HistDeleteByPattern(explorer, "iconcache_*.db");
+
+            log("Historique Windows nettoyé : " + items + " élément(s) supprimé(s) "
+                + "(récents, Jump Lists, miniatures). Les fichiers en cours d'utilisation sont ignorés. ✔", 1);
+        }
+
+        // Supprime le contenu d'un dossier (best-effort), renvoie le nombre d'éléments supprimés.
+        private static long HistDeleteContents(string dir, bool recurse)
+        {
+            long n = 0;
+            try
+            {
+                if (!Directory.Exists(dir)) return 0;
+                foreach (string f in Directory.GetFiles(dir))
+                    try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); n++; } catch { }
+                if (recurse)
+                    foreach (string sub in Directory.GetDirectories(dir))
+                    {
+                        n += HistDeleteContents(sub, true);
+                        try { Directory.Delete(sub, false); } catch { }
+                    }
+            }
+            catch { }
+            return n;
+        }
+
+        private static long HistDeleteByPattern(string dir, string pattern)
+        {
+            long n = 0;
+            try
+            {
+                if (!Directory.Exists(dir)) return 0;
+                foreach (string f in Directory.GetFiles(dir, pattern))
+                    try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); n++; } catch { }
+            }
+            catch { }
+            return n;
+        }
+
+        // ------------------------------------------------------------------
+        //  Rafraîchissement réseau (cache DNS + table ARP + NetBIOS)
+        // ------------------------------------------------------------------
+        /// <summary>
+        /// Rafraîchit la couche réseau SANS rien réinitialiser en dur (contrairement à la
+        /// réparation Winsock/TCP-IP) : vide le cache DNS, la table ARP et le cache NetBIOS,
+        /// puis réenregistre le DNS. Corrige les petits soucis de résolution / latence après
+        /// un changement de réseau. Aucun redémarrage requis.
+        /// </summary>
+        public static void RefreshNetwork(Action<string, int> log)
+        {
+            FlushDns();
+            log("Cache DNS vidé.", 0);
+            Run(Sys32("arp.exe"), "-d *");
+            log("Table ARP vidée.", 0);
+            Run(Sys32("nbtstat.exe"), "-R");
+            Run(Sys32("nbtstat.exe"), "-RR");
+            Run(Sys32("ipconfig.exe"), "/registerdns");
+            log("Réseau rafraîchi : DNS + ARP + NetBIOS, résolution de noms réenregistrée. ✔", 1);
+        }
+
+        // ------------------------------------------------------------------
+        //  Diagnostic mémoire Windows (test de la RAM au redémarrage)
+        // ------------------------------------------------------------------
+        /// <summary>
+        /// Ouvre l'outil natif « Diagnostic de mémoire Windows » (mdsched). L'utilisateur
+        /// choisit de redémarrer tout de suite ou au prochain démarrage ; le test s'exécute
+        /// avant le chargement de Windows et signale une RAM défaillante (cause de crashs/BSOD).
+        /// </summary>
+        public static void LaunchMemoryDiagnostic(Action<string, int> log)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(Sys32("mdsched.exe")) { UseShellExecute = true });
+                log("Diagnostic de mémoire Windows ouvert : choisis « Redémarrer maintenant » ou « au prochain démarrage ».", 0);
+            }
+            catch (Exception ex) { log("Impossible d'ouvrir le diagnostic mémoire : " + ex.Message, 3); }
+        }
+
+        // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------
         public static long CleanMemory(Action<string, int> log)
