@@ -9,46 +9,72 @@ using System.Threading.Tasks;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Jaquettes officielles Steam (image « header ») par AppID, pour la page Jeux. Ordre :
-    ///   1. cache LOCAL de Steam (appcache\librarycache) — instantané, hors-ligne, fichiers de l'utilisateur ;
+    /// Jaquettes officielles Steam (image « library_600x900 ») par AppID, pour la page Jeux. Ordre :
+    ///   1. cache LOCAL de Steam (appcache\librarycache) — instantané, hors-ligne ;
     ///   2. cache disque de l'app (bt-gamecache\&lt;appid&gt;.jpg) — déjà téléchargé une fois ;
     ///   3. CDN public Steam — téléchargé puis mis en cache disque (désactivé sous les harnais de test).
-    /// Chargement asynchrone et non bloquant ; échec silencieux → la carte garde sa tuile générique.
+    /// Chargement ASYNCHRONE et non bloquant (aucun thread bloqué sur le sémaphore), plusieurs cartes
+    /// peuvent attendre la même image, et un échec est mémorisé pour ne pas réessayer en boucle.
     /// </summary>
     internal static class GameArt
     {
         private static readonly Dictionary<int, Image> _cache = new Dictionary<int, Image>();
+        private static readonly Dictionary<int, List<Action>> _waiters = new Dictionary<int, List<Action>>();
         private static readonly HashSet<int> _loading = new HashSet<int>();
+        private static readonly HashSet<int> _failed = new HashSet<int>();
         private static readonly object _lock = new object();
-        private static readonly SemaphoreSlim _gate = new SemaphoreSlim(6);  // limite les chargements concurrents
+        private static readonly SemaphoreSlim _gate = new SemaphoreSlim(8);  // limite les TÉLÉCHARGEMENTS concurrents
         private static HttpClient _http;
 
-        /// <summary>Image prête (cache), ou null. Lance un chargement de fond au premier appel ;
-        /// onReady est invoqué (thread de fond) quand l'image devient disponible.</summary>
+        /// <summary>Image prête (cache mémoire), ou null. Lance un chargement de fond au premier appel ;
+        /// chaque onReady non nul est rappelé (thread de fond) quand l'image devient disponible.</summary>
         public static Image Get(int appId, Action onReady)
         {
             if (appId <= 0) return null;
+            bool start = false;
             lock (_lock)
             {
                 Image img;
                 if (_cache.TryGetValue(appId, out img)) return img;
-                if (_loading.Contains(appId)) return null;
-                _loading.Add(appId);
-            }
-            Task.Run(() =>
-            {
-                Image loaded = null;
-                try
+                if (_failed.Contains(appId)) return null;
+                if (onReady != null)
                 {
-                    _gate.Wait();
-                    try { loaded = LoadLocal(appId) ?? LoadDiskCache(appId) ?? Download(appId); }
+                    List<Action> list;
+                    if (!_waiters.TryGetValue(appId, out list)) { list = new List<Action>(); _waiters[appId] = list; }
+                    list.Add(onReady);
+                }
+                if (!_loading.Contains(appId)) { _loading.Add(appId); start = true; }
+            }
+            if (start) { var _ignore = LoadAsync(appId); }
+            return null;
+        }
+
+        private static async Task LoadAsync(int appId)
+        {
+            Image loaded = null;
+            try
+            {
+                // Rapide et hors-ligne (cache local Steam + cache disque) : hors du gate réseau.
+                loaded = await Task.Run(() => LoadLocal(appId) ?? LoadDiskCache(appId)).ConfigureAwait(false);
+                if (loaded == null && !UnderTestHarness())
+                {
+                    await _gate.WaitAsync().ConfigureAwait(false);
+                    try { loaded = await DownloadAsync(appId).ConfigureAwait(false); }
                     finally { _gate.Release(); }
                 }
-                catch { }
-                lock (_lock) { if (loaded != null) _cache[appId] = loaded; _loading.Remove(appId); }
-                if (loaded != null && onReady != null) { try { onReady(); } catch { } }
-            });
-            return null;
+            }
+            catch { }
+
+            Action[] cbs;
+            lock (_lock)
+            {
+                if (loaded != null) _cache[appId] = loaded; else _failed.Add(appId);
+                _loading.Remove(appId);
+                List<Action> list;
+                cbs = _waiters.TryGetValue(appId, out list) ? list.ToArray() : new Action[0];
+                _waiters.Remove(appId);
+            }
+            if (loaded != null) foreach (var cb in cbs) { try { cb(); } catch { } }
         }
 
         private static Image LoadLocal(int appId)
@@ -81,14 +107,14 @@ namespace BTOptimizer
             return null;
         }
 
-        private static Image Download(int appId)
+        private static async Task<Image> DownloadAsync(int appId)
         {
-            if (UnderTestHarness()) return null;   // pas de réseau sous les captures/tests
             try
             {
-                if (_http == null) { _http = new HttpClient(); _http.Timeout = TimeSpan.FromSeconds(6); }
+                if (_http == null)
+                    lock (_lock) { if (_http == null) { var h = new HttpClient(); h.Timeout = TimeSpan.FromSeconds(8); _http = h; } }
                 string url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/library_600x900.jpg";
-                byte[] data = _http.GetByteArrayAsync(url).GetAwaiter().GetResult();
+                byte[] data = await _http.GetByteArrayAsync(url).ConfigureAwait(false);
                 if (data == null || data.Length < 100) return null;
                 try { string p = DiskPath(appId); Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { }
                 return FromBytes(data);
