@@ -208,6 +208,7 @@ namespace BTOptimizer
             if (Environment.GetEnvironmentVariable("BT_UITEST") == "1")
             {
                 int uiErr = 0;
+                try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 string shot = Environment.GetEnvironmentVariable("BT_UISHOT");

@@ -33,6 +33,10 @@
     <EmbeddedResource Include="src\assets\*.png">
       <LogicalName>%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <!-- Polices officielles FPS Doctor (Ubuntu / Inter / Garet) embarquees. -->
+    <EmbeddedResource Include="src\assets\fonts\*.ttf;src\assets\fonts\*.otf">
+      <LogicalName>%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

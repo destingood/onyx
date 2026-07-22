@@ -13,30 +13,34 @@ namespace BTOptimizer
     // ----------------------------------------------------------------------
     internal static class FpsUi
     {
-        public static readonly Color BgMain = Color.FromArgb(9, 11, 10);
-        public static readonly Color RailBg = Color.FromArgb(12, 14, 13);
-        public static readonly Color Card   = Color.FromArgb(16, 18, 17);
-        public static readonly Color CardHi = Color.FromArgb(22, 25, 23);
-        public static readonly Color Border = Color.FromArgb(31, 34, 32);
-        public static readonly Color Neon   = Color.FromArgb(0, 255, 136);
+        // Palette alignée sur FPS Doctor : noir pur, gris neutres, blanc pur, néon #00FF88 (identique).
+        public static readonly Color BgMain = Color.FromArgb(0, 0, 0);       // #000000
+        public static readonly Color RailBg = Color.FromArgb(13, 13, 13);    // #0D0D0D (.frame)
+        public static readonly Color Card   = Color.FromArgb(15, 15, 15);
+        public static readonly Color CardHi = Color.FromArgb(23, 23, 23);    // #171717 (hover)
+        public static readonly Color Border = Color.FromArgb(23, 23, 23);    // #171717
+        public static readonly Color Neon   = Color.FromArgb(0, 255, 136);   // #00FF88
         public static readonly Color NeonDim= Color.FromArgb(0, 190, 110);
-        public static readonly Color Ink    = Color.FromArgb(240, 242, 241);
-        public static readonly Color Dim    = Color.FromArgb(155, 159, 155);
-        public static readonly Color Dim2   = Color.FromArgb(120, 124, 120);
-        public static readonly Color Warn   = Color.FromArgb(230, 175, 45);
-        public static readonly Color Err    = Color.FromArgb(232, 84, 74);
+        public static readonly Color Ink    = Color.FromArgb(255, 255, 255); // #FFFFFF
+        public static readonly Color Dim    = Color.FromArgb(176, 176, 176); // #B0B0B0
+        public static readonly Color Dim2   = Color.FromArgb(137, 137, 137); // #898989
+        public static readonly Color Warn   = Color.FromArgb(255, 208, 0);   // #FFD000
+        public static readonly Color Err    = Color.FromArgb(255, 107, 107); // #FF6B6B
 
+        // Polices officielles FPS Doctor : Ubuntu (titres/nav), Inter (corps), Garet (display).
         public static Font F(float size, bool semibold)
         {
-            return new Font(semibold ? "Segoe UI Semibold" : "Segoe UI", size);
+            return semibold ? Fonts.Make(Fonts.Ubuntu, size, FontStyle.Bold, "Segoe UI Semibold")
+                            : Fonts.Make(Fonts.Inter, size, FontStyle.Regular, "Segoe UI");
         }
-        public static readonly Font H1    = new Font("Segoe UI Semibold", 21f);
-        public static readonly Font H2    = new Font("Segoe UI Semibold", 12f);
-        public static readonly Font H3    = new Font("Segoe UI Semibold", 10.5f);
-        public static readonly Font Body  = new Font("Segoe UI", 9.5f);
-        public static readonly Font Small = new Font("Segoe UI", 8.5f);
-        public static readonly Font Tiny  = new Font("Segoe UI", 7.5f);
-        public static readonly Font Num   = new Font("Segoe UI Semibold", 20f);
+        public static readonly Font H1    = Fonts.Make(Fonts.Ubuntu, 20f,  FontStyle.Bold,    "Segoe UI Semibold");
+        public static readonly Font H2    = Fonts.Make(Fonts.Ubuntu, 12f,  FontStyle.Bold,    "Segoe UI Semibold");
+        public static readonly Font H3    = Fonts.Make(Fonts.Ubuntu, 10.5f, FontStyle.Bold,   "Segoe UI Semibold");
+        public static readonly Font Body  = Fonts.Make(Fonts.Inter,  9f,   FontStyle.Regular, "Segoe UI");
+        public static readonly Font Small = Fonts.Make(Fonts.Inter,  8.5f, FontStyle.Regular, "Segoe UI");
+        public static readonly Font Tiny  = Fonts.Make(Fonts.Inter,  7.5f, FontStyle.Regular, "Segoe UI");
+        public static readonly Font Num   = Fonts.Make(Fonts.Ubuntu, 20f,  FontStyle.Bold,    "Segoe UI Semibold");
+        public static readonly Font Garet = Fonts.Make(Fonts.Garet,  22f,  FontStyle.Regular, "Segoe UI Semibold");
         public static readonly Font Glyph = new Font("Segoe UI Emoji", 15f);
         public static readonly Font GlyphL  = new Font("Segoe UI Emoji", 30f);
         public static readonly Font GlyphXL = new Font("Segoe UI Emoji", 42f);
