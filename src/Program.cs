@@ -893,6 +893,30 @@ namespace BTOptimizer
                     }
                     catch (Exception ex) { Console.WriteLine("  shot " + names[p] + " : " + ex.Message); }
                 }
+                // Collection DÉFILÉE : régression du bug « logos/textes détachés des cartes en
+                // scrollant » (TextRenderer ignore TranslateTransform — coordonnées manuelles).
+                try
+                {
+                    dash.Goto(5);
+                    var pc = dash.PageAt(5) as PageCollection;
+                    if (pc != null)
+                    {
+                        pc.ScrollGridTo(160);
+                        Pump(350);
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p5-Collection-scrolled-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("  shot Collection-scrolled : " + ex.Message); }
                 try { dash.Hide(); dash.Dispose(); } catch { }
                 Pump(120);
             }

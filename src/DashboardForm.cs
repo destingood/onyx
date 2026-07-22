@@ -353,6 +353,9 @@ namespace BTOptimizer
 
         public void Goto(int idx) { ShowPage(idx); }
 
+        /// <summary>Page déjà créée à cet index (ou null) — pour le harnais de test visuel.</summary>
+        internal FpsPage PageAt(int idx) { return idx >= 0 && idx < _pages.Length ? _pages[idx] : null; }
+
         /// <summary>Génère un rapport de santé HTML (état + optimisations actives + matériel),
         /// l'enregistre sur le Bureau et l'ouvre dans le navigateur. Lecture seule, partageable.</summary>
         public void GenerateHealthReport()

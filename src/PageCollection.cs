@@ -108,10 +108,8 @@ namespace BTOptimizer
 
         private void GridClick(object sender, MouseEventArgs e)
         {
-            var sc = _grid.AutoScrollPosition;
-            var pt = new Point(e.X - sc.X, e.Y - sc.Y);
             foreach (var kv in _hits)
-                if (kv.Key.Contains(pt))
+                if (kv.Key.Contains(e.Location))
                 {
                     var b = kv.Value;
                     using (var f = new BadgeDetailForm(b, _s, IsUnlocked(b), () => Host.Goto(b.Page))) f.ShowDialog(FindForm());
@@ -121,9 +119,7 @@ namespace BTOptimizer
 
         private void GridMove(object sender, MouseEventArgs e)
         {
-            var sc = _grid.AutoScrollPosition;
-            var pt = new Point(e.X - sc.X, e.Y - sc.Y);
-            bool over = false; foreach (var kv in _hits) if (kv.Key.Contains(pt)) { over = true; break; }
+            bool over = false; foreach (var kv in _hits) if (kv.Key.Contains(e.Location)) { over = true; break; }
             _grid.Cursor = over ? Cursors.Hand : Cursors.Default;
         }
 
@@ -132,16 +128,19 @@ namespace BTOptimizer
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            var scroll = _grid.AutoScrollPosition;
-            g.TranslateTransform(scroll.X, scroll.Y);
+            // PAS de TranslateTransform ici : TextRenderer (GDI) l'ignore, donc dès qu'on défile,
+            // textes et glyphes se détachent des cartes (formes décalées, logos hors cases). On
+            // décale les coordonnées à la main — valable pour le GDI+ ET le texte GDI.
+            var scroll = _grid.AutoScrollPosition;   // négatif quand on a défilé
 
             _hits.Clear();
             for (int i = 0; i < BadgeCatalog.All.Length; i++)
             {
                 int col = i % _cols, row = i / _cols;
-                int cx = col * (CellW + Gap), cy = row * (CellH + Gap);
+                int cx = col * (CellW + Gap) + scroll.X, cy = row * (CellH + Gap) + scroll.Y;
                 var rc = new Rectangle(cx, cy, CellW, CellH);
                 _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(rc, BadgeCatalog.All[i]));
+                if (cy + CellH < 0 || cy > _grid.ClientSize.Height) continue;   // hors zone visible
                 DrawBadgeCell(g, cx, cy, CellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), false);
             }
         }
@@ -200,6 +199,10 @@ namespace BTOptimizer
         }
 
         internal void SeedDemoStats() { _s = new BadgeCatalog.Stats { OptiActive = 44, OptiTotal = 173, GamesDet = 3, Health = 78, Checkups = 6, Boost = true }; }
+
+        /// <summary>Défile la grille à y (px) — pour le harnais de test visuel (régression : les
+        /// textes des badges doivent rester DANS leurs cartes une fois la grille défilée).</summary>
+        internal void ScrollGridTo(int y) { if (_grid != null) { _grid.AutoScrollPosition = new Point(0, y); _grid.Invalidate(); } }
 
         protected override void OnPaint(PaintEventArgs e)
         {
