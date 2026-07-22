@@ -653,6 +653,79 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>
+        /// true = CTCP actif sur le template TCP « Internet » ; false = autre fournisseur
+        /// (cubic, newreno…) ; null = illisible. Les libellés netsh sont localisés mais les
+        /// valeurs (ctcp/cubic) restent en ASCII : on compare des tokens entiers pour ne pas
+        /// confondre « ctcp » et « dctcp ».
+        /// </summary>
+        public static bool? CongestionCtcp()
+        {
+            NativeResult r = Run(Sys32("netsh.exe"), "interface tcp show supplemental template=internet");
+            if (r.ExitCode != 0) return null;
+            foreach (string raw in r.Output.Split(new[] { ' ', '\t', '\r', '\n', ':' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string tok = raw.ToLowerInvariant();
+                if (tok == "ctcp") return true;
+                if (tok == "cubic" || tok == "newreno" || tok == "dctcp" || tok == "bbr2" || tok == "none") return false;
+            }
+            return null;
+        }
+
+        // ------------------------------------------------------------------
+        //  GPU AMD : ULPS (Ultra Low Power State)
+        // ------------------------------------------------------------------
+        private const string DisplayClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
+
+        private static bool IsAmdDisplaySubKey(RegistryKey ik)
+        {
+            string desc = ik.GetValue("DriverDesc") as string;
+            if (desc == null) return false;
+            string low = desc.ToLowerInvariant();
+            return low.Contains("amd") || low.Contains("radeon");
+        }
+
+        /// <summary>Écrit EnableUlps=0 (disable=true) ou 1 sur chaque GPU AMD/Radeon. Sans effet s'il n'y a pas de GPU AMD.</summary>
+        public static void SetAmdUlps(bool disable)
+        {
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(DisplayClassKey))
+            {
+                if (rk == null) return;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c, true))
+                    {
+                        if (ik == null || !IsAmdDisplaySubKey(ik)) continue;
+                        ik.SetValue("EnableUlps", disable ? 0 : 1, RegistryValueKind.DWord);
+                    }
+                }
+            }
+        }
+
+        /// <summary>true = ULPS coupé sur un GPU AMD ; false = encore actif ; null = pas de GPU AMD.</summary>
+        public static bool? AmdUlpsDisabled()
+        {
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(DisplayClassKey))
+            {
+                if (rk == null) return null;
+                bool found = false;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c))
+                    {
+                        if (ik == null || !IsAmdDisplaySubKey(ik)) continue;
+                        found = true;
+                        if (IntEquals(ik.GetValue("EnableUlps"), 0)) return true;
+                    }
+                }
+                return found ? (bool?)false : null;
+            }
+        }
+
         // ------------------------------------------------------------------
         //  Services Windows
         // ------------------------------------------------------------------
@@ -777,6 +850,7 @@ namespace BTOptimizer
             public string Path;
             public bool IsRecycleBin;
             public long SizeMB;
+            public bool DefaultOff;   // décoché par défaut (donnée personnelle : choix explicite)
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -803,6 +877,13 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
                 // Journaux d'installation de composants (souvent volumineux).
                 new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
+                // Historique d'utilisation : raccourcis récents + Jump Lists (décoché par
+                // défaut : vider supprime aussi les éléments épinglés des Jump Lists) et
+                // cache des miniatures/icônes de l'Explorateur (reconstruit tout seul ;
+                // les fichiers verrouillés par Explorer sont simplement ignorés).
+                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", DefaultOff = true,
+                                  Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
+                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
             AddBrowserCaches(list, local);
             list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true });
@@ -1633,6 +1714,7 @@ namespace BTOptimizer
             var steps = new[]
             {
                 new[] { Sys32("ipconfig.exe"), "/flushdns", "Cache DNS vidé" },
+                new[] { Sys32("netsh.exe"), "interface ip delete arpcache", "Cache ARP vidé" },
                 new[] { Sys32("netsh.exe"), "winsock reset", "Winsock réinitialisé" },
                 new[] { Sys32("netsh.exe"), "int ip reset", "Pile TCP/IP réinitialisée" },
                 new[] { Sys32("netsh.exe"), "int tcp reset", "Paramètres TCP réinitialisés" },

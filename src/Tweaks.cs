@@ -2258,6 +2258,56 @@ namespace BTOptimizer
                 Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled"), 0)
             });
 
+            list.Add(new Tweak
+            {
+                Id = "start_recommendations_off", Category = Cat.Rapidite,
+                Name = "Masquer les recommandations du menu Démarrer (fichiers/applis suggérés)",
+                Desc = "Retire la section « Recommandé » du menu Démarrer de Windows 11 (fichiers récents et applications suggérées) : menu plus net qui s'ouvre sans fouiller ton historique. « Rétablir » remet l'affichage par défaut.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_IrisRecommendations", 0, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_TrackDocs", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_IrisRecommendations", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_TrackDocs", 1, RegistryValueKind.DWord);
+                },
+                Check = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "Start_IrisRecommendations"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "store_open_with_off", Category = Cat.Rapidite,
+                Name = "Ne plus proposer « Rechercher dans le Store » pour ouvrir un fichier",
+                Desc = "Fichier à l'extension inconnue : Windows n'ouvre plus le Microsoft Store et la fenêtre « Ouvrir avec » va droit à la liste de tes applications. « Rétablir » remet le comportement par défaut.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Explorer", "NoUseStoreOpenWith"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "tcp_ctcp", Category = Cat.Reseau, Esport = true,
+                Name = "Contrôle de congestion TCP « CTCP » (montée en débit plus rapide)",
+                Desc = "Remplace l'algorithme de congestion du profil Internet par CTCP : le débit remonte plus vite après une perte de paquets — téléchargements et jeux TCP plus réactifs sur connexion chargée. « Rétablir » remet CUBIC, l'algorithme par défaut de Windows.",
+                Apply  = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=ctcp", "Activation de CTCP"),
+                Revert = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=cubic", "Retour à CUBIC"),
+                Check  = () => Sys.CongestionCtcp()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "amd_ulps_off", Category = Cat.Gpu, Reboot = true,
+                Name = "Désactiver l'ULPS des GPU AMD (micro-latences de réveil)",
+                Desc = "Coupe l'Ultra Low Power State des cartes AMD/Radeon : le GPU ne s'endort plus en profondeur, ce qui évite stutters et réveils lents (surtout en multi-GPU). Sans effet s'il n'y a pas de GPU AMD ; sur portable, l'économie d'énergie diminue. « Rétablir » réactive l'ULPS.",
+                Apply  = () => Sys.SetAmdUlps(true),
+                Revert = () => Sys.SetAmdUlps(false),
+                Check  = () => Sys.AmdUlpsDisabled()
+            });
+
             return list;
         }
     }

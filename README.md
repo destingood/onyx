@@ -11,7 +11,7 @@ sombre par défaut (basculable dans le menu ☰).
 
 ## En un coup d'œil
 
-- **173 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
+- **177 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
 - **Deux portes d'entrée** : 🏥 **Santé de mon PC** (bilan /100 avec graphique de tendance) et
   🧭 **J'ai un problème…** (assistant symptôme → bon outil).
 - **Suite de diagnostic** (menu ☰, rangée en 6 sous-menus) — chaque symptôme a son panneau
@@ -85,6 +85,30 @@ fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y
 code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
+### 🧩 Catalogue concurrent couvert : chaque catégorie complétée (v14.25)
+
+Passage systématique sur l'analyse du concurrent (FPSDoctor v1.4.5 : 37 optimisations +
+6 routines d'entretien) : **tout ce qui manquait encore a été ajouté, chacun dans sa
+catégorie** — le reste était déjà couvert par les versions précédentes.
+
+- **🚀 Rapidité & démarrage** — **Recommandations du menu Démarrer masquées** (Windows 11 :
+  fichiers récents et applis suggérées retirés du menu) et **« Rechercher dans le Store »
+  désactivé** : « Ouvrir avec » va droit à la liste de tes applications.
+- **🌐 Réseau** — **Contrôle de congestion TCP « CTCP »** sur le profil Internet (le débit
+  remonte plus vite après une perte de paquets). Détection « [déjà actif] » par token exact
+  de `netsh` (indépendant de la langue, pas de confusion cubic/dctcp) ; retour CUBIC en 1 clic.
+- **🎮 GPU & jeux** — **ULPS AMD désactivable** (`EnableUlps=0` sur chaque GPU Radeon
+  détecté dans la classe d'affichage) : fini les micro-latences de réveil, surtout en
+  multi-GPU. Sans GPU AMD : état « indéterminé », aucune écriture.
+- **🧹 Nettoyage disque** — parité « suppression de l'historique Windows » : **fichiers
+  récents & Jump Lists** (décochée par défaut — elle touche aussi tes épinglés) et **cache
+  des miniatures/icônes de l'Explorateur** (les fichiers verrouillés sont ignorés). La
+  **réparation réseau vide désormais aussi le cache ARP** (parité « rafraîchissement réseau »).
+
+Total : **177 optimisations**. Écarts assumés (documentés, non portés) : désinstallation
+complète de OneDrive (destructif — l'arrêt de l'autostart suffit et reste réversible) et la
+présence Discord (gadget marketing sans effet sur les perfs).
 
 ### 🎯 Viseur (crosshair) + filtre couleur (vibrance) intégrés (v14.24)
 
@@ -597,7 +621,7 @@ un **disque dur mécanique** (lecture < 150 Mo/s → conseille le passage sur SS
 
 Le bouton **Rapport** produit désormais un vrai **audit** exportable (page HTML autonome,
 thème sombre soigné, ouvrable dans le navigateur et imprimable en PDF) : en plus de l'état
-des 173 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
+des 177 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
 crashs pilote GPU (14 j), écrans bleus, réglages néfastes à corriger, bibliothèques de jeu
 manquantes, points de restauration, espace disque — avec pastilles vertes/rouges. Le
 livrable **avant/après** idéal pour montrer ton travail à un client (généré en arrière-plan

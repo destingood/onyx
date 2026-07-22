@@ -99,7 +99,7 @@ namespace BTOptimizer
             long sum = 0;
             foreach (Sys.CleanTarget t in targets)
             {
-                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0);
+                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && !t.DefaultOff);
                 sum += t.SizeMB;
             }
             _total.Text = string.Format("Total récupérable : {0:N0} Mo", sum);
