@@ -4,6 +4,15 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.25 — Overlay de performances en jeu
+- **📊 Overlay FPS + capteurs** par-dessus les jeux (fenêtré / sans bordure), façon
+  Afterburner/RTSS mais **100 % natif** : FPS/frametime par ETW (PresentMon),
+  CPU/GPU/RAM par capteurs en-process — **aucune injection**, compatible anticheat.
+- 4 coins, taille, opacité, éléments au choix, mode « seulement en jeu »,
+  **Ctrl+Alt+O** global (aussi dans le menu tray), persistance + ré-affichage au démarrage.
+- Sessions ETW séparées : l'overlay et « 📈 FPS en direct » tournent en même temps.
+- Assistant « J'ai un problème… » : + overlay, viseur et filtre couleur (v14.24) indexés.
+
 ## v13.5 — Revue QA
 - **Gardien en fond** : les mesures (nvidia-smi, journaux) passent en arrière-plan avec
   garde anti-réentrance et bulle marshallée — fini les micro-freezes de la fenêtre en jeu.

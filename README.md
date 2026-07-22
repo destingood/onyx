@@ -19,7 +19,7 @@ sombre par défaut (basculable dans le menu ☰).
 
 | Domaine | Outils |
 |---|---|
-| ⚡ Performance & FPS | 🎯 Objectif 500 FPS · 📈 FPS en direct · ⏱ Latence en direct · 🧪 Benchmark · 🔍 Qui ralentit mon PC · 🏁 Checklist match |
+| ⚡ Performance & FPS | 🎯 Objectif 500 FPS · 📊 Overlay en jeu (FPS + capteurs) · 📈 FPS en direct · ⏱ Latence en direct · 🧪 Benchmark · 🔍 Qui ralentit mon PC · 🏁 Checklist match |
 | 🩺 Crashs & stabilité | 🩺 Stabilité (14 j) · 🌡️ Températures/throttling · 🛒 Boutiques/crashs · 🧹 Réglages néfastes · 🔧 Réparer Windows · 🛡 Gardien en fond |
 | 📡 Réseau | 📶 Qualité réseau · 🛰️ Trajet (traceroute) · ⚙️ Réglages TCP/IP · 📡 Carte réseau · 🌐 DNS |
 | 🎮 Jeux & écran | 📦 Bibliothèques (winget) · 🎮 Priorité par jeu · 🔐 Exclusions antivirus · 🖥️ Écran · 🖱️ Souris |
@@ -85,6 +85,26 @@ fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y
 code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
+### 📊 Overlay de performances EN JEU (FPS + CPU/GPU/RAM, sans injection) (v14.25)
+
+LA fonction que les joueurs installent MSI Afterburner/RTSS pour avoir — ici **100 % native** :
+
+- **FPS + frametime du jeu** par-dessus l'écran, mesurés par la **session ETW façon PresentMon**
+  déjà présente dans l'app (les événements `Present()` DXGI/D3D9 que Windows émet) —
+  **AUCUNE injection dans le jeu, AUCUN hook** : compatible anticheat, zéro impact.
+- **CPU (charge + temp) · GPU (charge + temp) · RAM** via les capteurs **en-process**
+  (PDH + LibreHardwareMonitor GPU-seul) — mesures sur thread de fond, anti-réentrance.
+- Petite boîte sombre **click-through** dans le coin choisi (4 positions), taille du texte,
+  opacité et éléments au choix ; couleurs parlantes (FPS vert ≥ 120, temp orange/rouge) ;
+  mode **« seulement en jeu »** (apparaît en plein écran, disparaît sur le bureau).
+- **Ctrl+Alt+O global** : on/off en pleine partie (comme Ctrl+Alt+G pour le MODE JEU),
+  aussi dans le menu de la zone de notification. Persisté (`bt-overlay.txt`), ré-affiché
+  au démarrage, session ETW dédiée (le panneau 📈 FPS en direct reste utilisable en même
+  temps), tout est libéré à la fermeture.
+
+Menu **⚡ Performance & FPS → 📊 Overlay en jeu**, indexé dans « 🧭 J'ai un problème… »
+(« Voir mes FPS / températures PENDANT que je joue »).
 
 ### 🎯 Viseur (crosshair) + filtre couleur (vibrance) intégrés (v14.24)
 

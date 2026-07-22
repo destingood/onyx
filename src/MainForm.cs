@@ -86,6 +86,7 @@ namespace BTOptimizer
             Theme.Apply(this);
             Shown += OnShownWelcome;
             Shown += (s, e) => { try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { } };   // viseur si activé au dernier lancement
+            Shown += (s, e) => { try { PerfOverlay.ShowOnStartupIfEnabled(Log); } catch { } }; // overlay perfs si activé au dernier lancement
             CheckProfileDriftAtStartup();   // anti-régression : profil annulé par une MAJ Windows ?
         }
 
@@ -183,6 +184,7 @@ namespace BTOptimizer
             // --- ⚡ Performance & FPS ---
             var mPerf = group("⚡  Performance & FPS");
             mPerf.DropDownItems.Add("🎯 Objectif 500 FPS (écran haute fréquence)...", null, OnFps500Open);
+            mPerf.DropDownItems.Add("📊 Overlay en jeu : FPS + CPU/GPU (sans injection)...", null, open(() => new PerfOverlayForm(Log)));
             mPerf.DropDownItems.Add("📈 FPS en direct (par jeu, façon PresentMon)...", null, open(() => new FpsMonForm(Log)));
             mPerf.DropDownItems.Add("⏱ Latence en direct (DPC/ISR par pilote)...", null, open(() => new LiveMonForm(Log)));
             mPerf.DropDownItems.Add("🧪 Benchmark rapide (CPU / mémoire / disque)...", null, open(() => new BenchForm(Log)));
@@ -522,6 +524,7 @@ namespace BTOptimizer
             var trayMenu = new ContextMenuStrip();
             trayMenu.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("▶ MODE JEU on/off   (Ctrl+Alt+G)", null, (s, e) => OnBoostToggle(s, e));
+            trayMenu.Items.Add("📊 Overlay perfs on/off   (Ctrl+Alt+O)", null, (s, e) => { try { PerfOverlay.Toggle(Log); } catch { } });
             trayMenu.Items.Add("Timer 1 ms on/off", null, (s, e) => _chkTimer.Checked = !_chkTimer.Checked);
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
@@ -549,9 +552,11 @@ namespace BTOptimizer
             // Arrêt du timer AVANT tout : plus aucun tick (auto-boost / gardien) pendant la fermeture.
             try { if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; } } catch { }
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
+            try { UnregisterHotKey(Handle, HotkeyOverlayId); } catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
             try { Crosshair.Hide(); } catch { }   // retire l'overlay viseur
+            try { PerfOverlay.Hide(); } catch { } // retire l'overlay perfs (ferme la session ETW dédiée)
             try { if (_watchMon != null) _watchMon.Dispose(); } catch { }
             try { GpuSensors.Shutdown(); } catch { }   // ferme l'instance LibreHardwareMonitor (capteurs GPU natifs)
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
@@ -567,6 +572,7 @@ namespace BTOptimizer
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         private const int HotkeyBoostId = 0xB70;
+        private const int HotkeyOverlayId = 0xB71;
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
 
@@ -577,6 +583,8 @@ namespace BTOptimizer
             {
                 if (RegisterHotKey(Handle, HotkeyBoostId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'))
                     Log("Raccourci global actif : Ctrl+Alt+G = MODE JEU (fonctionne en pleine partie).", 0);
+                if (RegisterHotKey(Handle, HotkeyOverlayId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'O'))
+                    Log("Raccourci global actif : Ctrl+Alt+O = overlay FPS/capteurs en jeu.", 0);
             }
             catch { }
         }
@@ -589,6 +597,15 @@ namespace BTOptimizer
                 if (!Visible && _tray != null && _tray.Visible)
                     _tray.ShowBalloonTip(1500, "DesTinGOOD",
                         GameBoost.IsActive ? "MODE JEU activé (Ctrl+Alt+G)" : "MODE JEU désactivé (Ctrl+Alt+G)",
+                        ToolTipIcon.Info);
+            }
+            else if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyOverlayId)
+            {
+                bool shown = false;
+                try { shown = PerfOverlay.Toggle(Log); } catch { }
+                if (!Visible && _tray != null && _tray.Visible)
+                    _tray.ShowBalloonTip(1500, "DesTinGOOD",
+                        shown ? "Overlay perfs affiché (Ctrl+Alt+O)" : "Overlay perfs masqué (Ctrl+Alt+O)",
                         ToolTipIcon.Info);
             }
             base.WndProc(ref m);

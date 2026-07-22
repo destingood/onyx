@@ -114,6 +114,7 @@ namespace BTOptimizer
 
             Add("🚀 Performance & fluidité", "Ça rame / ça saccade en jeu", "🔍 Qui ralentit mon PC", () => new BloatForm(L));
             Add("🚀 Performance & fluidité", "Mes FPS sont bas", "📈 FPS en direct", () => new FpsMonForm(L));
+            Add("🚀 Performance & fluidité", "Voir mes FPS / températures PENDANT que je joue", "📊 Overlay en jeu", () => new PerfOverlayForm(L));
             Add("🚀 Performance & fluidité", "Je veux mesurer la puissance de mon PC", "🧪 Benchmark rapide", () => new BenchForm(L));
             Add("🚀 Performance & fluidité", "Chargements longs / mes jeux sont sur le bon disque ?", "💾 Jeux & disques", () => new DiskForm(L));
             Add("🚀 Performance & fluidité", "Input lag / réactivité de la souris", "⏱ Latence en direct", () => new LiveMonForm(L));
@@ -131,6 +132,8 @@ namespace BTOptimizer
 
             Add("🖥️ Écran & périphériques", "Mon écran semble bloqué à 60 Hz", "🖥️ Réglages d'écran", () => new DisplayForm(L));
             Add("🖥️ Écran & périphériques", "Ma souris est-elle vraiment à 1000 Hz ?", "🖱️ Fréquence de la souris", () => new MouseForm(L));
+            Add("🖥️ Écran & périphériques", "Mon jeu n'a pas de viseur (crosshair)", "🎯 Viseur personnalisé", () => new CrosshairForm(L));
+            Add("🖥️ Écran & périphériques", "Des couleurs plus vives / éclatantes (vibrance)", "🎨 Filtre couleur", () => new ColorFilterForm(L));
 
             Add("🧹 Entretien & sécurité", "PC lent à démarrer (trop de programmes au boot)", "Programmes au démarrage", () => new StartupForm(L));
             Add("🧹 Entretien & sécurité", "Libérer de l'espace disque", "Nettoyage disque", () => new CleanupForm(L));

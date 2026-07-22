@@ -16,13 +16,20 @@ namespace BTOptimizer
     /// </summary>
     internal sealed class FpsEtw : IDisposable
     {
-        private const string SessionName = "BTOptimizer-FPS";
+        private const string DefaultSessionName = "BTOptimizer-FPS";
 
         // Fournisseurs manifestés de Windows (mêmes IDs que PresentMon).
         private static readonly Guid DxgiProvider = new Guid("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");
         private static readonly Guid D3D9Provider = new Guid("783ACA0A-790E-4D7F-8451-AA850511C6B9");
         private const int DxgiPresentStart = 42;   // IDXGISwapChain::Present (début)
         private const int D3D9PresentStart = 1;    // IDirect3DDevice9::Present (début)
+
+        // Nom de session paramétrable : le panneau « FPS en direct » et l'overlay en jeu
+        // peuvent ainsi tourner EN MÊME TEMPS (2 sessions ETW distinctes sur les mêmes
+        // fournisseurs user-mode — autorisé par Windows) sans se stopper l'un l'autre.
+        private readonly string _sessionName;
+        public FpsEtw() : this(DefaultSessionName) { }
+        public FpsEtw(string sessionName) { _sessionName = sessionName ?? DefaultSessionName; }
 
         private TraceEventSession _session;
         private Thread _thread;
@@ -63,12 +70,12 @@ namespace BTOptimizer
             {
                 try
                 {
-                    var old = TraceEventSession.GetActiveSession(SessionName);
+                    var old = TraceEventSession.GetActiveSession(_sessionName);
                     if (old != null) old.Stop(true);
                 }
                 catch { }
 
-                _session = new TraceEventSession(SessionName);
+                _session = new TraceEventSession(_sessionName);
                 _session.EnableProvider(DxgiProvider, TraceEventLevel.Informational);
                 _session.EnableProvider(D3D9Provider, TraceEventLevel.Informational);
 
