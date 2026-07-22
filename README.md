@@ -95,7 +95,9 @@ tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
   de pilote : un cache de shaders corrompu est la cause classique. **Sûr et réversible par
   nature** — les jeux recompilent au 1er lancement (une saccade passagère, normal). La liste
   est **partagée** avec le nettoyage disque (qui gagne au passage la couverture Intel + AMD
-  Vulkan/OpenGL). Menu **🩺 Crashs & stabilité**, indexé dans l'assistant.
+  Vulkan/OpenGL). Menu **🩺 Crashs & stabilité**, indexé dans l'assistant, **et proposé comme
+  réparation dans le diagnostic 🛒 Boutiques/crashs** (pré-coché si des erreurs pilote NVIDIA
+  récentes rendent un cache corrompu suspect).
 - **Corrections issues d'un audit croisé** : le « Rétablir » de la priorité *Pro Audio* remettait
   une mauvaise valeur (bloquée sur *High*) ; le verdict *Mode MSI GPU* et *tâches de télémétrie*
   ne testait que le 1er élément (faux positif sur PC hybride / Apply partiel) ; fuite de handles
