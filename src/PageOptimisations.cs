@@ -114,6 +114,7 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 try { Engine.Run(list, apply, apply, false, Host.Log); } catch { }  // backup .reg oui, point de restauration non (trop lent)
+                try { AppStats.Invalidate(); } catch { }  // l'état opti a changé : dashboard/collection recalculeront
                 try { BeginInvoke((Action)(() => { _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
             });
         }
@@ -228,6 +229,7 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 try { Engine.Run(list, apply, false, false, Host.Log); } catch { }
+                try { AppStats.Invalidate(); } catch { }  // une opti a changé : invalide le cache partagé
                 bool? st = null; try { st = t.Check != null ? t.Check() : (bool?)apply; } catch { }
                 bool final = st ?? apply;
                 try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; })); } catch { }

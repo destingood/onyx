@@ -237,13 +237,16 @@ namespace BTOptimizer
 
         private void ComputeHealth()
         {
-            Task.Run(() =>
+            // État partagé/caché (AppStats) : évite de recalculer ce que la page Collection calcule aussi.
+            AppStats.Get(s =>
             {
-                int active = 0, total = 0;
-                try { var tw = Catalog.All(); total = tw.Count; foreach (var t in tw) { if (t.Check == null) continue; bool? st = null; try { st = t.Check(); } catch { } if (st == true) active++; } }
-                catch { }
-                int health = total > 0 ? (int)Math.Round(100.0 * active / total) : 0;
-                try { BeginInvoke((Action)(() => { _activeOpti = active; _health = health; if (_nOpti != null) _nOpti.Text = active.ToString(); if (_nCheck != null) _nCheck.Text = total.ToString(); if (_nJeux != null) _nJeux.Text = GameBoost.IsActive ? "1" : "0"; Invalidate(); })); }
+                try { BeginInvoke((Action)(() => {
+                    _activeOpti = s.OptiActive; _health = s.Health;
+                    if (_nOpti != null) _nOpti.Text = s.OptiActive.ToString();
+                    if (_nCheck != null) _nCheck.Text = s.OptiTotal.ToString();
+                    if (_nJeux != null) _nJeux.Text = GameBoost.IsActive ? "1" : "0";
+                    Invalidate();
+                })); }
                 catch { }
             });
         }

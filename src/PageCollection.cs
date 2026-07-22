@@ -58,19 +58,17 @@ namespace BTOptimizer
         private void ComputeAsync()
         {
             _computing = true;
-            Task.Run(() =>
+            // Réutilise l'état partagé/caché (opti + jeux) calculé par le dashboard, puis ajoute
+            // les compteurs de badges (checkups/boost) et évalue les conditions de déblocage.
+            AppStats.Get(a =>
             {
-                var st = new BadgeCatalog.Stats();
-                try
+                var st = new BadgeCatalog.Stats
                 {
-                    var tw = Catalog.All(); st.OptiTotal = tw.Count;
-                    foreach (var t in tw) { if (t.Check == null) continue; bool? c = null; try { c = t.Check(); } catch { } if (c == true) st.OptiActive++; }
-                    st.Health = st.OptiTotal > 0 ? (int)Math.Round(100.0 * st.OptiActive / st.OptiTotal) : 0;
-                }
-                catch { }
-                try { var games = GameScan.Known(); GameScan.Detect(games); foreach (var g in games) if (g.Detected) st.GamesDet++; } catch { }
-                st.Checkups = BadgeStore.Checkups;
-                st.Boost = BadgeStore.BoostUsed || GameBoost.IsActive;
+                    OptiActive = a.OptiActive, OptiTotal = a.OptiTotal,
+                    GamesDet = a.GamesDet, Health = a.Health,
+                    Checkups = BadgeStore.Checkups,
+                    Boost = BadgeStore.BoostUsed || GameBoost.IsActive
+                };
 
                 // Persiste tout badge dont la condition est actuellement remplie (déclenche les toasts).
                 BadgeCatalog.Evaluate(st);
