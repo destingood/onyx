@@ -166,7 +166,8 @@ namespace BTOptimizer
         {
             string name;
             if (_hfNames.TryGetValue(pid, out name) && !string.IsNullOrEmpty(name)) return name;
-            try { name = System.Diagnostics.Process.GetProcessById(pid).ProcessName; }
+            // using : sinon un handle Process fuite par nouveau PID sur toute la session de monitoring.
+            try { using (var p = System.Diagnostics.Process.GetProcessById(pid)) name = p.ProcessName; }
             catch { name = "PID " + pid; }
             _hfNames[pid] = name;
             return name;

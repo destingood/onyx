@@ -23,7 +23,9 @@ namespace BTOptimizer
     {
         private static readonly object _lock = new object();
         private static Computer _computer;
-        private static bool _failed;
+        private static bool _shutdown;       // l'app se ferme : ne plus jamais rouvrir l'instance
+        private static int _retryCountdown;  // lectures à sauter après un échec (backoff, PUIS on retente)
+        private const int RetryCooldown = 30; // ~30 s à 1 lecture/s avant de réessayer après un hoquet
 
         private static void EnsureOpen()
         {
@@ -55,7 +57,8 @@ namespace BTOptimizer
             var r = new GpuReading();
             lock (_lock)
             {
-                if (_failed) return r;
+                if (_shutdown) return r;                       // app fermée : ne pas ressusciter l'instance
+                if (_retryCountdown > 0) { _retryCountdown--; return r; }  // backoff après un échec récent
                 try
                 {
                     EnsureOpen();
@@ -94,13 +97,17 @@ namespace BTOptimizer
                         }
                         break;   // premier GPU dédié suffit
                     }
+                    _retryCountdown = 0;   // succès : on repart propre
                     return r;
                 }
                 catch
                 {
-                    _failed = true;
+                    // Hoquet transitoire (TDR pilote, bascule iGPU/dGPU, eGPU débranché...) : on
+                    // ferme l'instance et on patiente un backoff AVANT de retenter — au lieu de
+                    // couper les capteurs GPU pour TOUTE la session (ancien latch _failed définitif).
                     try { if (_computer != null) _computer.Close(); } catch { }
                     _computer = null;
+                    _retryCountdown = RetryCooldown;
                     return new GpuReading();
                 }
             }
@@ -116,11 +123,13 @@ namespace BTOptimizer
             return r.TempC;
         }
 
-        /// <summary>Ferme proprement l'instance LHM (à la fermeture de l'app).</summary>
+        /// <summary>Ferme proprement l'instance LHM (à la fermeture de l'app). Définitif :
+        /// un Read() encore en vol depuis un autre thread ne rouvrira pas une instance orpheline.</summary>
         public static void Shutdown()
         {
             lock (_lock)
             {
+                _shutdown = true;
                 try { if (_computer != null) _computer.Close(); } catch { }
                 _computer = null;
             }
