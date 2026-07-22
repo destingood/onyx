@@ -15,6 +15,7 @@ namespace BTOptimizer
         {
             if (b == null) return;
             if (_active.Count >= 3) return;   // évite un flot de toasts (ex. premier lancement) — le badge reste gagné
+            if (_active.Count == 0) { try { System.Media.SystemSounds.Asterisk.Play(); } catch { } }   // son une fois par salve
             var t = new BadgeToast(b);
             t.FormClosed += (s, e) => { _active.Remove(t); Reflow(); };
             _active.Add(t);

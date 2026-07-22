@@ -162,11 +162,30 @@ namespace BTOptimizer
             Color tier = BadgeCatalog.TierColor[b.Tier - 1];
             var cell = new Rectangle(cx, cy, cellW, cellH);
             FpsUi.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
-            DrawBadgeShape(g, cx + (cellW - 58) / 2, cy + 12, 58, b.Glyph, ok, tier, b.Shape, false);
-            TextRenderer.DrawText(g, b.Name, FpsUi.H3, new Rectangle(cx + 4, cy + 76, cellW - 8, 18),
+            DrawBadgeShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape, false);
+            TextRenderer.DrawText(g, b.Name, FpsUi.H3, new Rectangle(cx + 4, cy + 70, cellW - 8, 18),
                 ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
-            TextRenderer.DrawText(g, b.Crit, FpsUi.Tiny, new Rectangle(cx + 6, cy + 96, cellW - 12, 30),
-                ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+
+            if (ok)
+            {
+                TextRenderer.DrawText(g, b.Crit, FpsUi.Tiny, new Rectangle(cx + 6, cy + 92, cellW - 12, 28),
+                    Color.FromArgb(tier.R, tier.G, tier.B), TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            }
+            else if (_s != null)
+            {
+                // Badge verrouillé : progression vers le déblocage (motivant).
+                TextRenderer.DrawText(g, b.ProgressLabel(_s), FpsUi.Small, new Rectangle(cx, cy + 90, cellW, 16),
+                    FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                var bar = new Rectangle(cx + 18, cy + cellH - 20, cellW - 36, 6);
+                using (var bg = new SolidBrush(Color.FromArgb(30, 33, 31))) g.FillRectangle(bg, bar);
+                int fw = (int)(bar.Width * b.Progress(_s));
+                if (fw > 1) using (var fb = new SolidBrush(Color.FromArgb(165, tier.R, tier.G, tier.B))) g.FillRectangle(fb, bar.X, bar.Y, fw, bar.Height);
+            }
+            else
+            {
+                TextRenderer.DrawText(g, b.Crit, FpsUi.Tiny, new Rectangle(cx + 6, cy + 92, cellW - 12, 28),
+                    FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            }
         }
 
         // Forme du badge (hexagone/cercle/bouclier/étoile/losange) + emoji au centre.
