@@ -110,7 +110,7 @@ namespace BTOptimizer
                 it.SubItems.Add(m.Delta.ToString("+0;-0;0"));
                 it.SubItems.Add(m.EventsBefore.ToString("#,0"));
                 it.SubItems.Add(m.EventsAfter.ToString("#,0"));
-                if (m.Delta <= -8) it.ForeColor = Green;
+                if (m.Delta <= -8) it.ForeColor = Theme.OkColor;
                 else if (m.Delta >= 64) { it.ForeColor = Red; it.Font = new Font(grid.Font, FontStyle.Bold); }
                 else if (m.Delta >= 8) it.ForeColor = Orange;
                 grid.Items.Add(it);

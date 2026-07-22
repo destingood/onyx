@@ -86,6 +86,27 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🖤 Habillage noir/néon intégral, façon FPS doctor (v14.29)
+
+Toute l'app passe à la **charte visuelle du concurrent** — les couleurs exactes extraites du
+CSS de son build (fond **#000000**, cadres **#0D0D0D**, bordures **#171717**, boutons
+**#212121**, accent **néon #00FF88**, textes **#FFFFFF / #B0B0B0**) — appliquées **partout**
+via le moteur de thème central, et rien d'autre : **ni mascotte, ni badges, ni polices**
+(actifs de marque exclus ; Segoe UI conservée).
+
+- **Thème sombre = la charte** : fenêtres noir pur, cartes arrondies #0D0D0D, champs et
+  menus assortis, barre de titre DWM fusionnée #0D0D0D, bandeaux avec liseré néon.
+- **Le vert signature devient le néon** : boutons pleins verts → **néon à texte NOIR**
+  (comme la charte), textes/états verts (« [déjà actif] », interrupteurs ON, chips
+  version/PRO, timer ≤ 1 ms, wordmark) → **#00FF88**. L'orange (500 FPS, avertissements)
+  et le rouge (STOP, erreurs) gardent leur sens.
+- **Bascule stable** : le thème mémorise désormais les couleurs posées par chaque fenêtre
+  (`OrigBack`/`OrigFore`) — sombre ↔ clair sans dérive, le mode clair reste inchangé.
+- Les couleurs d'état dynamiques (mode jeu, verdicts, graphes) suivent le thème via
+  `Theme.OkColor` / `Theme.AccentColor` au lieu de verts codés en dur.
+
+Harnais complet : toutes les fenêtres construites sous la nouvelle charte, **0 erreur**.
+
 ### 🧰 Entretien du PC : les 6 routines réunies, en 1 clic chacune (v14.28)
 
 Le deuxième volet de la gestion simplifiée : **☰ → 💾 Disque & entretien → Entretien du PC**.

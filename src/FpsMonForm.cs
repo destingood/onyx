@@ -436,7 +436,7 @@ namespace BTOptimizer
                     g.DrawLine(pen, inner.Left, ty, inner.Right, ty);
                 using (var tf = new Font("Segoe UI", 7.5f))
                     TextRenderer.DrawText(g, target.ToString("0.0") + " ms (" + _screenHz + " Hz)",
-                        tf, new Point((int)inner.Left + 2, (int)ty - 15), Color.FromArgb(0, 210, 130));
+                        tf, new Point((int)inner.Left + 2, (int)ty - 15), Theme.OkColor);
             }
 
             // Barres : une par image (bleu = fluide, orange/rouge = micro-saccade).

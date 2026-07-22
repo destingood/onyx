@@ -37,7 +37,7 @@ namespace BTOptimizer
         private Label _status;
         private bool _busy;
 
-        private static readonly Color OkColor = Color.FromArgb(0, 150, 90);
+        private static Color OkColor { get { return Theme.OkColor; } }   // suit le thème (néon en sombre)
         private static readonly Color WarnColor = Color.FromArgb(200, 120, 0);
 
         public MaintenanceForm(Action<string, int> log)

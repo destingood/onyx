@@ -49,7 +49,7 @@ namespace BTOptimizer
         private static readonly Color Accent    = Color.FromArgb(0, 150, 90);
         private static readonly Color HeaderBg  = Color.FromArgb(28, 30, 38);
         private static readonly Color ColInfo   = Color.FromArgb(110, 115, 125);
-        private static readonly Color ColOk     = Color.FromArgb(0, 150, 90);
+        private static Color ColOk { get { return Theme.OkColor; } }
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
 
@@ -666,9 +666,9 @@ namespace BTOptimizer
 
             // Puces : version, puis édition (PRO / essai) si active.
             int cx = x + (int)wm + 14;
-            cx += DrawChip(g, cx, 13, "v" + AppVer, Color.FromArgb(0, 210, 130), false) + 6;
+            cx += DrawChip(g, cx, 13, "v" + AppVer, Theme.OkColor, false) + 6;
             if (License.IsPro)
-                DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
+                DrawChip(g, cx, 13, "PRO", Theme.OkColor, true);
             else if (License.TrialActive)
                 DrawChip(g, cx, 13, "ESSAI " + License.TrialDaysLeft + " J", Color.FromArgb(235, 180, 60), false);
 
@@ -1407,11 +1407,14 @@ namespace BTOptimizer
                     {
                         _btnBoost.Text = "■ MODE JEU ACTIF";
                         _btnBoost.BackColor = Color.FromArgb(200, 60, 40);
+                _btnBoost.ForeColor = Color.White;
+                        _btnBoost.ForeColor = Color.White;
                     }
                     else
                     {
                         _btnBoost.Text = "▶ MODE JEU";
-                        _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                        _btnBoost.BackColor = Theme.AccentColor;
+                        _btnBoost.ForeColor = Theme.Dark ? Color.Black : Color.White;
                     }
                 })); } catch { }
             });
@@ -1562,11 +1565,13 @@ namespace BTOptimizer
             {
                 _btnBoost.Text = "■ MODE JEU ACTIF";
                 _btnBoost.BackColor = Color.FromArgb(200, 60, 40);
+                _btnBoost.ForeColor = Color.White;
             }
             else
             {
                 _btnBoost.Text = "▶ MODE JEU";
-                _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                _btnBoost.BackColor = Theme.AccentColor;
+                _btnBoost.ForeColor = Theme.Dark ? Color.Black : Color.White;
             }
         }
 

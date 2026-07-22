@@ -26,7 +26,7 @@ namespace BTOptimizer
         private Label _status;
         private bool _busy;   // verrou anti-réentrance : une seule opération à la fois
 
-        private static readonly Color OnColor = Color.FromArgb(0, 150, 90);
+        private static Color OnColor { get { return Theme.OkColor; } }   // suit le thème (néon en sombre)
 
         public SimpleOptiForm(List<Tweak> all, Func<bool> requirePro, Action<string, int> log)
         {
