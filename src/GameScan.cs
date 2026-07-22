@@ -72,6 +72,44 @@ namespace BTOptimizer
             };
         }
 
+        /// <summary>Exécutable(s) principal(aux) d'un jeu (pour la priorité CPU par jeu via IFEO), ou null
+        /// si inconnu. Basé sur les noms distinctifs de PriorityExes.</summary>
+        public static string[] ExesFor(string name)
+        {
+            switch (name)
+            {
+                case "Counter-Strike 2": return new[] { "cs2.exe" };
+                case "VALORANT": return new[] { "VALORANT-Win64-Shipping.exe" };
+                case "Fortnite": return new[] { "FortniteClient-Win64-Shipping.exe" };
+                case "Overwatch 2": return new[] { "Overwatch.exe" };
+                case "Apex Legends": return new[] { "r5apex.exe", "r5apex_dx12.exe" };
+                case "Call of Duty (MW / Warzone / BO6)": return new[] { "cod.exe", "cod22-cod.exe", "cod23-cod.exe", "cod24-cod.exe" };
+                case "League of Legends": return new[] { "League of Legends.exe" };
+                case "Rocket League": return new[] { "RocketLeague.exe" };
+                case "Rainbow Six Siege": return new[] { "RainbowSix.exe", "RainbowSix_Vulkan.exe" };
+                case "Dota 2": return new[] { "dota2.exe" };
+                case "PUBG: BATTLEGROUNDS": return new[] { "TslGame.exe" };
+                case "Marvel Rivals": return new[] { "MarvelRivals.exe" };
+                case "Helldivers 2": return new[] { "helldivers2.exe" };
+                case "Destiny 2": return new[] { "destiny2.exe" };
+                case "Rust": return new[] { "RustClient.exe" };
+                case "Warframe": return new[] { "Warframe.x64.exe" };
+                case "Elden Ring": return new[] { "eldenring.exe" };
+                case "Grand Theft Auto V": return new[] { "GTA5.exe", "GTA5_Enhanced.exe" };
+                case "Battlefield 2042": return new[] { "BF2042.exe" };
+                case "The Finals": return new[] { "DiscoveryClient.exe" };
+                case "Cyberpunk 2077": return new[] { "Cyberpunk2077.exe" };
+                case "Baldur's Gate 3": return new[] { "bg3.exe", "bg3_dx11.exe" };
+                case "Palworld": return new[] { "Palworld-Win64-Shipping.exe" };
+                case "Path of Exile": return new[] { "PathOfExile.exe", "PathOfExileSteam.exe", "PathOfExile_x64.exe" };
+                case "Deep Rock Galactic": return new[] { "FSD-Win64-Shipping.exe" };
+                case "Dead by Daylight": return new[] { "DeadByDaylight-Win64-Shipping.exe" };
+                case "Black Myth: Wukong": return new[] { "b1-Win64-Shipping.exe" };
+                case "Satisfactory": return new[] { "FactoryGame-Win64-Shipping.exe" };
+                default: return null;
+            }
+        }
+
         public class GameInfo
         {
             public string Name;          // nom affiché

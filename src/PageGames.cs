@@ -192,11 +192,9 @@ namespace BTOptimizer
                 using (var pen = new Pen(detected ? FpsUi.Border : Color.FromArgb(26, 28, 27), 1f))
                 using (var bp = Round(rr, 12)) gr.DrawPath(pen, bp);
             };
-            var tt = new ToolTip(); tt.SetToolTip(card, g.Name + " — " + (g.Uncap ?? ""));
+            var tt = new ToolTip(); tt.SetToolTip(card, g.Name + " — clic pour la fiche détaillée");
             card.Cursor = Cursors.Hand;
-            card.Click += (s, e) => MessageBox.Show(FindForm(),
-                g.Name + "\n\n" + (g.Uncap ?? "Passe la limite de FPS à 500/illimité et coupe la V-Sync dans les options du jeu."),
-                "Débloquer les FPS", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            card.Click += (s, e) => { try { using (var f = new GameDetailForm(g, Host.Log)) f.ShowDialog(FindForm()); } catch { } };
             return card;
         }
 

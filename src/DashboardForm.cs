@@ -37,7 +37,7 @@ namespace BTOptimizer
             BackColor = FpsUi.BgMain;
             Font = FpsUi.Body;
             DoubleBuffered = true;
-            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+            try { Icon = Logo.MakeIcon(32, FpsUi.Neon); } catch { try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { } }
             // Garantit le rendu sombre des menus (⋯, tray) dès le démarrage.
             try { Theme.Prime(); } catch { }
 
@@ -262,10 +262,17 @@ namespace BTOptimizer
             _rail.BackColor = FpsUi.RailBg;
             _rail.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, _rail.Width - 1, 0, _rail.Width - 1, _rail.Height); };
 
-            var brand = new Label();
-            brand.Text = "DTG"; brand.Font = new Font("Segoe UI Black", 9f);
-            brand.ForeColor = FpsUi.Neon; brand.TextAlign = ContentAlignment.MiddleCenter;
-            brand.Dock = DockStyle.Bottom; brand.Height = 42;
+            var brand = new Panel();
+            brand.Dock = DockStyle.Bottom; brand.Height = 62; brand.BackColor = Color.Transparent;
+            brand.Paint += (s, e) =>
+            {
+                var gr = e.Graphics; gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                int mw = 34, mx = (brand.Width - mw) / 2;
+                Logo.Draw(gr, new RectangleF(mx, 6, mw, mw), FpsUi.Neon, false);
+                TextRenderer.DrawText(gr, "DTG", FpsUi.Tiny, new Rectangle(0, 42, brand.Width, 16), FpsUi.Neon,
+                    TextFormatFlags.HorizontalCenter);
+            };
+            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "DesTinGOOD — Bloc opératoire");
             _rail.Controls.Add(brand);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };

@@ -177,6 +177,31 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_GAMEDETAIL=<fichier> : rend la fiche détaillée d'un jeu (démo CS2) et sort.
+            string gdOut = Environment.GetEnvironmentVariable("BT_GAMEDETAIL");
+            if (!string.IsNullOrEmpty(gdOut))
+            {
+                var games = GameScan.Known(); GameScan.Detect(games);
+                GameScan.GameInfo gi = null;
+                foreach (var x in games) if (x.Name == "Counter-Strike 2") { gi = x; break; }
+                if (gi == null && games.Count > 0) gi = games[0];
+                GameArt.Get(gi.SteamId, null); Pump(2000);   // pré-charge la jaquette (cache froid en gate isolée)
+                using (var f = new GameDetailForm(gi, null))
+                {
+                    f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    f.Location = new System.Drawing.Point(-5000, -5000);
+                    f.Show(); f.Refresh(); Pump(3200); f.Refresh();   // laisse charger la jaquette (cache local)
+                    using (var bmp = new System.Drawing.Bitmap(f.Width, f.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(gdOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("GAMEDETAIL écrit : " + gdOut);
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
