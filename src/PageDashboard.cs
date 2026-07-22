@@ -19,6 +19,7 @@ namespace BTOptimizer
         private const int Hist = 60;
         private bool _sampling;
         private int _health = -1, _activeOpti = 0;
+        private double _curCpu = double.NaN, _curGpu = double.NaN, _curRam = double.NaN;
 
         private Panel _graph;
         private Label _nOpti, _nCheck, _nJeux;
@@ -177,9 +178,9 @@ namespace BTOptimizer
             FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
             int pad = 18;
             TextRenderer.DrawText(g, "UTILISATION SYSTÈME", FpsUi.H3, new Point(pad, 14), FpsUi.Ink, TextFormatFlags.NoPadding);
-            Legend(g, r.Width - 250, 16, "RAM", Color.FromArgb(120, 200, 120));
-            Legend(g, r.Width - 165, 16, "CPU", Color.FromArgb(90, 200, 250));
-            Legend(g, r.Width - 80, 16, "GPU", FpsUi.Neon);
+            Legend(g, r.Width - 320, 15, "RAM", _curRam, Color.FromArgb(120, 200, 120));
+            Legend(g, r.Width - 210, 15, "CPU", _curCpu, Color.FromArgb(90, 200, 250));
+            Legend(g, r.Width - 100, 15, "GPU", _curGpu, FpsUi.Neon);
 
             var plot = new Rectangle(pad, 48, r.Width - pad * 2, r.Height - 76);
             TextRenderer.DrawText(g, "100%", FpsUi.Small, new Point(pad, 44), FpsUi.Dim2, TextFormatFlags.NoPadding);
@@ -190,10 +191,12 @@ namespace BTOptimizer
             Series(g, plot, _gpu, FpsUi.Neon);
         }
 
-        private void Legend(Graphics g, int x, int y, string t, Color c)
+        private void Legend(Graphics g, int x, int y, string t, double val, Color c)
         {
-            using (var pen = new Pen(c, 2f)) g.DrawLine(pen, x, y + 8, x + 20, y + 8);
-            TextRenderer.DrawText(g, t, FpsUi.Small, new Point(x + 24, y), FpsUi.Dim, TextFormatFlags.NoPadding);
+            using (var pen = new Pen(c, 2.5f)) g.DrawLine(pen, x, y + 9, x + 18, y + 9);
+            TextRenderer.DrawText(g, t, FpsUi.Small, new Point(x + 23, y), FpsUi.Dim, TextFormatFlags.NoPadding);
+            int tw = TextRenderer.MeasureText(g, t, FpsUi.Small).Width;
+            TextRenderer.DrawText(g, double.IsNaN(val) ? "—" : val.ToString("0") + " %", FpsUi.H3, new Point(x + 23 + tw + 5, y - 1), c, TextFormatFlags.NoPadding);
         }
 
         private void Series(Graphics g, Rectangle plot, Queue<double> q, Color c)
@@ -207,6 +210,12 @@ namespace BTOptimizer
                 float v = (float)Math.Max(0, Math.Min(100, arr[i]));
                 pts[i] = new PointF(fx, plot.Bottom - v / 100f * plot.Height);
             }
+            // Remplissage translucide sous la courbe (aspect « aire »).
+            var poly = new PointF[arr.Length + 2];
+            Array.Copy(pts, poly, arr.Length);
+            poly[arr.Length] = new PointF(pts[arr.Length - 1].X, plot.Bottom);
+            poly[arr.Length + 1] = new PointF(pts[0].X, plot.Bottom);
+            using (var br = new SolidBrush(Color.FromArgb(30, c.R, c.G, c.B))) g.FillPolygon(br, poly);
             using (var pen = new Pen(c, 1.8f)) g.DrawLines(pen, pts);
         }
 
@@ -219,7 +228,7 @@ namespace BTOptimizer
                 double cpu = 0, gpu = 0, ram = 0;
                 try { HwSample s = _mon.Sample(); cpu = s.CpuLoad < 0 ? 0 : s.CpuLoad; ram = s.RamLoad; gpu = s.Gpu != null && s.Gpu.Ok ? s.Gpu.Util : 0; }
                 catch { }
-                try { BeginInvoke((Action)(() => { Push(_cpu, cpu); Push(_gpu, gpu); Push(_ram, ram); if (_graph != null) _graph.Invalidate(); _sampling = false; })); }
+                try { BeginInvoke((Action)(() => { _curCpu = cpu; _curGpu = gpu; _curRam = ram; Push(_cpu, cpu); Push(_gpu, gpu); Push(_ram, ram); if (_graph != null) _graph.Invalidate(); _sampling = false; })); }
                 catch { _sampling = false; }
             });
         }
