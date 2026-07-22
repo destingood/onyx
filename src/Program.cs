@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.34.0.0")]
-[assembly: AssemblyFileVersion("14.34.0.0")]
+[assembly: AssemblyVersion("14.35.0.0")]
+[assembly: AssemblyFileVersion("14.35.0.0")]
 
 namespace BTOptimizer
 {
@@ -200,6 +200,15 @@ namespace BTOptimizer
                     mi.Invoke(f, null);
                 }
                 Console.WriteLine("  UI LatencyGuideForm : construite + Reload OK.");
+
+                using (var f = new StreamGuideForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    var mi = typeof(StreamGuideForm).GetMethod("Reload",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    mi.Invoke(f, null);
+                }
+                Console.WriteLine("  UI StreamGuideForm : construite + Reload OK (guide streamer sans lag).");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Guide latence ERREUR : " + ex.Message); }
 

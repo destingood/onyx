@@ -218,6 +218,7 @@ namespace BTOptimizer
             mPerf.DropDownItems.Add("🔍 Qui ralentit mon PC ? (processus de fond)...", null, open(() => new BloatForm(Log)));
             mPerf.DropDownItems.Add("🏁 Prêt pour le match ? (checklist)...", null, open(() => new TournamentForm(Log)));
             mPerf.DropDownItems.Add("Guide latence & perf (checklist input lag)...", null, open(() => new LatencyGuideForm(Log)));
+            mPerf.DropDownItems.Add("🎥 Streamer sans lag (RTSS / OBS / NVIDIA)...", null, open(() => new StreamGuideForm(Log)));
 
             // --- 🩺 Crashs & stabilité ---
             var mCrash = group("🩺  Crashs & stabilité");

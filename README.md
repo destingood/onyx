@@ -86,6 +86,24 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎥 Guide « Streamer sans lag » (doc CAPET intégrée) (v14.35)
+
+La doc CAPET « jouer et streamer sans lag des jeux peu optimisés » **ne contenait aucune clé de
+registre** — c'est un guide de configuration d'**outils externes** (RTSS, OBS, panneau NVIDIA,
+mise à l'échelle Windows). Plutôt que d'inventer un faux tweak, elle devient un **panneau guide**
+dans l'app (☰ → Performances → **Streamer sans lag**), dans la famille des guides existants
+(« Guide latence », « Prêt pour le match ? ») :
+
+- **Détection auto** : OBS installé ? Afterburner+RTSS installé ? Écran à sa fréquence max ?
+  (vert = prêt, orange = à installer, avec bouton **« Installer OBS / outils »** via winget).
+- **Rappels codifiés** de la doc : RTSS (cap FPS, Detours API hooking), OBS (Capture de jeu,
+  aperçu coupé pour l'input lag, limiter le FPS de capture, surcouches tierces), NVIDIA (mise à
+  l'échelle plein écran anti-bandes-noires), Windows (mise à l'échelle par écran).
+- **Boutons** vers le panneau NVIDIA et les réglages d'écran.
+
+Aucun réglage système écrit : c'est un guide + des raccourcis. Le harnais construit le panneau et
+exécute son `Reload` — 0 erreur.
+
 ### 🟢 Filtre de netteté NVIDIA « ancien » (cadeau CAPET) (v14.34)
 
 Ajout du tweak `.reg` fourni par CAPET : forcer l'**ancien filtre de netteté NVIDIA** (Freestyle
