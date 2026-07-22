@@ -11,7 +11,7 @@ sombre par défaut (basculable dans le menu ☰).
 
 ## En un coup d'œil
 
-- **178 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
+- **179 optimisations** réversibles + bouton **⚡ TOUT OPTIMISER** (1 clic adapté au matériel).
 - **Deux portes d'entrée** : 🏥 **Santé de mon PC** (bilan /100 avec graphique de tendance) et
   🧭 **J'ai un problème…** (assistant symptôme → bon outil).
 - **Suite de diagnostic** (menu ☰, rangée en 6 sous-menus) — chaque symptôme a son panneau
@@ -85,6 +85,15 @@ fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y
 code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
+### 🟢 Filtre de netteté NVIDIA « ancien » (cadeau CAPET) (v14.34)
+
+Ajout du tweak `.reg` fourni par CAPET : forcer l'**ancien filtre de netteté NVIDIA** (Freestyle
+« Netteté ») via `nvlddmkm\FTS\EnableGR535=0` — image plus nette, moins floue que le nouveau
+filtre, réputé meilleur en compétitif (Valorant, CS). Vérifié depuis le `.reg` exact, **réversible**
+(« Rétablir » remet `=1`), catégorie 🎮 GPU, preset eSport. **NVIDIA uniquement** : garde-fou
+`Sys.MachineKeyExists(nvlddmkm)` — **rien n'est écrit sur un GPU AMD/Intel**, et l'état s'affiche
+« indéterminé » plutôt que faux. Catalogue : **179 optimisations**.
 
 ### 🖱️ Menu clic droit classique W11 (pack d'optimisation vidéo analysé) (v14.33)
 
@@ -788,7 +797,7 @@ un **disque dur mécanique** (lecture < 150 Mo/s → conseille le passage sur SS
 
 Le bouton **Rapport** produit désormais un vrai **audit** exportable (page HTML autonome,
 thème sombre soigné, ouvrable dans le navigateur et imprimable en PDF) : en plus de l'état
-des 178 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
+des 179 optimisations et du matériel, il ajoute une section **Diagnostic santé** —
 crashs pilote GPU (14 j), écrans bleus, réglages néfastes à corriger, bibliothèques de jeu
 manquantes, points de restauration, espace disque — avec pastilles vertes/rouges. Le
 livrable **avant/après** idéal pour montrer ton travail à un client (généré en arrière-plan

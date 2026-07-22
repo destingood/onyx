@@ -2326,6 +2326,25 @@ namespace BTOptimizer
                 Check  = () => Sys.UserKeyExists(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32")
             });
 
+            // Filtre de netteté NVIDIA « ancien » (pack CAPET, cadeau). Force l'ancien filtre
+            // Freestyle Sharpen via nvlddmkm\FTS\EnableGR535=0 — préféré en compétitif (moins
+            // flou que le nouveau). NVIDIA uniquement : rien n'est écrit sur un GPU AMD/Intel.
+            const string NvFts = @"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS";
+            const string NvSvc = @"SYSTEM\CurrentControlSet\Services\nvlddmkm";
+            list.Add(new Tweak
+            {
+                Id = "nvidia_sharpen_old", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Name = "Filtre de netteté NVIDIA « ancien » (Freestyle Sharpen, préféré en compétitif)",
+                Desc = "Force l'ANCIEN filtre de netteté NVIDIA (Freestyle « Netteté ») : image plus nette et "
+                     + "moins floue que le nouveau filtre, apprécié sur les jeux compétitifs (Valorant, CS…). "
+                     + "NVIDIA uniquement — sans effet sur un GPU AMD/Intel. Prend effet après redémarrage. "
+                     + "« Rétablir » remet le nouveau filtre par défaut.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS" },
+                Apply  = () => { if (Sys.MachineKeyExists(NvSvc)) Sys.SetMachine(NvFts, "EnableGR535", 0, RegistryValueKind.DWord); },
+                Revert = () => { if (Sys.MachineKeyExists(NvSvc)) Sys.SetMachine(NvFts, "EnableGR535", 1, RegistryValueKind.DWord); },
+                Check  = () => Sys.MachineKeyExists(NvSvc) ? (bool?)Sys.IntEquals(Sys.GetMachine(NvFts, "EnableGR535"), 0) : null
+            });
+
             return list;
         }
     }

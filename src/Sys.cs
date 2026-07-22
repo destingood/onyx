@@ -143,6 +143,13 @@ namespace BTOptimizer
                 if (k != null) k.DeleteValue(name, false);
         }
 
+        /// <summary>Vrai si la sous-clé machine existe (ex. tester la présence d'un service pilote).</summary>
+        public static bool MachineKeyExists(string sub)
+        {
+            using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub))
+                return k != null;
+        }
+
         public static bool IntEquals(object v, int expected)
         {
             return (v is int) && (int)v == expected;
