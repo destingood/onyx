@@ -33,6 +33,7 @@ namespace BTOptimizer
             ClientSize = new Size(1200, 760);
             MinimumSize = new Size(1040, 680);
             StartPosition = FormStartPosition.CenterScreen;
+            try { WindowBounds.Restore(this); } catch { }   // rouvre où l'utilisateur avait laissé la fenêtre
             BackColor = FpsUi.BgMain;
             Font = FpsUi.Body;
             DoubleBuffered = true;
@@ -63,7 +64,7 @@ namespace BTOptimizer
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
                 try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
             };
-            FormClosing += (s, e) => Cleanup();
+            FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
         private void OnResizeShell(object sender, EventArgs e)
