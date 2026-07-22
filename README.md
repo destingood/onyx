@@ -86,6 +86,22 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 💶 Funnel de vente branché — l'app mène à l'achat (v14.25)
+
+Préparation du lancement commercial (rien ne change pour l'utilisateur gratuit) :
+
+- **Lien d'achat dans la fenêtre Pro** (`LicenseKeyForm`) : toutes les fonctions verrouillées
+  passent par cette fenêtre, qui propose désormais « 🛒 Acheter la licence Pro — 19 €, à
+  vie » (ouvre la page de paiement dans le navigateur). Jusqu'ici, un utilisateur convaincu
+  n'avait **aucun chemin pour payer** depuis l'app.
+- **Landing reliée** : les boutons Télécharger et « Passer à la version Pro » de
+  `marketing/landing.html` pointent sur les pages de vente (permaliens `gratuit` / `pro`)
+  au lieu de `href="#"` ; numéros de version affichés remis à jour.
+- **Kit de lancement** dans `marketing/` : `PLAN-LANCEMENT.md` (étapes concrètes — statut,
+  boutique, hébergement de la landing, livraison des clés, distribution J1→J7, attentes
+  réalistes) et `posts-lancement.md` (fiches produit, email de livraison de clé, posts
+  Reddit/forum/X, scripts TikTok, message Discord — prêts à coller).
+
 ### 🎯 Viseur (crosshair) + filtre couleur (vibrance) intégrés (v14.24)
 
 Deux fonctions « confort de jeu » récupérées d'une autre branche et **portées dans la v14** :
