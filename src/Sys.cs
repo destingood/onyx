@@ -702,9 +702,11 @@ namespace BTOptimizer
             NativeResult r = Run(Sys32("schtasks.exe"), "/query /tn \"" + taskPath + "\" /fo LIST");
             if (r.ExitCode != 0) return null;
             // "Status"/"État" ... "Disabled"/"Désactivé" — on cherche le token désactivé.
+            // Repli sans accent des deux côtés : schtasks.exe capturé sans encodage explicite
+            // peut mal restituer les accents sur un Windows FR (« prêt » -> « prÃªt »/« pret »).
             string o = r.Output.ToLowerInvariant();
             if (o.Contains("disabled") || o.Contains("désactiv") || o.Contains("desactiv")) return true;
-            if (o.Contains("ready") || o.Contains("prêt") || o.Contains("running")) return false;
+            if (o.Contains("ready") || o.Contains("prêt") || o.Contains("pret") || o.Contains("running")) return false;
             return null;
         }
 
