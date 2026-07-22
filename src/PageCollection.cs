@@ -219,7 +219,7 @@ namespace BTOptimizer
             _best = Best();
             var tier = _best != null ? BadgeCatalog.TierColor[_best.Tier - 1] : FpsUi.Dim2;
             BadgeRender.DrawShape(g, L + (VW - 150) / 2, TopY + 34, 150, _best != null ? _best.Glyph : "🩺",
-                _best != null, tier, _best != null ? _best.Shape : 0, true);
+                _best != null, tier, _best != null ? _best.Shape : 0);
             string vname = _s == null ? "Analyse en cours…" : _best != null ? _best.Name : "Aucun badge";
             string vsub = _s == null ? "" : _best != null ? "Ton badge le plus élevé — clique" : "Applique une optimisation pour commencer";
             TextRenderer.DrawText(g, vname, FpsUi.H2, new Rectangle(L, TopY + VH - 96, VW, 26), _best != null ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
@@ -242,7 +242,7 @@ namespace BTOptimizer
             Color tier = BadgeCatalog.TierColor[b.Tier - 1];
             var cell = new Rectangle(cx, cy, cellW, cellH);
             FpsUi.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
-            BadgeRender.DrawShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape, false);
+            BadgeRender.DrawShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape);
             TextRenderer.DrawText(g, b.Name, FpsUi.H3, new Rectangle(cx + 4, cy + 70, cellW - 8, 18),
                 ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
 

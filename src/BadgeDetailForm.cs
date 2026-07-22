@@ -58,7 +58,7 @@ namespace BTOptimizer
             int w = ClientSize.Width;
             Color tier = BadgeCatalog.TierColor[Math.Max(0, Math.Min(2, _b.Tier - 1))];
 
-            BadgeRender.DrawShape(g, (w - 120) / 2, 26, 120, _b.Glyph, _ok, tier, _b.Shape, true);
+            BadgeRender.DrawShape(g, (w - 120) / 2, 26, 120, _b.Glyph, _ok, tier, _b.Shape);
             TextRenderer.DrawText(g, _b.Name, FpsUi.H1, new Rectangle(0, 152, w, 34), _ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
 
             if (_ok)

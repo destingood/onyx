@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -6,10 +7,24 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>Rendu partagé d'un badge : forme selon son type (hexagone/cercle/bouclier/étoile/
-    /// losange) + emoji au centre. Utilisé par la page Collection ET la fiche de détail.</summary>
+    /// losange) + emoji centré sur le centre VISUEL de la forme. Utilisé par la page Collection,
+    /// la fiche de détail et le toast de déblocage.</summary>
     internal static class BadgeRender
     {
-        public static void DrawShape(Graphics g, int x, int y, int size, string glyph, bool unlocked, Color tier, int shape, bool large)
+        // Police emoji par taille en pixels (cache : une par taille de badge rencontrée).
+        private static readonly Dictionary<int, Font> _fonts = new Dictionary<int, Font>();
+        private static Font GlyphFont(int px)
+        {
+            Font f;
+            if (!_fonts.TryGetValue(px, out f))
+            {
+                f = new Font("Segoe UI Emoji", Math.Max(8, px), FontStyle.Regular, GraphicsUnit.Pixel);
+                _fonts[px] = f;
+            }
+            return f;
+        }
+
+        public static void DrawShape(Graphics g, int x, int y, int size, string glyph, bool unlocked, Color tier, int shape)
         {
             Color fill = unlocked ? Color.FromArgb(30, tier.R, tier.G, tier.B) : Color.FromArgb(20, 22, 21);
             Color edge = unlocked ? tier : FpsUi.Border;
@@ -20,8 +35,28 @@ namespace BTOptimizer
                 g.FillPath(br, path);
                 g.DrawPath(pen, path);
             }
-            TextRenderer.DrawText(g, glyph, large ? FpsUi.GlyphXL : FpsUi.GlyphL, new Rectangle(x, y, size, size),
-                unlocked ? tier : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            // Glyphe proportionnel à la surface UTILE de chaque forme (sinon l'emoji déborde de
+            // l'hexagone/du losange), centré sur le centre VISUEL : le bouclier a sa masse en
+            // haut (pointe en bas), son glyphe remonte donc un peu.
+            float k; int dy;
+            switch (shape)
+            {
+                case 1: k = 0.50f; dy = 0; break;                        // cercle
+                case 2: k = 0.46f; dy = -(int)(size * 0.09f); break;     // bouclier (masse en haut)
+                case 3: k = 0.34f; dy = 0; break;                        // étoile (branches fines)
+                case 4: k = 0.38f; dy = 0; break;                        // losange (pointes)
+                default: k = 0.44f; dy = 0; break;                       // hexagone
+            }
+            DrawGlyph(g, glyph, new Rectangle(x, y + dy, size, size), (int)(size * k), unlocked ? tier : FpsUi.Dim2);
+        }
+
+        /// <summary>Emoji centré dans un rectangle. NoPadding est indispensable : sans lui, GDI
+        /// ajoute des marges asymétriques et l'encre part en bas à gauche du centre.</summary>
+        public static void DrawGlyph(Graphics g, string glyph, Rectangle r, int px, Color color)
+        {
+            TextRenderer.DrawText(g, glyph, GlyphFont(px), r, color,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
         }
 
         public static GraphicsPath ShapePath(int x, int y, int size, int shape)

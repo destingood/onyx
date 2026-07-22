@@ -97,8 +97,7 @@ namespace BTOptimizer
             int s = 56, cx = 16, cy = (r.Height - s) / 2;
             using (var br = new SolidBrush(Color.FromArgb(36, tier.R, tier.G, tier.B))) g.FillEllipse(br, cx, cy, s, s);
             using (var pen = new Pen(tier, 2f)) g.DrawEllipse(pen, cx, cy, s, s);
-            TextRenderer.DrawText(g, _b.Glyph, FpsUi.GlyphL, new Rectangle(cx, cy, s, s), tier,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            BadgeRender.DrawGlyph(g, _b.Glyph, new Rectangle(cx, cy, s, s), (int)(s * 0.5f), tier);
 
             int tx = cx + s + 14;
             TextRenderer.DrawText(g, "NOUVEAU BADGE DÉBLOQUÉ", FpsUi.Small, new Point(tx, 16), tier, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
