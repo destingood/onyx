@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.27 — Correctif critique du viseur
+- La fenêtre du viseur (crosshair) ne couvre plus tout l'écran : réduite à
+  l'encombrement du réticule. Un overlay plein écran faisait perdre aux jeux sans
+  bordure le flip indépendant DWM → grosse chute de FPS jusqu'au redémarrage du jeu.
+  Bug diagnostiqué en conditions réelles (Overwatch) et corrigé le soir même.
+
+## v14.26 — Tarifs alignés marché (−15 %) + clés à expiration
+- Nouveaux paliers : Gratuit (inchangé, 173 optimisations) · Pro Annuel **49 €/an** ·
+  Pro à Vie **127 €** (le marché : 59 €/an · 150 €).
+- Clés d'abonnement à date d'expiration signée RSA (infalsifiable) ; les clés sans
+  date restent valides à vie ; message clair et retour en édition gratuite à l'expiration.
+- Keygen : `dotnet run -- "Nom" [jours]` ; fenêtre Pro : confirmation « à vie »/« jusqu'au … ».
+
+## v14.25 — Funnel de vente branché
+- Lien d'achat dans la fenêtre Pro (aucun chemin de paiement n'existait dans l'app).
+- Landing reliée aux pages de vente ; kit de lancement dans `marketing/`
+  (PLAN-LANCEMENT.md + posts-lancement.md).
+
+*(Les notes v13.6 → v14.24 sont détaillées dans le README, sections par version.)*
+
 ## v13.5 — Revue QA
 - **Gardien en fond** : les mesures (nvidia-smi, journaux) passent en arrière-plan avec
   garde anti-réentrance et bulle marshallée — fini les micro-freezes de la fenêtre en jeu.
