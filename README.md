@@ -86,6 +86,31 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🚀 Cap commercialisation : beta gratuite honnête + garde-fou sécurité (v14.31)
+
+Décisions de mise sur le marché (issues d'une session de stress-test du plan), traduites en code :
+
+- **Beta gratuite, tout débloqué** — `License.FreePhase` (un seul booléen) déverrouille
+  l'intégralité des fonctions pendant la phase gratuite. Le code Free/Pro reste **intact et
+  dormant** : le jour de la monétisation (application signée), on repasse le booléen à `false`
+  et le mur Pro se rebranche d'un coup. L'en-tête affiche « Version gratuite (beta) — toutes
+  les fonctions débloquées ». Objectif : bâtir réputation + base d'utilisateurs avant de vendre.
+- **Garde-fou antivirus** — le boost « Complet » de *Mes jeux* retire un dossier de l'analyse
+  Windows Defender. Au **tout premier usage**, un avertissement explicite s'affiche (« à ne
+  faire QUE pour des jeux d'origine sûre, jamais pour un jeu piraté ») ; annuler ne touche à
+  rien. Opt-in éclairé, mémorisé une fois (`bt-defender-warned.txt`) — protège l'utilisateur
+  *et* la réputation, pas seulement l'EULA.
+- **Landing honnête** — la page marketing affiche « **Gratuit pendant la beta, tout est
+  débloqué** », l'offre Pro devient **« achat unique / version majeure »** (fini le « à vie »
+  et son obligation de maintenance infinie), **offerte aux soutiens de la beta**, et les
+  boutons pointent vers **itch.io** (canal de diffusion retenu).
+
+> **Diffusion** : produit **non signé** pour l'instant → premier lancement « éditeur inconnu »
+> (SmartScreen). Modèle assumé : gratuit d'abord sur **itch.io** (l'audience gamer y est, et la
+> bascule gratuit→payant est native), certificat de signature + activation du mur Pro plus tard.
+> Voir aussi la **checklist de validation** (les écrans v14.30 doivent être vus tourner dans une
+> VM sans Smart App Control avant diffusion).
+
 ### 🕹️ Mes jeux (boost par jeu) + interrupteurs pilule + exclusions du mode jeu (v14.30)
 
 La dernière grande brique de parité : **l'écran « jeux » du concurrent**, et les finitions

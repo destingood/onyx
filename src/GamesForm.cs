@@ -303,6 +303,23 @@ namespace BTOptimizer
         private void ApplyLevel(GameEntry g, int level)
         {
             if (_busy || g.Level == level) return;
+
+            // Sécurité : « Complet » retire le dossier du jeu de l'analyse Defender. Au TOUT
+            // PREMIER usage, on prévient explicitement (opt-in éclairé) ; ensuite l'utilisateur
+            // a été informé une fois pour toutes. Annuler garde le niveau actuel.
+            if (level == 2 && !string.IsNullOrEmpty(g.InstallPath) && !DefenderWarningAccepted())
+            {
+                DialogResult r = MessageBox.Show(this,
+                    "Le boost « Complet » retire le dossier de ce jeu de l'analyse de Windows Defender "
+                    + "(moins de saccades, mais l'antivirus n'y regarde plus).\r\n\r\n"
+                    + "À ne faire QUE pour des jeux d'origine sûre. JAMAIS pour un jeu piraté ou "
+                    + "téléchargé d'une source douteuse : ce dossier ne serait plus protégé.\r\n\r\n"
+                    + "Continuer ?",
+                    "Exclusion antivirus — à confirmer", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+                if (r != DialogResult.OK) return;   // annulé : on ne touche à rien
+                MarkDefenderWarningAccepted();
+            }
+
             _busy = true;
             SetBusyUi(true);
             SetStatus((level == 0 ? "Retrait du boost : " : "Boost " + (level == 1 ? "léger" : "complet") + " : ") + g.Name + "...", 0);
@@ -452,6 +469,17 @@ namespace BTOptimizer
                 }
                 catch { _busy = false; }
             });
+        }
+
+        // --- Mémoire de l'avertissement « exclusion antivirus » (une fois) -----
+        private static string DefenderWarnPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-defender-warned.txt"); }
+        }
+        private static bool DefenderWarningAccepted() { return File.Exists(DefenderWarnPath); }
+        private static void MarkDefenderWarningAccepted()
+        {
+            try { File.WriteAllText(DefenderWarnPath, "1"); } catch { }
         }
 
         // ------------------------------------------------------------------

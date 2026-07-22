@@ -24,6 +24,11 @@ namespace BTOptimizer
         public static bool IsPro { get; private set; }
         public static string Licensee { get; private set; }
 
+        // PHASE GRATUITE (beta) : tout est débloqué, aucun mur Pro, aucun compte à rebours.
+        // Le code Free/Pro reste intact et dormant : passer ce booléen à false rebranche le
+        // mur d'un coup le jour de la monétisation (produit signé). Voir README « beta ».
+        public static readonly bool FreePhase = true;
+
         private static string StorePath
         {
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-license.txt"); }
@@ -41,7 +46,7 @@ namespace BTOptimizer
         public static bool TrialUsed { get { return TrialStart.HasValue; } }
         public static bool TrialActive { get { return TrialStart.HasValue && DateTime.Now < TrialStart.Value.AddDays(TrialDays); } }
         public static bool CanStartTrial { get { return !IsPro && !TrialStart.HasValue; } }
-        public static bool ProUnlocked { get { return IsPro || TrialActive; } }
+        public static bool ProUnlocked { get { return FreePhase || IsPro || TrialActive; } }
         public static int TrialDaysLeft
         {
             get
@@ -130,6 +135,7 @@ namespace BTOptimizer
         public static string Status()
         {
             if (IsPro) return "Pro — licence : " + Licensee;
+            if (FreePhase) return "Version gratuite (beta) — toutes les fonctions débloquées";
             if (TrialActive) return "Essai Pro — " + TrialDaysLeft + " jour(s) restant(s)";
             if (TrialUsed) return "Édition gratuite (essai Pro expiré)";
             return "Édition gratuite";
