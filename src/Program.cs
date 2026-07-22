@@ -354,6 +354,10 @@ namespace BTOptimizer
                 Console.WriteLine("  " + nt + " emplacements, " + sum + " Mo récupérables");
                 using (var f = new CleanupForm(delegate(string m, int l) { })) { f.CreateControl(); }
                 Console.WriteLine("  UI CleanupForm : construite OK.");
+                // Reset shaders GPU (lecture seule : on énumère les caches présents, sans rien supprimer).
+                long shMB = 0; var shTargets = Sys.GpuShaderCacheTargets();
+                foreach (Sys.CleanTarget t in shTargets) shMB += t.SizeMB;
+                Console.WriteLine("  Caches de shaders GPU présents : " + shTargets.Count + " (~" + shMB + " Mo, tous constructeurs)");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Nettoyage ERREUR : " + ex.Message); }
 
