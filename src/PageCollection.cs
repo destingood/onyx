@@ -21,6 +21,7 @@ namespace BTOptimizer
 
         private Stats _s;
         private bool _computing;
+        private Button _btnExport;
 
         private static readonly Badge[] _badges =
         {
@@ -37,11 +38,18 @@ namespace BTOptimizer
 
         public PageCollection(DashboardForm host) : base(host)
         {
-            Resize += (s, e) => Invalidate();
+            _btnExport = FpsUi.GhostButton("Exporter en image");
+            _btnExport.Size = new Size(160, 30);
+            _btnExport.Click += (s, e) => ExportShowcase();
+            Controls.Add(_btnExport);
+            Resize += (s, e) => { PlaceBtn(); Invalidate(); };
         }
+
+        private void PlaceBtn() { if (_btnExport != null) _btnExport.Location = new Point(ClientSize.Width - 34 - _btnExport.Width, 22); }
 
         public override void OnShown()
         {
+            PlaceBtn();
             if (_s == null && !_computing) ComputeAsync();
             Invalidate();
         }
@@ -66,6 +74,56 @@ namespace BTOptimizer
         }
 
         private int Unlocked() { int n = 0; if (_s != null) foreach (var b in _badges) if (b.Ok(_s)) n++; return n; }
+
+        // save_showcase_image (FPSDoctor) : compose la collection en une image partageable (PNG).
+        private void ExportShowcase()
+        {
+            if (_s == null) { MessageBox.Show(FindForm(), "Analyse de la collection en cours — réessaie dans un instant.", "Collection", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            string path = null, err = null;
+            try
+            {
+                const int W = 940, H = 460;
+                using (var bmp = new Bitmap(W, H))
+                {
+                    using (var g = Graphics.FromImage(bmp))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                        using (var bg = new SolidBrush(FpsUi.BgMain)) g.FillRectangle(bg, 0, 0, W, H);
+                        using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
+
+                        TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 28), FpsUi.Ink, TextFormatFlags.NoPadding);
+                        int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
+                        TextRenderer.DrawText(g, "DesTinGOOD", FpsUi.H1, new Point(38 + wt, 28), FpsUi.Neon, TextFormatFlags.NoPadding);
+                        TextRenderer.DrawText(g, Unlocked() + " / " + _badges.Length + " badges débloqués   ·   santé du PC " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x) détecté(s)",
+                            FpsUi.Body, new Point(40, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
+
+                        int cols = 5, cellW = 168, cellH = 150, x0 = 40, y0 = 116, gap = 8;
+                        for (int i = 0; i < _badges.Length; i++)
+                        {
+                            int col = i % cols, row = i / cols;
+                            int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
+                            bool ok = _badges[i].Ok(_s);
+                            DrawBadgeGlyph(g, cx + (cellW - 96) / 2, cy, 96, _badges[i].Glyph, ok, true);
+                            TextRenderer.DrawText(g, _badges[i].Name, FpsUi.H3, new Rectangle(cx, cy + 100, cellW, 20),
+                                ok ? FpsUi.Ink : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
+                        }
+                        TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
+                            new Rectangle(0, H - 32, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
+                    }
+                    string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                    path = System.IO.Path.Combine(dir, "DesTinGOOD-collection.png");
+                    bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            catch (Exception ex) { err = ex.Message; }
+            if (path != null)
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
+                catch { MessageBox.Show(FindForm(), "Image enregistrée sur le Bureau :\n" + path, "Collection", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            }
+            else MessageBox.Show(FindForm(), "Export impossible :\n\n" + err, "Collection", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
