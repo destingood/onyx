@@ -169,6 +169,23 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 > compatible anticheat (zéro injection). Édition gratuite complète : LANDING_URL
 > Retours très bienvenus, je réponds à tout 🙏
 
+**Clip 4 — le prix du marché**
+- Hook : « Des joueurs paient 59 € PAR AN pour optimiser leur PC. »
+- Suite : « Voici ce que la mienne fait gratuitement » → enchaînement rapide : 173
+  optimisations, score santé, FPS mesurés. « Et la version complète, c'est 19 €. Une
+  fois. Pas d'abonnement. Lien dans la bio. »
+
+## 8. Si on te compare à FPSDoctor (ou à un autre optimiseur payant)
+
+Réponse-type, factuelle, **jamais dénigrante** (à adapter) :
+
+> Bonne question ! Les différences principales : chez moi les 173 optimisations sont
+> gratuites (le payant, c'est l'auto-optimisation en 1 clic), la licence coûte 19 € une
+> seule fois (pas d'abonnement), chaque réglage est réversible avec sauvegarde
+> automatique, zéro injection donc compatible anticheat, et l'app **mesure** tes FPS et
+> ta latence avant/après au lieu d'afficher des promesses. Essaie les deux et garde ce
+> qui marche le mieux sur TON PC — la mienne te montrera la mesure.
+
 ---
 
 ## Règles d'or de la distribution

@@ -109,6 +109,31 @@ Tous les textes sont prêts dans `posts-lancement.md`.
   de la visibilité, la clé Pro restant vendue sur Gumroad. Ensuite, certificat de signature
   OV (~250-400 €/an) quand le revenu le justifie.
 
+## Concurrence — FPSDoctor (seul concurrent direct identifié)
+
+Relevé sur fpsdoctor.com le 22/07/2026 (à re-vérifier avant d'utiliser les chiffres) :
+
+| | FPSDoctor | DesTinGOOD |
+|---|---|---|
+| Gratuit | 13 optimisations, analyse de base | **173 optimisations** + toute la suite de diagnostic |
+| Payant | 59 €/an (abonnement) · 150 € à vie | **19 € à vie**, pas d'abonnement |
+| Preuves | Témoignages « +380 FPS », « 3x stabilité garantie » | **Mesure avant/après sur TON PC** (FPS, latence, score /100) |
+| Anticheat / réversibilité | non mentionnés sur le site | cœur du produit (zéro injection, tout réversible, sauvegardes) |
+
+Ce que ça t'apprend :
+
+- **Le marché existe et paie** : 7 000+ utilisateurs revendiqués, en France, à 59 €/an.
+  Tu n'es pas trop cher — tu es (très) sous le prix du marché.
+- **Leur force n'est pas le produit, c'est la distribution** (communauté Discord, TikTok,
+  témoignages). C'est exactement ce que ton calendrier J1→J7 doit construire — le produit
+  seul ne suffira pas.
+- **Ton angle gagnant** : eux promettent des chiffres invérifiables ; toi tu mesures.
+  Eux ne parlent ni d'anticheat ni de retour arrière ; chez toi c'est structurel.
+  Ne les attaque jamais nommément en public — compare de façon générique et factuelle
+  (« les optimiseurs du marché… »), et laisse les joueurs faire le rapprochement.
+- **Prix** : garde 19 € (prix de lancement, ~8× sous leur accès à vie). Quand tu dépasseras
+  ~30 ventes/mois, tu pourras tester 29 € (toujours 5× moins cher) — ta décision.
+
 ## Attentes réalistes (à relire les jours de doute)
 
 - Semaine 1 : 0 à 5 ventes. Mois 1 : 10 à 50 ventes **si** la distribution est tenue.
