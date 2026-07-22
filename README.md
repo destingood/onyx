@@ -86,6 +86,23 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎯 Correctif critique du viseur — plus aucune perte de FPS (v14.27)
+
+Bug découvert **en conditions réelles** (grosse chute de FPS sur Overwatch, diagnostiquée
+sur cette machine par chronologie des fichiers d'état + test A/B) : la fenêtre du viseur
+couvrait **tout l'écran** (`Bounds = Screen.PrimaryScreen.Bounds`). Un overlay layered
+plein écran fait perdre aux jeux sans bordure le **flip indépendant** DWM → composition
+forcée → chute de FPS massive, qui **persiste jusqu'au redémarrage du jeu** (c'est le
+piège : désactiver le viseur en cours de partie ne suffit pas, ce qui innocente à tort
+le viseur lors d'un test « à chaud »).
+
+- **Correctif** : la fenêtre overlay est réduite à l'**encombrement exact du réticule**
+  (quelques dizaines de pixels, centrés) — `CenteredBounds()` recalculé à chaque
+  changement de réglage. Plus d'occlusion de l'écran → le jeu garde sa voie rapide.
+- La contrainte est documentée en tête de `Crosshair.cs` : **jamais plein écran**.
+- Reproduction de l'ancien bug : viseur activé → jeu sans bordure → FPS en chute ;
+  retour à la normale seulement après redémarrage complet du jeu.
+
 ### 💰 Tarifs alignés sur le marché (−15 %) + clés à expiration (v14.26)
 
 Décision produit : mêmes paliers que le concurrent direct, 15 % moins cher — Gratuit

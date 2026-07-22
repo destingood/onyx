@@ -11,6 +11,11 @@ namespace BTOptimizer
     //  Viseur (crosshair) personnalisé : superpose un réticule au centre de
     //  l'écran par-dessus les jeux (fenêtré / sans bordure). Réglages persistés
     //  dans bt-crosshair.txt. Overlay transparent et "click-through".
+    //
+    //  CONTRAINTE DE PERFORMANCE (v14.27) : la fenêtre overlay doit rester
+    //  RÉDUITE À L'ENCOMBREMENT DU RÉTICULE. Un overlay plein écran fait perdre
+    //  aux jeux sans bordure le « flip indépendant » DWM (composition forcée)
+    //  → grosse chute de FPS qui persiste jusqu'au redémarrage du jeu.
     // ----------------------------------------------------------------------
 
     /// <summary>Réglages du viseur.</summary>
@@ -138,7 +143,7 @@ namespace BTOptimizer
             BackColor = Color.Magenta;        // couleur "magique" rendue transparente
             TransparencyKey = Color.Magenta;
             DoubleBuffered = true;
-            Bounds = Screen.PrimaryScreen.Bounds;
+            Bounds = CenteredBounds(_s);
 
             _topmostKeeper = new Timer();
             _topmostKeeper.Interval = 3000;
@@ -158,12 +163,27 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>Plus petite fenêtre carrée, centrée sur l'écran principal, qui contient
+        /// le réticule (branches + cercle + point + liseré). Voir la contrainte de
+        /// performance en tête de fichier : jamais plein écran.</summary>
+        private static Rectangle CenteredBounds(CrosshairSettings s)
+        {
+            int th = Math.Max(1, s.Thickness) + (s.Outline ? 2 : 0);
+            int reach = Math.Max(Math.Max(s.Gap + s.Size, s.Dot / 2 + 1), 2);
+            int half = reach + th + 6;                 // marge pour les bouts arrondis du trait
+            if (half < 12) half = 12;
+            Rectangle scr = Screen.PrimaryScreen.Bounds;
+            return new Rectangle(scr.Left + scr.Width / 2 - half,
+                                 scr.Top + scr.Height / 2 - half,
+                                 half * 2, half * 2);
+        }
+
         public void ApplySettings(CrosshairSettings s)
         {
             _s = s;
             double o = s.Opacity; if (o < 10) o = 10; if (o > 100) o = 100;
             Opacity = o / 100.0;
-            try { Bounds = Screen.PrimaryScreen.Bounds; } catch { }
+            try { Bounds = CenteredBounds(s); } catch { }
             Invalidate();
         }
 
