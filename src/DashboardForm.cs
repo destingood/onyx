@@ -144,6 +144,11 @@ namespace BTOptimizer
             reg.DropDownItems.Add("Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
             reg.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
             reg.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            reg.DropDownItems.Add(new ToolStripSeparator());
+            var autostart = new ToolStripMenuItem("Démarrer DesTinGOOD avec Windows") { Checked = AppAutostart.IsEnabled() };
+            autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
+            reg.DropDownItems.Add(autostart);
+            reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             m.Add(reg);
 
             m.Add("🔁  Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
@@ -182,6 +187,15 @@ namespace BTOptimizer
             {
                 try { if (GameBoost.IsActive) GameBoost.Deactivate(Log); else GameBoost.Activate(Log); } catch { }
             });
+        }
+
+        private void RestartExplorerConfirm()
+        {
+            if (MessageBox.Show(this,
+                "Redémarrer l'explorateur Windows ?\n\nLa barre des tâches et le bureau disparaissent ~1 seconde puis reviennent. "
+                + "Utile pour rafraîchir le shell après des réglages, ou débloquer une barre des tâches figée.",
+                "DesTinGOOD", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            System.Threading.Tasks.Task.Run(() => AppAutostart.RestartExplorer());
         }
 
         private void ToggleOverlay()
