@@ -86,6 +86,26 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🧰 Entretien du PC : les 6 routines réunies, en 1 clic chacune (v14.28)
+
+Le deuxième volet de la gestion simplifiée : **☰ → 💾 Disque & entretien → Entretien du PC**.
+Les 6 routines d'entretien (le pendant des « checkups » du concurrent) vivaient déjà dans
+l'app mais éparpillées dans 4 panneaux — les voilà réunies, chacune en 1 clic :
+
+1. **Nettoyage des fichiers temporaires** (temp, WU, WER, dumps, CBS, navigateurs)
+2. **Optimisation des disques** (TRIM SSD / défrag HDD)
+3. **Vidage des caches GPU** (shaders NVIDIA/DX/AMD — après une MAJ de pilote)
+4. **Suppression de l'historique Windows** (récents, Jump Lists, miniatures — confirmation
+   demandée : ça touche tes épinglés)
+5. **Réparation système DISM + SFC** (long, hors du « tout »)
+6. **Rafraîchissement réseau** (DNS + ARP, léger, sans coupure)
+
+La **date du dernier passage est mémorisée** (`bt-entretien.txt`) et « à refaire » apparaît
+passé 15 jours — même repère que le cooldown du concurrent, mais en simple indicateur :
+**rien n'est verrouillé**. « ▶ TOUT ENTRETENIR » enchaîne les routines rapides. Les cibles de
+nettoyage sont maintenant étiquetées par groupe (`temp` / `gpu` / `history` / `bin`) — le
+panneau Nettoyage classique n'y perd rien. Harnais : fenêtre construite, 0 erreur.
+
 ### 🎚 Mode SIMPLE : la gestion des optimisations façon « FPS doctor » (v14.27)
 
 Nouveau bouton **🎚 MODE SIMPLE** à côté de TOUT OPTIMISER (aussi dans ☰ → Mon profil) : une

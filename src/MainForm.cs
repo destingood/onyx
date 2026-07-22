@@ -233,6 +233,7 @@ namespace BTOptimizer
 
             // --- 💾 Disque & entretien ---
             var mDisk = group("💾  Disque & entretien");
+            mDisk.DropDownItems.Add("🧰 Entretien du PC (6 routines en 1 clic, dates mémorisées)...", null, open(() => new MaintenanceForm(Log)));
             mDisk.DropDownItems.Add("💾 Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
             mDisk.DropDownItems.Add("🖴 Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
             mDisk.DropDownItems.Add("Nettoyage disque (temporaires, caches...)...", null, open(() => new CleanupForm(Log)));

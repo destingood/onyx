@@ -850,7 +850,8 @@ namespace BTOptimizer
             public string Path;
             public bool IsRecycleBin;
             public long SizeMB;
-            public bool DefaultOff;   // décoché par défaut (donnée personnelle : choix explicite)
+            public bool DefaultOff;      // décoché par défaut (donnée personnelle : choix explicite)
+            public string Kind = "temp"; // temp | gpu | history | bin — pour l'entretien par routine
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -866,10 +867,10 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
                 // Caches de shaders : à vider après une MAJ de pilote ou en cas de stutters —
                 // les jeux les recompilent au prochain lancement (saccades passagères normales).
-                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Path = Path.Combine(local, @"NVIDIA\DXCache") },
-                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache") },
-                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache") },
-                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache") },
+                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Path = Path.Combine(local, @"NVIDIA\DXCache"), Kind = "gpu" },
+                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache"), Kind = "gpu" },
+                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache"), Kind = "gpu" },
+                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache"), Kind = "gpu" },
                 // Rapports de plantage : minidumps et vidages, aucun intérêt à les garder.
                 new CleanTarget { Name = "Rapports de plantage (CrashDumps)", Path = Path.Combine(local, "CrashDumps") },
                 new CleanTarget { Name = "Minidumps Windows (écrans bleus passés)", Path = Path.Combine(win, "Minidump") },
@@ -881,12 +882,12 @@ namespace BTOptimizer
                 // défaut : vider supprime aussi les éléments épinglés des Jump Lists) et
                 // cache des miniatures/icônes de l'Explorateur (reconstruit tout seul ;
                 // les fichiers verrouillés par Explorer sont simplement ignorés).
-                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", DefaultOff = true,
+                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", DefaultOff = true, Kind = "history",
                                   Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
-                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
+                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Path = Path.Combine(local, @"Microsoft\Windows\Explorer"), Kind = "history" },
             };
             AddBrowserCaches(list, local);
-            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true });
+            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin" });
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
             return list;
         }
@@ -1706,6 +1707,15 @@ namespace BTOptimizer
             catch { }
             if (log != null && done > 0)
                 log((servers == null ? "DNS IPv6 remis en automatique" : "DNS IPv6 appliqué") + " sur " + done + " interface(s).", 1);
+        }
+
+        /// <summary>Rafraîchissement réseau LÉGER (sans coupure ni redémarrage) : vide le cache DNS et le cache ARP.</summary>
+        public static void NetworkRefresh(Action<string, int> log)
+        {
+            NativeResult d = Run(Sys32("ipconfig.exe"), "/flushdns");
+            log("Cache DNS vidé" + (d.ExitCode == 0 ? "." : " (code " + d.ExitCode + ")."), d.ExitCode == 0 ? 1 : 2);
+            NativeResult a = Run(Sys32("netsh.exe"), "interface ip delete arpcache");
+            log("Cache ARP vidé" + (a.ExitCode == 0 ? "." : " (code " + a.ExitCode + ")."), a.ExitCode == 0 ? 1 : 2);
         }
 
         /// <summary>Réparation réseau standard (vide le cache DNS, réinitialise Winsock et la pile TCP/IP). Redémarrage requis.</summary>
