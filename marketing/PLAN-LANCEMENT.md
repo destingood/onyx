@@ -65,15 +65,19 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 - Le produit gratuit n'est pas un détail : chaque téléchargement te donne un **email** à qui
   annoncer les mises à jour (et proposer Pro).
 
-## Étape 3 — Construire le livrable (~30-60 min)
+## Étape 3 — Construire le livrable — ✅ FAIT (22/07/2026)
 
-1. Renseigne `AppURL` dans `installer/BTOptimizer.iss` avec l'URL de ta landing (étape 5).
-2. `Build-Standalone.bat` → puis compile `installer\BTOptimizer.iss` (Inno Setup / `ISCC.exe`).
-3. Récupère le setup dans `installer\Output\` et uploade-le sur les **deux** produits Gumroad.
-4. Refais un build léger (`Build-Installer.bat`) si tu veux aussi offrir la version ~6 Mo.
-5. Teste : édition gratuite (fonctions Pro bien verrouillées), essai 7 jours, une clé à
-   vie **et** une clé `365` (vérifie l'affichage « jusqu'au … » et le refus d'une clé
-   expirée, ex. générée avec `1` jour la veille).
+- ✅ `AppURL` renseignée dans `installer/BTOptimizer.iss` (la boutique ; remplace-la par
+  l'URL de la landing quand elle sera hébergée).
+- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.26.0.0.exe`**
+  (~38 Mo) → c'est LE fichier à uploader sur les **trois** produits Gumroad.
+- ✅ Vérifié : **aucun binaire tiers embarqué** dans cet installateur (le composant NVIDIA
+  optionnel est vide tant que `tools/npi/` n'existe pas) — case juridique de la checklist réglée.
+- ✅ Cycle des clés **testé automatiquement contre le vrai `License.cs`** (avec ta clé
+  privée, jamais copiée) : clé à vie OK · clé 365 j OK (« expire 2027-07-22 ») · clé
+  expirée refusée avec le bon message · clé à date falsifiée rejetée.
+- Reste (optionnel) : build léger ~6 Mo (`Build-Installer.bat`) si tu veux offrir cette
+  variante, et un test visuel dans l'app (colle une clé, vérifie « jusqu'au … »).
 
 ## Étape 4 — Livrer une clé à chaque vente (2 min/vente)
 
@@ -95,8 +99,9 @@ Quand les ventes deviennent régulières, reviens me voir : j'automatise la gén
 
 ## Étape 5 — Héberger la landing (gratuit, ~15 min)
 
-- Le plus simple : **Netlify Drop** (app.netlify.com/drop) — renomme `landing.html` en
-  `index.html`, glisse-dépose, tu obtiens une URL en HTTPS immédiatement.
+- ✅ Dossier prêt à déposer : **`marketing/site/`** (contient `index.html`). Le plus
+  simple : **Netlify Drop** (app.netlify.com/drop) — glisse-dépose ce dossier, tu
+  obtiens une URL HTTPS immédiatement.
 - Alternative : GitHub Pages (repo public séparé, juste le fichier).
 - Reporte cette URL dans `installer/BTOptimizer.iss` (`AppURL`) et sur tes profils sociaux.
 

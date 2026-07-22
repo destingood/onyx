@@ -22,8 +22,9 @@
   #define AppVersion "7.9.0.0"
 #endif
 #define AppPublisher "DesTinGOOD"
-; TODO diffusion : renseigne l'URL réelle du produit/support (ou laisse vide).
-#define AppURL "https://example.com"
+; Boutique officielle (cohérent avec l'app et la landing). À remplacer par l'URL de la
+; landing hébergée dès qu'elle existe.
+#define AppURL "https://destingood.gumroad.com"
 
 ; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained) : coreclr.dll n'est
 ; présent que dans ce mode. Si oui, le runtime .NET est embarqué -> on n'exige rien du client.
