@@ -51,7 +51,7 @@ namespace BTOptimizer
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Greet(); })); } catch { } });
             Greet();
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
-            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame et ça saccade en jeu"); } } catch { }
+            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame et ça saccade en jeu"); ShowTyping(); } } catch { }
         }
 
         private void Greet()
@@ -69,11 +69,60 @@ namespace BTOptimizer
             Send(q);
         }
 
+        private Timer _typingAnim;
+        private Panel _typingRow;
+        private int _dot;
+
         private void Send(string q)
         {
             AddBubble(false, q, null);
             var reply = DocAssistant.Answer(q, _stats, Host.Log);
-            AddBubble(true, reply.Text, reply);
+            // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Doc écrit… ».
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { AddBubble(true, reply.Text, reply); return; }
+            ShowTyping();
+            var t = new Timer { Interval = 650 };
+            t.Tick += (s, e) => { t.Stop(); t.Dispose(); HideTyping(); AddBubble(true, reply.Text, reply); };
+            t.Start();
+        }
+
+        // Indicateur « Le Doc écrit… » : mini-bulle avec 3 points qui pulsent.
+        private void ShowTyping()
+        {
+            HideTyping();
+            var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(17, 19, 18) };
+            bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
+            var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
+            bubble.Controls.Add(dots);
+            var avatar = MakeAvatar(true);
+            var row = new Panel { Size = new Size(AV + GAP + 66, Math.Max(AV, 38)), BackColor = Color.Transparent, Margin = new Padding(6, 7, 10, 7), Tag = "typing" };
+            avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0);
+            row.Controls.Add(avatar); row.Controls.Add(bubble);
+            _typingRow = row; _flow.Controls.Add(row); try { _flow.ScrollControlIntoView(row); } catch { }
+            _dot = 1;
+            _typingAnim = new Timer { Interval = 320 };
+            _typingAnim.Tick += (s, e) => { _dot = _dot % 3 + 1; dots.Text = new string('●', _dot) + new string('·', 3 - _dot); };
+            _typingAnim.Start();
+        }
+
+        private void HideTyping()
+        {
+            if (_typingAnim != null) { try { _typingAnim.Stop(); _typingAnim.Dispose(); } catch { } _typingAnim = null; }
+            if (_typingRow != null) { try { _flow.Controls.Remove(_typingRow); _typingRow.Dispose(); } catch { } _typingRow = null; }
+        }
+
+        private Panel MakeAvatar(bool doc)
+        {
+            var avatar = new Panel { Size = new Size(AV, AV), BackColor = Color.Transparent };
+            avatar.Paint += (s, e) =>
+            {
+                var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+                var rr = new Rectangle(0, 0, AV - 1, AV - 1);
+                using (var br = new SolidBrush(doc ? Color.FromArgb(0, 34, 22) : Color.FromArgb(26, 28, 26))) g.FillEllipse(br, rr);
+                using (var pen = new Pen(doc ? FpsUi.Neon : FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
+                if (doc) Logo.Draw(g, new RectangleF(8, 8, AV - 16, AV - 16), FpsUi.Neon, false);
+                else TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            };
+            return avatar;
         }
 
         // Suggestions de démarrage (label affiché → texte envoyé au Doc).
@@ -125,17 +174,7 @@ namespace BTOptimizer
             bubble.Controls.Add(col);
             Size bs = bubble.PreferredSize;
 
-            // Avatar rond : Doc = logo néon (croix+éclair), Toi = frimousse.
-            var avatar = new Panel { Size = new Size(AV, AV), BackColor = Color.Transparent };
-            avatar.Paint += (s, e) =>
-            {
-                var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
-                var rr = new Rectangle(0, 0, AV - 1, AV - 1);
-                using (var br = new SolidBrush(doc ? Color.FromArgb(0, 34, 22) : Color.FromArgb(26, 28, 26))) g.FillEllipse(br, rr);
-                using (var pen = new Pen(doc ? FpsUi.Neon : FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
-                if (doc) Logo.Draw(g, new RectangleF(8, 8, AV - 16, AV - 16), FpsUi.Neon, false);
-                else TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            };
+            var avatar = MakeAvatar(doc);
 
             // Ligne avatar+bulle : Doc à GAUCHE, Toi à DROITE (vraie messagerie).
             int rowW = AV + GAP + bs.Width, rowH = Math.Max(AV, bs.Height);
@@ -192,7 +231,7 @@ namespace BTOptimizer
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
+            if (disposing) { try { HideTyping(); } catch { } if (_wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; } }
             base.Dispose(disposing);
         }
 
