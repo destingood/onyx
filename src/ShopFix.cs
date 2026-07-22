@@ -83,6 +83,7 @@ namespace BTOptimizer
             var items = new List<Item>();
             items.Add(CheckGpuOc(drvErrors));
             items.Add(CheckHags(drvErrors));
+            items.Add(CheckShaderCaches(drvErrors));
             items.Add(CheckDnsFilter());
             items.Add(CheckHosts());
             items.Add(CheckStoreServices());
@@ -122,6 +123,31 @@ namespace BTOptimizer
             int n = 0, i = 0;
             while ((i = r.Output.IndexOf("<Event ", i, StringComparison.Ordinal)) >= 0) { n++; i += 7; }
             return n;
+        }
+
+        // --- Caches de shaders GPU (micro-saccades / « dispositif de rendu perdu ») ---
+        // Un cache de shaders corrompu après une MAJ de pilote est LA cause classique des
+        // saccades et des crashs « dispositif de rendu perdu ». On le propose ici, pré-coché
+        // uniquement si des erreurs pilote NVIDIA récentes le rendent suspect.
+        private static Item CheckShaderCaches(int drvErrors)
+        {
+            System.Collections.Generic.List<Sys.CleanTarget> caches = Sys.GpuShaderCacheTargets();
+            long mb = 0; foreach (Sys.CleanTarget t in caches) mb += t.SizeMB;
+            bool suspect = drvErrors > 0 && caches.Count > 0;
+            string status = caches.Count == 0
+                ? "Aucun cache de shaders présent (rien à réinitialiser)."
+                : caches.Count + " cache(s) de shaders détecté(s) (~" + mb + " Mo, tous constructeurs)"
+                    + (suspect ? " — suspects vu les erreurs pilote récentes" : "")
+                    + ". Les vider force une recompilation propre (remède aux saccades / rendu perdu).";
+            return new Item
+            {
+                Id = "shader_cache_reset",
+                Name = "Caches de shaders GPU (saccades / dispositif de rendu perdu)",
+                Status = status,
+                Problem = suspect,
+                DefaultCheck = suspect,
+                Repair = delegate(Action<string, int> log) { Sys.ResetGpuShaderCaches(log); }
+            };
         }
 
         private static Item CheckGpuOc(int drvErrors)
