@@ -4,11 +4,36 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v13.7 — Booster Dynamique : Affinité CPU & Stationnement
-- **Affinité CPU sur mesure** : le Gardien détecte le lancement des jeux et assigne dynamiquement les processus aux meilleurs cœurs (automatique ou sélection manuelle), tout en appliquant la priorité Haute. Idéal pour exclure le Core 0 ou gérer les E-Cores (comme Process Lasso).
-- **Core Parking Dynamique** : le Gardien bascule automatiquement le profil d'alimentation sur "Performances Élevées" lorsqu'un jeu tourne pour empêcher la mise en veille des cœurs, puis restaure ton profil précédent en quittant.
+## v14.28 — Booster Dynamique + fusion de la branche vente
+- **Affinité CPU sur mesure** : le Gardien détecte le lancement des jeux et assigne
+  dynamiquement les processus aux meilleurs cœurs (automatique ou sélection manuelle),
+  avec priorité Haute. Idéal pour exclure le Core 0 ou gérer les E-Cores.
+- **Core parking dynamique** : bascule du profil d'alimentation en jeu, restauration
+  du profil précédent en quittant.
+- **Nettoyeur RAM automatique en fond** : purge de la liste Standby sous un seuil
+  configurable (tableau de bord Système) — fini les stutters de RAM pleine.
+- **Fusion de la branche vente** (v14.25 → v14.27 ci-dessous) : licences à expiration,
+  funnel d'achat, correctif du viseur — le tout dans la branche interface.
 
-- **Nettoyeur RAM automatique en fond** : purge des processus et de la liste Standby lorsque la RAM disponible devient faible (seuil configurable dans le tableau de bord Système), évitant les saccades (stutters) liées au manque de mémoire libre en jeu.
+## v14.27 — Correctif critique du viseur
+- La fenêtre du viseur (crosshair) ne couvre plus tout l'écran : réduite à
+  l'encombrement du réticule. Un overlay plein écran faisait perdre aux jeux sans
+  bordure le flip indépendant DWM → grosse chute de FPS jusqu'au redémarrage du jeu.
+  Bug diagnostiqué en conditions réelles (Overwatch) et corrigé le soir même.
+
+## v14.26 — Tarifs alignés marché (−15 %) + clés à expiration
+- Nouveaux paliers : Gratuit (inchangé, 173 optimisations) · Pro Annuel **49 €/an** ·
+  Pro à Vie **127 €** (le marché : 59 €/an · 150 €).
+- Clés d'abonnement à date d'expiration signée RSA (infalsifiable) ; les clés sans
+  date restent valides à vie ; message clair et retour en édition gratuite à l'expiration.
+- Keygen : `dotnet run -- "Nom" [jours]` ; fenêtre Pro : confirmation « à vie »/« jusqu'au … ».
+
+## v14.25 — Funnel de vente branché
+- Lien d'achat dans la fenêtre Pro (aucun chemin de paiement n'existait dans l'app).
+- Landing reliée aux pages de vente ; kit de lancement dans `marketing/`
+  (PLAN-LANCEMENT.md + posts-lancement.md).
+
+*(Les notes v13.6 → v14.24 sont détaillées dans le README, sections par version.)*
 
 ## v13.5 — Revue QA
 - **Gardien en fond** : les mesures (nvidia-smi, journaux) passent en arrière-plan avec
