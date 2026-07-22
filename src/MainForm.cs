@@ -1482,12 +1482,16 @@ namespace BTOptimizer
         private int _fsStableTicks;   // ticks consécutifs avec jeu plein écran (anti-clignotement)
 
         /// <summary>
-        /// MODE JEU AUTO : enclenche le mode jeu quand un jeu tient le plein écran depuis 2 ticks
-        /// (≈4 s) et le coupe seul au retour au bureau. Ne touche jamais à une activation MANUELLE.
+        /// MODE JEU AUTO + viseur AUTO : une seule détection partagée. Enclenche le mode jeu
+        /// quand un jeu tient le plein écran depuis 2 ticks (≈4 s) et le coupe seul au retour
+        /// au bureau. Ne touche jamais à une activation MANUELLE. Le viseur AUTO suit la même
+        /// détection, même quand le MODE JEU AUTO est décoché.
         /// </summary>
         private void UpdateAutoBoost()
         {
-            if (_chkAutoBoost == null || !_chkAutoBoost.Checked || _boostBusy) return;
+            bool wantBoost = _chkAutoBoost != null && _chkAutoBoost.Checked && !_boostBusy;
+            bool wantCross = Crosshair.AutoGameEnabled;
+            if (!wantBoost && !wantCross) return;
 
             // Détection PRÉCISE : un jeu connu qui tourne (immédiat, pas de faux positif sur une vidéo)
             // OU, en repli, une appli plein écran stable (couvre les jeux non listés).
@@ -1496,6 +1500,9 @@ namespace BTOptimizer
             _fsStableTicks = fullscreen ? Math.Min(_fsStableTicks + 1, 10) : 0;
             bool engage = game != null || _fsStableTicks >= 2;
 
+            if (wantCross) Crosshair.AutoTick(engage, game != null || fullscreen);
+
+            if (!wantBoost) return;
             if (engage && !GameBoost.IsActive)
             {
                 string reason = game != null ? "jeu détecté (" + game + ")" : "jeu plein écran détecté";

@@ -86,6 +86,19 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🎯 Viseur AUTO en jeu (v14.26)
+
+Le viseur sait maintenant **se montrer tout seul** : nouvelle case « **AUTO en jeu** » dans la
+fenêtre du viseur — le réticule apparaît dès qu'un jeu tourne (même détection éprouvée que le
+MODE JEU AUTO : process de jeu connu **ou** plein écran stable ≈4 s, une seule passe partagée,
+zéro coût quand les deux options sont décochées) et disparaît au retour au bureau.
+
+Règles de bonne conduite : il ne s'affiche qu'à l'**entrée** en jeu (si tu le masques à la main
+en pleine partie, il ne revient pas te déranger), et il ne retire **jamais** un viseur affiché
+manuellement. Réglage persisté dans `bt-crosshair.txt` (compatible avec les fichiers v14.24).
+C'était le dernier manque de la catégorie « crosshair » de l'analyse concurrente
+(`running_selected_game`).
+
 ### 🧩 Catalogue concurrent couvert : chaque catégorie complétée (v14.25)
 
 Passage systématique sur l'analyse du concurrent (FPSDoctor v1.4.5 : 37 optimisations +

@@ -25,6 +25,7 @@ namespace BTOptimizer
         public int Opacity = 90;       // 10..100 %
         public bool Outline = true;    // liseré noir pour lisibilité
         public bool Enabled = false;   // affiché au démarrage
+        public bool AutoGame = false;  // affiché automatiquement quand un jeu tourne
 
         public string ConfigPath
         {
@@ -45,7 +46,8 @@ namespace BTOptimizer
                     Dot.ToString(CultureInfo.InvariantCulture),
                     Opacity.ToString(CultureInfo.InvariantCulture),
                     Outline ? "1" : "0",
-                    Enabled ? "1" : "0"
+                    Enabled ? "1" : "0",
+                    AutoGame ? "1" : "0"
                 });
                 File.WriteAllText(ConfigPath, s);
             }
@@ -70,6 +72,7 @@ namespace BTOptimizer
                 if (p.Length > 6 && int.TryParse(p[6], out v)) c.Opacity = v;
                 if (p.Length > 7) c.Outline = p[7] == "1";
                 if (p.Length > 8) c.Enabled = p[8] == "1";
+                if (p.Length > 9) c.AutoGame = p[9] == "1";
             }
             catch { }
             return c;
@@ -111,9 +114,43 @@ namespace BTOptimizer
         public static void ShowOnStartupIfEnabled(Action<string, int> log)
         {
             var s = CrosshairSettings.Load();
+            _autoSettings = s;
             if (!s.Enabled) return;
             try { Show(s); if (log != null) log("Viseur (crosshair) affiché (activé dans les réglages).", 0); }
             catch { }
+        }
+
+        // --- Viseur AUTO en jeu (même détection que le MODE JEU AUTO) ---------
+        private static CrosshairSettings _autoSettings;  // cache lu par le tick (aucune I/O par tick)
+        private static bool _autoShown;                  // c'est l'AUTO qui a affiché le viseur
+        private static bool _wasInGame;                  // pour n'afficher qu'à l'ENTRÉE en jeu
+
+        /// <summary>true si « afficher automatiquement en jeu » est coché dans les réglages.</summary>
+        public static bool AutoGameEnabled
+        {
+            get
+            {
+                if (_autoSettings == null) _autoSettings = CrosshairSettings.Load();
+                return _autoSettings.AutoGame;
+            }
+        }
+
+        /// <summary>À appeler après un enregistrement des réglages : le tick relira le fichier.</summary>
+        public static void ReloadAutoSettings() { _autoSettings = null; }
+
+        /// <summary>
+        /// Tick « viseur AUTO en jeu » : affiche le réticule à l'ENTRÉE en jeu (transition
+        /// bureau → jeu), le retire au retour au bureau. Ne ré-affiche pas un viseur masqué
+        /// à la main en pleine partie et ne retire jamais un affichage manuel.
+        /// </summary>
+        public static void AutoTick(bool engage, bool stillInGame)
+        {
+            CrosshairSettings s = _autoSettings;
+            if (s == null || !s.AutoGame) { _wasInGame = stillInGame; _autoShown = false; return; }
+            if (engage && !_wasInGame && !IsVisible) { Show(s); _autoShown = true; }
+            else if (!stillInGame && _autoShown) { Hide(); _autoShown = false; }
+            if (engage) _wasInGame = true;
+            else if (!stillInGame) _wasInGame = false;
         }
     }
 
