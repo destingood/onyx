@@ -165,10 +165,10 @@ namespace BTOptimizer
                         powerBrake = ReasonActive("clocks_event_reasons.hw_power_brake_slowdown", nv)
                                   || ReasonActive("clocks_throttle_reasons.hw_power_brake_slowdown", nv);
                     }
-                    try { BeginInvoke((Action)(() => ApplySample(s, doReasons, thermal, powerBrake))); } catch { }
+                    UiSafe.Post(this, () => ApplySample(s, doReasons, thermal, powerBrake));
                 }
                 catch { }
-                finally { _thBusy = false; }
+                finally { _thBusy = false; }   // libère APRÈS Sample() : la garde PDH de StopMonitoring reste correcte
             });
         }
 

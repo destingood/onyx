@@ -147,8 +147,12 @@ namespace BTOptimizer
             _list.Items.Clear();
             Task.Run(() =>
             {
-                var findings = Compute(out _score);
-                try { BeginInvoke((Action)(() => Render(findings))); } catch { }
+                try
+                {
+                    var findings = Compute(out _score);
+                    UiSafe.Post(this, () => Render(findings));
+                }
+                catch { UiSafe.Post(this, () => SetBusy(false)); }   // bilan lourd : ne pas figer si un sous-système lève
             });
         }
 

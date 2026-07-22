@@ -138,8 +138,12 @@ namespace BTOptimizer
             _summary.Text = "Analyse des cartes réseau...";
             Task.Run(() =>
             {
-                var adapters = ReadAdapters();
-                try { BeginInvoke((Action)(() => Populate(adapters))); } catch { }
+                try
+                {
+                    var adapters = ReadAdapters();
+                    UiSafe.Post(this, () => Populate(adapters));
+                }
+                catch { UiSafe.Post(this, () => SetBusy(false)); }
             });
         }
 
@@ -293,7 +297,7 @@ namespace BTOptimizer
                 }
                 SaveBackup(backup);
                 int cc = changed;
-                try { BeginInvoke((Action)(() => AfterApply(optimize, cc, toRestart))); } catch { }
+                UiSafe.Post(this, () => AfterApply(optimize, cc, toRestart));
             });
         }
 
@@ -327,7 +331,7 @@ namespace BTOptimizer
                         catch (Exception ex) { if (_log != null) _log("Redémarrage carte : " + ex.Message, 2); }
                     }
                     System.Threading.Thread.Sleep(1500);
-                    try { BeginInvoke((Action)Scan); } catch { }
+                    UiSafe.Post(this, Scan);
                 });
             }
             else

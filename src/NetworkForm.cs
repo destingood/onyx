@@ -182,15 +182,19 @@ namespace BTOptimizer
             _verdict.Text = "Mesure en cours (20 pings par segment)...";
             Task.Run(() =>
             {
-                string gw = DefaultGateway();
-                var hops = new List<Hop>();
-                if (gw != null) hops.Add(new Hop("Box / routeur (ton réseau local)", gw, true));
-                hops.Add(new Hop("Internet — Cloudflare (1.1.1.1)", "1.1.1.1", false));
-                hops.Add(new Hop("Internet — Google (8.8.8.8)", "8.8.8.8", false));
+                try
+                {
+                    string gw = DefaultGateway();
+                    var hops = new List<Hop>();
+                    if (gw != null) hops.Add(new Hop("Box / routeur (ton réseau local)", gw, true));
+                    hops.Add(new Hop("Internet — Cloudflare (1.1.1.1)", "1.1.1.1", false));
+                    hops.Add(new Hop("Internet — Google (8.8.8.8)", "8.8.8.8", false));
 
-                var results = new List<HopResult>();
-                foreach (Hop h in hops) results.Add(Measure(h));
-                try { BeginInvoke((Action)(() => Populate(results, gw != null))); } catch { }
+                    var results = new List<HopResult>();
+                    foreach (Hop h in hops) results.Add(Measure(h));
+                    UiSafe.Post(this, () => Populate(results, gw != null));
+                }
+                catch { UiSafe.Post(this, () => { _btnScan.Enabled = true; Cursor = Cursors.Default; }); }
             });
         }
 

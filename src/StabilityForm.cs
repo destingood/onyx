@@ -275,12 +275,16 @@ namespace BTOptimizer
             _summary.Text = "Lecture des journaux Windows...";
             Task.Run(() =>
             {
-                List<CrashEvent> events = CrashScan.Recent(Days);
-                int nvl = CrashScan.GpuDriverErrors(Days);
-                int bsod = CrashScan.Bsod(Days);
-                int hard = CrashScan.HardResets(Days);
-                int whea = CrashScan.Whea(Days);
-                try { BeginInvoke((Action)(() => Populate(events, nvl, bsod, hard, whea))); } catch { }
+                try
+                {
+                    List<CrashEvent> events = CrashScan.Recent(Days);
+                    int nvl = CrashScan.GpuDriverErrors(Days);
+                    int bsod = CrashScan.Bsod(Days);
+                    int hard = CrashScan.HardResets(Days);
+                    int whea = CrashScan.Whea(Days);
+                    UiSafe.Post(this, () => Populate(events, nvl, bsod, hard, whea));
+                }
+                catch { UiSafe.Post(this, () => { _btnScan.Enabled = true; Cursor = Cursors.Default; }); }
             });
         }
 

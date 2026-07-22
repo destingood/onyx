@@ -218,10 +218,14 @@ namespace BTOptimizer
             _verdict.Text = "Analyse des disques et des jeux...";
             Task.Run(() =>
             {
-                Dictionary<char, DiskMeta> metas = LetterInfo();
-                var games = GameScan.Known();
-                GameScan.Detect(games);
-                try { BeginInvoke((Action)(() => Populate(metas, games))); } catch { }
+                try
+                {
+                    Dictionary<char, DiskMeta> metas = LetterInfo();
+                    var games = GameScan.Known();
+                    GameScan.Detect(games);
+                    UiSafe.Post(this, () => Populate(metas, games));
+                }
+                catch { UiSafe.Post(this, () => { _btnScan.Enabled = true; Cursor = Cursors.Default; }); }
             });
         }
 

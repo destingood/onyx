@@ -113,7 +113,7 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 List<Hop> hops = Trace(target);
-                try { BeginInvoke((Action)(() => Show(hops))); } catch { }
+                UiSafe.Post(this, () => Show(hops));   // garde la course « fermé pendant le traceroute (~90 s) »
             });
         }
 

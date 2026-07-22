@@ -181,7 +181,7 @@ namespace BTOptimizer
                     tasks.Add(Task.Run(() => Bench(captured)));
                 }
                 try { Task.WaitAll(tasks.ToArray()); } catch { }
-                try { BeginInvoke((Action)ShowResults); } catch { }
+                UiSafe.Post(this, ShowResults);   // garde « fenêtre fermée pendant le bench DNS »
             });
         }
 
@@ -266,21 +266,18 @@ namespace BTOptimizer
                     }
                 }
                 catch (Exception ex) { if (_log != null) _log("DNS : " + ex.Message, 3); }
-                try
+                bool didRevert = reverted;
+                UiSafe.Post(this, () =>
                 {
-                    BeginInvoke((Action)(() =>
-                    {
-                        RefreshCurrent();
-                        SetBusy(false);
-                        MessageBox.Show(this,
-                            reverted
-                                ? "Ce résolveur est injoignable depuis ton réseau.\n\n• IPv4 : tes réglages précédents ont été restaurés à l'identique.\n• IPv6 : remis en automatique (état sûr et joignable).\n\nRien n'est cassé."
-                                : "DNS mis à jour (IPv4 + IPv6).",
-                            "DesTinGOOD", MessageBoxButtons.OK,
-                            reverted ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
-                    }));
-                }
-                catch { }
+                    RefreshCurrent();
+                    SetBusy(false);
+                    MessageBox.Show(this,
+                        didRevert
+                            ? "Ce résolveur est injoignable depuis ton réseau.\n\n• IPv4 : tes réglages précédents ont été restaurés à l'identique.\n• IPv6 : remis en automatique (état sûr et joignable).\n\nRien n'est cassé."
+                            : "DNS mis à jour (IPv4 + IPv6).",
+                        "DesTinGOOD", MessageBoxButtons.OK,
+                        didRevert ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+                });
             });
         }
 

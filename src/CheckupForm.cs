@@ -327,8 +327,12 @@ namespace BTOptimizer
             _summary.Text = "Analyse en cours...";
             Task.Run(() =>
             {
-                List<Checkup.Item> items = Checkup.Analyze();
-                try { BeginInvoke((Action)(() => Populate(items))); } catch { }
+                try
+                {
+                    List<Checkup.Item> items = Checkup.Analyze();
+                    UiSafe.Post(this, () => Populate(items));
+                }
+                catch { UiSafe.Post(this, () => SetBusy(false)); }   // évite le blocage si Analyze() lève
             });
         }
 
@@ -378,17 +382,13 @@ namespace BTOptimizer
                 }
                 _log("Réglages néfastes : " + sel.Count + " correction(s) appliquée(s).", 1);
                 List<Checkup.Item> after = Checkup.Analyze();
-                try
+                UiSafe.Post(this, () =>
                 {
-                    BeginInvoke((Action)(() =>
-                    {
-                        Populate(after);
-                        if (reboot)
-                            MessageBox.Show(this, "Correction terminée. Redémarre le PC pour les points qui le demandent.",
-                                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }));
-                }
-                catch { }
+                    Populate(after);
+                    if (reboot)
+                        MessageBox.Show(this, "Correction terminée. Redémarre le PC pour les points qui le demandent.",
+                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                });
             });
         }
     }

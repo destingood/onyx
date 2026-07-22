@@ -241,28 +241,28 @@ namespace BTOptimizer
             _busy = true;
             Task.Run(delegate ()
             {
-                Data d = null;
                 bool inGame = true;
                 try
                 {
                     if (_s.GameOnly)
                         try { inGame = Native.IsGameFullscreen(); } catch { inGame = true; }
-                    d = SampleOnce(inGame);
-                }
-                catch { d = null; }
-                try
-                {
-                    BeginInvoke((Action)delegate ()
+                    Data d = SampleOnce(inGame);
+                    bool ig = inGame;
+                    // MAJ UI marshalée + gardée (fenêtre fermée entre-temps → ignorée).
+                    UiSafe.Post(this, delegate ()
                     {
-                        _busy = false;
-                        if (IsDisposed) return;
-                        _inGame = inGame;
+                        _inGame = ig;
                         if (d != null) _d = d;
                         Relayout();
                         Invalidate();
                     });
                 }
-                catch { _busy = false; }   // fenêtre détruite pendant la mesure
+                catch { }
+                // _busy libéré ICI (thread de fond, après SampleOnce) et NON dans le callback UI :
+                // sinon la garde « while (_busy) » de OnFormClosing (thread UI) se bloquerait elle-même
+                // (le callback qui remet _busy=false ne pourrait jamais s'exécuter). Ainsi PdhCloseQuery
+                // / Dispose de _mon et _fps n'a jamais lieu pendant un Sample() encore en vol.
+                finally { _busy = false; }
             });
         }
 
@@ -465,6 +465,12 @@ namespace BTOptimizer
             // Timers d'abord : plus aucun tick pendant la teardown.
             try { if (_tick != null) { _tick.Stop(); _tick.Dispose(); _tick = null; } } catch { }
             try { if (_topmostKeeper != null) { _topmostKeeper.Stop(); _topmostKeeper.Dispose(); _topmostKeeper = null; } } catch { }
+            // Attendre qu'un échantillonnage de fond (Task.Run) libère _mon/_fps AVANT de fermer
+            // leurs handles : sinon PdhCloseQuery / Dispose court-circuiterait un PdhCollectQueryData
+            // ou un Snapshot ETW encore en vol sur le même handle natif → crash non rattrapable (CoreCLR).
+            // (_busy est mis à false côté thread de fond, donc pas d'auto-blocage ici.)
+            int waited = 0;
+            while (_busy && waited < 2000) { System.Threading.Thread.Sleep(20); waited += 20; }
             try { if (_fps != null) { _fps.Dispose(); _fps = null; } } catch { }
             try { if (_mon != null) { _mon.Dispose(); _mon = null; } } catch { }
             try { if (_fontMain != null) { _fontMain.Dispose(); _fontMain = null; } } catch { }
