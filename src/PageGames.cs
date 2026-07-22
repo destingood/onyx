@@ -69,8 +69,41 @@ namespace BTOptimizer
             {
                 List<GameScan.GameInfo> games = new List<GameScan.GameInfo>();
                 try { games = GameScan.Known(); GameScan.Detect(games); } catch { }
+                try { MergeScanned(games); } catch { }   // + TOUS les jeux installés (scanner générique multi-plateforme)
                 try { BeginInvoke((Action)(() => { _all = games; Render(); })); } catch { }
             });
+        }
+
+        // Fusionne les jeux RÉELLEMENT installés (toutes plateformes, connus ou pas) détectés par
+        // le scanner générique, en plus du catalogue connu. Un jeu Steam hors-catalogue garde son
+        // AppID → jaquette officielle quand même. Dédoublonnage par nom normalisé.
+        private static void MergeScanned(List<GameScan.GameInfo> games)
+        {
+            List<GameLibrary.InstalledGame> scanned;
+            try { scanned = GameLibrary.ScanAll(); } catch { return; }
+            if (scanned == null || scanned.Count == 0) return;
+
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach (GameScan.GameInfo g in games) { string k = NormName(g.Name); if (k.Length > 0) seen.Add(k); }
+
+            foreach (GameLibrary.InstalledGame s in scanned)
+            {
+                string k = NormName(s.Name);
+                if (k.Length == 0 || !seen.Add(k)) continue;
+                games.Add(new GameScan.GameInfo
+                {
+                    Name = s.Name, Detected = true, SteamId = s.SteamAppId,
+                    InstallPath = s.InstallDir, Store = s.Launcher
+                });
+            }
+        }
+
+        private static string NormName(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            var sb = new System.Text.StringBuilder(s.Length);
+            foreach (char c in s.ToLowerInvariant()) if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
         }
 
         private bool Match(GameScan.GameInfo g)
@@ -111,11 +144,11 @@ namespace BTOptimizer
             // qui est visible en haut) ; les autres se chargeront à la demande au défilement.
             foreach (var g in det) if (g.SteamId > 0) GameArt.Get(g.SteamId, null);
 
-            int total = _all.Count, shownDet = det.Count;
+            int shownDet = det.Count;
             if (_query.Length > 0)
                 _subtitle = (det.Count + other.Count) + " résultat(s) pour « " + _search.Text.Trim() + " »   ·   " + shownDet + " détecté(s)";
             else
-                _subtitle = shownDet + " jeu(x) détecté(s) sur " + total + " jeux connus";
+                _subtitle = shownDet + " jeu(x) détecté(s) sur ton PC (toutes plateformes)";
             Invalidate();
         }
 

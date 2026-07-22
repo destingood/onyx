@@ -34,7 +34,9 @@ namespace BTOptimizer
         private ToolStripMenuItem _miPro;
         private ToolStripMenuItem _miWatch;
         private HwMonitor _watchMon;
-        private int _watchTick, _watchCooldown, _nvlSeen = -1;
+        private int _watchTick, _watchCooldown, _ramCleanCooldown, _nvlSeen = -1;
+        private string _activeGameName;
+        private string _originalPowerProfile;
         private volatile bool _guardBusy;
         private bool _offerHealthAfter;   // après ⚡ TOUT OPTIMISER : proposer le bilan Santé
         private TextBox _search;
@@ -1574,7 +1576,7 @@ namespace BTOptimizer
         {
             if (_miWatch.Checked)
             {
-                _watchTick = 0; _watchCooldown = 0;
+                _watchTick = 0; _watchCooldown = 0; _ramCleanCooldown = 0;
                 _nvlSeen = -1;
                 // Référence (n'alerte que sur les NOUVELLES erreurs pilote) : GpuDriverErrors lance
                 // wevtutil (process bloquant) → EN FOND, sinon la fenêtre gèle ~1-3 s à l'activation.
@@ -1601,13 +1603,87 @@ namespace BTOptimizer
                 try
                 {
                     if (_watchCooldown > 0) _watchCooldown--;
+                    if (_ramCleanCooldown > 0) _ramCleanCooldown--;
+
+                    if (_watchMon == null) _watchMon = new HwMonitor();
+                    HwSample s = _watchMon.Sample();
+
+                    int ramThresh;
+                    if (Sys.LoadRamCleaner(out ramThresh))
+                    {
+                        long freeRam = s.RamTotalMB - s.RamUsedMB;
+                        if (freeRam < ramThresh && _ramCleanCooldown <= 0)
+                        {
+                            Sys.CleanMemory(null);
+                            Log("RAM libre < " + ramThresh + " Mo (" + freeRam + " Mo restants) : Nettoyage auto en fond effectué.", 1);
+                            _ramCleanCooldown = 10;   // ~5 min
+                        }
+                    }
 
                     bool gaming = false;
                     try { gaming = GameScan.RunningKnownGame() != null || Native.IsGameFullscreen(); } catch { }
+
+                    // --- Dynamic Affinity & Priority ---
+                    var affinityDict = Sys.LoadGameAffinity();
+                    string detectedGameKey = null;
+                    System.Diagnostics.Process targetProcess = null;
+
+                    if (affinityDict.Count > 0)
+                    {
+                        foreach (var kvp in affinityDict)
+                        {
+                            string[] exes = GameScan.ExesFor(kvp.Key);
+                            if (exes == null) continue;
+                            foreach (string exe in exes)
+                            {
+                                string procName = System.IO.Path.GetFileNameWithoutExtension(exe);
+                                var procs = System.Diagnostics.Process.GetProcessesByName(procName);
+                                if (procs.Length > 0)
+                                {
+                                    targetProcess = procs[0];
+                                    detectedGameKey = kvp.Key;
+                                    break;
+                                }
+                            }
+                            if (targetProcess != null) break;
+                        }
+                    }
+
+                    if (targetProcess != null)
+                    {
+                        if (detectedGameKey != _activeGameName)
+                        {
+                            _activeGameName = detectedGameKey;
+                            
+                            string mode = affinityDict[detectedGameKey].Item1;
+                            long mask = affinityDict[detectedGameKey].Item2;
+                            Sys.SetProcessAffinity(targetProcess.Id, mask);
+                            Sys.SetProcessPriority(targetProcess.Id, System.Diagnostics.ProcessPriorityClass.High);
+                            Log(_activeGameName + " détecté : Affinité (" + mode + ") et Priorité Haute appliquées.", 1);
+
+                            if (_originalPowerProfile == null)
+                            {
+                                _originalPowerProfile = Sys.GetActivePowerProfile();
+                                Sys.SetActivePowerProfile("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"); // High Performance
+                                Log("Profil d'alimentation basculé sur Performances (Core Parking désactivé).", 1);
+                            }
+                        }
+                    }
+                    else if (_activeGameName != null)
+                    {
+                        Log(_activeGameName + " fermé. Restauration des paramètres...", 0);
+                        _activeGameName = null;
+                        if (_originalPowerProfile != null)
+                        {
+                            Sys.SetActivePowerProfile(_originalPowerProfile);
+                            _originalPowerProfile = null;
+                            Log("Profil d'alimentation restauré.", 0);
+                        }
+                    }
+                    // ------------------------------------
+
                     if (gaming)
                     {
-                        if (_watchMon == null) _watchMon = new HwMonitor();
-                        HwSample s = _watchMon.Sample();
                         if (s.Gpu != null && s.Gpu.Ok && s.Gpu.TempC >= 85 && _watchCooldown <= 0)
                         {
                             TrayWarn("GPU à " + s.Gpu.TempC.ToString("0") + " °C — surveille le refroidissement (risque de throttling / crash).");

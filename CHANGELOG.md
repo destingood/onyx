@@ -4,6 +4,12 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v13.7 — Booster Dynamique : Affinité CPU & Stationnement
+- **Affinité CPU sur mesure** : le Gardien détecte le lancement des jeux et assigne dynamiquement les processus aux meilleurs cœurs (automatique ou sélection manuelle), tout en appliquant la priorité Haute. Idéal pour exclure le Core 0 ou gérer les E-Cores (comme Process Lasso).
+- **Core Parking Dynamique** : le Gardien bascule automatiquement le profil d'alimentation sur "Performances Élevées" lorsqu'un jeu tourne pour empêcher la mise en veille des cœurs, puis restaure ton profil précédent en quittant.
+
+- **Nettoyeur RAM automatique en fond** : purge des processus et de la liste Standby lorsque la RAM disponible devient faible (seuil configurable dans le tableau de bord Système), évitant les saccades (stutters) liées au manque de mémoire libre en jeu.
+
 ## v13.5 — Revue QA
 - **Gardien en fond** : les mesures (nvidia-smi, journaux) passent en arrière-plan avec
   garde anti-réentrance et bulle marshallée — fini les micro-freezes de la fenêtre en jeu.

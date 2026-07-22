@@ -89,7 +89,6 @@ namespace BTOptimizer
             m.Add(new ToolStripSeparator());
 
             var jeux = new ToolStripMenuItem("🎮  Jeux");
-            jeux.DropDownItems.Add("🎮 Bibliothèque de jeux (toutes plateformes)", null, (s, e) => OpenDialog(new GameLibraryForm(Log)));
             jeux.DropDownItems.Add("Priorité CPU par jeu", null, (s, e) => OpenDialog(new GameProfileForm(Log)));
             jeux.DropDownItems.Add("Réglages Mode Jeu (exclusions)", null, (s, e) => OpenDialog(new GameModeForm(Log)));
             jeux.DropDownItems.Add("Qualité réseau en jeu", null, (s, e) => OpenDialog(new NetworkForm(Log)));

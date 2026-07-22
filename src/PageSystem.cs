@@ -32,6 +32,7 @@ namespace BTOptimizer
             _btnReport.Size = new Size(150, 30);
             _btnReport.Click += (s, e) => Host.GenerateHealthReport();
             Controls.Add(_btnReport);
+            InitRamCleanerUi();
             Resize += (s, e) => { PlaceBtn(); Invalidate(); };
         }
 
@@ -39,6 +40,37 @@ namespace BTOptimizer
         {
             if (_btnComp != null) _btnComp.Location = new Point(ClientSize.Width - 34 - _btnComp.Width, 22);
             if (_btnReport != null && _btnComp != null) _btnReport.Location = new Point(_btnComp.Left - 12 - _btnReport.Width, 22);
+            if (_chkRamAuto != null) _chkRamAuto.Location = new Point(34, ClientSize.Height - 40);
+            if (_numRamThresh != null) _numRamThresh.Location = new Point(_chkRamAuto.Right + 10, _chkRamAuto.Top - 2);
+            if (_lblRamThresh != null) _lblRamThresh.Location = new Point(_numRamThresh.Right + 5, _chkRamAuto.Top + 2);
+        }
+
+        private CheckBox _chkRamAuto;
+        private NumericUpDown _numRamThresh;
+        private Label _lblRamThresh;
+
+        private void InitRamCleanerUi()
+        {
+            _chkRamAuto = new CheckBox { Text = "Nettoyeur RAM automatique en fond", AutoSize = true, ForeColor = FpsUi.Dim, Cursor = Cursors.Hand };
+            _numRamThresh = new NumericUpDown { Minimum = 100, Maximum = 64000, Increment = 500, Width = 80, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Ink };
+            _lblRamThresh = new Label { Text = "Mo de RAM libre déclencheur", AutoSize = true, ForeColor = FpsUi.Dim };
+
+            int thresh;
+            _chkRamAuto.Checked = Sys.LoadRamCleaner(out thresh);
+            _numRamThresh.Value = thresh;
+
+            _chkRamAuto.CheckedChanged += (s, e) => SaveRamCleanerUi();
+            _numRamThresh.ValueChanged += (s, e) => SaveRamCleanerUi();
+
+            Controls.Add(_chkRamAuto);
+            Controls.Add(_numRamThresh);
+            Controls.Add(_lblRamThresh);
+        }
+
+        private void SaveRamCleanerUi()
+        {
+            Sys.SaveRamCleaner(_chkRamAuto.Checked, (int)_numRamThresh.Value);
+            _chkRamAuto.ForeColor = _chkRamAuto.Checked ? FpsUi.Neon : FpsUi.Dim;
         }
 
         public override void OnShown() { PlaceBtn(); Sample(); _timer.Start(); }
