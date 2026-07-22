@@ -8,15 +8,21 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // Page Collection : succès/badges PERSISTANTS (une fois gagnés, ils le restent), avec styles
-    // variés (forme + couleur par palier). Alimentés par l'état réel du PC ET des événements
-    // (Check Up réalisés, Mode Jeu utilisé). Calcul en arrière-plan.
+    // variés (forme + couleur par palier). La grille est SCROLLABLE (gère n'importe quel nombre de
+    // badges à toute taille de fenêtre). Alimentée par l'état réel du PC ET des événements.
     internal class PageCollection : FpsPage
     {
-        // Définitions des badges partagées : BadgeCatalog.All / .TierColor (id → affichage + condition).
         private BadgeCatalog.Stats _s;
         private bool _computing;
         private Button _btnExport;
+        private Panel _grid;
+        private ScrollWheelFilter _wheel;
+        private int _cols = 1;
+        private Rectangle _vitrineRect;
+        private BadgeCatalog.Badge _best;
         private readonly List<KeyValuePair<Rectangle, BadgeCatalog.Badge>> _hits = new List<KeyValuePair<Rectangle, BadgeCatalog.Badge>>();
+
+        private const int L = 34, TopY = 100, VW = 280, VH = 300, CellW = 150, CellH = 132, Gap = 14;
 
         public PageCollection(DashboardForm host) : base(host)
         {
@@ -24,33 +30,43 @@ namespace BTOptimizer
             _btnExport.Size = new Size(160, 30);
             _btnExport.Click += (s, e) => ExportShowcase();
             Controls.Add(_btnExport);
-            MouseClick += OnBadgeClick;
-            MouseMove += (s, e) =>
-            {
-                bool over = false;
-                foreach (var kv in _hits) if (kv.Key.Contains(e.Location)) { over = true; break; }
-                Cursor = over ? Cursors.Hand : Cursors.Default;
-            };
-            Resize += (s, e) => { PlaceBtn(); Invalidate(); };
+
+            _grid = new CollectionGrid { BackColor = FpsUi.BgMain };
+            _grid.Paint += GridPaint;
+            _grid.MouseClick += GridClick;
+            _grid.MouseMove += GridMove;
+            Controls.Add(_grid);
+            _wheel = new ScrollWheelFilter(_grid);
+            try { Application.AddMessageFilter(_wheel); } catch { }
+
+            MouseClick += OnVitrineClick;   // clic sur la vitrine (badge le plus élevé)
+            Resize += (s, e) => { PlaceBtn(); LayoutGrid(); Invalidate(); };
         }
 
-        private void OnBadgeClick(object sender, MouseEventArgs e)
+        protected override void Dispose(bool disposing)
         {
-            foreach (var kv in _hits)
-                if (kv.Key.Contains(e.Location))
-                {
-                    var b = kv.Value;
-                    using (var f = new BadgeDetailForm(b, _s, IsUnlocked(b), () => Host.Goto(b.Page)))
-                        f.ShowDialog(FindForm());
-                    return;
-                }
+            if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
+            base.Dispose(disposing);
         }
 
         private void PlaceBtn() { if (_btnExport != null) _btnExport.Location = new Point(ClientSize.Width - 34 - _btnExport.Width, 22); }
 
+        private void LayoutGrid()
+        {
+            if (_grid == null) return;
+            int gx = L + VW + 30, gridTop = TopY + 26;
+            int w = Math.Max(120, ClientSize.Width - 34 - gx);
+            int h = Math.Max(120, ClientSize.Height - gridTop - 20);
+            _grid.SetBounds(gx, gridTop, w, h);
+            _cols = Math.Max(1, (w - 18 + Gap) / (CellW + Gap));   // -18 : réserve la barre de défilement
+            int rows = (BadgeCatalog.All.Length + _cols - 1) / _cols;
+            _grid.AutoScrollMinSize = new Size(0, rows * (CellH + Gap) + 4);
+            _grid.Invalidate();
+        }
+
         public override void OnShown()
         {
-            PlaceBtn();
+            PlaceBtn(); LayoutGrid();
             if (_s == null && !_computing) ComputeAsync();
             Invalidate();
         }
@@ -58,8 +74,6 @@ namespace BTOptimizer
         private void ComputeAsync()
         {
             _computing = true;
-            // Réutilise l'état partagé/caché (opti + jeux) calculé par le dashboard, puis ajoute
-            // les compteurs de badges (checkups/boost) et évalue les conditions de déblocage.
             AppStats.Get(a =>
             {
                 var st = new BadgeCatalog.Stats
@@ -69,16 +83,68 @@ namespace BTOptimizer
                     Checkups = BadgeStore.Checkups,
                     Boost = BadgeStore.BoostUsed || GameBoost.IsActive
                 };
-
-                // Persiste tout badge dont la condition est actuellement remplie (déclenche les toasts).
-                BadgeCatalog.Evaluate(st);
-
-                try { BeginInvoke((Action)(() => { _s = st; _computing = false; Invalidate(); })); } catch { _computing = false; }
+                BadgeCatalog.Evaluate(st);   // persiste les badges remplis (déclenche les toasts)
+                try { BeginInvoke((Action)(() => { _s = st; _computing = false; Invalidate(); if (_grid != null) _grid.Invalidate(); })); }
+                catch { _computing = false; }
             });
         }
 
         private bool IsUnlocked(BadgeCatalog.Badge b) { return BadgeStore.IsEarned(b.Id) || (_s != null && b.Ok(_s)); }
         private int Unlocked() { int n = 0; foreach (var b in BadgeCatalog.All) if (IsUnlocked(b)) n++; return n; }
+
+        // Badge « le plus élevé » = plus haut palier débloqué (puis dernier dans l'ordre).
+        private BadgeCatalog.Badge Best()
+        {
+            BadgeCatalog.Badge best = null;
+            foreach (var b in BadgeCatalog.All) if (IsUnlocked(b) && (best == null || b.Tier >= best.Tier)) best = b;
+            return best;
+        }
+
+        private void OnVitrineClick(object sender, MouseEventArgs e)
+        {
+            if (_best != null && _vitrineRect.Contains(e.Location))
+                using (var f = new BadgeDetailForm(_best, _s, true, () => Host.Goto(_best.Page))) f.ShowDialog(FindForm());
+        }
+
+        private void GridClick(object sender, MouseEventArgs e)
+        {
+            var sc = _grid.AutoScrollPosition;
+            var pt = new Point(e.X - sc.X, e.Y - sc.Y);
+            foreach (var kv in _hits)
+                if (kv.Key.Contains(pt))
+                {
+                    var b = kv.Value;
+                    using (var f = new BadgeDetailForm(b, _s, IsUnlocked(b), () => Host.Goto(b.Page))) f.ShowDialog(FindForm());
+                    return;
+                }
+        }
+
+        private void GridMove(object sender, MouseEventArgs e)
+        {
+            var sc = _grid.AutoScrollPosition;
+            var pt = new Point(e.X - sc.X, e.Y - sc.Y);
+            bool over = false; foreach (var kv in _hits) if (kv.Key.Contains(pt)) { over = true; break; }
+            _grid.Cursor = over ? Cursors.Hand : Cursors.Default;
+        }
+
+        private void GridPaint(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            var scroll = _grid.AutoScrollPosition;
+            g.TranslateTransform(scroll.X, scroll.Y);
+
+            _hits.Clear();
+            for (int i = 0; i < BadgeCatalog.All.Length; i++)
+            {
+                int col = i % _cols, row = i / _cols;
+                int cx = col * (CellW + Gap), cy = row * (CellH + Gap);
+                var rc = new Rectangle(cx, cy, CellW, CellH);
+                _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(rc, BadgeCatalog.All[i]));
+                DrawBadgeCell(g, cx, cy, CellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), false);
+            }
+        }
 
         // ---- export image (save_showcase_image) ----
         private void ExportShowcase()
@@ -105,7 +171,9 @@ namespace BTOptimizer
 
         internal Bitmap RenderShowcase()
         {
-            const int W = 980, H = 470;
+            int cols = 6, cellW = 150, cellH = 150, x0 = 34, y0 = 112, gap = 8;
+            int rows = (BadgeCatalog.All.Length + cols - 1) / cols;
+            int W = x0 * 2 + cols * cellW + (cols - 1) * gap, H = y0 + rows * (cellH + gap) + 34;
             var bmp = new Bitmap(W, H);
             using (var g = Graphics.FromImage(bmp))
             {
@@ -119,7 +187,6 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, Unlocked() + " / " + BadgeCatalog.All.Length + " badges   ·   santé " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x)   ·   " + _s.Checkups + " Check Up",
                     FpsUi.Body, new Point(40, 72), FpsUi.Dim, TextFormatFlags.NoPadding);
 
-                int cols = 6, cellW = 150, cellH = 150, x0 = 34, y0 = 112, gap = 8;
                 for (int i = 0; i < BadgeCatalog.All.Length; i++)
                 {
                     int col = i % cols, row = i / cols;
@@ -127,7 +194,7 @@ namespace BTOptimizer
                     DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), true);
                 }
                 TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
-                    new Rectangle(0, H - 30, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
+                    new Rectangle(0, H - 28, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
             }
             return bmp;
         }
@@ -143,42 +210,29 @@ namespace BTOptimizer
             int unlocked = Unlocked();
             PaintTitle(g, "COLLECTION", "Débloque des badges en soignant ton PC — " + unlocked + " / " + BadgeCatalog.All.Length + " obtenus. (Ils restent acquis.)");
 
-            int L = 34, top = 100;
-            // Vitrine (gauche) : le badge le plus élevé débloqué.
-            int vw = 280, vh = 300;
-            FpsUi.PaintCard(g, new Rectangle(L, top, vw, vh), FpsUi.Card, FpsUi.Border, 14f);
-            BadgeCatalog.Badge best = null;
-            for (int i = BadgeCatalog.All.Length - 1; i >= 0; i--) if (IsUnlocked(BadgeCatalog.All[i])) { best = BadgeCatalog.All[i]; break; }
-            BadgeRender.DrawShape(g, L + (vw - 150) / 2, top + 40, 150, best != null ? best.Glyph : "🩺",
-                best != null, best != null ? BadgeCatalog.TierColor[best.Tier - 1] : FpsUi.Dim2, best != null ? best.Shape : 0, true);
-            string vname = _s == null ? "Analyse en cours…" : best != null ? best.Name : "Aucun badge";
-            string vsub = _s == null ? "" : best != null ? "Ton badge le plus élevé" : "Applique une optimisation pour commencer";
-            TextRenderer.DrawText(g, vname, FpsUi.H2, new Rectangle(L, top + vh - 66, vw, 26), best != null ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(g, vsub, FpsUi.Small, new Rectangle(L, top + vh - 38, vw, 20), best != null ? FpsUi.Neon : FpsUi.Dim2, TextFormatFlags.HorizontalCenter);
+            // Vitrine (gauche) : le badge le plus élevé débloqué + résumé.
+            _vitrineRect = new Rectangle(L, TopY, VW, VH);
+            FpsUi.PaintCard(g, _vitrineRect, FpsUi.Card, FpsUi.Border, 14f);
+            _best = Best();
+            var tier = _best != null ? BadgeCatalog.TierColor[_best.Tier - 1] : FpsUi.Dim2;
+            BadgeRender.DrawShape(g, L + (VW - 150) / 2, TopY + 34, 150, _best != null ? _best.Glyph : "🩺",
+                _best != null, tier, _best != null ? _best.Shape : 0, true);
+            string vname = _s == null ? "Analyse en cours…" : _best != null ? _best.Name : "Aucun badge";
+            string vsub = _s == null ? "" : _best != null ? "Ton badge le plus élevé — clique" : "Applique une optimisation pour commencer";
+            TextRenderer.DrawText(g, vname, FpsUi.H2, new Rectangle(L, TopY + VH - 96, VW, 26), _best != null ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, vsub, FpsUi.Small, new Rectangle(L, TopY + VH - 68, VW, 18), _best != null ? FpsUi.Neon : FpsUi.Dim2, TextFormatFlags.HorizontalCenter);
+            // Petit résumé chiffré sous la vitrine.
+            if (_s != null)
+                TextRenderer.DrawText(g, unlocked + " / " + BadgeCatalog.All.Length + " badges  ·  santé " + _s.Health + " %",
+                    FpsUi.Tiny, new Rectangle(L, TopY + VH - 44, VW, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
 
-            // Grille de badges (droite) — plein espace (mascotte retirée).
-            int gx = L + vw + 30;
-            int right = ClientSize.Width - 34;
-            TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, top - 6), FpsUi.Ink, TextFormatFlags.NoPadding);
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, top + 14, gx + 64, top + 14);
-
-            int cellW = 150, cellH = 132, gap = 14, gy = top + 26;
-            int cols = Math.Max(1, (right - gx + gap) / (cellW + gap));
-            _hits.Clear();
-            for (int i = 0; i < BadgeCatalog.All.Length; i++)
-            {
-                int col = i % cols, row = i / cols;
-                int cx = gx + col * (cellW + gap), cy = gy + row * (cellH + gap);
-                if (cx + cellW > right + 2) continue;
-                var rc = new Rectangle(cx, cy, cellW, cellH);
-                _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(rc, BadgeCatalog.All[i]));
-                DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), false);
-            }
-            // Vitrine cliquable = badge le plus élevé.
-            if (best != null) _hits.Add(new KeyValuePair<Rectangle, BadgeCatalog.Badge>(new Rectangle(L, top, vw, vh), best));
+            // En-tête de la grille (la grille elle-même est le panneau scrollable _grid).
+            int gx = L + VW + 30;
+            TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, TopY - 6), FpsUi.Ink, TextFormatFlags.NoPadding);
+            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, TopY + 14, gx + 64, TopY + 14);
         }
 
-        // Carte d'un badge : cadre + forme/glyphe + nom + critère.
+        // Carte d'un badge : cadre + forme/glyphe + nom + critère (ou progression si verrouillé).
         private void DrawBadgeCell(Graphics g, int cx, int cy, int cellW, BadgeCatalog.Badge b, bool ok, bool onImage)
         {
             int cellH = onImage ? 138 : 132;
@@ -196,7 +250,6 @@ namespace BTOptimizer
             }
             else if (_s != null)
             {
-                // Badge verrouillé : progression vers le déblocage (motivant).
                 TextRenderer.DrawText(g, b.ProgressLabel(_s), FpsUi.Small, new Rectangle(cx, cy + 90, cellW, 16),
                     FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
                 var bar = new Rectangle(cx + 18, cy + cellH - 20, cellW - 36, 6);
@@ -210,6 +263,11 @@ namespace BTOptimizer
                     FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
             }
         }
+    }
 
+    // Panneau de grille scrollable + double-bufferé (défilement fluide de dizaines de badges).
+    internal class CollectionGrid : Panel
+    {
+        public CollectionGrid() { DoubleBuffered = true; AutoScroll = true; }
     }
 }

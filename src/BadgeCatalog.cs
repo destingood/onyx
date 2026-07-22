@@ -39,18 +39,31 @@ namespace BTOptimizer
 
         public static readonly Badge[] All =
         {
-            new Badge("premiers",   "🩹", "Premiers Soins",  "Applique 1 optimisation",    1, 0, 1,  1, s => s.OptiActive),
-            new Badge("optimiseur", "🚀", "Optimiseur",      "15 optimisations actives",   1, 0, 15, 1, s => s.OptiActive),
-            new Badge("chirurgien", "🔧", "Chirurgien",      "40 optimisations actives",   2, 2, 40, 1, s => s.OptiActive),
-            new Badge("blinde",     "🛡", "Blindé",          "Santé du PC ≥ 60 %",         1, 2, 60, 1, s => s.Health),
-            new Badge("perfect",    "🏆", "Perfectionniste", "Santé du PC ≥ 85 %",         3, 3, 85, 1, s => s.Health),
-            new Badge("joueur",     "🎮", "Joueur",          "1 jeu détecté",              1, 1, 1,  2, s => s.GamesDet),
-            new Badge("ludo",       "📚", "Ludothèque",      "4 jeux détectés",            2, 1, 4,  2, s => s.GamesDet),
-            new Badge("modejeu",    "⚡", "Mode Jeu",        "Active le Mode Jeu",         1, 0, 1,  2, s => s.Boost ? 1 : 0),
-            new Badge("infirmier",  "🩺", "Infirmier",       "1 Check Up réalisé",         1, 1, 1,  3, s => s.Checkups),
-            new Badge("routine",    "💊", "Routine",         "5 Check Up réalisés",        2, 0, 5,  3, s => s.Checkups),
-            new Badge("legende",    "💎", "Légende",         "40 opti · 85 % · jeu · Check Up", 3, 4, 4, 1,
-                s => (s.OptiActive >= 40 ? 1 : 0) + (s.Health >= 85 ? 1 : 0) + (s.GamesDet >= 1 ? 1 : 0) + (s.Checkups >= 1 ? 1 : 0)),
+            // Optimisations (page 1)
+            new Badge("premiers",   "🩹", "Premiers Soins",  "Applique 1 optimisation",    1, 0, 1,   1, s => s.OptiActive),
+            new Badge("optimiseur", "🚀", "Optimiseur",      "15 optimisations actives",   1, 0, 15,  1, s => s.OptiActive),
+            new Badge("chirurgien", "🔧", "Chirurgien",      "40 optimisations actives",   2, 2, 40,  1, s => s.OptiActive),
+            new Badge("bloc",       "🏥", "Bloc opératoire", "80 optimisations actives",   3, 2, 80,  1, s => s.OptiActive),
+            new Badge("total",      "✚",  "Traitement total","120 optimisations actives",  3, 0, 120, 1, s => s.OptiActive),
+            // Santé (page 1)
+            new Badge("blinde",     "🛡", "Blindé",          "Santé du PC ≥ 60 %",         1, 2, 60,  1, s => s.Health),
+            new Badge("coeur",      "❤",  "Cœur solide",     "Santé du PC ≥ 75 %",         2, 2, 75,  1, s => s.Health),
+            new Badge("perfect",    "🏆", "Perfectionniste", "Santé du PC ≥ 85 %",         3, 3, 85,  1, s => s.Health),
+            new Badge("immacule",   "🌟", "Immaculé",        "Santé du PC ≥ 95 %",         3, 3, 95,  1, s => s.Health),
+            // Jeux (page 2)
+            new Badge("joueur",     "🎮", "Joueur",          "1 jeu détecté",              1, 1, 1,   2, s => s.GamesDet),
+            new Badge("ludo",       "📚", "Ludothèque",      "4 jeux détectés",            2, 1, 4,   2, s => s.GamesDet),
+            new Badge("collec",     "🎯", "Collectionneur",  "10 jeux détectés",           2, 1, 10,  2, s => s.GamesDet),
+            new Badge("grandludo",  "🗄", "Grande Ludothèque","20 jeux détectés",          3, 4, 20,  2, s => s.GamesDet),
+            new Badge("modejeu",    "⚡", "Mode Jeu",        "Active le Mode Jeu",         1, 0, 1,   2, s => s.Boost ? 1 : 0),
+            // Check Up (page 3)
+            new Badge("infirmier",  "🩺", "Infirmier",       "1 Check Up réalisé",         1, 1, 1,   3, s => s.Checkups),
+            new Badge("routine",    "💊", "Routine",         "5 Check Up réalisés",        2, 0, 5,   3, s => s.Checkups),
+            new Badge("vigilant",   "🔬", "Vigilant",        "10 Check Up réalisés",       2, 0, 10,  3, s => s.Checkups),
+            new Badge("marathon",   "🏅", "Marathon santé",  "20 Check Up réalisés",       3, 3, 20,  3, s => s.Checkups),
+            // Ultime
+            new Badge("legende",    "💎", "Légende",         "80 opti · 95 % · 10 jeux · 10 Check Up", 3, 4, 4, 1,
+                s => (s.OptiActive >= 80 ? 1 : 0) + (s.Health >= 95 ? 1 : 0) + (s.GamesDet >= 10 ? 1 : 0) + (s.Checkups >= 10 ? 1 : 0)),
         };
 
         public static Badge ById(string id)

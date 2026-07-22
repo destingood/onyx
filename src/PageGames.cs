@@ -18,7 +18,7 @@ namespace BTOptimizer
         private string _subtitle = "Analyse des jeux installés…";
         private List<GameScan.GameInfo> _all;
         private bool _loaded;
-        private WheelFilter _wheel;
+        private ScrollWheelFilter _wheel;
 
         public PageGames(DashboardForm host) : base(host)
         {
@@ -53,7 +53,7 @@ namespace BTOptimizer
 
             // La molette défile la grille même quand le curseur est sur une carte (le message va
             // normalement au contrôle qui a le focus, pas à celui sous le curseur).
-            _wheel = new WheelFilter(_flow);
+            _wheel = new ScrollWheelFilter(_flow);
             try { Application.AddMessageFilter(_wheel); } catch { }
 
             Resize += (s, e) => DoLayout();
@@ -274,29 +274,6 @@ namespace BTOptimizer
         {
             if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
             base.Dispose(disposing);
-        }
-
-        // Molette → défile le flux visible même quand le curseur est sur une carte enfant.
-        private class WheelFilter : IMessageFilter
-        {
-            private const int WM_MOUSEWHEEL = 0x020A;
-            private readonly ScrollableControl _target;
-            public WheelFilter(ScrollableControl target) { _target = target; }
-            public bool PreFilterMessage(ref Message m)
-            {
-                if (m.Msg != WM_MOUSEWHEEL || _target == null) return false;
-                try
-                {
-                    if (!_target.IsHandleCreated || !_target.Visible || !_target.VerticalScroll.Visible) return false;
-                    Point p = _target.PointToClient(Control.MousePosition);
-                    if (!_target.ClientRectangle.Contains(p)) return false;
-                    int delta = (short)(((long)m.WParam >> 16) & 0xFFFF);
-                    var ap = _target.AutoScrollPosition;
-                    _target.AutoScrollPosition = new Point(-ap.X, -ap.Y - delta);
-                    return true;   // consommé
-                }
-                catch { return false; }
-            }
         }
     }
 
