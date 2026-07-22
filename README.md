@@ -20,7 +20,7 @@ sombre par défaut (basculable dans le menu ☰).
 | Domaine | Outils |
 |---|---|
 | ⚡ Performance & FPS | 🎯 Objectif 500 FPS · 📊 Overlay en jeu (FPS + capteurs) · 📈 FPS en direct · ⏱ Latence en direct · 🧪 Benchmark · 🔍 Qui ralentit mon PC · 🏁 Checklist match |
-| 🩺 Crashs & stabilité | 🩺 Stabilité (14 j) · 🌡️ Températures/throttling · 🛒 Boutiques/crashs · 🧹 Réglages néfastes · 🔧 Réparer Windows · 🛡 Gardien en fond |
+| 🩺 Crashs & stabilité | 🩺 Stabilité (14 j) · 🌡️ Températures/throttling · 🛒 Boutiques/crashs · 🧹 Réglages néfastes · 🔧 Réparer Windows · 🎮 Reset shaders GPU · 🛡 Gardien en fond |
 | 📡 Réseau | 📶 Qualité réseau · 🛰️ Trajet (traceroute) · ⚙️ Réglages TCP/IP · 📡 Carte réseau · 🌐 DNS |
 | 🎮 Jeux & écran | 📦 Bibliothèques (winget) · 🎮 Priorité par jeu · 🔐 Exclusions antivirus · 🖥️ Écran · 🖱️ Souris |
 | 💾 Disque & entretien | 💾 Jeux & disques · 🖴 Optimiser lecteurs · 🧹 Nettoyage · 🔁 Points de restauration |
@@ -85,6 +85,21 @@ fermeture), **Ping** (`using`), **Process** (`GetProcesses` libérés partout, y
 code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul ajustement : le
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
+
+### 🎮 Reset shaders GPU + corrections d'audit (v14.26)
+
+- **Réparer les micro-saccades (reset shaders GPU)** — 1 clic qui vide **tous** les caches de
+  shaders : DirectX (`D3DSCache`), NVIDIA (`DXCache`/`GLCache`/`NV_Cache`), AMD
+  (`DxCache`/`DxcCache`/`VkCache`/`GLCache`) et **Intel Arc/iGPU** (`ShaderCache`). C'est LE
+  remède quand un jeu saccade ou plante (« dispositif de rendu perdu ») après une mise à jour
+  de pilote : un cache de shaders corrompu est la cause classique. **Sûr et réversible par
+  nature** — les jeux recompilent au 1er lancement (une saccade passagère, normal). La liste
+  est **partagée** avec le nettoyage disque (qui gagne au passage la couverture Intel + AMD
+  Vulkan/OpenGL). Menu **🩺 Crashs & stabilité**, indexé dans l'assistant.
+- **Corrections issues d'un audit croisé** : le « Rétablir » de la priorité *Pro Audio* remettait
+  une mauvaise valeur (bloquée sur *High*) ; le verdict *Mode MSI GPU* et *tâches de télémétrie*
+  ne testait que le 1er élément (faux positif sur PC hybride / Apply partiel) ; fuite de handles
+  `Process` sur la réparation Steam. Le tout vérifié par le harnais (0 erreur, 173 optimisations).
 
 ### 📊 Overlay de performances EN JEU (FPS + CPU/GPU/RAM, sans injection) (v14.25)
 

@@ -1686,10 +1686,11 @@ namespace BTOptimizer
                 },
                 Revert = () =>
                 {
-                    Sys.SetMachine(ProAudioKey, "Scheduling Category", "High", RegistryValueKind.String);
+                    Sys.SetMachine(ProAudioKey, "Scheduling Category", "Medium", RegistryValueKind.String);
                     Sys.SetMachine(ProAudioKey, "SFIO Priority", "Normal", RegistryValueKind.String);
                 },
                 Check = () => Sys.StrEquals(Sys.GetMachine(ProAudioKey, "SFIO Priority"), "High")
+                           && Sys.StrEquals(Sys.GetMachine(ProAudioKey, "Scheduling Category"), "High")
             });
 
             // ================= MODE MSI (interruptions par message) =================
@@ -2184,7 +2185,19 @@ namespace BTOptimizer
                 Desc = "Coupe les tâches Windows qui analysent le PC en arrière-plan (Microsoft Compatibility Appraiser, CEIP, DiskDiagnostic) : gros pics disque/CPU au repos en moins. « Rétablir » les réactive.",
                 Apply = () => { foreach (string t in TelemetryTasks) Sys.SetScheduledTask(t, false); },
                 Revert = () => { foreach (string t in TelemetryTasks) Sys.SetScheduledTask(t, true); },
-                Check = () => Sys.ScheduledTaskDisabled(TelemetryTasks[0]) == true
+                Check = () =>
+                {
+                    // Actif seulement si TOUTES les tâches (encore présentes) sont désactivées —
+                    // ne tester que la 1re masquait un Apply partiellement échoué.
+                    bool any = false;
+                    foreach (string t in TelemetryTasks)
+                    {
+                        bool? d = Sys.ScheduledTaskDisabled(t);
+                        if (d == false) return false;
+                        if (d == true) any = true;
+                    }
+                    return any;
+                }
             });
 
             list.Add(new Tweak

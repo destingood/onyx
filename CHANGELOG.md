@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.26 — Reset shaders GPU + corrections d'audit
+- **🎮 Réparer les micro-saccades (reset shaders GPU)** : nouvelle action 1 clic qui vide
+  TOUS les caches de shaders (DirectX, NVIDIA, AMD, **Intel Arc/iGPU**, Vulkan/OpenGL) —
+  le remède classique aux saccades / « dispositif de rendu perdu » après une MAJ de pilote.
+  Sûr (les jeux recompilent au 1er lancement), même liste partagée avec le nettoyage disque
+  (ajout des caches **Intel**, **AMD Vulkan/GL** et **NVIDIA NV_Cache/LocalLow** qui manquaient).
+- **Corrections (audit croisé)** :
+  - `audio_proaudio_mmcss` : le « Rétablir » remettait « Scheduling Category » sur *High* au
+    lieu de *Medium* (état bloqué en permanence). Corrigé, + `Check` vérifie les 2 valeurs.
+  - `GpuMsiActive` : vérifie désormais TOUS les GPU (portable hybride iGPU+dGPU) au lieu de
+    s'arrêter au premier — le verdict ne dépend plus de l'ordre d'énumération.
+  - `telemetry_tasks_off` : `Check` teste les 5 tâches, plus seulement la 1re (Apply partiel masqué).
+  - `ShopFix` : handles `Process` (Steam) désormais libérés (fuite de ~30 handles par réparation).
+
 ## v14.25 — Overlay de performances en jeu
 - **📊 Overlay FPS + capteurs** par-dessus les jeux (fenêtré / sans bordure), façon
   Afterburner/RTSS mais **100 % natif** : FPS/frametime par ETW (PresentMon),

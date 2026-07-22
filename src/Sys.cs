@@ -495,8 +495,12 @@ namespace BTOptimizer
             if (count == 0) throw new Exception("Aucun GPU trouvé pour le MSI mode.");
         }
 
+        /// <summary>true = TOUS les GPU ont MSI, false = au moins un sans, null = aucun GPU trouvé.
+        /// (Même sémantique que MsiActiveForClass : sur un portable hybride iGPU+dGPU,
+        /// s'arrêter au premier GPU rendait le verdict dépendant de l'ordre d'énumération.)</summary>
         public static bool? GpuMsiActive()
         {
+            bool found = false;
             using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
             {
                 if (pci == null) return null;
@@ -510,15 +514,16 @@ namespace BTOptimizer
                             using (RegistryKey ik = dev.OpenSubKey(inst))
                             {
                                 if (ik == null || !IsGpuDevice(ik)) continue;
+                                found = true;
                                 object v = GetMachine(@"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
                                     @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties", "MSISupported");
-                                return IntEquals(v, 1);
+                                if (!IntEquals(v, 1)) return false;
                             }
                         }
                     }
                 }
             }
-            return null;
+            return found ? (bool?)true : null;
         }
 
         // ------------------------------------------------------------------
@@ -790,12 +795,6 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache Windows Update", Path = Path.Combine(win, @"SoftwareDistribution\Download") },
                 new CleanTarget { Name = "Prefetch", Path = Path.Combine(win, "Prefetch") },
                 new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
-                // Caches de shaders : à vider après une MAJ de pilote ou en cas de stutters —
-                // les jeux les recompilent au prochain lancement (saccades passagères normales).
-                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Path = Path.Combine(local, @"NVIDIA\DXCache") },
-                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache") },
-                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache") },
-                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache") },
                 // Rapports de plantage : minidumps et vidages, aucun intérêt à les garder.
                 new CleanTarget { Name = "Rapports de plantage (CrashDumps)", Path = Path.Combine(local, "CrashDumps") },
                 new CleanTarget { Name = "Minidumps Windows (écrans bleus passés)", Path = Path.Combine(win, "Minidump") },
@@ -804,10 +803,87 @@ namespace BTOptimizer
                 // Journaux d'installation de composants (souvent volumineux).
                 new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
             };
+            // Caches de shaders GPU (tous constructeurs) : à vider après une MAJ de pilote ou
+            // en cas de saccades — les jeux les recompilent au prochain lancement (stutters passagers normaux).
+            foreach (CleanTarget sc in GpuShaderCacheTargets()) list.Add(sc);
             AddBrowserCaches(list, local);
             list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true });
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
             return list;
+        }
+
+        // ------------------------------------------------------------------
+        //  Caches de shaders GPU — source unique de vérité (tous constructeurs).
+        //  Emplacements publics et bien connus ; les vider est sûr et réversible
+        //  par nature (Windows et les jeux les reconstruisent). Sert au nettoyage
+        //  disque ET au bouton dédié « Réparer les saccades » (reset shaders).
+        // ------------------------------------------------------------------
+        public static System.Collections.Generic.List<CleanTarget> GpuShaderCacheTargets()
+        {
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string localLow = Path.Combine(Path.GetDirectoryName(local) ?? local, "LocalLow");
+            var pairs = new[]
+            {
+                new[] { "Shaders DirectX Windows (D3DSCache, tous GPU)", Path.Combine(local, "D3DSCache") },
+                new[] { "Shaders NVIDIA DirectX (DXCache)",     Path.Combine(local, @"NVIDIA\DXCache") },
+                new[] { "Shaders NVIDIA OpenGL/Vulkan (GLCache)", Path.Combine(local, @"NVIDIA\GLCache") },
+                new[] { "Cache NVIDIA (NV_Cache)",              Path.Combine(local, @"NVIDIA Corporation\NV_Cache") },
+                new[] { "Cache NVIDIA OpenGL (LocalLow)",       Path.Combine(localLow, @"NVIDIA\PerDriverVersion\DXCache") },
+                new[] { "Shaders AMD DirectX (DxCache)",        Path.Combine(local, @"AMD\DxCache") },
+                new[] { "Shaders AMD DXC (DxcCache)",           Path.Combine(local, @"AMD\DxcCache") },
+                new[] { "Shaders AMD Vulkan (VkCache)",         Path.Combine(local, @"AMD\VkCache") },
+                new[] { "Shaders AMD OpenGL (GLCache)",         Path.Combine(local, @"AMD\GLCache") },
+                new[] { "Shaders Intel (Arc / iGPU, ShaderCache)", Path.Combine(local, @"Intel\ShaderCache") },
+            };
+            var list = new System.Collections.Generic.List<CleanTarget>();
+            foreach (string[] p in pairs)
+            {
+                if (Directory.Exists(p[1]))
+                    list.Add(new CleanTarget { Name = p[0], Path = p[1] });
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Vide TOUS les caches de shaders GPU (tous constructeurs) en une passe.
+        /// Le remède classique aux micro-saccades / « dispositif de rendu perdu »
+        /// après une mise à jour de pilote. Sûr : les jeux recompilent leurs shaders
+        /// au prochain lancement (une saccade passagère la première partie, normal).
+        /// Retourne le nombre de Mo libérés.
+        /// </summary>
+        public static long ResetGpuShaderCaches(Action<string, int> log)
+        {
+            System.Collections.Generic.List<CleanTarget> targets = GpuShaderCacheTargets();
+            if (targets.Count == 0)
+            {
+                if (log != null) log("Aucun cache de shaders GPU présent (rien à réinitialiser).", 0);
+                return 0;
+            }
+            long freedMB = 0; int dirs = 0, files = 0;
+            foreach (CleanTarget t in targets)
+            {
+                long before = MeasureTarget(t);
+                int removed = 0;
+                try
+                {
+                    foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
+                    {
+                        try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); removed++; } catch { }
+                    }
+                    foreach (string d in Directory.EnumerateDirectories(t.Path))
+                    {
+                        try { Directory.Delete(d, true); } catch { }
+                    }
+                }
+                catch (Exception ex) { if (log != null) log(t.Name + " : " + ex.Message, 2); continue; }
+                if (removed > 0) { dirs++; files += removed; freedMB += before; }
+                if (log != null && removed > 0) log("  ✓ " + t.Name + " — " + removed + " fichier(s), " + before + " Mo", 0);
+            }
+            if (log != null)
+                log("Caches de shaders GPU réinitialisés : " + dirs + " emplacement(s), " + files
+                    + " fichier(s), ~" + freedMB + " Mo. Les jeux recompilent au 1er lancement (saccade passagère normale).",
+                    files > 0 ? 1 : 0);
+            return freedMB;
         }
 
         // Caches des navigateurs (tous profils) : Chrome, Edge, Brave (dossier Cache) et Firefox (cache2).

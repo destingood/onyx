@@ -109,6 +109,7 @@ namespace BTOptimizer
             Add("🩺 Crashs & instabilité", "Mes jeux crashent ou se ferment tout seuls", "🩺 Stabilité (14 j)", () => new StabilityForm(L));
             Add("🩺 Crashs & instabilité", "« Votre dispositif de rendu a été perdu » / freeze", "🛒 Boutiques / crashs", () => new ShopFixForm(L));
             Add("🩺 Crashs & instabilité", "Le PC ou le GPU chauffe / bride (throttling)", "🌡️ Températures & throttling", () => new ThermalForm(L));
+            Add("🩺 Crashs & instabilité", "Micro-saccades / plantages depuis une MAJ de pilote GPU", "🎮 Reset shaders GPU (via menu ☰ → Crashs)", () => new ShopFixForm(L));
             Add("🩺 Crashs & instabilité", "Un ancien « optimiseur » a peut-être cassé des réglages", "🧹 Réglages néfastes", () => new CheckupForm(L));
             Add("🩺 Crashs & instabilité", "Crashs qui persistent malgré tout", "🔧 Réparer Windows (via menu ☰)", () => new HealthForm(L));
 

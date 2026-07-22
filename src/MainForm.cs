@@ -200,6 +200,7 @@ namespace BTOptimizer
             mCrash.DropDownItems.Add("🛒 Boutiques infinies / jeux qui crashent...", null, open(() => new ShopFixForm(Log)));
             mCrash.DropDownItems.Add("🧹 Réglages néfastes d'autres optimiseurs...", null, open(() => new CheckupForm(Log)));
             mCrash.DropDownItems.Add("🔧 Réparer l'intégrité de Windows (DISM + SFC)...", null, OnRepairWindows);
+            mCrash.DropDownItems.Add("🎮 Réparer les micro-saccades (reset shaders GPU)...", null, OnResetShaders);
             _miWatch = new ToolStripMenuItem("🛡 Surveillance en fond (alerte GPU chaud / pilote)", null, OnWatchToggle);
             _miWatch.CheckOnClick = true;
             mCrash.DropDownItems.Add(_miWatch);
@@ -1582,6 +1583,29 @@ namespace BTOptimizer
                 return;
             Log("Réparation d'intégrité Windows démarrée (10-20 min)...", 0);
             Task.Run(() => Sys.RepairWindows(Log));
+        }
+
+        /// <summary>Vide tous les caches de shaders GPU (tous constructeurs) : remède classique
+        /// aux micro-saccades / « dispositif de rendu perdu » après une mise à jour de pilote.</summary>
+        private void OnResetShaders(object sender, EventArgs e)
+        {
+            List<Sys.CleanTarget> found = Sys.GpuShaderCacheTargets();
+            long mb = 0; foreach (Sys.CleanTarget t in found) mb += t.SizeMB;
+            string detail = found.Count == 0
+                ? "Aucun cache de shaders détecté pour l'instant (rien à faire)."
+                : found.Count + " cache(s) détecté(s), ~" + mb + " Mo.";
+            if (MessageBox.Show(this,
+                    "Réinitialiser les caches de shaders GPU ?\n\n"
+                    + detail + "\n\n"
+                    + "À faire quand les jeux SACCADENT ou plantent (« dispositif de rendu perdu ») "
+                    + "depuis une mise à jour de pilote : un cache de shaders corrompu est LA cause classique.\n\n"
+                    + "• Tous constructeurs : DirectX, NVIDIA, AMD, Intel (Vulkan/OpenGL compris).\n"
+                    + "• 100 % sûr : les jeux recompilent leurs shaders au 1er lancement\n"
+                    + "  (une saccade passagère la première partie, c'est normal).",
+                    "Reset shaders GPU", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            Log("Réinitialisation des caches de shaders GPU...", 0);
+            Task.Run(() => Sys.ResetGpuShaderCaches(Log));
         }
 
         // ------------------------------------------------------------------

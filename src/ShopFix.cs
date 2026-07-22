@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Management;
 using Microsoft.Win32;
@@ -693,7 +694,10 @@ namespace BTOptimizer
                     if (IsSteamRunning())
                     {
                         log("Fermeture de Steam en douceur (les téléchargements reprendront à la réouverture)...", 0);
-                        try { System.Diagnostics.Process.Start(Path.Combine(steam, "steam.exe"), "-shutdown"); }
+                        try
+                        {
+                            using (Process p = Process.Start(Path.Combine(steam, "steam.exe"), "-shutdown")) { }
+                        }
                         catch (Exception ex) { log("Impossible de demander l'arrêt de Steam : " + ex.Message, 3); return; }
                         for (int i = 0; i < 30 && IsSteamRunning(); i++) System.Threading.Thread.Sleep(500);
                         if (IsSteamRunning()) { log("Steam ne s'est pas fermé : cache non vidé. Ferme Steam puis relance la réparation.", 2); return; }
@@ -720,7 +724,12 @@ namespace BTOptimizer
 
         private static bool IsSteamRunning()
         {
-            try { return System.Diagnostics.Process.GetProcessesByName("steam").Length > 0; }
+            try
+            {
+                Process[] ps = Process.GetProcessesByName("steam");
+                try { return ps.Length > 0; }
+                finally { foreach (Process p in ps) p.Dispose(); }   // sinon ~30 handles fuités par réparation
+            }
             catch { return false; }
         }
 
