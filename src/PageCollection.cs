@@ -12,43 +12,10 @@ namespace BTOptimizer
     // (Check Up réalisés, Mode Jeu utilisé). Calcul en arrière-plan.
     internal class PageCollection : FpsPage
     {
-        private sealed class Stats { public int OptiActive, OptiTotal, GamesDet, Health, Checkups; public bool Boost; }
-
-        // shape : 0 hexagone · 1 cercle · 2 bouclier · 3 étoile · 4 losange
-        private sealed class Badge
-        {
-            public string Id, Glyph, Name, Crit;
-            public int Tier, Shape;
-            public Func<Stats, bool> Ok;
-            public Badge(string id, string g, string n, string c, int tier, int shape, Func<Stats, bool> ok)
-            { Id = id; Glyph = g; Name = n; Crit = c; Tier = tier; Shape = shape; Ok = ok; }
-        }
-
-        private Stats _s;
+        // Définitions des badges partagées : BadgeCatalog.All / .TierColor (id → affichage + condition).
+        private BadgeCatalog.Stats _s;
         private bool _computing;
         private Button _btnExport;
-
-        private static readonly Color[] TierColor =
-        {
-            Color.FromArgb(0, 255, 136),   // palier 1 — vert néon
-            Color.FromArgb(0, 200, 255),   // palier 2 — cyan
-            Color.FromArgb(255, 200, 60),  // palier 3 — or
-        };
-
-        private static readonly Badge[] _badges =
-        {
-            new Badge("premiers",   "🩹", "Premiers Soins",  "Applique 1 optimisation",    1, 0, s => s.OptiActive >= 1),
-            new Badge("optimiseur", "🚀", "Optimiseur",      "15 optimisations actives",   1, 0, s => s.OptiActive >= 15),
-            new Badge("chirurgien", "🔧", "Chirurgien",      "40 optimisations actives",   2, 2, s => s.OptiActive >= 40),
-            new Badge("blinde",     "🛡", "Blindé",          "Santé du PC ≥ 60 %",         1, 2, s => s.Health >= 60),
-            new Badge("perfect",    "🏆", "Perfectionniste", "Santé du PC ≥ 85 %",         3, 3, s => s.Health >= 85),
-            new Badge("joueur",     "🎮", "Joueur",          "1 jeu détecté",              1, 1, s => s.GamesDet >= 1),
-            new Badge("ludo",       "📚", "Ludothèque",      "4 jeux détectés",            2, 1, s => s.GamesDet >= 4),
-            new Badge("modejeu",    "⚡", "Mode Jeu",        "Active le Mode Jeu",         1, 0, s => s.Boost),
-            new Badge("infirmier",  "🩺", "Infirmier",       "1 Check Up réalisé",         1, 1, s => s.Checkups >= 1),
-            new Badge("routine",    "💊", "Routine",         "5 Check Up réalisés",        2, 0, s => s.Checkups >= 5),
-            new Badge("legende",    "💎", "Légende",         "40 opti · 85 % · jeu · Check Up", 3, 4, s => s.OptiActive >= 40 && s.Health >= 85 && s.GamesDet >= 1 && s.Checkups >= 1),
-        };
 
         public PageCollection(DashboardForm host) : base(host)
         {
@@ -73,7 +40,7 @@ namespace BTOptimizer
             _computing = true;
             Task.Run(() =>
             {
-                var st = new Stats();
+                var st = new BadgeCatalog.Stats();
                 try
                 {
                     var tw = Catalog.All(); st.OptiTotal = tw.Count;
@@ -85,15 +52,15 @@ namespace BTOptimizer
                 st.Checkups = BadgeStore.Checkups;
                 st.Boost = BadgeStore.BoostUsed || GameBoost.IsActive;
 
-                // Persiste tout badge dont la condition est actuellement remplie.
-                foreach (var b in _badges) { try { if (b.Ok(st)) BadgeStore.MarkEarned(b.Id); } catch { } }
+                // Persiste tout badge dont la condition est actuellement remplie (déclenche les toasts).
+                BadgeCatalog.Evaluate(st);
 
                 try { BeginInvoke((Action)(() => { _s = st; _computing = false; Invalidate(); })); } catch { _computing = false; }
             });
         }
 
-        private bool IsUnlocked(Badge b) { return BadgeStore.IsEarned(b.Id) || (_s != null && b.Ok(_s)); }
-        private int Unlocked() { int n = 0; foreach (var b in _badges) if (IsUnlocked(b)) n++; return n; }
+        private bool IsUnlocked(BadgeCatalog.Badge b) { return BadgeStore.IsEarned(b.Id) || (_s != null && b.Ok(_s)); }
+        private int Unlocked() { int n = 0; foreach (var b in BadgeCatalog.All) if (IsUnlocked(b)) n++; return n; }
 
         // ---- export image (save_showcase_image) ----
         private void ExportShowcase()
@@ -131,15 +98,15 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
                 int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
                 TextRenderer.DrawText(g, "DesTinGOOD", FpsUi.H1, new Point(38 + wt, 26), FpsUi.Neon, TextFormatFlags.NoPadding);
-                TextRenderer.DrawText(g, Unlocked() + " / " + _badges.Length + " badges   ·   santé " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x)   ·   " + _s.Checkups + " Check Up",
+                TextRenderer.DrawText(g, Unlocked() + " / " + BadgeCatalog.All.Length + " badges   ·   santé " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x)   ·   " + _s.Checkups + " Check Up",
                     FpsUi.Body, new Point(40, 72), FpsUi.Dim, TextFormatFlags.NoPadding);
 
                 int cols = 6, cellW = 150, cellH = 150, x0 = 34, y0 = 112, gap = 8;
-                for (int i = 0; i < _badges.Length; i++)
+                for (int i = 0; i < BadgeCatalog.All.Length; i++)
                 {
                     int col = i % cols, row = i / cols;
                     int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
-                    DrawBadgeCell(g, cx, cy, cellW, _badges[i], IsUnlocked(_badges[i]), true);
+                    DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), true);
                 }
                 TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
                     new Rectangle(0, H - 30, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
@@ -147,7 +114,7 @@ namespace BTOptimizer
             return bmp;
         }
 
-        internal void SeedDemoStats() { _s = new Stats { OptiActive = 44, OptiTotal = 173, GamesDet = 3, Health = 78, Checkups = 6, Boost = true }; }
+        internal void SeedDemoStats() { _s = new BadgeCatalog.Stats { OptiActive = 44, OptiTotal = 173, GamesDet = 3, Health = 78, Checkups = 6, Boost = true }; }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -156,16 +123,16 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int unlocked = Unlocked();
-            PaintTitle(g, "COLLECTION", "Débloque des badges en soignant ton PC — " + unlocked + " / " + _badges.Length + " obtenus. (Ils restent acquis.)");
+            PaintTitle(g, "COLLECTION", "Débloque des badges en soignant ton PC — " + unlocked + " / " + BadgeCatalog.All.Length + " obtenus. (Ils restent acquis.)");
 
             int L = 34, top = 100;
             // Vitrine (gauche) : le badge le plus élevé débloqué.
             int vw = 280, vh = 300;
             FpsUi.PaintCard(g, new Rectangle(L, top, vw, vh), FpsUi.Card, FpsUi.Border, 14f);
-            Badge best = null;
-            for (int i = _badges.Length - 1; i >= 0; i--) if (IsUnlocked(_badges[i])) { best = _badges[i]; break; }
+            BadgeCatalog.Badge best = null;
+            for (int i = BadgeCatalog.All.Length - 1; i >= 0; i--) if (IsUnlocked(BadgeCatalog.All[i])) { best = BadgeCatalog.All[i]; break; }
             DrawBadgeShape(g, L + (vw - 150) / 2, top + 40, 150, best != null ? best.Glyph : "🩺",
-                best != null, best != null ? TierColor[best.Tier - 1] : FpsUi.Dim2, best != null ? best.Shape : 0, true);
+                best != null, best != null ? BadgeCatalog.TierColor[best.Tier - 1] : FpsUi.Dim2, best != null ? best.Shape : 0, true);
             string vname = _s == null ? "Analyse en cours…" : best != null ? best.Name : "Aucun badge";
             string vsub = _s == null ? "" : best != null ? "Ton badge le plus élevé" : "Applique une optimisation pour commencer";
             TextRenderer.DrawText(g, vname, FpsUi.H2, new Rectangle(L, top + vh - 66, vw, 26), best != null ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
@@ -179,20 +146,20 @@ namespace BTOptimizer
 
             int cellW = 150, cellH = 132, gap = 14, gy = top + 26;
             int cols = Math.Max(1, (right - gx + gap) / (cellW + gap));
-            for (int i = 0; i < _badges.Length; i++)
+            for (int i = 0; i < BadgeCatalog.All.Length; i++)
             {
                 int col = i % cols, row = i / cols;
                 int cx = gx + col * (cellW + gap), cy = gy + row * (cellH + gap);
                 if (cx + cellW > right + 2) continue;
-                DrawBadgeCell(g, cx, cy, cellW, _badges[i], IsUnlocked(_badges[i]), false);
+                DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), false);
             }
         }
 
         // Carte d'un badge : cadre + forme/glyphe + nom + critère.
-        private void DrawBadgeCell(Graphics g, int cx, int cy, int cellW, Badge b, bool ok, bool onImage)
+        private void DrawBadgeCell(Graphics g, int cx, int cy, int cellW, BadgeCatalog.Badge b, bool ok, bool onImage)
         {
             int cellH = onImage ? 138 : 132;
-            Color tier = TierColor[b.Tier - 1];
+            Color tier = BadgeCatalog.TierColor[b.Tier - 1];
             var cell = new Rectangle(cx, cy, cellW, cellH);
             FpsUi.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
             DrawBadgeShape(g, cx + (cellW - 58) / 2, cy + 12, 58, b.Glyph, ok, tier, b.Shape, false);

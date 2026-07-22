@@ -51,6 +51,7 @@ namespace BTOptimizer
 
             BuildTray();
             Resize += OnResizeShell;
+            BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
 
@@ -188,6 +189,12 @@ namespace BTOptimizer
             System.Threading.Tasks.Task.Run(() => AppAutostart.RestartExplorer());
         }
 
+        // Notification (thread de fond possible) : marshale vers l'UI et affiche le toast.
+        private void OnNewBadge(string id)
+        {
+            try { BeginInvoke((Action)(() => { try { BadgeToastManager.Show(BadgeCatalog.ById(id)); } catch { } })); } catch { }
+        }
+
         private void ToggleOverlay()
         {
             try
@@ -223,6 +230,7 @@ namespace BTOptimizer
 
         private void Cleanup()
         {
+            try { BadgeStore.OnNewBadge -= OnNewBadge; } catch { }
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
             try { Native.SetTimer1ms(false); } catch { }

@@ -16,6 +16,10 @@ namespace BTOptimizer
         public static int Checkups { get; private set; }
         public static bool BoostUsed { get; private set; }
 
+        /// <summary>Déclenché quand un badge est gagné pour la PREMIÈRE fois (id du badge). Peut
+        /// être levé depuis un thread de fond : les abonnés doivent marshaler vers l'UI.</summary>
+        public static event Action<string> OnNewBadge;
+
         private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-badges.txt"); } }
 
         static BadgeStore() { Load(); }
@@ -60,7 +64,10 @@ namespace BTOptimizer
         /// <summary>Enregistre un badge comme gagné. Renvoie true si c'est un NOUVEAU badge.</summary>
         public static bool MarkEarned(string id)
         {
-            lock (_lock) { bool added = _earned.Add(id); if (added) Save(); return added; }
+            bool added;
+            lock (_lock) { added = _earned.Add(id); if (added) Save(); }
+            if (added) { var h = OnNewBadge; if (h != null) try { h(id); } catch { } }
+            return added;
         }
     }
 }

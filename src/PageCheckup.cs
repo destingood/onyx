@@ -127,7 +127,7 @@ namespace BTOptimizer
                 {
                     try { report.AppendLine("• " + RunOne(id)); } catch (Exception ex) { report.AppendLine("• Erreur : " + ex.Message); }
                 }
-                try { BadgeStore.IncCheckups(1); } catch { }   // débloque les badges Check Up (Infirmier / Routine)
+                try { BadgeStore.IncCheckups(1); BadgeCatalog.EvaluateEvents(); } catch { }   // débloque Infirmier / Routine (+ toast)
                 try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "▶   LANCER LE CHECK UP+";
                     MessageBox.Show(FindForm(), report.ToString(), "Check Up+ terminé", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
                 catch { }

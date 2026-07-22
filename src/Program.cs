@@ -133,6 +133,29 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_TOAST=<fichier> : rend un toast de badge (démo) et sort.
+            string toastOut = Environment.GetEnvironmentVariable("BT_TOAST");
+            if (!string.IsNullOrEmpty(toastOut))
+            {
+                using (var t = new BadgeToast(BadgeCatalog.ById("chirurgien")))
+                {
+                    t.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    t.Location = new System.Drawing.Point(-5000, -5000);
+                    t.Show();
+                    t.Refresh();
+                    Pump(600);
+                    t.Refresh();
+                    using (var bmp = new System.Drawing.Bitmap(t.Width, t.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(t.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(toastOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("TOAST écrit : " + toastOut);
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
