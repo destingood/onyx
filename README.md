@@ -86,6 +86,36 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 🕹️ Mes jeux (boost par jeu) + interrupteurs pilule + exclusions du mode jeu (v14.30)
+
+La dernière grande brique de parité : **l'écran « jeux » du concurrent**, et les finitions
+qui restaient — le tout commercialisable, 100 % réversible, zéro actif tiers.
+
+- **🕹️ Mes jeux** (☰ → Jeux & écran, en tête) : chaque jeu détecté (ou ajouté par son
+  dossier) a un **niveau de boost** — *Aucun* / *Léger* (priorité CPU élevée pour les
+  exécutables du jeu, IFEO officiel) / *Complet* (priorité + **exclusion antivirus** du
+  dossier, API Defender). ♥ épingle en tête, ✕ retire un jeu ajouté (boost annulé
+  d'abord), « Tout réinitialiser » retire tout (parité `reset_games_opti`). Tuiles à
+  **initiale néon** (pas de jaquettes distantes : aucun service tiers), persistance
+  `bt-games.txt`, détection en fond.
+- **🎚 Interrupteurs pilule néon** : le mode SIMPLE troque ses cases à cocher contre de
+  vrais **toggles** custom (`NeonSwitch` : piste sombre/néon, bille noire sur ON — la
+  charte), libellé cliquable, clavier (Espace/Entrée) et focus gérés.
+- **⚙️ Mode jeu : services coupés & exclusions** : l'écran qui montre ce que le MODE JEU
+  suspend (SysMain, WSearch, Spooler…) avec un interrupteur par service — OFF = jamais
+  touché (tu imprimes en jouant ? exclus Spooler). Persisté, appliqué à la prochaine
+  activation (parité `game_mode_list_affected` / `set_exclusion`).
+- **🚀 Démarrage & fermeture façon app commerciale** : « Lancer au démarrage de Windows
+  (réduit) » (clé Run utilisateur + argument `tray` → démarre en zone de notification) et
+  « La croix ✕ réduit en zone de notification » (opt-in ; Quitter via l'icône). Parité
+  `enable_autostart` / `minimizeToTray`.
+
+Vérification : build Release **0 erreur**. Note de transparence : l'exécution du harnais
+BTTEST a été **bloquée cette fois par Smart App Control** (politique machine sur les
+binaires fraîchement compilés non signés — rien à voir avec le code) ; les moteurs
+réutilisés (IFEO, Defender, GameBoost, GameScan) étaient déjà validés par les harnais
+des versions précédentes.
+
 ### 🖤 Habillage noir/néon intégral, façon FPS doctor (v14.29)
 
 Toute l'app passe à la **charte visuelle du concurrent** — les couleurs exactes extraites du

@@ -1202,6 +1202,29 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Lancement de l'application au démarrage de Windows (HKCU Run).
+        //  L'argument « tray » (sans tiret : pas capté par le mode CLI) fait
+        //  démarrer la fenêtre réduite en zone de notification.
+        // ------------------------------------------------------------------
+        private const string AppRunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string AppRunValue = "DesTinGOOD";
+
+        public static bool AppAutostartEnabled()
+        {
+            string v = GetUser(AppRunKey, AppRunValue) as string;
+            return !string.IsNullOrEmpty(v);
+        }
+
+        public static void SetAppAutostart(bool enable)
+        {
+            if (enable)
+                SetUser(AppRunKey, AppRunValue,
+                    "\"" + Environment.ProcessPath + "\" tray", RegistryValueKind.String);
+            else
+                DelUser(AppRunKey, AppRunValue);
+        }
+
+        // ------------------------------------------------------------------
         //  Exclusions Windows Defender (API WMI officielle, nécessite l'élévation)
         // ------------------------------------------------------------------
         private static ManagementScope DefenderScope()

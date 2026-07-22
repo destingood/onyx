@@ -19,7 +19,8 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private readonly Func<bool> _requirePro;
         private readonly List<Tweak> _items;   // l'essentiel : Recommandé ∪ eSport
-        private readonly Dictionary<string, CheckBox> _sw = new Dictionary<string, CheckBox>();
+        private readonly Dictionary<string, NeonSwitch> _sw = new Dictionary<string, NeonSwitch>();
+        private readonly Dictionary<string, Label> _lbl = new Dictionary<string, Label>();
 
         private Button _btnLight, _btnFull, _btnRevertAll, _btnRescan;
         private Panel _panel;
@@ -80,23 +81,34 @@ namespace BTOptimizer
 
                 var gb = new GroupBox();
                 gb.Text = category;
-                gb.SetBounds(8, y, 688, 30 + items.Count * 24);
+                gb.SetBounds(8, y, 688, 32 + items.Count * 26);
                 gb.Font = new Font("Segoe UI Semibold", 9f);
                 gb.ForeColor = Color.FromArgb(50, 70, 130);
 
                 int i = 0;
                 foreach (Tweak t in items)
                 {
-                    var cb = new CheckBox();
-                    cb.Text = t.Name + (t.Reboot ? "  (redémarrage requis)" : "");
-                    cb.SetBounds(12, 20 + i * 24, 656, 22);
-                    cb.Font = new Font("Segoe UI", 9f);
-                    cb.ForeColor = SystemColors.ControlText;
-                    cb.Tag = t;
-                    cb.Click += OnSwitchClicked;   // Click (pas CheckedChanged) : les mises à jour
-                    tip.SetToolTip(cb, t.Desc);    // programmatiques ne déclenchent donc rien.
-                    _sw[t.Id] = cb;
-                    gb.Controls.Add(cb);
+                    // Interrupteur pilule néon + libellé cliquable (façon FPS doctor).
+                    var sw = new NeonSwitch();
+                    sw.SetBounds(12, 22 + i * 26, 46, 22);
+                    sw.Tag = t;
+                    sw.CheckedChanged += OnSwitchToggled;   // geste utilisateur uniquement
+                    _sw[t.Id] = sw;
+
+                    var lbl = new Label();
+                    lbl.Text = t.Name + (t.Reboot ? "  (redémarrage requis)" : "");
+                    lbl.SetBounds(66, 24 + i * 26, 606, 20);
+                    lbl.Font = new Font("Segoe UI", 9f);
+                    lbl.ForeColor = SystemColors.ControlText;
+                    lbl.Cursor = Cursors.Hand;
+                    NeonSwitch captured = sw;
+                    lbl.Click += (s, e) => { if (captured.Enabled) captured.Toggle(); };
+                    tip.SetToolTip(lbl, t.Desc);
+                    tip.SetToolTip(sw, t.Desc);
+                    _lbl[t.Id] = lbl;
+
+                    gb.Controls.Add(sw);
+                    gb.Controls.Add(lbl);
                     i++;
                 }
                 _panel.Controls.Add(gb);
@@ -112,12 +124,12 @@ namespace BTOptimizer
         }
 
         // --- Interrupteur : application / rétablissement immédiat -------------
-        private void OnSwitchClicked(object sender, EventArgs e)
+        private void OnSwitchToggled(object sender, EventArgs e)
         {
-            var cb = (CheckBox)sender;
-            var t = (Tweak)cb.Tag;
-            if (_busy) { cb.Checked = !cb.Checked; return; }   // ceinture (le panel est déjà désactivé)
-            bool turnOn = cb.Checked;                          // état APRÈS le clic = geste demandé
+            var sw = (NeonSwitch)sender;
+            var t = (Tweak)sw.Tag;
+            if (_busy) { sw.SetCheckedSilent(!sw.Checked); return; }   // ceinture (le panel est déjà gelé)
+            bool turnOn = sw.Checked;                                  // état APRÈS le geste
             RunOperation(new List<Tweak> { t }, turnOn, false,
                 (turnOn ? "Application : " : "Rétablissement : ") + t.Name);
         }
@@ -222,10 +234,12 @@ namespace BTOptimizer
 
         private void SetSwitch(string id, bool on)
         {
-            CheckBox cb;
-            if (!_sw.TryGetValue(id, out cb)) return;
-            cb.Checked = on;
-            cb.ForeColor = on ? OnColor : SystemColors.ControlText;
+            NeonSwitch sw;
+            if (!_sw.TryGetValue(id, out sw)) return;
+            sw.SetCheckedSilent(on);
+            Label lbl;
+            if (_lbl.TryGetValue(id, out lbl))
+                lbl.ForeColor = on ? OnColor : Theme.InkColor;
         }
 
         private void SetBusyUi(bool busy)

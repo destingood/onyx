@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace BTOptimizer
 {
@@ -21,6 +22,38 @@ namespace BTOptimizer
             "SysMain", "WSearch", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice"
         };
 
+        /// <summary>Ce que le mode jeu PEUT suspendre (pour l'écran « services coupés & exclusions »).</summary>
+        public static string[] AffectedServices
+        {
+            get { return (string[])Suspendable.Clone(); }
+        }
+
+        // --- Exclusions : services que l'utilisateur interdit de suspendre ------
+        private static string ExclusionsPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gamemode-excl.txt"); }
+        }
+
+        /// <summary>Services exclus de la suspension (choix utilisateur, persisté).</summary>
+        public static HashSet<string> LoadExclusions()
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (File.Exists(ExclusionsPath))
+                    foreach (string line in File.ReadAllLines(ExclusionsPath))
+                        if (line.Trim().Length > 0) set.Add(line.Trim());
+            }
+            catch { }
+            return set;
+        }
+
+        public static void SaveExclusions(IEnumerable<string> excluded)
+        {
+            try { File.WriteAllLines(ExclusionsPath, excluded); }
+            catch { }
+        }
+
         public static void Activate(Action<string, int> log)
         {
             if (IsActive) return;
@@ -30,9 +63,11 @@ namespace BTOptimizer
 
             long freed = Sys.CleanMemory(log);
 
+            HashSet<string> excluded = LoadExclusions();
             _stopped.Clear();
             foreach (string svc in Suspendable)
             {
+                if (excluded.Contains(svc)) continue;   // interdit par l'utilisateur
                 // Chaque service isolé : un service récalcitrant ne doit NI faire échouer le mode
                 // jeu, NI laisser les autres à moitié suspendus. Un service n'est enregistré dans
                 // _stopped que si son arrêt a réussi (sinon on n'essaiera pas de le relancer).

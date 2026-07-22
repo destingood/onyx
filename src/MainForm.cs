@@ -223,6 +223,8 @@ namespace BTOptimizer
 
             // --- 🎮 Jeux & écran ---
             var mGame = group("🎮  Jeux & écran");
+            mGame.DropDownItems.Add("🕹️ Mes jeux (boost par jeu : léger / complet)...", null, open(() => new GamesForm(Log)));
+            mGame.DropDownItems.Add("⚙️ Mode jeu : services coupés & exclusions...", null, open(() => new BoostConfigForm(Log)));
             mGame.DropDownItems.Add("📦 Bibliothèques de jeu manquantes & applis...", null, open(() => new LibsForm(Log)));
             mGame.DropDownItems.Add("🎮 Priorité CPU par jeu...", null, open(() => new GameProfileForm(Log)));
             mGame.DropDownItems.Add("🔐 Exclusions antivirus pour les jeux...", null, open(() => new DefenderForm(Log)));
@@ -284,6 +286,32 @@ namespace BTOptimizer
             });
             _menu.Items.Add(_miPro);
             _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
+            var miAutostart = new ToolStripMenuItem("Lancer au démarrage de Windows (réduit)");
+            miAutostart.Checked = Sys.AppAutostartEnabled();
+            miAutostart.Click += (s, e) =>
+            {
+                bool want = !miAutostart.Checked;
+                try
+                {
+                    Sys.SetAppAutostart(want);
+                    miAutostart.Checked = want;
+                    Log(want ? "DesTinGOOD se lancera au démarrage de Windows, réduit en zone de notification."
+                             : "Lancement au démarrage de Windows désactivé.", 0);
+                }
+                catch (Exception ex) { Log("Démarrage automatique : " + ex.Message, 2); }
+            };
+            _menu.Items.Add(miAutostart);
+            var miCloseTray = new ToolStripMenuItem("La croix ✕ réduit en zone de notification (au lieu de fermer)");
+            miCloseTray.Checked = _closeToTray;
+            miCloseTray.Click += (s, e) =>
+            {
+                _closeToTray = !_closeToTray;
+                miCloseTray.Checked = _closeToTray;
+                SaveCloseToTray();
+                Log(_closeToTray ? "La croix ✕ réduira l'app en zone de notification (Quitter : clic droit sur l'icône)."
+                                 : "La croix ✕ ferme l'application.", 0);
+            };
+            _menu.Items.Add(miCloseTray);
             var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
             {
                 Theme.Toggle();
@@ -537,8 +565,12 @@ namespace BTOptimizer
             trayMenu.Items.Add("▶ MODE JEU on/off   (Ctrl+Alt+G)", null, (s, e) => OnBoostToggle(s, e));
             trayMenu.Items.Add("Timer 1 ms on/off", null, (s, e) => _chkTimer.Checked = !_chkTimer.Checked);
             trayMenu.Items.Add(new ToolStripSeparator());
-            trayMenu.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
+            trayMenu.Items.Add("Quitter", null, (s, e) => { _reallyQuit = true; _tray.Visible = false; Close(); });
             _tray.ContextMenuStrip = trayMenu;
+
+            // Lancé avec l'argument « tray » (démarrage de Windows) : démarre réduit.
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "tray") >= 0)
+                Shown += (s, e) => { WindowState = FormWindowState.Minimized; };
 
             // Toutes les 2 s : résolution timer réelle + détection jeu plein écran (mode AUTO).
             _uiTimer = new Timer();
@@ -557,8 +589,31 @@ namespace BTOptimizer
             });
         }
 
+        // --- Fermer = réduire (opt-in) + démarrage réduit (argument « tray ») ---
+        private bool _closeToTray = System.IO.File.Exists(
+            System.IO.Path.Combine(Application.StartupPath, "bt-closetray.txt"));
+        private bool _reallyQuit;
+
+        private void SaveCloseToTray()
+        {
+            string p = System.IO.Path.Combine(Application.StartupPath, "bt-closetray.txt");
+            try
+            {
+                if (_closeToTray) System.IO.File.WriteAllText(p, "1");
+                else if (System.IO.File.Exists(p)) System.IO.File.Delete(p);
+            }
+            catch { }
+        }
+
         private void OnFormClosingCleanup(object sender, FormClosingEventArgs e)
         {
+            // La croix ✕ range l'app en zone de notification (opt-in) au lieu de quitter.
+            if (_closeToTray && !_reallyQuit && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                WindowState = FormWindowState.Minimized;   // OnResizeToTray cache + icône tray
+                return;
+            }
             // Arrêt du timer AVANT tout : plus aucun tick (auto-boost / gardien) pendant la fermeture.
             try { if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; } } catch { }
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
