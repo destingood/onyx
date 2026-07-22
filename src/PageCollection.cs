@@ -82,35 +82,8 @@ namespace BTOptimizer
             string path = null, err = null;
             try
             {
-                const int W = 940, H = 460;
-                using (var bmp = new Bitmap(W, H))
+                using (var bmp = RenderShowcase())
                 {
-                    using (var g = Graphics.FromImage(bmp))
-                    {
-                        g.SmoothingMode = SmoothingMode.AntiAlias;
-                        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                        using (var bg = new SolidBrush(FpsUi.BgMain)) g.FillRectangle(bg, 0, 0, W, H);
-                        using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
-
-                        TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 28), FpsUi.Ink, TextFormatFlags.NoPadding);
-                        int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
-                        TextRenderer.DrawText(g, "DesTinGOOD", FpsUi.H1, new Point(38 + wt, 28), FpsUi.Neon, TextFormatFlags.NoPadding);
-                        TextRenderer.DrawText(g, Unlocked() + " / " + _badges.Length + " badges débloqués   ·   santé du PC " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x) détecté(s)",
-                            FpsUi.Body, new Point(40, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
-
-                        int cols = 5, cellW = 168, cellH = 150, x0 = 40, y0 = 116, gap = 8;
-                        for (int i = 0; i < _badges.Length; i++)
-                        {
-                            int col = i % cols, row = i / cols;
-                            int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
-                            bool ok = _badges[i].Ok(_s);
-                            DrawBadgeGlyph(g, cx + (cellW - 96) / 2, cy, 96, _badges[i].Glyph, ok, true);
-                            TextRenderer.DrawText(g, _badges[i].Name, FpsUi.H3, new Rectangle(cx, cy + 100, cellW, 20),
-                                ok ? FpsUi.Ink : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
-                        }
-                        TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
-                            new Rectangle(0, H - 32, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
-                    }
                     string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                     path = System.IO.Path.Combine(dir, "DesTinGOOD-collection.png");
                     bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
@@ -124,6 +97,43 @@ namespace BTOptimizer
             }
             else MessageBox.Show(FindForm(), "Export impossible :\n\n" + err, "Collection", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+
+        /// <summary>Compose l'image de la collection (badges + compteur + branding).</summary>
+        internal Bitmap RenderShowcase()
+        {
+            const int W = 940, H = 460;
+            var bmp = new Bitmap(W, H);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                using (var bg = new SolidBrush(FpsUi.BgMain)) g.FillRectangle(bg, 0, 0, W, H);
+                using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
+
+                TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 28), FpsUi.Ink, TextFormatFlags.NoPadding);
+                int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
+                TextRenderer.DrawText(g, "DesTinGOOD", FpsUi.H1, new Point(38 + wt, 28), FpsUi.Neon, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, Unlocked() + " / " + _badges.Length + " badges débloqués   ·   santé du PC " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x) détecté(s)",
+                    FpsUi.Body, new Point(40, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
+
+                int cols = 5, cellW = 168, cellH = 150, x0 = 40, y0 = 116, gap = 8;
+                for (int i = 0; i < _badges.Length; i++)
+                {
+                    int col = i % cols, row = i / cols;
+                    int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
+                    bool ok = _badges[i].Ok(_s);
+                    DrawBadgeGlyph(g, cx + (cellW - 96) / 2, cy, 96, _badges[i].Glyph, ok, true);
+                    TextRenderer.DrawText(g, _badges[i].Name, FpsUi.H3, new Rectangle(cx, cy + 100, cellW, 20),
+                        ok ? FpsUi.Ink : FpsUi.Dim2, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);
+                }
+                TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
+                    new Rectangle(0, H - 32, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
+            }
+            return bmp;
+        }
+
+        /// <summary>Alimente des stats de démo (inspection visuelle de l'image de collection).</summary>
+        internal void SeedDemoStats() { _s = new Stats { OptiActive = 44, OptiTotal = 173, GamesDet = 3, Health = 78, Boost = true }; }
 
         protected override void OnPaint(PaintEventArgs e)
         {

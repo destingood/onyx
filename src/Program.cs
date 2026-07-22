@@ -118,6 +118,21 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_SHOWCASE=<fichier> : rend l'image de collection (démo) et sort.
+            string scOut = Environment.GetEnvironmentVariable("BT_SHOWCASE");
+            if (!string.IsNullOrEmpty(scOut))
+            {
+                using (var dash = new DashboardForm())
+                using (var pc = new PageCollection(dash))
+                {
+                    pc.SeedDemoStats();
+                    using (var bmp = pc.RenderShowcase())
+                        bmp.Save(scOut, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Console.WriteLine("SHOWCASE écrit : " + scOut);
+                Environment.Exit(0);
+            }
+
             // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
