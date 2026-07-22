@@ -13,9 +13,9 @@ TikTok / Reddit / X / Discord
 Landing (marketing/landing.html, hébergée gratuitement)
         │                         │
         ▼                         ▼
-Gumroad « gratuit » (0 €)   Gumroad « pro » (19 €)
-installe l'app, capture     paiement → tu génères la clé
-l'email                     (seller/) → email au client
+Gumroad « gratuit » (0 €)   Gumroad « annuel » (49 €/an) · « pro » (127 € à vie)
+installe l'app, capture     paiement → tu génères la clé (seller/, avec ou sans
+l'email                     durée) → email au client
         │                         ▲
         ▼                         │
 Dans l'app : fonction Pro cliquée → fenêtre Pro
@@ -25,7 +25,9 @@ Dans l'app : fonction Pro cliquée → fenêtre Pro
 Les adresses sont déjà câblées dans la landing **et** dans l'app (`LicenseKeyForm.BuyUrl`) :
 
 - Produit gratuit : `https://destingood.gumroad.com/l/gratuit`
-- Produit Pro : `https://destingood.gumroad.com/l/pro`
+- Abonnement annuel (49 €/an) : `https://destingood.gumroad.com/l/annuel`
+- Licence à vie (127 €) : `https://destingood.gumroad.com/l/pro`
+- Dans l'app, le lien d'achat ouvre la boutique entière : `https://destingood.gumroad.com`
 
 ⚠️ Elles supposent le **nom d'utilisateur Gumroad `destingood`** et ces **permaliens exacts**.
 Si tu choisis autre chose, dis-le-moi : je mets à jour le code et la landing (2 minutes).
@@ -50,13 +52,16 @@ Si tu choisis autre chose, dis-le-moi : je mets à jour le code et la landing (2
 
 Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
-| | Permalien | Prix | Contenu |
-|---|---|---|---|
-| DesTinGOOD (gratuit) | `gratuit` | 0 € (+ « pay what you want » activé) | Setup autonome (~37 Mo) + setup léger (~6 Mo) |
-| DesTinGOOD Pro — licence à vie | `pro` | 19 € | Mêmes fichiers + note « clé envoyée par email sous 24 h » |
+| | Permalien | Prix | Type Gumroad | Contenu |
+|---|---|---|---|---|
+| DesTinGOOD (gratuit) | `gratuit` | 0 € (+ « pay what you want ») | Produit | Setup autonome (~37 Mo) + setup léger (~6 Mo) |
+| DesTinGOOD Pro — Annuel | `annuel` | 49 €/an | **Membership** (facturation récurrente annuelle) | Mêmes fichiers + « clé envoyée sous 24 h, renouvelée à chaque échéance » |
+| DesTinGOOD Pro — À Vie | `pro` | 127 € | Produit | Mêmes fichiers + « clé à vie envoyée sous 24 h » |
 
-- Crée un **code promo `LANCEMENT`** (-30 %, valable 7 jours) plutôt que de baisser le prix :
-  l'urgence est réelle et le prix affiché reste 19 €.
+- Crée un **code promo `LANCEMENT`** (−30 %, valable 7 jours) plutôt que de baisser les
+  prix : annuel à 34,30 €, à vie à 88,90 €, et les prix affichés restent 49 / 127 €.
+  À ces tarifs alignés sur le marché, sans preuve sociale au début, ce code est ton
+  vrai déclencheur des premières ventes.
 - Le produit gratuit n'est pas un détail : chaque téléchargement te donne un **email** à qui
   annoncer les mises à jour (et proposer Pro).
 
@@ -66,7 +71,9 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 2. `Build-Standalone.bat` → puis compile `installer\BTOptimizer.iss` (Inno Setup / `ISCC.exe`).
 3. Récupère le setup dans `installer\Output\` et uploade-le sur les **deux** produits Gumroad.
 4. Refais un build léger (`Build-Installer.bat`) si tu veux aussi offrir la version ~6 Mo.
-5. Teste : édition gratuite (fonctions Pro bien verrouillées), essai 7 jours, une clé de test.
+5. Teste : édition gratuite (fonctions Pro bien verrouillées), essai 7 jours, une clé à
+   vie **et** une clé `365` (vérifie l'affichage « jusqu'au … » et le refus d'une clé
+   expirée, ex. générée avec `1` jour la veille).
 
 ## Étape 4 — Livrer une clé à chaque vente (2 min/vente)
 
@@ -74,10 +81,14 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
 ```
 cd seller
-dotnet run -- "Prénom Nom de l'acheteur"
+dotnet run -- "Prénom Nom"          # licence À VIE (produit « pro », 127 €)
+dotnet run -- "Prénom Nom" 365      # ABONNEMENT annuel (produit « annuel », 49 €/an)
 ```
 
 → réponds à l'acheteur avec la clé (modèle d'email dans `posts-lancement.md`).
+**Renouvellements** : à chaque échéance annuelle (email Gumroad « subscription renewed »),
+génère une nouvelle clé `365` et envoie-la — l'ancienne expire toute seule, l'app affiche
+un message clair et retombe en édition gratuite si le client ne renouvelle pas.
 **`seller/private.xml` est ton coffre-fort** : sauvegarde-le (clé USB + cloud chiffré) ;
 s'il fuite, n'importe qui fabrique des clés ; si tu le perds, tu ne peux plus en émettre.
 Quand les ventes deviennent régulières, reviens me voir : j'automatise la génération.
@@ -116,7 +127,7 @@ Relevé sur fpsdoctor.com le 22/07/2026 (à re-vérifier avant d'utiliser les ch
 | | FPSDoctor | DesTinGOOD |
 |---|---|---|
 | Gratuit | 13 optimisations, analyse de base | **173 optimisations** + toute la suite de diagnostic |
-| Payant | 59 €/an (abonnement) · 150 € à vie | **19 € à vie**, pas d'abonnement |
+| Payant | 59 €/an (abonnement) · 150 € à vie | **49 €/an · 127 € à vie** (mêmes paliers, −15 %) |
 | Preuves | Témoignages « +380 FPS », « 3x stabilité garantie » | **Mesure avant/après sur TON PC** (FPS, latence, score /100) |
 | Anticheat / réversibilité | non mentionnés sur le site | cœur du produit (zéro injection, tout réversible, sauvegardes) |
 
@@ -131,13 +142,19 @@ Ce que ça t'apprend :
   Eux ne parlent ni d'anticheat ni de retour arrière ; chez toi c'est structurel.
   Ne les attaque jamais nommément en public — compare de façon générique et factuelle
   (« les optimiseurs du marché… »), et laisse les joueurs faire le rapprochement.
-- **Prix** : garde 19 € (prix de lancement, ~8× sous leur accès à vie). Quand tu dépasseras
-  ~30 ventes/mois, tu pourras tester 29 € (toujours 5× moins cher) — ta décision.
+- **Prix (ta décision, appliquée)** : alignement sur leurs paliers à **−15 %** — 49 €/an
+  vs 59, 127 € à vie vs 150. L'acheteur qui compare voit « pareil, moins cher — et
+  l'édition gratuite est 13× plus généreuse ». Contrepartie honnête : à prix quasi égal,
+  leur preuve sociale (7 000 joueurs) pèse lourd ; ton code `LANCEMENT` (−30 %) et tes
+  mesures avant/après publiées sont ce qui compense au démarrage.
 
 ## Attentes réalistes (à relire les jours de doute)
 
-- Semaine 1 : 0 à 5 ventes. Mois 1 : 10 à 50 ventes **si** la distribution est tenue.
-- Chaque vente : 19 € − ~10 % Gumroad ≈ 17 €, puis ~21-25 % de cotisations → **~13 € net**.
+- Semaine 1 : 0 à 3 ventes. Mois 1 : 5 à 30 ventes **si** la distribution est tenue — un
+  prix aligné marché convertit moins vite qu'un prix cassé, mais rapporte 6 à 7× par vente.
+- À vie : 127 € − ~10 % Gumroad ≈ 114 €, puis ~21-25 % de cotisations → **~89 € net**.
+- Annuel : 49 € → **~34 € net par client et par an**, qui se répète tant qu'il renouvelle —
+  c'est cette ligne qui construit le revenu mensuel que tu cherches.
 - Le produit est bon et le funnel est branché ; la seule variable, c'est le nombre de
   personnes qui voient l'app chaque jour. La régularité bat l'intensité.
 

@@ -20,9 +20,15 @@ namespace BTOptimizer
             "<RSAKeyValue><Modulus>wb0N0QieE+SPCM3Iu0xDQFG3TjN9dHuv7a4FIDknN5FMr9sSQ6hk8wEcODgtor22h9Go91vTzhs/FFUccSIwGrKlYqHvirMNiIaGXzEo688WBbLhLxegrWrf9uwN8I679rZK7JmjBAowawEjcV3SIGrapSeBQP2BoKWho2/6x6E3VWAXUSjgrxG2V//6QDGBFk9fuMTLrvAlMd6EyiGSTA0KfPrzx4vSm1pvCtvQAsHVnDC9aEm2Q1SWVjWbzu9h8epCt9Q6EiRiqw1NCJD0t6dOymsAqoyCcoZzbh9yNZyncH1hZ1HQUmqAGbnY0/KSZ/jzcRRcysYh5mEANZWktQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         private const char Sep = (char)0x1F; // séparateur d'unité entre le nom et la signature
+        private const char DateSep = (char)0x1E; // sépare, DANS la partie signée, le nom de la date d'expiration
 
         public static bool IsPro { get; private set; }
         public static string Licensee { get; private set; }
+        /// <summary>Fin de validité de la licence active (abonnement annuel) ; null = licence à vie.</summary>
+        public static DateTime? Expiry { get; private set; }
+        /// <summary>Raison lisible du dernier refus d'activation ("" si rien de plus utile que « clé invalide »).</summary>
+        public static string ActivateError { get; private set; }
+        private static DateTime? _expiredOn; // clé (stockée ou collée) refusée car expirée — pour Status()
 
         private static string StorePath
         {
@@ -55,6 +61,7 @@ namespace BTOptimizer
         static License()
         {
             Licensee = "";
+            ActivateError = "";
             try { if (File.Exists(StorePath)) Activate(File.ReadAllText(StorePath).Trim(), false); }
             catch { }
             LoadTrial();
@@ -100,9 +107,15 @@ namespace BTOptimizer
             return true;
         }
 
-        /// <summary>Valide une clé ; si valide, passe en Pro (et l'enregistre si persist=true).</summary>
+        /// <summary>Valide une clé ; si valide, passe en Pro (et l'enregistre si persist=true).
+        /// Deux formats de partie signée : « Nom » (licence à vie) ou « Nom␞AAAA-MM-JJ »
+        /// (abonnement, valable jusqu'à cette date incluse). La date est DANS la chaîne
+        /// signée RSA : elle est infalsifiable, et les clés d'avant l'abonnement (sans
+        /// date) restent valides à vie. L'expiration est contrôlée au démarrage et à
+        /// l'activation — suffisant pour une app de bureau relancée régulièrement.</summary>
         public static bool Activate(string token, bool persist)
         {
+            ActivateError = "";
             if (string.IsNullOrWhiteSpace(token)) return false;
             try
             {
@@ -110,17 +123,38 @@ namespace BTOptimizer
                 string s = Encoding.UTF8.GetString(raw);
                 int i = s.IndexOf(Sep);
                 if (i <= 0) return false;
-                string name = s.Substring(0, i);
+                string signed = s.Substring(0, i);
                 byte[] sig = Convert.FromBase64String(s.Substring(i + 1));
                 using (RSA rsa = RSA.Create())
                 {
                     rsa.FromXmlString(PublicKeyXml);
-                    bool ok = rsa.VerifyData(Encoding.UTF8.GetBytes(name), sig,
+                    bool ok = rsa.VerifyData(Encoding.UTF8.GetBytes(signed), sig,
                         HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                     if (!ok) return false;
                 }
+                string name = signed;
+                DateTime? until = null;
+                int j = signed.IndexOf(DateSep);
+                if (j > 0)
+                {
+                    name = signed.Substring(0, j);
+                    DateTime d;
+                    if (!DateTime.TryParseExact(signed.Substring(j + 1), "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
+                        return false; // date illisible = clé refusée (jamais « à vie » par accident)
+                    if (DateTime.Now.Date > d.Date)
+                    {
+                        _expiredOn = d;
+                        ActivateError = "Clé expirée le " + d.ToString("dd/MM/yyyy")
+                            + " — renouvelle l'abonnement pour recevoir une nouvelle clé.";
+                        return false;
+                    }
+                    until = d;
+                }
                 IsPro = true;
                 Licensee = name;
+                Expiry = until;
+                _expiredOn = null;
                 if (persist) { try { File.WriteAllText(StorePath, token.Trim()); } catch { } }
                 return true;
             }
@@ -129,8 +163,11 @@ namespace BTOptimizer
 
         public static string Status()
         {
-            if (IsPro) return "Pro — licence : " + Licensee;
+            if (IsPro)
+                return "Pro — licence : " + Licensee
+                     + (Expiry.HasValue ? " (jusqu'au " + Expiry.Value.ToString("dd/MM/yyyy") + ")" : "");
             if (TrialActive) return "Essai Pro — " + TrialDaysLeft + " jour(s) restant(s)";
+            if (_expiredOn.HasValue) return "Édition gratuite (licence expirée le " + _expiredOn.Value.ToString("dd/MM/yyyy") + ")";
             if (TrialUsed) return "Édition gratuite (essai Pro expiré)";
             return "Édition gratuite";
         }

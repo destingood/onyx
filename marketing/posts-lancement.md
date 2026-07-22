@@ -25,13 +25,31 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 > signée — la signature de code est en cours) : « Informations complémentaires » →
 > « Exécuter quand même ».
 >
-> L'édition Pro (19 €, licence à vie) ajoute le bouton ⚡ TOUT OPTIMISER, les presets
-> eSport/Benchmark, le MODE JEU auto, l'overclock GPU, le gardien en fond et les
-> réglages réseau avancés — essai gratuit de 7 jours inclus dans l'app.
+> L'édition Pro (49 €/an, ou 127 € une seule fois — 15 % sous les prix du marché)
+> ajoute le bouton ⚡ TOUT OPTIMISER, les presets eSport/Benchmark, le MODE JEU auto,
+> l'overclock GPU, le gardien en fond et les réglages réseau avancés — essai gratuit
+> de 7 jours inclus dans l'app.
 
 **Fichiers** : `DesTinGOOD-Setup.exe` (autonome ~37 Mo) + version légère ~6 Mo.
 
-### Produit « pro » (permalien `pro`, 19 €)
+### Produit « annuel » (permalien `annuel`, 49 €/an — Membership Gumroad, facturation annuelle)
+
+**Titre** : DesTinGOOD Pro — abonnement annuel
+
+**Description** :
+
+> Tout DesTinGOOD, débloqué : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel), presets
+> eSport & Benchmark, MODE JEU automatique, overclock GPU + profil pilote NVIDIA,
+> gardien de démarrage & surveillance en fond, DNS rapide & réglages réseau avancés.
+>
+> 4,08 €/mois, facturé 49 € par an — 15 % sous les prix du marché.
+>
+> 📧 **Ta clé personnelle est envoyée par email sous 24 h** (signée à ton nom, valable
+> 1 an, renouvelée à chaque échéance tant que l'abonnement est actif). Colle-la dans
+> l'app : menu ☰ → « Activer la version Pro ». Essai gratuit de 7 jours inclus dans
+> l'app pour tester avant.
+
+### Produit « pro » (permalien `pro`, 127 €)
 
 **Titre** : DesTinGOOD Pro — licence à vie
 
@@ -56,7 +74,9 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 > Salut {Prénom},
 >
-> Merci pour ton achat ! Voici ta clé Pro, générée à ton nom :
+> Merci pour ton achat ! Voici ta clé Pro, générée à ton nom
+> ({licence à vie / valable jusqu'au JJ/MM/AAAA — je t'enverrai la nouvelle clé à
+> chaque renouvellement de ton abonnement}) :
 >
 > `{CLÉ}`
 >
@@ -92,8 +112,9 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > (forced HPET, disabled pagefile, TdrLevel=0…).
 >
 > The free edition includes all 173 tweaks + the full diagnostic suite. There's a paid
-> tier (one-time, no subscription) for the auto-tune stuff, that's how I'm trying to
-> make this sustainable.
+> tier for the auto-tune stuff (yearly, or a one-time lifetime license if you hate
+> subscriptions — priced ~15% under the market), that's how I'm trying to make this
+> sustainable.
 >
 > Windows will show "unknown publisher" — I'm a solo dev, code signing cert is on the
 > roadmap once this earns anything.
@@ -117,9 +138,10 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 >   pagefile désactivé, etc.)
 > - Bonus confort : viseur (crosshair) et filtre couleur/vibrance intégrés
 >
-> L'édition gratuite contient tout ça. Il y a une version Pro (19 €, à vie, pas
-> d'abonnement) pour l'auto-optimisation en 1 clic — c'est ce qui me permet de
-> continuer à le développer. Essai Pro 7 jours inclus.
+> L'édition gratuite contient tout ça. Il y a une version Pro (49 €/an, ou 127 € une
+> seule fois si tu détestes les abonnements — 15 % sous les prix du marché) pour
+> l'auto-optimisation en 1 clic — c'est ce qui me permet de continuer à le développer.
+> Essai Pro 7 jours inclus.
 >
 > LANDING_URL
 >
@@ -137,8 +159,8 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > pagefile coupé…). Ton PC n'a probablement pas besoin de plus de hacks, mais de moins.
 >
 > 3/ L'édition gratuite : 173 optimisations + toute la suite de diagnostic. La Pro
-> (19 €, à vie, pas d'abonnement) ajoute le 1-clic adapté au matériel. Essai 7 jours
-> dans l'app. LANDING_URL — retours bienvenus, je réponds à tout.
+> (49 €/an ou 127 € à vie — 15 % sous le marché) ajoute le 1-clic adapté au matériel.
+> Essai 7 jours dans l'app. LANDING_URL — retours bienvenus, je réponds à tout.
 
 ## 6. Scripts TikTok — 30 s, hook < 3 s (J1, J3, J5…)
 
@@ -172,19 +194,20 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 **Clip 4 — le prix du marché**
 - Hook : « Des joueurs paient 59 € PAR AN pour optimiser leur PC. »
 - Suite : « Voici ce que la mienne fait gratuitement » → enchaînement rapide : 173
-  optimisations, score santé, FPS mesurés. « Et la version complète, c'est 19 €. Une
-  fois. Pas d'abonnement. Lien dans la bio. »
+  optimisations, score santé, FPS mesurés. « La version complète ? 15 % moins cher que
+  le marché : 49 € l'année, ou 127 € une seule fois — à vie. Lien dans la bio. »
 
 ## 8. Si on te compare à FPSDoctor (ou à un autre optimiseur payant)
 
 Réponse-type, factuelle, **jamais dénigrante** (à adapter) :
 
 > Bonne question ! Les différences principales : chez moi les 173 optimisations sont
-> gratuites (le payant, c'est l'auto-optimisation en 1 clic), la licence coûte 19 € une
-> seule fois (pas d'abonnement), chaque réglage est réversible avec sauvegarde
-> automatique, zéro injection donc compatible anticheat, et l'app **mesure** tes FPS et
-> ta latence avant/après au lieu d'afficher des promesses. Essaie les deux et garde ce
-> qui marche le mieux sur TON PC — la mienne te montrera la mesure.
+> gratuites (ailleurs, l'édition gratuite en a une dizaine), les prix sont ~15 % sous
+> le marché (49 €/an, ou 127 € une seule fois pour ne jamais payer d'abonnement),
+> chaque réglage est réversible avec sauvegarde automatique, zéro injection donc
+> compatible anticheat, et l'app **mesure** tes FPS et ta latence avant/après au lieu
+> d'afficher des promesses. Essaie les deux et garde ce qui marche le mieux sur TON
+> PC — la mienne te montrera la mesure.
 
 ---
 
