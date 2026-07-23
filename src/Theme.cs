@@ -23,7 +23,7 @@ namespace BTOptimizer
         public static bool Dark { get; private set; }
 
         // Repères des couleurs codées en dur dans les fenêtres.
-        private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité FPSDoctor)
+        private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité DTG)
         private static readonly Color AccentRef = Color.FromArgb(0, 150, 90);
 
         // Liseré signature sous les bandeaux (identité DesTinGOOD).
@@ -69,7 +69,7 @@ namespace BTOptimizer
         {
             if (Dark)
             {
-                // Palette FPSDoctor : noir profond + vert néon, alignée sur le shell (FpsUi).
+                // Palette DTG : noir profond + vert néon, alignée sur le shell (FpsUi).
                 // Toutes les fenêtres v14 passent par ces tokens (Theme.Apply) — les retoucher
                 // ici reskin l'ensemble des ~34 fenêtres d'un coup.
                 Bg = Color.FromArgb(9, 11, 10); Panel = Color.FromArgb(16, 18, 17);

@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace BTOptimizer
 {
-    /// <summary>Images embarquées (mascotte docteur, badges) façon FPSDoctor.</summary>
+    /// <summary>Images embarquées (mascotte docteur, badges) style DTG.</summary>
     internal static class Assets
     {
         private static readonly Dictionary<string, Image> _cache = new Dictionary<string, Image>();

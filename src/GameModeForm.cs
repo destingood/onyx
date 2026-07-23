@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Réglages du Mode Jeu (game_mode config / exclusions de FPSDoctor) : choisir quels services
+    /// Réglages du Mode Jeu (game_mode config / exclusions du concurrent) : choisir quels services
     /// de fond le Mode Jeu suspend pendant une partie. Décocher un service = le laisser tourner.
     /// </summary>
     internal class GameModeForm : Form

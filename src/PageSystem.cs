@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page Systeme : moniteur materiel live (CPU / GPU / RAM) facon FPSDoctor.
+    // Page Systeme : moniteur materiel live (CPU / GPU / RAM) style DTG.
     internal class PageSystem : FpsPage
     {
         private readonly HwMonitor _mon = new HwMonitor();

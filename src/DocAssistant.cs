@@ -6,9 +6,9 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// « Le Doc » — assistant LOCAL (aucun réseau, aucune clé) : comprend la demande par mots-clés,
+    /// « Le Copilote » — assistant LOCAL (aucun réseau, aucune clé) : comprend la demande par mots-clés,
     /// s'appuie sur les VRAIES données du PC (AppStats) et sur le catalogue symptôme→outil
-    /// (HelpCatalog), puis répond et propose d'ouvrir le bon soin. Remplace le chat IA de FPS Doctor.
+    /// (HelpCatalog), puis répond et propose d'ouvrir le bon outil. Remplace le chat IA de FPS Doctor.
     /// </summary>
     internal static class DocAssistant
     {
@@ -24,8 +24,8 @@ namespace BTOptimizer
             string h = st != null ? "  Santé actuelle de ton PC : " + st.Health + " %." : "";
             return new Reply
             {
-                Text = "Bonjour, je suis le Doc — l'assistant de ton PC." + h +
-                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) et j'ouvre le bon soin.",
+                Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
+                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) et j'ouvre le bon outil.",
                 ShowStarters = true
             };
         }
@@ -41,7 +41,7 @@ namespace BTOptimizer
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
             if (Has(s, "aide", "help", "comment", "que fais", "que peux", "sais tu faire", "tu fais quoi"))
-                return new Reply { Text = "Je diagnostique et j'ouvre les bons soins : santé du PC, FPS, latence, réseau/ping, crashs, écran/souris, disque, démarrage, nettoyage, sauvegarde… Dis-moi ce qui cloche.", ShowStarters = true };
+                return new Reply { Text = "Je diagnostique et j'ouvre les bons outils : santé du PC, FPS, latence, réseau/ping, crashs, écran/souris, disque, démarrage, nettoyage, sauvegarde… Dis-moi ce qui cloche.", ShowStarters = true };
 
             // Questions sur l'état réel du PC (vraies données).
             if (st != null && Has(s, "sante", "etat", "bilan", "score", "va mon pc", "comment va"))

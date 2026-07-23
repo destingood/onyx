@@ -192,7 +192,7 @@ namespace BTOptimizer
                     int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
                     DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), true);
                 }
-                TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le bloc opératoire de ton PC", FpsUi.Small,
+                TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le QG de ton PC", FpsUi.Small,
                     new Rectangle(0, H - 28, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
             }
             return bmp;

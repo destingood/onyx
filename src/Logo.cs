@@ -5,7 +5,7 @@ using System.Drawing.Drawing2D;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Logo DesTinGOOD : croix médicale (santé / « bloc opératoire ») fusionnée avec un éclair
+    /// Logo DesTinGOOD : croix médicale (santé / « QG ») fusionnée avec un éclair
     /// (vitesse / FPS). Dessiné en vectoriel → net à toute taille (rail, icône de fenêtre, à propos).
     /// </summary>
     internal static class Logo

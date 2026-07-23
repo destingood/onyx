@@ -8,7 +8,7 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Démarrage automatique avec Windows + redémarrage de l'explorateur — deux fonctions
-    /// reprises de FPSDoctor (page Plan : is/enable/disable_autostart ; fix restart_explorer).
+    /// reprises du concurrent (page Plan : is/enable/disable_autostart ; fix restart_explorer).
     /// Autostart via la clé Run de l'utilisateur courant (aucun droit admin requis).
     /// </summary>
     internal static class AppAutostart

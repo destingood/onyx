@@ -7,7 +7,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // ----------------------------------------------------------------------
-    //  Primitives d'interface façon FPSDoctor : palette noir profond + vert
+    //  Primitives d'interface style DTG : palette noir profond + vert
     //  néon #00FF88, cartes arrondies, interrupteurs, boutons pilule. Partagé
     //  par toutes les pages du shell.
     // ----------------------------------------------------------------------
@@ -132,7 +132,7 @@ namespace BTOptimizer
     }
 
     // ----------------------------------------------------------------------
-    //  Interrupteur néon (toggle) façon FPSDoctor.
+    //  Interrupteur néon (toggle) style DTG.
     // ----------------------------------------------------------------------
     internal class ToggleSwitch : Control
     {

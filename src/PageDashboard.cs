@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page d'accueil « bloc opératoire » : greeting, jauge SANTE, cartes stats,
+    // Page d'accueil « QG » : greeting, jauge SANTE, cartes stats,
     // graphe systeme live, statut patient + badge.
     internal class PageDashboard : FpsPage
     {
@@ -58,9 +58,9 @@ namespace BTOptimizer
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
-            var prem = FpsUi.NeonButton("◆  DÉBLOQUER PREMIUM");
+            var prem = FpsUi.NeonButton("◆  PASSER PRO");
             prem.Name = "prem";
-            prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm("Premium"));
+            prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm(""));
             Controls.Add(prem);
 
             Resize += (s, e) => { DoLayout(); Invalidate(); };
@@ -130,7 +130,7 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, "Bonjour, ", FpsUi.H1, new Point(L, 30), FpsUi.Ink, TextFormatFlags.NoPadding);
             int wHi = TextRenderer.MeasureText(g, "Bonjour, ", FpsUi.H1).Width;
             TextRenderer.DrawText(g, name + " !", FpsUi.H1, new Point(L + wHi - 6, 30), FpsUi.Neon, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "Bienvenue dans le bloc opératoire.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, "Bienvenue dans ton QG.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
 
             int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
             int patientTop = 118;
@@ -141,23 +141,25 @@ namespace BTOptimizer
             DrawPatient(g, rightX, patientTop, rightW, patientH);
         }
 
-        // Carte patient unifiée : titre + anneau de SANTÉ + badge + statut, hauteur dynamique.
+        // Carte santé unifiée : titre + anneau de SANTÉ + logo + verdict, hauteur dynamique.
         private void DrawPatient(Graphics g, int x, int y, int w, int h)
         {
             FpsUi.PaintCard(g, new Rectangle(x, y, w, h), FpsUi.Card, FpsUi.Border, 14f);
-            TextRenderer.DrawText(g, "SANTÉ DU PATIENT", FpsUi.H3, new Rectangle(x, y + 20, w, 22), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, "SANTÉ DE MON PC", FpsUi.H3, new Rectangle(x, y + 20, w, 22), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
 
             int ring = 132;
             DrawHealthRing(g, x + (w - ring) / 2, y + 52, ring);
 
-            // Badge centré sous l'anneau ; ne s'affiche que si la carte est assez haute.
+            // Logo DTG centré sous l'anneau ; ne s'affiche que si la carte est assez haute.
             int by = y + 52 + ring + 12;
             int statusY = y + h - 34;
-            Image badge = Assets.BadgePremierSoin;
             int bs = Math.Min(120, statusY - by - 6);
-            if (bs >= 60 && badge != null) g.DrawImage(badge, x + (w - bs) / 2, by, bs, bs);
+            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Neon, false);
 
-            TextRenderer.DrawText(g, "Premiers Soins", FpsUi.H2, new Rectangle(x, statusY, w, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            // Verdict aligné sur le vocabulaire historique du bilan (et les seuils de l'anneau).
+            int hp = _health < 0 ? 0 : _health;
+            string verdict = hp < 30 ? "À corriger" : hp < 60 ? "Moyen" : hp < 85 ? "Bon" : "Excellent";
+            TextRenderer.DrawText(g, verdict, FpsUi.H2, new Rectangle(x, statusY, w, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
         }
 
         private void DrawHealthRing(Graphics g, int x, int y, int size)

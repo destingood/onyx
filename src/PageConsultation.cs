@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page Consultation : CHAT avec « Le Doc » — assistant LOCAL (aucun réseau). Comprend la demande,
+    // Page Consultation : CHAT avec « Le Copilote » — assistant LOCAL (aucun réseau). Comprend la demande,
     // s'appuie sur les vraies données du PC, et ouvre le bon outil. Équivalent du /app/chat de FPS Doctor.
     internal class PageConsultation : FpsPage
     {
@@ -32,7 +32,7 @@ namespace BTOptimizer
             try { Application.AddMessageFilter(_wheel); } catch { }
 
             _input = new TextBox();
-            try { _input.PlaceholderText = "Décris ton souci au Doc… (ex. « ça rame en jeu », « ping élevé », « écran bloqué à 60 Hz »)"; } catch { }
+            try { _input.PlaceholderText = "Décris ton souci au Copilote… (ex. « ça rame en jeu », « ping élevé », « écran bloqué à 60 Hz »)"; } catch { }
             _input.BackColor = FpsUi.Card; _input.ForeColor = FpsUi.Ink;
             _input.BorderStyle = BorderStyle.FixedSingle; _input.Font = FpsUi.Body;
             _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
@@ -77,7 +77,7 @@ namespace BTOptimizer
         {
             AddBubble(false, q, null);
             var reply = DocAssistant.Answer(q, _stats, Host.Log);
-            // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Doc écrit… ».
+            // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Copilote écrit… ».
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { AddBubble(true, reply.Text, reply); return; }
             ShowTyping();
             var t = new Timer { Interval = 650 };
@@ -85,7 +85,7 @@ namespace BTOptimizer
             t.Start();
         }
 
-        // Indicateur « Le Doc écrit… » : mini-bulle avec 3 points qui pulsent.
+        // Indicateur « Le Copilote écrit… » : mini-bulle avec 3 points qui pulsent.
         private void ShowTyping()
         {
             HideTyping();
@@ -125,7 +125,7 @@ namespace BTOptimizer
             return avatar;
         }
 
-        // Suggestions de démarrage (label affiché → texte envoyé au Doc).
+        // Suggestions de démarrage (label affiché → texte envoyé au Copilote).
         private static readonly (string, string)[] Starters =
         {
             ("Ça rame en jeu", "ça rame et ça saccade en jeu"),
@@ -154,7 +154,7 @@ namespace BTOptimizer
             bubble.Paint += (s, e) => { try { using (var pen = new Pen(bord)) using (var p = Round(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14)) e.Graphics.DrawPath(pen, p); } catch { } };
 
             var col = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
-            col.Controls.Add(new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = doc ? FpsUi.Neon : Color.FromArgb(150, 255, 200), BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 4), Text = doc ? "LE DOC" : "TOI" });
+            col.Controls.Add(new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = doc ? FpsUi.Neon : Color.FromArgb(150, 255, 200), BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 4), Text = doc ? "COPILOTE" : "TOI" });
             col.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" });
 
             if (reply != null && reply.Tool != null)
@@ -238,7 +238,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "CONSULTATION", "Le Doc — décris ton souci, je t'ouvre le bon soin (assistant local, hors-ligne).");
+            PaintTitle(e.Graphics, "COPILOTE", "Le Copilote — décris ton souci, je t'ouvre le bon outil (assistant local, hors-ligne).");
         }
     }
 }

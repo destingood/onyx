@@ -202,7 +202,7 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
-            // BT_UITEST=1 : ne teste QUE le shell FPSDoctor (dashboard + 8 pages) hors-écran,
+            // BT_UITEST=1 : ne teste QUE le shell DTG (dashboard + 8 pages) hors-écran,
             // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
             // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
             if (Environment.GetEnvironmentVariable("BT_UITEST") == "1")
@@ -923,13 +923,13 @@ namespace BTOptimizer
             Console.WriteLine("  Captures écrites dans " + dir);
         }
 
-        /// <summary>Construit le shell FPSDoctor et rend chacune des 8 pages hors-écran, à trois
+        /// <summary>Construit le shell DTG et rend chacune des 8 pages hors-écran, à trois
         /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
         /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
         /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
         private static void TestShellUi(ref int errors)
         {
-            Console.WriteLine("Shell FPSDoctor (dashboard + 8 pages, rendu hors-écran)...");
+            Console.WriteLine("Shell le concurrent (dashboard + 8 pages, rendu hors-écran)...");
             string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
             // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
             // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
@@ -971,7 +971,7 @@ namespace BTOptimizer
         }
 
         /// <summary>Construit hors-écran chaque fenêtre exposée par le menu ⋯ Outils (le point
-        /// d'entrée de toutes les fonctions FPSDoctor). Détecte les crashes de construction sans
+        /// d'entrée de toutes les fonctions du shell DTG). Détecte les crashes de construction sans
         /// effet de bord : les monitorings (ETW/FPS) ne démarrent que sur l'événement Load (Show),
         /// jamais sur CreateControl ; MainForm n'est que construite (pas de handle) par prudence.</summary>
         private static void TestMenuForms(ref int errors)

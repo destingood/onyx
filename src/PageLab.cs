@@ -6,7 +6,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // Page Laboratoire : modules optionnels (viseur, filtre couleur, compteur
-    // FPS, overclock, speed test). Cartes facon FPSDoctor.
+    // FPS, overclock, speed test). Cartes style DTG.
     internal class PageLab : FpsPage
     {
         public PageLab(DashboardForm host) : base(host)

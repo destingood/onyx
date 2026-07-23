@@ -7,7 +7,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // ----------------------------------------------------------------------
-    //  Shell facon FPSDoctor : fenetre unique, barre laterale a icones qui
+    //  Shell style DTG : fenetre unique, barre laterale a icones qui
     //  echange le contenu (pages), mascotte docteur toujours visible.
     // ----------------------------------------------------------------------
     internal class DashboardForm : Form
@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         public DashboardForm()
         {
-            Text = "DesTinGOOD — Bloc opératoire";
+            Text = "DesTinGOOD — QG";
             ClientSize = new Size(1200, 760);
             MinimumSize = new Size(1040, 680);
             StartPosition = FormStartPosition.CenterScreen;
@@ -273,7 +273,7 @@ namespace BTOptimizer
                 TextRenderer.DrawText(gr, "DTG", FpsUi.Tiny, new Rectangle(0, 42, brand.Width, 16), FpsUi.Neon,
                     TextFormatFlags.HorizontalCenter);
             };
-            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "DesTinGOOD — Bloc opératoire");
+            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "DesTinGOOD — QG");
             _rail.Controls.Add(brand);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
