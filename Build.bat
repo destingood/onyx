@@ -24,8 +24,12 @@ taskkill /IM BTOptimizer.exe /F >nul 2>&1
 taskkill /IM dotnet.exe /FI "WINDOWTITLE eq DesTinGOOD*" /F >nul 2>&1
 
 echo.
-echo Compilation .NET 10 (compatible Smart App Control)...
-dotnet publish BTOptimizer.csproj -c Release -o dist --nologo
+echo Nettoyage de l'ancien build (evite un dist hybride autonome/framework)...
+if exist dist rd /s /q dist
+
+echo.
+echo Compilation .NET 10 AUTONOME (runtime embarque : marche sans installer .NET)...
+dotnet publish BTOptimizer.csproj -c Release -o dist -r win-x64 --self-contained true --nologo
 if %errorlevel% neq 0 (
     echo.
     echo ECHEC de la compilation.
@@ -34,6 +38,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo OK : dist\BTOptimizer.exe cree (v5.2).
-echo Lance l'application avec  Lancer-BTOptimizer.bat  (passe par l'hote dotnet signe).
+echo OK : dist\BTOptimizer.exe cree (autonome, runtime .NET embarque).
+echo Double-clique dist\BTOptimizer.exe : il marche sans installer .NET.
+echo (Lancer-BTOptimizer.bat reste utile seulement pour lancer en admin.)
 pause
