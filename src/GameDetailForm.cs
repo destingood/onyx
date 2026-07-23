@@ -12,10 +12,10 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Fiche détaillée d'un jeu (au clic depuis la page Jeux), façon FPS Doctor : jaquette officielle,
-    /// statut + launcher, réglages FPS présentés proprement, priorité CPU DÉDIÉE à ce jeu (IFEO),
-    /// lancer / ouvrir le dossier, et « Optimiser mon PC pour le jeu » en 1 clic (preset recommandé,
-    /// réversible) — pensé pour un néophyte.
+    /// Fiche détaillée d'un jeu (au clic depuis la page Jeux) : onglets, grande jaquette à droite,
+    /// deux niveaux de boost avec leur compte RÉEL à gauche, priorité CPU dédiée (IFEO),
+    /// lancer / ouvrir le dossier. Le boost léger reste gratuit ; le complet (auto-tune matériel)
+    /// est une fonction Pro. Tout est confirmé, sauvegardé et réversible.
     /// </summary>
     internal class GameDetailForm : Form
     {
@@ -71,7 +71,7 @@ namespace BTOptimizer
             mode.Click += (s, e) => { try { Close(); } catch { } };
             Controls.Add(mode);
 
-            int ay = 470;   // rangée d'actions, sous les cartes de boost
+            int ay = 448;   // rangée d'actions, sous les conseils FPS
             if (_exes != null)
             {
                 _prio = FpsUi.GhostButton("Priorité CPU : —");
@@ -174,7 +174,7 @@ namespace BTOptimizer
 
         private void BuildBoosts()
         {
-            int y = 296, w = (LeftW - 16) / 2;
+            int y = 146, w = (LeftW - 16) / 2;
             _cardLight = BoostCard(Pad, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
             _cardFull = BoostCard(Pad + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
             Controls.Add(_cardLight); Controls.Add(_cardFull);
@@ -183,20 +183,21 @@ namespace BTOptimizer
 
         private Panel BoostCard(int x, int y, int w, string title, bool pro, out Label num, out Button btn)
         {
-            var card = new Panel { Bounds = new Rectangle(x, y, w, 132), BackColor = Color.Transparent };
+            var card = new Panel { Bounds = new Rectangle(x, y, w, 166), BackColor = Color.Transparent };
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
                 pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.NeonDim : FpsUi.Border, 12f);
 
-            num = FpsUi.Text("…", FpsUi.Num, FpsUi.Ink);
-            num.AutoSize = false; num.SetBounds(16, 12, 70, 34);
-            var lab = FpsUi.Text(title, FpsUi.H3, pro ? FpsUi.Neon : FpsUi.Dim);
-            lab.AutoSize = false; lab.SetBounds(86, 20, w - 100, 20);
-            var sub = FpsUi.Text("", FpsUi.Small, FpsUi.Dim2);
-            sub.AutoSize = false; sub.SetBounds(16, 50, w - 32, 32);
-            sub.Text = pro ? "Réglage auto adapté à TON matériel." : "Réglages sûrs, valables pour tous les jeux.";
+            // Grand nombre (le compte réel), puis le libellé et l'explication.
+            num = FpsUi.Text("…", FpsUi.Garet, FpsUi.Ink);
+            num.AutoSize = false; num.SetBounds(20, 16, w - 40, 46);
+            var lab = FpsUi.Text("Optimisations", FpsUi.Small, FpsUi.Dim2);
+            lab.AutoSize = false; lab.SetBounds(22, 62, w - 44, 18);
+            var sub = FpsUi.Text("", FpsUi.Small, pro ? FpsUi.Neon : FpsUi.Dim);
+            sub.AutoSize = false; sub.SetBounds(22, 84, w - 44, 34);
+            sub.Text = pro ? "Adapté à TON matériel (eSport)." : "Réglages sûrs, tous jeux.";
 
             btn = pro ? FpsUi.NeonButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
-            btn.SetBounds(16, 88, w - 32, 32);
+            btn.SetBounds(20, 122, w - 40, 34);
             card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(sub); card.Controls.Add(btn);
 
             bool isPro = pro;
@@ -314,12 +315,11 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
                 _g.Detected ? FpsUi.Neon : FpsUi.Dim, TextFormatFlags.NoPrefix);
 
-            Section(g, "RÉGLAGES POUR DÉBLOQUER LES FPS", 148, Pad, LeftW);
+            // Conseils FPS SOUS les cartes : l'action passe devant l'explication.
+            Section(g, "RÉGLAGES À FAIRE DANS LE JEU", 336, Pad, LeftW);
             string tip = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
-            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 176, LeftW, 60), FpsUi.Ink,
+            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 364, LeftW, 64), FpsUi.Ink,
                 TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-
-            Section(g, "APPLIQUER EN UN CLIC", 262, Pad, LeftW);
 
             if (!string.IsNullOrEmpty(_g.InstallPath))
                 TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(Pad, ClientSize.Height - 84, LeftW, 16),
