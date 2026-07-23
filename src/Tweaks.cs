@@ -2351,6 +2351,31 @@ namespace BTOptimizer
                 Check  = () => Sys.AmdUlpsDisabled()
             });
 
+            // ---- Services CAPET supplémentaires (non-recommandés, hors presets, avertissement) ----
+            list.Add(new Tweak
+            {
+                Id = "dps_off", Category = Cat.Services,
+                Name = "⚠ Désactiver le service Diagnostic Policy (DPS)",
+                Desc = "RISQUÉ : coupe le service de diagnostic Windows. Un service de fond en moins, MAIS le "
+                     + "dépannage réseau automatique de Windows cesse de fonctionner. À éviter si tu utilises "
+                     + "le diagnostic Windows. « Rétablir » le remet en démarrage automatique.",
+                Apply  = () => Sys.ConfigureService("DPS", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("DPS", "auto", false, true),
+                Check  = () => Sys.ServiceDisabled("DPS")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "rmsvc_off", Category = Cat.Services,
+                Name = "⚠ Désactiver le service Radio Management (RmSvc)",
+                Desc = "RISQUÉ : coupe la gestion des radios. Sur un PORTABLE, peut casser le Wi-Fi, le Bluetooth "
+                     + "ou le mode Avion. À n'activer que sur un PC fixe sans Wi-Fi/BT. « Rétablir » le remet en "
+                     + "démarrage manuel (à la demande).",
+                Apply  = () => Sys.ConfigureService("RmSvc", "disabled", true, false),
+                Revert = () => Sys.ConfigureService("RmSvc", "demand", false, false),
+                Check  = () => Sys.ServiceDisabled("RmSvc")
+            });
+
             return list;
         }
     }
