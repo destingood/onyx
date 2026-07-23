@@ -16,7 +16,7 @@ namespace BTOptimizer
         private Button _color;
         private TrackBar _size, _thick, _gap, _dot, _opacity;
         private Label _lSize, _lThick, _lGap, _lDot, _lOpacity;
-        private CheckBox _outline, _enabled;
+        private CheckBox _outline, _enabled, _autoGame;
         private bool _loading;
 
         public CrosshairForm(Action<string, int> log)
@@ -72,6 +72,11 @@ namespace BTOptimizer
             _enabled.Text = "Afficher le viseur";
             _enabled.CheckedChanged += OnToggleEnabled;
 
+            _autoGame = new CheckBox();
+            _autoGame.SetBounds(16, 386, 438, 22);
+            _autoGame.Text = "AUTO en jeu : afficher dès qu'un jeu tourne, masquer au retour au bureau";
+            _autoGame.CheckedChanged += (s, e) => Apply();
+
             var btnSave = MakeButton("Enregistrer", 16, 424, 180, 44, true);
             btnSave.Click += OnSave;
             var btnClose = MakeButton("Fermer", 206, 424, 120, 44, false);
@@ -86,7 +91,7 @@ namespace BTOptimizer
             {
                 intro, lShape, _shape, lColor, _color,
                 _lSize, _size, _lThick, _thick, _lGap, _gap, _lDot, _dot, _lOpacity, _opacity,
-                _outline, _enabled, btnSave, btnClose, hint
+                _outline, _enabled, _autoGame, btnSave, btnClose, hint
             });
         }
 
@@ -114,6 +119,7 @@ namespace BTOptimizer
             _opacity.Value = Clamp(_s.Opacity, _opacity);
             _outline.Checked = _s.Outline;
             _enabled.Checked = _s.Enabled;
+            _autoGame.Checked = _s.AutoGame;
             _loading = false;
             UpdateLabels();
             if (_s.Enabled) Crosshair.Show(Collect());
@@ -132,6 +138,7 @@ namespace BTOptimizer
             _s.Opacity = _opacity.Value;
             _s.Outline = _outline.Checked;
             _s.Enabled = _enabled.Checked;
+            _s.AutoGame = _autoGame.Checked;
             return _s;
         }
 
@@ -178,9 +185,12 @@ namespace BTOptimizer
         {
             CrosshairSettings s = Collect();
             s.Save();
+            Crosshair.ReloadAutoSettings();
             if (s.Enabled) Crosshair.Show(s);
             if (_log != null)
-                _log(s.Enabled ? "Viseur enregistré et affiché." : "Viseur enregistré (masqué).", 1);
+                _log(s.Enabled ? "Viseur enregistré et affiché."
+                   : s.AutoGame ? "Viseur enregistré : il s'affichera tout seul en jeu."
+                   : "Viseur enregistré (masqué).", 1);
             Close();
         }
 

@@ -219,6 +219,14 @@ namespace BTOptimizer
             {
                 bool wanted = Native.IsGameFullscreen();
                 if (wanted != Native.TimerActive) Native.SetTimer1ms(wanted);
+
+                // Viseur AUTO en jeu : affiché dès qu'un jeu tourne (jeu connu ou plein écran), retiré au bureau.
+                if (Crosshair.AutoGameEnabled)
+                {
+                    bool game = false;
+                    try { game = GameScan.RunningKnownGame() != null; } catch { }
+                    Crosshair.AutoTick(game || wanted, game || wanted);
+                }
             }
             catch { }
         }
