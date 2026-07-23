@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — J'ai un problème…";
+            Text = "Fluide — J'ai un problème…";
             ClientSize = new Size(700, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -146,7 +146,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Benchmark rapide";
+            Text = "Fluide — Benchmark rapide";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

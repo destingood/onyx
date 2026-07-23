@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Prêt pour le match ?";
+            Text = "Fluide — Prêt pour le match ?";
             ClientSize = new Size(640, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -311,7 +311,7 @@ namespace BTOptimizer
                     try { lines = File.ReadAllLines(path); }
                     catch (Exception ex) { log("hosts illisible : " + ex.Message, 3); return; }
 
-                    // Ne pas écraser un backup existant : le 1er = le vrai hosts d'origine (avant DesTinGOOD).
+                    // Ne pas écraser un backup existant : le 1er = le vrai hosts d'origine (avant Fluide).
                     try { if (!File.Exists(path + ".destingood.bak")) File.Copy(path, path + ".destingood.bak"); }
                     catch (Exception ex) { log("Sauvegarde hosts impossible : " + ex.Message, 3); return; }
 
@@ -320,7 +320,7 @@ namespace BTOptimizer
                         if (IsBlockingHostsLine(lines[i]))
                         {
                             if (fixedCount < 10) log("hosts neutralisé : " + lines[i].Trim(), 0);
-                            lines[i] = "# [DesTinGOOD boutiques] " + lines[i];
+                            lines[i] = "# [Fluide boutiques] " + lines[i];
                             fixedCount++;
                         }
                     if (fixedCount > 10) log("hosts : ... et " + (fixedCount - 10) + " autre(s) ligne(s).", 0);

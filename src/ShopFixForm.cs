@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Boutiques & contenu en jeu";
+            Text = "Fluide — Boutiques & contenu en jeu";
             ClientSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -144,7 +144,7 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_items[i]);
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Coche au moins un point à réparer.", "DesTinGOOD",
+                MessageBox.Show(this, "Coche au moins un point à réparer.", "Fluide",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -185,7 +185,7 @@ namespace BTOptimizer
                         if (needReboot)
                             MessageBox.Show(this,
                                 "Réparation terminée. Redémarre le PC pour appliquer les points qui le demandent (IPv6, HAGS...).",
-                                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }

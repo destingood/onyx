@@ -36,7 +36,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Températures & throttling";
+            Text = "Fluide — Températures & throttling";
             ClientSize = new Size(600, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

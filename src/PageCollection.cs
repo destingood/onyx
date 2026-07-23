@@ -155,7 +155,7 @@ namespace BTOptimizer
                 using (var bmp = RenderShowcase())
                 {
                     string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    path = System.IO.Path.Combine(dir, "DesTinGOOD-collection.png");
+                    path = System.IO.Path.Combine(dir, "Fluide-collection.png");
                     bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 }
             }
@@ -182,7 +182,7 @@ namespace BTOptimizer
                 using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
                 TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
                 int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
-                TextRenderer.DrawText(g, "DesTinGOOD", FpsUi.H1, new Point(38 + wt, 26), FpsUi.Neon, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "Fluide", FpsUi.H1, new Point(38 + wt, 26), FpsUi.Neon, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, Unlocked() + " / " + BadgeCatalog.All.Length + " badges   ·   santé " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x)   ·   " + _s.Checkups + " Check Up",
                     FpsUi.Body, new Point(40, 72), FpsUi.Dim, TextFormatFlags.NoPadding);
 
@@ -192,7 +192,7 @@ namespace BTOptimizer
                     int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
                     DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), true);
                 }
-                TextRenderer.DrawText(g, "Optimisé avec DesTinGOOD — le QG de ton PC", FpsUi.Small,
+                TextRenderer.DrawText(g, "Optimisé avec Fluide — le QG de ton PC", FpsUi.Small,
                     new Rectangle(0, H - 28, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
             }
             return bmp;

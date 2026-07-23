@@ -10,14 +10,14 @@ namespace BTOptimizer
     {
         /// <summary>Boutique (les deux offres : abonnement 49 €/an et licence à vie 127 €) —
         /// cohérent avec marketing/landing.html et marketing/PLAN-LANCEMENT.md.</summary>
-        internal const string BuyUrl = "https://destingood.gumroad.com";
+        internal const string BuyUrl = "https://fluide.gumroad.com";
 
         private TextBox _key;
         private Label _status;
 
         public LicenseKeyForm(string feature)
         {
-            Text = "DesTinGOOD — Version Pro";
+            Text = "Fluide — Version Pro";
             ClientSize = new Size(520, 340);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -40,8 +40,9 @@ namespace BTOptimizer
                 Text = feat + " fait partie de l'édition Pro.\r\n\r\n"
                      + "L'édition gratuite inclut toutes les optimisations manuelles, la sauvegarde, "
                      + "le point de restauration, la mesure de latence et le moniteur matériel.\r\n\r\n"
-                     + "L'édition Pro ajoute : auto-tune matériel, presets eSport/Benchmark, overclock GPU, "
-                     + "profil pilote NVIDIA, gardien de démarrage, outils DNS et analyse avancée.",
+                     + "L'édition Pro ajoute : ⚡ TOUT OPTIMISER (auto-tune matériel), presets eSport/Benchmark, "
+                     + "MODE JEU auto, boosters dynamiques (affinité CPU, nettoyeur RAM), overclock GPU, "
+                     + "gardien en fond et réglages réseau avancés.",
                 Location = new Point(18, 72), Size = new Size(484, 120), ForeColor = Color.FromArgb(50, 54, 62)
             });
 
@@ -82,7 +83,7 @@ namespace BTOptimizer
                     if (License.StartTrial())
                     {
                         MessageBox.Show(this, "Essai Pro activé : " + License.TrialDaysLeft + " jours. Toutes les fonctions sont débloquées.",
-                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         DialogResult = DialogResult.OK; Close();
                     }
                 };
@@ -116,7 +117,7 @@ namespace BTOptimizer
                 catch
                 {
                     MessageBox.Show(this, "Ouvre cette adresse dans ton navigateur :\r\n" + BuyUrl,
-                        "DesTinGOOD Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
             Controls.Add(buy);
@@ -130,7 +131,7 @@ namespace BTOptimizer
                     ? "\r\nAbonnement valable jusqu'au " + License.Expiry.Value.ToString("dd/MM/yyyy") + "."
                     : "\r\nLicence à vie — merci !";
                 MessageBox.Show(this, "Édition Pro activée pour : " + License.Licensee + until,
-                    "DesTinGOOD Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 DialogResult = DialogResult.OK;
                 Close();
             }
@@ -142,7 +143,7 @@ namespace BTOptimizer
                 // Le label est masqué quand le bouton d'essai occupe sa place → boîte de dialogue
                 // (avant, l'erreur était tout simplement invisible dans ce cas).
                 if (_status.Visible) _status.Text = err;
-                else MessageBox.Show(this, err, "DesTinGOOD Pro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else MessageBox.Show(this, err, "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

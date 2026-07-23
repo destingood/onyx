@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Points de restauration";
+            Text = "Fluide — Points de restauration";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -138,7 +138,7 @@ namespace BTOptimizer
 
         private void OnCreate(object sender, EventArgs e)
         {
-            string desc = "DesTinGOOD " + DateTime.Now.ToString("dd/MM HH:mm");
+            string desc = "Fluide " + DateTime.Now.ToString("dd/MM HH:mm");
             SetBusy(true);
             _summary.Text = "Création du point de restauration (jusqu'à 1 min)...";
             Task.Run(() =>

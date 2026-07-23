@@ -101,7 +101,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Qui ralentit mon PC ?";
+            Text = "Fluide — Qui ralentit mon PC ?";
             ClientSize = new Size(700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -262,7 +262,7 @@ namespace BTOptimizer
         {
             if (_list.SelectedItems.Count != 1)
             {
-                MessageBox.Show(this, "Sélectionne d'abord une application dans la liste.", "DesTinGOOD",
+                MessageBox.Show(this, "Sélectionne d'abord une application dans la liste.", "Fluide",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -271,7 +271,7 @@ namespace BTOptimizer
             if (Critical.Contains(r.Name))
             {
                 MessageBox.Show(this, "« " + r.Name + " » est un processus système : fermeture refusée pour ta sécurité.",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (MessageBox.Show(this,

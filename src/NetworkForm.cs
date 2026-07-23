@@ -46,7 +46,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Qualité réseau en jeu";
+            Text = "Fluide — Qualité réseau en jeu";
             ClientSize = new Size(680, 460);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

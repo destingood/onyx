@@ -10,7 +10,7 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 ### Produit « gratuit » (permalien `gratuit`, 0 € + pay-what-you-want)
 
-**Titre** : DesTinGOOD — Optimiseur & diagnostic gaming pour Windows (gratuit)
+**Titre** : Fluide — Optimiseur & diagnostic gaming pour Windows (gratuit)
 
 **Description** :
 
@@ -30,15 +30,15 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 > l'overclock GPU, le gardien en fond et les réglages réseau avancés — essai gratuit
 > de 7 jours inclus dans l'app.
 
-**Fichiers** : `DesTinGOOD-Setup.exe` (autonome ~37 Mo) + version légère ~6 Mo.
+**Fichiers** : `Fluide-Setup.exe` (autonome ~37 Mo) + version légère ~6 Mo.
 
 ### Produit « annuel » (permalien `annuel`, 49 €/an — Membership Gumroad, facturation annuelle)
 
-**Titre** : DesTinGOOD Pro — abonnement annuel
+**Titre** : Fluide Pro — abonnement annuel
 
 **Description** :
 
-> Tout DesTinGOOD, débloqué : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel), presets
+> Tout Fluide, débloqué : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel), presets
 > eSport & Benchmark, MODE JEU automatique, overclock GPU + profil pilote NVIDIA,
 > gardien de démarrage & surveillance en fond, DNS rapide & réglages réseau avancés.
 >
@@ -51,11 +51,11 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 ### Produit « pro » (permalien `pro`, 127 €)
 
-**Titre** : DesTinGOOD Pro — licence à vie
+**Titre** : Fluide Pro — licence à vie
 
 **Description** :
 
-> Tout DesTinGOOD, débloqué à vie : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel),
+> Tout Fluide, débloqué à vie : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel),
 > presets eSport & Benchmark, MODE JEU automatique, overclock GPU + profil pilote
 > NVIDIA, gardien de démarrage & surveillance en fond, DNS rapide & réglages réseau
 > avancés.
@@ -70,7 +70,7 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 ## 2. Email de livraison de clé (réponse à chaque vente)
 
-**Objet** : Ta clé DesTinGOOD Pro 🔑
+**Objet** : Ta clé Fluide Pro 🔑
 
 > Salut {Prénom},
 >
@@ -80,14 +80,14 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 >
 > `{CLÉ}`
 >
-> Pour l'activer : ouvre DesTinGOOD → menu ☰ (en haut à droite) → « Activer la
+> Pour l'activer : ouvre Fluide → menu ☰ (en haut à droite) → « Activer la
 > version Pro » → colle la clé → Activer. C'est tout.
 >
 > Un souci, une question, une idée d'amélioration ? Réponds simplement à cet email,
 > c'est moi (le développeur) qui lis.
 >
 > Bon jeu !
-> Lucas — DesTinGOOD
+> Lucas — Fluide
 
 ---
 
@@ -186,7 +186,7 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 
 ## 7. Message Discord (salons projets/self-promo uniquement)
 
-> 🎮 Dév solo FR : je viens de sortir DesTinGOOD, un optimiseur gaming Windows honnête —
+> 🎮 Dév solo FR : je viens de sortir Fluide, un optimiseur gaming Windows honnête —
 > 176 réglages expliqués et réversibles, score santé /100, FPS/latence mesurés,
 > compatible anticheat (zéro injection). Édition gratuite complète : LANDING_URL
 > Retours très bienvenus, je réponds à tout 🙏

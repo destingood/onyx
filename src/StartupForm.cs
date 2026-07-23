@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Programmes au démarrage";
+            Text = "Fluide — Programmes au démarrage";
             ClientSize = new Size(680, 440);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 360);
@@ -89,7 +89,7 @@ namespace BTOptimizer
                 if (e.Enabled) on++;
                 _list.Items.Add(it);
             }
-            Text = "DesTinGOOD — Programmes au démarrage (" + on + " actifs / " + _entries.Count + ")";
+            Text = "Fluide — Programmes au démarrage (" + on + " actifs / " + _entries.Count + ")";
             _loading = false;
         }
 

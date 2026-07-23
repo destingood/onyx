@@ -67,7 +67,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — DNS";
+            Text = "Fluide — DNS";
             ClientSize = new Size(640, 532);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -276,7 +276,7 @@ namespace BTOptimizer
                             reverted
                                 ? "Ce résolveur est injoignable depuis ton réseau.\n\n• IPv4 : tes réglages précédents ont été restaurés à l'identique.\n• IPv6 : remis en automatique (état sûr et joignable).\n\nRien n'est cassé."
                                 : "DNS mis à jour (IPv4 + IPv6).",
-                            "DesTinGOOD", MessageBoxButtons.OK,
+                            "Fluide", MessageBoxButtons.OK,
                             reverted ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
                     }));
                 }

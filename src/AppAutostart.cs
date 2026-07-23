@@ -14,7 +14,7 @@ namespace BTOptimizer
     internal static class AppAutostart
     {
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string ValueName = "DesTinGOOD";
+        private const string ValueName = "Fluide";
 
         public static bool IsEnabled()
         {

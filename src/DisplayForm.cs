@@ -34,7 +34,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Réglages d'écran";
+            Text = "Fluide — Réglages d'écran";
             ClientSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -152,7 +152,7 @@ namespace BTOptimizer
             }
             MessageBox.Show(this,
                 done + " écran(s) passé(s) à leur fréquence max" + (fail > 0 ? ", " + fail + " échec(s)" : "") + ".",
-                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Scan();
         }
 

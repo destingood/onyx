@@ -26,7 +26,7 @@ namespace BTOptimizer
         private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité DTG)
         private static readonly Color AccentRef = Color.FromArgb(0, 150, 90);
 
-        // Liseré signature sous les bandeaux (identité DesTinGOOD).
+        // Liseré signature sous les bandeaux (identité Fluide).
         private static readonly Color BrandA = Color.FromArgb(0, 205, 130);
         private static readonly Color BrandB = Color.FromArgb(0, 140, 235);
 
@@ -47,7 +47,7 @@ namespace BTOptimizer
 
         static Theme()
         {
-            // Sombre par défaut (identité gaming DesTinGOOD) ; le choix de l'utilisateur,
+            // Sombre par défaut (identité gaming Fluide) ; le choix de l'utilisateur,
             // une fois fait, est respecté (bt-theme.txt).
             try
             {

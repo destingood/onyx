@@ -35,7 +35,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Exclusions antivirus (jeux)";
+            Text = "Fluide — Exclusions antivirus (jeux)";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -153,7 +153,7 @@ namespace BTOptimizer
                 if (wanted[i] && !_rows[i].Excluded) toAdd++;
                 else if (!wanted[i] && _rows[i].Excluded) toRemove++;
             }
-            if (toAdd == 0 && toRemove == 0) { MessageBox.Show(this, "Aucun changement.", "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (toAdd == 0 && toRemove == 0) { MessageBox.Show(this, "Aucun changement.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
 
             string msg = "Appliquer les exclusions antivirus ?\n\n";
             if (toAdd > 0) msg += "• " + toAdd + " dossier(s) de jeu à EXCLURE de l'analyse (moins de saccades).\n";

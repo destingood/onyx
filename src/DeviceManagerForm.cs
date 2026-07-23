@@ -30,7 +30,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Gestionnaire de périphériques";
+            Text = "Fluide — Gestionnaire de périphériques";
             ClientSize = new Size(680, 540);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(580, 440);
@@ -213,7 +213,7 @@ namespace BTOptimizer
             try
             {
                 var sb = new System.Text.StringBuilder();
-                sb.AppendLine("=== PÉRIPHÉRIQUES — DesTinGOOD ===");
+                sb.AppendLine("=== PÉRIPHÉRIQUES — Fluide ===");
                 sb.AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                 int problems = 0; foreach (DeviceInfo.Device d in _devices) if (d.IsProblem) problems++;
                 sb.AppendLine(_devices.Count + " périphériques, " + problems + " en erreur.");

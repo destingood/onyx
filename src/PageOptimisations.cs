@@ -110,7 +110,7 @@ namespace BTOptimizer
             foreach (Tweak t in _tweaks) if (selector(t)) list.Add(t);
             if (list.Count == 0) return;
             if (MessageBox.Show(FindForm(), (apply ? "Appliquer" : "Rétablir") + " " + list.Count + " optimisation(s) — " + label + " ?",
-                "DesTinGOOD", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                "Fluide", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
             Task.Run(() =>
             {

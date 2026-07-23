@@ -252,7 +252,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Réglages néfastes";
+            Text = "Fluide — Réglages néfastes";
             ClientSize = new Size(680, 460);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -356,7 +356,7 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_items[i]);
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Coche au moins un réglage à corriger.", "DesTinGOOD",
+                MessageBox.Show(this, "Coche au moins un réglage à corriger.", "Fluide",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -385,7 +385,7 @@ namespace BTOptimizer
                         Populate(after);
                         if (reboot)
                             MessageBox.Show(this, "Correction terminée. Redémarre le PC pour les points qui le demandent.",
-                                "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }

@@ -41,7 +41,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Moniteur matériel";
+            Text = "Fluide — Moniteur matériel";
             ClientSize = new Size(720, 470);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(600, 420);
@@ -243,7 +243,7 @@ namespace BTOptimizer
                         _btnRam.Enabled = true;
                         _btnRam.Text = "Libérer la RAM";
                         MessageBox.Show(this, "Mémoire libérée : ~" + Math.Max(0, freed) + " Mo.",
-                            "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }
@@ -261,14 +261,14 @@ namespace BTOptimizer
                     "horodatage;cpu_pct;ram_mo;cpu_temp_c;timer_ms;gpu_temp_c;gpu_pct;gpu_core_mhz;gpu_w;vram_mo" + Environment.NewLine);
                 _btnCsv.Text = "Enregistrer CSV : ON";
                 _btnCsv.ForeColor = Color.FromArgb(120, 230, 150);
-                Text = "DesTinGOOD — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
+                Text = "Fluide — Moniteur matériel (CSV en cours : " + System.IO.Path.GetFileName(_csvPath) + ")";
             }
             else
             {
                 _csvPath = null;
                 _btnCsv.Text = "Enregistrer CSV : OFF";
                 _btnCsv.ForeColor = Color.White;
-                Text = "DesTinGOOD — Moniteur matériel";
+                Text = "Fluide — Moniteur matériel";
             }
         }
 

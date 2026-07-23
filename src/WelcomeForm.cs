@@ -19,7 +19,7 @@ namespace BTOptimizer
         {
             Choice = StartAction.Open;
 
-            Text = "Bienvenue dans DesTinGOOD";
+            Text = "Bienvenue dans Fluide";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;

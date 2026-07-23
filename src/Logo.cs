@@ -5,8 +5,10 @@ using System.Drawing.Drawing2D;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Logo DesTinGOOD : croix médicale (santé / « QG ») fusionnée avec un éclair
-    /// (vitesse / FPS). Dessiné en vectoriel → net à toute taille (rail, icône de fenêtre, à propos).
+    /// Logo Fluide : une frametime qui devient parfaitement plate — le chaos (stutter)
+    /// à gauche, la ligne idéale à droite, le point de mesure au bout. C'est la promesse
+    /// mesurable du produit (« Mesuré, pas promis. »). Vectoriel → net à toute taille
+    /// (rail, icône de fenêtre, à propos). Même géométrie que le favicon de la landing.
     /// </summary>
     internal static class Logo
     {
@@ -19,34 +21,33 @@ namespace BTOptimizer
             if (withPlate)
             {
                 using (var path = RoundRect(box, w * 0.22f))
-                using (var bg = new LinearGradientBrush(box, Color.FromArgb(20, 24, 22), Color.FromArgb(9, 12, 11), 60f))
+                using (var bg = new SolidBrush(Color.FromArgb(11, 14, 17)))
                 {
                     g.FillPath(bg, path);
-                    using (var pen = new Pen(Color.FromArgb(120, accent), Math.Max(1f, w * 0.045f))) g.DrawPath(pen, path);
+                    using (var pen = new Pen(Color.FromArgb(150, accent), Math.Max(1f, w * 0.045f))) g.DrawPath(pen, path);
                 }
             }
 
-            // Croix médicale (néon vif) — deux barres arrondies centrées.
-            float t = w * 0.15f;                         // demi-épaisseur d'une barre
-            float cx = x + w * 0.5f, cy = y + h * 0.5f;
-            float armV = h * 0.33f, armH = w * 0.33f;
-            var vert = new RectangleF(cx - t, cy - armV, t * 2, armV * 2);
-            var horz = new RectangleF(cx - armH, cy - t, armH * 2, t * 2);
-            using (var cb = new SolidBrush(accent))
-            using (var pv = RoundRect(vert, t * 0.5f))
-            using (var ph = RoundRect(horz, t * 0.5f))
-            { g.FillPath(cb, pv); g.FillPath(cb, ph); }
-
-            // Éclair PAR-DESSUS, blanc électrique + fin liseré sombre → « vitesse » lisible sur la croix.
-            var bolt = new[]
+            // La frametime : pics (stutter) qui se résolvent en ligne parfaitement plate.
+            var line = new[]
             {
-                new PointF(x + .585f * w, y + .16f * h), new PointF(x + .40f * w, y + .53f * h),
-                new PointF(x + .515f * w, y + .53f * h), new PointF(x + .43f * w, y + .85f * h),
-                new PointF(x + .64f * w, y + .46f * h), new PointF(x + .525f * w, y + .46f * h),
-                new PointF(x + .61f * w, y + .16f * h)
+                new PointF(x + .14f * w,  y + .52f * h),
+                new PointF(x + .205f * w, y + .33f * h),
+                new PointF(x + .27f * w,  y + .67f * h),
+                new PointF(x + .33f * w,  y + .40f * h),
+                new PointF(x + .39f * w,  y + .57f * h),
+                new PointF(x + .445f * w, y + .50f * h),
+                new PointF(x + .80f * w,  y + .50f * h)
             };
-            using (var bb = new SolidBrush(Color.FromArgb(240, 244, 255, 250))) g.FillPolygon(bb, bolt);
-            using (var bp = new Pen(Color.FromArgb(150, 6, 10, 8), Math.Max(1f, w * 0.02f))) g.DrawPolygon(bp, bolt);
+            using (var pen = new Pen(accent, Math.Max(1.5f, w * 0.075f)))
+            {
+                pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; pen.LineJoin = LineJoin.Round;
+                g.DrawLines(pen, line);
+            }
+            // Le point d'arrivée : la mesure stabilisée.
+            float r = Math.Max(1.5f, w * 0.05f);
+            using (var b = new SolidBrush(accent))
+                g.FillEllipse(b, x + .80f * w - r, y + .50f * h - r, r * 2, r * 2);
 
             g.SmoothingMode = sm;
         }
