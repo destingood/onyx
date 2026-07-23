@@ -70,7 +70,7 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
 - ✅ `AppURL` renseignée dans `installer/BTOptimizer.iss` (la boutique ; remplace-la par
   l'URL de la landing quand elle sera hébergée).
-- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.28.0.0.exe`**
+- ✅ Installateur AUTONOME construit : **`installer/Output/Fluide-Setup-14.32.0.0.exe`**
   (~38 Mo — nouvelle interface QG, boosters dynamiques, licences à expiration, correctif
   viseur) → c'est LE fichier à uploader sur les **trois** produits Gumroad.
 - ✅ Interface v14.28 validée par le harnais hors-écran (8 pages × 3 tailles, 39/39
