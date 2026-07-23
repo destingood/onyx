@@ -31,7 +31,9 @@ namespace BTOptimizer
         {
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
             Text = "Fluide — " + g.Name;
-            ClientSize = new Size(640, 560);
+            // Mise en page « fiche pleine largeur » : onglets en haut, optimisations à gauche,
+            // grande jaquette à droite, appel Pro en bas — comme une page, pas une boîte.
+            ClientSize = new Size(1000, 620);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -49,33 +51,60 @@ namespace BTOptimizer
             try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { }   // barre de titre sombre
         }
 
+        private const int Pad = 40;        // marge de page
+        private const int CoverW = 320;    // largeur de la jaquette (colonne droite)
+
+        private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
+
         private void BuildActions()
         {
-            const int rx = 200;
+            // Onglet « ‹ BIBLIOTHÈQUE » : ramène à la liste (la fiche se referme).
+            var back = FpsUi.GhostButton("‹  BIBLIOTHÈQUE");
+            back.SetBounds(Pad, 22, 170, 30);
+            back.FlatAppearance.BorderSize = 0;
+            back.BackColor = FpsUi.BgMain; back.ForeColor = FpsUi.Dim;
+            back.Click += (s, e) => Close();
+            Controls.Add(back);
+
+            var mode = FpsUi.NeonButton("▶  MODE JEU");
+            mode.SetBounds(ClientSize.Width - Pad - 150, 20, 150, 34);
+            mode.Click += (s, e) => { try { Close(); } catch { } };
+            Controls.Add(mode);
+
+            int ay = 470;   // rangée d'actions, sous les cartes de boost
             if (_exes != null)
             {
                 _prio = FpsUi.GhostButton("Priorité CPU : —");
-                _prio.SetBounds(rx, 126, 300, 34);
+                _prio.SetBounds(Pad, ay, LeftW, 34);
                 _prio.Click += (s, e) => TogglePrio();
                 Controls.Add(_prio);
             }
 
             var launch = FpsUi.NeonButton("▶  Lancer");
-            launch.SetBounds(rx, 168, 145, 34);
+            launch.SetBounds(Pad, ay + 42, (LeftW - 12) / 2, 34);
             launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
             launch.Click += (s, e) => Launch();
             Controls.Add(launch);
 
             var folder = FpsUi.GhostButton("Ouvrir le dossier");
-            folder.SetBounds(rx + 155, 168, 145, 34);
+            folder.SetBounds(Pad + (LeftW - 12) / 2 + 12, ay + 42, (LeftW - 12) / 2, 34);
             folder.Enabled = _g.InstallPath != null;
             folder.Click += (s, e) => OpenFolder();
             Controls.Add(folder);
 
             BuildBoosts();
 
+            // Appel Pro, sous la jaquette (colonne droite) — visible sans écraser le reste.
+            if (!License.ProUnlocked)
+            {
+                var pro = FpsUi.NeonButton("◆  PASSER PRO");
+                pro.SetBounds(ClientSize.Width - Pad - CoverW, ClientSize.Height - 62, CoverW, 40);
+                pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
+                Controls.Add(pro);
+            }
+
             var close = FpsUi.GhostButton("Fermer");
-            close.SetBounds(ClientSize.Width - 24 - 110, ClientSize.Height - 58, 110, 40);
+            close.SetBounds(Pad, ClientSize.Height - 62, 120, 40);
             close.Click += (s, e) => Close();
             Controls.Add(close);
         }
@@ -145,9 +174,9 @@ namespace BTOptimizer
 
         private void BuildBoosts()
         {
-            int y = ClientSize.Height - 190, w = (ClientSize.Width - 24 * 2 - 16) / 2;
-            _cardLight = BoostCard(24, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
-            _cardFull = BoostCard(24 + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
+            int y = 296, w = (LeftW - 16) / 2;
+            _cardLight = BoostCard(Pad, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
+            _cardFull = BoostCard(Pad + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
             Controls.Add(_cardLight); Controls.Add(_cardFull);
             CountBoosts();
         }
@@ -251,60 +280,56 @@ namespace BTOptimizer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int W = ClientSize.Width;
 
-            // Jaquette
-            var pr = new Rectangle(24, 24, 150, 224);
-            Image img = _g.SteamId > 0
+            // --- Onglets : « BIBLIOTHÈQUE » (bouton) puis le jeu, actif et souligné ---
+            int tabX = Pad + 182;
+            TextRenderer.DrawText(g, _g.Name.ToUpperInvariant(), FpsUi.H3, new Rectangle(tabX, 26, W - tabX - 210, 22),
+                FpsUi.Ink, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            int tabW = Math.Min(W - tabX - 210, TextRenderer.MeasureText(_g.Name.ToUpperInvariant(), FpsUi.H3).Width);
+            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, tabX, 52, tabX + tabW, 52);
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 52, W - Pad, 52);
+
+            // --- Colonne droite : grande jaquette ---
+            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, 440);
+            Image big = _g.SteamId > 0
                 ? GameArt.Get(_g.SteamId, () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } })
                 : null;
-            using (var clip = Round(pr, 12))
+            using (var clip = Round(cover, 14))
             {
                 var save = g.Clip; g.SetClip(clip);
-                if (img != null)
-                {
-                    DrawCover(g, img, pr);
-                    if (!_g.Detected) using (var v = new SolidBrush(Color.FromArgb(150, 9, 11, 10))) g.FillRectangle(v, pr);
-                }
+                if (big != null) DrawCover(g, big, cover);
                 else
                 {
-                    using (var b = new SolidBrush(FpsUi.Card)) g.FillRectangle(b, pr);
-                    TextRenderer.DrawText(g, "🎮", FpsUi.GlyphL, pr, _g.Detected ? FpsUi.Neon : FpsUi.Dim2,
+                    using (var b = new SolidBrush(FpsUi.Card)) g.FillRectangle(b, cover);
+                    TextRenderer.DrawText(g, "🎮", FpsUi.GlyphXL, cover, FpsUi.Dim2,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
                 g.Clip = save; save.Dispose();
             }
-            using (var pen = new Pen(FpsUi.Border)) using (var bp = Round(pr, 12)) g.DrawPath(pen, bp);
+            using (var pen = new Pen(FpsUi.Border)) using (var bp = Round(cover, 14)) g.DrawPath(pen, bp);
 
-            // Titre + statut + chemin
-            const int rx = 200;
-            TextRenderer.DrawText(g, _g.Name, FpsUi.H1, new Rectangle(rx, 24, W - rx - 24, 60), FpsUi.Ink,
+            // --- Colonne gauche : titre du bloc + réglages, puis les cartes de boost ---
+            TextRenderer.DrawText(g, "OPTIMISATIONS DE JEU", FpsUi.H2, new Rectangle(Pad, 84, LeftW, 26),
+                FpsUi.Ink, TextFormatFlags.NoPrefix);
+            string st2 = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
+            TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
+                _g.Detected ? FpsUi.Neon : FpsUi.Dim, TextFormatFlags.NoPrefix);
+
+            Section(g, "RÉGLAGES POUR DÉBLOQUER LES FPS", 148, Pad, LeftW);
+            string tip = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
+            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 176, LeftW, 60), FpsUi.Ink,
                 TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-            string status = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
-            TextRenderer.DrawText(g, status, FpsUi.H3, new Rectangle(rx, 88, W - rx - 24, 22), _g.Detected ? FpsUi.Neon : FpsUi.Dim,
-                TextFormatFlags.NoPrefix);
+
+            Section(g, "APPLIQUER EN UN CLIC", 262, Pad, LeftW);
+
             if (!string.IsNullOrEmpty(_g.InstallPath))
-                TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(rx, 110, W - rx - 24, 16), FpsUi.Dim,
-                    TextFormatFlags.NoPrefix | TextFormatFlags.PathEllipsis);
-
-            // Réglages FPS
-            int fy = 268;
-            Section(g, "RÉGLAGES POUR DÉBLOQUER LES FPS", fy, W);
-            string uncap = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
-            TextRenderer.DrawText(g, uncap, FpsUi.Body, new Rectangle(24, fy + 28, W - 48, 84), FpsUi.Ink,
-                TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-
-            // Profil conseillé (néophyte)
-            int py = fy + 116;
-            Section(g, "PROFIL CONSEILLÉ (simple)", py, W);
-            TextRenderer.DrawText(g,
-                "Mode Jeu de Windows · plan Performances ultimes · Game DVR / Game Bar coupés · NVIDIA Reflex / AMD Anti-Lag ON · V-Sync OFF.  "
-                + "Le bouton ⚡ ci-dessous applique tout ça d'un coup (sûr et réversible).",
-                FpsUi.Small, new Rectangle(24, py + 28, W - 48, 46), FpsUi.Dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(Pad, ClientSize.Height - 84, LeftW, 16),
+                    FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.PathEllipsis);
         }
 
-        private static void Section(Graphics g, string title, int y, int W)
+        private static void Section(Graphics g, string title, int y, int x, int w)
         {
-            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(24, y, W - 48, 18), FpsUi.NeonDim, TextFormatFlags.NoPrefix);
-            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 24, y + 20, W - 24, y + 20);
+            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(x, y, w, 18), FpsUi.NeonDim, TextFormatFlags.NoPrefix);
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, x, y + 20, x + w, y + 20);
         }
 
         private static GraphicsPath Round(Rectangle r, int rad)
