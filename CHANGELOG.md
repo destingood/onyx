@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.36 — Le Copilote AGIT (il ne se contente plus d'ouvrir un panneau)
+- Le chat **mesure ton PC pour de vrai** et répond avec **tes** chiffres, sans clic :
+  fréquence réelle de chaque écran vs son maximum · charge et températures CPU/GPU ·
+  espace disque libre **et récupérable** · bibliothèques de jeu manquantes.
+- Il **exécute** ensuite, mais **jamais sans ton clic** : passer l'écran à sa fréquence max,
+  créer un point de restauration, libérer l'espace disque. Chaque bouton annonce ce qui va
+  changer et rappelle que c'est réversible — la promesse fondatrice de Fluide est intacte.
+- **Il n'invente pas de problème** : la correction n'est proposée que s'il y a réellement
+  quelque chose à corriger (écrans déjà au maximum → « Rien à corriger de ce côté »).
+- Tout tourne **en tâche de fond** (un point de restauration prend une minute) : la fenêtre
+  ne fige jamais, et le compte-rendu revient dans la conversation.
+- Visuel : bulles **indigo** (le vert résiduel a sauté), profondeur et arrondis propres,
+  **heure sur chaque message**, en-tête aligné sur le texte — « TOI » n'est plus rogné.
+- Harnais : 8 pages × 3 tailles, 40/40 fenêtres, 0 erreur ; échange complet vérifié en capture.
+
 ## v14.35 — « Flux », la mascotte du Copilote
 - Le chat a enfin un **personnage** (l'ancienne mascotte est partie avec le rebrand) :
   **Flux**, un orbe dont la **bouche EST la courbe de frametime** du logo.

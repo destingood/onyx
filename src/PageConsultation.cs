@@ -52,7 +52,7 @@ namespace BTOptimizer
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
             Greet();
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
-            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame et ça saccade en jeu"); ShowTyping(); } } catch { }
+            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("mon écran est bloqué à 60 hz"); } } catch { }
         }
 
         private void Greet()
@@ -79,18 +79,59 @@ namespace BTOptimizer
             AddBubble(false, q, null);
             var reply = DocAssistant.Answer(q, _stats, Host.Log);
             // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Copilote écrit… ».
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { AddBubble(true, reply.Text, reply); return; }
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
+            {
+                AddBubble(true, reply.Text, reply);
+                if (reply.Action != null && reply.Action.AutoRun)
+                {
+                    string res; try { res = reply.Action.Run(Host.Log); } catch { res = "—"; }
+                    var f = DocAssistant.FollowUp(reply.Action);
+                    AddBubble(true, res, f != null ? new DocAssistant.Reply { Text = res, Action = f } : null);
+                }
+                return;
+            }
             ShowTyping();
             var t = new Timer { Interval = 650 };
-            t.Tick += (s, e) => { t.Stop(); t.Dispose(); HideTyping(); AddBubble(true, reply.Text, reply); };
+            t.Tick += (s, e) =>
+            {
+                t.Stop(); t.Dispose(); HideTyping();
+                AddBubble(true, reply.Text, reply);
+                // Mesure (lecture seule) : elle part d'elle-même. Un CHANGEMENT, lui, attend le clic.
+                if (reply.Action != null && reply.Action.AutoRun) RunAction(reply.Action);
+            };
             t.Start();
+        }
+
+        /// <summary>Exécute une action EN TÂCHE DE FOND (certaines durent une minute : point de
+        /// restauration, nettoyage) puis affiche le compte-rendu dans la conversation, avec la
+        /// correction correspondante s'il y a réellement quelque chose à corriger.</summary>
+        private void RunAction(DocAssistant.ChatAction a)
+        {
+            if (a == null || a.Run == null) return;
+            ShowTyping();
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string res;
+                try { res = a.Run(Host.Log); }
+                catch (Exception ex) { res = "L'action n'a pas abouti : " + ex.Message; }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        HideTyping();
+                        var follow = DocAssistant.FollowUp(a);
+                        AddBubble(true, res, follow != null ? new DocAssistant.Reply { Text = res, Action = follow } : null);
+                    }));
+                }
+                catch { }
+            });
         }
 
         // Indicateur « Le Copilote écrit… » : mini-bulle avec 3 points qui pulsent.
         private void ShowTyping()
         {
             HideTyping();
-            var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(17, 19, 18) };
+            var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(20, 20, 31) };
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
             var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
             bubble.Controls.Add(dots);
@@ -154,15 +195,25 @@ namespace BTOptimizer
             int flowW = _flow.ClientSize.Width;
             int maxTextW = Math.Min(520, Math.Max(220, flowW - AV - GAP - 150));
 
-            // Bulle auto-dimensionnée : Doc sombre / Toi vert accent, coins arrondis + liseré.
-            Color bg = doc ? Color.FromArgb(17, 19, 18) : Color.FromArgb(0, 46, 29);
-            Color bord = doc ? FpsUi.Border : Color.FromArgb(0, 96, 60);
-            var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(14, 10, 16, 12), Margin = new Padding(0) };
+            // Bulle auto-dimensionnée : Copilote sombre / Toi en indigo, coins arrondis + liseré.
+            Color bg = doc ? Color.FromArgb(20, 20, 31) : Color.FromArgb(32, 30, 68);
+            Color bord = doc ? FpsUi.Border : Color.FromArgb(79, 70, 229);
+            var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(16, 12, 18, 14), Margin = new Padding(0) };
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
             bubble.Paint += (s, e) => { try { using (var pen = new Pen(bord)) using (var p = Round(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14)) e.Graphics.DrawPath(pen, p); } catch { } };
 
             var col = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
-            col.Controls.Add(new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = doc ? FpsUi.Neon : Color.FromArgb(150, 255, 200), BackColor = Color.Transparent, Margin = new Padding(0, 0, 0, 4), Text = doc ? "COPILOTE" : "TOI" });
+            // En-tête : qui parle + l'heure (repère utile quand la conversation s'allonge).
+            col.Controls.Add(new Label
+            {
+                AutoSize = true, Font = FpsUi.Small,
+                ForeColor = doc ? FpsUi.Neon : Color.FromArgb(185, 190, 250),
+                // Même marge gauche que le corps du message (les Label d'un FlowLayoutPanel
+                // ont 3 px par défaut) : sans ça l'en-tête débordait de 3 px vers la gauche
+                // et la première lettre passait sous l'arrondi de la bulle.
+                BackColor = Color.Transparent, Margin = new Padding(3, 0, 3, 5),
+                Text = (doc ? "COPILOTE" : "TOI") + "   " + DateTime.Now.ToString("HH:mm")
+            });
             col.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" });
 
             if (reply != null && reply.Tool != null)
@@ -172,6 +223,23 @@ namespace BTOptimizer
                 var entry = reply.Tool;
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
                 col.Controls.Add(btn);
+            }
+            // Action qui MODIFIE le système : bouton explicite + annonce de ce qui change.
+            // Jamais d'exécution automatique ici — c'est la promesse de Fluide.
+            if (reply != null && reply.Action != null && reply.Action.IsChange)
+            {
+                var act = reply.Action;
+                var go = FpsUi.NeonButton("▶  " + act.Label);
+                go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
+                go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act); };
+                col.Controls.Add(go);
+                if (!string.IsNullOrEmpty(act.Warning))
+                    col.Controls.Add(new Label
+                    {
+                        AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
+                        ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
+                        Margin = new Padding(0, 5, 0, 0), Text = act.Warning
+                    });
             }
             if (reply != null && reply.ShowStarters)
             {
@@ -210,7 +278,7 @@ namespace BTOptimizer
                 Text = text, AutoSize = false, Height = 28,
                 Width = TextRenderer.MeasureText(text, FpsUi.Small).Width + 24,
                 FlatStyle = FlatStyle.Flat, Font = FpsUi.Small, Cursor = Cursors.Hand,
-                BackColor = Color.FromArgb(13, 15, 14), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
+                BackColor = Color.FromArgb(20, 20, 31), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
             };
             b.FlatAppearance.BorderColor = FpsUi.Border;
             b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Neon; b.FlatAppearance.BorderColor = FpsUi.Neon; };

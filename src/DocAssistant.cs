@@ -12,11 +12,24 @@ namespace BTOptimizer
     /// </summary>
     internal static class DocAssistant
     {
+        /// <summary>Ce que le Copilote peut EXÉCUTER depuis la conversation.
+        /// IsChange = true → jamais sans un clic explicite (promesse fondatrice de Fluide).
+        /// AutoRun = true → mesure en lecture seule, lancée d'elle-même en tâche de fond.</summary>
+        public sealed class ChatAction
+        {
+            public string Label;                            // libellé du bouton / de l'étape
+            public string Warning;                          // ce qui va changer (sous le bouton)
+            public bool IsChange;
+            public bool AutoRun;
+            public Func<Action<string, int>, string> Run;    // exécute et renvoie le compte-rendu
+        }
+
         public sealed class Reply
         {
             public string Text;
             public HelpCatalog.Entry Tool;   // outil proposé à l'ouverture (bouton), ou null
             public bool ShowStarters;         // affiche des suggestions cliquables
+            public ChatAction Action;         // mesure lancée seule, ou changement à confirmer
         }
 
         public static Reply Intro(BadgeCatalog.Stats st)
@@ -53,6 +66,23 @@ namespace BTOptimizer
             if (st != null && Has(s, "combien d'opti", "optimisation active", "mes opti"))
                 return WithTool(entries, "Santé de mon PC", st.OptiActive + " optimisation(s) active(s) sur " + st.OptiTotal + ". Va dans Optimisations pour en activer d'autres (preset « Recommandé »).");
 
+            // --- Intentions où le Copilote MESURE puis AGIT (avant l'aiguillage générique) ---
+            if (Has(s, "ecran", "hz", "hertz", "rafraich", "moniteur", "144", "165", "240", "bloque a 60"))
+                return WithAction(entries, "Réglages d'écran",
+                    "Je regarde tes écrans et leur fréquence réelle…", ChatActions.MeasureScreen());
+            if (Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu", "charge gpu", "surchauff"))
+                return WithAction(entries, "Températures & throttling",
+                    "Je prends une mesure en direct…", ChatActions.MeasureSensors());
+            if (Has(s, "espace", "disque plein", "nettoy", "liberer", "place disque", "temporaire", "saturé", "sature"))
+                return WithAction(entries, "Nettoyage disque",
+                    "J'analyse ton disque système…", ChatActions.MeasureDisk());
+            if (Has(s, "dll", "manquante", "demarre pas", "refuse de demarrer", "visual c", "directx", "redist", "bibliotheque"))
+                return WithAction(entries, "Bibliothèques de jeu",
+                    "Je vérifie les bibliothèques essentielles…", ChatActions.MeasureLibs());
+            if (Has(s, "point de restau", "restauration", "sauvegarde", "backup", "avant de toucher", "filet"))
+                return WithAction(entries, "Points de restauration",
+                    "Je peux poser un filet de sécurité avant toute manipulation.", ChatActions.MakeRestorePoint());
+
             // Correspondance symptôme (score par mots-clés).
             HelpCatalog.Entry best = null; int bestScore = 0;
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
@@ -66,6 +96,26 @@ namespace BTOptimizer
         {
             HelpCatalog.Entry t = null; foreach (var e in entries) if (e.Tool == toolName) { t = e; break; }
             return new Reply { Text = text, Tool = t };
+        }
+
+        /// <summary>Réponse qui EXÉCUTE (mesure lancée seule, ou changement à confirmer),
+        /// tout en gardant sous la main l'outil complet correspondant.</summary>
+        private static Reply WithAction(List<HelpCatalog.Entry> entries, string toolName, string text, ChatAction action)
+        {
+            Reply r = WithTool(entries, toolName, text);
+            r.Action = action;
+            return r;
+        }
+
+        /// <summary>Suite proposée après une mesure : la correction correspondante, s'il y a
+        /// vraiment quelque chose à corriger (sinon on ne propose rien — pas de faux problème).</summary>
+        public static ChatAction FollowUp(ChatAction measured)
+        {
+            if (measured == null) return null;
+            if (measured == null || measured.Label == null) return null;
+            if (measured.Label.StartsWith("Lecture de tes écrans")) return ChatActions.FixScreen();
+            if (measured.Label.StartsWith("Analyse du disque")) return ChatActions.FixDisk();
+            return null;
         }
 
         private static int Score(string q, HelpCatalog.Entry e)
