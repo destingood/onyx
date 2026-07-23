@@ -91,7 +91,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Entretien du PC — Fluide";
+            Text = "Fluide — Entretien du PC";
             ClientSize = new Size(720, 478);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

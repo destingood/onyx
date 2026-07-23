@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Prérequis & installation automatique — Fluide";
+            Text = "Fluide — Prérequis & installation automatique";
             ClientSize = new Size(600, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
