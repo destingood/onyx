@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.32 — Identité couleur propre : l'indigo Fluide
+- **Nouvel accent `#818CF8`** (indigo) à la place du vert `#00FF88` — qui était, d'après les
+  commentaires du code, **le hex exact du concurrent**. Dernier morceau d'habillage repris,
+  désormais retiré : nom, logo, thème et couleur sont maintenant tous propres à Fluide.
+- Fonds légèrement bleutés (`#08080C`, cartes `#101018`, survol `#1A1A28`) : la palette tient
+  ensemble au lieu d'un accent posé sur du noir pur.
+- Appliqué partout d'un seul tenant : `FpsUi` (source unique), rail, anneau de santé, boutons,
+  interrupteurs, overlay en jeu, badges, et les **boutons d'action des 43 fenêtres** classiques.
+- **Icône `.ico` reforgée** en indigo (9 tailles) et **landing basculée** (thèmes clair et
+  sombre, favicon, boutons) — l'app et le site sont enfin de la même couleur.
+- Les couleurs **sémantiques sont préservées** : ambre pour l'alerte, rouge pour l'erreur.
+- Harnais : 8 pages × 3 tailles, 40/40 fenêtres, 0 erreur.
+
 ## v14.31 — Finition esthétique (suite) : survols et courbes
 - **États de survol / d'appui** : les boutons (fantôme et néon) s'éclaircissent au survol et
   s'enfoncent au clic ; les **cartes de statistiques** s'éclaircissent avec un liseré néon

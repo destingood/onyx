@@ -23,7 +23,7 @@ namespace BTOptimizer
         private int _ticks;
         private volatile bool _thBusy;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
         private static readonly Color Bad = Color.FromArgb(200, 60, 40);
 

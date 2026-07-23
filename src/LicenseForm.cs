@@ -73,7 +73,7 @@ namespace BTOptimizer
             var accept = new Button
             {
                 Text = "J'accepte", Width = 160, Dock = DockStyle.Right,
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 150, 90), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10f), DialogResult = DialogResult.OK
             };
             var decline = new Button

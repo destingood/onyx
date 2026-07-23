@@ -82,12 +82,12 @@ namespace BTOptimizer
             {
                 Location = new Point(x, y), Size = new Size(512, 66), FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(16, 0, 0, 0),
-                BackColor = primary ? Color.FromArgb(0, 150, 90) : Color.White,
+                BackColor = primary ? Color.FromArgb(79, 70, 229) : Color.White,
                 ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52),
                 Font = new Font("Segoe UI Semibold", 11f),
                 Text = string.IsNullOrEmpty(desc) ? title : (title + "\n" + desc)
             };
-            b.FlatAppearance.BorderColor = primary ? Color.FromArgb(0, 150, 90) : Color.FromArgb(200, 204, 210);
+            b.FlatAppearance.BorderColor = primary ? Color.FromArgb(79, 70, 229) : Color.FromArgb(200, 204, 210);
             b.FlatAppearance.BorderSize = primary ? 0 : 1;
             if (!string.IsNullOrEmpty(desc))
             {

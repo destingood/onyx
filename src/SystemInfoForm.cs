@@ -9,7 +9,7 @@ namespace BTOptimizer
     /// <summary>Inventaire matériel + diagnostic santé avec corrections en un clic.</summary>
     internal class SystemInfoForm : Form
     {
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private readonly Action<string, int> _log;
         private ListView _list;

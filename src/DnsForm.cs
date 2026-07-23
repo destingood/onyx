@@ -22,7 +22,7 @@ namespace BTOptimizer
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         // Domaines du benchmark : un généraliste + deux « jeux » (résolus en continu par les lanceurs).
         private static readonly string[] BenchDomains = { "www.google.com", "steampowered.com", "riotgames.com" };

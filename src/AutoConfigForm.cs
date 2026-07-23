@@ -26,7 +26,7 @@ namespace BTOptimizer
         private Button _btnApply, _btnRevert, _btnFps, _btnClose;
         private bool _busy;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private static readonly Color Bg = Color.FromArgb(245, 246, 248);
         private static readonly Color Ink = Color.FromArgb(40, 44, 52);
         private static readonly Color Sub = Color.FromArgb(96, 100, 108);

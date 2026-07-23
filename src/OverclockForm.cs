@@ -47,7 +47,7 @@ namespace BTOptimizer
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private static readonly Color Warn   = Color.FromArgb(205, 90, 40);
 
         public OverclockForm(Action<string, int> log)
@@ -160,7 +160,7 @@ namespace BTOptimizer
             y += 46;
 
             var btnNv = MakeButton("Appliquer le profil pilote NVIDIA « faible latence » (Ultra Low Latency)", 20, y, 620, 32, false);
-            btnNv.ForeColor = Color.FromArgb(0, 120, 60);
+            btnNv.ForeColor = Color.FromArgb(67, 56, 202);
             btnNv.Enabled = Sys.NvpiAvailable();
             if (!btnNv.Enabled) btnNv.Text = "Profil pilote NVIDIA — nvidiaProfileInspector introuvable (tools\\npi\\)";
             btnNv.Click += OnApplyNvidia;

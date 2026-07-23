@@ -7,7 +7,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="app.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B0E11'/%3E%3Cpath d='M5 17 7.5 10.5 10 22 12.5 13.5 15 18.5 17.5 16 26 16' fill='none' stroke='%2335E0A1' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='26' cy='16' r='2' fill='%2335E0A1'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B0E11'/%3E%3Cpath d='M5 17 7.5 10.5 10 22 12.5 13.5 15 18.5 17.5 16 26 16' fill='none' stroke='%23818CF8' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='26' cy='16' r='2' fill='%23818CF8'/%3E%3C/svg%3E">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Fluide","operatingSystem":"Windows 10, Windows 11","applicationCategory":"UtilitiesApplication","description":"Optimiseur PC gamer : 176 optimisations réversibles, mesure de FPS et de latence en direct, diagnostic complet (crashs, réseau, disque). Aucune injection, compatible anticheat.","offers":[{"@type":"Offer","name":"Gratuit","price":"0","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro Annuel","price":"49","priceCurrency":"EUR"},{"@type":"Offer","name":"Pro à Vie","price":"127","priceCurrency":"EUR"}]}
 </script>
@@ -21,10 +21,10 @@
     --ink: #D2DAE0;
     --ink-dim: #8A97A0;
     --ink-faint: #5C666E;
-    --signal: #35E0A1;
-    --signal-deep: #17b381;
+    --signal: #818CF8;
+    --signal-deep: #6670D6;
     --before: #F0A93C;
-    --grid: rgba(53,224,161,0.07);
+    --grid: rgba(129,140,248,0.07);
     --scale: clamp(1rem, 0.9rem + 0.4vw, 1.125rem);
     --h1: clamp(2.5rem, 1.4rem + 5vw, 5rem);
     --h2: clamp(1.7rem, 1.1rem + 2.4vw, 2.7rem);
@@ -37,17 +37,17 @@
       --bg: #EEF2F3; --panel: #FFFFFF; --panel-2: #F6F8F9;
       --line: rgba(12,20,26,0.10); --line-strong: rgba(12,20,26,0.16);
       --ink: #10171C; --ink-dim: #4E5A62; --ink-faint: #85939B;
-      --signal: #0C9F71; --signal-deep: #0a815d; --before: #C77A16;
-      --grid: rgba(12,159,113,0.08);
+      --signal: #4F46E5; --signal-deep: #4338CA; --before: #C77A16;
+      --grid: rgba(79,70,229,0.08);
     }
   }
   :root[data-theme="dark"] {
     --bg:#0B0E11;--panel:#12171C;--panel-2:#161C22;--line:rgba(255,255,255,0.08);--line-strong:rgba(255,255,255,0.14);
-    --ink:#D2DAE0;--ink-dim:#8A97A0;--ink-faint:#5C666E;--signal:#35E0A1;--signal-deep:#17b381;--before:#F0A93C;--grid:rgba(53,224,161,0.07);
+    --ink:#D2DAE0;--ink-dim:#8A97A0;--ink-faint:#5C666E;--signal:#818CF8;--signal-deep:#6670D6;--before:#F0A93C;--grid:rgba(129,140,248,0.07);
   }
   :root[data-theme="light"] {
     --bg:#EEF2F3;--panel:#FFFFFF;--panel-2:#F6F8F9;--line:rgba(12,20,26,0.10);--line-strong:rgba(12,20,26,0.16);
-    --ink:#10171C;--ink-dim:#4E5A62;--ink-faint:#85939B;--signal:#0C9F71;--signal-deep:#0a815d;--before:#C77A16;--grid:rgba(12,159,113,0.08);
+    --ink:#10171C;--ink-dim:#4E5A62;--ink-faint:#85939B;--signal:#4F46E5;--signal-deep:#4338CA;--before:#C77A16;--grid:rgba(79,70,229,0.08);
   }
 
   * { box-sizing: border-box; }
@@ -87,7 +87,7 @@
     padding: 11px 20px; border-radius: 9px; text-decoration: none; cursor: pointer;
     border: 1px solid transparent; transition: transform .12s ease, background .15s ease, border-color .15s ease;
   }
-  .btn-primary { background: var(--signal); color: #04150E; }
+  .btn-primary { background: var(--signal); color: #0B0B14; }
   .btn-primary:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--signal) 88%, white); }
   .btn-ghost { border-color: var(--line-strong); color: var(--ink); background: transparent; }
   .btn-ghost:hover { border-color: var(--signal); color: var(--signal); }

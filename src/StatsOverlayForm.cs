@@ -11,7 +11,7 @@ namespace BTOptimizer
         private StatsOverlaySettings _s;
         private CheckBox _chk;
         private ComboBox _corner;
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public StatsOverlayForm(Action<string, int> log)
         {

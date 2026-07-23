@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnScan, _btnOpen, _btnClose;
         private int _score = -1;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
         private static readonly Color Bad = Color.FromArgb(200, 60, 40);
 

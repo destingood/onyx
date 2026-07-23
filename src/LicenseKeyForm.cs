@@ -56,7 +56,7 @@ namespace BTOptimizer
             var activate = new Button
             {
                 Text = "Activer", Width = 110, Location = new Point(392, 250),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 150, 90), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10f)
             };
             activate.FlatAppearance.BorderSize = 0;
@@ -72,8 +72,8 @@ namespace BTOptimizer
                     Text = "Démarrer l'essai Pro gratuit de 7 jours", Width = 254, Location = new Point(266, 250),
                     FlatStyle = FlatStyle.Flat, BackColor = Color.White, Font = new Font("Segoe UI", 9f)
                 };
-                trial.FlatAppearance.BorderColor = Color.FromArgb(0, 150, 90);
-                trial.ForeColor = Color.FromArgb(0, 120, 60);
+                trial.FlatAppearance.BorderColor = Color.FromArgb(79, 70, 229);
+                trial.ForeColor = Color.FromArgb(67, 56, 202);
                 trial.Location = new Point(18, 250);
                 _status.Location = new Point(18, 250);
                 _status.Visible = false;
@@ -92,7 +92,7 @@ namespace BTOptimizer
             }
             else if (License.TrialActive)
             {
-                _status.ForeColor = Color.FromArgb(0, 120, 60);
+                _status.ForeColor = Color.FromArgb(67, 56, 202);
                 _status.Text = "Essai en cours : " + License.TrialDaysLeft + " jour(s) restant(s).";
             }
             else if (License.TrialUsed)
@@ -108,7 +108,7 @@ namespace BTOptimizer
             {
                 Text = "🛒 Pas encore de clé ? Passer Pro — 49 €/an, ou 127 € une seule fois.",
                 Location = new Point(18, 306), AutoSize = true,
-                LinkColor = Color.FromArgb(0, 150, 90), ActiveLinkColor = Color.FromArgb(0, 120, 60),
+                LinkColor = Color.FromArgb(79, 70, 229), ActiveLinkColor = Color.FromArgb(67, 56, 202),
                 LinkBehavior = LinkBehavior.HoverUnderline, BackColor = Color.Transparent
             };
             buy.LinkClicked += (s, e) =>

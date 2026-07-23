@@ -24,7 +24,7 @@ namespace BTOptimizer
 
         // Repères des couleurs codées en dur dans les fenêtres.
         private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité DTG)
-        private static readonly Color AccentRef = Color.FromArgb(0, 150, 90);
+        private static readonly Color AccentRef = Color.FromArgb(79, 70, 229);
 
         // Liseré signature sous les bandeaux (identité Fluide).
         private static readonly Color BrandA = Color.FromArgb(0, 205, 130);

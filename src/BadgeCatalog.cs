@@ -32,7 +32,7 @@ namespace BTOptimizer
 
         public static readonly Color[] TierColor =
         {
-            Color.FromArgb(0, 255, 136),   // palier 1 — vert néon
+            Color.FromArgb(129, 140, 248),   // palier 1 — vert néon
             Color.FromArgb(0, 200, 255),   // palier 2 — cyan
             Color.FromArgb(255, 200, 60),  // palier 3 — or
         };

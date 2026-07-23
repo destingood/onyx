@@ -15,7 +15,7 @@ namespace BTOptimizer
         private Button _btnAnalyze, _btnClean, _btnClose;
         private List<Sys.CleanTarget> _targets = new List<Sys.CleanTarget>();
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public CleanupForm(Action<string, int> log)
         {

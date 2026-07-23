@@ -20,7 +20,7 @@ namespace BTOptimizer
         private ListView _list;
         private Label _summary;
         private Button _btnScan, _btnClose, _btnKill;
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         // Processus système à ne JAMAIS proposer de fermer.
         private static readonly HashSet<string> Critical = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
