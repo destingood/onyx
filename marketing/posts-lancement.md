@@ -14,7 +14,7 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 **Description** :
 
-> 174 optimisations gaming pour Windows 10/11 — chacune est optionnelle, expliquée et
+> 176 optimisations gaming pour Windows 10/11 — chacune est optionnelle, expliquée et
 > **réversible** (sauvegarde du registre + point de restauration créés avant toute
 > modification). Bilan « Santé de mon PC » sur 100, assistant « J'ai un problème… »,
 > mesure de FPS et de latence en direct, diagnostic crashs/réseau/disque, rapport HTML.
@@ -102,7 +102,7 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 **Corps** :
 
 > Hey everyone — solo dev here. I got tired of "FPS boost" tools that apply random
-> registry hacks, so I built the opposite: every one of the 174 tweaks is optional,
+> registry hacks, so I built the opposite: every one of the 176 tweaks is optional,
 > explained, and reversible (registry backup + restore point created before anything
 > is touched). No injection, no kernel driver, anticheat-safe by design.
 >
@@ -111,7 +111,7 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > panel that detects and **undoes the harmful tweaks** other "optimizers" leave behind
 > (forced HPET, disabled pagefile, TdrLevel=0…).
 >
-> The free edition includes all 174 tweaks + the full diagnostic suite. There's a paid
+> The free edition includes all 176 tweaks + the full diagnostic suite. There's a paid
 > tier for the auto-tune stuff (yearly, or a one-time lifetime license if you hate
 > subscriptions — priced ~15% under the market), that's how I'm trying to make this
 > sustainable.
@@ -130,7 +130,7 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > pour le gaming, et je viens le montrer ici parce qu'il est en français et pensé
 > pour être **honnête** :
 >
-> - 174 optimisations, chacune expliquée, optionnelle et **réversible** (sauvegarde
+> - 176 optimisations, chacune expliquée, optionnelle et **réversible** (sauvegarde
 >   .reg + point de restauration automatiques avant application)
 > - Zéro injection, zéro pilote noyau → compatible anticheat (Valorant, Faceit…)
 > - Il **mesure** : FPS, latence DPC/ISR, score santé /100, rapport HTML avant/après
@@ -158,7 +158,7 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > qui détecte et répare les dégâts laissés par les faux optimiseurs (HPET forcé,
 > pagefile coupé…). Ton PC n'a probablement pas besoin de plus de hacks, mais de moins.
 >
-> 3/ L'édition gratuite : 174 optimisations + toute la suite de diagnostic. La Pro
+> 3/ L'édition gratuite : 176 optimisations + toute la suite de diagnostic. La Pro
 > (49 €/an ou 127 € à vie — 15 % sous le marché) ajoute le 1-clic adapté au matériel.
 > Essai 7 jours dans l'app. LANDING_URL — retours bienvenus, je réponds à tout.
 
@@ -187,7 +187,7 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 ## 7. Message Discord (salons projets/self-promo uniquement)
 
 > 🎮 Dév solo FR : je viens de sortir DesTinGOOD, un optimiseur gaming Windows honnête —
-> 174 réglages expliqués et réversibles, score santé /100, FPS/latence mesurés,
+> 176 réglages expliqués et réversibles, score santé /100, FPS/latence mesurés,
 > compatible anticheat (zéro injection). Édition gratuite complète : LANDING_URL
 > Retours très bienvenus, je réponds à tout 🙏
 
@@ -201,7 +201,7 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 
 Réponse-type, factuelle, **jamais dénigrante** (à adapter) :
 
-> Bonne question ! Les différences principales : chez moi les 174 optimisations sont
+> Bonne question ! Les différences principales : chez moi les 176 optimisations sont
 > gratuites (ailleurs, l'édition gratuite en a une dizaine), les prix sont ~15 % sous
 > le marché (49 €/an, ou 127 € une seule fois pour ne jamais payer d'abonnement),
 > chaque réglage est réversible avec sauvegarde automatique, zéro injection donc
