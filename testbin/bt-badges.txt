@@ -1,3 +1,0 @@
-checkups=0
-boost=0
-earned=premiers,optimiseur,chirurgien,bloc,joueur,ludo,collec

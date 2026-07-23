@@ -53,3 +53,4 @@ BTTest-out.txt
 *.destingood.bak
 bt-health-history.txt
 bt-nic-backup.txt
+testbin/
