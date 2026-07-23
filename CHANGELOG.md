@@ -4,27 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v14.37 — L'interface s'anime (fluidité « premium », sans coûter de FPS)
-- **Moteur d'animation transitoire** (`Anim`) : UN seul timer ~60 fps qui ne tourne QUE
-  pendant une transition puis s'arrête → **zéro coût processeur au repos** (cohérent avec un
-  optimiseur). Tout est bâti sur des propriétés composées par le GPU (opacité de fenêtre).
-- **Ouverture / fermeture des fenêtres** : fondu + légère montée à l'ouverture (~140 ms,
-  décélération douce), fondu rapide à la fermeture. Un seul point (`OpenDialog`) → **les ~40
-  fenêtres** ET la fenêtre principale au lancement. Composé par Windows, zéro scintillement.
-- **Transitions entre les 8 pages** : cross-fade par capture — un calque superposé (alpha DWM)
-  montrant l'ancienne page s'efface pour révéler la nouvelle (~120 ms). Lisse même sur le
-  moniteur système ; repli instantané si la capture échoue. (`DrawToBitmap` rendant du vide sur
-  ces contrôles, la capture passe par `PrintWindow`, comme le harnais.)
-- **Survols & appuis en douceur** : greffés une seule fois dans `Theme.Apply` → hérités par les
-  **56 fenêtres** (la couleur/lueur monte en ~120 ms, léger enfoncement au clic).
-- **Interrupteurs (NeonSwitch)** : la bille glisse + remplissage néon progressif (~160 ms) sur
-  bascule (les synchros d'affichage restent instantanées, pas d'animation de masse au chargement).
-- **Toast « nouveau badge »** : apparition et disparition en fondu.
-- **Garde-fou** : interrupteur *Réglages système → Animations de l'interface* — **activé par
-  défaut**, **se coupe seul quand un jeu tourne** (plein écran, jeu connu ou Mode Jeu), et
-  **respecte le réglage Windows** « Afficher les animations ». Choix persisté (`bt-anim.txt`).
-- Harnais : animations **forcées OFF** en test (captures déterministes) — 8 pages × 3 tailles,
-  0 erreur ; build Release 0 erreur.
+## v14.37 — Animations d'ouverture (version prudente, sans bug)
+- **Fondu d'ouverture des fenêtres** : les fenêtres d'outil (menu ⋯) apparaissent en fondu
+  doux (~150 ms), via un moteur d'animation transitoire (`Anim`) — **un seul timer ~60 fps
+  actif UNIQUEMENT pendant l'effet**, puis à l'arrêt : zéro coût au repos (cohérent optimiseur).
+- **Toast « nouveau badge »** : apparition / disparition en fondu.
+- **Interrupteur « Animations de l'interface »** (Réglages système, activé par défaut) : se
+  coupe seul quand un jeu tourne, respecte le réglage Windows « Afficher les animations »,
+  choix persisté (`bt-anim.txt`).
+- *Retiré volontairement (instables sur du WinForms peint à la main)* : le **cross-fade entre
+  pages** — la capture `PrintWindow` ressortait **noire** sur certains GPU (flash noir) ; et
+  l'**easing des survols / interrupteurs** — repeindre 8×/transition des boutons non
+  double-bufferisés provoquait un **clignotement**. Survol et bascule restent donc
+  **instantanés** (comportement stable connu). Une reprise « en douceur » propre
+  (double-buffering + application asynchrone du réglage) reste faisable plus tard.
+- Harnais : animations forcées OFF en test — 8 pages × 3 tailles, 0 erreur ; build 0 erreur.
 
 ## v14.36 — Le Copilote AGIT (il ne se contente plus d'ouvrir un panneau)
 - Le chat **mesure ton PC pour de vrai** et répond avec **tes** chiffres, sans clic :

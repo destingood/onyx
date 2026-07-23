@@ -54,8 +54,6 @@ namespace BTOptimizer
             BuildTray();
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
-            Load += delegate { if (Anim.On) { try { Opacity = 0.0; } catch { } } };   // démarre invisible…
-            Shown += delegate { AnimFx.FadeInForm(this); };                            // …puis fondu d'ouverture
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
@@ -366,8 +364,7 @@ namespace BTOptimizer
                 try { page.OnShown(); } catch { }
             };
 
-            if (prev >= 0 && prev != idx) AnimFx.CrossFadePage(_host, commit);
-            else commit();
+            commit();   // échange instantané (le cross-fade par capture flashait en noir sur certains GPU)
         }
 
         private FpsPage CreatePage(int idx)
