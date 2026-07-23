@@ -79,7 +79,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Booster de jeu (Priorité & Affinité)";
+            Text = "Fluide — Booster de jeu (Priorité & Affinité)";
             ClientSize = new Size(680, 480);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -292,7 +292,7 @@ namespace BTOptimizer
         {
             using (var f = new Form
             {
-                Text = "DesTinGOOD — Ajouter un jeu", ClientSize = new Size(380, 132), FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Fluide — Ajouter un jeu", ClientSize = new Size(380, 132), FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent, MaximizeBox = false, MinimizeBox = false, Font = new Font("Segoe UI", 9f)
             })
             {

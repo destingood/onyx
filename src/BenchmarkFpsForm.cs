@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Benchmark FPS";
+            Text = "Fluide — Benchmark FPS";
             ClientSize = new Size(560, 440);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -159,7 +159,7 @@ namespace BTOptimizer
 
         private string SummaryText()
         {
-            return "DesTinGOOD — Benchmark FPS" + (string.IsNullOrEmpty(_game) ? "" : " (" + _game + ")") + "\n"
+            return "Fluide — Benchmark FPS" + (string.IsNullOrEmpty(_game) ? "" : " (" + _game + ")") + "\n"
                  + "Moyenne : " + _avg.ToString("0") + " FPS\n"
                  + "1% low  : " + (_low1 > 0 ? _low1.ToString("0") : "n/d") + " FPS\n"
                  + "0.1% low: " + (_low01 > 0 ? _low01.ToString("0") : "n/d") + " FPS\n"

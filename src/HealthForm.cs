@@ -56,7 +56,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Santé de mon PC";
+            Text = "Fluide — Santé de mon PC";
             ClientSize = new Size(680, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

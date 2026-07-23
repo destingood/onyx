@@ -20,7 +20,7 @@ namespace BTOptimizer
         public BadgeDetailForm(BadgeCatalog.Badge b, BadgeCatalog.Stats s, bool ok, Action goTo)
         {
             _b = b; _s = s; _ok = ok; _goTo = goTo;
-            Text = "DesTinGOOD — " + b.Name;
+            Text = "Fluide — " + b.Name;
             ClientSize = new Size(400, 360);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;

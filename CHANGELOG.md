@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.29 — Rebrand : DesTinGOOD devient **Fluide**
+- Nouveau nom (**Fluide**), nouveau logo (**la frametime qui devient plate** — le chaos
+  à gauche, la ligne idéale à droite), nouvelle signature : **« Mesuré, pas promis. »**
+  Décidés par interview, avec faits vérifiés : `fluide.gg` libre, « FrameLab » écarté
+  (FrameLabFPS existe déjà), `fluide.fr/.app` pris.
+- Portée : couche **visible** uniquement — titres, textes, logo/icône de fenêtre,
+  installateur (« Fluide Setup », `Fluide-Setup-x.exe`), landing, kit de vente. La
+  couche technique (`BTOptimizer.exe`, `bt-*.txt`, lanceurs, clés, gardien) est
+  inchangée, comme au rebrand v10.3.
+- Boutique : `fluide.gumroad.com` (repli `fluidegg`) ; domaine `fluide.gg` à acheter
+  après les premières ventes. Landing : titre/description SEO, favicon frametime,
+  données structurées SoftwareApplication (3 offres).
+
 ## v14.28 — Booster Dynamique + fusion de la branche vente
 - **Affinité CPU sur mesure** : le Gardien détecte le lancement des jeux et assigne
   dynamiquement les processus aux meilleurs cœurs (automatique ou sélection manuelle),

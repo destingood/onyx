@@ -1,4 +1,4 @@
-# Plan de lancement — vendre DesTinGOOD Pro
+# Plan de lancement — vendre Fluide Pro
 
 Objectif : passer de « produit fini » à « premières ventes », avec le minimum de frais
 fixes. Réaliste, pas magique : les premières ventes arrivent en général **1 à 3 semaines**
@@ -24,12 +24,12 @@ Dans l'app : fonction Pro cliquée → fenêtre Pro
 
 Les adresses sont déjà câblées dans la landing **et** dans l'app (`LicenseKeyForm.BuyUrl`) :
 
-- Produit gratuit : `https://destingood.gumroad.com/l/gratuit`
-- Abonnement annuel (49 €/an) : `https://destingood.gumroad.com/l/annuel`
-- Licence à vie (127 €) : `https://destingood.gumroad.com/l/pro`
-- Dans l'app, le lien d'achat ouvre la boutique entière : `https://destingood.gumroad.com`
+- Produit gratuit : `https://fluide.gumroad.com/l/gratuit`
+- Abonnement annuel (49 €/an) : `https://fluide.gumroad.com/l/annuel`
+- Licence à vie (127 €) : `https://fluide.gumroad.com/l/pro`
+- Dans l'app, le lien d'achat ouvre la boutique entière : `https://fluide.gumroad.com`
 
-⚠️ Elles supposent le **nom d'utilisateur Gumroad `destingood`** et ces **permaliens exacts**.
+⚠️ Elles supposent le **nom d'utilisateur Gumroad `fluide`** et ces **permaliens exacts**.
 Si tu choisis autre chose, dis-le-moi : je mets à jour le code et la landing (2 minutes).
 
 ## Étape 0 — Légal (gratuit, à lancer en parallèle, ~30 min + quelques jours de délai)
@@ -45,7 +45,8 @@ Si tu choisis autre chose, dis-le-moi : je mets à jour le code et la landing (2
 ## Étape 1 — Compte Gumroad (~30 min, à faire par toi)
 
 1. Crée le compte sur gumroad.com (je ne peux pas créer de comptes à ta place).
-2. Nom d'utilisateur : **destingood** (voir plus haut).
+2. Nom d'utilisateur : **fluide** — s'il est pris, prends **fluidegg** et dis-le-moi :
+   je re-câble l'app, la landing et le kit en 2 minutes.
 3. Renseigne le versement bancaire (payouts) et vérifie l'identité si demandé.
 
 ## Étape 2 — Les deux produits (~45 min)
@@ -54,9 +55,9 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
 | | Permalien | Prix | Type Gumroad | Contenu |
 |---|---|---|---|---|
-| DesTinGOOD (gratuit) | `gratuit` | 0 € (+ « pay what you want ») | Produit | Setup autonome (~37 Mo) + setup léger (~6 Mo) |
-| DesTinGOOD Pro — Annuel | `annuel` | 49 €/an | **Membership** (facturation récurrente annuelle) | Mêmes fichiers + « clé envoyée sous 24 h, renouvelée à chaque échéance » |
-| DesTinGOOD Pro — À Vie | `pro` | 127 € | Produit | Mêmes fichiers + « clé à vie envoyée sous 24 h » |
+| Fluide (gratuit) | `gratuit` | 0 € (+ « pay what you want ») | Produit | Setup autonome (~37 Mo) + setup léger (~6 Mo) |
+| Fluide Pro — Annuel | `annuel` | 49 €/an | **Membership** (facturation récurrente annuelle) | Mêmes fichiers + « clé envoyée sous 24 h, renouvelée à chaque échéance » |
+| Fluide Pro — À Vie | `pro` | 127 € | Produit | Mêmes fichiers + « clé à vie envoyée sous 24 h » |
 
 - Crée un **code promo `LANCEMENT`** (−30 %, valable 7 jours) plutôt que de baisser les
   prix : annuel à 34,30 €, à vie à 88,90 €, et les prix affichés restent 49 / 127 €.
@@ -134,7 +135,7 @@ Tous les textes sont prêts dans `posts-lancement.md`.
 
 Relevé sur fpsdoctor.com le 22/07/2026 (à re-vérifier avant d'utiliser les chiffres) :
 
-| | FPSDoctor | DesTinGOOD |
+| | FPSDoctor | Fluide |
 |---|---|---|
 | Gratuit | 13 optimisations, analyse de base | **176 optimisations** + toute la suite de diagnostic |
 | Payant | 59 €/an (abonnement) · 150 € à vie | **49 €/an · 127 € à vie** (mêmes paliers, −15 %) |

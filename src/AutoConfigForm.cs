@@ -52,7 +52,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Config auto + preuve";
+            Text = "Fluide — Config auto + preuve";
             ClientSize = new Size(700, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

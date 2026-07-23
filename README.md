@@ -86,6 +86,15 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
+### 💧 Rebrand : DesTinGOOD devient **Fluide** (v14.29)
+
+Nouveau nom, nouveau logo (**la frametime qui devient plate**), nouvelle signature
+(**« Mesuré, pas promis. »**) — décidés par interview avec faits vérifiés (domaines,
+collisions de marques). Portée : couche **visible** uniquement — la couche technique
+(`BTOptimizer.exe`, `bt-*.txt`, lanceurs, clés, gardien) est inchangée, exactement
+comme au rebrand v10.3. Installateur : « Fluide Setup » (`Fluide-Setup-x.exe`),
+boutique `fluide.gumroad.com`. Détail complet dans le CHANGELOG (v14.29).
+
 ### 🎯 Correctif critique du viseur — plus aucune perte de FPS (v14.27)
 
 Bug découvert **en conditions réelles** (grosse chute de FPS sur Overwatch, diagnostiquée

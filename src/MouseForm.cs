@@ -45,7 +45,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Fréquence de la souris";
+            Text = "Fluide — Fréquence de la souris";
             ClientSize = new Size(560, 340);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

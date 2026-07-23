@@ -3,15 +3,15 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("DesTinGOOD Optimizer")]
-[assembly: AssemblyProduct("DesTinGOOD Optimizer")]
+[assembly: AssemblyTitle("Fluide")]
+[assembly: AssemblyProduct("Fluide")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.28.0.0")]
-[assembly: AssemblyFileVersion("14.28.0.0")]
+[assembly: AssemblyVersion("14.29.0.0")]
+[assembly: AssemblyFileVersion("14.29.0.0")]
 
 namespace BTOptimizer
 {
@@ -34,8 +34,8 @@ namespace BTOptimizer
             {
                 if (!isNew)
                 {
-                    MessageBox.Show("DesTinGOOD est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
-                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Fluide est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -49,8 +49,8 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "DesTinGOOD a rencontré une erreur et va se fermer :\n\n" + ex,
-                        "DesTinGOOD — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "Fluide a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "Fluide — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 GC.KeepAlive(mutex);
             }
@@ -217,7 +217,7 @@ namespace BTOptimizer
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
 
-            Console.WriteLine("DesTinGOOD TEST — contexte :");
+            Console.WriteLine("Fluide TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
             Console.WriteLine("  SID cible      : " + Sys.TargetSid);

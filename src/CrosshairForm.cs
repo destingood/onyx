@@ -30,7 +30,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Viseur (crosshair) — DesTinGOOD";
+            Text = "Viseur (crosshair) — Fluide";
             ClientSize = new Size(470, 486);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -36,7 +36,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Trajet réseau";
+            Text = "Fluide — Trajet réseau";
             ClientSize = new Size(660, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

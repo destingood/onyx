@@ -60,7 +60,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — FPS EN DIRECT (par jeu, façon PresentMon)";
+            Text = "Fluide — FPS EN DIRECT (par jeu, façon PresentMon)";
             ClientSize = new Size(940, 640);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(760, 520);
@@ -227,7 +227,7 @@ namespace BTOptimizer
                 _bannerTitle.Text = "Mesure impossible";
                 _bannerFps.Text = "—";
                 _bannerDetail.Text = "Cause : " + (_etw.LastError ?? "inconnue")
-                    + ". Lance DesTinGOOD en administrateur.";
+                    + ". Lance Fluide en administrateur.";
                 if (_log != null) _log("FPS en direct : session ETW refusée (" + (_etw.LastError ?? "?") + ").", 2);
                 _etw.Dispose();
                 _etw = null;

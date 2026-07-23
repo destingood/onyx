@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Overlay de stats";
+            Text = "Fluide — Overlay de stats";
             ClientSize = new Size(480, 300);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

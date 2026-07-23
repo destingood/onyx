@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         public DashboardForm()
         {
-            Text = "DesTinGOOD — QG";
+            Text = "Fluide — QG";
             ClientSize = new Size(1200, 760);
             MinimumSize = new Size(1040, 680);
             StartPosition = FormStartPosition.CenterScreen;
@@ -72,7 +72,7 @@ namespace BTOptimizer
             if (WindowState == FormWindowState.Minimized)
             {
                 Hide(); _tray.Visible = true;
-                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "DesTinGOOD", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
+                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "Fluide", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
                 return;
             }
         }
@@ -138,7 +138,7 @@ namespace BTOptimizer
             reg.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
             reg.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
             reg.DropDownItems.Add(new ToolStripSeparator());
-            var autostart = new ToolStripMenuItem("Démarrer DesTinGOOD avec Windows") { Checked = AppAutostart.IsEnabled() };
+            var autostart = new ToolStripMenuItem("Démarrer Fluide avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
             reg.DropDownItems.Add(autostart);
             reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
@@ -152,7 +152,7 @@ namespace BTOptimizer
             m.Add(prof);
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
-            m.Add("ℹ  À propos de DesTinGOOD", null, (s, e) => OpenDialog(new AboutForm()));
+            m.Add("ℹ  À propos de Fluide", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
         }
 
@@ -160,10 +160,10 @@ namespace BTOptimizer
         {
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "DesTinGOOD"; _tray.Visible = false;
+            _tray.Text = "Fluide"; _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var m = new ContextMenuStrip();
-            m.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
+            m.Items.Add("Ouvrir Fluide", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
             m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
             m.Items.Add("Rapport de santé (HTML)", null, (s, e) => GenerateHealthReport());
@@ -187,7 +187,7 @@ namespace BTOptimizer
             if (MessageBox.Show(this,
                 "Redémarrer l'explorateur Windows ?\n\nLa barre des tâches et le bureau disparaissent ~1 seconde puis reviennent. "
                 + "Utile pour rafraîchir le shell après des réglages, ou débloquer une barre des tâches figée.",
-                "DesTinGOOD", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                "Fluide", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             System.Threading.Tasks.Task.Run(() => AppAutostart.RestartExplorer());
         }
 
@@ -270,10 +270,10 @@ namespace BTOptimizer
                 var gr = e.Graphics; gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 int mw = 34, mx = (brand.Width - mw) / 2;
                 Logo.Draw(gr, new RectangleF(mx, 6, mw, mw), FpsUi.Neon, false);
-                TextRenderer.DrawText(gr, "DTG", FpsUi.Tiny, new Rectangle(0, 42, brand.Width, 16), FpsUi.Neon,
+                TextRenderer.DrawText(gr, "Fluide", FpsUi.Tiny, new Rectangle(0, 42, brand.Width, 16), FpsUi.Neon,
                     TextFormatFlags.HorizontalCenter);
             };
-            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "DesTinGOOD — QG");
+            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "Fluide — QG");
             _rail.Controls.Add(brand);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
@@ -313,7 +313,7 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, "Impossible d'ouvrir cette page :\n\n" + ex.Message,
-                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
             }
@@ -349,7 +349,7 @@ namespace BTOptimizer
         public void OpenDialog(Form f)
         {
             try { using (f) f.ShowDialog(this); }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         public void Goto(int idx) { ShowPage(idx); }
@@ -369,7 +369,7 @@ namespace BTOptimizer
                 {
                     string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
                     string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    path = System.IO.Path.Combine(dir, "DesTinGOOD-rapport-sante.html");
+                    path = System.IO.Path.Combine(dir, "Fluide-rapport-sante.html");
                     System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
                 }
                 catch (Exception ex) { err = ex.Message; }
@@ -381,9 +381,9 @@ namespace BTOptimizer
                         if (path != null)
                         {
                             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
-                            catch { MessageBox.Show(this, "Rapport enregistré sur le Bureau :\n" + path, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                            catch { MessageBox.Show(this, "Rapport enregistré sur le Bureau :\n" + path, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); }
                         }
-                        else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
                 catch { }
@@ -395,7 +395,7 @@ namespace BTOptimizer
         public void ExportProfile()
         {
             string file;
-            using (var dlg = new SaveFileDialog { Filter = "Profil DesTinGOOD (*.dtg)|*.dtg", FileName = "mon-profil-destingood.dtg", Title = "Exporter mon profil d'optimisations" })
+            using (var dlg = new SaveFileDialog { Filter = "Profil Fluide (*.dtg)|*.dtg", FileName = "mon-profil-fluide.dtg", Title = "Exporter mon profil d'optimisations" })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 file = dlg.FileName;
@@ -414,7 +414,7 @@ namespace BTOptimizer
                     {
                         Cursor = Cursors.Default;
                         if (err == null) MessageBox.Show(this, ids.Count + " optimisation(s) active(s) exportée(s) :\n" + file, "Profil exporté", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        else MessageBox.Show(this, "Échec de l'export :\n\n" + err, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        else MessageBox.Show(this, "Échec de l'export :\n\n" + err, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
                 catch { }
@@ -426,14 +426,14 @@ namespace BTOptimizer
         public void ImportProfile()
         {
             string file;
-            using (var dlg = new OpenFileDialog { Filter = "Profil DesTinGOOD (*.dtg)|*.dtg|Tous les fichiers|*.*", Title = "Importer un profil d'optimisations" })
+            using (var dlg = new OpenFileDialog { Filter = "Profil Fluide (*.dtg)|*.dtg|Tous les fichiers|*.*", Title = "Importer un profil d'optimisations" })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 file = dlg.FileName;
             }
             var wanted = new System.Collections.Generic.HashSet<string>();
             try { foreach (string line in System.IO.File.ReadAllLines(file)) { string id = line.Trim(); if (id.Length > 0) wanted.Add(id); } }
-            catch (Exception ex) { MessageBox.Show(this, "Lecture impossible :\n\n" + ex.Message, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+            catch (Exception ex) { MessageBox.Show(this, "Lecture impossible :\n\n" + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
 
             var list = new System.Collections.Generic.List<Tweak>();
             try { foreach (Tweak t in Catalog.All()) if (wanted.Contains(t.Id)) list.Add(t); } catch { }

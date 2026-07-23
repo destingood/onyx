@@ -222,7 +222,7 @@ namespace BTOptimizer
             // En-tête : marque + nom du jeu détecté (à droite).
             using (var hf = new Font("Segoe UI Semibold", 8f))
             {
-                TextRenderer.DrawText(g, "DesTinGOOD", hf, new Point(12, 7), Neon, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "Fluide", hf, new Point(12, 7), Neon, TextFormatFlags.NoPadding);
                 if (!string.IsNullOrEmpty(_fpsName))
                 {
                     string nm = _fpsName; if (nm.Length > 18) nm = nm.Substring(0, 17) + "…";

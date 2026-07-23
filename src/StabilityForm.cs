@@ -201,7 +201,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Stabilité du PC";
+            Text = "Fluide — Stabilité du PC";
             ClientSize = new Size(680, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

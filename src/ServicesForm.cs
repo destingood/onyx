@@ -52,7 +52,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Services Windows";
+            Text = "Fluide — Services Windows";
             ClientSize = new Size(720, 460);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(600, 380);

@@ -27,7 +27,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Nettoyage disque";
+            Text = "Fluide — Nettoyage disque";
             ClientSize = new Size(520, 380);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

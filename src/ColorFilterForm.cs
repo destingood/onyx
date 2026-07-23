@@ -27,7 +27,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Filtre couleur / vibrance — DesTinGOOD";
+            Text = "Filtre couleur / vibrance — Fluide";
             ClientSize = new Size(460, 280);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

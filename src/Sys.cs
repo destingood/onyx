@@ -1205,7 +1205,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static void CreateRestorePoint(Action<string, int> log)
         {
-            CreateRestorePoint("DesTinGOOD", log);
+            CreateRestorePoint("Fluide", log);
         }
 
         public static void CreateRestorePoint(string description, Action<string, int> log)
@@ -1218,7 +1218,7 @@ namespace BTOptimizer
                 using (ManagementClass mc = new ManagementClass(scope, path, new ObjectGetOptions()))
                 using (ManagementBaseObject inParams = mc.GetMethodParameters("CreateRestorePoint"))
                 {
-                    inParams["Description"] = string.IsNullOrEmpty(description) ? "DesTinGOOD" : description;
+                    inParams["Description"] = string.IsNullOrEmpty(description) ? "Fluide" : description;
                     inParams["RestorePointType"] = (uint)12; // MODIFY_SETTINGS
                     inParams["EventType"] = (uint)100;       // BEGIN_SYSTEM_CHANGE
                     using (ManagementBaseObject outParams = mc.InvokeMethod("CreateRestorePoint", inParams, null))

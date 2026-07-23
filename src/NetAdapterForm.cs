@@ -54,7 +54,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Carte réseau (latence)";
+            Text = "Fluide — Carte réseau (latence)";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -300,7 +300,7 @@ namespace BTOptimizer
         private void AfterApply(bool optimize, int changed, List<Adapter> toRestart)
         {
             if (_log != null) _log("Carte réseau : " + changed + " réglage(s) " + (optimize ? "optimisé(s)" : "rétabli(s)") + ".", 1);
-            if (changed == 0) { SetBusy(false); MessageBox.Show(this, "Aucun changement.", "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (changed == 0) { SetBusy(false); MessageBox.Show(this, "Aucun changement.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
 
             var connected = toRestart.Where(a => a.Connected && !string.IsNullOrEmpty(a.Connection)).ToList();
             bool restart = false;
@@ -335,7 +335,7 @@ namespace BTOptimizer
                 SetBusy(false);
                 Scan();
                 MessageBox.Show(this, "Réglages enregistrés. Effet au prochain redémarrage du PC (ou de la carte).",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

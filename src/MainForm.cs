@@ -126,7 +126,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "DesTinGOOD Optimizer " + AppVer + " — optimise, diagnostique & répare ton PC de jeu (Windows 10/11)";
+            Text = "Fluide " + AppVer + " — optimise, diagnostique & répare ton PC de jeu (Windows 10/11)";
             ClientSize = new Size(900, 868);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -268,7 +268,7 @@ namespace BTOptimizer
                 {
                     string p = System.IO.Path.Combine(Application.StartupPath, "bt-optimizer-log.txt");
                     if (System.IO.File.Exists(p)) Process.Start("notepad.exe", "\"" + p + "\"");
-                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch { }
             });
@@ -276,7 +276,7 @@ namespace BTOptimizer
             _menu.Items.Add(new ToolStripSeparator());
             // --- Application ---
             _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
-            _menu.Items.Add("À propos de DesTinGOOD", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _menu.Items.Add("À propos de Fluide", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
             _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
             {
                 using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
@@ -518,11 +518,11 @@ namespace BTOptimizer
             // Zone de notification : réduire la fenêtre garde l'app (et le timer 1 ms) active.
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "DesTinGOOD";
+            _tray.Text = "Fluide";
             _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("Ouvrir DesTinGOOD", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Ouvrir Fluide", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("▶ MODE JEU on/off   (Ctrl+Alt+G)", null, (s, e) => OnBoostToggle(s, e));
             trayMenu.Items.Add("Timer 1 ms on/off", null, (s, e) => _chkTimer.Checked = !_chkTimer.Checked);
             trayMenu.Items.Add(new ToolStripSeparator());
@@ -589,7 +589,7 @@ namespace BTOptimizer
             {
                 OnBoostToggle(this, EventArgs.Empty);
                 if (!Visible && _tray != null && _tray.Visible)
-                    _tray.ShowBalloonTip(1500, "DesTinGOOD",
+                    _tray.ShowBalloonTip(1500, "Fluide",
                         GameBoost.IsActive ? "MODE JEU activé (Ctrl+Alt+G)" : "MODE JEU désactivé (Ctrl+Alt+G)",
                         ToolTipIcon.Info);
             }
@@ -607,7 +607,7 @@ namespace BTOptimizer
                 string tip = Native.TimerActive
                     ? "Toujours actif — le timer 1 ms reste maintenu. Double-clic pour rouvrir."
                     : "Toujours actif en arrière-plan. Double-clic pour rouvrir.";
-                _tray.ShowBalloonTip(2500, "DesTinGOOD", tip, ToolTipIcon.Info);
+                _tray.ShowBalloonTip(2500, "Fluide", tip, ToolTipIcon.Info);
             }
         }
 
@@ -992,7 +992,7 @@ namespace BTOptimizer
                         Log("" + drifted.Count + " optimisation(s) de ton profil ne sont PLUS actives "
                             + "(mise à jour Windows ?) — menu ☰ → « Mon profil a-t-il été annulé ? » pour les ré-appliquer.", 2);
                         if (_tray != null)
-                            _tray.ShowBalloonTip(4000, "DesTinGOOD",
+                            _tray.ShowBalloonTip(4000, "Fluide",
                                 drifted.Count + " optimisation(s) annulée(s) par Windows — ré-application possible (menu ☰).",
                                 ToolTipIcon.Warning);
                     }));
@@ -1043,7 +1043,7 @@ namespace BTOptimizer
             }
             using (var d = new SaveFileDialog
             {
-                Filter = "Profil DesTinGOOD (*.txt)|*.txt", FileName = "destingood-profil.txt",
+                Filter = "Profil Fluide (*.txt)|*.txt", FileName = "fluide-profil.txt",
                 Title = "Exporter le profil (" + sel.Count + " optimisations cochées)"
             })
             {
@@ -1061,7 +1061,7 @@ namespace BTOptimizer
         {
             using (var d = new OpenFileDialog
             {
-                Filter = "Profil DesTinGOOD (*.txt)|*.txt|Tous les fichiers (*.*)|*.*",
+                Filter = "Profil Fluide (*.txt)|*.txt|Tous les fichiers (*.*)|*.*",
                 Title = "Importer un profil d'optimisations"
             })
             {
@@ -1120,7 +1120,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Aucune optimisation cochée.", "DesTinGOOD",
+                MessageBox.Show(this, "Aucune optimisation cochée.", "Fluide",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1138,7 +1138,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "DesTinGOOD",
+                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "Fluide",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1171,7 +1171,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this,
                     "Une erreur est survenue avant l'application :\n\n" + res.PrepError,
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (res.RebootNeeded)
@@ -1205,7 +1205,7 @@ namespace BTOptimizer
 
             if (MessageBox.Show(this,
                     "Voir ton nouveau score « Santé de mon PC » ?",
-                    "DesTinGOOD", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    "Fluide", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 using (var f = new HealthForm(Log)) f.ShowDialog(this);
         }
 
@@ -1315,7 +1315,7 @@ namespace BTOptimizer
             if (!System.IO.Directory.Exists(tools))
             {
                 MessageBox.Show(this, "Aucun dossier « tools ». Lance d'abord une capture (Mesurer latence → ETW).",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var files = new System.IO.DirectoryInfo(tools).GetFiles("dpcisr-*.txt");
@@ -1323,7 +1323,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this, "Il faut au moins 2 rapports DPC/ISR dans « tools » pour comparer.\n" +
                     "Fais deux captures (Mesurer latence → Oui à l'ETW), avant et après tes changements.",
-                    "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             Array.Sort(files, (a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
@@ -1425,7 +1425,7 @@ namespace BTOptimizer
                     RefreshStates();
                     Log("Réinitialisation terminée.", 1);
                     MessageBox.Show(this, "Toutes les optimisations ont été rétablies aux valeurs Windows.\nUn redémarrage est conseillé.",
-                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -1713,7 +1713,7 @@ namespace BTOptimizer
             {
                 BeginInvoke((Action)(() =>
                 {
-                    try { if (_tray != null) _tray.ShowBalloonTip(5000, "DesTinGOOD — surveillance", msg, ToolTipIcon.Warning); }
+                    try { if (_tray != null) _tray.ShowBalloonTip(5000, "Fluide — surveillance", msg, ToolTipIcon.Warning); }
                     catch { }
                 }));
             }
@@ -1737,7 +1737,7 @@ namespace BTOptimizer
                 if (sel.Count == 0)
                 {
                     MessageBox.Show(this, "Coche d'abord les optimisations à inclure dans ton profil,\npuis active le gardien.",
-                        "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _guardEventSuppressed = true;
                     _chkGuard.Checked = false;
                     _guardEventSuppressed = false;

@@ -49,7 +49,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "DesTinGOOD — Test de stress CPU (intégré)";
+            Text = "Fluide — Test de stress CPU (intégré)";
             ClientSize = new Size(560, 320);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

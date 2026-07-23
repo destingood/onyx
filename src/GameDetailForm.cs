@@ -30,7 +30,7 @@ namespace BTOptimizer
         public GameDetailForm(GameScan.GameInfo g, Action<string, int> log)
         {
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
-            Text = "DesTinGOOD — " + g.Name;
+            Text = "Fluide — " + g.Name;
             ClientSize = new Size(640, 560);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -129,7 +129,7 @@ namespace BTOptimizer
                     }
                 OpenFolder();
             }
-            catch (Exception ex) { MessageBox.Show(this, "Impossible de lancer le jeu : " + ex.Message, "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception ex) { MessageBox.Show(this, "Impossible de lancer le jeu : " + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }
 
         private void OpenFolder()
@@ -157,7 +157,7 @@ namespace BTOptimizer
                 }
                 catch (Exception ex) { if (_log != null) _log("Optimiser pour le jeu : " + ex.Message, 2); }
                 try { BeginInvoke((Action)(() => { Cursor = Cursors.Default;
-                    MessageBox.Show(this, n + " optimisation(s) recommandée(s) appliquée(s). Bon jeu ! 🎮", "DesTinGOOD", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
+                    MessageBox.Show(this, n + " optimisation(s) recommandée(s) appliquée(s). Bon jeu ! 🎮", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
                 catch { }
             });
         }
