@@ -41,7 +41,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Optimisations — mode SIMPLE — DesTinGOOD";
+            Text = "Optimisations — mode SIMPLE — Fluide";
             ClientSize = new Size(760, 700);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

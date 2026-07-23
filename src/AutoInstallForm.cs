@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Prérequis & installation automatique — DesTinGOOD";
+            Text = "Prérequis & installation automatique — Fluide";
             ClientSize = new Size(600, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -41,7 +41,7 @@ namespace BTOptimizer
             var intro = new Label();
             intro.SetBounds(16, 12, 568, 52);
             intro.Text = "Certains jeux ne démarrent pas sans leurs prérequis (Visual C++, DirectX, .NET, "
-                       + "OpenAL). DesTinGOOD peut les installer pour toi via winget (Microsoft). "
+                       + "OpenAL). Fluide peut les installer pour toi via winget (Microsoft). "
                        + "Choisis comment — c'est modifiable à tout moment ici.";
             intro.ForeColor = Theme.InkDimColor;
 

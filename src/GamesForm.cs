@@ -69,7 +69,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Mes jeux — boost par jeu — DesTinGOOD";
+            Text = "Mes jeux — boost par jeu — Fluide";
             ClientSize = new Size(760, 620);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
