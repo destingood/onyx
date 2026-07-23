@@ -13,7 +13,7 @@ namespace BTOptimizer
     // ----------------------------------------------------------------------
     internal static class FpsUi
     {
-        // Palette alignée sur FPS Doctor : noir pur, gris neutres, blanc pur, néon #00FF88 (identique).
+        // Palette Fluide : noir pur, gris neutres, blanc pur, accent néon #00FF88.
         public static readonly Color BgMain = Color.FromArgb(0, 0, 0);       // #000000
         public static readonly Color RailBg = Color.FromArgb(13, 13, 13);    // #0D0D0D (.frame)
         public static readonly Color Card   = Color.FromArgb(15, 15, 15);
@@ -27,7 +27,7 @@ namespace BTOptimizer
         public static readonly Color Warn   = Color.FromArgb(255, 208, 0);   // #FFD000
         public static readonly Color Err    = Color.FromArgb(255, 107, 107); // #FF6B6B
 
-        // Polices officielles FPS Doctor : Ubuntu (titres/nav), Inter (corps), Garet (display).
+        // Polices Fluide : Ubuntu (titres/nav), Inter (corps), Garet (display) — toutes libres.
         public static Font F(float size, bool semibold)
         {
             return semibold ? Fonts.Make(Fonts.Ubuntu, size, FontStyle.Bold, "Segoe UI Semibold")
@@ -99,6 +99,9 @@ namespace BTOptimizer
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = 0;
             b.BackColor = Color.FromArgb(26, 29, 27);
+            // Retours au survol / à l'appui : un bouton qui ne réagit pas fait « maquette ».
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(38, 42, 39);
+            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(18, 21, 19);
             b.ForeColor = Ink;
             b.Font = Small;
             b.Cursor = Cursors.Hand;
@@ -114,6 +117,9 @@ namespace BTOptimizer
             b.FlatAppearance.BorderColor = Neon;
             b.FlatAppearance.BorderSize = 1;
             b.BackColor = Card;
+            // Le néon « chauffe » au survol, puis s'enfonce à l'appui.
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 46, 29);
+            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 30, 19);
             b.ForeColor = Neon;
             b.Font = H3;
             b.Cursor = Cursors.Hand;

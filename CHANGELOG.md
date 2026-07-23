@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.31 — Finition esthétique (suite) : survols et courbes
+- **États de survol / d'appui** : les boutons (fantôme et néon) s'éclaircissent au survol et
+  s'enfoncent au clic ; les **cartes de statistiques** s'éclaircissent avec un liseré néon
+  quand la souris passe dessus (suivi du survol sur la carte *et* ses enfants).
+- **Graphe système lissé** : courbe en spline (tension 0,4) au lieu d'une ligne brisée, et
+  **aire en dégradé** qui s'efface vers le bas — lecture plus douce, vraie profondeur.
+- Commentaires du fichier d'interface corrigés : la palette et les polices sont décrites
+  comme celles de **Fluide** (elles étaient décrites comme reprises d'un concurrent).
+- *Non retenu volontairement* : l'entrée en glissé des cartes. En WinForms, déplacer des
+  panneaux à fond transparent à chaque image provoque un scintillement visible — le résultat
+  aurait été moins bon que pas d'animation du tout.
+
 ## v14.30 — Finition esthétique (le QG s'anime) + panneau Discord
 - **Animation d'entrée du tableau de bord** : l'anneau de santé se **remplit** de 0 % à son
   score et les compteurs **montent** jusqu'à leur valeur (courbe ease-out, ~340 ms). La
