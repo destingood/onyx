@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.35 — « Flux », la mascotte du Copilote
+- Le chat a enfin un **personnage** (l'ancienne mascotte est partie avec le rebrand) :
+  **Flux**, un orbe dont la **bouche EST la courbe de frametime** du logo.
+- **Elle réagit vraiment** : bouche plate quand la santé du PC est bonne (≥ 60), en
+  **dents de scie** quand il y a un problème, trois points tant que le bilan n'est pas
+  calculé. Mêmes seuils que l'anneau du QG → l'app tient un discours cohérent.
+- Dessinée **en vectoriel dans le code** (`Mascot.cs`) : aucune image embarquée, nette à
+  toute taille, suit automatiquement l'accent indigo.
+- Vérifiée en capture : sur cette machine (santé 48 %), Flux alerte bien.
+
 ## v14.34 — Les 40 fenêtres du menu ⋯ passent à l'indigo (+ 2 bugs d'affichage)
 - **Le thème des fenêtres était resté vert.** `Theme.cs` avait sa **propre palette**, séparée
   du shell : fonds verdâtres, surlignage de menu vert, liseré signature vert→bleu. Le menu ⋯

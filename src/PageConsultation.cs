@@ -48,7 +48,8 @@ namespace BTOptimizer
         public override void OnShown()
         {
             DoLayout();
-            AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Greet(); })); } catch { } });
+            Mascot.CurrentMood = Mascot.Mood.Thinking;   // tant que le bilan n'est pas connu
+            AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
             Greet();
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
             try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame et ça saccade en jeu"); ShowTyping(); } } catch { }
@@ -117,10 +118,17 @@ namespace BTOptimizer
             {
                 var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
                 var rr = new Rectangle(0, 0, AV - 1, AV - 1);
-                using (var br = new SolidBrush(doc ? Color.FromArgb(0, 34, 22) : Color.FromArgb(26, 28, 26))) g.FillEllipse(br, rr);
-                using (var pen = new Pen(doc ? FpsUi.Neon : FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
-                if (doc) Logo.Draw(g, new RectangleF(8, 8, AV - 16, AV - 16), FpsUi.Neon, false);
-                else TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                if (doc)
+                {
+                    // Flux, la mascotte : son humeur suit le dernier bilan de santé connu.
+                    Mascot.Draw(g, new RectangleF(0, 0, AV - 1, AV - 1), FpsUi.Neon, Mascot.CurrentMood);
+                }
+                else
+                {
+                    using (var br = new SolidBrush(Color.FromArgb(26, 26, 40))) g.FillEllipse(br, rr);
+                    using (var pen = new Pen(FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
+                    TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
             };
             return avatar;
         }
