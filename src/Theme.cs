@@ -23,7 +23,7 @@ namespace BTOptimizer
         public static bool Dark { get; private set; }
 
         // Repères des couleurs codées en dur dans les fenêtres.
-        private static readonly Color HeaderBg = Color.FromArgb(28, 30, 38);
+        private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité DTG)
         private static readonly Color AccentRef = Color.FromArgb(0, 150, 90);
 
         // Liseré signature sous les bandeaux (identité DesTinGOOD).
@@ -60,16 +60,24 @@ namespace BTOptimizer
             try { ToolStripManager.Renderer = new MenuRenderer(); } catch { }
         }
 
+        /// <summary>Force l'initialisation statique (moteur de rendu des menus sombre) au
+        /// démarrage, même si aucune fenêtre v14 n'a encore été ouverte. Sans cet appel, le
+        /// menu ⋯ / tray du shell s'affichait avec le rendu clair par défaut de Windows.</summary>
+        public static void Prime() { }
+
         private static void LoadTokens()
         {
             if (Dark)
             {
-                Bg = Color.FromArgb(22, 24, 29); Panel = Color.FromArgb(30, 33, 40);
-                Ink = Color.FromArgb(212, 218, 224); InkDim = Color.FromArgb(140, 147, 156);
-                Line = Color.FromArgb(56, 61, 71); GroupInk = Color.FromArgb(120, 150, 210);
-                FieldBg = Color.FromArgb(26, 29, 35);
-                MenuBg = Color.FromArgb(32, 35, 42); MenuHot = Color.FromArgb(52, 58, 70);
-                MenuLine = Color.FromArgb(64, 70, 82);
+                // Palette DTG : noir profond + vert néon, alignée sur le shell (FpsUi).
+                // Toutes les fenêtres v14 passent par ces tokens (Theme.Apply) — les retoucher
+                // ici reskin l'ensemble des ~34 fenêtres d'un coup.
+                Bg = Color.FromArgb(9, 11, 10); Panel = Color.FromArgb(16, 18, 17);
+                Ink = Color.FromArgb(240, 242, 241); InkDim = Color.FromArgb(150, 154, 150);
+                Line = Color.FromArgb(34, 37, 35); GroupInk = Color.FromArgb(150, 182, 165);
+                FieldBg = Color.FromArgb(13, 15, 14);
+                MenuBg = Color.FromArgb(16, 18, 17); MenuHot = Color.FromArgb(20, 40, 30);
+                MenuLine = Color.FromArgb(34, 37, 35);
             }
             else
             {

@@ -130,6 +130,26 @@ namespace BTOptimizer
                 if (k != null) k.DeleteValue(name, false);
         }
 
+        /// <summary>Supprime une sous-clé utilisateur et toute sa descendance (rétablissement « clé entière »).</summary>
+        public static void DelUserSubKeyTree(string sub)
+        {
+            try { UserBase().DeleteSubKeyTree(UserPrefix() + sub, false); } catch { }
+        }
+
+        /// <summary>Vrai si la sous-clé utilisateur existe (Check « présence de clé »).</summary>
+        public static bool UserKeyExists(string sub)
+        {
+            using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub))
+                return k != null;
+        }
+
+        /// <summary>Vrai si la sous-clé machine existe (ex. tester la présence d'un service pilote).</summary>
+        public static bool MachineKeyExists(string sub)
+        {
+            using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub))
+                return k != null;
+        }
+
         public static bool IntEquals(object v, int expected)
         {
             return (v is int) && (int)v == expected;
@@ -949,6 +969,106 @@ namespace BTOptimizer
         public static void SaveAutoLevel(int level)
         {
             try { File.WriteAllText(AutoLevelPath, level.ToString()); } catch { }
+        }
+
+        // ------------------------------------------------------------------
+        //  Nettoyeur RAM auto
+        // ------------------------------------------------------------------
+        private static string RamCleanerPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ramcleaner.txt"); }
+        }
+
+        public static bool LoadRamCleaner(out int thresholdMB)
+        {
+            thresholdMB = 1024;
+            try
+            {
+                if (!File.Exists(RamCleanerPath)) return false;
+                string[] lines = File.ReadAllLines(RamCleanerPath);
+                if (lines.Length > 0 && lines[0] == "1")
+                {
+                    if (lines.Length > 1) int.TryParse(lines[1], out thresholdMB);
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        public static void SaveRamCleaner(bool enabled, int thresholdMB)
+        {
+            try
+            {
+                File.WriteAllLines(RamCleanerPath, new[] { enabled ? "1" : "0", thresholdMB.ToString() });
+            }
+            catch { }
+        }
+
+        // ------------------------------------------------------------------
+        //  Affinité CPU et Profils d'Alimentation
+        // ------------------------------------------------------------------
+        public static void SetProcessAffinity(int pid, long mask)
+        {
+            try { Process.GetProcessById(pid).ProcessorAffinity = (IntPtr)mask; } catch { }
+        }
+
+        public static void SetProcessPriority(int pid, ProcessPriorityClass prio)
+        {
+            try { Process.GetProcessById(pid).PriorityClass = prio; } catch { }
+        }
+
+        public static string GetActivePowerProfile()
+        {
+            try
+            {
+                var p = Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/getactivescheme", UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true });
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+                var m = Regex.Match(output, @"GUID de.*:\s*([0-9a-f\-]{36})", RegexOptions.IgnoreCase);
+                if (m.Success) return m.Groups[1].Value;
+            }
+            catch { }
+            return null;
+        }
+
+        public static void SetActivePowerProfile(string guid)
+        {
+            try { Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/setactive " + guid, UseShellExecute = false, CreateNoWindow = true }).WaitForExit(); } catch { }
+        }
+
+        public static string GameAffinityPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-game-affinity.txt"); } }
+
+        public static Dictionary<string, Tuple<string, long>> LoadGameAffinity()
+        {
+            var d = new Dictionary<string, Tuple<string, long>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                if (File.Exists(GameAffinityPath))
+                {
+                    foreach (string line in File.ReadAllLines(GameAffinityPath))
+                    {
+                        var p = line.Split('|');
+                        if (p.Length >= 3)
+                        {
+                            long mask;
+                            if (long.TryParse(p[2], out mask)) d[p[0]] = Tuple.Create(p[1], mask);
+                        }
+                    }
+                }
+            }
+            catch { }
+            return d;
+        }
+
+        public static void SaveGameAffinity(Dictionary<string, Tuple<string, long>> dict)
+        {
+            try
+            {
+                var lines = dict.Select(kvp => kvp.Key + "|" + kvp.Value.Item1 + "|" + kvp.Value.Item2.ToString());
+                File.WriteAllLines(GameAffinityPath, lines.ToArray());
+            }
+            catch { }
         }
 
         // ------------------------------------------------------------------

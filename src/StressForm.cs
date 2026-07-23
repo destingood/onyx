@@ -61,7 +61,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🧪 Test de stress CPU — révèle surchauffe & instabilité",
+                Text = "  Test de stress CPU — révèle surchauffe & instabilité",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });

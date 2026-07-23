@@ -471,6 +471,17 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "chrome_bg_off", Category = Cat.Rapidite,
+                Name = "Empêcher Google Chrome de tourner en arrière-plan",
+                Desc = "Chrome garde des processus et le GPU actifs même fenêtre fermée. Cette politique coupe le mode arrière-plan : autant de ressources rendues au jeu. Sans effet si tu n'as pas Chrome. « Rétablir » l'annule.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Google\Chrome" },
+                Apply = () => Sys.SetMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled"),
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Google\Chrome", "BackgroundModeEnabled"), 0)
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "widgets_off", Category = Cat.Rapidite,
                 Name = "Désactiver les Widgets (Windows 11) / Actualités (Windows 10)",
                 Desc = "Supprime le processus Widgets/Actualités qui tourne en permanence en arrière-plan. Plein effet à la prochaine session.",
@@ -2256,6 +2267,38 @@ namespace BTOptimizer
                 Apply  = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled", 1, RegistryValueKind.DWord),
                 Check  = () => Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\PushNotifications", "ToastEnabled"), 0)
+            });
+
+            // Menu contextuel classique de Windows 11 (pack CAPET « OPTI W11 », .reg vérifié) :
+            // clé CLSID à InprocServer32 vide → clic droit complet façon Windows 10.
+            list.Add(new Tweak
+            {
+                Id = "classic_context_menu", Category = Cat.Rapidite, Recommended = true,
+                Name = "Menu clic droit classique (fin de « Afficher plus d'options »)",
+                Desc = "Restaure le menu contextuel COMPLET de Windows 10 au clic droit : toutes les entrées "
+                     + "directement, sans passer par « Afficher plus d'options ». Prend effet après un "
+                     + "redémarrage de l'Explorateur (Gestionnaire des tâches → « Redémarrer l'Explorateur », "
+                     + "ou déconnexion/reconnexion). « Rétablir » remet le menu réduit de Windows 11.",
+                BackupKeys = new[] { @"HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" },
+                Apply  = () => Sys.SetUser(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32", "", "", RegistryValueKind.String),
+                Revert = () => Sys.DelUserSubKeyTree(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}"),
+                Check  = () => Sys.UserKeyExists(@"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32")
+            });
+
+            // Filtre de netteté NVIDIA « ancien » (cadeau CAPET, .reg vérifié) : force l'ancien
+            // filtre Freestyle Sharpen via nvlddmkm\FTS\EnableGR535=0. NVIDIA uniquement.
+            list.Add(new Tweak
+            {
+                Id = "nvidia_sharpen_old", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Name = "Filtre de netteté NVIDIA « ancien » (Freestyle Sharpen, préféré en compétitif)",
+                Desc = "Force l'ANCIEN filtre de netteté NVIDIA (Freestyle « Netteté ») : image plus nette et "
+                     + "moins floue que le nouveau filtre, apprécié sur les jeux compétitifs (Valorant, CS…). "
+                     + "NVIDIA uniquement — sans effet sur un GPU AMD/Intel. Prend effet après redémarrage. "
+                     + "« Rétablir » remet le nouveau filtre par défaut.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS" },
+                Apply  = () => { if (Sys.MachineKeyExists(@"SYSTEM\CurrentControlSet\Services\nvlddmkm")) Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535", 0, RegistryValueKind.DWord); },
+                Revert = () => { if (Sys.MachineKeyExists(@"SYSTEM\CurrentControlSet\Services\nvlddmkm")) Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535", 1, RegistryValueKind.DWord); },
+                Check  = () => Sys.MachineKeyExists(@"SYSTEM\CurrentControlSet\Services\nvlddmkm") ? (bool?)Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535"), 0) : null
             });
 
             return list;

@@ -6,6 +6,7 @@
 bin/
 obj/
 dist/
+dist-sandbox/
 
 # Archives et outils tiers decompresses
 *.zip

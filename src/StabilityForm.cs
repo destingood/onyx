@@ -213,7 +213,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🩺 Stabilité — qu'est-ce qui a planté sur ce PC ? (14 jours)",
+                Text = "  Stabilité — qu'est-ce qui a planté sur ce PC ? (14 jours)",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -233,7 +233,7 @@ namespace BTOptimizer
             };
             _list.Columns.Add("Quand", 118);
             _list.Columns.Add("Type", 110);
-            _list.Columns.Add("Programme (🎮 = jeu détecté)", 392);
+            _list.Columns.Add("Programme (= jeu détecté)", 392);
             Controls.Add(_list);
 
             _verdict = new Label
@@ -245,11 +245,11 @@ namespace BTOptimizer
 
             _btnScan = MakeBtn("Ré-analyser", 18, 448, 110, 38, false);
             _btnScan.Click += (s, e) => Scan();
-            _btnRepair = MakeBtn("🛒 Réparation boutiques / crashs", 136, 448, 250, 38, true);
+            _btnRepair = MakeBtn("Réparation boutiques / crashs", 136, 448, 250, 38, true);
             _btnRepair.Click += (s, e) => { using (var f = new ShopFixForm(_log)) f.ShowDialog(this); Scan(); };
             // Outil INTÉGRÉ d'abord : le stress-test CPU natif (pour reproduire un crash / une
-            // surchauffe). L'OCCT/FurMark de bureau reste accessible via 🌡️ Températures (stress GPU).
-            var btnStress = MakeBtn("🧪 Stress-test CPU", 396, 448, 168, 38, false);
+            // surchauffe). L'OCCT/FurMark de bureau reste accessible via Températures (stress GPU).
+            var btnStress = MakeBtn("Stress-test CPU", 396, 448, 168, 38, false);
             btnStress.Click += (s, e) => { using (var f = new StressForm(_log)) f.ShowDialog(this); };
             _btnClose = MakeBtn("Fermer", 572, 448, 90, 38, false);
             _btnClose.Click += (s, e) => Close();
@@ -294,7 +294,7 @@ namespace BTOptimizer
                 if (ev.IsGame) games++;
                 var it = new ListViewItem(ev.Time.ToString("dd/MM HH:mm"));
                 it.SubItems.Add(ev.Kind);
-                it.SubItems.Add((ev.IsGame ? "🎮 " : "") + ev.Detail);
+                it.SubItems.Add((ev.IsGame ? "" : "") + ev.Detail);
                 _list.Items.Add(it);
             }
 

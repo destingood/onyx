@@ -43,7 +43,7 @@ namespace BTOptimizer
             {
                 Text = Catalog.All().Count + " optimisations réversibles + une suite de diagnostic complète (bilan Santé /100, "
                      + "crashs, réseau, disque, mesure FPS/latence). Tout est sauvegardé et annulable. "
-                     + "Astuce : menu ☰ → 🏥 Santé de mon PC et 🧭 J'ai un problème…",
+                     + "Astuce : menu ☰ → Santé de mon PC et J'ai un problème…",
                 Location = new Point(24, 112), Size = new Size(512, 48), ForeColor = Color.FromArgb(60, 64, 72)
             });
 
@@ -51,7 +51,7 @@ namespace BTOptimizer
                 "Applique les réglages recommandés, adaptés et sûrs (avec sauvegarde).", 24, 168, true);
             reco.Click += (s, e) => { Choice = StartAction.ApplyRecommended; Close(); };
 
-            var open = BigButton("🛠  Ouvrir l'application",
+            var open = BigButton(" Ouvrir l'application",
                 "Choisir moi-même les optimisations à appliquer.", 24, 246, false);
             open.Click += (s, e) => { Choice = StartAction.Open; Close(); };
 

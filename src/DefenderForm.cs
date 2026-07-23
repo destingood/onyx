@@ -8,7 +8,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🔐 Exclusions antivirus pour les jeux : l'analyse en temps réel de Windows Defender
+    /// Exclusions antivirus pour les jeux : l'analyse en temps réel de Windows Defender
     /// scanne les fichiers de jeu à chaque accès → saccades et chargements plus longs.
     /// Exclure les dossiers de jeux DE CONFIANCE supprime ce coût. Réversible. Honnête sur
     /// le compromis : n'exclus QUE des installations de jeux que tu sais saines.
@@ -47,7 +47,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🔐 Exclusions antivirus — moins de saccades dans les jeux",
+                Text = "  Exclusions antivirus — moins de saccades dans les jeux",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f), TextAlign = ContentAlignment.MiddleLeft
             });

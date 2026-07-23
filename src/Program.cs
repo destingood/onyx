@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.27.0.0")]
-[assembly: AssemblyFileVersion("14.27.0.0")]
+[assembly: AssemblyVersion("14.28.0.0")]
+[assembly: AssemblyFileVersion("14.28.0.0")]
 
 namespace BTOptimizer
 {
@@ -44,7 +44,7 @@ namespace BTOptimizer
                 {
                     Sys.Init();
                     if (!LicenseForm.EnsureAccepted()) return;
-                    Application.Run(new MainForm());
+                    Application.Run(new DashboardForm());
                 }
                 catch (Exception ex)
                 {
@@ -84,6 +84,137 @@ namespace BTOptimizer
                 autoIds.Sort(StringComparer.Ordinal);
                 foreach (string id in autoIds) Console.WriteLine(id);
                 return;
+            }
+
+            // BT_FORMSHOT=Nom1,Nom2 : capture chaque fenêtre nommée du menu ⋯ hors-écran (une par
+            // une, avec log de progression pour repérer un éventuel blocage). BT_UISHOT=<dossier>.
+            string fshot = Environment.GetEnvironmentVariable("BT_FORMSHOT");
+            if (!string.IsNullOrEmpty(fshot))
+            {
+                try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+                string dir = Environment.GetEnvironmentVariable("BT_UISHOT");
+                if (string.IsNullOrEmpty(dir)) dir = System.IO.Path.GetTempPath();
+                try { System.IO.Directory.CreateDirectory(dir); } catch { }
+                foreach (string raw in fshot.Split(','))
+                {
+                    string name = raw.Trim();
+                    if (name.Length == 0) continue;
+                    Console.WriteLine("start " + name); Console.Out.Flush();
+                    var f = MakeMenuForm(name);
+                    if (f == null) { Console.WriteLine("  ? inconnu"); continue; }
+                    CaptureFormShot(dir, name, f);
+                    Console.WriteLine("done " + name); Console.Out.Flush();
+                }
+                Environment.Exit(0);
+            }
+
+            // BT_REPORT=<fichier> : génère le rapport de santé HTML et sort (vérif sans effet de bord).
+            string repOut = Environment.GetEnvironmentVariable("BT_REPORT");
+            if (!string.IsNullOrEmpty(repOut))
+            {
+                string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
+                System.IO.File.WriteAllText(repOut, html, new System.Text.UTF8Encoding(false));
+                Console.WriteLine("RAPPORT écrit : " + repOut + " (" + html.Length + " octets)");
+                Environment.Exit(0);
+            }
+
+            // BT_SHOWCASE=<fichier> : rend l'image de collection (démo) et sort.
+            string scOut = Environment.GetEnvironmentVariable("BT_SHOWCASE");
+            if (!string.IsNullOrEmpty(scOut))
+            {
+                using (var dash = new DashboardForm())
+                using (var pc = new PageCollection(dash))
+                {
+                    pc.SeedDemoStats();
+                    using (var bmp = pc.RenderShowcase())
+                        bmp.Save(scOut, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Console.WriteLine("SHOWCASE écrit : " + scOut);
+                Environment.Exit(0);
+            }
+
+            // BT_TOAST=<fichier> : rend un toast de badge (démo) et sort.
+            string toastOut = Environment.GetEnvironmentVariable("BT_TOAST");
+            if (!string.IsNullOrEmpty(toastOut))
+            {
+                using (var t = new BadgeToast(BadgeCatalog.ById("chirurgien")))
+                {
+                    t.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    t.Location = new System.Drawing.Point(-5000, -5000);
+                    t.Show();
+                    t.Refresh();
+                    Pump(600);
+                    t.Refresh();
+                    using (var bmp = new System.Drawing.Bitmap(t.Width, t.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(t.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(toastOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("TOAST écrit : " + toastOut);
+                Environment.Exit(0);
+            }
+
+            // BT_BADGEDETAIL=<fichier> : rend la fiche d'un badge verrouillé (démo) et sort.
+            string bdOut = Environment.GetEnvironmentVariable("BT_BADGEDETAIL");
+            if (!string.IsNullOrEmpty(bdOut))
+            {
+                var st = new BadgeCatalog.Stats { OptiActive = 44, Health = 72, GamesDet = 3, Checkups = 2 };
+                using (var f = new BadgeDetailForm(BadgeCatalog.ById("perfect"), st, false, null))
+                {
+                    f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    f.Location = new System.Drawing.Point(-5000, -5000);
+                    f.Show(); f.Refresh(); Pump(600); f.Refresh();
+                    using (var bmp = new System.Drawing.Bitmap(f.Width, f.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(bdOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("BADGEDETAIL écrit : " + bdOut);
+                Environment.Exit(0);
+            }
+
+            // BT_GAMEDETAIL=<fichier> : rend la fiche détaillée d'un jeu (démo CS2) et sort.
+            string gdOut = Environment.GetEnvironmentVariable("BT_GAMEDETAIL");
+            if (!string.IsNullOrEmpty(gdOut))
+            {
+                var games = GameScan.Known(); GameScan.Detect(games);
+                GameScan.GameInfo gi = null;
+                foreach (var x in games) if (x.Name == "Counter-Strike 2") { gi = x; break; }
+                if (gi == null && games.Count > 0) gi = games[0];
+                GameArt.Get(gi.SteamId, null); Pump(2000);   // pré-charge la jaquette (cache froid en gate isolée)
+                using (var f = new GameDetailForm(gi, null))
+                {
+                    f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                    f.Location = new System.Drawing.Point(-5000, -5000);
+                    f.Show(); f.Refresh(); Pump(3200); f.Refresh();   // laisse charger la jaquette (cache local)
+                    using (var bmp = new System.Drawing.Bitmap(f.Width, f.Height))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        bmp.Save(gdOut, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                }
+                Console.WriteLine("GAMEDETAIL écrit : " + gdOut);
+                Environment.Exit(0);
+            }
+
+            // BT_UITEST=1 : ne teste QUE le shell DTG (dashboard + 8 pages) hors-écran,
+            // SANS aucun effet de bord (pas d'essai démarré, pas de profil écrasé). Sert à valider
+            // rapidement les corrections d'affichage sans dérouler tout le harnais mutatif.
+            if (Environment.GetEnvironmentVariable("BT_UITEST") == "1")
+            {
+                int uiErr = 0;
+                try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
+                TestShellUi(ref uiErr);
+                TestMenuForms(ref uiErr);
+                string shot = Environment.GetEnvironmentVariable("BT_UISHOT");
+                if (!string.IsNullOrEmpty(shot)) { try { CaptureShellShots(shot); } catch (Exception ex) { Console.WriteLine("  Capture ERREUR : " + ex.Message); } }
+                Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
+                Environment.Exit(uiErr == 0 ? 0 : 1);
             }
 
             Console.WriteLine("DesTinGOOD TEST — contexte :");
@@ -630,6 +761,8 @@ namespace BTOptimizer
                     }
                 }
             }
+            TestShellUi(ref errors);
+
             Console.WriteLine("TEST TERMINÉ — " + i + " optimisations chargées, " + errors + " erreur(s).");
             Environment.Exit(errors == 0 ? 0 : 1);
         }
@@ -638,6 +771,271 @@ namespace BTOptimizer
         {
             try { return DnsBench.QueryMs(server, "www.google.com", 800, 3); }
             catch { return -1; }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
+        private const uint PW_RENDERFULLCONTENT = 2;
+
+        private static void Pump(int ms)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < ms) { Application.DoEvents(); System.Threading.Thread.Sleep(15); }
+        }
+
+        // Fabrique une fenêtre du menu ⋯ par son nom (pour la capture BT_FORMSHOT).
+        private static System.Windows.Forms.Form MakeMenuForm(string name)
+        {
+            Action<string, int> log = delegate (string m, int l) { };
+            switch (name)
+            {
+                case "MainForm": return new MainForm();
+                case "GameProfileForm": return new GameProfileForm(log);
+                case "NetworkForm": return new NetworkForm(log);
+                case "DiskForm": return new DiskForm(log);
+                case "ShopFixForm": return new ShopFixForm(log);
+                case "LibsForm": return new LibsForm(log);
+                case "DefenderForm": return new DefenderForm(log);
+                case "TournamentForm": return new TournamentForm(log);
+                case "Fps500Form": return new Fps500Form(log);
+                case "BenchForm": return new BenchForm(log);
+                case "DisplayForm": return new DisplayForm(log);
+                case "LatencyGuideForm": return new LatencyGuideForm(log);
+                case "HealthForm": return new HealthForm(log);
+                case "BloatForm": return new BloatForm(log);
+                case "CheckupForm": return new CheckupForm(log);
+                case "StabilityForm": return new StabilityForm(log);
+                case "StressForm": return new StressForm(log);
+                case "ThermalForm": return new ThermalForm(log);
+                case "MonitorForm": return new MonitorForm();
+                case "SystemInfoForm": return new SystemInfoForm(log);
+                case "DnsForm": return new DnsForm(log);
+                case "NetTuneForm": return new NetTuneForm(log);
+                case "NetRouteForm": return new NetRouteForm(log);
+                case "MouseForm": return new MouseForm(log);
+                case "AudioForm": return new AudioForm(log);
+                case "DeviceManagerForm": return new DeviceManagerForm(log);
+                case "StartupForm": return new StartupForm(log);
+                case "ServicesForm": return new ServicesForm(log);
+                case "RestoreForm": return new RestoreForm(log);
+                case "HelpNavForm": return new HelpNavForm(log);
+                case "AboutForm": return new AboutForm();
+                case "LicenseKeyForm": return new LicenseKeyForm("");
+                case "SpeedTestForm": return new SpeedTestForm(log);
+                case "ControllerForm": return new ControllerForm(log);
+                case "StatsOverlayForm": return new StatsOverlayForm(log);
+                case "StatsOverlayWindow": return new StatsOverlayWindow();
+                case "BenchmarkFpsForm": return new BenchmarkFpsForm(log);
+                case "GameModeForm": return new GameModeForm(log);
+                default: return null;
+            }
+        }
+
+        private static void CaptureFormShot(string dir, string name, System.Windows.Forms.Form f)
+        {
+            try
+            {
+                f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show();
+                if (f is StatsOverlayWindow sw) sw.SeedDemo();   // données de démo pour l'inspection visuelle hors jeu
+                if (f is BenchmarkFpsForm bf) bf.SeedDemo();
+                Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
+                using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
+                {
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); }
+                    }
+                    bmp.Save(System.IO.Path.Combine(dir, "form-" + name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+                f.Hide();   // Hide (pas Close) : Close du dernier form détruit le contexte UI du thread
+            }
+            catch (Exception ex) { Console.WriteLine("  formshot " + name + " ERREUR : " + ex.Message); }
+            finally { try { f.Dispose(); } catch { } }
+        }
+
+        /// <summary>BT_UISHOT=&lt;dossier&gt; : montre le shell HORS de l'écran visible (-5000,-5000)
+        /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
+        /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
+        /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureShellShots(string dir)
+        {
+            try { System.IO.Directory.CreateDirectory(dir); } catch { }
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme" };
+            var sizes = new System.Drawing.Size[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
+            foreach (var sz in sizes)
+            {
+                var dash = new DashboardForm();
+                dash.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);   // hors de tout écran visible
+                dash.Show();
+                dash.ClientSize = sz;
+                Pump(450);
+                for (int p = 0; p < 8; p++)
+                {
+                    dash.Goto(p);
+                    Pump(names[p] == "Jeux" ? 3000 : 350);   // Jeux : laisse charger les jaquettes (cache Steam local)
+                    try
+                    {
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p" + p + "-" + names[p] + "-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                    catch (Exception ex) { Console.WriteLine("  shot " + names[p] + " : " + ex.Message); }
+                }
+                // Collection DÉFILÉE : régression du bug « logos/textes détachés des cartes en
+                // scrollant » (TextRenderer ignore TranslateTransform — coordonnées manuelles).
+                try
+                {
+                    dash.Goto(5);
+                    var pc = dash.PageAt(5) as PageCollection;
+                    if (pc != null)
+                    {
+                        pc.ScrollGridTo(160);
+                        Pump(350);
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p5-Collection-scrolled-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("  shot Collection-scrolled : " + ex.Message); }
+                try { dash.Hide(); dash.Dispose(); } catch { }
+                Pump(120);
+            }
+            Console.WriteLine("  Captures écrites dans " + dir);
+        }
+
+        /// <summary>Construit le shell DTG et rend chacune des 8 pages hors-écran, à trois
+        /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
+        /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
+        /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
+        private static void TestShellUi(ref int errors)
+        {
+            Console.WriteLine("Shell le concurrent (dashboard + 8 pages, rendu hors-écran)...");
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
+            // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
+            try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+
+            DashboardForm dash = null;
+            try { dash = new DashboardForm(); dash.CreateControl(); }
+            catch (Exception ex) { errors++; Console.WriteLine("  DashboardForm ERREUR : " + ex); return; }
+
+            var sizes = new System.Drawing.Size[]
+            {
+                new System.Drawing.Size(1200, 760),   // défaut
+                new System.Drawing.Size(1040, 680),   // minimum
+                new System.Drawing.Size(1680, 960),   // large
+            };
+            foreach (var sz in sizes)
+            {
+                dash.ClientSize = sz;
+                for (int p = 0; p < 8; p++)
+                {
+                    try
+                    {
+                        dash.Goto(p);                  // CreatePage + OnShown, chaîne de parents réelle
+                        Application.DoEvents();
+                        int bw = Math.Max(1, dash.Width), bh = Math.Max(1, dash.Height);
+                        using (var bmp = new System.Drawing.Bitmap(bw, bh))
+                            dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bw, bh)); // exerce OnPaint (détecte les crashes)
+                    }
+                    catch (Exception exp)
+                    {
+                        errors++;
+                        Console.WriteLine("  [!] " + names[p] + " @ " + sz.Width + "x" + sz.Height
+                            + " : " + exp.GetType().Name + " — " + exp.Message);
+                    }
+                }
+            }
+            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail compris.");
+            try { dash.Dispose(); } catch { }
+        }
+
+        /// <summary>Construit hors-écran chaque fenêtre exposée par le menu ⋯ Outils (le point
+        /// d'entrée de toutes les fonctions du shell DTG). Détecte les crashes de construction sans
+        /// effet de bord : les monitorings (ETW/FPS) ne démarrent que sur l'événement Load (Show),
+        /// jamais sur CreateControl ; MainForm n'est que construite (pas de handle) par prudence.</summary>
+        private static void TestMenuForms(ref int errors)
+        {
+            Console.WriteLine("Forms du menu Outils (construction hors-écran, sans effet de bord)...");
+            Action<string, int> log = delegate (string m, int l) { };
+            var forms = new System.Collections.Generic.List<System.Tuple<string, Func<System.Windows.Forms.Form>, bool>>
+            {
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameProfileForm", () => new GameProfileForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetworkForm", () => new NetworkForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DiskForm", () => new DiskForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ShopFixForm", () => new ShopFixForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LibsForm", () => new LibsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DefenderForm", () => new DefenderForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("TournamentForm", () => new TournamentForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("Fps500Form", () => new Fps500Form(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("FpsMonForm", () => new FpsMonForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchForm", () => new BenchForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DisplayForm", () => new DisplayForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LiveMonForm", () => new LiveMonForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LatencyGuideForm", () => new LatencyGuideForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HealthForm", () => new HealthForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BloatForm", () => new BloatForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("CheckupForm", () => new CheckupForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StabilityForm", () => new StabilityForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StressForm", () => new StressForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ThermalForm", () => new ThermalForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MonitorForm", () => new MonitorForm(), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SystemInfoForm", () => new SystemInfoForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DnsForm", () => new DnsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetTuneForm", () => new NetTuneForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("NetRouteForm", () => new NetRouteForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MouseForm", () => new MouseForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AudioForm", () => new AudioForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DeviceManagerForm", () => new DeviceManagerForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StartupForm", () => new StartupForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ServicesForm", () => new ServicesForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("RestoreForm", () => new RestoreForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SpeedTestForm", () => new SpeedTestForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameModeForm", () => new GameModeForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
+            };
+            int ok = 0;
+            foreach (var it in forms)
+            {
+                try
+                {
+                    using (var f = it.Item2())
+                        if (it.Item3) f.CreateControl();
+                    ok++;
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    Console.WriteLine("  [!] " + it.Item1 + " : " + ex.GetType().Name + " — " + ex.Message);
+                }
+            }
+            Console.WriteLine("  " + ok + "/" + forms.Count + " forms du menu construites sans exception.");
         }
 
         /// <summary>Latence en direct : modules noyau, session ETW (2,5 s si admin), UI, sonde de réveil.</summary>

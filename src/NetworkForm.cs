@@ -10,7 +10,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 📶 Qualité réseau en jeu : mesure la latence, la GIGUE et la PERTE vers la box
+    /// Qualité réseau en jeu : mesure la latence, la GIGUE et la PERTE vers la box
     /// (réseau local / Wi-Fi) ET vers internet, pour dire en 10 s si le lag vient de
     /// TON installation (Wi-Fi, câble) ou du FAI / de l'hébergeur du jeu.
     /// </summary>
@@ -58,7 +58,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  📶 Qualité réseau — le lag vient de chez toi ou du FAI ?",
+                Text = "  Qualité réseau — le lag vient de chez toi ou du FAI ?",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12.5f), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -241,7 +241,7 @@ namespace BTOptimizer
             {
                 _verdict.ForeColor = Accent;
                 _verdict.Text = "✔ Réseau stable de bout en bout : box saine, internet stable. Le réseau n'est pas ton problème "
-                    + "en jeu — regarde plutôt FPS/frametime (🎯) et pilote GPU (🩺).";
+                    + "en jeu — regarde plutôt FPS/frametime () et pilote GPU ().";
             }
 
             if (_log != null && net != null)

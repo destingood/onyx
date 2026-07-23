@@ -10,7 +10,7 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// 🏥 Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
+    /// Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
     /// les panneaux (crashs, thermique, réglages néfastes, boutiques, bibliothèques, disque,
     /// réseau, optimisations). Chaque point à corriger ouvre le panneau concerné en un clic.
     /// </summary>
@@ -68,7 +68,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🏥 Santé de mon PC — le bilan en un coup d'œil",
+                Text = "  Santé de mon PC — le bilan en un coup d'œil",
                 Dock = DockStyle.Fill, ForeColor = Color.White,
                 Font = Own(new Font("Segoe UI Semibold", 12.5f)), TextAlign = ContentAlignment.MiddleLeft
             });
@@ -274,7 +274,7 @@ namespace BTOptimizer
             string grade = _score >= 90 ? "Excellent" : _score >= 75 ? "Bon" : _score >= 55 ? "Moyen" : "À corriger";
             _scoreLabel.Text = _score.ToString(); _scoreLabel.ForeColor = c;
             _grade.Text = grade; _grade.ForeColor = c;
-            _gauge.BackColor = Color.White;
+            _gauge.BackColor = Theme.FieldColor;   // carte de score adaptée au thème (sombre par défaut)
 
             int graves = findings.Count(x => x.Severity == 2);
             int attn = findings.Count(x => x.Severity == 1);
@@ -301,7 +301,7 @@ namespace BTOptimizer
             {
                 var it = new ListViewItem(fi.Severity == 2 ? "⛔" : fi.Severity == 1 ? "⚠" : "✔") { Tag = fi };
                 it.SubItems.Add(fi.Text + (fi.Open != null ? "   →" : ""));
-                it.ForeColor = fi.Severity == 2 ? Bad : fi.Severity == 1 ? Warn : Color.FromArgb(40, 44, 52);
+                it.ForeColor = fi.Severity == 2 ? Bad : fi.Severity == 1 ? Warn : Theme.InkColor;   // OK : lisible en thème sombre
                 _list.Items.Add(it);
             }
             if (_log != null) _log("Bilan santé PC : score " + _score + "/100 (" + grade + "), "
@@ -317,14 +317,15 @@ namespace BTOptimizer
             int w = _chart.ClientSize.Width, h = _chart.ClientSize.Height;
             int padL = 6, padR = 6, padT = 6, padB = 6;
 
-            using (var grid = new Pen(Color.FromArgb(232, 235, 238)))
+            using (var grid = new Pen(Theme.LineColor))
                 for (int i = 0; i <= 4; i++) { int y = padT + (h - padT - padB) * i / 4; g.DrawLine(grid, padL, y, w - padR, y); }
 
             var pts = _history;
             if (pts == null || pts.Count == 0)
             {
                 using (var f = new Font("Segoe UI", 8.5f))
-                    g.DrawString("Aucun historique — refais un bilan pour voir la tendance.", f, Brushes.Gray, padL + 2, h / 2 - 8);
+                using (var gb = new SolidBrush(Theme.InkDimColor))
+                    g.DrawString("Aucun historique — refais un bilan pour voir la tendance.", f, gb, padL + 2, h / 2 - 8);
                 return;
             }
 

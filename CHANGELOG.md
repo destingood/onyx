@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.28 — Booster Dynamique + fusion de la branche vente
+- **Affinité CPU sur mesure** : le Gardien détecte le lancement des jeux et assigne
+  dynamiquement les processus aux meilleurs cœurs (automatique ou sélection manuelle),
+  avec priorité Haute. Idéal pour exclure le Core 0 ou gérer les E-Cores.
+- **Core parking dynamique** : bascule du profil d'alimentation en jeu, restauration
+  du profil précédent en quittant.
+- **Nettoyeur RAM automatique en fond** : purge de la liste Standby sous un seuil
+  configurable (tableau de bord Système) — fini les stutters de RAM pleine.
+- **Fusion de la branche vente** (v14.25 → v14.27 ci-dessous) : licences à expiration,
+  funnel d'achat, correctif du viseur — le tout dans la branche interface.
+
 ## v14.27 — Correctif critique du viseur
 - La fenêtre du viseur (crosshair) ne couvre plus tout l'écran : réduite à
   l'encombrement du réticule. Un overlay plein écran faisait perdre aux jeux sans
