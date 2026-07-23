@@ -150,6 +150,71 @@ namespace BTOptimizer
                 return k != null;
         }
 
+        /// <summary>true = CTCP actif (template Internet) ; false = autre fournisseur ; null = illisible.</summary>
+        public static bool? CongestionCtcp()
+        {
+            NativeResult r = Run(Sys32("netsh.exe"), "interface tcp show supplemental template=internet");
+            if (r.ExitCode != 0) return null;
+            foreach (string raw in r.Output.Split(new[] { ' ', '\t', '\r', '\n', ':' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string tok = raw.ToLowerInvariant();
+                if (tok == "ctcp") return true;
+                if (tok == "cubic" || tok == "newreno" || tok == "dctcp" || tok == "bbr2" || tok == "none") return false;
+            }
+            return null;
+        }
+
+        private const string DisplayClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}";
+
+        private static bool IsAmdDisplaySubKey(RegistryKey ik)
+        {
+            string desc = ik.GetValue("DriverDesc") as string;
+            if (desc == null) return false;
+            string low = desc.ToLowerInvariant();
+            return low.Contains("amd") || low.Contains("radeon");
+        }
+
+        /// <summary>Écrit EnableUlps=0 (disable=true) ou 1 sur chaque GPU AMD/Radeon. Sans effet sans GPU AMD.</summary>
+        public static void SetAmdUlps(bool disable)
+        {
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(DisplayClassKey))
+            {
+                if (rk == null) return;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c, true))
+                    {
+                        if (ik == null || !IsAmdDisplaySubKey(ik)) continue;
+                        ik.SetValue("EnableUlps", disable ? 0 : 1, RegistryValueKind.DWord);
+                    }
+                }
+            }
+        }
+
+        /// <summary>true = ULPS coupé sur un GPU AMD ; false = encore actif ; null = pas de GPU AMD.</summary>
+        public static bool? AmdUlpsDisabled()
+        {
+            using (RegistryKey rk = Registry.LocalMachine.OpenSubKey(DisplayClassKey))
+            {
+                if (rk == null) return null;
+                bool found = false;
+                foreach (string c in rk.GetSubKeyNames())
+                {
+                    int n;
+                    if (!int.TryParse(c, out n)) continue;
+                    using (RegistryKey ik = rk.OpenSubKey(c))
+                    {
+                        if (ik == null || !IsAmdDisplaySubKey(ik)) continue;
+                        found = true;
+                        if (IntEquals(ik.GetValue("EnableUlps"), 0)) return true;
+                    }
+                }
+                return found ? (bool?)false : null;
+            }
+        }
+
         public static bool IntEquals(object v, int expected)
         {
             return (v is int) && (int)v == expected;
@@ -797,6 +862,7 @@ namespace BTOptimizer
             public string Path;
             public bool IsRecycleBin;
             public long SizeMB;
+            public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine)
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -812,10 +878,10 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
                 // Caches de shaders : à vider après une MAJ de pilote ou en cas de stutters —
                 // les jeux les recompilent au prochain lancement (saccades passagères normales).
-                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Path = Path.Combine(local, @"NVIDIA\DXCache") },
-                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Path = Path.Combine(local, @"NVIDIA\GLCache") },
-                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Path = Path.Combine(local, "D3DSCache") },
-                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Path = Path.Combine(local, @"AMD\DxCache") },
+                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Kind = "gpu", Path = Path.Combine(local, @"NVIDIA\DXCache") },
+                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Kind = "gpu", Path = Path.Combine(local, @"NVIDIA\GLCache") },
+                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Kind = "gpu", Path = Path.Combine(local, "D3DSCache") },
+                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Kind = "gpu", Path = Path.Combine(local, @"AMD\DxCache") },
                 // Rapports de plantage : minidumps et vidages, aucun intérêt à les garder.
                 new CleanTarget { Name = "Rapports de plantage (CrashDumps)", Path = Path.Combine(local, "CrashDumps") },
                 new CleanTarget { Name = "Minidumps Windows (écrans bleus passés)", Path = Path.Combine(win, "Minidump") },
@@ -823,9 +889,11 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
                 // Journaux d'installation de composants (souvent volumineux).
                 new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
+                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
+                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
             AddBrowserCaches(list, local);
-            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true });
+            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin" });
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
             return list;
         }
@@ -1745,6 +1813,15 @@ namespace BTOptimizer
             catch { }
             if (log != null && done > 0)
                 log((servers == null ? "DNS IPv6 remis en automatique" : "DNS IPv6 appliqué") + " sur " + done + " interface(s).", 1);
+        }
+
+        /// <summary>Rafraîchissement réseau LÉGER (sans coupure ni redémarrage) : vide le cache DNS et le cache ARP.</summary>
+        public static void NetworkRefresh(Action<string, int> log)
+        {
+            NativeResult d = Run(Sys32("ipconfig.exe"), "/flushdns");
+            log("Cache DNS vidé" + (d.ExitCode == 0 ? "." : " (code " + d.ExitCode + ")."), d.ExitCode == 0 ? 1 : 2);
+            NativeResult a = Run(Sys32("netsh.exe"), "interface ip delete arpcache");
+            log("Cache ARP vidé" + (a.ExitCode == 0 ? "." : " (code " + a.ExitCode + ")."), a.ExitCode == 0 ? 1 : 2);
         }
 
         /// <summary>Réparation réseau standard (vide le cache DNS, réinitialise Winsock et la pile TCP/IP). Redémarrage requis.</summary>

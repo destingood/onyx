@@ -86,15 +86,18 @@ namespace BTOptimizer
             var m = _toolsMenu.Items;
 
             m.Add("🛠  Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
+            m.Add("🎚  Mode SIMPLE (interrupteurs immédiats)", null, (s, e) => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log)));
             m.Add(new ToolStripSeparator());
 
             var jeux = new ToolStripMenuItem("🎮  Jeux");
             jeux.DropDownItems.Add("Priorité CPU par jeu", null, (s, e) => OpenDialog(new GameProfileForm(Log)));
+            jeux.DropDownItems.Add("🕹 Mes jeux (boost par jeu : léger / complet)", null, (s, e) => OpenDialog(new GamesForm(Log)));
             jeux.DropDownItems.Add("Réglages Mode Jeu (exclusions)", null, (s, e) => OpenDialog(new GameModeForm(Log)));
             jeux.DropDownItems.Add("Qualité réseau en jeu", null, (s, e) => OpenDialog(new NetworkForm(Log)));
             jeux.DropDownItems.Add("Jeux & disques", null, (s, e) => OpenDialog(new DiskForm(Log)));
             jeux.DropDownItems.Add("Boutiques & contenu en jeu", null, (s, e) => OpenDialog(new ShopFixForm(Log)));
             jeux.DropDownItems.Add("Bibliothèques & applis de jeu", null, (s, e) => OpenDialog(new LibsForm(Log)));
+            jeux.DropDownItems.Add("Prérequis & installation automatique", null, (s, e) => OpenDialog(new AutoInstallForm(Log)));
             jeux.DropDownItems.Add("Exclusions antivirus (jeux)", null, (s, e) => OpenDialog(new DefenderForm(Log)));
             jeux.DropDownItems.Add("Prêt pour le match ?", null, (s, e) => OpenDialog(new TournamentForm(Log)));
             m.Add(jeux);
@@ -106,6 +109,7 @@ namespace BTOptimizer
             perf.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
             perf.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
             perf.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
+            perf.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
             m.Add(perf);
 
             var lat = new ToolStripMenuItem("⏱  Latence");
@@ -144,6 +148,7 @@ namespace BTOptimizer
             reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             m.Add(reg);
 
+            m.Add("🧰  Entretien du PC (nettoyage, TRIM, caches, DNS — 6 routines)", null, (s, e) => OpenDialog(new MaintenanceForm(Log)));
             m.Add("🔁  Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
 
             var prof = new ToolStripMenuItem("💾  Profil d'optimisations");

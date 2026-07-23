@@ -41,6 +41,7 @@ namespace BTOptimizer
         public static Color FieldColor { get { return FieldBg; } }
         public static Color LineColor { get { return Line; } }
         public static Color OkColor { get { return Dark ? Color.FromArgb(70, 200, 130) : Color.FromArgb(0, 130, 0); } }
+        public static Color AccentColor { get { return Dark ? Color.FromArgb(0, 190, 120) : AccentRef; } }
 
         private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-theme.txt"); } }
 

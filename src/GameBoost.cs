@@ -24,6 +24,9 @@ namespace BTOptimizer
         /// <summary>Liste des services que le Mode Jeu peut suspendre (pour l'écran d'exclusions).</summary>
         public static IReadOnlyList<string> SuspendableServices { get { return Suspendable; } }
 
+        /// <summary>Alias tableau (BoostConfigForm) des services suspendables.</summary>
+        public static string[] AffectedServices { get { return (string[])Suspendable.Clone(); } }
+
         /// <summary>Libellé lisible d'un service suspendable.</summary>
         public static string FriendlyName(string svc)
         {
