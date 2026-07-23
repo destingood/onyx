@@ -4,6 +4,45 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.36 — Le Copilote AGIT (il ne se contente plus d'ouvrir un panneau)
+- Le chat **mesure ton PC pour de vrai** et répond avec **tes** chiffres, sans clic :
+  fréquence réelle de chaque écran vs son maximum · charge et températures CPU/GPU ·
+  espace disque libre **et récupérable** · bibliothèques de jeu manquantes.
+- Il **exécute** ensuite, mais **jamais sans ton clic** : passer l'écran à sa fréquence max,
+  créer un point de restauration, libérer l'espace disque. Chaque bouton annonce ce qui va
+  changer et rappelle que c'est réversible — la promesse fondatrice de Fluide est intacte.
+- **Il n'invente pas de problème** : la correction n'est proposée que s'il y a réellement
+  quelque chose à corriger (écrans déjà au maximum → « Rien à corriger de ce côté »).
+- Tout tourne **en tâche de fond** (un point de restauration prend une minute) : la fenêtre
+  ne fige jamais, et le compte-rendu revient dans la conversation.
+- Visuel : bulles **indigo** (le vert résiduel a sauté), profondeur et arrondis propres,
+  **heure sur chaque message**, en-tête aligné sur le texte — « TOI » n'est plus rogné.
+- Harnais : 8 pages × 3 tailles, 40/40 fenêtres, 0 erreur ; échange complet vérifié en capture.
+
+## v14.35 — « Flux », la mascotte du Copilote
+- Le chat a enfin un **personnage** (l'ancienne mascotte est partie avec le rebrand) :
+  **Flux**, un orbe dont la **bouche EST la courbe de frametime** du logo.
+- **Elle réagit vraiment** : bouche plate quand la santé du PC est bonne (≥ 60), en
+  **dents de scie** quand il y a un problème, trois points tant que le bilan n'est pas
+  calculé. Mêmes seuils que l'anneau du QG → l'app tient un discours cohérent.
+- Dessinée **en vectoriel dans le code** (`Mascot.cs`) : aucune image embarquée, nette à
+  toute taille, suit automatiquement l'accent indigo.
+- Vérifiée en capture : sur cette machine (santé 48 %), Flux alerte bien.
+
+## v14.34 — Les 40 fenêtres du menu ⋯ passent à l'indigo (+ 2 bugs d'affichage)
+- **Le thème des fenêtres était resté vert.** `Theme.cs` avait sa **propre palette**, séparée
+  du shell : fonds verdâtres, surlignage de menu vert, liseré signature vert→bleu. Le menu ⋯
+  et ses ~40 fenêtres juraient donc avec le QG indigo. Tokens repris (`#08080C` / `#101018` /
+  `#22222F`), surlignage de menu indigo, liseré signature **indigo → violet**.
+- **Bug « & » corrigé** : « Bibliothèques **&** applis de jeu » s'affichait « Bibliothèques
+  applis de jeu » — WinForms traite `&` comme un raccourci clavier dans les `Label`. Rendu
+  littéral partout (`UseMnemonic = false`), vérifié en capture.
+- **Listes blanches en thème sombre** : seule `CheckedListBox` était traitée, donc toute
+  `ListBox` simple restait **blanche**. Le traitement couvre désormais la classe de base.
+- **Chevauchement dans « Santé de mon PC »** : le texte d'explication (4 lignes quand il y a
+  des points graves ET d'attention) débordait **sous** le graphique de tendance. Hauteur du
+  libellé et position du graphique recalées.
+
 ## v14.33 — Présence Discord (parité FPSDoctor, la dernière)
 - **Rich Presence Discord natif** : quand elle est activée, Fluide affiche « Optimise son PC ·
   avec Fluide » dans le statut Discord de l'utilisateur, avec logo et compteur de temps. C'était

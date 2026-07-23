@@ -23,12 +23,12 @@ namespace BTOptimizer
         public static bool Dark { get; private set; }
 
         // Repères des couleurs codées en dur dans les fenêtres.
-        private static readonly Color HeaderBg = Color.FromArgb(12, 14, 13);   // bandeau quasi-noir (identité DTG)
+        private static readonly Color HeaderBg = Color.FromArgb(12, 12, 18);   // bandeau quasi-noir (identité Fluide)
         private static readonly Color AccentRef = Color.FromArgb(79, 70, 229);
 
-        // Liseré signature sous les bandeaux (identité Fluide).
-        private static readonly Color BrandA = Color.FromArgb(0, 205, 130);
-        private static readonly Color BrandB = Color.FromArgb(0, 140, 235);
+        // Liseré signature sous les bandeaux (identité Fluide) : indigo → violet.
+        private static readonly Color BrandA = Color.FromArgb(129, 140, 248);  // #818CF8
+        private static readonly Color BrandB = Color.FromArgb(167, 139, 250);  // #A78BFA
 
         // Tokens (basculent avec le thème).
         private static Color Bg, Panel, Ink, InkDim, Line, GroupInk, FieldBg;
@@ -70,21 +70,21 @@ namespace BTOptimizer
         {
             if (Dark)
             {
-                // Palette DTG : noir profond + vert néon, alignée sur le shell (FpsUi).
-                // Toutes les fenêtres v14 passent par ces tokens (Theme.Apply) — les retoucher
-                // ici reskin l'ensemble des ~34 fenêtres d'un coup.
-                Bg = Color.FromArgb(9, 11, 10); Panel = Color.FromArgb(16, 18, 17);
-                Ink = Color.FromArgb(240, 242, 241); InkDim = Color.FromArgb(150, 154, 150);
-                Line = Color.FromArgb(34, 37, 35); GroupInk = Color.FromArgb(150, 182, 165);
-                FieldBg = Color.FromArgb(13, 15, 14);
-                MenuBg = Color.FromArgb(16, 18, 17); MenuHot = Color.FromArgb(20, 40, 30);
-                MenuLine = Color.FromArgb(34, 37, 35);
+                // Palette Fluide : noirs bleutés + accent indigo, alignée sur le shell (FpsUi).
+                // Toutes les fenêtres du menu ⋯ passent par ces tokens (Theme.Apply) — les
+                // retoucher ici reskin les ~40 fenêtres ET le menu lui-même d'un coup.
+                Bg = Color.FromArgb(8, 8, 12); Panel = Color.FromArgb(16, 16, 24);
+                Ink = Color.FromArgb(240, 241, 245); InkDim = Color.FromArgb(150, 152, 166);
+                Line = Color.FromArgb(34, 34, 47); GroupInk = Color.FromArgb(165, 172, 220);
+                FieldBg = Color.FromArgb(13, 13, 20);
+                MenuBg = Color.FromArgb(16, 16, 24); MenuHot = Color.FromArgb(34, 32, 72);
+                MenuLine = Color.FromArgb(34, 34, 47);
             }
             else
             {
                 Bg = Color.FromArgb(245, 246, 248); Panel = Color.White;
                 Ink = Color.FromArgb(45, 49, 57); InkDim = Color.FromArgb(110, 115, 125);
-                Line = Color.FromArgb(200, 204, 210); GroupInk = Color.FromArgb(50, 70, 130);
+                Line = Color.FromArgb(200, 204, 210); GroupInk = Color.FromArgb(79, 70, 229);
                 FieldBg = Color.White;
                 MenuBg = Color.White; MenuHot = Color.FromArgb(232, 236, 242);
                 MenuLine = Color.FromArgb(205, 209, 216);
@@ -342,6 +342,11 @@ namespace BTOptimizer
                 if (gb != null) WireGroup(gb);
                 var lv = c as ListView;
                 if (lv != null) WireList(lv);
+                // « Bibliothèques & applis » s'affichait « Bibliothèques  applis » : WinForms
+                // traite « & » comme un raccourci clavier dans les Label. Aucun libellé de
+                // l'app n'utilise de mnémonique → on rend le caractère littéral partout.
+                var lbl = c as Label;
+                if (lbl != null) { try { lbl.UseMnemonic = false; } catch { } }
                 if (role.Underline)
                 {
                     c.Paint += OnPaintBannerLine;
@@ -373,9 +378,12 @@ namespace BTOptimizer
             {
                 c.BackColor = Panel; c.ForeColor = Ink;
             }
-            else if (c is CheckedListBox)
+            else if (c is ListBox)
             {
+                // Couvre ListBox ET CheckedListBox (qui en dérive) : une ListBox simple
+                // n'était pas traitée et restait BLANCHE en thème sombre.
                 c.BackColor = Panel; c.ForeColor = Ink;
+                try { ((ListBox)c).BorderStyle = BorderStyle.FixedSingle; } catch { }
             }
             else if (c is ComboBox)
             {

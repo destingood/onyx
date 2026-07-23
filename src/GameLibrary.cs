@@ -31,7 +31,7 @@ namespace BTOptimizer
             var all = new List<InstalledGame>();
             var scanners = new Func<List<InstalledGame>>[]
             {
-                ScanSteam, ScanEpic, ScanGog, ScanUbisoft, ScanRiot, ScanBlizzard, ScanEa, ScanXbox
+                ScanSteam, ScanEpic, ScanGog, ScanUbisoft, ScanRiot, ScanXbox, ScanEaGames, ScanInstalledPrograms
             };
             foreach (Func<List<InstalledGame>> scan in scanners)
             {
@@ -218,61 +218,154 @@ namespace BTOptimizer
             return games;
         }
 
-        // =========================================================== BLIZZARD / BATTLE.NET
-        private static List<InstalledGame> ScanBlizzard()
+        // =========================================================== EA APP / ORIGIN (marqueur fichier)
+        // Les jeux installés par l'EA app ne déclarent RIEN dans le registre de désinstallation
+        // (vérifié sur Battlefield 6 : aucune clé, aucun éditeur). En revanche chacun contient
+        // « __Installer\installerdata.xml » — marqueur fiable et propre à EA/Origin. On teste ce
+        // marqueur sur les dossiers de 1er niveau de chaque disque + les conteneurs habituels.
+        private static readonly string[] EaContainers =
         {
-            return FromUninstall("Blizzard Entertainment", "BATTLE.NET");
-        }
-
-        // =========================================================== EA (ex-Origin)
-        private static List<InstalledGame> ScanEa()
-        {
-            return FromUninstall("Electronic Arts", "EA");
-        }
-
-        // Parcourt les clés de désinstallation Windows et retient celles d'un éditeur donné.
-        // Sert de fallback pour les launchers sans manifeste propre lisible (EA, Blizzard).
-        private static readonly string[] LauncherNoise =
-        {
-            "Battle.net", "EA app", "EA Desktop", "Origin", "Uplay", "Ubisoft Connect", "Redistributable", "DirectX", "Runtime"
+            @"Program Files\EA Games", @"Program Files (x86)\EA Games",
+            @"Program Files\Origin Games", @"Program Files (x86)\Origin Games",
+            "EA Games", "Origin Games", "Games"
         };
 
-        private static List<InstalledGame> FromUninstall(string publisherContains, string launcher)
+        private static List<InstalledGame> ScanEaGames()
         {
             var games = new List<InstalledGame>();
-            string[] roots =
+            var candidates = new List<string>();
+            foreach (string drive in FixedDrives())
             {
-                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-            };
-            foreach (string root in roots)
+                candidates.AddRange(SafeDirs(drive));                                   // ex. F:\Battlefield 6
+                foreach (string c in EaContainers) candidates.AddRange(SafeDirs(Path.Combine(drive, c)));
+            }
+            foreach (string dir in candidates)
             {
                 try
                 {
-                    using (RegistryKey k = Registry.LocalMachine.OpenSubKey(root))
-                    {
-                        if (k == null) continue;
-                        foreach (string sub in k.GetSubKeyNames())
-                            using (RegistryKey e = k.OpenSubKey(sub))
-                            {
-                                if (e == null) continue;
-                                string pub = Convert.ToString(e.GetValue("Publisher"));
-                                if (pub == null || pub.IndexOf(publisherContains, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                                string name = Convert.ToString(e.GetValue("DisplayName"));
-                                if (string.IsNullOrWhiteSpace(name)) continue;
-                                if (LauncherNoise.Any(n => name.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
-                                games.Add(new InstalledGame
-                                {
-                                    Name = name.Trim(),
-                                    Launcher = launcher,
-                                    InstallDir = Convert.ToString(e.GetValue("InstallLocation"))
-                                });
-                            }
-                    }
+                    if (!File.Exists(Path.Combine(dir, "__Installer", "installerdata.xml"))) continue;
+                    string name = Path.GetFileName(dir);
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    games.Add(new InstalledGame { Name = name, Launcher = "EA", InstallDir = dir });
                 }
                 catch { }
             }
             return games;
+        }
+
+        private static string[] SafeDirs(string path)
+        {
+            try { return Directory.Exists(path) ? Directory.GetDirectories(path) : new string[0]; }
+            catch { return new string[0]; }
+        }
+
+        // =========================================================== PROGRAMMES INSTALLÉS (registre)
+        // Rattrape TOUT ce qui n'a pas de manifeste propre : Battle.net (éditeur Blizzard), EA, et
+        // surtout les jeux posés par un simple setup.exe (hors launcher). On lit HKLM 32+64 ET HKCU
+        // (beaucoup de jeux s'enregistrent par utilisateur — c'était le trou du scanner précédent).
+        // On exige une InstallLocation (signal fort « vrai logiciel installé ») et on filtre le
+        // bruit (pilotes, runtimes, utilitaires système) pour ne pas polluer la bibliothèque.
+        private static readonly string[] NoisePublishers =
+        {
+            // Systèmes / pilotes / suites bureautiques
+            "Microsoft", "Intel", "NVIDIA", "Advanced Micro Devices", "Realtek", "Google", "Apple",
+            "Oracle", "Adobe", "Mozilla", "VideoLAN", "Samsung", "Xiaomi", "SafeNet", "Nmap Project",
+            // Outils de développement / runtimes
+            "Docker", "Git Development", "JetBrains", "Python", "Eclipse Adoptium", "Anysphere",
+            "opencode", "Astral Software", "BurntSushi", "Gyan", "jrsoftware", "Ollama", "namazso",
+            // Utilitaires système / tweak / monitoring
+            "Piriform", "CPUID", "Crystal Dew World", "Resplendence", "NoVirusThanks", "Parsec",
+            "Denuvo", "Malwarebytes", "Dropbox", "Bitsum", "TechPowerUp", "Antibody Software",
+            "TeamViewer", "OCCT", "Logitech", "Razer", "Corsair",
+            // Applis grand public (pas des jeux)
+            "Opera Software", "Discord Inc", "spikehd", "TikTok", "Smart Code OOD", "TechEnClair", "yanis",
+            // Nos propres logiciels / concurrents (ne pas s'auto-lister dans la bibliothèque)
+            "BT Optimizer", "Fluide", "FPSDoctor"
+        };
+
+        // Noms exacts sans éditeur exploitable. Correspondance EXACTE obligatoire : un filtre
+        // « contient » sur « bun » ou « uv » massacrerait de vrais jeux (« Bunny », « Survival »…).
+        private static readonly string[] NoiseExactNames =
+        {
+            "bun", "uv", "cursor (user)", "opencode", "tauri-app", "ffmpeg", "npcap"
+        };
+
+        private static readonly string[] NoiseNames =
+        {
+            "driver", "runtime", "redistributable", "redistribuable", "sdk", "toolkit", "framework",
+            "visual c++", ".net", "language pack", "module linguistique", "service pack", "webview",
+            "vcredist", "directx", "physx", "anti-cheat", "anticheat", "antivirus", "winrar",
+            "7-zip", "notepad", "visual studio", "afterburner", "hwinfo", "hwmonitor", "cpu-z",
+            "gpu-z", "crystaldisk", "ccleaner", "latencymon", "onedrive"
+        };
+
+        // Launchers eux-mêmes : exclus en correspondance EXACTE seulement, pour ne pas éliminer
+        // un vrai jeu (ex. « The Seven Deadly Sins: Origin » ne doit pas sauter à cause d'« Origin »).
+        private static readonly string[] LauncherApps =
+        {
+            "battle.net", "ea app", "ea desktop", "origin", "epic games launcher", "ubisoft connect",
+            "uplay", "gog galaxy", "steam", "riot client", "rockstar games launcher"
+        };
+
+        private static List<InstalledGame> ScanInstalledPrograms()
+        {
+            var games = new List<InstalledGame>();
+            const string Un = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+            const string Un32 = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
+
+            var roots = new List<RegistryKey>();
+            try { roots.Add(Registry.LocalMachine.OpenSubKey(Un)); } catch { }
+            try { roots.Add(Registry.LocalMachine.OpenSubKey(Un32)); } catch { }
+            try { roots.Add(Registry.CurrentUser.OpenSubKey(Un)); } catch { }
+            try { roots.Add(Registry.CurrentUser.OpenSubKey(Un32)); } catch { }
+
+            foreach (RegistryKey k in roots)
+            {
+                if (k == null) continue;
+                try
+                {
+                    foreach (string sub in k.GetSubKeyNames())
+                        using (RegistryKey e = k.OpenSubKey(sub))
+                        {
+                            if (e == null) continue;
+                            string name = Convert.ToString(e.GetValue("DisplayName"));
+                            string loc = Convert.ToString(e.GetValue("InstallLocation"));
+                            string pub = Convert.ToString(e.GetValue("Publisher")) ?? "";
+                            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(loc)) continue;
+                            if (Convert.ToString(e.GetValue("SystemComponent")) == "1") continue;
+                            string trimmed = name.Trim();
+                            if (LauncherApps.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
+                            if (NoiseExactNames.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
+                            if (NoisePublishers.Any(p => pub.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                            if (NoiseNames.Any(n => trimmed.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                            games.Add(new InstalledGame
+                            {
+                                Name = trimmed,
+                                Launcher = LauncherFor(loc, pub),
+                                InstallDir = loc
+                            });
+                        }
+                }
+                catch { }
+                finally { try { k.Dispose(); } catch { } }
+            }
+            return games;
+        }
+
+        // Devine la plateforme depuis le chemin d'installation ou l'éditeur.
+        // NB : on se fie à l'ÉDITEUR pour Blizzard, car le dossier peut s'appeler n'importe comment.
+        private static string LauncherFor(string loc, string pub)
+        {
+            string l = (loc ?? "").ToLowerInvariant();
+            string p = (pub ?? "").ToLowerInvariant();
+            if (p.Contains("blizzard")) return "BATTLE.NET";
+            if (l.Contains("steamapps")) return "STEAM";
+            if (l.Contains("epic games")) return "EPIC";
+            if (l.Contains("gog")) return "GOG";
+            if (l.Contains("ubisoft")) return "UBISOFT";
+            if (p.Contains("electronic arts") || l.Contains("ea games") || l.Contains("origin games")) return "EA";
+            if (l.Contains("riot games")) return "RIOT";
+            return "PC";
         }
 
         // =========================================================== XBOX / GAME PASS
@@ -289,6 +382,7 @@ namespace BTOptimizer
                 {
                     string name = Path.GetFileName(sub);
                     if (string.IsNullOrWhiteSpace(name)) continue;
+                    if (string.Equals(name, "GameSave", StringComparison.OrdinalIgnoreCase)) continue;  // dossier système, pas un jeu
                     string content = Path.Combine(sub, "Content");
                     games.Add(new InstalledGame
                     {
