@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.29.0.0")]
-[assembly: AssemblyFileVersion("14.29.0.0")]
+[assembly: AssemblyVersion("14.30.0.0")]
+[assembly: AssemblyFileVersion("14.30.0.0")]
 
 namespace BTOptimizer
 {
@@ -827,6 +827,7 @@ namespace BTOptimizer
                 case "StatsOverlayWindow": return new StatsOverlayWindow();
                 case "BenchmarkFpsForm": return new BenchmarkFpsForm(log);
                 case "GameModeForm": return new GameModeForm(log);
+                case "DiscordForm": return new DiscordForm(log);
                 default: return null;
             }
         }
@@ -1018,6 +1019,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameModeForm", () => new GameModeForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DiscordForm", () => new DiscordForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;

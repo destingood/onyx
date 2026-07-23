@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.30 — Finition esthétique (le QG s'anime) + panneau Discord
+- **Animation d'entrée du tableau de bord** : l'anneau de santé se **remplit** de 0 % à son
+  score et les compteurs **montent** jusqu'à leur valeur (courbe ease-out, ~340 ms). La
+  couleur de l'anneau reste celle du score final (pas de clignotement rouge→vert).
+- **Respect de l'accessibilité** : animation désactivée si les effets visuels Windows sont
+  coupés (`SystemInformation.UIEffectsEnabled`) — et sous le harnais, qui doit voir l'état final.
+- **Panneau Discord** (☰ → ⚙ Réglages système) : démarrage avec Windows, réduction en zone
+  de notification, démarrage réduit — lus dans la vraie configuration de Discord, écrits avec
+  **sauvegarde `.bak`**, entièrement réversibles. Affiche si Discord tourne et sa mémoire.
+  **Honnête** : accélération matérielle, overlay en jeu et QoS ne sont pas exposés hors de
+  Discord — le panneau le dit et t'y renvoie au lieu de faire semblant.
+- Harnais : **40/40 fenêtres** (Discord inclus), 8 pages × 3 tailles, 0 erreur.
+
 ## v14.29 — Rebrand : DesTinGOOD devient **Fluide**
 - Nouveau nom (**Fluide**), nouveau logo (**la frametime qui devient plate** — le chaos
   à gauche, la ligne idéale à droite), nouvelle signature : **« Mesuré, pas promis. »**
