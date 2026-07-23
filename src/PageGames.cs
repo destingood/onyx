@@ -70,7 +70,7 @@ namespace BTOptimizer
                 List<GameScan.GameInfo> games = new List<GameScan.GameInfo>();
                 try { games = GameScan.Known(); GameScan.Detect(games); } catch { }
                 try { MergeScanned(games); } catch { }   // + TOUS les jeux installés (scanner générique multi-plateforme)
-                try { BeginInvoke((Action)(() => { _all = games; Render(); })); } catch { }
+                try { BeginInvoke((Action)(() => { _all = games; Render(); PrefetchArt(); })); } catch { }
             });
         }
 
@@ -104,6 +104,37 @@ namespace BTOptimizer
             var sb = new System.Text.StringBuilder(s.Length);
             foreach (char c in s.ToLowerInvariant()) if (char.IsLetterOrDigit(c)) sb.Append(c);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Lance la résolution « nom → AppID Steam » pour TOUS les jeux détectés sans AppID, dès
+        /// le chargement de la bibliothèque. Indispensable : déclencher ça depuis le Paint d'une
+        /// tuile ne marche que pour les cartes VISIBLES (WinForms ne peint pas hors écran), donc
+        /// les jaquettes des jeux plus bas dans la liste n'arrivaient jamais.
+        /// </summary>
+        private void PrefetchArt()
+        {
+            if (_all == null) return;
+            foreach (GameScan.GameInfo g in _all)
+            {
+                if (!g.Detected || g.SteamId > 0 || string.IsNullOrEmpty(g.Name)) continue;
+                GameScan.GameInfo gg = g;
+                int id = SteamAppIndex.Resolve(gg.Name, () =>
+                {
+                    // Résolution arrivée : on relit (désormais en cache) et on redessine.
+                    try
+                    {
+                        if (!IsHandleCreated) return;
+                        BeginInvoke((Action)(() =>
+                        {
+                            if (gg.SteamId <= 0) gg.SteamId = SteamAppIndex.Resolve(gg.Name, null);
+                            if (_flow != null) _flow.Invalidate(true);
+                        }));
+                    }
+                    catch { }
+                });
+                if (id > 0) gg.SteamId = id;   // déjà en cache : immédiat
+            }
         }
 
         private bool Match(GameScan.GameInfo g)
@@ -180,6 +211,17 @@ namespace BTOptimizer
                 gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 var rr = new Rectangle(0, 0, ((Panel)s).ClientRectangle.Width - 1, ((Panel)s).ClientRectangle.Height - 1);
 
+                // Jeu sans AppID (Battle.net, EA app, GOG, hors launcher) : on retrouve son AppID
+                // Steam par le NOM afin d'afficher la VRAIE jaquette — la plupart des jeux PC
+                // existent sur Steam même installés ailleurs. L'index se charge en tâche de fond ;
+                // en attendant, la tuile retombe proprement sur l'icône du jeu.
+                if (g.SteamId <= 0 && detected)
+                {
+                    int rid = SteamAppIndex.Resolve(g.Name,
+                        () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } });
+                    if (rid > 0) g.SteamId = rid;
+                }
+
                 Image img = g.SteamId > 0
                     ? GameArt.Get(g.SteamId, () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } })
                     : null;
@@ -201,10 +243,50 @@ namespace BTOptimizer
                         // pastille ronde à la manette + nom bien lisible (au lieu d'une boîte vide).
                         using (var lg = new LinearGradientBrush(rr, Color.FromArgb(26, 31, 28), Color.FromArgb(12, 15, 13), 90f)) gr.FillRectangle(lg, rr);
                         Color ac = detected ? FpsUi.Neon : FpsUi.Dim2;
-                        int d = 78; var circ = new Rectangle((rr.Width - d) / 2, 40, d, d);
-                        using (var cb = new SolidBrush(Color.FromArgb(detected ? 34 : 22, ac.R, ac.G, ac.B))) gr.FillEllipse(cb, circ);
-                        using (var cp = new Pen(Color.FromArgb(detected ? 130 : 60, ac.R, ac.G, ac.B), 1.5f)) gr.DrawEllipse(cp, circ);
-                        TextRenderer.DrawText(gr, "🎮", FpsUi.GlyphL, circ, ac, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+                        // Aucune jaquette Steam possible (Battle.net, EA app, jeux hors launcher) :
+                        // on affiche l'icône HAUTE RÉSOLUTION du jeu, extraite de son exécutable.
+                        // Extraction en tâche de fond → la carte se redessine dès qu'elle est prête.
+                        Image ico = detected
+                            ? GameIcon.For(g.InstallPath, () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } })
+                            : null;
+
+                        if (ico != null && ico.Width >= 64)
+                        {
+                            // Vraie icône 128/256 px : on la montre EN GRAND, comme une vignette.
+                            // (Pas de pastille ronde : elle rapetisserait l'illustration pour rien.)
+                            int isz = 112;
+                            var ir = new Rectangle((rr.Width - isz) / 2, 24, isz, isz);
+                            InterpolationMode oldIm = gr.InterpolationMode;
+                            gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                            gr.DrawImage(ico, ir);
+                            gr.InterpolationMode = oldIm;
+                        }
+                        else
+                        {
+                            // Rien de mieux qu'une petite icône (ou rien) : pastille ronde classique.
+                            int d = 78; var circ = new Rectangle((rr.Width - d) / 2, 40, d, d);
+                            using (var cb = new SolidBrush(Color.FromArgb(detected ? 34 : 22, ac.R, ac.G, ac.B))) gr.FillEllipse(cb, circ);
+                            using (var cp = new Pen(Color.FromArgb(detected ? 130 : 60, ac.R, ac.G, ac.B), 1.5f)) gr.DrawEllipse(cp, circ);
+
+                            if (ico != null)
+                            {
+                                int isz = Math.Min(48, Math.Max(32, ico.Width));
+                                var ir = new Rectangle(circ.X + (circ.Width - isz) / 2, circ.Y + (circ.Height - isz) / 2, isz, isz);
+                                InterpolationMode oldIm = gr.InterpolationMode;
+                                gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                                gr.DrawImage(ico, ir);
+                                gr.InterpolationMode = oldIm;
+                            }
+                            else
+                            {
+                                // GDI (TextRenderer) centre mal les emoji : leurs métriques débordent
+                                // de la cellule → glyphe décalé. GDI+ + StringFormat centré = au milieu.
+                                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                                using (var gb = new SolidBrush(ac))
+                                    gr.DrawString("🎮", FpsUi.GlyphL, gb, (RectangleF)circ, sf);
+                            }
+                        }
                         TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 138, rr.Width - 20, 68), detected ? FpsUi.Ink : FpsUi.Dim,
                             TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
                     }

@@ -121,15 +121,43 @@ namespace BTOptimizer
             try
             {
                 if (_g.SteamId > 0) { Process.Start(new ProcessStartInfo("steam://run/" + _g.SteamId) { UseShellExecute = true }); return; }
+
+                // Jeux Battle.net : passer par l'URI officielle du launcher est bien plus fiable
+                // que de lancer l'exe à la main (Blizzard exige souvent l'agent Battle.net).
+                string bnet = BattleNetUri(_g.Name);
+                if (bnet != null && string.Equals(_g.Store, "BATTLE.NET", StringComparison.OrdinalIgnoreCase))
+                { Process.Start(new ProcessStartInfo(bnet) { UseShellExecute = true }); return; }
+
                 if (_g.InstallPath != null && _exes != null)
                     foreach (var exe in _exes)
                     {
                         string p = Path.Combine(_g.InstallPath, exe);
                         if (File.Exists(p)) { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true, WorkingDirectory = _g.InstallPath }); return; }
                     }
+
+                // Jeu hors catalogue (repéré par le scanner) : on devine l'exécutable principal.
+                string guess = GameLibrary.GuessMainExe(_g.InstallPath);
+                if (guess != null)
+                {
+                    Process.Start(new ProcessStartInfo(guess) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(guess) });
+                    return;
+                }
                 OpenFolder();
             }
             catch (Exception ex) { MessageBox.Show(this, "Impossible de lancer le jeu : " + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+        }
+
+        // URI officielles du launcher Blizzard (codes produits Battle.net).
+        private static string BattleNetUri(string name)
+        {
+            string n = (name ?? "").ToLowerInvariant();
+            if (n.Contains("world of warcraft")) return "battlenet://WoW";
+            if (n.Contains("hearthstone")) return "battlenet://WTCG";
+            if (n.Contains("overwatch")) return "battlenet://Pro";
+            if (n.Contains("diablo iv") || n.Contains("diablo 4")) return "battlenet://Fen";
+            if (n.Contains("diablo iii") || n.Contains("diablo 3")) return "battlenet://D3";
+            if (n.Contains("starcraft ii") || n.Contains("starcraft 2")) return "battlenet://S2";
+            return null;
         }
 
         private void OpenFolder()

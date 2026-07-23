@@ -47,8 +47,84 @@ namespace BTOptimizer
                 string key = (g.Launcher ?? "") + "|" + g.Name.Trim().ToLowerInvariant();
                 if (seen.Add(key)) result.Add(g);
             }
+            BackfillSteamIds(result);
             result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             return result;
+        }
+
+        /// <summary>
+        /// Beaucoup de jeux Steam sont AUSSI déclarés dans le registre, mais sans AppID : ils
+        /// s'affichaient donc avec un placeholder au lieu de leur jaquette. Si leur dossier
+        /// d'installation vit dans une bibliothèque Steam, on retrouve l'AppID via le dossier
+        /// (« steamapps\common\<dossier> ») déjà résolu par le scan Steam.
+        /// </summary>
+        private static void BackfillSteamIds(List<InstalledGame> games)
+        {
+            var byFolder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (InstalledGame g in games)
+            {
+                if (g.SteamAppId <= 0 || string.IsNullOrEmpty(g.InstallDir)) continue;
+                string leaf = SafeLeaf(g.InstallDir);
+                if (leaf.Length > 0 && !byFolder.ContainsKey(leaf)) byFolder[leaf] = g.SteamAppId;
+            }
+            if (byFolder.Count == 0) return;
+
+            foreach (InstalledGame g in games)
+            {
+                if (g.SteamAppId > 0 || string.IsNullOrEmpty(g.InstallDir)) continue;
+                if (g.InstallDir.IndexOf(@"steamapps\common", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                int id;
+                if (byFolder.TryGetValue(SafeLeaf(g.InstallDir), out id)) g.SteamAppId = id;
+            }
+        }
+
+        private static string SafeLeaf(string p)
+        {
+            try { return Path.GetFileName(p.TrimEnd('\\', '/')) ?? ""; }
+            catch { return ""; }
+        }
+
+        // Écartés : désinstalleurs, anti-triche, utilitaires — jamais le jeu lui-même.
+        private static readonly string[] ExeNoise =
+        {
+            "unins", "uninstall", "crashhandler", "crashreport", "crashpad", "anticheat",
+            "vcredist", "directx", "dxsetup", "setup", "redist", "config", "settings", "cleanup", "helper"
+        };
+
+        /// <summary>
+        /// Devine l'exécutable principal d'un jeu : le plus GROS .exe à la racine du dossier
+        /// (puis un niveau en dessous), hors désinstalleurs / anti-triche / utilitaires.
+        /// Heuristique simple mais fiable : le binaire du jeu pèse toujours bien plus lourd.
+        /// Sert à la fois au bouton « Lancer » et à l'extraction de l'icône du jeu.
+        /// </summary>
+        public static string GuessMainExe(string dir)
+        {
+            if (string.IsNullOrEmpty(dir)) return null;
+            try { if (!Directory.Exists(dir)) return null; } catch { return null; }
+
+            string[] subs;
+            try { subs = Directory.GetDirectories(dir); } catch { subs = new string[0]; }
+            var scan = new string[subs.Length + 1];
+            scan[0] = dir;
+            Array.Copy(subs, 0, scan, 1, subs.Length);
+
+            string best = null; long bestLen = 0;
+            foreach (string d in scan)
+            {
+                string[] files;
+                try { files = Directory.GetFiles(d, "*.exe"); } catch { continue; }
+                foreach (string f in files)
+                {
+                    string leaf = Path.GetFileNameWithoutExtension(f).ToLowerInvariant();
+                    bool noisy = false;
+                    foreach (string n in ExeNoise) if (leaf.Contains(n)) { noisy = true; break; }
+                    if (noisy) continue;
+                    long len = 0;
+                    try { len = new FileInfo(f).Length; } catch { }
+                    if (len > bestLen) { bestLen = len; best = f; }
+                }
+            }
+            return best;
         }
 
         // =========================================================== STEAM (.acf)
@@ -333,6 +409,14 @@ namespace BTOptimizer
                             string pub = Convert.ToString(e.GetValue("Publisher")) ?? "";
                             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(loc)) continue;
                             if (Convert.ToString(e.GetValue("SystemComponent")) == "1") continue;
+
+                            // Clé ORPHELINE : le jeu a été désinstallé mais son entrée de registre
+                            // subsiste (constaté sur DARK SOULS REMASTERED et Disney Dreamlight
+                            // Valley, dont le dossier steamapps\common n'existe plus). Sans ce
+                            // test on affiche des jeux fantômes, sans icône ni jaquette.
+                            bool locExists;
+                            try { locExists = Directory.Exists(loc); } catch { locExists = false; }
+                            if (!locExists) continue;
                             string trimmed = name.Trim();
                             if (LauncherApps.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
                             if (NoiseExactNames.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
