@@ -29,6 +29,7 @@ namespace BTOptimizer
         private float _animT = 1f;                    // 0 = début, 1 = état final
         private int _tOpti, _tTotal, _tJeux;          // valeurs cibles des compteurs
         private bool _statsReady;
+        private readonly HashSet<Control> _hover = new HashSet<Control>();   // cartes sous la souris
 
         /// <summary>Animations désactivées si l'utilisateur a coupé les effets Windows
         /// (accessibilité) ou sous le harnais de capture, qui doit voir l'état final.</summary>
@@ -114,7 +115,15 @@ namespace BTOptimizer
             var card = new Panel();
             card.BackColor = Color.Transparent;
             card.Tag = "stat" + slot;
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            // Au survol : fond éclairci + liseré néon (la carte réagit sous la souris).
+            card.Paint += (s, e) =>
+            {
+                var p = (Panel)s;
+                bool hot = _hover.Contains(p);
+                FpsUi.PaintCard(e.Graphics, p.ClientRectangle,
+                                hot ? FpsUi.CardHi : FpsUi.Card,
+                                hot ? FpsUi.NeonDim : FpsUi.Border, 12f);
+            };
 
             var ic = FpsUi.Text(icon, FpsUi.Glyph, FpsUi.Ink); ic.Name = "ic"; ic.SetBounds(16, 14, 34, 34); ic.AutoSize = false;
             var num = FpsUi.Text("—", FpsUi.Num, FpsUi.Ink); num.Name = "num"; num.SetBounds(56, 12, 130, 36); num.AutoSize = false;
@@ -123,7 +132,25 @@ namespace BTOptimizer
 
             card.Controls.Add(ic); card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(b);
             Controls.Add(card);
+            WireHover(card, card);   // après l'ajout des enfants : ils captent aussi la souris
             return num;
+        }
+
+        /// <summary>Suit le survol sur la carte ET ses enfants (un enfant sous la souris
+        /// déclencherait sinon un MouseLeave de la carte, d'où le test de position réelle).</summary>
+        private void WireHover(Control root, Panel card)
+        {
+            root.MouseEnter += (s, e) => { if (_hover.Add(card)) card.Invalidate(); };
+            root.MouseLeave += (s, e) =>
+            {
+                try
+                {
+                    if (card.ClientRectangle.Contains(card.PointToClient(Cursor.Position))) return;
+                }
+                catch { }
+                if (_hover.Remove(card)) card.Invalidate();
+            };
+            foreach (Control ch in root.Controls) WireHover(ch, card);
         }
 
         private void DoLayout()
@@ -259,13 +286,23 @@ namespace BTOptimizer
                 float v = (float)Math.Max(0, Math.Min(100, arr[i]));
                 pts[i] = new PointF(fx, plot.Bottom - v / 100f * plot.Height);
             }
-            // Remplissage translucide sous la courbe (aspect « aire »).
-            var poly = new PointF[arr.Length + 2];
-            Array.Copy(pts, poly, arr.Length);
-            poly[arr.Length] = new PointF(pts[arr.Length - 1].X, plot.Bottom);
-            poly[arr.Length + 1] = new PointF(pts[0].X, plot.Bottom);
-            using (var br = new SolidBrush(Color.FromArgb(30, c.R, c.G, c.B))) g.FillPolygon(br, poly);
-            using (var pen = new Pen(c, 1.8f)) g.DrawLines(pen, pts);
+            // Courbe lissée (spline) + aire en dégradé qui s'efface vers le bas : la lecture
+            // est plus douce qu'une ligne brisée, et l'aire donne de la profondeur.
+            const float tension = 0.4f;              // au-delà, la spline « rebondit »
+            if (plot.Height > 1)
+            {
+                using (var path = new GraphicsPath())
+                {
+                    path.AddCurve(pts, tension);
+                    path.AddLine(pts[arr.Length - 1].X, plot.Bottom, pts[0].X, plot.Bottom);
+                    path.CloseFigure();
+                    using (var br = new LinearGradientBrush(
+                        new Rectangle(plot.X, plot.Y, Math.Max(1, plot.Width), plot.Height),
+                        Color.FromArgb(70, c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B), 90f))
+                        g.FillPath(br, path);
+                }
+            }
+            using (var pen = new Pen(c, 1.8f)) { pen.LineJoin = LineJoin.Round; g.DrawCurve(pen, pts, tension); }
         }
 
         private void Sample()
