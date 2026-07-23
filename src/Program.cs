@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.36.0.0")]
-[assembly: AssemblyFileVersion("14.36.0.0")]
+[assembly: AssemblyVersion("14.37.0.0")]
+[assembly: AssemblyFileVersion("14.37.0.0")]
 
 namespace BTOptimizer
 {
@@ -68,6 +68,7 @@ namespace BTOptimizer
     {
         public static void Run()
         {
+            Anim.ForceOff = true;   // harnais : jamais d'animation (captures déterministes = état final)
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Sys.Init();
 

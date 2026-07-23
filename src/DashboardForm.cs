@@ -40,6 +40,7 @@ namespace BTOptimizer
             try { Icon = Logo.MakeIcon(32, FpsUi.Neon); } catch { try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { } }
             // Garantit le rendu sombre des menus (⋯, tray) dès le démarrage.
             try { Theme.Prime(); } catch { }
+            try { AnimSettings.Recompute(); } catch { }   // état initial de l'interrupteur « Animations »
 
             _host = new Panel();
             _host.Dock = DockStyle.Fill;
@@ -53,6 +54,8 @@ namespace BTOptimizer
             BuildTray();
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
+            Load += delegate { if (Anim.On) { try { Opacity = 0.0; } catch { } } };   // démarre invisible…
+            Shown += delegate { AnimFx.FadeInForm(this); };                            // …puis fondu d'ouverture
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
@@ -153,6 +156,9 @@ namespace BTOptimizer
             var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec Fluide »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             reg.DropDownItems.Add(discord);
+            var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
+            anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
+            reg.DropDownItems.Add(anim);
             reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             m.Add(reg);
 
@@ -228,13 +234,17 @@ namespace BTOptimizer
                 bool wanted = Native.IsGameFullscreen();
                 if (wanted != Native.TimerActive) Native.SetTimer1ms(wanted);
 
+                bool knownGame = false;
+                try { knownGame = GameScan.RunningKnownGame() != null; } catch { }
+
+                // Animations coupées quand un jeu tourne (plein écran, jeu connu, ou Mode Jeu actif).
+                bool anyGame = wanted || knownGame;
+                try { anyGame = anyGame || GameBoost.IsActive; } catch { }
+                try { AnimSettings.SetGameRunning(anyGame); } catch { }
+
                 // Viseur AUTO en jeu : affiché dès qu'un jeu tourne (jeu connu ou plein écran), retiré au bureau.
                 if (Crosshair.AutoGameEnabled)
-                {
-                    bool game = false;
-                    try { game = GameScan.RunningKnownGame() != null; } catch { }
-                    Crosshair.AutoTick(game || wanted, game || wanted);
-                }
+                    Crosshair.AutoTick(knownGame || wanted, knownGame || wanted);
             }
             catch { }
         }
@@ -340,15 +350,24 @@ namespace BTOptimizer
             }
             for (int i = 0; i < _nav.Count; i++) _nav[i].Active = (i == idx);
             FpsPage page = _pages[idx];
+            int prev = _current;
 
-            _host.SuspendLayout();
-            if (_current >= 0 && _pages[_current] != null) _pages[_current].Visible = false;
-            if (!_host.Controls.Contains(page)) _host.Controls.Add(page);
-            page.Visible = true;
-            page.BringToFront();
-            _host.ResumeLayout();
-            _current = idx;
-            try { page.OnShown(); } catch { }
+            // L'échange réel (masquer l'ancienne, montrer la nouvelle) est encapsulé pour pouvoir
+            // le jouer SOUS un cross-fade quand on passe d'une page à une autre.
+            Action commit = delegate
+            {
+                _host.SuspendLayout();
+                if (prev >= 0 && _pages[prev] != null) _pages[prev].Visible = false;
+                if (!_host.Controls.Contains(page)) _host.Controls.Add(page);
+                page.Visible = true;
+                page.BringToFront();
+                _host.ResumeLayout();
+                _current = idx;
+                try { page.OnShown(); } catch { }
+            };
+
+            if (prev >= 0 && prev != idx) AnimFx.CrossFadePage(_host, commit);
+            else commit();
         }
 
         private FpsPage CreatePage(int idx)
@@ -369,7 +388,7 @@ namespace BTOptimizer
 
         public void OpenDialog(Form f)
         {
-            try { using (f) f.ShowDialog(this); }
+            try { AnimFx.HookDialog(f); using (f) f.ShowDialog(this); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 

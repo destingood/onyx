@@ -280,7 +280,7 @@ namespace BTOptimizer
         private static readonly ConditionalWeakTable<Control, RoleInfo> Roles =
             new ConditionalWeakTable<Control, RoleInfo>();
 
-        private sealed class BtnState { public bool Hover; public bool Down; }
+        private sealed class BtnState { public bool Hover; public bool Down; public float HovT, DownT; public Anim.Handle HovAnim, DownAnim; }
         private static readonly ConditionalWeakTable<Button, BtnState> Buttons =
             new ConditionalWeakTable<Button, BtnState>();
 
@@ -459,17 +459,38 @@ namespace BTOptimizer
             if (Buttons.TryGetValue(b, out st)) return;
             st = new BtnState();
             Buttons.Add(b, st);
-            b.MouseEnter += delegate { st.Hover = true; b.Invalidate(); };
-            b.MouseLeave += delegate { st.Hover = false; st.Down = false; b.Invalidate(); };
+            b.MouseEnter += delegate { st.Hover = true; HovTo(b, st); };
+            b.MouseLeave += delegate { st.Hover = false; st.Down = false; HovTo(b, st); DownTo(b, st); };
             b.MouseDown += delegate (object s, MouseEventArgs me)
             {
-                if (me.Button == MouseButtons.Left) { st.Down = true; b.Invalidate(); }
+                if (me.Button == MouseButtons.Left) { st.Down = true; DownTo(b, st); }
             };
-            b.MouseUp += delegate { st.Down = false; b.Invalidate(); };
+            b.MouseUp += delegate { st.Down = false; DownTo(b, st); };
             b.GotFocus += delegate { b.Invalidate(); };
             b.LostFocus += delegate { b.Invalidate(); };
             b.Resize += OnInvalidateSelf;
             b.Paint += OnPaintButton;
+        }
+
+        // Survol / appui EN DOUCEUR (easing ~120 ms) — pilotés par le moteur Anim, partagés
+        // par les boutons plats des 56 fenêtres. Coupés => saut immédiat à l'état final.
+        private static void HovTo(Button b, BtnState st)
+        {
+            float target = st.Hover ? 1f : 0f;
+            if (st.HovAnim != null) st.HovAnim.Cancelled = true;
+            if (!Anim.On) { st.HovT = target; b.Invalidate(); return; }
+            float from = st.HovT;
+            st.HovAnim = Anim.Tween(120, delegate (float p) { st.HovT = from + (target - from) * p; b.Invalidate(); });
+        }
+
+        private static void DownTo(Button b, BtnState st)
+        {
+            float target = st.Down ? 1f : 0f;
+            if (st.DownAnim != null) st.DownAnim.Cancelled = true;
+            if (!Anim.On) { st.DownT = target; b.Invalidate(); return; }
+            float from = st.DownT;
+            int ms = target > from ? 60 : 150;   // enfoncement vif, relâchement plus doux
+            st.DownAnim = Anim.Tween(ms, delegate (float p) { st.DownT = from + (target - from) * p; b.Invalidate(); });
         }
 
         private static void OnPaintButton(object sender, PaintEventArgs e)
@@ -486,8 +507,13 @@ namespace BTOptimizer
 
             Color back = b.BackColor;
             if (!b.Enabled) back = Blend(back, parentBg, 0.55f);
-            else if (st.Down) back = Hover(back, 2);
-            else if (st.Hover) back = Hover(back, 1);
+            else
+            {
+                // Survol/appui fondus (HovT/DownT animés par Anim) — 0 au repos = couleur d'origine.
+                Color b0 = back;
+                if (st.HovT > 0.001f) back = Blend(b0, Hover(b0, 1), st.HovT);
+                if (st.DownT > 0.001f) back = Blend(back, Hover(b0, 2), st.DownT);
+            }
 
             float rad = Dpi(b, 8f);
             if (rad > r.Height / 2f - 1f) rad = r.Height / 2f - 1f;

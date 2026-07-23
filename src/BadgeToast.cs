@@ -70,8 +70,8 @@ namespace BTOptimizer
             }
             catch { }
             _timer.Interval = 4800;
-            _timer.Tick += (s, e) => { _timer.Stop(); try { Close(); } catch { } };
-            Click += (s, e) => { _timer.Stop(); try { Close(); } catch { } };   // clic = fermer
+            _timer.Tick += (s, e) => FadeThenClose();
+            Click += (s, e) => FadeThenClose();   // clic = fermer
         }
 
         protected override bool ShowWithoutActivation { get { return true; } }
@@ -81,7 +81,28 @@ namespace BTOptimizer
             get { CreateParams cp = base.CreateParams; cp.ExStyle |= WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST; return cp; }
         }
 
-        public void ShowToast() { Show(); _timer.Start(); }
+        private bool _closing;
+
+        public void ShowToast()
+        {
+            if (Anim.On) { try { Opacity = 0.0; } catch { } }
+            Show();
+            _timer.Start();
+            if (Anim.On)
+                Anim.Tween(180, Ease.OutCubic, delegate (float p) { try { Opacity = p; } catch { } },
+                    delegate { try { Opacity = 1.0; } catch { } });
+        }
+
+        // Fermeture en fondu (fin du minuteur ou clic). Coupé => fermeture immédiate.
+        private void FadeThenClose()
+        {
+            if (_closing) return;
+            _closing = true;
+            try { _timer.Stop(); } catch { }
+            if (!Anim.On) { try { Close(); } catch { } return; }
+            Anim.Tween(160, Ease.Linear, delegate (float p) { try { Opacity = 1.0 - p; } catch { } },
+                delegate { try { Close(); } catch { } });
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
