@@ -24,28 +24,71 @@ namespace BTOptimizer
         private Panel _graph;
         private Label _nOpti, _nCheck, _nJeux;
 
+        // --- Animation d'entrée (l'anneau se remplit, les compteurs montent) -------------
+        private readonly Timer _animTimer = new Timer();
+        private float _animT = 1f;                    // 0 = début, 1 = état final
+        private int _tOpti, _tTotal, _tJeux;          // valeurs cibles des compteurs
+        private bool _statsReady;
+
+        /// <summary>Animations désactivées si l'utilisateur a coupé les effets Windows
+        /// (accessibilité) ou sous le harnais de capture, qui doit voir l'état final.</summary>
+        private static bool MotionEnabled
+        {
+            get
+            {
+                try { return SystemInformation.UIEffectsEnabled && Environment.GetEnvironmentVariable("BT_UITEST") != "1"; }
+                catch { return false; }
+            }
+        }
+
+        /// <summary>Décélération douce (ease-out cubique) : rapide au départ, posée à l'arrivée.</summary>
+        private static float Ease(float t) { float u = 1f - t; return 1f - u * u * u; }
+
         public PageDashboard(DashboardForm host) : base(host)
         {
             Build();
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Sample();
+            _animTimer.Interval = 16;                 // ~60 images/s
+            _animTimer.Tick += (s, e) => AnimTick();
         }
 
         public override void OnShown()
         {
             DoLayout();
+            _animT = MotionEnabled ? 0f : 1f;
+            ApplyCounters();
             ComputeHealth();
             Sample();
             _timer.Start();
+            if (MotionEnabled) _animTimer.Start();
+        }
+
+        private void AnimTick()
+        {
+            _animT += 0.05f;                          // ~340 ms au total
+            if (_animT >= 1f) { _animT = 1f; _animTimer.Stop(); }
+            ApplyCounters();
+            Invalidate();
+        }
+
+        /// <summary>Compteurs : de 0 à leur valeur, suivant la même courbe que l'anneau.</summary>
+        private void ApplyCounters()
+        {
+            if (!_statsReady) return;
+            float e = Ease(_animT);
+            if (_nOpti != null) _nOpti.Text = ((int)Math.Round(_tOpti * e)).ToString();
+            if (_nCheck != null) _nCheck.Text = ((int)Math.Round(_tTotal * e)).ToString();
+            if (_nJeux != null) _nJeux.Text = ((int)Math.Round(_tJeux * e)).ToString();
         }
 
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            if (!Visible) { try { _timer.Stop(); } catch { } }
+            if (!Visible) { try { _timer.Stop(); _animTimer.Stop(); } catch { } }
         }
 
-        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
+        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _animTimer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
 
         private void Build()
         {
@@ -165,11 +208,15 @@ namespace BTOptimizer
         private void DrawHealthRing(Graphics g, int x, int y, int size)
         {
             int hp = _health < 0 ? 0 : _health;
+            // L'anneau se remplit à l'ouverture ; la COULEUR reste celle du score final
+            // (sinon elle virerait rouge → orange → vert pendant le remplissage).
+            int shown = (int)Math.Round(hp * Ease(_animT));
             var rf = new RectangleF(x + 6, y + 6, size - 12, size - 12);
             using (var back = new Pen(Color.FromArgb(38, 40, 39), 8f)) g.DrawArc(back, rf, 0, 360);
             Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Neon);
-            using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * hp / 100f); }
-            TextRenderer.DrawText(g, hp + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            if (shown > 0)
+                using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * shown / 100f); }
+            TextRenderer.DrawText(g, shown + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
             TextRenderer.DrawText(g, "SANTÉ", FpsUi.Small, new Rectangle(x, y + size / 2 + 14, size, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
         }
 
@@ -244,9 +291,11 @@ namespace BTOptimizer
             {
                 try { BeginInvoke((Action)(() => {
                     _activeOpti = s.OptiActive; _health = s.Health;
-                    if (_nOpti != null) _nOpti.Text = s.OptiActive.ToString();
-                    if (_nCheck != null) _nCheck.Text = s.OptiTotal.ToString();
-                    if (_nJeux != null) _nJeux.Text = GameBoost.IsActive ? "1" : "0";
+                    // Cibles de l'animation : les compteurs y montent (ou s'y posent
+                    // directement si les effets sont coupés / si l'entrée est terminée).
+                    _tOpti = s.OptiActive; _tTotal = s.OptiTotal; _tJeux = GameBoost.IsActive ? 1 : 0;
+                    _statsReady = true;
+                    ApplyCounters();
                     Invalidate();
                 })); }
                 catch { }
