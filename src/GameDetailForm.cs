@@ -72,10 +72,7 @@ namespace BTOptimizer
             folder.Click += (s, e) => OpenFolder();
             Controls.Add(folder);
 
-            var opt = FpsUi.NeonButton("⚡  Optimiser mon PC pour le jeu");
-            opt.SetBounds(24, ClientSize.Height - 58, 330, 40);
-            opt.Click += (s, e) => OptimizeForGame();
-            Controls.Add(opt);
+            BuildBoosts();
 
             var close = FpsUi.GhostButton("Fermer");
             close.SetBounds(ClientSize.Width - 24 - 110, ClientSize.Height - 58, 110, 40);
@@ -138,26 +135,111 @@ namespace BTOptimizer
             catch { }
         }
 
-        private void OptimizeForGame()
-        {
-            if (MessageBox.Show(this,
-                "Appliquer les optimisations RECOMMANDÉES (sûres) pour améliorer les FPS ?\n\n"
-                + "Elles conviennent à la plupart des jeux et restent entièrement réversibles depuis la page Optimisations.",
-                "Optimiser pour " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+        // ------------------------------------------------------------------
+        //  Deux niveaux de boost, avec le VRAI nombre d'optimisations de chacun
+        //  (compté sur le catalogue de CE PC, jamais un chiffre décoratif).
+        // ------------------------------------------------------------------
+        private Panel _cardLight, _cardFull;
+        private Label _nLight, _nFull;
+        private Button _btnLight, _btnFull;
 
-            Cursor = Cursors.WaitCursor;
+        private void BuildBoosts()
+        {
+            int y = ClientSize.Height - 190, w = (ClientSize.Width - 24 * 2 - 16) / 2;
+            _cardLight = BoostCard(24, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
+            _cardFull = BoostCard(24 + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
+            Controls.Add(_cardLight); Controls.Add(_cardFull);
+            CountBoosts();
+        }
+
+        private Panel BoostCard(int x, int y, int w, string title, bool pro, out Label num, out Button btn)
+        {
+            var card = new Panel { Bounds = new Rectangle(x, y, w, 132), BackColor = Color.Transparent };
+            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
+                pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.NeonDim : FpsUi.Border, 12f);
+
+            num = FpsUi.Text("…", FpsUi.Num, FpsUi.Ink);
+            num.AutoSize = false; num.SetBounds(16, 12, 70, 34);
+            var lab = FpsUi.Text(title, FpsUi.H3, pro ? FpsUi.Neon : FpsUi.Dim);
+            lab.AutoSize = false; lab.SetBounds(86, 20, w - 100, 20);
+            var sub = FpsUi.Text("", FpsUi.Small, FpsUi.Dim2);
+            sub.AutoSize = false; sub.SetBounds(16, 50, w - 32, 32);
+            sub.Text = pro ? "Réglage auto adapté à TON matériel." : "Réglages sûrs, valables pour tous les jeux.";
+
+            btn = pro ? FpsUi.NeonButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
+            btn.SetBounds(16, 88, w - 32, 32);
+            card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(sub); card.Controls.Add(btn);
+
+            bool isPro = pro;
+            btn.Click += (s, e) => ApplyBoost(isPro);
+            return card;
+        }
+
+        /// <summary>Compte réel des deux niveaux, en tâche de fond (la détection matérielle
+        /// et le catalogue coûtent quelques centaines de ms).</summary>
+        private void CountBoosts()
+        {
             Task.Run(() =>
             {
-                int n = 0;
-                try
+                int light = 0, full = 0;
+                try { light = Catalog.All().Where(t => t.Recommended).Count(); } catch { }
+                try { full = FullBoostList().Count; } catch { }
+                try { BeginInvoke((Action)(() =>
                 {
-                    var list = Catalog.All().Where(t => t.Recommended).ToList(); n = list.Count;
-                    Engine.Run(list, true, true, false, _log);
-                    try { AppStats.Invalidate(); } catch { }
-                }
-                catch (Exception ex) { if (_log != null) _log("Optimiser pour le jeu : " + ex.Message, 2); }
-                try { BeginInvoke((Action)(() => { Cursor = Cursors.Default;
-                    MessageBox.Show(this, n + " optimisation(s) recommandée(s) appliquée(s). Bon jeu ! 🎮", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
+                    if (_nLight != null) _nLight.Text = light.ToString();
+                    if (_nFull != null) _nFull.Text = full.ToString();
+                    if (_btnFull != null && !License.ProUnlocked) _btnFull.Text = "🔒  BOOST COMPLET";
+                })); }
+                catch { }
+            });
+        }
+
+        private System.Collections.Generic.List<Tweak> FullBoostList()
+        {
+            var all = Catalog.All();
+            var ids = Hardware.AutoTuneIds(all, Hardware.Detect(), Hardware.LevelAggressive);
+            return all.Where(t => ids.Contains(t.Id)).ToList();
+        }
+
+        private void ApplyBoost(bool full)
+        {
+            // Le boost complet, c'est l'auto-tune matériel : fonction Pro, comme ailleurs dans l'app.
+            if (full && !License.ProUnlocked)
+            {
+                using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this);
+                if (!License.ProUnlocked) return;
+                if (_btnFull != null) _btnFull.Text = "BOOST COMPLET";
+            }
+
+            System.Collections.Generic.List<Tweak> list;
+            try { list = full ? FullBoostList() : Catalog.All().Where(t => t.Recommended).ToList(); }
+            catch { return; }
+
+            if (MessageBox.Show(this,
+                (full ? "Appliquer le BOOST COMPLET" : "Appliquer le BOOST LÉGER")
+                + " pour " + _g.Name + " ?\n\n"
+                + list.Count + " optimisation(s) seront appliquées.\n"
+                + (full ? "Réglage adapté à ton matériel (niveau eSport).\n" : "Réglages sûrs, valables pour tous les jeux.\n")
+                + "\nUne sauvegarde du registre et un point de restauration sont créés avant, "
+                + "et tout reste réversible depuis la page Optimisations.",
+                "Fluide — " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+
+            Cursor = Cursors.WaitCursor;
+            if (_btnLight != null) _btnLight.Enabled = false;
+            if (_btnFull != null) _btnFull.Enabled = false;
+            Task.Run(() =>
+            {
+                int n = list.Count;
+                try { Engine.Run(list, true, true, false, _log); try { AppStats.Invalidate(); } catch { } }
+                catch (Exception ex) { if (_log != null) _log("Boost " + _g.Name + " : " + ex.Message, 2); }
+                try { BeginInvoke((Action)(() =>
+                {
+                    Cursor = Cursors.Default;
+                    if (_btnLight != null) _btnLight.Enabled = true;
+                    if (_btnFull != null) _btnFull.Enabled = true;
+                    MessageBox.Show(this, n + " optimisation(s) appliquée(s). Bon jeu ! 🎮",
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); }
                 catch { }
             });
         }
