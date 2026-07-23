@@ -215,6 +215,38 @@ namespace BTOptimizer
             }
         }
 
+        // ------------------------------------------------------------------
+        //  Retrait d'applis Windows préinstallées (dé-bloatware curaté).
+        //  Retire un paquet Appx par motif de nom. Best-effort : échec toléré
+        //  (appli absente = pas grave). Réversible seulement via le Store.
+        // ------------------------------------------------------------------
+        private static string PowerShellExe
+        {
+            get { return Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"); }
+        }
+
+        public static bool RemoveAppxByName(string namePattern, Action<string, int> log)
+        {
+            string cmd = "-NoProfile -ExecutionPolicy Bypass -Command \"Get-AppxPackage -AllUsers -Name '"
+                       + namePattern + "*' | Remove-AppxPackage -ErrorAction SilentlyContinue\"";
+            NativeResult r = Run(PowerShellExe, cmd, 300000);
+            bool ok = r.ExitCode == 0;
+            if (log != null) log((ok ? "Retiré : " : "Absent/échec : ") + namePattern, ok ? 1 : 2);
+            return ok;
+        }
+
+        /// <summary>Best-effort : réenregistre les paquets Windows encore présents et ouvre le Store.</summary>
+        public static void ReprovisionDefaultApps(Action<string, int> log)
+        {
+            string cmd = "-NoProfile -ExecutionPolicy Bypass -Command \"Get-AppxPackage -AllUsers | "
+                       + "ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "
+                       + "($_.InstallLocation + '\\AppXManifest.xml') -ErrorAction SilentlyContinue }\"";
+            Run(PowerShellExe, cmd, 300000);
+            if (log != null) log("Réenregistrement des applis Windows lancé.", 0);
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-windows-store://home") { UseShellExecute = true }); }
+            catch { }
+        }
+
         public static bool IntEquals(object v, int expected)
         {
             return (v is int) && (int)v == expected;
