@@ -20,7 +20,7 @@ namespace BTOptimizer
         private Game _selectedGame;
         private int _cpuCores;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private class Game
         {

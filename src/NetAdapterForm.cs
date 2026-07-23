@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnOptimize, _btnRevert, _btnScan, _btnClose;
         private List<Adapter> _adapters = new List<Adapter>();
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private const string ClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
 
         // Réglages gérés : clé pilote (standardisée) -> (libellé, valeur « latence min »).

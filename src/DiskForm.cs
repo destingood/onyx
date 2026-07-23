@@ -19,7 +19,7 @@ namespace BTOptimizer
         private ListView _drives, _games;
         private Label _verdict;
         private Button _btnScan, _btnClose;
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public DiskForm(Action<string, int> log)
         {

@@ -135,7 +135,7 @@ namespace BTOptimizer
         private Label _cpu1, _cpuN, _ram, _disk, _verdict, _status;
         private Button _btnRun, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public BenchForm(Action<string, int> log)
         {

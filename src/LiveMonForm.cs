@@ -33,7 +33,7 @@ namespace BTOptimizer
         private Font _tileCapFont, _tileValFont, _boldRow;
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
-        private static readonly Color Green  = Color.FromArgb(0, 150, 90);
+        private static readonly Color Green  = Color.FromArgb(79, 70, 229);
         private static readonly Color Orange = Color.FromArgb(205, 133, 0);
         private static readonly Color Red    = Color.FromArgb(200, 45, 45);
         private static readonly Color TileBg = Color.FromArgb(28, 30, 38);

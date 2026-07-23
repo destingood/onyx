@@ -134,7 +134,7 @@ namespace BTOptimizer
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = primary ? 0 : 1;
             b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
-            b.BackColor = primary ? Color.FromArgb(0, 150, 90) : Color.White;
+            b.BackColor = primary ? Color.FromArgb(79, 70, 229) : Color.White;
             b.ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52);
             b.UseVisualStyleBackColor = false;
             return b;

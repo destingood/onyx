@@ -21,7 +21,7 @@ namespace BTOptimizer
         private Button _btnApply, _btnScan, _btnClose;
         private List<Row> _rows = new List<Row>();
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private class Row { public string Name; public string Path; public bool Excluded; }
 

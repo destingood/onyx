@@ -614,7 +614,7 @@ namespace BTOptimizer
         private List<LibScan.LibItem> _items = new List<LibScan.LibItem>();
         private string _winget;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private readonly string[] _highlight;
 

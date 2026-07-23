@@ -113,7 +113,7 @@ namespace BTOptimizer
             _btnApply = new Button
             {
                 Text = "Appliquer", Width = 130, Dock = DockStyle.Right,
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 150, 90), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
                 Font = Own(new Font("Segoe UI Semibold", 9.5f))
             };
             _btnApply.FlatAppearance.BorderSize = 0;

@@ -48,10 +48,10 @@ namespace BTOptimizer
         private bool _trayTipShown;
         private BenchResult _lastBench;
 
-        private static readonly Color Accent    = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent    = Color.FromArgb(79, 70, 229);
         private static readonly Color HeaderBg  = Color.FromArgb(28, 30, 38);
         private static readonly Color ColInfo   = Color.FromArgb(110, 115, 125);
-        private static readonly Color ColOk     = Color.FromArgb(0, 150, 90);
+        private static readonly Color ColOk     = Color.FromArgb(79, 70, 229);
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
 
@@ -147,7 +147,7 @@ namespace BTOptimizer
             _btnBoost.SetBounds(700, 12, 142, 38);
             _btnBoost.FlatStyle = FlatStyle.Flat;
             _btnBoost.FlatAppearance.BorderSize = 0;
-            _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+            _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
             _btnBoost.ForeColor = Color.White;
             _btnBoost.Font = new Font("Segoe UI Semibold", 9.5f);
             _btnBoost.Click += OnBoostToggle;
@@ -1388,7 +1388,7 @@ namespace BTOptimizer
                     else
                     {
                         _btnBoost.Text = "▶ MODE JEU";
-                        _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                        _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
                     }
                 })); } catch { }
             });
@@ -1536,7 +1536,7 @@ namespace BTOptimizer
             else
             {
                 _btnBoost.Text = "▶ MODE JEU";
-                _btnBoost.BackColor = Color.FromArgb(0, 150, 90);
+                _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
             }
         }
 

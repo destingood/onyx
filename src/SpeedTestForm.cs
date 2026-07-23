@@ -16,7 +16,7 @@ namespace BTOptimizer
     internal class SpeedTestForm : Form
     {
         private readonly Action<string, int> _log;
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private const string DownUrl = "https://speed.cloudflare.com/__down?bytes=25000000"; // ~25 Mo
 
         private Button _btnRun, _btnClose;

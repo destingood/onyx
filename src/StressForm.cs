@@ -29,7 +29,7 @@ namespace BTOptimizer
         private Label _big, _status;
         private Button _btnStart, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private static readonly Color Warn   = Color.FromArgb(205, 133, 0);
         private static readonly Color Bad    = Color.FromArgb(200, 45, 45);
 

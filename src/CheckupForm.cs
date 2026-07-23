@@ -240,7 +240,7 @@ namespace BTOptimizer
         private Button _btnScan, _btnFix, _btnClose;
         private List<Checkup.Item> _items = new List<Checkup.Item>();
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public CheckupForm(Action<string, int> log)
         {

@@ -19,7 +19,7 @@ namespace BTOptimizer
         private Button _btnAnalyze, _btnRepair, _btnClose;
         private List<ShopFix.Item> _items = new List<ShopFix.Item>();
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public ShopFixForm(Action<string, int> log)
         {

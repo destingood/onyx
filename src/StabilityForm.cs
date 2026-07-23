@@ -188,7 +188,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnScan, _btnRepair, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
         private const int Days = 14;
 
         public StabilityForm(Action<string, int> log)

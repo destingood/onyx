@@ -13,14 +13,16 @@ namespace BTOptimizer
     // ----------------------------------------------------------------------
     internal static class FpsUi
     {
-        // Palette Fluide : noir pur, gris neutres, blanc pur, accent néon #00FF88.
-        public static readonly Color BgMain = Color.FromArgb(0, 0, 0);       // #000000
-        public static readonly Color RailBg = Color.FromArgb(13, 13, 13);    // #0D0D0D (.frame)
-        public static readonly Color Card   = Color.FromArgb(15, 15, 15);
-        public static readonly Color CardHi = Color.FromArgb(23, 23, 23);    // #171717 (hover)
-        public static readonly Color Border = Color.FromArgb(23, 23, 23);    // #171717
-        public static readonly Color Neon   = Color.FromArgb(0, 255, 136);   // #00FF88
-        public static readonly Color NeonDim= Color.FromArgb(0, 190, 110);
+        // Palette Fluide : noirs légèrement bleutés + accent indigo #818CF8.
+        // Une seule source de vérité : changer l'accent ici le change dans tout le shell
+        // (logo, rail, anneau de santé, boutons, overlay).
+        public static readonly Color BgMain = Color.FromArgb(8, 8, 12);      // #08080C
+        public static readonly Color RailBg = Color.FromArgb(13, 13, 20);    // #0D0D14 (.frame)
+        public static readonly Color Card   = Color.FromArgb(16, 16, 24);    // #101018
+        public static readonly Color CardHi = Color.FromArgb(26, 26, 40);    // #1A1A28 (survol)
+        public static readonly Color Border = Color.FromArgb(34, 34, 47);    // #22222F
+        public static readonly Color Neon   = Color.FromArgb(129, 140, 248); // #818CF8 (accent)
+        public static readonly Color NeonDim= Color.FromArgb(102, 112, 214); // #6670D6
         public static readonly Color Ink    = Color.FromArgb(255, 255, 255); // #FFFFFF
         public static readonly Color Dim    = Color.FromArgb(176, 176, 176); // #B0B0B0
         public static readonly Color Dim2   = Color.FromArgb(137, 137, 137); // #898989
@@ -98,10 +100,10 @@ namespace BTOptimizer
             b.Text = text;
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = 0;
-            b.BackColor = Color.FromArgb(26, 29, 27);
+            b.BackColor = Color.FromArgb(28, 28, 42);
             // Retours au survol / à l'appui : un bouton qui ne réagit pas fait « maquette ».
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(38, 42, 39);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(18, 21, 19);
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 40, 58);
+            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 20, 30);
             b.ForeColor = Ink;
             b.Font = Small;
             b.Cursor = Cursors.Hand;
@@ -117,9 +119,9 @@ namespace BTOptimizer
             b.FlatAppearance.BorderColor = Neon;
             b.FlatAppearance.BorderSize = 1;
             b.BackColor = Card;
-            // Le néon « chauffe » au survol, puis s'enfonce à l'appui.
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 46, 29);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 30, 19);
+            // L'accent « chauffe » au survol, puis s'enfonce à l'appui.
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(34, 32, 72);
+            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(22, 21, 48);
             b.ForeColor = Neon;
             b.Font = H3;
             b.Cursor = Cursors.Hand;
@@ -187,15 +189,15 @@ namespace BTOptimizer
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var r = new RectangleF(1, 1, Width - 2, Height - 2);
-            Color track = _on ? FpsUi.Neon : Color.FromArgb(48, 51, 49);
-            if (_locked) track = Color.FromArgb(40, 43, 41);
+            Color track = _on ? FpsUi.Neon : Color.FromArgb(48, 48, 62);
+            if (_locked) track = Color.FromArgb(40, 40, 52);
             using (var path = FpsUi.Round(r, r.Height / 2f))
             using (var br = new SolidBrush(track))
                 g.FillPath(br, path);
 
             int d = Height - 8;
             int kx = _on ? Width - d - 4 : 4;
-            Color knob = _on ? Color.FromArgb(8, 12, 10) : Color.FromArgb(180, 184, 180);
+            Color knob = _on ? Color.FromArgb(10, 10, 16) : Color.FromArgb(180, 180, 190);
             using (var br = new SolidBrush(knob))
                 g.FillEllipse(br, kx, 4, d, d);
         }

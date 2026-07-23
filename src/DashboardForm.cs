@@ -514,7 +514,7 @@ namespace BTOptimizer
             {
                 // Pastille néon-teintée + BARRE néon à gauche (indicateur d'onglet actif, façon FPS Doctor).
                 using (var path = FpsUi.Round(rf, 12f))
-                using (var br = new SolidBrush(Color.FromArgb(26, 0, 255, 136))) g.FillPath(br, path);
+                using (var br = new SolidBrush(Color.FromArgb(26, 129, 140, 248))) g.FillPath(br, path);
                 using (var bar = FpsUi.Round(new RectangleF(0f, Height / 2f - 13f, 3.5f, 26f), 1.75f))
                 using (var br = new SolidBrush(FpsUi.Neon)) g.FillPath(br, bar);
             }

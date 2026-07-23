@@ -18,7 +18,7 @@ namespace BTOptimizer
         private TextBox _state;
         private Button _btnApply, _btnRevert, _btnRefresh, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         // Réglages recommandés (jeu + téléchargements). Valeurs = tokens netsh, non traduits.
         private static readonly string[][] Recommended =

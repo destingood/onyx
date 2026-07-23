@@ -16,7 +16,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnOpen, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private class Entry { public string Symptom, Tool; public Func<Form> Open; }
         private readonly List<Entry> _entries = new List<Entry>();

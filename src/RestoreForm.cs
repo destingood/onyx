@@ -19,7 +19,7 @@ namespace BTOptimizer
         private Label _summary;
         private Button _btnCreate, _btnEnable, _btnRollback, _btnScan, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         public RestoreForm(Action<string, int> log)
         {

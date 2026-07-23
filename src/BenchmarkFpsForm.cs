@@ -13,7 +13,7 @@ namespace BTOptimizer
     internal class BenchmarkFpsForm : Form
     {
         private readonly Action<string, int> _log;
-        private static readonly Color Accent = Color.FromArgb(0, 150, 90);
+        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
 
         private FpsEtw _etw;
         private readonly Timer _timer = new Timer();
