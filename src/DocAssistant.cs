@@ -21,7 +21,9 @@ namespace BTOptimizer
             public string Warning;                          // ce qui va changer (sous le bouton)
             public bool IsChange;
             public bool AutoRun;
-            public Func<Action<string, int>, string> Run;    // exécute et renvoie le compte-rendu
+            /// <summary>Exécute et renvoie la RÉPONSE à afficher : elle peut elle-même porter
+            /// la correction qui découle de la mesure, ou tout un plan (voir Reply.Plan).</summary>
+            public Func<Action<string, int>, Reply> Run;
         }
 
         public sealed class Reply
@@ -30,6 +32,7 @@ namespace BTOptimizer
             public HelpCatalog.Entry Tool;   // outil proposé à l'ouverture (bouton), ou null
             public bool ShowStarters;         // affiche des suggestions cliquables
             public ChatAction Action;         // mesure lancée seule, ou changement à confirmer
+            public List<ChatAction> Plan;     // plusieurs corrections classées par impact
         }
 
         public static Reply Intro(BadgeCatalog.Stats st)
@@ -65,6 +68,17 @@ namespace BTOptimizer
                 return new Reply { Text = st.GamesDet + " jeu(x) détecté(s) sur ce PC. Ouvre l'onglet Jeux 🎮 pour les optimiser un par un (clic sur une jaquette).", ShowStarters = false };
             if (st != null && Has(s, "combien d'opti", "optimisation active", "mes opti"))
                 return WithTool(entries, "Santé de mon PC", st.OptiActive + " optimisation(s) active(s) sur " + st.OptiTotal + ". Va dans Optimisations pour en activer d'autres (preset « Recommandé »).");
+
+            // --- ENQUÊTE : symptôme large ou demande de bilan → il cherche TOUTES les causes ---
+            if (Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze",
+                       "bilan", "diagnostic", "analyse", "verifie tout", "check up", "checkup",
+                       "fps bas", "perd des fps", "chute de fps", "probleme", "ca marche pas"))
+                return new Reply
+                {
+                    Text = "Je lance l'enquête complète : écrans, températures, mémoire, disque, "
+                         + "bibliothèques et optimisations. Quelques secondes…",
+                    Action = Investigator.Action(q.Trim(), st)
+                };
 
             // --- Intentions où le Copilote MESURE puis AGIT (avant l'aiguillage générique) ---
             if (Has(s, "ecran", "hz", "hertz", "rafraich", "moniteur", "144", "165", "240", "bloque a 60"))
@@ -107,16 +121,6 @@ namespace BTOptimizer
             return r;
         }
 
-        /// <summary>Suite proposée après une mesure : la correction correspondante, s'il y a
-        /// vraiment quelque chose à corriger (sinon on ne propose rien — pas de faux problème).</summary>
-        public static ChatAction FollowUp(ChatAction measured)
-        {
-            if (measured == null) return null;
-            if (measured == null || measured.Label == null) return null;
-            if (measured.Label.StartsWith("Lecture de tes écrans")) return ChatActions.FixScreen();
-            if (measured.Label.StartsWith("Analyse du disque")) return ChatActions.FixDisk();
-            return null;
-        }
 
         private static int Score(string q, HelpCatalog.Entry e)
         {

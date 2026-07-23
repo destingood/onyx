@@ -12,10 +12,10 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Fiche détaillée d'un jeu (au clic depuis la page Jeux), façon FPS Doctor : jaquette officielle,
-    /// statut + launcher, réglages FPS présentés proprement, priorité CPU DÉDIÉE à ce jeu (IFEO),
-    /// lancer / ouvrir le dossier, et « Optimiser mon PC pour le jeu » en 1 clic (preset recommandé,
-    /// réversible) — pensé pour un néophyte.
+    /// Fiche détaillée d'un jeu (au clic depuis la page Jeux) : onglets, grande jaquette à droite,
+    /// deux niveaux de boost avec leur compte RÉEL à gauche, priorité CPU dédiée (IFEO),
+    /// lancer / ouvrir le dossier. Le boost léger reste gratuit ; le complet (auto-tune matériel)
+    /// est une fonction Pro. Tout est confirmé, sauvegardé et réversible.
     /// </summary>
     internal class GameDetailForm : Form
     {
@@ -31,7 +31,9 @@ namespace BTOptimizer
         {
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
             Text = "Fluide — " + g.Name;
-            ClientSize = new Size(640, 560);
+            // Mise en page « fiche pleine largeur » : onglets en haut, optimisations à gauche,
+            // grande jaquette à droite, appel Pro en bas — comme une page, pas une boîte.
+            ClientSize = new Size(1000, 620);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -49,36 +51,60 @@ namespace BTOptimizer
             try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { }   // barre de titre sombre
         }
 
+        private const int Pad = 40;        // marge de page
+        private const int CoverW = 320;    // largeur de la jaquette (colonne droite)
+
+        private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
+
         private void BuildActions()
         {
-            const int rx = 200;
+            // Onglet « ‹ BIBLIOTHÈQUE » : ramène à la liste (la fiche se referme).
+            var back = FpsUi.GhostButton("‹  BIBLIOTHÈQUE");
+            back.SetBounds(Pad, 22, 170, 30);
+            back.FlatAppearance.BorderSize = 0;
+            back.BackColor = FpsUi.BgMain; back.ForeColor = FpsUi.Dim;
+            back.Click += (s, e) => Close();
+            Controls.Add(back);
+
+            var mode = FpsUi.NeonButton("▶  MODE JEU");
+            mode.SetBounds(ClientSize.Width - Pad - 150, 20, 150, 34);
+            mode.Click += (s, e) => { try { Close(); } catch { } };
+            Controls.Add(mode);
+
+            int ay = 448;   // rangée d'actions, sous les conseils FPS
             if (_exes != null)
             {
                 _prio = FpsUi.GhostButton("Priorité CPU : —");
-                _prio.SetBounds(rx, 126, 300, 34);
+                _prio.SetBounds(Pad, ay, LeftW, 34);
                 _prio.Click += (s, e) => TogglePrio();
                 Controls.Add(_prio);
             }
 
             var launch = FpsUi.NeonButton("▶  Lancer");
-            launch.SetBounds(rx, 168, 145, 34);
+            launch.SetBounds(Pad, ay + 42, (LeftW - 12) / 2, 34);
             launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
             launch.Click += (s, e) => Launch();
             Controls.Add(launch);
 
             var folder = FpsUi.GhostButton("Ouvrir le dossier");
-            folder.SetBounds(rx + 155, 168, 145, 34);
+            folder.SetBounds(Pad + (LeftW - 12) / 2 + 12, ay + 42, (LeftW - 12) / 2, 34);
             folder.Enabled = _g.InstallPath != null;
             folder.Click += (s, e) => OpenFolder();
             Controls.Add(folder);
 
-            var opt = FpsUi.NeonButton("⚡  Optimiser mon PC pour le jeu");
-            opt.SetBounds(24, ClientSize.Height - 58, 330, 40);
-            opt.Click += (s, e) => OptimizeForGame();
-            Controls.Add(opt);
+            BuildBoosts();
+
+            // Appel Pro, sous la jaquette (colonne droite) — visible sans écraser le reste.
+            if (!License.ProUnlocked)
+            {
+                var pro = FpsUi.NeonButton("◆  PASSER PRO");
+                pro.SetBounds(ClientSize.Width - Pad - CoverW, ClientSize.Height - 62, CoverW, 40);
+                pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
+                Controls.Add(pro);
+            }
 
             var close = FpsUi.GhostButton("Fermer");
-            close.SetBounds(ClientSize.Width - 24 - 110, ClientSize.Height - 58, 110, 40);
+            close.SetBounds(Pad, ClientSize.Height - 62, 120, 40);
             close.Click += (s, e) => Close();
             Controls.Add(close);
         }
@@ -166,26 +192,112 @@ namespace BTOptimizer
             catch { }
         }
 
-        private void OptimizeForGame()
-        {
-            if (MessageBox.Show(this,
-                "Appliquer les optimisations RECOMMANDÉES (sûres) pour améliorer les FPS ?\n\n"
-                + "Elles conviennent à la plupart des jeux et restent entièrement réversibles depuis la page Optimisations.",
-                "Optimiser pour " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+        // ------------------------------------------------------------------
+        //  Deux niveaux de boost, avec le VRAI nombre d'optimisations de chacun
+        //  (compté sur le catalogue de CE PC, jamais un chiffre décoratif).
+        // ------------------------------------------------------------------
+        private Panel _cardLight, _cardFull;
+        private Label _nLight, _nFull;
+        private Button _btnLight, _btnFull;
 
-            Cursor = Cursors.WaitCursor;
+        private void BuildBoosts()
+        {
+            int y = 146, w = (LeftW - 16) / 2;
+            _cardLight = BoostCard(Pad, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
+            _cardFull = BoostCard(Pad + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
+            Controls.Add(_cardLight); Controls.Add(_cardFull);
+            CountBoosts();
+        }
+
+        private Panel BoostCard(int x, int y, int w, string title, bool pro, out Label num, out Button btn)
+        {
+            var card = new Panel { Bounds = new Rectangle(x, y, w, 166), BackColor = Color.Transparent };
+            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
+                pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.NeonDim : FpsUi.Border, 12f);
+
+            // Grand nombre (le compte réel), puis le libellé et l'explication.
+            num = FpsUi.Text("…", FpsUi.Garet, FpsUi.Ink);
+            num.AutoSize = false; num.SetBounds(20, 16, w - 40, 46);
+            var lab = FpsUi.Text("Optimisations", FpsUi.Small, FpsUi.Dim2);
+            lab.AutoSize = false; lab.SetBounds(22, 62, w - 44, 18);
+            var sub = FpsUi.Text("", FpsUi.Small, pro ? FpsUi.Neon : FpsUi.Dim);
+            sub.AutoSize = false; sub.SetBounds(22, 84, w - 44, 34);
+            sub.Text = pro ? "Adapté à TON matériel (eSport)." : "Réglages sûrs, tous jeux.";
+
+            btn = pro ? FpsUi.NeonButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
+            btn.SetBounds(20, 122, w - 40, 34);
+            card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(sub); card.Controls.Add(btn);
+
+            bool isPro = pro;
+            btn.Click += (s, e) => ApplyBoost(isPro);
+            return card;
+        }
+
+        /// <summary>Compte réel des deux niveaux, en tâche de fond (la détection matérielle
+        /// et le catalogue coûtent quelques centaines de ms).</summary>
+        private void CountBoosts()
+        {
             Task.Run(() =>
             {
-                int n = 0;
-                try
+                int light = 0, full = 0;
+                try { light = Catalog.All().Where(t => t.Recommended).Count(); } catch { }
+                try { full = FullBoostList().Count; } catch { }
+                try { BeginInvoke((Action)(() =>
                 {
-                    var list = Catalog.All().Where(t => t.Recommended).ToList(); n = list.Count;
-                    Engine.Run(list, true, true, false, _log);
-                    try { AppStats.Invalidate(); } catch { }
-                }
-                catch (Exception ex) { if (_log != null) _log("Optimiser pour le jeu : " + ex.Message, 2); }
-                try { BeginInvoke((Action)(() => { Cursor = Cursors.Default;
-                    MessageBox.Show(this, n + " optimisation(s) recommandée(s) appliquée(s). Bon jeu ! 🎮", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
+                    if (_nLight != null) _nLight.Text = light.ToString();
+                    if (_nFull != null) _nFull.Text = full.ToString();
+                    if (_btnFull != null && !License.ProUnlocked) _btnFull.Text = "🔒  BOOST COMPLET";
+                })); }
+                catch { }
+            });
+        }
+
+        private System.Collections.Generic.List<Tweak> FullBoostList()
+        {
+            var all = Catalog.All();
+            var ids = Hardware.AutoTuneIds(all, Hardware.Detect(), Hardware.LevelAggressive);
+            return all.Where(t => ids.Contains(t.Id)).ToList();
+        }
+
+        private void ApplyBoost(bool full)
+        {
+            // Le boost complet, c'est l'auto-tune matériel : fonction Pro, comme ailleurs dans l'app.
+            if (full && !License.ProUnlocked)
+            {
+                using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this);
+                if (!License.ProUnlocked) return;
+                if (_btnFull != null) _btnFull.Text = "BOOST COMPLET";
+            }
+
+            System.Collections.Generic.List<Tweak> list;
+            try { list = full ? FullBoostList() : Catalog.All().Where(t => t.Recommended).ToList(); }
+            catch { return; }
+
+            if (MessageBox.Show(this,
+                (full ? "Appliquer le BOOST COMPLET" : "Appliquer le BOOST LÉGER")
+                + " pour " + _g.Name + " ?\n\n"
+                + list.Count + " optimisation(s) seront appliquées.\n"
+                + (full ? "Réglage adapté à ton matériel (niveau eSport).\n" : "Réglages sûrs, valables pour tous les jeux.\n")
+                + "\nUne sauvegarde du registre et un point de restauration sont créés avant, "
+                + "et tout reste réversible depuis la page Optimisations.",
+                "Fluide — " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+
+            Cursor = Cursors.WaitCursor;
+            if (_btnLight != null) _btnLight.Enabled = false;
+            if (_btnFull != null) _btnFull.Enabled = false;
+            Task.Run(() =>
+            {
+                int n = list.Count;
+                try { Engine.Run(list, true, true, false, _log); try { AppStats.Invalidate(); } catch { } }
+                catch (Exception ex) { if (_log != null) _log("Boost " + _g.Name + " : " + ex.Message, 2); }
+                try { BeginInvoke((Action)(() =>
+                {
+                    Cursor = Cursors.Default;
+                    if (_btnLight != null) _btnLight.Enabled = true;
+                    if (_btnFull != null) _btnFull.Enabled = true;
+                    MessageBox.Show(this, n + " optimisation(s) appliquée(s). Bon jeu ! 🎮",
+                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); }
                 catch { }
             });
         }
@@ -197,60 +309,55 @@ namespace BTOptimizer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int W = ClientSize.Width;
 
-            // Jaquette
-            var pr = new Rectangle(24, 24, 150, 224);
-            Image img = _g.SteamId > 0
+            // --- Onglets : « BIBLIOTHÈQUE » (bouton) puis le jeu, actif et souligné ---
+            int tabX = Pad + 182;
+            TextRenderer.DrawText(g, _g.Name.ToUpperInvariant(), FpsUi.H3, new Rectangle(tabX, 26, W - tabX - 210, 22),
+                FpsUi.Ink, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            int tabW = Math.Min(W - tabX - 210, TextRenderer.MeasureText(_g.Name.ToUpperInvariant(), FpsUi.H3).Width);
+            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, tabX, 52, tabX + tabW, 52);
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 52, W - Pad, 52);
+
+            // --- Colonne droite : grande jaquette ---
+            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, 440);
+            Image big = _g.SteamId > 0
                 ? GameArt.Get(_g.SteamId, () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } })
                 : null;
-            using (var clip = Round(pr, 12))
+            using (var clip = Round(cover, 14))
             {
                 var save = g.Clip; g.SetClip(clip);
-                if (img != null)
-                {
-                    DrawCover(g, img, pr);
-                    if (!_g.Detected) using (var v = new SolidBrush(Color.FromArgb(150, 9, 11, 10))) g.FillRectangle(v, pr);
-                }
+                if (big != null) DrawCover(g, big, cover);
                 else
                 {
-                    using (var b = new SolidBrush(FpsUi.Card)) g.FillRectangle(b, pr);
-                    TextRenderer.DrawText(g, "🎮", FpsUi.GlyphL, pr, _g.Detected ? FpsUi.Neon : FpsUi.Dim2,
+                    using (var b = new SolidBrush(FpsUi.Card)) g.FillRectangle(b, cover);
+                    TextRenderer.DrawText(g, "🎮", FpsUi.GlyphXL, cover, FpsUi.Dim2,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
                 g.Clip = save; save.Dispose();
             }
-            using (var pen = new Pen(FpsUi.Border)) using (var bp = Round(pr, 12)) g.DrawPath(pen, bp);
+            using (var pen = new Pen(FpsUi.Border)) using (var bp = Round(cover, 14)) g.DrawPath(pen, bp);
 
-            // Titre + statut + chemin
-            const int rx = 200;
-            TextRenderer.DrawText(g, _g.Name, FpsUi.H1, new Rectangle(rx, 24, W - rx - 24, 60), FpsUi.Ink,
+            // --- Colonne gauche : titre du bloc + réglages, puis les cartes de boost ---
+            TextRenderer.DrawText(g, "OPTIMISATIONS DE JEU", FpsUi.H2, new Rectangle(Pad, 84, LeftW, 26),
+                FpsUi.Ink, TextFormatFlags.NoPrefix);
+            string st2 = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
+            TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
+                _g.Detected ? FpsUi.Neon : FpsUi.Dim, TextFormatFlags.NoPrefix);
+
+            // Conseils FPS SOUS les cartes : l'action passe devant l'explication.
+            Section(g, "RÉGLAGES À FAIRE DANS LE JEU", 336, Pad, LeftW);
+            string tip = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
+            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 364, LeftW, 64), FpsUi.Ink,
                 TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-            string status = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
-            TextRenderer.DrawText(g, status, FpsUi.H3, new Rectangle(rx, 88, W - rx - 24, 22), _g.Detected ? FpsUi.Neon : FpsUi.Dim,
-                TextFormatFlags.NoPrefix);
+
             if (!string.IsNullOrEmpty(_g.InstallPath))
-                TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(rx, 110, W - rx - 24, 16), FpsUi.Dim,
-                    TextFormatFlags.NoPrefix | TextFormatFlags.PathEllipsis);
-
-            // Réglages FPS
-            int fy = 268;
-            Section(g, "RÉGLAGES POUR DÉBLOQUER LES FPS", fy, W);
-            string uncap = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
-            TextRenderer.DrawText(g, uncap, FpsUi.Body, new Rectangle(24, fy + 28, W - 48, 84), FpsUi.Ink,
-                TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-
-            // Profil conseillé (néophyte)
-            int py = fy + 116;
-            Section(g, "PROFIL CONSEILLÉ (simple)", py, W);
-            TextRenderer.DrawText(g,
-                "Mode Jeu de Windows · plan Performances ultimes · Game DVR / Game Bar coupés · NVIDIA Reflex / AMD Anti-Lag ON · V-Sync OFF.  "
-                + "Le bouton ⚡ ci-dessous applique tout ça d'un coup (sûr et réversible).",
-                FpsUi.Small, new Rectangle(24, py + 28, W - 48, 46), FpsUi.Dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(Pad, ClientSize.Height - 84, LeftW, 16),
+                    FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.PathEllipsis);
         }
 
-        private static void Section(Graphics g, string title, int y, int W)
+        private static void Section(Graphics g, string title, int y, int x, int w)
         {
-            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(24, y, W - 48, 18), FpsUi.NeonDim, TextFormatFlags.NoPrefix);
-            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 24, y + 20, W - 24, y + 20);
+            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(x, y, w, 18), FpsUi.NeonDim, TextFormatFlags.NoPrefix);
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, x, y + 20, x + w, y + 20);
         }
 
         private static GraphicsPath Round(Rectangle r, int rad)

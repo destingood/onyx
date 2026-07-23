@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.39 — Le Copilote ENQUÊTE (il raisonne comme un technicien)
+- Sur un symptôme large (« ça rame », « FPS bas », « bilan », « diagnostic »…), il ne renvoie
+  plus vers un panneau : il lance **toutes les mesures**, **croise** les résultats, **classe
+  les causes par impact réel** et rend un **plan d'action ordonné**.
+- Six pistes vérifiées : fréquence des écrans · température GPU · saturation mémoire ·
+  disque système et espace récupérable · bibliothèques de jeu · optimisations inactives.
+- **Il dit aussi ce qui va bien** (« Vérifié et sain : écrans à leur fréquence maximale ·
+  températures GPU sous contrôle… ») et, s'il ne trouve rien, il le dit franchement au lieu
+  d'inventer un problème.
+- Chaque cause corrigeable porte **son bouton** dans la même bulle ; une réponse peut donc
+  désormais contenir **plusieurs corrections** (`Reply.Plan`), toujours sur clic explicite.
+- Réponses des actions typées (`Reply` au lieu d'une chaîne) : une mesure enchaîne d'elle-même
+  sur la correction qui en découle, sans logique de suivi codée en dur.
+- 100 % local : aucune requête réseau, aucune donnée ne quitte la machine.
+- Vérifié en capture sur cette machine : 2 causes réelles trouvées (disque plein à 95 %,
+  1 bibliothèque manquante), 3 points sains listés, correction proposée en un clic.
+
 ## v14.37 — Animations d'ouverture (version prudente, sans bug)
 - **Fondu d'ouverture des fenêtres** : les fenêtres d'outil (menu ⋯) apparaissent en fondu
   doux (~150 ms), via un moteur d'animation transitoire (`Anim`) — **un seul timer ~60 fps

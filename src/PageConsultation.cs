@@ -52,7 +52,7 @@ namespace BTOptimizer
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
             Greet();
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
-            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("mon écran est bloqué à 60 hz"); } } catch { }
+            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame en jeu"); } } catch { }
         }
 
         private void Greet()
@@ -84,9 +84,9 @@ namespace BTOptimizer
                 AddBubble(true, reply.Text, reply);
                 if (reply.Action != null && reply.Action.AutoRun)
                 {
-                    string res; try { res = reply.Action.Run(Host.Log); } catch { res = "—"; }
-                    var f = DocAssistant.FollowUp(reply.Action);
-                    AddBubble(true, res, f != null ? new DocAssistant.Reply { Text = res, Action = f } : null);
+                    DocAssistant.Reply res;
+                    try { res = reply.Action.Run(Host.Log); } catch { res = new DocAssistant.Reply { Text = "—" }; }
+                    if (res != null) AddBubble(true, res.Text, res);
                 }
                 return;
             }
@@ -111,16 +111,15 @@ namespace BTOptimizer
             ShowTyping();
             System.Threading.Tasks.Task.Run(() =>
             {
-                string res;
+                DocAssistant.Reply res;
                 try { res = a.Run(Host.Log); }
-                catch (Exception ex) { res = "L'action n'a pas abouti : " + ex.Message; }
+                catch (Exception ex) { res = new DocAssistant.Reply { Text = "L'action n'a pas abouti : " + ex.Message }; }
                 try
                 {
                     BeginInvoke((Action)(() =>
                     {
                         HideTyping();
-                        var follow = DocAssistant.FollowUp(a);
-                        AddBubble(true, res, follow != null ? new DocAssistant.Reply { Text = res, Action = follow } : null);
+                        if (res != null) AddBubble(true, res.Text, res);
                     }));
                 }
                 catch { }
@@ -224,23 +223,12 @@ namespace BTOptimizer
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
                 col.Controls.Add(btn);
             }
-            // Action qui MODIFIE le système : bouton explicite + annonce de ce qui change.
+            // Action(s) qui MODIFIENT le système : bouton explicite + annonce de ce qui change.
             // Jamais d'exécution automatique ici — c'est la promesse de Fluide.
             if (reply != null && reply.Action != null && reply.Action.IsChange)
-            {
-                var act = reply.Action;
-                var go = FpsUi.NeonButton("▶  " + act.Label);
-                go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
-                go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act); };
-                col.Controls.Add(go);
-                if (!string.IsNullOrEmpty(act.Warning))
-                    col.Controls.Add(new Label
-                    {
-                        AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
-                        ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
-                        Margin = new Padding(0, 5, 0, 0), Text = act.Warning
-                    });
-            }
+                AddActionButton(col, reply.Action, maxTextW);
+            if (reply != null && reply.Plan != null)
+                foreach (var step in reply.Plan) if (step != null) AddActionButton(col, step, maxTextW);
             if (reply != null && reply.ShowStarters)
             {
                 var chips = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, MaximumSize = new Size(maxTextW, 0), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
@@ -260,6 +248,23 @@ namespace BTOptimizer
             row.Controls.Add(avatar); row.Controls.Add(bubble);
             _flow.Controls.Add(row);
             try { _flow.ScrollControlIntoView(row); } catch { }
+        }
+
+        /// <summary>Bouton d'une correction : libellé, puis en petit ce qu'elle va changer.
+        /// Une fois lancée, le bouton se verrouille (pas de double exécution).</summary>
+        private void AddActionButton(Control col, DocAssistant.ChatAction act, int maxTextW)
+        {
+            var go = FpsUi.NeonButton("▶  " + act.Label);
+            go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
+            go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act); };
+            col.Controls.Add(go);
+            if (!string.IsNullOrEmpty(act.Warning))
+                col.Controls.Add(new Label
+                {
+                    AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
+                    ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
+                    Margin = new Padding(3, 5, 3, 0), Text = act.Warning
+                });
         }
 
         // Ré-aligne les bulles « Toi » à droite quand la largeur change.
