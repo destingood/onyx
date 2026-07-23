@@ -81,15 +81,18 @@ namespace BTOptimizer
             _gauge.Controls.Add(_scoreLabel); _gauge.Controls.Add(_grade);
             Controls.Add(_gauge);
 
+            // Hauteur calée sur le texte réel (3 lignes + interligne) : à 56 px le libellé
+            // débordait SOUS le graphique de tendance, les deux se chevauchaient.
             _sub = new Label
             {
-                Location = new Point(212, 70), Size = new Size(450, 56), ForeColor = Color.FromArgb(60, 64, 72),
+                Location = new Point(212, 66), Size = new Size(450, 72), ForeColor = Color.FromArgb(60, 64, 72),
                 Font = Own(new Font("Segoe UI", 9.5f))
             };
             Controls.Add(_sub);
 
-            // Mini-graphique de tendance des scores (historique).
-            _chart = new Panel { Location = new Point(212, 128), Size = new Size(450, 58), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            // Mini-graphique de tendance des scores (historique), sous le texte avec une vraie
+            // respiration (le libellé fait 4 lignes quand il y a des points graves ET d'attention).
+            _chart = new Panel { Location = new Point(212, 142), Size = new Size(450, 46), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             _chart.Paint += DrawHistoryChart;
             Controls.Add(_chart);
 

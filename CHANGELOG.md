@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.34 — Les 40 fenêtres du menu ⋯ passent à l'indigo (+ 2 bugs d'affichage)
+- **Le thème des fenêtres était resté vert.** `Theme.cs` avait sa **propre palette**, séparée
+  du shell : fonds verdâtres, surlignage de menu vert, liseré signature vert→bleu. Le menu ⋯
+  et ses ~40 fenêtres juraient donc avec le QG indigo. Tokens repris (`#08080C` / `#101018` /
+  `#22222F`), surlignage de menu indigo, liseré signature **indigo → violet**.
+- **Bug « & » corrigé** : « Bibliothèques **&** applis de jeu » s'affichait « Bibliothèques
+  applis de jeu » — WinForms traite `&` comme un raccourci clavier dans les `Label`. Rendu
+  littéral partout (`UseMnemonic = false`), vérifié en capture.
+- **Listes blanches en thème sombre** : seule `CheckedListBox` était traitée, donc toute
+  `ListBox` simple restait **blanche**. Le traitement couvre désormais la classe de base.
+- **Chevauchement dans « Santé de mon PC »** : le texte d'explication (4 lignes quand il y a
+  des points graves ET d'attention) débordait **sous** le graphique de tendance. Hauteur du
+  libellé et position du graphique recalées.
+
 ## v14.32 — Identité couleur propre : l'indigo Fluide
 - **Nouvel accent `#818CF8`** (indigo) à la place du vert `#00FF88` — qui était, d'après les
   commentaires du code, **le hex exact du concurrent**. Dernier morceau d'habillage repris,
