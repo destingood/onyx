@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.33 — Présence Discord (parité FPSDoctor, la dernière)
+- **Rich Presence Discord natif** : quand elle est activée, Fluide affiche « Optimise son PC ·
+  avec Fluide » dans le statut Discord de l'utilisateur, avec logo et compteur de temps. C'était
+  le **seul point de l'apparence FPSDoctor qui manquait** ; il est désormais couvert.
+- **Zéro dépendance** : passe par l'IPC local de Discord (`discord-ipc-N`, canal nommé) au lieu
+  d'embarquer une DLL tierce. Se tait proprement si Discord n'est pas lancé.
+- **Activable / désactivable** depuis *Réglages système → Présence Discord*, choix persisté.
+  Reste **inerte tant que l'App ID Discord n'est pas renseigné** (placeholder par défaut) : rien
+  ne fuit et rien ne s'affiche tant que le vendeur n'a pas créé son app sur le portail Discord.
+- Démarre automatiquement au lancement si l'option est cochée ; s'arrête à la fermeture.
+- Harnais : build Release **réussi**, publication `dist` vérifiée (DLL + EXE générés).
+
 ## v14.32 — Identité couleur propre : l'indigo Fluide
 - **Nouvel accent `#818CF8`** (indigo) à la place du vert `#00FF88` — qui était, d'après les
   commentaires du code, **le hex exact du concurrent**. Dernier morceau d'habillage repris,

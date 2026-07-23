@@ -55,6 +55,7 @@ namespace BTOptimizer
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
+            try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
 
             Shown += (s, e) =>
             {
@@ -148,6 +149,9 @@ namespace BTOptimizer
             var autostart = new ToolStripMenuItem("Démarrer Fluide avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
             reg.DropDownItems.Add(autostart);
+            var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec Fluide »)") { Checked = DiscordPresence.Enabled };
+            discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
+            reg.DropDownItems.Add(discord);
             reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             m.Add(reg);
 
