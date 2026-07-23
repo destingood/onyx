@@ -69,9 +69,13 @@ Textes prêts à coller dans `posts-lancement.md`, section « Fiches produit ».
 
 - ✅ `AppURL` renseignée dans `installer/BTOptimizer.iss` (la boutique ; remplace-la par
   l'URL de la landing quand elle sera hébergée).
-- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.27.0.0.exe`**
-  (~38 Mo, inclut le correctif critique du viseur) → c'est LE fichier à uploader sur les
-  **trois** produits Gumroad.
+- ✅ Installateur AUTONOME construit : **`installer/Output/BTOptimizer-Setup-14.28.0.0.exe`**
+  (~38 Mo — nouvelle interface QG, boosters dynamiques, licences à expiration, correctif
+  viseur) → c'est LE fichier à uploader sur les **trois** produits Gumroad.
+- ✅ Interface v14.28 validée par le harnais hors-écran (8 pages × 3 tailles, 39/39
+  fenêtres du menu, 0 erreur) ; capture réelle du QG intégrée à la landing (`app.png`).
+- 🔁 Avant chaque diffusion : vérifier que le compteur « Optimisations au total » du QG
+  correspond au chiffre de la landing et des posts (actuellement **176**).
 - ✅ Vérifié : **aucun binaire tiers embarqué** dans cet installateur (le composant NVIDIA
   optionnel est vide tant que `tools/npi/` n'existe pas) — case juridique de la checklist réglée.
 - ✅ Cycle des clés **testé automatiquement contre le vrai `License.cs`** (avec ta clé
@@ -132,7 +136,7 @@ Relevé sur fpsdoctor.com le 22/07/2026 (à re-vérifier avant d'utiliser les ch
 
 | | FPSDoctor | DesTinGOOD |
 |---|---|---|
-| Gratuit | 13 optimisations, analyse de base | **174 optimisations** + toute la suite de diagnostic |
+| Gratuit | 13 optimisations, analyse de base | **176 optimisations** + toute la suite de diagnostic |
 | Payant | 59 €/an (abonnement) · 150 € à vie | **49 €/an · 127 € à vie** (mêmes paliers, −15 %) |
 | Preuves | Témoignages « +380 FPS », « 3x stabilité garantie » | **Mesure avant/après sur TON PC** (FPS, latence, score /100) |
 | Anticheat / réversibilité | non mentionnés sur le site | cœur du produit (zéro injection, tout réversible, sauvegardes) |

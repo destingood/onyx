@@ -1,4 +1,12 @@
 <title>DesTinGOOD — optimise, diagnostique, prouve</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="DesTinGOOD : 176 optimisations gaming réversibles pour Windows 10/11 + diagnostic complet (santé /100, FPS, latence). Aucune injection, compatible anticheat. Gratuit — Pro 49 €/an ou 127 € à vie.">
+<meta property="og:title" content="DesTinGOOD — l'optimiseur gaming qui mesure au lieu de promettre">
+<meta property="og:description" content="176 optimisations réversibles + diagnostic complet. Zéro injection, compatible anticheat. Gratuit ; Pro 49 €/an ou 127 € à vie.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="app.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
     --bg: #0B0E11;
@@ -107,6 +115,17 @@
   .scope-legend { position: absolute; top: 14px; right: 16px; display: flex; gap: 16px; font-family: var(--mono); font-size: 0.7rem; }
   .lg { display: flex; align-items: center; gap: 6px; color: var(--ink-dim); }
   .lg i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+  .scope.shot { padding: 0; }
+  .scope.shot img { display: block; width: 100%; height: auto; }
+
+  /* faq */
+  .faq { max-width: 760px; display: flex; flex-direction: column; gap: 10px; }
+  .faq details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 0 20px; }
+  .faq summary { cursor: pointer; padding: 16px 0; font-weight: 600; list-style: none; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::before { content: "▸ "; color: var(--signal); }
+  .faq details[open] summary::before { content: "▾ "; }
+  .faq details p { color: var(--ink-dim); margin: 0 0 16px; font-size: 0.94rem; }
 
   .statbar {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 26px;
@@ -196,6 +215,7 @@
       <a href="#mesure">Mesure</a>
       <a href="#fonctions">Fonctions</a>
       <a href="#tarifs">Tarifs</a>
+      <a href="#faq">FAQ</a>
       <a class="btn btn-primary" href="#telecharger">Télécharger</a>
     </div>
   </div>
@@ -206,7 +226,7 @@
     <div>
       <p class="eyebrow">Mesuré, pas promis</p>
       <h1>Ton PC de jeu, <span class="accent">optimisé</span> — et surtout <span class="accent">diagnostiqué</span>.</h1>
-      <p class="lede">174 optimisations réversibles <em>plus</em> une suite de diagnostic complète : pourquoi ça crashe, ça rame ou ça lag — avec un verdict et le bon outil pour chaque symptôme. Bouton <b>⚡ TOUT OPTIMISER</b> en un clic, et la preuve chiffrée avant/après.</p>
+      <p class="lede">176 optimisations réversibles <em>plus</em> une suite de diagnostic complète : pourquoi ça crashe, ça rame ou ça lag — avec un verdict et le bon outil pour chaque symptôme. Bouton <b>⚡ TOUT OPTIMISER</b> en un clic, et la preuve chiffrée avant/après.</p>
       <div class="cta-row">
         <a class="btn btn-primary" href="#telecharger">Télécharger gratuitement</a>
         <a class="btn btn-ghost" href="#fonctions">Voir la suite</a>
@@ -214,19 +234,17 @@
       </div>
     </div>
 
-    <div class="scope" aria-hidden="true">
-      <span class="scope-tag">latence · µs</span>
-      <div class="scope-legend">
-        <span class="lg"><i style="background:var(--before)"></i>avant</span>
-        <span class="lg"><i style="background:var(--signal)"></i>après</span>
-      </div>
-      <canvas id="scope" width="620" height="300"></canvas>
+    <div class="scope shot">
+      <!-- Capture réelle générée par le harnais (BT_UITEST + BT_UISHOT) — à rafraîchir à chaque
+           évolution visuelle : copier shots/p0-Dashboard-1280x800.png vers app.png (landing + site). -->
+      <img src="app.png" width="1296" height="839" loading="eager" fetchpriority="high"
+           alt="Le QG DesTinGOOD : santé du PC sur 100, 176 optimisations, utilisation système en direct">
     </div>
   </div>
 
   <div class="wrap">
     <div class="statbar tnum">
-      <div class="stat"><div class="k">174</div><div class="l">optimisations réversibles</div></div>
+      <div class="stat"><div class="k">176</div><div class="l">optimisations réversibles</div></div>
       <div class="stat"><div class="k">30<b>+</b></div><div class="l">panneaux de diagnostic</div></div>
       <div class="stat"><div class="k">39</div><div class="l">outils reliés, en 1 clic</div></div>
       <div class="stat"><div class="k"><b>1</b>-clic</div><div class="l">tout optimiser · tout rétablir</div></div>
@@ -268,7 +286,7 @@
       <p class="sub">Deux portes d'entrée — un bilan santé /100 et un assistant « J'ai un problème… » — puis 30+ panneaux rangés par thème. Chaque symptôme a son verdict <em>et</em> le bon outil, installable en un clic depuis le panneau.</p>
     </div>
     <div class="feat">
-      <div class="card"><div class="ix">01 · EN 1 CLIC</div><h3>⚡ Tout optimiser</h3><p>174 optimisations réversibles ; le bouton unique détecte ton matériel (SSD/HDD, GPU, RAM, écran) et coche la meilleure sélection — sauvegarde .reg + point de restauration automatiques.</p></div>
+      <div class="card"><div class="ix">01 · EN 1 CLIC</div><h3>⚡ Tout optimiser</h3><p>176 optimisations réversibles ; le bouton unique détecte ton matériel (SSD/HDD, GPU, RAM, écran) et coche la meilleure sélection — sauvegarde .reg + point de restauration automatiques.</p></div>
       <div class="card"><div class="ix">02 · DIAGNOSTIC</div><h3>🏥 Santé /100</h3><p>Un bilan global agrégeant crashs, thermique, réseau, disque et réglages néfastes, avec graphique de tendance et accès direct au panneau qui corrige chaque point.</p></div>
       <div class="card"><div class="ix">03 · CRASHS</div><h3>🩺 Pourquoi ça plante</h3><p>Lit les journaux Windows (crashs, pilote GPU, écrans bleus), détecte le throttling thermique et le « dispositif de rendu perdu », et annule les réglages néfastes laissés par d'autres « optimiseurs ».</p></div>
       <div class="card"><div class="ix">04 · RÉSEAU</div><h3>📡 Suite complète</h3><p>Qualité (gigue/perte, chez toi ou le FAI ?), traceroute, réglages TCP/IP qui débloquent les téléchargements, carte réseau basse latence et DNS benchmarké.</p></div>
@@ -290,7 +308,7 @@
         <div class="dl-tier">Édition autonome · recommandée</div>
         <!-- Garder synchronisé avec la version de l'assembly (src/Program.cs) et le nom
              de l'installateur — 2 occurrences dans cette page (ici + pied de page). -->
-        <div class="dl-title">DesTinGOOD Setup <span class="mono">v14.27</span></div>
+        <div class="dl-title">DesTinGOOD Setup <span class="mono">v14.28</span></div>
         <p>Runtime .NET inclus : s'installe et démarre sans rien installer d'autre. Environ 37 Mo.</p>
         <!-- Produit Gumroad « gratuit » (0 €) : héberge l'installateur ET capture l'email des
              utilisateurs gratuits. Permaliens à créer tels quels — voir marketing/PLAN-LANCEMENT.md, étape 2. -->
@@ -321,7 +339,7 @@
         <span class="tier">Gratuit</span>
         <div class="amt">0 €</div>
         <ul>
-          <li>Les 174 optimisations en manuel</li>
+          <li>Les 176 optimisations en manuel</li>
           <li>Bilan santé /100 &amp; assistant « J'ai un problème… »</li>
           <li>Toute la suite de diagnostic (crashs, réseau, disque…)</li>
           <li>Mesure FPS / latence &amp; moniteur matériel</li>
@@ -357,8 +375,51 @@
     <p class="sub" style="max-width:680px; margin:22px auto 0; text-align:center;">
       15&nbsp;% sous le marché : le même service se vend ailleurs 59&nbsp;€/an ou 150&nbsp;€
       l'accès à vie — avec une édition gratuite limitée à une poignée de réglages. Ici :
-      49&nbsp;€/an ou 127&nbsp;€ une seule fois, et les 174 optimisations restent gratuites.
+      49&nbsp;€/an ou 127&nbsp;€ une seule fois, et les 176 optimisations restent gratuites.
     </p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">FAQ</p>
+      <h2>Les questions qu'on me pose vraiment.</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>Windows affiche « éditeur inconnu » — c'est normal ?</summary>
+        <p>Oui : je suis un développeur indépendant et l'application n'est pas encore signée
+        (le certificat arrive avec les premières ventes). Clique « Informations complémentaires »
+        puis « Exécuter quand même ». Tout ce que fait l'app est réversible, avec sauvegarde
+        automatique avant chaque modification.</p>
+      </details>
+      <details>
+        <summary>C'est compatible avec les anticheats (Valorant, Faceit…) ?</summary>
+        <p>L'app n'utilise aucune injection ni pilote noyau : elle applique des réglages Windows
+        officiels et documentés — c'est un choix de conception. Elle refuse volontairement les
+        fonctions qui exigeraient d'injecter du code dans les jeux.</p>
+      </details>
+      <details>
+        <summary>Qu'est-ce qui est gratuit, et qu'est-ce qui est Pro ?</summary>
+        <p>Gratuit : les 176 optimisations en manuel, le bilan santé /100, tout le diagnostic
+        (FPS, latence, crashs, réseau, disque), les sauvegardes et la restauration. Pro : le
+        1-clic adapté au matériel, les presets eSport/Benchmark, le MODE JEU auto, les boosters
+        dynamiques et la surveillance en fond.</p>
+      </details>
+      <details>
+        <summary>Comment je reçois ma clé après l'achat ?</summary>
+        <p>Par email sous 24 h — une clé signée à ton nom, à coller dans l'app (menu ☰ →
+        « Activer la version Pro »). Licence à vie : valable pour toujours. Abonnement : clé
+        renouvelée à chaque échéance. Tout fonctionne hors-ligne, sans compte.</p>
+      </details>
+      <details>
+        <summary>Et si je change d'avis ?</summary>
+        <p>Essaie avant d'acheter : l'app inclut un essai Pro gratuit de 7 jours, sans carte
+        bancaire. Et chaque réglage se rétablit d'un clic — y compris « tout rétablir » d'un
+        coup.</p>
+      </details>
+    </div>
   </div>
 </section>
 
@@ -373,7 +434,7 @@
 <footer>
   <div class="wrap foot-in">
     <div>© DesTinGOOD — Optimiseur &amp; diagnostic gaming pour Windows.</div>
-    <div class="mono">v14.27 · Windows 10/11 · x64</div>
+    <div class="mono">v14.28 · Windows 10/11 · x64</div>
   </div>
 </footer>
 
