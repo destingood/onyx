@@ -334,6 +334,34 @@ namespace BTOptimizer
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Guide latence ERREUR : " + ex.Message); }
 
+            Console.WriteLine("Fonctions portées (Mes jeux, guides, mode simple, dé-bloatware)...");
+            try
+            {
+                using (var f = new GamesForm(delegate(string m, int l) { })) f.CreateControl();
+                Console.WriteLine("  UI GamesForm : construite OK.");
+                using (var f = new StreamGuideForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    typeof(StreamGuideForm).GetMethod("Reload", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(f, null);
+                }
+                Console.WriteLine("  UI StreamGuideForm : construite + Reload OK.");
+                using (var f = new BiosGuideForm(delegate(string m, int l) { }))
+                {
+                    f.CreateControl();
+                    typeof(BiosGuideForm).GetMethod("Reload", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(f, null);
+                }
+                Console.WriteLine("  UI BiosGuideForm : construite + Reload OK.");
+                using (var f = new MaintenanceForm(delegate(string m, int l) { })) f.CreateControl();
+                Console.WriteLine("  UI MaintenanceForm : construite OK.");
+                using (var f = new AutoInstallForm(delegate(string m, int l) { })) f.CreateControl();
+                Console.WriteLine("  UI AutoInstallForm : construite OK.");
+                using (var f = new BloatRemoveForm(delegate(string m, int l) { })) f.CreateControl();
+                Console.WriteLine("  UI BloatRemoveForm : construite OK (dé-bloatware).");
+                using (var f = new SimpleOptiForm(Catalog.All(), () => false, delegate(string m, int l) { })) f.CreateControl();
+                Console.WriteLine("  UI SimpleOptiForm : construite OK.");
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Fonctions portées ERREUR : " + ex.Message); }
+
             Console.WriteLine("Écrans (Hz actuel vs max)...");
             try
             {
