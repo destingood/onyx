@@ -21,6 +21,7 @@ namespace BTOptimizer
             public string Warning;                          // ce qui va changer (sous le bouton)
             public bool IsChange;
             public bool AutoRun;
+            public bool NoChain;                            // exclu de « TOUT réparer » (ex. redémarrage)
             /// <summary>Exécute et renvoie la RÉPONSE à afficher : elle peut elle-même porter
             /// la correction qui découle de la mesure, ou tout un plan (voir Reply.Plan).</summary>
             public Func<Action<string, int>, Reply> Run;

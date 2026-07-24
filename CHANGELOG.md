@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.50 — Le Copilote RÉPARE (presque) tout — et d'un seul clic
+- **🚀 « TOUT réparer »** : après l'enquête, UN bouton enchaîne toutes les corrections dans
+  l'ordre d'impact — point de restauration d'abord (filet), chaque étape isolée (une qui
+  échoue n'arrête pas les autres), compte-rendu ligne par ligne. Un seul clic explicite :
+  la promesse fondatrice (jamais de changement sans ton accord) reste intacte.
+- **Presque chaque piste a maintenant SA réparation en un clic** :
+  - bibliothèques manquantes → **installation directe** des runtimes Microsoft (winget) ;
+  - DNS lent → **bascule vérifiée** (test réel après changement, retour arrière AUTOMATIQUE
+    s'il ne répond pas — même filet que le panneau) ;
+  - optimisations inactives → **preset « Recommandé » appliqué par le moteur complet**
+    (sauvegarde registre + point de restauration AVANT, application isolée, réversible) ;
+  - processus gourmand → **fermeture propre** (douce puis forcée, jamais le cœur de Windows) ;
+  - démarrage chargé → **coupe les lanceurs connus** (liste blanche stricte : Steam, Epic,
+    Discord, Spotify, Wallpaper Engine… — réversible, rien n'est désinstallé) ;
+  - crashs pilote GPU → **installation de DDU** (gratuit) directement depuis le chat ;
+  - redémarrage en retard → **redémarrage programmé (60 s) annulable d'un clic** — jamais
+    inclus dans « TOUT réparer » (il garde son propre bouton).
+- Les mesures individuelles enchaînent aussi sur leur réparation (mesure DNS → bascule,
+  processus → fermeture, bibliothèques → installation…).
+
 ## v14.49 — La boîte à outils du Copilote : 4 mesures, 5 pistes et un lexique de plus
 - **4 nouvelles mesures dans le chat** :
   - **DNS** — chronomètre TON serveur DNS contre Cloudflare/Google (gratuits) sur les mêmes

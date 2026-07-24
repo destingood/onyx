@@ -133,7 +133,8 @@ namespace BTOptimizer
                              + "persiste, pilote réinstallé PROPREMENT avec DDU (gratuit, 1 clic depuis Bibliothèques).",
                         Why = "Crashs GPU — constaté : " + gpuErr + " événement(s) du pilote graphique dans le journal "
                             + "système Windows sur 14 jours ; attendu sur un PC stable : 0. Chaque événement = le pilote "
-                            + "s'est réinitialisé (freeze/écran noir possible en jeu). Les remèdes proposés sont tous gratuits."
+                            + "s'est réinitialisé (freeze/écran noir possible en jeu). Les remèdes proposés sont tous gratuits.",
+                        Fix = ChatActions.InstallTool("Wagnardsoft.DisplayDriverUninstaller", "DDU")
                     });
                 else ok.Add("aucun crash du pilote GPU (14 j)");
             }
@@ -222,7 +223,8 @@ namespace BTOptimizer
                              + "(runtimes Microsoft officiels), pré-cochée dans le panneau Bibliothèques.",
                         Why = "Bibliothèques — constaté : " + missing + " runtime(s) essentiel(s) absent(s) de la base de "
                             + "désinstallation Windows. Un jeu compilé contre un runtime absent refuse de démarrer ou plante "
-                            + "aussitôt. Ces runtimes sont distribués gratuitement par Microsoft."
+                            + "aussitôt. Ces runtimes sont distribués gratuitement par Microsoft.",
+                        Fix = ChatActions.FixLibs()
                     });
                 else ok.Add("bibliothèques de jeu complètes");
             }
@@ -294,7 +296,8 @@ namespace BTOptimizer
                              + "Gratuit : le panneau « Qui ralentit mon PC » permet de le fermer proprement.",
                         Why = "Processus — constaté : « " + hog.Name + " » à " + hog.CpuPct.ToString("0") + " % CPU pendant "
                             + "~1 s de mesure des temps processeur (cœur de Windows et jeux en cours exclus). Un programme "
-                            + "de fond qui pèse autant vole des images par seconde à ton jeu ; le fermer est gratuit."
+                            + "de fond qui pèse autant vole des images par seconde à ton jeu ; le fermer est gratuit.",
+                        Fix = ChatActions.FixHog(hog.Name)
                     });
                 else ok.Add("aucun programme gourmand en fond");
             }
@@ -312,7 +315,8 @@ namespace BTOptimizer
                              + "rapide » de Windows endort au lieu d'éteindre). Un vrai redémarrage purge pilotes et fuites "
                              + "mémoire — gratuit, 2 minutes, souvent spectaculaire.",
                         Why = "Redémarrage — constaté : " + up.ToString("0") + " jours d'uptime système ; seuil : 7 jours. "
-                            + "Pilotes et services accumulent états bancals et fuites ; un redémarrage complet remet tout à plat, gratuitement."
+                            + "Pilotes et services accumulent états bancals et fuites ; un redémarrage complet remet tout à plat, gratuitement.",
+                        Fix = ChatActions.RestartAction()
                     });
                 else if (up >= 0) ok.Add("redémarré récemment");
             }
@@ -368,7 +372,8 @@ namespace BTOptimizer
                              + "des poids en fond. Le panneau « Programmes au démarrage » permet d'en couper — gratuit, "
                              + "réversible, sans rien désinstaller.",
                         Why = "Démarrage — constaté : " + en + " entrées actives (clés Run du registre) ; seuil : 8. "
-                            + "Chaque entrée ralentit l'allumage et reste souvent résidente ensuite."
+                            + "Chaque entrée ralentit l'allumage et reste souvent résidente ensuite.",
+                        Fix = ChatActions.FixStartup()
                     });
                 else ok.Add("démarrage léger (" + en + " au boot)");
             }
@@ -392,7 +397,10 @@ namespace BTOptimizer
                                  + "serveur attend cette traduction. Le panneau DNS rapide bascule gratuitement (réversible).",
                             Why = "DNS — constaté : " + curMs.ToString("0") + " ms (actuel) vs " + bestMs.ToString("0")
                                 + " ms (" + bestName + ", gratuit) sur les mêmes requêtes. Mesuré uniquement parce que ta "
-                                + "plainte touche au réseau — l'enquête adapte ses mesures au symptôme."
+                                + "plainte touche au réseau — l'enquête adapte ses mesures au symptôme.",
+                            Fix = ChatActions.FixDns(bestName,
+                                bestName != null && bestName.StartsWith("Google") ? new[] { "8.8.8.8", "8.8.4.4" }
+                                                                                  : new[] { "1.1.1.1", "1.0.0.1" })
                         });
                     else if (curMs >= 0) ok.Add("DNS réactif (" + curMs.ToString("0") + " ms)");
                 }
@@ -414,7 +422,8 @@ namespace BTOptimizer
                                  + "gratuit et réversible, comme tout ici.",
                             Why = "Optimisations — constaté : santé " + st.Health + " % et " + inactive + " réglages "
                                 + "recommandés inactifs. Chacun est documenté, réversible et gratuit ; le preset "
-                                + "« Recommandé » n'active que les sûrs."
+                                + "« Recommandé » n'active que les sûrs.",
+                            Fix = ChatActions.FixOpti()
                         });
                     else if (st.Health >= 70) ok.Add("optimisations bien engagées (" + st.OptiActive + " actives)");
                 }
@@ -481,12 +490,19 @@ namespace BTOptimizer
             var plan = new List<DocAssistant.ChatAction>();
             foreach (var f in found) if (f.Fix != null) plan.Add(f.Fix);
 
+            // « 🚀 TOUT réparer » : un SEUL clic explicite pour dérouler toutes les corrections
+            // enchaînables (le redémarrage, NoChain, garde son propre bouton).
+            var chain = new List<DocAssistant.ChatAction>();
+            foreach (var p in plan) if (p != null && !p.NoChain) chain.Add(p);
+            DocAssistant.ChatAction all = ChatActions.AllFix(chain);
+
             return new DocAssistant.Reply
             {
                 Text = sb.ToString().TrimEnd(),
                 Cards = cards,
                 Footer = foot.ToString().TrimEnd(),
                 Plan = plan.Count > 0 ? plan : null,   // sert au « oui » (re-présentation) — les cartes portent les boutons
+                Action = all,                          // le pilote automatique, sous les cartes
                 Explain = explain
             };
         }
