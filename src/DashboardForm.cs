@@ -81,6 +81,20 @@ namespace BTOptimizer
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
                 try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
             };
+
+#if !BTTEST
+            // Cerveau IA LOCAL : mise en place AUTOMATIQUE en arrière-plan pour chaque
+            // installation (gratuit, 100 % sur la machine — voir LocalBrain.AutoSetup et ses
+            // garde-fous). Différée de 20 s pour ne pas concurrencer le démarrage ; jamais
+            // dans le harnais de test. « désactive l'ia » dans le Copilote coupe et bloque.
+            var iaTimer = new Timer { Interval = 20000 };
+            iaTimer.Tick += (s, e) =>
+            {
+                iaTimer.Stop(); iaTimer.Dispose();
+                System.Threading.Tasks.Task.Run(() => LocalBrain.AutoSetup(Log));
+            };
+            iaTimer.Start();
+#endif
             FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
