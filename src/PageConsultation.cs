@@ -18,6 +18,11 @@ namespace BTOptimizer
         private DocAssistant.Reply _last;   // dernière réponse ACTIONNABLE : contexte du prochain « oui »/« non »
         private bool _greeted;
         private bool _seeded;
+        private Panel _statsRow;                          // cockpit : tuiles d'état en direct
+        private Label _vHealth, _vScreen, _vPing, _vGpu;  // valeurs des tuiles
+        private Panel _inputBar;                          // barre de saisie (carte arrondie)
+        private FlowLayoutPanel _quick;                   // raccourcis permanents au-dessus de la saisie
+        private bool _proactive;                          // accueil proactif déjà tenté
 
         public PageConsultation(DashboardForm host) : base(host)
         {
@@ -32,18 +37,96 @@ namespace BTOptimizer
             _wheel = new ScrollWheelFilter(_flow);
             try { Application.AddMessageFilter(_wheel); } catch { }
 
-            _input = new TextBox();
-            try { _input.PlaceholderText = "Décris ton souci au Copilote… (ex. « ça rame en jeu », « ping élevé », « écran bloqué à 60 Hz »)"; } catch { }
-            _input.BackColor = FpsUi.Card; _input.ForeColor = FpsUi.Ink;
-            _input.BorderStyle = BorderStyle.FixedSingle; _input.Font = FpsUi.Body;
-            _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
-            Controls.Add(_input);
+            // --- Cockpit : 4 tuiles d'état EN DIRECT (santé / écrans / ping / GPU) ---
+            _statsRow = new Panel { BackColor = Color.Transparent };
+            Controls.Add(_statsRow);
+            _vHealth = StatTile("SANTÉ");
+            _vScreen = StatTile("ÉCRANS");
+            _vPing = StatTile("PING");
+            _vGpu = StatTile("GPU");
 
-            _send = FpsUi.NeonButton("Envoyer");
+            // --- Barre de saisie « pro » : carte arrondie + bouton d'envoi compact ---
+            _inputBar = FpsUi.CardPanel(12f);
+            Controls.Add(_inputBar);
+            _input = new TextBox { BorderStyle = BorderStyle.None, BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, Font = FpsUi.Body };
+            try { _input.PlaceholderText = "Décris ton souci… (les fautes de frappe sont comprises)"; } catch { }
+            _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
+            _inputBar.Controls.Add(_input);
+            _send = FpsUi.NeonButton("→");
             _send.Click += (s, e) => SendInput();
-            Controls.Add(_send);
+            _inputBar.Controls.Add(_send);
+
+            // --- Raccourcis PERMANENTS (pas seulement dans le message d'accueil) ---
+            _quick = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
+            (string, string)[] qs =
+            {
+                ("Enquête complète", "fais un bilan complet de mon pc"),
+                ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
+                ("Test ping", "mesure mon ping"),
+                ("Processus gourmands", "quel programme consomme mon cpu en fond"),
+                ("Pourquoi ?", "pourquoi"),
+            };
+            foreach (var qd in qs) { var c = Chip(qd.Item1); string txt = qd.Item2; c.Click += (s, e) => Send(txt); _quick.Controls.Add(c); }
+            Controls.Add(_quick);
 
             Resize += (s, e) => DoLayout();
+        }
+
+        /// <summary>Tuile du cockpit : légende + valeur colorée (— tant que la mesure n'est pas là).</summary>
+        private Label StatTile(string title)
+        {
+            var tile = FpsUi.CardPanel(10f);
+            var cap = FpsUi.Text(title, FpsUi.Tiny, FpsUi.Dim2); cap.Location = new Point(12, 6);
+            var val = FpsUi.Text("—", FpsUi.H3, FpsUi.Dim); val.Location = new Point(12, 20);
+            tile.Controls.Add(cap); tile.Controls.Add(val);
+            _statsRow.Controls.Add(tile);
+            return val;
+        }
+
+        private void Tile(Label l, string txt, Color c)
+        {
+            try { BeginInvoke((Action)(() => { l.Text = txt; l.ForeColor = c; })); } catch { }
+        }
+
+        /// <summary>Remplit le cockpit en tâche de fond : écrans, ping réel, température GPU.</summary>
+        private void RefreshTiles()
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string scr = "n/d"; Color scrC = FpsUi.Dim2;
+                try
+                {
+                    var list = DisplayInfo.Query(); int below = 0, max = 0;
+                    if (list != null) foreach (var d in list) { if (d.BelowMax) below++; if (d.CurrentHz > max) max = d.CurrentHz; }
+                    if (list != null && list.Count > 0)
+                    { scr = below == 0 ? max + " Hz ✓" : below + " sous le max"; scrC = below == 0 ? FpsUi.Neon : FpsUi.Warn; }
+                }
+                catch { }
+                Tile(_vScreen, scr, scrC);
+
+                string png = "hors-ligne"; Color pngC = FpsUi.Dim2;
+                try
+                {
+                    double avg, jit; int loss;
+                    if (ChatActions.PingSample(3, 500, out avg, out jit, out loss))
+                    { png = avg.ToString("0") + " ms"; pngC = avg < 40 && loss == 0 ? FpsUi.Neon : avg < 80 ? FpsUi.Warn : FpsUi.Err; }
+                }
+                catch { }
+                Tile(_vPing, png, pngC);
+
+                string gpu = "n/d"; Color gpuC = FpsUi.Dim2;
+                try
+                {
+                    using (var mon = new HwMonitor())
+                    {
+                        HwSample smp = mon.Sample();
+                        if (smp.Gpu != null && smp.Gpu.Ok && smp.Gpu.TempC > 0)
+                        { gpu = smp.Gpu.TempC.ToString("0") + " °C"; gpuC = smp.Gpu.TempC < 70 ? FpsUi.Neon : smp.Gpu.TempC < 85 ? FpsUi.Warn : FpsUi.Err; }
+                    }
+                }
+                catch { }
+                Tile(_vGpu, gpu, gpuC);
+            });
         }
 
         public override void OnShown()
@@ -51,8 +134,41 @@ namespace BTOptimizer
             DoLayout();
             try { _input.Focus(); } catch { }   // on peut taper directement, sans cliquer le champ
             Mascot.CurrentMood = Mascot.Mood.Thinking;   // tant que le bilan n'est pas connu
-            AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
+            AppStats.Get(a =>
+            {
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health };
+                        Mascot.CurrentMood = Mascot.MoodForHealth(a.Health);
+                        if (_vHealth != null)
+                        {
+                            _vHealth.Text = a.Health + " %";
+                            _vHealth.ForeColor = a.Health >= 80 ? FpsUi.Neon : a.Health >= 60 ? FpsUi.Warn : FpsUi.Err;
+                        }
+                        Greet(); Invalidate(true);
+                    }));
+                }
+                catch { }
+            });
+            RefreshTiles();
             Greet();
+            // Accueil PROACTIF : il a déjà jeté un œil (mesures légères uniquement) et ne parle
+            // que s'il y a quelque chose d'utile à proposer — sinon il se tait.
+            try
+            {
+                if (!_proactive && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
+                {
+                    _proactive = true;
+                    System.Threading.Tasks.Task.Run(() =>
+                    {
+                        var tip = QuickTip();
+                        if (tip != null) { try { BeginInvoke((Action)(() => AddBubble(true, tip.Text, tip))); } catch { } }
+                    });
+                }
+            }
+            catch { }
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
             // BT_UISHOT_MSG permet au harnais d'envoyer un AUTRE message (test des fautes de frappe…).
             try
@@ -148,6 +264,65 @@ namespace BTOptimizer
             });
         }
 
+        /// <summary>Coup d'œil PROACTIF à l'arrivée : mesures légères seulement (écrans, disque,
+        /// bibliothèques), UNE proposition maximum, et le silence si tout va bien.</summary>
+        private DocAssistant.Reply QuickTip()
+        {
+            try
+            {
+                var list = DisplayInfo.Query();
+                if (list != null)
+                    foreach (var d in list)
+                        if (d.BelowMax)
+                            return new DocAssistant.Reply
+                            {
+                                Text = "Pendant que tu t'installais, j'ai jeté un œil : « " + d.Name + " » tourne à "
+                                     + d.CurrentHz + " Hz alors qu'il peut faire " + d.MaxHz + " Hz. Correction gratuite, un clic :",
+                                Action = ChatActions.FixScreen()
+                            };
+            }
+            catch { }
+            try
+            {
+                string root = System.IO.Path.GetPathRoot(Environment.SystemDirectory);
+                var di = new System.IO.DriveInfo(root);
+                double freeGb = di.AvailableFreeSpace / 1073741824.0;
+                int pct = di.TotalSize > 0 ? (int)Math.Round(di.AvailableFreeSpace * 100.0 / di.TotalSize) : 100;
+                if (pct < 12)
+                {
+                    var fix = ChatActions.FixDisk();
+                    return new DocAssistant.Reply
+                    {
+                        Text = "Pendant que tu t'installais, j'ai jeté un œil : ton disque système n'a plus que "
+                             + freeGb.ToString("0") + " Go libres (" + pct + " %). "
+                             + (fix != null ? "Nettoyage gratuit (fichiers qui se régénèrent), un clic :" : "Le panneau Nettoyage disque t'aidera à faire de la place."),
+                        Action = fix,
+                        Tool = fix == null ? FindTool("Nettoyage disque") : null
+                    };
+                }
+            }
+            catch { }
+            try
+            {
+                int missing = LibScan.MissingEssentialCount();
+                if (missing > 0)
+                    return new DocAssistant.Reply
+                    {
+                        Text = "Pendant que tu t'installais, j'ai vérifié tes bibliothèques de jeu : il en manque " + missing
+                             + " (Visual C++, DirectX, .NET — gratuites, Microsoft). C'est la cause n°1 d'un jeu qui refuse de démarrer.",
+                        Tool = FindTool("Bibliothèques de jeu")
+                    };
+            }
+            catch { }
+            return null;
+        }
+
+        private HelpCatalog.Entry FindTool(string name)
+        {
+            try { foreach (var e in HelpCatalog.Entries(Host.Log)) if (e.Tool == name) return e; } catch { }
+            return null;
+        }
+
         // Indicateur « Le Copilote écrit… » : mini-bulle avec 3 points qui pulsent.
         private void ShowTyping()
         {
@@ -241,6 +416,16 @@ namespace BTOptimizer
             });
             col.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" });
 
+            // Diagnostic STRUCTURÉ : chaque cause en carte d'impact colorée, bouton intégré.
+            if (reply != null && reply.Cards != null)
+                foreach (var cd in reply.Cards) if (cd != null) col.Controls.Add(MakeCard(cd, maxTextW));
+            if (reply != null && !string.IsNullOrEmpty(reply.Footer))
+                col.Controls.Add(new Label
+                {
+                    AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
+                    ForeColor = FpsUi.Dim, BackColor = Color.Transparent,
+                    Margin = new Padding(3, 10, 3, 0), Text = reply.Footer
+                });
             if (reply != null && reply.Tool != null)
             {
                 var btn = FpsUi.NeonButton("Ouvrir « " + reply.Tool.Tool + " »  →");
@@ -253,7 +438,8 @@ namespace BTOptimizer
             // Jamais d'exécution automatique ici — c'est la promesse de Fluide.
             if (reply != null && reply.Action != null && reply.Action.IsChange)
                 AddActionButton(col, reply.Action, maxTextW);
-            if (reply != null && reply.Plan != null)
+            // Le plan ne se rend en boutons que s'il n'est PAS déjà porté par des cartes.
+            if (reply != null && reply.Plan != null && reply.Cards == null)
                 foreach (var step in reply.Plan) if (step != null) AddActionButton(col, step, maxTextW);
             if (reply != null && reply.ShowStarters)
             {
@@ -303,6 +489,52 @@ namespace BTOptimizer
                 });
         }
 
+        /// <summary>Carte d'une cause : barre d'accent + pastille d'impact colorée (rouge ≥ 85,
+        /// orange ≥ 65, jaune sinon), texte, et bouton de correction intégré quand il y en a une.</summary>
+        private Control MakeCard(DocAssistant.Card cd, int maxW)
+        {
+            Color acc = cd.Impact >= 85 ? FpsUi.Err : cd.Impact >= 65 ? Color.FromArgb(255, 152, 64) : FpsUi.Warn;
+            string level = cd.Impact >= 85 ? "CRITIQUE" : cd.Impact >= 65 ? "ÉLEVÉ" : "MOYEN";
+            var pnl = new Panel { Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
+            pnl.Paint += (s, e) =>
+            {
+                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, Color.FromArgb(22, 22, 34), FpsUi.Border, 10f);
+                using (var br = new SolidBrush(acc)) e.Graphics.FillRectangle(br, 1, 10, 3, pnl.Height - 20);
+            };
+            var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, acc);
+            pill.Location = new Point(14, 8);
+            var body = new Label
+            {
+                AutoSize = true, MaximumSize = new Size(pnl.Width - 28, 0), Font = FpsUi.Body,
+                ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Location = new Point(14, 25), Text = cd.Text ?? ""
+            };
+            pnl.Controls.Add(pill); pnl.Controls.Add(body);
+            int y = 25 + body.PreferredSize.Height;
+            if (cd.Fix != null)
+            {
+                var act = cd.Fix;
+                var go = FpsUi.NeonButton("▶  " + act.Label);
+                go.AutoSize = false; go.Size = new Size(Math.Min(pnl.Width - 28, 320), 30);
+                go.Location = new Point(14, y + 8);
+                go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
+                pnl.Controls.Add(go);
+                y = go.Location.Y + go.Height;
+                if (!string.IsNullOrEmpty(act.Warning))
+                {
+                    var warn = new Label
+                    {
+                        AutoSize = true, MaximumSize = new Size(pnl.Width - 28, 0), Font = FpsUi.Tiny,
+                        ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
+                        Location = new Point(14, y + 4), Text = act.Warning
+                    };
+                    pnl.Controls.Add(warn);
+                    y = warn.Location.Y + warn.PreferredSize.Height;
+                }
+            }
+            pnl.Height = y + 12;
+            return pnl;
+        }
+
         // Ré-aligne les bulles « Toi » à droite quand la largeur change.
         private void RealignUserRows()
         {
@@ -330,10 +562,33 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            int inputH = 40, m = 34, bottom = ClientSize.Height - 20;
-            _flow.SetBounds(20, 96, ClientSize.Width - 40, Math.Max(120, ClientSize.Height - 96 - inputH - 24));
-            if (_send != null) _send.SetBounds(ClientSize.Width - m - 120, bottom - inputH, 120, inputH);
-            if (_input != null) _input.SetBounds(m, bottom - inputH + 6, Math.Max(120, ClientSize.Width - m - 120 - 12 - m), inputH - 12);
+            int W = ClientSize.Width, H = ClientSize.Height, m = 34;
+
+            // Cockpit sous le sous-titre (le titre peint finit vers y ≈ 80).
+            if (_statsRow != null)
+            {
+                _statsRow.SetBounds(m, 88, Math.Max(220, W - 2 * m), 46);
+                int n = _statsRow.Controls.Count;
+                if (n > 0)
+                {
+                    int gap = 8, tw = (_statsRow.Width - (n - 1) * gap) / n, x = 0;
+                    foreach (Control t in _statsRow.Controls) { t.SetBounds(x, 0, tw, 46); x += tw + gap; }
+                }
+            }
+
+            // Pile du bas : raccourcis permanents, puis barre de saisie.
+            int inputH = 46, quickH = 30, pad = 16;
+            int barY = H - pad - inputH;
+            if (_inputBar != null)
+            {
+                _inputBar.SetBounds(m, barY, Math.Max(220, W - 2 * m), inputH);
+                if (_send != null) _send.SetBounds(_inputBar.Width - 44, 7, 36, 32);
+                if (_input != null) _input.SetBounds(16, 14, Math.Max(80, _inputBar.Width - 16 - 46 - 12), 20);
+            }
+            int quickY = barY - 6 - quickH;
+            if (_quick != null) _quick.SetBounds(m - 4, quickY, Math.Max(220, W - 2 * (m - 4)), quickH);
+
+            _flow.SetBounds(20, 142, W - 40, Math.Max(120, quickY - 10 - 142));
             RealignUserRows();
         }
 
@@ -355,7 +610,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "COPILOTE", "Le Copilote — il mesure ton PC en direct, trouve les causes et corrige avec ton accord (100 % local).");
+            PaintTitle(e.Graphics, "COPILOTE", "Cockpit local : il mesure en direct, explique son diagnostic et corrige gratuitement — toujours avec ton accord.");
         }
     }
 }

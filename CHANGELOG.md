@@ -4,6 +4,25 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.48 — Page Copilote « pro » (cockpit) + intelligence proactive
+- **Cockpit en tête de page** : 4 tuiles d'état EN DIRECT — Santé, Écrans (au max ✓ / N sous
+  le max), Ping réel (échos), Température GPU — colorées selon les seuils. La page se lit
+  comme un poste de pilotage, pas comme un simple chat.
+- **Diagnostic en CARTES d'impact** : chaque cause de l'enquête devient une carte (barre
+  d'accent + pastille « IMPACT 90 · CRITIQUE » rouge/orange/jaune) avec **son bouton de
+  correction intégré** — fini le mur de texte numéroté.
+- **Accueil proactif** : en arrivant sur la page, le Copilote a déjà jeté un œil (mesures
+  légères : écrans, disque, bibliothèques) et fait UNE proposition utile s'il y a lieu —
+  sinon il se tait.
+- **Mémoire d'une enquête à l'autre** (`bt-copilote.txt`, pistes stables uniquement) :
+  « Depuis la dernière enquête — réglé ✔ : disque · toujours là : crashs du pilote GPU ·
+  nouveau : … ». Les pistes volatiles (ping, processus) ne polluent pas le suivi.
+- **Question de clarification** : sur un signal faible, il demande « Tu veux dire “X” ? »
+  au lieu de balayer d'un « pas compris ».
+- **Barre de saisie pro** : carte arrondie + envoi compact, et **raccourcis permanents**
+  au-dessus (Enquête complète · Solutions gratuites · Test ping · Processus gourmands ·
+  Pourquoi ?) — plus besoin de remonter au message d'accueil.
+
 ## v14.47 — Le Copilote comprend les fautes de frappe, raisonne et ne propose QUE du gratuit
 - **Tolérance aux fautes de frappe** : « mon ecrqn est bloquer a 60 herz », « grqtuit »,
   « conexion »… sont compris (distance d'édition bornée par mot : 1 faute dès 5 lettres,

@@ -22,7 +22,63 @@ namespace BTOptimizer
             public int Impact;                       // 0-100, sert au tri
             public string Text;                      // « Ton écran est à 60 Hz… »
             public string Why;                       // constaté / seuil / conséquence — servi sur « pourquoi ? »
+            public string Key;                       // identifiant STABLE pour la mémoire (null = piste volatile)
             public DocAssistant.ChatAction Fix;      // correction proposée (peut être null)
+        }
+
+        // --- Mémoire d'une enquête à l'autre --------------------------------------------------
+        //  On ne mémorise que les pistes STABLES (un ping ou un processus gourmand fluctuent) :
+        //  au bilan suivant, le Copilote dit ce qui a été réglé, ce qui reste, ce qui est nouveau.
+        private static readonly string[] MemLabels =
+        {
+            "ecrans|écran sous sa fréquence", "crashgpu|crashs du pilote GPU", "disque|disque à nettoyer",
+            "biblio|bibliothèques manquantes", "reglages|réglages néfastes", "opti|optimisations inactives"
+        };
+
+        private static string MemPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-copilote.txt"); }
+        }
+
+        private static string MemLabel(string key)
+        {
+            foreach (string m in MemLabels) { int i = m.IndexOf('|'); if (m.Substring(0, i) == key) return m.Substring(i + 1); }
+            return key;
+        }
+
+        private static bool IsStable(string key)
+        {
+            foreach (string m in MemLabels) if (m.StartsWith(key + "|", StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        /// <summary>Clés stables de la dernière enquête, ou null si aucune enquête mémorisée.</summary>
+        private static HashSet<string> LoadMem()
+        {
+            try
+            {
+                if (!File.Exists(MemPath)) return null;
+                var set = new HashSet<string>(StringComparer.Ordinal);
+                foreach (string line in File.ReadAllLines(MemPath))
+                {
+                    string l = line.Trim();
+                    if (l.Length == 0 || l.StartsWith("#", StringComparison.Ordinal)) continue;
+                    if (IsStable(l)) set.Add(l);
+                }
+                return set;
+            }
+            catch { return null; }
+        }
+
+        private static void SaveMem(List<Finding> found)
+        {
+            try
+            {
+                var sb = new StringBuilder("# Dernière enquête du Copilote — pistes stables constatées\n");
+                foreach (var f in found) if (f.Key != null && IsStable(f.Key)) sb.Append(f.Key).Append('\n');
+                File.WriteAllText(MemPath, sb.ToString());
+            }
+            catch { }
         }
 
         /// <summary>Enquête complète. 'focus' oriente le vocabulaire de la conclusion
@@ -40,7 +96,7 @@ namespace BTOptimizer
                 if (screens != null) foreach (var d in screens) if (d.BelowMax) below.Add(d);
                 if (below.Count > 0)
                 {
-                    var f = new Finding { Impact = 95, Fix = ChatActions.FixScreen() };
+                    var f = new Finding { Impact = 95, Key = "ecrans", Fix = ChatActions.FixScreen() };
                     f.Text = below.Count == 1
                         ? "Ton écran tourne à " + below[0].CurrentHz + " Hz alors qu'il peut faire " + below[0].MaxHz + " Hz. "
                           + "C'est de la fluidité que tu as payée et que tu n'utilises pas — correction gratuite et immédiate."
@@ -61,7 +117,7 @@ namespace BTOptimizer
                 if (gpuErr > 0)
                     found.Add(new Finding
                     {
-                        Impact = 90,
+                        Impact = 90, Key = "crashgpu",
                         Text = "Le pilote de ta carte graphique a signalé " + gpuErr + " erreur(s) ces 14 derniers jours. "
                              + "C'est la signature des crashs « dispositif de rendu perdu » : surchauffe, overclock instable "
                              + "ou pilote abîmé. Gratuit : dépoussiérage + panneau Températures pour surveiller, et si ça "
@@ -121,7 +177,7 @@ namespace BTOptimizer
                 if (pct < 12)
                     found.Add(new Finding
                     {
-                        Impact = 80,
+                        Impact = 80, Key = "disque",
                         Text = "Ton disque système est plein à " + (100 - pct) + " % (" + freeGb.ToString("0") + " Go libres). "
                              + "Sous 10 % de libre, Windows ralentit franchement. Le nettoyage est gratuit : uniquement des "
                              + "fichiers qui se régénèrent (temporaires, caches).",
@@ -133,7 +189,7 @@ namespace BTOptimizer
                 else if (recov >= 3072)
                     found.Add(new Finding
                     {
-                        Impact = 45,
+                        Impact = 45, Key = "disque",
                         Text = "" + (recov / 1024.0).ToString("0.0") + " Go de temporaires et de caches traînent sur ton disque "
                              + "— récupérables gratuitement, sans toucher à tes fichiers.",
                         Why = "Espace récupérable — constaté : " + (recov / 1024.0).ToString("0.0") + " Go de temporaires et "
@@ -151,7 +207,7 @@ namespace BTOptimizer
                 if (missing > 0)
                     found.Add(new Finding
                     {
-                        Impact = 75,
+                        Impact = 75, Key = "biblio",
                         Text = "" + missing + " bibliothèque(s) essentielle(s) manquante(s) (Visual C++, DirectX, .NET). "
                              + "C'est la cause classique d'un jeu qui refuse de démarrer. Installation gratuite "
                              + "(runtimes Microsoft officiels), pré-cochée dans le panneau Bibliothèques.",
@@ -174,7 +230,7 @@ namespace BTOptimizer
                     var names = new List<string>(); foreach (var it in bad) names.Add(it.Name);
                     found.Add(new Finding
                     {
-                        Impact = 82,
+                        Impact = 82, Key = "reglages",
                         Text = "" + bad.Count + " réglage(s) néfaste(s) laissé(s) par un ancien « optimiseur » ou un mauvais "
                              + "guide : " + string.Join(" · ", names.ToArray()) + ". Je peux remettre les valeurs saines de "
                              + "Windows — gratuit et réversible.",
@@ -241,7 +297,7 @@ namespace BTOptimizer
                     if (st.Health < 70 && inactive > 20)
                         found.Add(new Finding
                         {
-                            Impact = 55,
+                            Impact = 55, Key = "opti",
                             Text = "" + inactive + " optimisations sont encore inactives et ton score de santé est à "
                                  + st.Health + " %. Le preset « Recommandé » couvre l'essentiel sans rien risquer — "
                                  + "gratuit et réversible, comme tout ici.",
@@ -256,6 +312,24 @@ namespace BTOptimizer
 
             found.Sort(delegate (Finding a, Finding b) { return b.Impact.CompareTo(a.Impact); });
 
+            // --- Mémoire : ce qui a changé depuis la DERNIÈRE enquête (pistes stables) ---
+            HashSet<string> prev = LoadMem();
+            string evol = null;
+            if (prev != null)
+            {
+                var cur = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var f in found) if (f.Key != null && IsStable(f.Key)) cur.Add(f.Key);
+                var done = new List<string>(); var still = new List<string>(); var fresh = new List<string>();
+                foreach (var k in prev) { if (cur.Contains(k)) still.Add(MemLabel(k)); else done.Add(MemLabel(k)); }
+                foreach (var k in cur) if (!prev.Contains(k)) fresh.Add(MemLabel(k));
+                var parts = new List<string>();
+                if (done.Count > 0) parts.Add("réglé ✔ : " + string.Join(", ", done.ToArray()));
+                if (still.Count > 0) parts.Add("toujours là : " + string.Join(", ", still.ToArray()));
+                if (fresh.Count > 0) parts.Add("nouveau : " + string.Join(", ", fresh.ToArray()));
+                if (parts.Count > 0) evol = "Depuis la dernière enquête — " + string.Join(" · ", parts.ToArray()) + ".";
+            }
+            SaveMem(found);
+
             // --- Raisonnement complet, servi si l'utilisateur demande « pourquoi ? » ---
             var why = new StringBuilder("Mon raisonnement, mesure par mesure :\n\n");
             foreach (var f in found)
@@ -269,6 +343,7 @@ namespace BTOptimizer
             var sb = new StringBuilder();
             if (found.Count == 0)
             {
+                if (evol != null) sb.Append(evol).Append("\n\n");
                 sb.Append("J'ai passé ton PC au crible");
                 if (!string.IsNullOrEmpty(focus)) sb.Append(" en cherchant ce qui pourrait expliquer « ").Append(focus).Append(" »");
                 sb.Append(" : je n'ai rien trouvé d'anormal.\n\n");
@@ -278,26 +353,29 @@ namespace BTOptimizer
                 return new DocAssistant.Reply { Text = sb.ToString(), Explain = explain };
             }
 
+            if (evol != null) sb.Append(evol).Append("\n\n");
             sb.Append("J'ai enquêté sur ton PC");
             if (!string.IsNullOrEmpty(focus)) sb.Append(" (« ").Append(focus).Append(" »)");
             sb.Append(" — ").Append(found.Count).Append(found.Count > 1 ? " causes trouvées" : " cause trouvée")
-              .Append(", de la plus lourde à la plus légère :\n\n");
-            for (int i = 0; i < found.Count; i++)
-                sb.Append(i + 1).Append(". ").Append(found[i].Text).Append("\n\n");
-            if (ok.Count > 0)
-                sb.Append("Vérifié et sain : ").Append(string.Join(" · ", ok.ToArray())).Append(".");
-            sb.Append("\n\nDemande-moi « pourquoi ? » pour le raisonnement complet, mesure par mesure.");
+              .Append(", de la plus lourde à la plus légère. Chaque carte porte sa correction gratuite quand j'en ai une :");
+
+            // Les causes deviennent des CARTES d'impact (le texte reste sobre, la structure parle).
+            var cards = new List<DocAssistant.Card>();
+            foreach (var f in found) cards.Add(new DocAssistant.Card { Impact = f.Impact, Text = f.Text, Fix = f.Fix });
+
+            var foot = new StringBuilder();
+            if (ok.Count > 0) foot.Append("Vérifié et sain : ").Append(string.Join(" · ", ok.ToArray())).Append(".\n");
+            foot.Append("Demande-moi « pourquoi ? » pour le raisonnement complet, mesure par mesure.");
 
             var plan = new List<DocAssistant.ChatAction>();
             foreach (var f in found) if (f.Fix != null) plan.Add(f.Fix);
 
-            if (plan.Count > 0)
-                sb.Append("\nCe que je peux corriger tout de suite — gratuit, et tu gardes la main :");
-
             return new DocAssistant.Reply
             {
                 Text = sb.ToString().TrimEnd(),
-                Plan = plan.Count > 0 ? plan : null,
+                Cards = cards,
+                Footer = foot.ToString().TrimEnd(),
+                Plan = plan.Count > 0 ? plan : null,   // sert au « oui » (re-présentation) — les cartes portent les boutons
                 Explain = explain
             };
         }
