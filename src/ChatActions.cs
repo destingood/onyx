@@ -646,6 +646,87 @@ namespace BTOptimizer
             return a;
         }
 
+        // ==================================================================
+        //  DÉPANNAGE PC UNIVERSEL — les grandes réparations, gratuites
+        // ==================================================================
+
+        /// <summary>Répare l'intégrité de Windows : DISM /RestoreHealth puis SFC /scannow. C'est LE
+        /// remède universel aux corruptions système (crashs, plantages, MAJ qui échoue, apps qui
+        /// ne s'ouvrent plus). Long (10-20 min), gratuit, officiel Microsoft, sans risque.</summary>
+        public static DocAssistant.ChatAction RepairWindows()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Réparer Windows (DISM + SFC, 10-20 min)";
+            a.IsChange = true;
+            a.Warning = "Lance les réparateurs officiels de Windows (DISM puis SFC). Gratuit, sans risque, mais LONG "
+                      + "(10-20 min) — tu peux continuer à utiliser le PC. Un redémarrage peut être demandé ensuite.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Réparation d'intégrité Windows (DISM /RestoreHealth puis SFC /scannow)…", 0);
+                try { Sys.RepairWindows(log); }
+                catch (Exception ex) { return Say("La réparation n'a pas pu aller au bout : " + ex.Message); }
+                return Say("✅ Réparation Windows terminée (DISM + SFC). Si des fichiers ont été réparés, redémarre le PC "
+                         + "pour finaliser. Beaucoup de problèmes « impossibles à régler » partent après ça.");
+            };
+            return a;
+        }
+
+        /// <summary>Réinitialise la PILE réseau : Winsock + TCP/IP + cache DNS/ARP + IP renouvelée.
+        /// LE remède au « plus d'internet » quand tout semble branché (souvent laissé par un VPN,
+        /// un antivirus ou un mauvais « optimiseur »). Gratuit ; un redémarrage finalise.</summary>
+        public static DocAssistant.ChatAction RepairNetwork()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Réinitialiser la connexion réseau";
+            a.IsChange = true; a.NoChain = true;
+            a.Warning = "Remet à zéro Winsock, la pile TCP/IP et les caches DNS/ARP (commandes officielles Windows). "
+                      + "Répare la plupart des « plus d'internet ». Un REDÉMARRAGE est nécessaire ensuite pour finaliser.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string sh = Sys.Sys32("netsh.exe"), ip = Sys.Sys32("ipconfig.exe");
+                try
+                {
+                    if (log != null) log("Réinitialisation réseau : Winsock…", 0);
+                    Sys.Run(sh, "winsock reset");
+                    if (log != null) log("Réinitialisation réseau : pile TCP/IP…", 0);
+                    Sys.Run(sh, "int ip reset");
+                    Sys.Run(sh, "int ipv6 reset");
+                    Sys.Run(sh, "winhttp reset proxy");
+                    Sys.Run(ip, "/flushdns");
+                    Sys.Run(ip, "/release");
+                    Sys.Run(ip, "/renew");
+                }
+                catch (Exception ex) { return Say("La réinitialisation réseau a échoué : " + ex.Message); }
+                var r = Say("✅ Pile réseau réinitialisée (Winsock, TCP/IP, DNS/ARP). ⚠ REDÉMARRE le PC pour finaliser — "
+                          + "c'est après le redémarrage que la connexion revient. Je peux le programmer :");
+                r.Action = RestartAction();
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Relance le moteur audio de Windows (services Audiosrv + AudioEndpointBuilder).
+        /// Corrige la majorité des « plus de son » sans redémarrer. Gratuit, immédiat.</summary>
+        public static DocAssistant.ChatAction RepairAudio()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Relancer le son de Windows";
+            a.IsChange = true;
+            a.Warning = "Redémarre les services audio de Windows. Le son se coupe une seconde puis revient. Sans risque.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                try
+                {
+                    if (log != null) log("Redémarrage du moteur audio (AudioEndpointBuilder + Audiosrv)…", 0);
+                    Sys.RestartService("AudioEndpointBuilder");   // porte Audiosrv (dépendance) : le relance aussi
+                }
+                catch (Exception ex) { return Say("Je n'ai pas pu relancer l'audio : " + ex.Message); }
+                return Say("✅ Moteur audio relancé. Si le son ne revient pas : vérifie le bon périphérique de sortie "
+                         + "(clic sur l'icône 🔊 près de l'horloge) et le volume de l'appli. Sinon, dis-moi et je creuse.");
+            };
+            return a;
+        }
+
         // ------------------------------------------------------------------
         //  Cerveau IA LOCAL (optionnel, gratuit) — « il répond à tout »
         // ------------------------------------------------------------------
