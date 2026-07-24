@@ -2487,7 +2487,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "mouse_markc_curve", Category = Cat.Souris, Esport = true,
+                Id = "mouse_markc_curve", Category = Cat.Souris, Recommended = true, Esport = true,
                 Name = "Courbe de souris 1:1 (fix MarkC, zéro accélération résiduelle)",
                 Desc = "Complète « désactiver l'accélération » avec les courbes SmoothMouse 1:1 de MarkC : déplacement "
                      + "strictement proportionnel, sans la moindre accélération résiduelle de Windows. Prisé pour la visée. "
