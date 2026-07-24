@@ -674,11 +674,13 @@ namespace BTOptimizer
                     r0.Action = PullModel();
                     return r0;
                 }
-                if (LocalBrain.OllamaExe() != null)
-                    return Say("Ollama est installé mais son serveur ne tourne pas : lance « Ollama » depuis le menu "
-                             + "Démarrer (il s'installe dans la zone de notification), puis redis « active l'ia ».");
-                var r = Say("Pour me donner un cerveau IA local — gratuit, open source, 100 % sur ta machine, aucune "
-                          + "donnée envoyée, aucun abonnement — il me faut Ollama :");
+                if (LocalBrain.Installed)
+                    return Say("✅ Ollama est bien installé, mais son moteur ne tourne pas à l'instant. Lance « Ollama » "
+                             + "depuis le menu Démarrer (il se met dans la zone de notification), puis redis « active l'ia » — "
+                             + "je m'occupe du reste (modèle adapté à ta machine + configuration).");
+                var r = Say("Ollama n'est pas installé sur ce PC. Je peux l'installer pour toi — gratuit, open source, "
+                          + "100 % sur ta machine, aucune donnée envoyée, aucun abonnement — puis je le configure et "
+                          + "télécharge le modèle adapté :");
                 r.Action = InstallTool("Ollama.Ollama", "Ollama (IA locale)");
                 return r;
             };
