@@ -205,7 +205,12 @@ namespace BTOptimizer
         {
             var a = new DocAssistant.ChatAction();
             a.Label = "Vérification des bibliothèques"; a.AutoRun = true; a.IsChange = false;
-            a.Run = delegate (Action<string, int> log) { return Say(LibsText()); };
+            a.Run = delegate (Action<string, int> log)
+            {
+                var r = Say(LibsText());
+                r.Action = FixLibs();          // null si rien ne manque
+                return r;
+            };
             return a;
         }
 
@@ -306,9 +311,11 @@ namespace BTOptimizer
                     sb.Append(" : ").Append(h.CpuPct.ToString("0")).Append(" % CPU · ").Append(h.RamMb).Append(" Mo\n");
                 }
                 sb.Append(top[0].CpuPct >= 25
-                    ? "\n⚠ « " + top[0].Name + " » pèse lourd — le panneau « Qui ralentit mon PC » permet de le fermer proprement (jamais un processus système)."
+                    ? "\n⚠ « " + top[0].Name + " » pèse lourd — je peux le fermer proprement (jamais un processus système)."
                     : "\nRien d'alarmant : aucun ne pèse vraiment sur les performances.");
-                return Say(sb.ToString().TrimEnd());
+                var r = Say(sb.ToString().TrimEnd());
+                if (top[0].CpuPct >= 25) r.Action = FixHog(top[0].Name);
+                return r;
             };
             return a;
         }
@@ -381,6 +388,295 @@ namespace BTOptimizer
         {
             foreach (string c in CoreProc) if (string.Equals(name, c, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
+        }
+
+        // ==================================================================
+        //  RÉPARATIONS — ce que le Copilote sait corriger LUI-MÊME (sur clic)
+        // ==================================================================
+
+        /// <summary>« 🚀 TOUT réparer » : enchaîne toutes les corrections du plan, dans l'ordre
+        /// d'impact, après UN SEUL clic explicite. Point de restauration d'abord (filet), puis
+        /// chaque étape isolément — une qui échoue n'arrête pas les autres.</summary>
+        public static DocAssistant.ChatAction AllFix(List<DocAssistant.ChatAction> steps)
+        {
+            if (steps == null || steps.Count < 2) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = "🚀 TOUT réparer (" + steps.Count + " corrections)";
+            a.IsChange = true;
+            a.Warning = "Enchaîne les " + steps.Count + " corrections ci-dessus dans l'ordre d'impact, après un "
+                      + "point de restauration (filet). Tout reste réversible. Peut prendre plusieurs minutes.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                var sb = new StringBuilder();
+                try { Sys.CreateRestorePoint("Fluide — TOUT réparer (Copilote)", log); sb.Append("🛟 Point de restauration créé.\n\n"); }
+                catch { sb.Append("⚠ Point de restauration impossible (restauration système coupée ?) — je continue, chaque étape reste réversible.\n\n"); }
+                int okN = 0;
+                foreach (var st in steps)
+                {
+                    if (st == null || st.Run == null) continue;
+                    sb.Append("• ").Append(st.Label).Append(" : ");
+                    try
+                    {
+                        DocAssistant.Reply r = st.Run(log);
+                        sb.Append(r != null && !string.IsNullOrEmpty(r.Text) ? r.Text.Split('\n')[0] : "fait").Append('\n');
+                        okN++;
+                    }
+                    catch (Exception ex) { sb.Append("échec — ").Append(ex.Message).Append('\n'); }
+                }
+                sb.Append('\n').Append("Terminé : ").Append(okN).Append('/').Append(steps.Count)
+                  .Append(" corrections passées — le tout gratuitement. Relance une enquête quand tu veux : "
+                        + "je te dirai exactement ce qui a changé.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        /// <summary>Installe toutes les bibliothèques ESSENTIELLES manquantes (runtimes Microsoft,
+        /// winget, gratuit) — null s'il ne manque rien.</summary>
+        public static DocAssistant.ChatAction FixLibs()
+        {
+            int missing; try { missing = LibScan.MissingEssentialCount(); } catch { return null; }
+            if (missing <= 0) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Installer les " + missing + " bibliothèque(s) manquante(s)";
+            a.IsChange = true;
+            a.Warning = "Installe les runtimes officiels Microsoft manquants via winget (gratuit). Peut prendre quelques minutes.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string winget = LibScan.WingetPath();
+                if (winget == null) return Say("winget est introuvable : installe « App Installer » (gratuit, Microsoft Store), puis redemande-moi.");
+                var sb = new StringBuilder();
+                int okN = 0, n = 0;
+                try
+                {
+                    foreach (var it in LibScan.Items())
+                    {
+                        if (!it.Essential) continue;
+                        bool here = true; try { here = it.Installed(); } catch { }
+                        if (here) continue;
+                        n++;
+                        bool done = false; try { done = LibScan.Install(winget, it, log); } catch { }
+                        if (done) { okN++; sb.Append("✅ ").Append(it.Name).Append('\n'); }
+                        else sb.Append("⚠ ").Append(it.Name).Append(" : échec (voir journal)\n");
+                    }
+                }
+                catch { }
+                if (n == 0) return Say("Toutes les bibliothèques essentielles sont déjà là. ✅");
+                sb.Append('\n').Append(okN).Append('/').Append(n).Append(" installée(s), sans rien payer.")
+                  .Append(okN == n ? " Tes jeux ont tout ce qu'il leur faut." : " Réessaie plus tard pour le reste.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        /// <summary>Bascule le DNS IPv4 vers un résolveur GRATUIT plus rapide — avec le même filet
+        /// que le panneau : test réel après bascule, retour arrière automatique s'il ne répond pas.</summary>
+        public static DocAssistant.ChatAction FixDns(string bestName, string[] servers)
+        {
+            if (servers == null || servers.Length == 0) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Basculer le DNS vers " + bestName;
+            a.IsChange = true;
+            a.Warning = "Change les serveurs DNS IPv4 — gratuit, réversible (panneau DNS rapide → « Automatique »). "
+                      + "Si le résolveur ne répond pas d'ici, retour arrière AUTOMATIQUE.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                try
+                {
+                    Dictionary<string, string[]> snap = Sys.SnapshotDns();
+                    Sys.SetDns(servers, log);
+                    if (DnsBench.QueryMs(servers[0], "www.google.com", 900, 2) < 0)
+                    {
+                        Sys.RestoreDnsSnapshot(snap, log);
+                        return Say("⚠ " + bestName + " ne répond pas depuis ton réseau — j'ai tout remis comme avant. Rien n'est cassé.");
+                    }
+                }
+                catch (Exception ex) { return Say("La bascule DNS a échoué : " + ex.Message); }
+                return Say("✅ DNS basculé vers " + bestName + " et vérifié en vrai — gratuit, et réversible à tout moment.");
+            };
+            return a;
+        }
+
+        /// <summary>Applique le preset « Recommandé » (réglages sûrs, réversibles) via le MOTEUR
+        /// complet de l'app : sauvegarde du registre + point de restauration AVANT, application
+        /// isolée ensuite. Null si tout le preset est déjà actif.</summary>
+        public static DocAssistant.ChatAction FixOpti()
+        {
+            List<Tweak> todo = RecommendedTodo();
+            if (todo == null || todo.Count == 0) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Appliquer le preset Recommandé (" + todo.Count + " réglages)";
+            a.IsChange = true;
+            a.Warning = "Applique les réglages sûrs du preset « Recommandé » (tous réversibles depuis Optimisations). "
+                      + "Sauvegarde du registre + point de restauration créés AVANT. Peut prendre une minute.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                List<Tweak> sel = RecommendedTodo();   // re-mesuré au moment du clic
+                if (sel == null || sel.Count == 0) return Say("Tout le preset Recommandé est déjà en place. ✅");
+                EngineResult r;
+                try { r = Engine.Run(sel, true, true, true, log); }
+                catch (Exception ex) { return Say("L'application a échoué : " + ex.Message); }
+                if (r.PrepFailed) return Say("Je n'ai RIEN appliqué : la préparation (sauvegarde) a échoué — " + r.PrepError);
+                return Say("✅ " + r.Ok + "/" + sel.Count + " réglage(s) du preset Recommandé appliqués, sauvegarde créée."
+                         + (r.RebootNeeded ? "\nUn redémarrage finalisera certains d'entre eux." : "")
+                         + "\nRéversible à tout moment depuis Optimisations.");
+            };
+            return a;
+        }
+
+        private static List<Tweak> RecommendedTodo()
+        {
+            try
+            {
+                var sel = new List<Tweak>();
+                foreach (Tweak t in Catalog.All())
+                {
+                    if (!t.Recommended) continue;
+                    bool? c = null; try { c = t.Check != null ? t.Check() : null; } catch { }
+                    if (c != true) sel.Add(t);
+                }
+                return sel;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Ferme proprement tous les processus d'un nom donné (jamais le cœur de Windows) :
+        /// fermeture douce d'abord, forcée sinon. L'appli reste installée et relançable.</summary>
+        public static DocAssistant.ChatAction FixHog(string name)
+        {
+            if (string.IsNullOrEmpty(name) || IsCore(name)) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Fermer « " + name + " »";
+            a.IsChange = true;
+            a.Warning = "Ferme cette application (fermeture douce d'abord, forcée sinon). Sauvegarde ton travail dedans avant — tu peux la relancer quand tu veux.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                int soft = 0, hard = 0;
+                try
+                {
+                    foreach (var p in System.Diagnostics.Process.GetProcessesByName(name))
+                    {
+                        try
+                        {
+                            bool polite = false;
+                            try { polite = p.CloseMainWindow(); } catch { }
+                            if (polite && p.WaitForExit(3000)) { soft++; continue; }
+                            p.Kill(true); p.WaitForExit(3000); hard++;
+                        }
+                        catch { }
+                        finally { try { p.Dispose(); } catch { } }
+                    }
+                }
+                catch { }
+                if (soft + hard == 0) return Say("« " + name + " » ne tourne plus (déjà fermé ?).");
+                return Say("✅ « " + name + " » fermé (" + (soft + hard) + " processus" + (hard > 0 ? ", dont " + hard + " forcé(s)" : "")
+                         + "). Ton CPU respire — relance-le quand tu veux.");
+            };
+            return a;
+        }
+
+        // Lancements auto non essentiels connus (gaming/fond) — coupables SANS risque : l'appli
+        // reste installée, se lance à la main, et le panneau Démarrage peut tout remettre.
+        private static readonly string[] StartupSafeCut =
+        {
+            "steam", "epic", "discord", "spotify", "riot", "gog", "galaxy", "ubisoft", "ea desktop",
+            "battle.net", "battlenet", "wallpaper", "lively", "medal", "overwolf", "megasync"
+        };
+
+        /// <summary>Coupe au démarrage les lanceurs/apps de fond CONNUS et sans risque (liste
+        /// blanche stricte) — null si aucun ne se lance au boot.</summary>
+        public static DocAssistant.ChatAction FixStartup()
+        {
+            List<Sys.StartupEntry> hit = StartupCuttable();
+            if (hit == null || hit.Count == 0) return null;
+            var names = new List<string>(); foreach (var e in hit) names.Add(e.Name);
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Couper " + hit.Count + " lancement(s) auto non essentiel(s)";
+            a.IsChange = true;
+            a.Warning = "Désactive au démarrage : " + string.Join(", ", names.ToArray()) + ". Les applis restent "
+                      + "installées et lançables à la main — réversible dans « Programmes au démarrage ».";
+            a.Run = delegate (Action<string, int> log)
+            {
+                int okN = 0;
+                var sb = new StringBuilder();
+                foreach (var e in StartupCuttable())   // re-listé au moment du clic
+                {
+                    try { Sys.SetStartupEnabled(e, false); okN++; sb.Append("✅ ").Append(e.Name).Append('\n'); }
+                    catch { sb.Append("⚠ ").Append(e.Name).Append(" : refusé\n"); }
+                }
+                if (okN == 0) return Say("Rien n'a pu être coupé (déjà fait ?).");
+                sb.Append('\n').Append(okN).Append(" lancement(s) auto coupé(s) — allumage plus rapide, moins de poids en fond. Réversible à tout moment.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        private static List<Sys.StartupEntry> StartupCuttable()
+        {
+            var hit = new List<Sys.StartupEntry>();
+            try
+            {
+                foreach (var e in Sys.ListStartup())
+                {
+                    if (!e.Enabled) continue;
+                    string hay = ((e.Name ?? "") + " " + (e.Command ?? "")).ToLowerInvariant();
+                    foreach (string k in StartupSafeCut) if (hay.Contains(k)) { hit.Add(e); break; }
+                }
+            }
+            catch { }
+            return hit;
+        }
+
+        /// <summary>Programme un VRAI redémarrage dans 60 s (annulable) — purge pilotes et fuites.
+        /// Jamais enchaîné dans « TOUT réparer » (NoChain).</summary>
+        public static DocAssistant.ChatAction RestartAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Redémarrer le PC (dans 60 s, annulable)";
+            a.IsChange = true; a.NoChain = true;
+            a.Warning = "Programme un redémarrage COMPLET dans 60 secondes — enregistre ton travail. Un bouton d'annulation apparaîtra.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                try { Sys.Run(Sys.Sys32("shutdown.exe"), "/r /t 60 /c \"Fluide : vrai redemarrage demande au Copilote (annulable)\""); }
+                catch (Exception ex) { return Say("Impossible de programmer le redémarrage : " + ex.Message); }
+                var r = Say("⏳ Redémarrage complet dans 60 secondes — enregistre ton travail.\nPour annuler, clique ci-dessous.");
+                var cancel = new DocAssistant.ChatAction();
+                cancel.Label = "Annuler le redémarrage"; cancel.IsChange = true; cancel.NoChain = true;
+                cancel.Warning = "Annule le redémarrage programmé — rien d'autre ne change.";
+                cancel.Run = delegate (Action<string, int> log2)
+                {
+                    try { Sys.Run(Sys.Sys32("shutdown.exe"), "/a"); } catch { }
+                    return Say("Redémarrage annulé. Pense à le faire à l'occasion — c'est gratuit et ça purge beaucoup de soucis.");
+                };
+                r.Action = cancel;
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Installe UN outil gratuit du catalogue par winget, depuis le chat.
+        /// Null s'il est déjà installé.</summary>
+        public static DocAssistant.ChatAction InstallTool(string wingetId, string label)
+        {
+            try { if (LibScan.InstalledById(wingetId)) return null; } catch { }
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Installer " + label + " (gratuit)";
+            a.IsChange = true;
+            a.Warning = "Installe " + label + " via winget (éditeur officiel, gratuit). Quelques minutes.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string winget = LibScan.WingetPath();
+                if (winget == null) return Say("winget est introuvable : installe « App Installer » (gratuit, Microsoft Store) puis reviens.");
+                LibScan.LibItem item = null;
+                try { foreach (var it in LibScan.Items()) if (string.Equals(it.WingetId, wingetId, StringComparison.OrdinalIgnoreCase)) { item = it; break; } }
+                catch { }
+                if (item == null) return Say("Je ne connais pas cet outil dans le catalogue.");
+                bool done = false; try { done = LibScan.Install(winget, item, log); } catch { }
+                return Say(done
+                    ? "✅ " + item.Name + " installé — double-clic dessus dans 📦 Bibliothèques pour l'ouvrir."
+                    : "⚠ L'installation de " + item.Name + " a échoué (voir journal). Réessaie plus tard.");
+            };
+            return a;
         }
 
         // ------------------------------------------------------------------
@@ -466,14 +762,19 @@ namespace BTOptimizer
                 sb.Append("• Ton DNS actuel").Append(cur != null ? " (" + cur + ")" : "").Append(" : ")
                   .Append(curMs >= 0 ? curMs.ToString("0") + " ms" : "ne répond pas").Append('\n');
                 if (bestMs >= 0) sb.Append("• ").Append(bestName).Append(" : ").Append(bestMs.ToString("0")).Append(" ms (gratuit)\n\n");
+                bool bad = (curMs < 0 && bestMs >= 0) || (curMs >= 0 && bestMs >= 0 && curMs > bestMs * 2 && curMs - bestMs >= 15);
                 if (curMs < 0 && bestMs >= 0)
-                    sb.Append("⚠ Ton DNS ne répond pas alors qu'internet marche : change-le, c'est gratuit et immédiat.");
-                else if (curMs >= 0 && bestMs >= 0 && curMs > bestMs * 2 && curMs - bestMs >= 15)
+                    sb.Append("⚠ Ton DNS ne répond pas alors qu'internet marche : je peux le basculer, c'est gratuit et immédiat.");
+                else if (bad)
                     sb.Append("⚠ Ton DNS traîne : chaque site, chaque boutique en jeu attend cette traduction. "
-                            + "Le panneau DNS rapide bascule vers le plus rapide — gratuit et réversible.");
+                            + "Je peux le basculer vers le plus rapide — gratuit et réversible.");
                 else
                     sb.Append("✅ Ton DNS répond bien — rien à gagner de ce côté.");
-                return Say(sb.ToString().TrimEnd());
+                var r = Say(sb.ToString().TrimEnd());
+                if (bad && bestName != null)
+                    r.Action = FixDns(bestName, bestName.StartsWith("Google") ? new[] { "8.8.8.8", "8.8.4.4" }
+                                                                              : new[] { "1.1.1.1", "1.0.0.1" });
+                return r;
             };
             return a;
         }
@@ -499,10 +800,12 @@ namespace BTOptimizer
                 if (on.Count > 6) sb.Append("• … et ").Append(on.Count - 6).Append(" autres\n");
                 sb.Append('\n');
                 if (on.Count >= 8) sb.Append("⚠ C'est beaucoup : chacun ralentit l'allumage ET reste souvent en fond ensuite. "
-                                           + "Le panneau « Programmes au démarrage » permet d'en couper — gratuit, réversible, sans rien désinstaller.");
+                                           + "Je peux couper les non essentiels connus — gratuit, réversible, sans rien désinstaller.");
                 else if (on.Count <= 3) sb.Append("✅ Démarrage léger — rien à couper d'urgence.");
                 else sb.Append("Raisonnable. Tu peux quand même couper ceux que tu n'utilises pas tous les jours (réversible).");
-                return Say(sb.ToString().TrimEnd());
+                var r = Say(sb.ToString().TrimEnd());
+                if (on.Count >= 8) r.Action = FixStartup();    // null si aucun connu à couper
+                return r;
             };
             return a;
         }
@@ -538,7 +841,9 @@ namespace BTOptimizer
                     sb.Append("✅ Aucun crash relevé — ta machine est stable sur la période.");
                 else
                     sb.Append("Le panneau Stabilité date chaque événement précisément et repère les motifs.");
-                return Say(sb.ToString().TrimEnd());
+                var r = Say(sb.ToString().TrimEnd());
+                if (gpu > 0) r.Action = InstallTool("Wagnardsoft.DisplayDriverUninstaller", "DDU");   // null si déjà là
+                return r;
             };
             return a;
         }
