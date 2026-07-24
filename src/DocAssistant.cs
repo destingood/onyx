@@ -259,21 +259,25 @@ namespace BTOptimizer
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
             if (best != null && bestScore >= 2)
                 return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best };
-            // Signal FAIBLE : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
-            if (best != null && bestScore == 1)
-                return new Reply
-                {
-                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule en quelques mots.",
-                    Tool = best, ShowStarters = true
-                };
 
-            // --- Dernier recours : le CERVEAU IA LOCAL (gratuit) s'il est prêt ---
-            //     Lecture seule : la question part vers le modèle qui tourne SUR cette machine.
+            // --- CERVEAU IA LOCAL (gratuit) : dès qu'il est prêt, il répond à TOUT ce que les
+            //     règles ne traitent pas avec certitude — y compris un signal PC faible (bestScore
+            //     == 1), où il vaut mieux une vraie réponse qu'un « tu veux dire… ? ». ---
             if (LocalBrain.Enabled)
                 return new Reply
                 {
-                    Text = "Ça sort de mes règles — je passe la question à mon cerveau IA local…",
+                    Text = best != null && bestScore == 1
+                        ? "Je regarde ça pour toi…"
+                        : "Bonne question — je réfléchis…",
                     Action = ChatActions.AskBrain(q.Trim(), st)
+                };
+            // Signal FAIBLE sans IA : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
+            if (best != null && bestScore == 1)
+                return new Reply
+                {
+                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule, "
+                         + "ou dis « active l'ia » pour que je réponde à tout.",
+                    Tool = best, ShowStarters = true
                 };
             if (LocalBrain.SetupStatus != null)
                 return new Reply
