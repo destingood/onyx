@@ -17,6 +17,7 @@ namespace FluideKeygen
     {
         private const char Sep = (char)0x1F;
         private const char DateSep = (char)0x1E;
+        private const char MachineSep = (char)0x1D;   // lie la cle a UN SEUL PC (meme convention que src/License.cs)
 
         // Palette Fluide
         private static readonly Color Bg = Color.FromArgb(14, 14, 22);
@@ -29,7 +30,7 @@ namespace FluideKeygen
         private static readonly Color Ok = Color.FromArgb(120, 205, 145);
         private static readonly Color Err = Color.FromArgb(240, 120, 120);
 
-        private TextBox _licensee, _note, _key;
+        private TextBox _licensee, _note, _pcid, _key;
         private RadioButton _life, _sub;
         private NumericUpDown _days;
         private Label _status, _count;
@@ -40,8 +41,8 @@ namespace FluideKeygen
         public KeygenForm()
         {
             Text = "Fluide — Générateur de licences";
-            ClientSize = new Size(880, 640);
-            MinimumSize = new Size(820, 600);
+            ClientSize = new Size(880, 712);
+            MinimumSize = new Size(820, 660);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Bg;
             ForeColor = Ink;
@@ -80,7 +81,7 @@ namespace FluideKeygen
 
             // --- Colonne gauche : formulaire d'émission --------------------
             var form = new Panel { BackColor = Bg };
-            form.SetBounds(24, 90, 360, 470);
+            form.SetBounds(24, 90, 360, 542);
             form.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Bottom;
 
             int y = 6;
@@ -88,7 +89,12 @@ namespace FluideKeygen
             _licensee = Input(); _licensee.SetBounds(0, y, 360, 28); form.Controls.Add(_licensee); y += 40;
 
             form.Controls.Add(Caption("Email / note (journal uniquement, optionnel)", 0, y)); y += 22;
-            _note = Input(); _note.SetBounds(0, y, 360, 28); form.Controls.Add(_note); y += 44;
+            _note = Input(); _note.SetBounds(0, y, 360, 28); form.Controls.Add(_note); y += 40;
+
+            form.Controls.Add(Caption("ID du PC du client  (vide = clé valable sur tout PC)", 0, y)); y += 22;
+            _pcid = Input(); _pcid.SetBounds(0, y, 360, 28);
+            _pcid.CharacterCasing = CharacterCasing.Upper;
+            form.Controls.Add(_pcid); y += 44;
 
             _life = Radio("Licence à vie", true); _life.SetBounds(0, y, 130, 24); form.Controls.Add(_life);
             _sub = Radio("Abonnement", false); _sub.SetBounds(140, y, 110, 24); form.Controls.Add(_sub);
@@ -249,20 +255,24 @@ namespace FluideKeygen
             if (_privPath == null || !File.Exists(_privPath)) { RefreshStatus(); return; }
 
             int? days = _sub.Checked ? (int?)(int)_days.Value : null;
+            string pc = (_pcid.Text ?? "").Trim();
             try
             {
                 string privXml = File.ReadAllText(_privPath);
                 DateTime? exp;
-                string token = MakeKey(privXml, name, days, out exp);
+                string token = MakeKey(privXml, name, days, pc, out exp);
                 _key.Text = token;
                 CopyText(token, _copyKey, "Copier la clé");
                 _copyKey.Text = "Copié ✓";
+
+                string note = (_note.Text ?? "").Trim();
+                if (pc.Length > 0) note = (note + "  [PC " + pc + "]").Trim();
 
                 var rec = new Rec
                 {
                     Date = DateTime.Now,
                     Licensee = name,
-                    Note = (_note.Text ?? "").Trim(),
+                    Note = note,
                     Lifetime = !days.HasValue,
                     Expiry = exp,
                     Key = token
@@ -270,7 +280,7 @@ namespace FluideKeygen
                 AppendLog(rec);
                 AddRow(rec, true);
                 UpdateCount();
-                _licensee.Clear(); _note.Clear(); _licensee.Focus();
+                _licensee.Clear(); _note.Clear(); _pcid.Clear(); _licensee.Focus();
             }
             catch (Exception ex)
             {
@@ -278,7 +288,7 @@ namespace FluideKeygen
             }
         }
 
-        private static string MakeKey(string privXml, string name, int? days, out DateTime? expiry)
+        private static string MakeKey(string privXml, string name, int? days, string machine, out DateTime? expiry)
         {
             string payload = name;
             expiry = null;
@@ -288,6 +298,9 @@ namespace FluideKeygen
                 expiry = exp;
                 payload = name + DateSep + exp.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             }
+            // VERROU MACHINE : l'ID du PC entre DANS la partie signee -> infalsifiable, et la
+            // cle sera refusee sur tout autre ordinateur.
+            if (!string.IsNullOrEmpty(machine)) payload = payload + MachineSep + machine;
             using (RSA rsa = RSA.Create())
             {
                 rsa.FromXmlString(privXml);

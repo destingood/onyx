@@ -21,9 +21,12 @@ namespace BTOptimizer
 
         private const char Sep = (char)0x1F; // séparateur d'unité entre le nom et la signature
         private const char DateSep = (char)0x1E; // sépare, DANS la partie signée, le nom de la date d'expiration
+        private const char MachineSep = (char)0x1D; // sépare, DANS la partie signée, l'ID du SEUL PC autorisé
 
         public static bool IsPro { get; private set; }
         public static string Licensee { get; private set; }
+        /// <summary>ID de l'ordinateur auquel la licence active est liée (null = clé valable sur tout PC).</summary>
+        public static string BoundMachine { get; private set; }
         /// <summary>Fin de validité de la licence active (abonnement annuel) ; null = licence à vie.</summary>
         public static DateTime? Expiry { get; private set; }
         /// <summary>Raison lisible du dernier refus d'activation ("" si rien de plus utile que « clé invalide »).</summary>
@@ -108,11 +111,12 @@ namespace BTOptimizer
         }
 
         /// <summary>Valide une clé ; si valide, passe en Pro (et l'enregistre si persist=true).
-        /// Deux formats de partie signée : « Nom » (licence à vie) ou « Nom␞AAAA-MM-JJ »
-        /// (abonnement, valable jusqu'à cette date incluse). La date est DANS la chaîne
-        /// signée RSA : elle est infalsifiable, et les clés d'avant l'abonnement (sans
-        /// date) restent valides à vie. L'expiration est contrôlée au démarrage et à
-        /// l'activation — suffisant pour une app de bureau relancée régulièrement.</summary>
+        /// Partie signée : « Nom [␞AAAA-MM-JJ] [␝ID-MACHINE] » — le nom, la date d'expiration
+        /// (abonnement) et l'ID de l'ordinateur autorisé sont TOUS dans la chaîne signée RSA,
+        /// donc infalsifiables sans la clé privée du vendeur.
+        /// • sans date → licence à vie ; • sans ID machine → clé utilisable sur n'importe quel PC
+        /// (clés historiques, restées valides) ; • AVEC ID machine → la clé ne s'active QUE sur
+        /// cet ordinateur précis (une clé = un seul PC).</summary>
         public static bool Activate(string token, bool persist)
         {
             ActivateError = "";
@@ -132,14 +136,25 @@ namespace BTOptimizer
                         HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
                     if (!ok) return false;
                 }
-                string name = signed;
+                // Partie signée : « Nom [␞AAAA-MM-JJ] [␝ID-MACHINE] ». Date ET ID machine sont
+                // DANS la signature RSA : impossible de les modifier sans la clé privée.
+                string body = signed;
+                string machine = null;
+                int k = body.IndexOf(MachineSep);
+                if (k > 0)
+                {
+                    machine = body.Substring(k + 1).Trim();
+                    body = body.Substring(0, k);
+                }
+
+                string name = body;
                 DateTime? until = null;
-                int j = signed.IndexOf(DateSep);
+                int j = body.IndexOf(DateSep);
                 if (j > 0)
                 {
-                    name = signed.Substring(0, j);
+                    name = body.Substring(0, j);
                     DateTime d;
-                    if (!DateTime.TryParseExact(signed.Substring(j + 1), "yyyy-MM-dd",
+                    if (!DateTime.TryParseExact(body.Substring(j + 1), "yyyy-MM-dd",
                         CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
                         return false; // date illisible = clé refusée (jamais « à vie » par accident)
                     if (DateTime.Now.Date > d.Date)
@@ -151,9 +166,22 @@ namespace BTOptimizer
                     }
                     until = d;
                 }
+
+                // VERROU MACHINE : une clé émise pour un PC précis ne s'active QUE sur ce PC.
+                // (Les clés sans ID machine restent valables partout — compatibilité ascendante.)
+                if (!string.IsNullOrEmpty(machine)
+                    && !string.Equals(machine, MachineId.Current, StringComparison.OrdinalIgnoreCase))
+                {
+                    ActivateError = "Cette clé est liée à un autre ordinateur."
+                        + "\r\nID de CE PC : " + MachineId.Current
+                        + "\r\nDemande une clé émise pour cet identifiant.";
+                    return false;
+                }
+
                 IsPro = true;
                 Licensee = name;
                 Expiry = until;
+                BoundMachine = string.IsNullOrEmpty(machine) ? null : machine;
                 _expiredOn = null;
                 if (persist) { try { File.WriteAllText(StorePath, token.Trim()); } catch { } }
                 return true;

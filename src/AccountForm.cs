@@ -18,7 +18,7 @@ namespace BTOptimizer
         public AccountForm()
         {
             Text = "Fluide — Mon compte";
-            ClientSize = new Size(560, 428);
+            ClientSize = new Size(560, 490);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -61,13 +61,33 @@ namespace BTOptimizer
             gLic.Controls.AddRange(new Control[] { _big, _sub, _activate });
             Controls.Add(gLic);
 
-            // --- Statistiques de la machine ------------------------------
-            var gStats = new GroupBox { Text = "Mon PC", Location = new Point(18, 232), Size = new Size(524, 116) };
-            _stats = new Label { Location = new Point(16, 28), Size = new Size(492, 78), Text = "Calcul en cours…", ForeColor = Theme.InkColor };
-            gStats.Controls.Add(_stats);
+            // --- Statistiques + identifiant de CET ordinateur -------------
+            var gStats = new GroupBox { Text = "Mon PC", Location = new Point(18, 232), Size = new Size(524, 178) };
+            _stats = new Label { Location = new Point(16, 26), Size = new Size(492, 62), Text = "Calcul en cours…", ForeColor = Theme.InkColor };
+
+            var midCap = new Label
+            {
+                Location = new Point(16, 94), Size = new Size(492, 18), ForeColor = Theme.InkDimColor,
+                Text = "ID de cet ordinateur — à communiquer pour recevoir ta clé :"
+            };
+            var mid = new TextBox
+            {
+                Location = new Point(16, 114), Size = new Size(340, 26), ReadOnly = true,
+                Font = new Font("Consolas", 11f), TextAlign = HorizontalAlignment.Center
+            };
+            try { mid.Text = MachineId.Current; } catch { mid.Text = "—"; }
+            var copyMid = new Button { Text = "Copier l'ID", Location = new Point(366, 114), Size = new Size(142, 26), FlatStyle = FlatStyle.Flat };
+            copyMid.Click += (s, e) => { try { Clipboard.SetText(mid.Text); copyMid.Text = "Copié ✓"; } catch { } };
+            var midNote = new Label
+            {
+                Location = new Point(16, 146), Size = new Size(492, 18), ForeColor = Theme.InkDimColor,
+                Text = "Chaque clé n'est activable que sur l'ordinateur pour lequel elle a été émise."
+            };
+
+            gStats.Controls.AddRange(new Control[] { _stats, midCap, mid, copyMid, midNote });
             Controls.Add(gStats);
 
-            var close = new Button { Text = "Fermer", Location = new Point(442, 360), Size = new Size(100, 32), FlatStyle = FlatStyle.Flat };
+            var close = new Button { Text = "Fermer", Location = new Point(442, 422), Size = new Size(100, 32), FlatStyle = FlatStyle.Flat };
             close.Click += (s, e) => Close();
             Controls.Add(close);
         }

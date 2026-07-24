@@ -18,7 +18,7 @@ namespace BTOptimizer
         public LicenseKeyForm(string feature)
         {
             Text = "Fluide — Version Pro";
-            ClientSize = new Size(520, 340);
+            ClientSize = new Size(520, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -99,6 +99,28 @@ namespace BTOptimizer
             {
                 _status.Text = "Essai expiré — une clé est nécessaire pour la version Pro.";
             }
+            // ID de CET ordinateur : chaque clé n'est activable que sur un seul PC, le client
+            // doit donc pouvoir communiquer cet identifiant pour qu'on lui émette sa clé.
+            Controls.Add(new Label
+            {
+                Text = "ID de cet ordinateur (à fournir pour obtenir ta clé) :",
+                Location = new Point(18, 330), AutoSize = true
+            });
+            var midBox = new TextBox
+            {
+                Location = new Point(18, 350), Size = new Size(360, 24), ReadOnly = true,
+                Font = new Font("Consolas", 10f), TextAlign = HorizontalAlignment.Center
+            };
+            try { midBox.Text = MachineId.Current; } catch { midBox.Text = "—"; }
+            Controls.Add(midBox);
+            var midCopy = new Button
+            {
+                Text = "Copier", Location = new Point(392, 350), Size = new Size(110, 24),
+                FlatStyle = FlatStyle.Flat
+            };
+            midCopy.Click += (s2, e2) => { try { Clipboard.SetText(midBox.Text); midCopy.Text = "Copié ✓"; } catch { } };
+            Controls.Add(midCopy);
+
             Theme.Apply(this);
 
             // Chemin d'achat : cette fenêtre est le passage obligé de toutes les fonctions Pro —
