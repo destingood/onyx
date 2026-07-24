@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.58 — L'identité ONYX jusqu'au bout des ongles
+- **Icône d'application régénérée** depuis le logo vectoriel (anneau d'or sur plaque
+  carbone, 9 tailles 16→256) via le nouveau hook harnais `BT_ICON` — l'Explorateur,
+  la barre des tâches et l'installateur montrent enfin le même ONYX que l'app.
+- **Landing resynchronisée** (les 2 exemplaires) : palette Carbone & Or (l'« avant »
+  passe en bleu-gris froid — l'ancien monde — au lieu d'un ambre qui singeait l'or),
+  logo serti dans l'anneau, capture d'écran fraîche du QG v14.57, bloc téléchargement
+  à jour. README, installateur Inno Setup, .bat et outils vendeur renommés ONYX.
+- Les documents de plan de lancement et posts restent volontairement intacts.
+
 ## v14.57 — Les 8 pages au diapason
 - **Système** : les courbes CPU/RAM rejoignent le trio ONYX (ivoire / émeraude — le vert
   pomme et le cyan juraient sur carbone).

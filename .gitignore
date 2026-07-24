@@ -67,3 +67,4 @@ testbin/
 # Artefacts du harnais visuel (captures/logs regenerables)
 shots-*/
 uitest-*.log
+icon*.log

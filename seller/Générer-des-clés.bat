@@ -1,9 +1,9 @@
 @echo off
-title Fluide - Generateur de licences
+title ONYX - Generateur de licences
 cd /d "%~dp0"
 
 rem  Via l'hote dotnet SIGNE (Smart App Control autorise dotnet.exe, pas un .exe local non signe).
-set "DLL=%~dp0gui\bin\Release\net10.0-windows\FluideKeygen.dll"
+set "DLL=%~dp0gui\bin\Release\net10.0-windows\ONYXKeygen.dll"
 
 if not exist "%DLL%" (
     echo Compilation du generateur...
@@ -16,7 +16,7 @@ if not exist "%DLL%" (
     )
 )
 
-echo Ouverture du generateur de cles Fluide...
+echo Ouverture du generateur de cles ONYX...
 echo (garde ce dossier "seller" PRIVE : il contient ta cle-maitresse private.xml)
 echo.
 dotnet "%DLL%"

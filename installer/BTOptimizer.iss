@@ -1,5 +1,5 @@
 ; ============================================================================
-;  Installateur Fluide (Inno Setup 6.3+)
+;  Installateur ONYX (Inno Setup 6.3+)
 ;
 ;  Compilation (le plus simple) : double-clic sur ..\Build-Installer.bat
 ;  Manuel :  1) publie l'app :  dotnet publish -c Release -o dist
@@ -13,7 +13,7 @@
 ;     s'installe et tourne SANS aucun prérequis. Idéal pour une diffusion grand public.
 ; ============================================================================
 
-#define AppName "Fluide"
+#define AppName "ONYX"
 #define AppExe "BTOptimizer.exe"
 ; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
 #ifexist "..\dist\BTOptimizer.exe"
@@ -21,7 +21,7 @@
 #else
   #define AppVersion "7.9.0.0"
 #endif
-#define AppPublisher "Fluide"
+#define AppPublisher "ONYX"
 ; Boutique officielle (cohérent avec l'app et la landing). À remplacer par l'URL de la
 ; landing hébergée dès qu'elle existe.
 #define AppURL "https://fluide.gumroad.com"
@@ -45,7 +45,7 @@ DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName} {#AppVersion}
 OutputDir=Output
-OutputBaseFilename=Fluide-Setup-{#AppVersion}
+OutputBaseFilename=ONYX-Setup-{#AppVersion}
 SetupIconFile=..\src\app.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -66,7 +66,7 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
 
 [Components]
-Name: "app";    Description: "Application Fluide";                                        Types: full compact custom; Flags: fixed
+Name: "app";    Description: "Application ONYX";                                        Types: full compact custom; Flags: fixed
 Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfileInspector)";     Types: full
 
 [Files]
@@ -140,7 +140,7 @@ begin
     Exit;
 
   case MsgBox('Le .NET Desktop Runtime 10 (x64) est requis et ne semble pas installé.' + #13#10 +
-              'Fluide ne pourra pas démarrer sans lui.' + #13#10#13#10 +
+              'ONYX ne pourra pas démarrer sans lui.' + #13#10#13#10 +
               '« Oui »  : ouvrir la page de téléchargement (rubrique « .NET Desktop Runtime »),' + #13#10 +
               '             installe le runtime puis relance ce programme.' + #13#10 +
               '« Non »  : installer quand même.' + #13#10 +

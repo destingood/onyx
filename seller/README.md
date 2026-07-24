@@ -1,6 +1,6 @@
 # Dossier VENDEUR — ne pas livrer aux clients
 
-Ce dossier contient les outils de commercialisation de Fluide. **Rien ici ne doit
+Ce dossier contient les outils de commercialisation de ONYX. **Rien ici ne doit
 être inclus dans le paquet distribué aux clients**, en particulier `private.xml`.
 
 ## 1. Générer une clé de licence Pro

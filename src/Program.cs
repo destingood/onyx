@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.57.0.0")]
-[assembly: AssemblyFileVersion("14.57.0.0")]
+[assembly: AssemblyVersion("14.58.0.0")]
+[assembly: AssemblyFileVersion("14.58.0.0")]
 
 namespace BTOptimizer
 {
@@ -85,6 +85,46 @@ namespace BTOptimizer
                 autoIds.Sort(StringComparer.Ordinal);
                 foreach (string id in autoIds) Console.WriteLine(id);
                 return;
+            }
+
+            // BT_ICON=<fichier.ico> : génère l'icône d'application ONYX (multi-tailles, entrées
+            // PNG) depuis le logo vectoriel — LA source de vérité du .ico embarqué dans l'exe.
+            string icoOut = Environment.GetEnvironmentVariable("BT_ICON");
+            if (!string.IsNullOrEmpty(icoOut))
+            {
+                int[] sizes = { 16, 20, 24, 32, 40, 48, 64, 128, 256 };
+                var pngs = new System.Collections.Generic.List<byte[]>();
+                foreach (int sz in sizes)
+                {
+                    using (var bmp = new System.Drawing.Bitmap(sz, sz))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        {
+                            g.Clear(System.Drawing.Color.Transparent);
+                            Logo.Draw(g, new System.Drawing.RectangleF(0, 0, sz, sz), FpsUi.Gold, true);
+                        }
+                        using (var ms = new System.IO.MemoryStream())
+                        { bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png); pngs.Add(ms.ToArray()); }
+                    }
+                }
+                using (var fs = System.IO.File.Create(icoOut))
+                using (var bw = new System.IO.BinaryWriter(fs))
+                {
+                    bw.Write((short)0); bw.Write((short)1); bw.Write((short)sizes.Length);
+                    int off = 6 + 16 * sizes.Length;
+                    for (int n = 0; n < sizes.Length; n++)
+                    {
+                        bw.Write((byte)(sizes[n] >= 256 ? 0 : sizes[n]));
+                        bw.Write((byte)(sizes[n] >= 256 ? 0 : sizes[n]));
+                        bw.Write((byte)0); bw.Write((byte)0);
+                        bw.Write((short)1); bw.Write((short)32);
+                        bw.Write(pngs[n].Length); bw.Write(off);
+                        off += pngs[n].Length;
+                    }
+                    foreach (var png in pngs) bw.Write(png);
+                }
+                Console.WriteLine("ICÔNE écrite : " + icoOut + " (" + sizes.Length + " tailles)");
+                Environment.Exit(0);
             }
 
             // BT_FORMSHOT=Nom1,Nom2 : capture chaque fenêtre nommée du menu ⋯ hors-écran (une par
