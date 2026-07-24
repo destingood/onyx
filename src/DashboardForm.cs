@@ -46,10 +46,14 @@ namespace BTOptimizer
             _host.Dock = DockStyle.Fill;
             _host.BackColor = FpsUi.BgMain;
             Controls.Add(_host);
+            // Réserve la largeur de la barre REPLIÉE : le contenu démarre juste après elle.
+            // Quand elle s'ouvre, elle passe PAR-DESSUS le contenu — rien n'est remis en page.
+            Padding = new Padding(RailNarrow, 0, 0, 0);
 
             BuildTools();
             BuildRail();
             Controls.Add(_rail);
+            _rail.BringToFront();   // la barre superposée doit rester au-dessus du contenu
 
             BuildTray();
             Resize += OnResizeShell;
@@ -61,6 +65,7 @@ namespace BTOptimizer
             Shown += (s, e) =>
             {
                 SetDark(); ShowPage(0);
+                if (_rail != null) { _rail.Height = ClientSize.Height; _rail.BringToFront(); }
                 // Rétablit les overlays activés au dernier lancement (le shell remplace MainForm
                 // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
@@ -77,6 +82,8 @@ namespace BTOptimizer
                 if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "Fluide", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
                 return;
             }
+            // Barre superposée (non dockée) : sa hauteur ne suit plus automatiquement la fenêtre.
+            if (_rail != null && _rail.Height != ClientSize.Height) _rail.Height = ClientSize.Height;
         }
 
         // ------------------------------------------------------------------
@@ -87,9 +94,19 @@ namespace BTOptimizer
             _toolsMenu = new ContextMenuStrip();
             var m = _toolsMenu.Items;
 
-            m.Add("🛠  Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
-            m.Add("🎚  Mode SIMPLE (interrupteurs immédiats)", null, (s, e) => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log)));
-            m.Add(new ToolStripSeparator());
+            // Les groupes de ce menu CALQUENT les catégories du rail : chaque outil avancé est
+            // rangé sous la catégorie à laquelle il appartient (Optimisations, Jeux, Check Up+,
+            // Laboratoire, Système) au lieu d'un fourre-tout « outils avancés ».
+
+            var opti = new ToolStripMenuItem("🚀  Optimisations");
+            opti.DropDownItems.Add("🛠 Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
+            opti.DropDownItems.Add("🎚 Mode SIMPLE (interrupteurs immédiats)", null, (s, e) => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log)));
+            opti.DropDownItems.Add("⚡ Config auto adaptée à mon PC (+ preuve)", null, (s, e) => OpenDialog(new AutoConfigForm(Log)));
+            opti.DropDownItems.Add(new ToolStripSeparator());
+            opti.DropDownItems.Add("💾 Exporter mon profil…", null, (s, e) => ExportProfile());
+            opti.DropDownItems.Add("💾 Importer un profil…", null, (s, e) => ImportProfile());
+            opti.DropDownItems.Add("🔁 Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
+            m.Add(opti);
 
             var jeux = new ToolStripMenuItem("🎮  Jeux");
             jeux.DropDownItems.Add("Priorité CPU par jeu", null, (s, e) => OpenDialog(new GameProfileForm(Log)));
@@ -97,76 +114,83 @@ namespace BTOptimizer
             jeux.DropDownItems.Add("Réglages Mode Jeu (exclusions)", null, (s, e) => OpenDialog(new GameModeForm(Log)));
             jeux.DropDownItems.Add("Qualité réseau en jeu", null, (s, e) => OpenDialog(new NetworkForm(Log)));
             jeux.DropDownItems.Add("Jeux & disques", null, (s, e) => OpenDialog(new DiskForm(Log)));
+            jeux.DropDownItems.Add("🧹 Jeux dormants (récupérer de l'espace)", null, (s, e) => OpenDialog(new DormantGamesForm(Log)));
             jeux.DropDownItems.Add("Boutiques & contenu en jeu", null, (s, e) => OpenDialog(new ShopFixForm(Log)));
             jeux.DropDownItems.Add("🛠 Réparer l'installation des jeux (EA/Steam/Epic/Battle.net)", null, (s, e) => OpenDialog(new LauncherFixForm(Log)));
             jeux.DropDownItems.Add("Bibliothèques & applis de jeu", null, (s, e) => OpenDialog(new LibsForm(Log)));
             jeux.DropDownItems.Add("Prérequis & installation automatique", null, (s, e) => OpenDialog(new AutoInstallForm(Log)));
             jeux.DropDownItems.Add("Exclusions antivirus (jeux)", null, (s, e) => OpenDialog(new DefenderForm(Log)));
             jeux.DropDownItems.Add("Prêt pour le match ?", null, (s, e) => OpenDialog(new TournamentForm(Log)));
+            jeux.DropDownItems.Add("Réafficher les jeux masqués", null, (s, e) =>
+            {
+                int n = GameHidden.Count;
+                if (n == 0)
+                {
+                    MessageBox.Show(this, "Aucun jeu n'est masqué.", "Fluide",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                if (MessageBox.Show(this, "Réafficher les " + n + " jeu(x) masqué(s) ?", "Fluide",
+                        MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                GameHidden.ClearAll();
+                ShowPage(2);   // page Jeux : elle se redessine a l'affichage
+            });
             m.Add(jeux);
 
-            var perf = new ToolStripMenuItem("📈  Performances & FPS");
-            perf.DropDownItems.Add("⚡ Config auto adaptée à mon PC (+ preuve)", null, (s, e) => OpenDialog(new AutoConfigForm(Log)));
-            perf.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
-            perf.DropDownItems.Add("FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
-            perf.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
-            perf.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
-            perf.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
-            perf.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
-            perf.DropDownItems.Add("🧩 BIOS & manips manuelles (XMP, ReBAR…)", null, (s, e) => OpenDialog(new BiosGuideForm(Log)));
-            m.Add(perf);
+            var check = new ToolStripMenuItem("🩺  Check Up+");
+            check.DropDownItems.Add("Santé de mon PC", null, (s, e) => OpenDialog(new HealthForm(Log)));
+            check.DropDownItems.Add("Qui ralentit mon PC ?", null, (s, e) => OpenDialog(new BloatForm(Log)));
+            check.DropDownItems.Add("Réglages néfastes", null, (s, e) => OpenDialog(new CheckupForm(Log)));
+            check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
+            check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
+            check.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
+            check.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
+            check.DropDownItems.Add("Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
+            check.DropDownItems.Add("Rapport de santé (HTML, à partager)", null, (s, e) => GenerateHealthReport());
+            check.DropDownItems.Add(new ToolStripSeparator());
+            check.DropDownItems.Add("🧰 Entretien du PC (nettoyage, TRIM, caches, DNS — 6 routines)", null, (s, e) => OpenDialog(new MaintenanceForm(Log)));
+            m.Add(check);
 
-            var lat = new ToolStripMenuItem("⏱  Latence");
-            lat.DropDownItems.Add("Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
-            lat.DropDownItems.Add("Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
-            m.Add(lat);
+            var labo = new ToolStripMenuItem("🧪  Laboratoire");
+            labo.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
+            labo.DropDownItems.Add("FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
+            labo.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
+            labo.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
+            labo.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
+            labo.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
+            labo.DropDownItems.Add("🧩 BIOS & manips manuelles (XMP, ReBAR…)", null, (s, e) => OpenDialog(new BiosGuideForm(Log)));
+            labo.DropDownItems.Add(new ToolStripSeparator());
+            labo.DropDownItems.Add("⏱ Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
+            labo.DropDownItems.Add("⏱ Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
+            m.Add(labo);
 
-            var diag = new ToolStripMenuItem("🩺  Diagnostic & santé");
-            diag.DropDownItems.Add("Santé de mon PC", null, (s, e) => OpenDialog(new HealthForm(Log)));
-            diag.DropDownItems.Add("Qui ralentit mon PC ?", null, (s, e) => OpenDialog(new BloatForm(Log)));
-            diag.DropDownItems.Add("Réglages néfastes", null, (s, e) => OpenDialog(new CheckupForm(Log)));
-            diag.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
-            diag.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
-            diag.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
-            diag.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
-            diag.DropDownItems.Add("Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
-            diag.DropDownItems.Add("Rapport de santé (HTML, à partager)", null, (s, e) => GenerateHealthReport());
-            m.Add(diag);
-
+            var sys = new ToolStripMenuItem("⚙  Système");
             var net = new ToolStripMenuItem("🌐  Réseau");
             net.DropDownItems.Add("DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
             net.DropDownItems.Add("Réglages TCP/IP", null, (s, e) => OpenDialog(new NetTuneForm(Log)));
             net.DropDownItems.Add("Trajet réseau", null, (s, e) => OpenDialog(new NetRouteForm(Log)));
-            m.Add(net);
-
-            var reg = new ToolStripMenuItem("⚙  Réglages système");
-            reg.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));
-            reg.DropDownItems.Add("Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
-            reg.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
-            reg.DropDownItems.Add("Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
-            reg.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
-            reg.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
-            reg.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
-            reg.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add(net);
+            sys.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));
+            sys.DropDownItems.Add("Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
+            sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
+            sys.DropDownItems.Add("Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
+            sys.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
+            sys.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
+            sys.DropDownItems.Add(new ToolStripSeparator());
             var autostart = new ToolStripMenuItem("Démarrer Fluide avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
-            reg.DropDownItems.Add(autostart);
+            sys.DropDownItems.Add(autostart);
             var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec Fluide »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
-            reg.DropDownItems.Add(discord);
+            sys.DropDownItems.Add(discord);
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
-            reg.DropDownItems.Add(anim);
-            reg.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
-            m.Add(reg);
+            sys.DropDownItems.Add(anim);
+            sys.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
+            m.Add(sys);
 
-            m.Add("🧰  Entretien du PC (nettoyage, TRIM, caches, DNS — 6 routines)", null, (s, e) => OpenDialog(new MaintenanceForm(Log)));
-            m.Add("🔁  Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
-
-            var prof = new ToolStripMenuItem("💾  Profil d'optimisations");
-            prof.DropDownItems.Add("Exporter mon profil…", null, (s, e) => ExportProfile());
-            prof.DropDownItems.Add("Importer un profil…", null, (s, e) => ImportProfile());
-            m.Add(prof);
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de Fluide", null, (s, e) => OpenDialog(new AboutForm()));
@@ -292,14 +316,18 @@ namespace BTOptimizer
 
         private void BuildRail()
         {
-            _rail = new Panel();
-            _rail.Dock = DockStyle.Left;
-            _rail.Width = RailNarrow;
+            _rail = new BufferedPanel();
+            // NON docké, volontairement : la barre se SUPERPOSE au contenu quand elle s'ouvre au
+            // lieu de le pousser. Avec Dock=Left, animer la largeur forçait Windows à recalculer la
+            // mise en page de toute la fenêtre — donc de la page Jeux et de ses dizaines de tuiles —
+            // à CHAQUE image : c'était l'origine du lag. En superposition, rien d'autre ne bouge.
+            _rail.Dock = DockStyle.None;
+            _rail.SetBounds(0, 0, RailNarrow, Math.Max(200, ClientSize.Height));
             _rail.BackColor = FpsUi.RailBg;
             _rail.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, _rail.Width - 1, 0, _rail.Width - 1, _rail.Height); };
 
             // --- Haut : marque + avatar. Un clic replie/déplie tout le menu. ---
-            _railBrand = new Panel { Dock = DockStyle.Top, Height = BrandH, BackColor = Color.Transparent, Cursor = Cursors.Hand };
+            _railBrand = new BufferedPanel { Dock = DockStyle.Top, Height = BrandH, BackColor = FpsUi.RailBg, Cursor = Cursors.Hand };
             _railBrand.Paint += (s, e) =>
             {
                 var gr = e.Graphics;
@@ -331,7 +359,7 @@ namespace BTOptimizer
             _rail.Controls.Add(_railBrand);
 
             // --- Bas : bloc profil (mène à « Mon compte »). ---
-            _railProfile = new Panel { Dock = DockStyle.Bottom, Height = ProfileH, BackColor = Color.Transparent, Cursor = Cursors.Hand };
+            _railProfile = new BufferedPanel { Dock = DockStyle.Bottom, Height = ProfileH, BackColor = FpsUi.RailBg, Cursor = Cursors.Hand };
             _railProfile.Paint += (s, e) => PaintProfile(e.Graphics);
             _railProfile.Click += (s, e) => OpenDialog(new AccountForm());   // Mon compte
             var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Mon compte");
@@ -695,6 +723,19 @@ namespace BTOptimizer
     /// icône + libellé (déplié). L'item actif est ENCADRÉ en néon (repère net, façon FPS Doctor),
     /// et un badge chiffré peut signaler du nouveau (jeux détectés, badges gagnés…).
     /// </summary>
+    /// <summary>
+    /// Panneau double-bufferisé et repeint intégralement au redimensionnement.
+    /// Indispensable pour animer une largeur sans scintillement ni traînées.
+    /// </summary>
+    internal class BufferedPanel : Panel
+    {
+        public BufferedPanel()
+        {
+            DoubleBuffered = true;
+            ResizeRedraw = true;   // sans ça, l'ancien contenu reste affiché après un resize
+        }
+    }
+
     internal class NavCell : Panel
     {
         private readonly string _glyph;
@@ -729,7 +770,13 @@ namespace BTOptimizer
             _glyph = glyph;
             Label = tip;
             IconId = -1;                 // par défaut : ancien rendu emoji
-            DoubleBuffered = true; BackColor = Color.Transparent; Cursor = Cursors.Hand;
+            DoubleBuffered = true;
+            ResizeRedraw = true;
+            // Fond OPAQUE (couleur du rail) et non Transparent : un fond transparent ne fait pas
+            // repeindre la zone du parent quand la cellule est redimensionnée → l'ancien contour
+            // arrondi reste à l'écran et on obtient des traînées pendant l'animation.
+            BackColor = FpsUi.RailBg;
+            Cursor = Cursors.Hand;
             var tt = new ToolTip(); tt.SetToolTip(this, tip);
             MouseEnter += (s, e) => { _hover = true; Invalidate(); };
             MouseLeave += (s, e) => { _hover = false; Invalidate(); };
