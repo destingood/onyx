@@ -276,6 +276,10 @@ namespace BTOptimizer
             new[] { "runtime;redist;redistributable", "Les runtimes (Visual C++, DirectX, .NET) sont des briques Microsoft GRATUITES dont les jeux dépendent. Il en manque une → le jeu refuse de démarrer (erreur dll). L'app les installe en 1 clic.", "Bibliothèques de jeu" },
             new[] { "smart;s.m.a.r.t", "Le S.M.A.R.T., c'est l'auto-diagnostic des disques : usure SSD, secteurs défaillants… L'app le lit nativement et te prévient AVANT la panne — sauvegarde tes données au premier ⚠.", "Jeux & disques" },
             new[] { "nagle", "L'algorithme de Nagle regroupe les petits paquets réseau pour économiser la bande passante — bien pour le web, mauvais pour le jeu (il retarde tes actions). L'app propose le réglage anti-Nagle, réversible.", "Réglages TCP/IP" },
+            new[] { "islc;standby list", "ISLC (Intelligent Standby List Cleaner) purge la « standby list » : un cache mémoire que Windows vide parfois trop tard, cause de micro-saccades sur certaines configs. Gratuit, installable en 1 clic depuis les Bibliothèques.", "Bibliothèques de jeu" },
+            new[] { "markc", "Le « MarkC fix » est la méthode historique pour désactiver TOTALEMENT l'accélération de la souris (déplacement 1:1). L'optimisation souris de l'app fait l'équivalent proprement — et c'est réversible.", "Fréquence de la souris" },
+            new[] { "sharpness;nettete;sharpen", "Le filtre de netteté NVIDIA (sharpen) redonne du piqué à l'image, utile avec DLSS/upscaling. L'app propose le réglage communautaire qui ramène l'ANCIEN filtre par jeu (EnableGR535), réversible, dans Optimisations → GPU.", null },
+            new[] { "wub;update blocker", "Windows Update Blocker (Wub) coupe le service de mise à jour : plus AUCUN correctif, même de sécurité — le PC accumule des failles connues. L'app le détecte dans « Réglages néfastes » et le répare en un clic.", "Réglages néfastes" },
         };
 
         /// <summary>« C'est quoi X ? » (ou juste « X ? ») → définition claire + l'outil lié.

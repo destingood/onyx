@@ -4,6 +4,29 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.52 — La doc CAPET digérée : le bon intégré, les pièges détectés
+Analyse du kit de tutos fourni (TUTO 1-3, ISLC, filtres NVIDIA, scripts d'inversion). La
+moitié était DÉJÀ native (accél. souris, GameDVR, services risqués en opt-in, ISLC/Autoruns/
+DDU au catalogue, Ultimate Performance, HAGS, MSI…). Le reste est intégré — et les pièges
+sont désormais détectés :
+- **2 nouvelles détections « Réglages néfastes »** (avec réparation 1 clic, héritées
+  automatiquement par l'enquête du Copilote et « TOUT réparer ») :
+  - **Windows Update bloqué** (outils type Wub) — plus aucune mise à jour, même de
+    sécurité ; réactivation à la valeur normale de Windows ;
+  - **Maintenance automatique désactivée** (MaintenanceDisabled) — re-TRIM SSD, défrag et
+    nettoyages nocturnes ne tournent plus.
+- **3 optimisations réversibles de plus** (hors presets, descriptions honnêtes) :
+  - **Fermetures et menus plus rapides** (MenuShowDelay 8 ms, applis bloquées fermées en
+    1-2 s — avertit du risque AutoEndTasks sur travail non enregistré) ;
+  - **Empêcher Windows Update d'écraser tes pilotes** (SearchOrderConfig) — le complément
+    naturel d'un nettoyage DDU ;
+  - **NVIDIA : ancien filtre de netteté** (EnableGR535) — le réglage communautaire des
+    filtres sharpness fournis.
+- **4 notions au lexique du Copilote** : ISLC/standby list, MarkC, netteté NVIDIA, Wub.
+- Non retenu, en conscience : couper la maintenance auto et bloquer Windows Update (les
+  2 détections ci-dessus font l'inverse), Spooler/DPS/RmSvc déjà en opt-in ⚠, le pack
+  « SystemProfile\Tasks\Games » (étiqueté placebo par l'auteur lui-même).
+
 ## v14.51 — Les finitions auxquelles on ne pense pas (mais qui changent tout)
 - **Progression EN DIRECT** : pendant une action longue (installation winget, « TOUT
   réparer »), la bulle « écrit… » s'élargit et relaie **chaque ligne du journal en temps

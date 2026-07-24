@@ -42,6 +42,49 @@ namespace BTOptimizer
                 ScheduledDefragOff(),
                 ClearPageFile(),
                 LargeSystemCache(),
+                UpdateBlocked(),
+                AutoMaintenanceOff(),
+            };
+        }
+
+        // Windows Update BLOQUÉ (outils type « Windows Update Blocker ») : plus AUCUNE mise à
+        // jour, y compris de sécurité — le PC accumule des failles connues et non corrigées.
+        private static Item UpdateBlocked()
+        {
+            bool off = false;
+            try { off = Sys.ServiceDisabled("wuauserv"); } catch { }
+            return new Item
+            {
+                Name = "Windows Update bloqué (service désactivé)",
+                Problem = off,
+                Security = true,
+                Status = off ? "BLOQUÉ — plus aucune mise à jour, MÊME de sécurité (failles connues non corrigées)"
+                             : "actif (bon)",
+                Fix = delegate (Action<string, int> log)
+                {
+                    Sys.ConfigureService("wuauserv", "demand", false, false);
+                    log("Windows Update réactivé (démarrage à la demande — la valeur normale de Windows).", 1);
+                }
+            };
+        }
+
+        // Maintenance automatique coupée (MaintenanceDisabled=1, courant dans les kits « boost ») :
+        // le re-TRIM SSD, la défrag HDD et les nettoyages nocturnes ne passent plus.
+        private static Item AutoMaintenanceOff()
+        {
+            bool off = Sys.IntEquals(Sys.GetMachine(
+                @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled"), 1);
+            return new Item
+            {
+                Name = "Maintenance automatique de Windows désactivée",
+                Problem = off,
+                Status = off ? "DÉSACTIVÉE — re-TRIM SSD, défrag et nettoyages nocturnes ne tournent plus (perfs qui se dégradent avec le temps)"
+                             : "active (bon)",
+                Fix = delegate (Action<string, int> log)
+                {
+                    Sys.DelMachine(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance", "MaintenanceDisabled");
+                    log("Maintenance automatique réactivée (valeur par défaut de Windows).", 1);
+                }
             };
         }
 
