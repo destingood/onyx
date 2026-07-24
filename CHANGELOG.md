@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.63 — Encore plus de vocabulaire compris
+- **Dictionnaire texto étendu à ~190 entrées** : vraiment (vrmt/vrm), trop (tro/tr), jamais
+  (jms), aujourd'hui (auj/ajd), parce que (psk/pask), ok (dak/okey/oke), en fait, faut (fo),
+  vas-y (vazy)…
+- **Vocabulaire de panne enrichi** — le Copilote comprend les mille façons de dire qu'un PC
+  déconne : ça mouline / patine / traîne / broute / rame / est poussif / à-coups ; ça
+  gèle / fige / freeze / bug / buggue / plante ; ça chauffe / brûle / fournaise / ventilo à
+  fond ; réseau qui décroche / téléporte / rubber. Variantes d'orthographe absorbées
+  (lague/laggue/lagg, freez/frize, bugg/beug…).
+- Tout passe par la même couche : abréviation développée → synonyme reconnu → faute corrigée.
+  « sa mouline de ouf » ou « mon pc beug tt le tps » sont compris.
+
 ## v14.62 — Il comprend le langage texto (abréviations + fautes)
 - **Couche d'expansion des abréviations**, appliquée AVANT tout le routage : « slt g un pb
   mon pc ram bcp pk » devient « salut j'ai un problème mon pc rame beaucoup pourquoi » et part
