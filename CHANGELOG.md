@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.73 — Ultra intelligent : il vérifie et se corrige tout seul
+- **Web d'emblée sur le factuel / récent / produits / prix** : une question comme « quel est le
+  dernier GPU NVIDIA et son prix » est vérifiée en ligne AVANT de répondre → info à jour
+  (RTX 5090) au lieu de la réponse périmée du modèle (qui affirmait « RTX 3090 Ti »). Le
+  Copilote distingue le personnel (« mon GPU plante » → mesures locales) du général
+  (« le dernier GPU » → web).
+- **Auto-vérification** : même quand il répond de tête, s'il exprime un doute OU une limite de
+  connaissances (« je ne peux pas fournir… », « à vérifier », « je ne suis pas certain »), il
+  lance une recherche web et **se corrige tout seul**, sources citées (« 🧠+🌐 je n'étais pas
+  sûr, alors j'ai vérifié »).
+- Résultat : des réponses **ancrées (RAG + mémoire), actuelles (web) et honnêtes** — il ne te
+  laisse plus avec une info fausse dite avec assurance.
+
 ## v14.72 — Base de connaissances : imports façon wiki (BookStack & co)
 - **Import direct des exports de wiki** : la base lit désormais tes fichiers **.md / .markdown /
   .html / .htm** en plus du .txt. BookStack (et la plupart des wikis) exportent une page/un livre

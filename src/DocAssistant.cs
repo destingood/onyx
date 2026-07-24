@@ -508,20 +508,27 @@ namespace BTOptimizer
         private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)
         {
             if (!LocalBrain.Enabled || LocalBrain.WebOff()) return null;
-            // On ne vole JAMAIS une question qui parle du PC (« quel est mon dernier crash ») :
-            // ça reste du ressort des mesures/réparations locales.
-            if (Has(s, "pc", "ordi", "jeu", "fps", "ram", "cpu", "gpu", "ecran", "disque", "windows",
-                       "pilote", "son", "wifi", "ping", "clavier", "souris", "bios", "ssd", "crash", "carte graphique"))
-                return null;
-            // Sujet d'ACTUALITÉ / temps réel (hors PC).
-            bool topic = Has(s, "qui a gagne", "qui gagne", "resultat", "score", "match", "meteo", "temps qu'il fait",
-                                "actualite", "actu", "news", "prix de", "coute combien", "cours de", "bourse",
-                                "date de sortie", "quand sort", "classement", "aujourd'hui", "ce soir", "cette semaine",
-                                "en ce moment", "recent", "president", "elu", "vainqueur", "champion", "film", "serie");
-            bool asks = Has(s, "qui", "quel", "quelle", "combien", "quand", "comment", "gagne", "sort", "coute", "resultat", "score");
-            if (topic && asks)
-                return new Reply { Text = "Ça, c'est de l'actualité — je vais voir sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
-            return null;
+
+            // Question sur SA machine (« mon GPU plante », « ma config rame ») → local (mesures/
+            // réparations), jamais le web. On distingue le personnel du général.
+            bool personal = Has(s, "mon pc", "ma config", "ma machine", "chez moi", "mon ordi", "mon setup")
+                         || (Has(s, "mon", "ma", "mes") && Has(s, "plante", "crash", "rame", "lag", "bug", "freeze",
+                                 "souci", "probleme", "marche pas", "demarre pas", "chauffe", "gele", "fige"));
+            if (personal) return null;
+
+            // Signaux « il faut aller chercher » : récence, produits, prix, comparatifs, actualité,
+            // culture générale factuelle. Le modèle répond souvent avec assurance MAIS périmé/faux
+            // là-dessus → on vérifie sur le web d'emblée.
+            bool needsWeb = Has(s,
+                "dernier", "derniere", "recent", "recente", "actuel", "actuelle", "nouveau", "nouvelle",
+                "meilleur", "meilleure", "top ", "prix", "coute", "combien coute", "vaut le coup", "vaut il",
+                "comparer", "comparatif", "versus", "sortie", "date de sortie", "quand sort", "quand sortira",
+                "2024", "2025", "2026", "classement", "qui a gagne", "qui gagne", "resultat", "score", "match",
+                "meteo", "actualite", "actu", "news", "president", "elu", "vainqueur", "champion", "film", "serie",
+                "cours de", "bourse", "cotation", "population de", "capitale de", "combien de", "record du");
+            if (!needsWeb) return null;
+
+            return new Reply { Text = "Je vérifie l'info à jour sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
         }
 
         /// <summary>Texte qui suit le premier marqueur trouvé, sur la question ORIGINALE (accents

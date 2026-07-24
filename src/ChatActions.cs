@@ -830,6 +830,27 @@ namespace BTOptimizer
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
+
+                // AUTO-VÉRIFICATION (« ultra intelligent ») : si le modèle DOUTE de sa propre réponse
+                // et qu'internet est actif, il va vérifier sur le web et se corrige tout seul.
+                if (LooksUnsure(ans) && LocalBrain.Enabled && !LocalBrain.WebOff())
+                {
+                    if (log != null) log("Réponse incertaine → vérification sur le web…", 0);
+                    List<WebSearch.Result> res = null;
+                    try { res = WebSearch.Query(q, 5); } catch { }
+                    if (res != null && res.Count > 0)
+                    {
+                        string better = null;
+                        try { better = LocalBrain.AskWeb(q, WebSearch.Context(res), model); } catch { }
+                        if (!string.IsNullOrEmpty(better))
+                        {
+                            LocalBrain.PushAssistant(better.Trim());
+                            return Say(better.Trim() + "\n\n— 🧠+🌐 je n'étais pas sûr, alors j'ai vérifié sur le web ("
+                                     + WebSearch.Sources(res) + ").");
+                        }
+                    }
+                }
+
                 LocalBrain.PushAssistant(ans.Trim());
                 return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
             };
@@ -897,6 +918,31 @@ namespace BTOptimizer
                 return Say(ans.Trim() + "\n\n— 🌐 recherché sur le web (" + WebSearch.Sources(res) + "), synthétisé par l'IA locale.");
             };
             return a;
+        }
+
+        // La réponse trahit-elle une incertitude / un manque d'info ? → déclenche l'auto-vérification web.
+        private static bool LooksUnsure(string ans)
+        {
+            string a = (ans ?? "").ToLowerInvariant();
+            string[] cues =
+            {
+                // doute
+                "je ne suis pas sur", "je ne suis pas certain", "je ne suis pas sûr", "pas totalement sur",
+                "je ne sais pas", "je n'ai pas l'info", "je n'ai pas d'info", "je n'ai pas acces",
+                "je n'ai pas accès", "a verifier", "à vérifier", "reste a confirmer", "je pense que",
+                "il me semble", "peut-etre", "peut etre", "sous reserve", "je ne connais pas",
+                "je n'en suis pas sur", "difficile a dire", "il faudrait verifier",
+                // refus / limite de connaissances (souvent une info RÉCENTE prise pour du futur) → à vérifier sur le web
+                "je ne peux pas fournir", "je ne peux pas répondre", "je ne peux pas repondre",
+                "je ne peux pas te dire", "je ne peux pas confirmer", "je ne peux pas savoir",
+                "je ne dispose pas", "je ne suis pas en mesure", "je n'ai pas la possibilite",
+                "au-dela de mes connaissances", "au-delà de mes connaissances", "ma base de connaissances",
+                "date de coupure", "ma derniere mise a jour", "ma dernière mise à jour", "apres ma formation",
+                "pas encore realise", "pas encore réalisé", "n'est pas encore", "futur lointain",
+                "en temps reel", "en temps réel", "informations en direct"
+            };
+            foreach (string c in cues) if (a.Contains(c)) return true;
+            return false;
         }
 
         // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
