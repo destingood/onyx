@@ -93,10 +93,19 @@ namespace BTOptimizer
             if (IsNo(s))
                 return new Reply { Text = "Pas de souci, on laisse ça de côté. Autre chose à vérifier ?", ShowStarters = true };
 
-            if (Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir"))
+            if (Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "yo", "wesh", "slt", "bonne nuit"))
                 return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
-            if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super"))
+            // « ça va ? » et ses formes familières (cava, sava, cv…). Messages COURTS seulement :
+            // « comment va mon pc » doit rester une question de santé, pas de la politesse.
+            if (SplitWords(s).Length <= 4 && !Has(s, "pc", "ordi", "jeu")
+                && Has(s, "ca va", "cava", "sava", "cv", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
+                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true };
+            if (Has(s, "au revoir", "a plus", "bye", "ciao", "a bientot", "bonne journee", "bonne soiree"))
+                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false };
+            if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super", "nickel", "cool"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
+            if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
+                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne 100 % sur ta machine (aucune donnée envoyée). Je mesure, je répare, je conseille — et si tu as activé mon cerveau IA local, je réponds à tout. Alors, on regarde quoi ?", ShowStarters = true };
 
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {
