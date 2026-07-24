@@ -10,22 +10,20 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-rem --- Lancement via l'hote dotnet (signe Microsoft) ----------------------------
-rem  Smart App Control autorise dotnet.exe (signe) : l'app tourne donc meme si un
-rem  .exe compile localement serait bloque. Le code s'execute avec les droits admin
-rem  herites de ce script.
-set "DLL=%~dp0dist\BTOptimizer.dll"
-if not exist "%DLL%" (
-    echo Build introuvable : "%DLL%"
+rem --- Lancement du build mono-fichier ------------------------------------------
+rem  Depuis PublishSingleFile (v14.45), il n'y a PLUS de BTOptimizer.dll : tout est
+rem  dans dist\BTOptimizer.exe, qui passe Smart App Control meme non signe
+rem  (verifie sur cette machine). On le lance directement ; il herite des droits
+rem  admin de ce script, donc pas de second UAC.
+set "EXE=%~dp0dist\BTOptimizer.exe"
+if not exist "%EXE%" (
+    echo Build introuvable : "%EXE%"
     echo Lance d'abord Build.bat pour compiler l'application.
     pause
     exit /b 1
 )
 
-set "DOTNET=dotnet"
-where dotnet >nul 2>&1 || set "DOTNET=%ProgramFiles%\dotnet\dotnet.exe"
-
-"%DOTNET%" "%DLL%"
+"%EXE%"
 if %errorlevel% neq 0 (
     echo.
     echo L'application s'est terminee avec le code %errorlevel%.
