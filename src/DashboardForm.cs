@@ -284,49 +284,112 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Barre laterale
         // ------------------------------------------------------------------
+        // Barre latérale repliable : étroite (icônes seules) ou large (icônes + libellés).
+        private const int RailNarrow = 66, RailWide = 232, BrandH = 64, ProfileH = 64;
+        private bool _railOpen;
+        private Panel _railBrand, _railProfile;
+        private NavCell _tools;
+
         private void BuildRail()
         {
             _rail = new Panel();
             _rail.Dock = DockStyle.Left;
-            _rail.Width = 66;
+            _rail.Width = RailNarrow;
             _rail.BackColor = FpsUi.RailBg;
             _rail.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, _rail.Width - 1, 0, _rail.Width - 1, _rail.Height); };
 
-            var brand = new Panel();
-            brand.Dock = DockStyle.Bottom; brand.Height = 62; brand.BackColor = Color.Transparent;
-            brand.Paint += (s, e) =>
+            // --- Haut : marque + avatar. Un clic replie/déplie tout le menu. ---
+            _railBrand = new Panel { Dock = DockStyle.Top, Height = BrandH, BackColor = Color.Transparent, Cursor = Cursors.Hand };
+            _railBrand.Paint += (s, e) =>
             {
-                var gr = e.Graphics; gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                int mw = 34, mx = (brand.Width - mw) / 2;
-                Logo.Draw(gr, new RectangleF(mx, 6, mw, mw), FpsUi.Neon, false);
-                TextRenderer.DrawText(gr, "Fluide", FpsUi.Tiny, new Rectangle(0, 42, brand.Width, 16), FpsUi.Neon,
-                    TextFormatFlags.HorizontalCenter);
+                var gr = e.Graphics;
+                gr.SmoothingMode = SmoothingMode.AntiAlias;
+                gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                int mw = 34, mx = _railOpen ? 16 : (_railBrand.Width - mw) / 2;
+                Logo.Draw(gr, new RectangleF(mx, (BrandH - mw) / 2f, mw, mw), FpsUi.Neon, false);
+                if (_railOpen)
+                    TextRenderer.DrawText(gr, "Fluide", FpsUi.H3,
+                        new Rectangle(mx + mw + 12, 0, _railBrand.Width - mx - mw - 20, BrandH), FpsUi.Ink,
+                        TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             };
-            var brandTip = new ToolTip(); brandTip.SetToolTip(brand, "Fluide — QG");
-            _rail.Controls.Add(brand);
+            _railBrand.Click += (s, e) => ToggleRail();
+            var brandTip = new ToolTip(); brandTip.SetToolTip(_railBrand, "Replier / déplier le menu");
+            _rail.Controls.Add(_railBrand);
+
+            // --- Bas : bloc profil (mène à la Collection de badges). ---
+            _railProfile = new Panel { Dock = DockStyle.Bottom, Height = ProfileH, BackColor = Color.Transparent, Cursor = Cursors.Hand };
+            _railProfile.Paint += (s, e) => PaintProfile(e.Graphics);
+            _railProfile.Click += (s, e) => ShowPage(5);   // page Collection
+            var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Ma collection de badges");
+            _rail.Controls.Add(_railProfile);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
             string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
-            int y = 58;
             for (int i = 0; i < glyphs.Length; i++)
             {
                 var cell = new NavCell(glyphs[i], tips[i]);
-                cell.SetBounds(9, y, 48, 48);
                 int idx = i;
                 cell.Click += (s, e) => ShowPage(idx);
                 _nav.Add(cell);
                 _rail.Controls.Add(cell);
-                y += 56;
             }
 
-            var tools = new Label();
-            tools.Text = "⋯"; tools.Font = new Font("Segoe UI", 15f);
-            tools.ForeColor = FpsUi.Dim; tools.TextAlign = ContentAlignment.MiddleCenter;
-            tools.Cursor = Cursors.Hand; tools.BackColor = Color.Transparent;
-            tools.SetBounds(9, y + 4, 48, 40);
-            var ttip = new ToolTip(); ttip.SetToolTip(tools, "Outils avancés (optimiseur complet, latence, DNS…)");
-            tools.Click += (s, e) => _toolsMenu.Show(tools, new Point(tools.Width, 0));
-            _rail.Controls.Add(tools);
+            _tools = new NavCell("⋯", "Outils avancés (optimiseur complet, latence, DNS…)");
+            _tools.Label = "Outils avancés";
+            _tools.Click += (s, e) => _toolsMenu.Show(_tools, new Point(_tools.Width, 0));
+            _rail.Controls.Add(_tools);
+
+            LayoutRail();
+        }
+
+        /// <summary>Replie / déplie la barre, avec animation de largeur si les animations sont actives.</summary>
+        private void ToggleRail()
+        {
+            _railOpen = !_railOpen;
+            int from = _rail.Width, to = _railOpen ? RailWide : RailNarrow;
+
+            foreach (NavCell c in _nav) c.Expanded = _railOpen;
+            if (_tools != null) _tools.Expanded = _railOpen;
+
+            if (Anim.On)
+                Anim.Tween(160, p => { _rail.Width = (int)(from + (to - from) * p); LayoutRail(); },
+                           () => { _rail.Width = to; LayoutRail(); });
+            else { _rail.Width = to; LayoutRail(); }
+        }
+
+        /// <summary>Place les items selon la largeur courante (marque en haut, profil en bas).</summary>
+        private void LayoutRail()
+        {
+            if (_rail == null) return;
+            int cellW = Math.Max(48, _rail.Width - 18);
+            int y = BrandH + 12;
+            foreach (NavCell c in _nav) { c.SetBounds(9, y, cellW, 48); y += 56; }
+            if (_tools != null) _tools.SetBounds(9, y + 4, cellW, 44);
+            if (_railBrand != null) _railBrand.Invalidate();
+            if (_railProfile != null) _railProfile.Invalidate();
+        }
+
+        // Bloc profil : pastille + nom + badge courant (façon « carte de membre »).
+        private void PaintProfile(Graphics gr)
+        {
+            gr.SmoothingMode = SmoothingMode.AntiAlias;
+            gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            int d = 34, x = _railOpen ? 16 : (_railProfile.Width - d) / 2, cy = (ProfileH - d) / 2;
+            var circ = new RectangleF(x, cy, d, d);
+            using (var br = new SolidBrush(Color.FromArgb(30, 129, 140, 248))) gr.FillEllipse(br, circ);
+            using (var pen = new Pen(Color.FromArgb(120, FpsUi.Neon.R, FpsUi.Neon.G, FpsUi.Neon.B), 1.4f)) gr.DrawEllipse(pen, circ);
+            Logo.Draw(gr, new RectangleF(x + 7, cy + 7, d - 14, d - 14), FpsUi.Neon, false);
+
+            if (!_railOpen) return;
+
+            int tx = x + d + 12, tw = _railProfile.Width - tx - 26;
+            TextRenderer.DrawText(gr, "DesTinGOOD", FpsUi.Small, new Rectangle(tx, cy - 1, tw, 18), FpsUi.Ink,
+                TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            TextRenderer.DrawText(gr, "Ma collection", FpsUi.Tiny, new Rectangle(tx, cy + 16, tw, 16), FpsUi.Dim,
+                TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            TextRenderer.DrawText(gr, "›", FpsUi.H3, new Rectangle(_railProfile.Width - 24, 0, 20, ProfileH), FpsUi.Dim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
 
         // ------------------------------------------------------------------
@@ -523,18 +586,39 @@ namespace BTOptimizer
     // ----------------------------------------------------------------------
     //  Icone de navigation.
     // ----------------------------------------------------------------------
+    /// <summary>
+    /// Item de la barre latérale. Deux rendus selon l'état du rail : icône seule (replié) ou
+    /// icône + libellé (déplié). L'item actif est ENCADRÉ en néon (repère net, façon FPS Doctor),
+    /// et un badge chiffré peut signaler du nouveau (jeux détectés, badges gagnés…).
+    /// </summary>
     internal class NavCell : Panel
     {
         private readonly string _glyph;
-        private bool _active, _hover;
+        private bool _active, _hover, _expanded;
+        private int _badge;
+
+        /// <summary>Libellé affiché quand le rail est déplié (par défaut : l'info-bulle).</summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public string Label { get; set; }
 
         [System.ComponentModel.Browsable(false)]
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool Active { get { return _active; } set { _active = value; Invalidate(); } }
 
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool Expanded { get { return _expanded; } set { _expanded = value; Invalidate(); } }
+
+        /// <summary>Pastille chiffrée (0 = aucune).</summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int Badge { get { return _badge; } set { _badge = value; Invalidate(); } }
+
         public NavCell(string glyph, string tip)
         {
             _glyph = glyph;
+            Label = tip;
             DoubleBuffered = true; BackColor = Color.Transparent; Cursor = Cursors.Hand;
             var tt = new ToolTip(); tt.SetToolTip(this, tip);
             MouseEnter += (s, e) => { _hover = true; Invalidate(); };
@@ -545,23 +629,55 @@ namespace BTOptimizer
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            var rf = new RectangleF(5f, 2f, Width - 8f, Height - 4f);
+            var rf = new RectangleF(5f, 2f, Width - 10f, Height - 4f);
+
             if (_active)
             {
-                // Pastille néon-teintée + BARRE néon à gauche (indicateur d'onglet actif, façon FPS Doctor).
+                // Fond teinté + CONTOUR néon : l'item courant se repère d'un coup d'œil, replié
+                // comme déplié (la barre latérale d'avant disparaissait une fois le rail élargi).
                 using (var path = FpsUi.Round(rf, 12f))
-                using (var br = new SolidBrush(Color.FromArgb(26, 129, 140, 248))) g.FillPath(br, path);
-                using (var bar = FpsUi.Round(new RectangleF(0f, Height / 2f - 13f, 3.5f, 26f), 1.75f))
-                using (var br = new SolidBrush(FpsUi.Neon)) g.FillPath(br, bar);
+                {
+                    using (var br = new SolidBrush(Color.FromArgb(26, 129, 140, 248))) g.FillPath(br, path);
+                    using (var pen = new Pen(FpsUi.Neon, 1.4f)) g.DrawPath(pen, path);
+                }
             }
             else if (_hover)
             {
                 using (var path = FpsUi.Round(rf, 12f))
                 using (var br = new SolidBrush(Color.FromArgb(16, 255, 255, 255))) g.FillPath(br, path);
             }
-            TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle,
-                _active ? FpsUi.Neon : (_hover ? FpsUi.Ink : FpsUi.Dim),
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+
+            Color fg = _active ? FpsUi.Neon : (_hover ? FpsUi.Ink : FpsUi.Dim);
+
+            if (_expanded)
+            {
+                var iconR = new Rectangle(10, 0, 38, Height);
+                TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, iconR, fg,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                var textR = new Rectangle(54, 0, Math.Max(10, Width - 54 - 30), Height);
+                TextRenderer.DrawText(g, (Label ?? "").ToUpperInvariant(), FpsUi.Small, textR, fg,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+            }
+            else
+            {
+                TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle, fg,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+
+            if (_badge > 0) PaintBadge(g);
+        }
+
+        private void PaintBadge(Graphics g)
+        {
+            string txt = _badge > 99 ? "99+" : _badge.ToString();
+            int d = 17;
+            // Déplié : à droite de la ligne. Replié : en pastille sur le coin de l'icône.
+            int bx = _expanded ? Width - d - 12 : Width / 2 + 6;
+            int by = _expanded ? (Height - d) / 2 : 5;
+            var circ = new Rectangle(bx, by, d, d);
+            using (var br = new SolidBrush(FpsUi.Neon)) g.FillEllipse(br, circ);
+            TextRenderer.DrawText(g, txt, FpsUi.Tiny, circ, FpsUi.RailBg,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
     }
 }

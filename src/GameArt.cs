@@ -104,7 +104,11 @@ namespace BTOptimizer
                     Path.Combine(lc, a, "header.jpg"),
                     Path.Combine(lc, a + "_header.jpg")
                 };
-                foreach (var c in cands) if (File.Exists(c)) { Image im = FromFile(c); if (im != null) return im; }
+                // Même filtre anti-placeholder que pour le réseau : le cache Steam contient
+                // aussi des vignettes d'attente de 1 Ko pour les jeux sans jaquette publiée.
+                foreach (var c in cands)
+                    if (File.Exists(c) && new FileInfo(c).Length >= MinArtBytes)
+                    { Image im = FromFile(c); if (im != null) return im; }
             }
             catch { }
             return null;
@@ -114,7 +118,7 @@ namespace BTOptimizer
 
         private static Image LoadDiskCache(int appId)
         {
-            try { string p = DiskPath(appId); if (File.Exists(p) && new FileInfo(p).Length > 100) return FromFile(p); }
+            try { string p = DiskPath(appId); if (File.Exists(p) && new FileInfo(p).Length >= MinArtBytes) return FromFile(p); }
             catch { }
             return null;
         }
@@ -122,6 +126,12 @@ namespace BTOptimizer
         /// <summary>Formats Steam essayés dans l'ordre. Tous les jeux n'ont PAS la jaquette
         /// portrait (library_600x900) : sans repli, un jeu récent ou un portage sortait avec
         /// une tuile vide alors que son bandeau existe. On dégrade donc proprement.</summary>
+        /// <summary>Seuil anti-placeholder. Steam sert un JPEG GRIS UNI (~1,5 Ko) pour les jeux
+        /// sans jaquette publiée : accepté, il donnait une tuile grise, moche et muette. Une vraie
+        /// jaquette 600x900 pèse 30-200 Ko, un bandeau 15-40 Ko — sous 6 Ko, ce n'est pas une image
+        /// de jeu, et on préfère retomber sur l'icône + le nom (bien plus lisible).</summary>
+        private const int MinArtBytes = 6000;
+
         private static readonly string[] ArtFiles =
         {
             "library_600x900.jpg",   // vraie jaquette verticale
@@ -142,7 +152,7 @@ namespace BTOptimizer
                 {
                     string url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/" + file;
                     byte[] data = await _http.GetByteArrayAsync(url).ConfigureAwait(false);
-                    if (data == null || data.Length < 100) continue;
+                    if (data == null || data.Length < MinArtBytes) continue;   // placeholder gris → format suivant
                     try { string p = DiskPath(appId); Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { }
                     Image img = FromBytes(data);
                     if (img != null) return img;
