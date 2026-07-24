@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.60 — Un outil pour chaque besoin, avec les risques
+- **Conseiller d'outils** (`ToolAdvisor`) : pour un besoin que l'app ne couvre pas nativement,
+  le Copilote propose le BON outil — le sien en 1 clic quand il existe, sinon une
+  **recommandation gratuite externe**, toujours accompagnée de **son risque/précaution** et de
+  « prends-le sur le site officiel ». Couvre : récupérer un fichier supprimé (Recuva), tester
+  la RAM (MemTest86), cloner/partitionner un disque, créer une clé USB Windows, scan malware
+  (Malwarebytes Free), désinstaller proprement (BCUninstaller), contrôle à distance, mot de
+  passe Windows oublié, éditeur du registre…
+- **Mises en garde intégrées** : les « driver updaters »/« PC boosters », CCleaner et les
+  **arnaques au faux support** sont explicitement déconseillés (pourquoi + quoi faire à la
+  place) — le Copilote protège l'utilisateur, il ne se contente pas de proposer.
+- **L'IA locale suit la même règle** : quand elle conseille un outil, elle doit dire qu'il est
+  gratuit, énoncer les risques et renvoyer au site officiel.
+
 ## v14.59 — Dépanneur PC universel : bien au-delà du gaming
 Le Copilote ne se limite plus aux soucis de jeu — il aide à réparer un PC quel que soit le
 problème, avec les grandes réparations gratuites et officielles :

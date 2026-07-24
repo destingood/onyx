@@ -261,6 +261,21 @@ namespace BTOptimizer
                     Action = Investigator.Action(q.Trim(), st)
                 };
 
+            // --- CONSEILLER D'OUTILS : pour un BESOIN précis (récupérer un fichier, tester la
+            //     RAM, désinstaller proprement, malware, enregistrer l'écran…), propose LE bon
+            //     outil — le sien en 1 clic, sinon un gratuit externe AVEC ses risques. Inclut des
+            //     mises en garde (outils à éviter). Placé AVANT le match de panneau : ces besoins
+            //     spécifiques priment sur une correspondance de symptôme approximative. ---
+            {
+                ToolAdvisor.Rec rec = ToolAdvisor.Advise(s);
+                if (rec != null)
+                    return new Reply
+                    {
+                        Text = rec.Text,
+                        Action = rec.WingetId != null ? ChatActions.InstallTool(rec.WingetId, ToolName(rec.WingetId)) : null
+                    };
+            }
+
             // Correspondance symptôme (score par mots-clés).
             HelpCatalog.Entry best = null; int bestScore = 0;
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
@@ -382,6 +397,14 @@ namespace BTOptimizer
                 };
 
             return null;
+        }
+
+        // Nom lisible d'un outil du catalogue à partir de son id winget (pour le bouton).
+        private static string ToolName(string wingetId)
+        {
+            try { foreach (var it in LibScan.Items()) if (string.Equals(it.WingetId, wingetId, StringComparison.OrdinalIgnoreCase)) return it.Name; }
+            catch { }
+            return wingetId;
         }
 
         private static Reply WithTool(List<HelpCatalog.Entry> entries, string toolName, string text)
