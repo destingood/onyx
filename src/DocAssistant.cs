@@ -197,6 +197,24 @@ namespace BTOptimizer
                 }
             }
 
+            // --- BASE DE CONNAISSANCES (RAG) : gestion ---
+            if (Has(s, "recharge mon savoir", "reconstruis ta base", "recharge ta base", "j'ai ajoute des documents",
+                       "actualise ta base", "reindexe"))
+            {
+                KnowledgeBase.Invalidate();
+                System.Threading.Tasks.Task.Run(() => { try { KnowledgeBase.EnsureIndex(); } catch { } });
+                return new Reply { Text = "Je relis ta base de connaissances (dossier bt-savoir) et je ré-indexe en fond. Tes documents seront pris en compte dès ta prochaine question.", ShowStarters = false };
+            }
+            if (Has(s, "que contient ta base", "ta base de connaissances", "que sais tu faire de ta base", "contenu de ta base", "tes documents"))
+                return new Reply { Text = "Ma base de connaissances contient :\n\n" + KnowledgeBase.Describe()
+                    + "\n\nPour l'enrichir, dépose des .txt/.md dans le dossier bt-savoir (dis « ou mettre mes documents ») puis « recharge mon savoir ».", ShowStarters = false };
+            if (Has(s, "ou mettre mes documents", "ou ajouter des documents", "ou deposer mes fiches", "dossier savoir", "ajouter un document"))
+            {
+                string folder = KnowledgeBase.FolderPath();
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(folder) { UseShellExecute = true }); } catch { }
+                return new Reply { Text = "Dépose tes fiches (.txt ou .md) ici :\n" + folder + "\n(le dossier vient de s'ouvrir). Puis dis « recharge mon savoir ».", ShowStarters = false };
+            }
+
             // Recherche web EXPLICITE : « cherche sur internet X », « google X »…
             if (Has(s, "cherche sur internet", "cherche sur le web", "recherche internet", "google", "sur internet", "sur le web", "recherche web"))
                 return new Reply { Text = "Je cherche ça sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };

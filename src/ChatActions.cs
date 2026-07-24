@@ -813,10 +813,20 @@ namespace BTOptimizer
                 }
                 if (log != null) log("IA locale (" + model + ") réfléchit…", 0);
                 string ans;
+                // RAG : on récupère les extraits pertinents de la base de connaissances (intégrée +
+                // tes documents) et on les ajoute au contexte → réponses ancrées et précises.
+                string sysCtx = BrainContext(st);
+                try
+                {
+                    string kb = KnowledgeBase.Search(q, 5);
+                    if (!string.IsNullOrEmpty(kb))
+                        sysCtx += "\n\n" + kb + "Appuie-toi sur ces extraits quand ils sont pertinents (cite « base de connaissances ») ; sinon, réponds avec tes propres connaissances.";
+                }
+                catch { }
                 // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
                 // (« et pourquoi ? », « développe »… gardent leur sens).
                 LocalBrain.PushUser(q);
-                try { ans = LocalBrain.AskChat(BrainContext(st), model); }
+                try { ans = LocalBrain.AskChat(sysCtx, model); }
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");

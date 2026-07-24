@@ -233,6 +233,16 @@ namespace BTOptimizer
                     if (BestModel() == null) { SetupStatus = null; return; }
                 }
 
+                // Base de connaissances (RAG) : petit modèle d'embeddings + index, si la place suit.
+                if (!HasEmbedModel() && FreeSystemGb() >= 2)
+                {
+                    SetupStatus = "téléchargement de la base de connaissances (IA)";
+                    if (log != null) log("IA locale : modèle d'embeddings (base de connaissances)…", 0);
+                    string exe3 = OllamaExe(); if (exe3 == null) exe3 = "ollama";
+                    Sys.Run(exe3, "pull " + EmbedModel, Sys.LongRunTimeoutMs);
+                }
+                try { KnowledgeBase.EnsureIndex(); } catch { }
+
                 SetEnabled(true);
                 SetupStatus = null;
                 if (log != null) log("🧠 IA locale prête (installation automatique) — le Copilote répond maintenant à tout.", 1);
@@ -323,6 +333,47 @@ namespace BTOptimizer
 
         // Modèles préférés : petits, rapides, corrects en français — du meilleur compromis au repli.
         private static readonly string[] Preferred = { "qwen2.5:7b", "qwen2.5:3b", "llama3.2:3b", "llama3.2", "qwen2.5:1.5b", "qwen2.5:0.5b", "qwen2.5", "mistral", "phi3", "gemma2" };
+
+        public const string EmbedModel = "nomic-embed-text";
+
+        /// <summary>Le modèle d'embeddings est-il téléchargé ? (pour la base de connaissances RAG)</summary>
+        public static bool HasEmbedModel()
+        {
+            try
+            {
+                string json = Http.GetStringAsync(Base + "/api/tags").Result;
+                using (var d = JsonDocument.Parse(json))
+                    foreach (var m in d.RootElement.GetProperty("models").EnumerateArray())
+                        if ((m.GetProperty("name").GetString() ?? "").StartsWith("nomic-embed", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            catch { }
+            return false;
+        }
+
+        /// <summary>Vecteur d'un texte (768 dim) via Ollama. 'isQuery' ajoute le préfixe de tâche
+        /// attendu par nomic (search_query/search_document). Null si indisponible. BLOQUANT.</summary>
+        public static float[] Embed(string text, bool isQuery)
+        {
+            try
+            {
+                string prompt = (isQuery ? "search_query: " : "search_document: ") + text;
+                var payload = new Dictionary<string, object> { { "model", EmbedModel }, { "prompt", prompt } };
+                var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                using (var cts = new System.Threading.CancellationTokenSource(20000))
+                using (var r = Http.PostAsync(Base + "/api/embeddings", body, cts.Token).Result)
+                {
+                    string json = r.Content.ReadAsStringAsync().Result;
+                    using (var d = JsonDocument.Parse(json))
+                    {
+                        var arr = d.RootElement.GetProperty("embedding");
+                        var v = new float[arr.GetArrayLength()];
+                        int i = 0; foreach (var x in arr.EnumerateArray()) v[i++] = (float)x.GetDouble();
+                        return v.Length > 0 ? v : null;
+                    }
+                }
+            }
+            catch { return null; }
+        }
 
         /// <summary>Meilleur modèle DÉJÀ téléchargé, ou null s'il n'y en a aucun.</summary>
         public static string BestModel()

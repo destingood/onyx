@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.71 — Base de connaissances IA (RAG local, gratuit)
+- **Le Copilote interroge une base de connaissances avant de répondre** (RAG 100 % local) :
+  - **base PC/gaming intégrée** (crashs & codes d'exception, FPS, réseau, drivers, BIOS/XMP,
+    réparations Windows…) ;
+  - **tes propres documents** : dépose des .txt/.md dans le dossier **bt-savoir\** et il s'en
+    sert (« où mettre mes documents » ouvre le dossier, « recharge mon savoir » ré-indexe) ;
+  - **les deux combinés**, et la recherche web en secours (v14.68) pour l'actualité.
+- **Embeddings locaux via Ollama** (nomic-embed-text, ~275 Mo, installé automatiquement) ;
+  index mis en cache (bt-kb-index.txt), reconstruit seulement si le savoir change. Aucune clé,
+  aucun abonnement.
+- À chaque question, les 4-5 extraits les plus pertinents sont donnés au modèle → réponses
+  ancrées et précises, qui s'enrichissent quand tu ajoutes des documents.
+- Commandes : « que contient ta base », « où mettre mes documents », « recharge mon savoir ».
+- Vérifié : « mon jeu plante avec violation d'accès mémoire c0000005 » → l'extrait exact
+  (c0000005 = violation d'accès mémoire) remonte en premier sur les 22 passages intégrés.
+
 ## v14.70 — La CAUSE EXACTE d'un crash (n'importe quel app/jeu)
 - **Le Copilote lit le module fautif ET le code d'exception** que Windows enregistre à chaque
   crash (Application Error 1000), puis les traduit en **cause probable + remède gratuit** via

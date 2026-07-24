@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.70.0.0")]
-[assembly: AssemblyFileVersion("14.70.0.0")]
+[assembly: AssemblyVersion("14.71.0.0")]
+[assembly: AssemblyFileVersion("14.71.0.0")]
 
 namespace BTOptimizer
 {
@@ -156,6 +156,18 @@ namespace BTOptimizer
                 string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
                 System.IO.File.WriteAllText(repOut, html, new System.Text.UTF8Encoding(false));
                 Console.WriteLine("RAPPORT écrit : " + repOut + " (" + html.Length + " octets)");
+                Environment.Exit(0);
+            }
+
+            // BT_KB=<question> : construit l'index RAG et affiche les extraits retrouvés — vérif.
+            string kbQ = Environment.GetEnvironmentVariable("BT_KB");
+            if (!string.IsNullOrEmpty(kbQ))
+            {
+                Console.WriteLine("Embed dispo : " + LocalBrain.HasEmbedModel());
+                KnowledgeBase.EnsureIndex();
+                Console.WriteLine("Base :\n" + KnowledgeBase.Describe());
+                Console.WriteLine("\nQuestion : " + kbQ);
+                Console.WriteLine("Extraits retrouvés :\n" + KnowledgeBase.Search(kbQ, 4));
                 Environment.Exit(0);
             }
 
