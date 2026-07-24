@@ -668,8 +668,9 @@ namespace BTOptimizer
                                  + "Désormais, tout ce que mes règles ne comprennent pas, je le lui demande — pose-moi "
                                  + "n'importe quelle question ! (« désactive l'ia » pour couper.)");
                     }
-                    var r0 = Say("Ollama tourne, mais aucun modèle n'est téléchargé. Je peux m'en charger "
-                               + "(llama3.2:3b, ≈ 2 Go, gratuit, une seule fois — il tourne ensuite hors-ligne) :");
+                    LocalBrain.ModelPick pk = LocalBrain.ChooseModel();
+                    var r0 = Say("Ollama tourne, mais aucun modèle n'est téléchargé. J'ai choisi celui qui convient le "
+                               + "mieux à ta machine : " + pk.Human + " — gratuit, une seule fois, il tourne ensuite hors-ligne :");
                     r0.Action = PullModel();
                     return r0;
                 }
@@ -684,24 +685,25 @@ namespace BTOptimizer
             return a;
         }
 
-        /// <summary>Télécharge le petit modèle multilingue de référence (une seule fois).</summary>
+        /// <summary>Télécharge le modèle ADAPTÉ à la machine (une seule fois).</summary>
         public static DocAssistant.ChatAction PullModel()
         {
+            LocalBrain.ModelPick pick = LocalBrain.ChooseModel();
             var a = new DocAssistant.ChatAction();
-            a.Label = "Télécharger le modèle (≈ 2 Go, gratuit)";
+            a.Label = "Télécharger le modèle (" + pick.Human.Split('—')[0].Trim() + ", gratuit)";
             a.IsChange = true;
-            a.Warning = "Télécharge llama3.2:3b via Ollama (une seule fois, ≈ 2 Go). Le modèle tourne ensuite 100 % "
-                      + "hors-ligne sur ta machine. Peut prendre plusieurs minutes selon ta connexion.";
+            a.Warning = "Télécharge " + pick.Human + " via Ollama (une seule fois). Modèle choisi pour TA config. "
+                      + "Il tourne ensuite 100 % hors-ligne. Peut prendre plusieurs minutes selon ta connexion.";
             a.Run = delegate (Action<string, int> log)
             {
                 string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
-                if (log != null) log("Téléchargement du modèle llama3.2:3b (Ollama)…", 0);
-                try { Sys.Run(exe, "pull llama3.2:3b"); }
+                if (log != null) log("Téléchargement du modèle " + pick.Tag + " (Ollama)…", 0);
+                try { Sys.Run(exe, "pull " + pick.Tag); }
                 catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
                 if (LocalBrain.BestModel() != null)
                 {
                     LocalBrain.SetEnabled(true);
-                    return Say("🧠 Modèle prêt — IA locale ACTIVÉE. Pose-moi n'importe quelle question !");
+                    return Say("🧠 Modèle prêt (" + pick.Tag + ") — IA locale ACTIVÉE. Pose-moi n'importe quelle question !");
                 }
                 return Say("Le modèle ne s'est pas installé (connexion ? espace disque ?). Réessaie dans un moment.");
             };
