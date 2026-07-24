@@ -22,6 +22,11 @@ signing.local.cfg
 seller/private.xml
 seller/bin/
 seller/obj/
+seller/gui/bin/
+seller/gui/obj/
+# Generateur de cles compile a la racine (outil vendeur - binaire non versionne)
+/FluideKeygen.exe
+/FluideKeygen.pdb
 installer/Output/
 installer/Output-fix/
 installer/Output*/

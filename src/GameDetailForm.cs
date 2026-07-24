@@ -51,6 +51,14 @@ namespace BTOptimizer
             try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { }   // barre de titre sombre
         }
 
+        /// <summary>Composite (WS_EX_COMPOSITED) : la fiche ET tous ses enfants sont rendus dans
+        /// un seul back-buffer. Sans ça, l'intégration dans la page repeint par morceaux et
+        /// laisse des carrés noirs le temps de la transition (même idiome que BufferedFlow).</summary>
+        protected override CreateParams CreateParams
+        {
+            get { var cp = base.CreateParams; cp.ExStyle |= 0x02000000; return cp; }
+        }
+
         private const int Pad = 40;        // marge de page
         private const int CoverW = 320;    // largeur de la jaquette (colonne droite)
 

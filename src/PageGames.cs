@@ -363,10 +363,15 @@ namespace BTOptimizer
                 // une Form pendant son propre FormClosing laisse une fenêtre fantôme.
                 f.FormClosing += (s, e) => { e.Cancel = true; try { BeginInvoke((Action)CloseDetail); } catch { } };
                 _detail = f;
+                // Échange en une seule passe de layout, fiche invisible tant qu'elle n'est
+                // pas positionnée : sinon on voit la page se recomposer morceau par morceau.
+                SuspendLayout();
+                f.Visible = false;
                 ShowLibraryChrome(false);
                 Controls.Add(f);
-                f.Show();
                 f.BringToFront();
+                ResumeLayout(true);
+                f.Show();
             }
             catch { CloseDetail(); }
         }
@@ -375,10 +380,12 @@ namespace BTOptimizer
         {
             if (_detail == null) return;
             var f = _detail; _detail = null;
+            SuspendLayout();
+            try { f.Visible = false; Controls.Remove(f); } catch { }
             ShowLibraryChrome(true);
-            try { Controls.Remove(f); } catch { }
-            try { f.Dispose(); } catch { }
             try { if (_flow != null) _flow.BringToFront(); } catch { }
+            ResumeLayout(true);
+            try { f.Dispose(); } catch { }
         }
 
         private void ShowLibraryChrome(bool on)
