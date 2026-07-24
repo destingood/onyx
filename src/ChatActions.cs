@@ -826,6 +826,42 @@ namespace BTOptimizer
             return a;
         }
 
+        // ------------------------------------------------------------------
+        //  RECHERCHE WEB — le Copilote va chercher l'info d'actualité en ligne
+        // ------------------------------------------------------------------
+        /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
+        /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
+        public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Recherche web"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (LocalBrain.WebOff())
+                    return Say("La recherche internet est coupée. Dis « active internet » pour que je puisse chercher l'actualité en ligne.");
+                if (log != null) log("Recherche web (DuckDuckGo)…", 0);
+                List<WebSearch.Result> res;
+                try { res = WebSearch.Query(q, 5); }
+                catch { res = null; }
+                if (res == null || res.Count == 0)
+                    return Say("Je n'ai pas réussi à joindre le web (hors-ligne ?) ou rien trouvé. Réessaie, ou reformule ta recherche.");
+                if (!LocalBrain.ServerUp(1500) || LocalBrain.BestModel() == null)
+                {
+                    // Pas d'IA pour résumer : on donne quand même les meilleurs résultats bruts.
+                    var sb = new StringBuilder("🌐 Voici ce que j'ai trouvé sur le web :\n\n");
+                    foreach (var r in res) { sb.Append("• ").Append(r.Title); if (!string.IsNullOrEmpty(r.Domain)) sb.Append("  (").Append(r.Domain).Append(')'); sb.Append('\n'); }
+                    return Say(sb.ToString().TrimEnd());
+                }
+                string ans;
+                try { ans = LocalBrain.AskWeb(q, WebSearch.Context(res), LocalBrain.BestModel()); }
+                catch (Exception ex) { return Say("La synthèse a échoué : " + ex.Message); }
+                if (string.IsNullOrEmpty(ans))
+                    return Say("Je n'ai pas pu résumer les résultats. Sources : " + WebSearch.Sources(res) + ".");
+                return Say(ans.Trim() + "\n\n— 🌐 recherché sur le web (" + WebSearch.Sources(res) + "), synthétisé par l'IA locale.");
+            };
+            return a;
+        }
+
         // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
         private static string BrainContext(BadgeCatalog.Stats st)
         {
@@ -834,7 +870,7 @@ namespace BTOptimizer
             sb.Append("Réponds à N'IMPORTE QUELLE question (PC, jeux, culture générale, aide, conseils…), en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
             sb.Append("HONNÊTETÉ AVANT TOUT : si tu n'es pas sûr, DIS-LE clairement (« Je ne suis pas certain, mais… », « À vérifier »). ");
             sb.Append("N'invente JAMAIS un fait, un chiffre, une date ou une mesure du PC : mieux vaut admettre « je ne sais pas » qu'affirmer du faux. ");
-            sb.Append("Tu n'as PAS accès à internet ni à l'heure réelle, la météo ou l'actualité du jour : dis-le si on te le demande, et propose ce que tu peux faire à la place. ");
+            sb.Append("Pour une info d'ACTUALITÉ ou de temps réel (résultat de match, météo, prix, news du jour), tu ne la connais pas de tête, MAIS le Copilote peut chercher sur le web : invite l'utilisateur à demander « cherche sur internet … » (ou réponds simplement, une recherche web sera lancée). ");
             sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
             sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit rester gratuit. ");
             sb.Append("Quand tu conseilles un OUTIL, dis toujours (1) qu'il est gratuit, (2) ses RISQUES ou précautions "

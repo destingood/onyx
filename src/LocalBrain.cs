@@ -50,6 +50,23 @@ namespace BTOptimizer
             try { if (File.Exists(OffPath)) File.Delete(OffPath); } catch { }
         }
 
+        // --- Recherche web (actualité / temps réel). Activée par défaut quand l'IA tourne ;
+        //     « coupe internet » écrit ce drapeau pour rester 100 % hors-ligne. ---
+        private static string WebOffPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-web-off.txt"); }
+        }
+        public static bool WebOff() { try { return File.Exists(WebOffPath); } catch { return false; } }
+        public static void SetWebEnabled(bool on)
+        {
+            try
+            {
+                if (on) { if (File.Exists(WebOffPath)) File.Delete(WebOffPath); }
+                else File.WriteAllText(WebOffPath, "Recherche internet coupée par l'utilisateur — le Copilote reste 100 % hors-ligne.\n");
+            }
+            catch { }
+        }
+
         private static string ConsentPath
         {
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-consent.txt"); }
@@ -443,6 +460,30 @@ namespace BTOptimizer
                 { "prompt", question },
                 { "stream", false },
                 { "options", new Dictionary<string, object> { { "temperature", 0.4 }, { "num_predict", 350 } } }
+            };
+            var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using (var r = Http.PostAsync(Base + "/api/generate", body).Result)
+            {
+                string json = r.Content.ReadAsStringAsync().Result;
+                using (var d = JsonDocument.Parse(json))
+                    return d.RootElement.GetProperty("response").GetString();
+            }
+        }
+
+        /// <summary>Répond à une question EN S'APPUYANT sur des résultats web fournis (RAG) :
+        /// le modèle reste local, mais raisonne sur des infos fraîches récupérées sur internet.
+        /// BLOQUANT (tâche de fond).</summary>
+        public static string AskWeb(string question, string webContext, string model)
+        {
+            if (string.IsNullOrEmpty(model)) return null;
+            string sys = "Tu es le Copilote. On vient de faire une RECHERCHE WEB pour toi ; les résultats sont ci-dessous. "
+                       + "Réponds à la question de l'utilisateur en t'appuyant UNIQUEMENT sur ces résultats, en FRANÇAIS, "
+                       + "ton direct, 120 mots max. Donne la réponse d'abord, puis cite brièvement la source (le site). "
+                       + "Si les résultats ne contiennent pas la réponse, dis-le honnêtement — n'invente rien.\n\n" + webContext;
+            var payload = new Dictionary<string, object>
+            {
+                { "model", model }, { "system", sys }, { "prompt", question }, { "stream", false },
+                { "options", new Dictionary<string, object> { { "temperature", 0.3 }, { "num_predict", 320 } } }
             };
             var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using (var r = Http.PostAsync(Base + "/api/generate", body).Result)

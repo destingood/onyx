@@ -151,6 +151,25 @@ namespace BTOptimizer
                 LocalBrain.ResetHistory();
                 return new Reply { Text = "C'est oublié — on repart sur une page blanche. Qu'est-ce que je peux faire pour toi ?", ShowStarters = true };
             }
+            // Activer / couper la recherche internet (« coupe » testé avant « active »).
+            if (Has(s, "coupe internet", "coupe la recherche", "sans internet", "reste hors ligne", "mode hors ligne", "desactive internet"))
+            {
+                LocalBrain.SetWebEnabled(false);
+                return new Reply { Text = "Recherche internet coupée — je reste 100 % hors-ligne (mesures, réparations, IA locale sur ce PC). Dis « active internet » pour la rétablir.", ShowStarters = true };
+            }
+            if (Has(s, "active internet", "activer internet", "connecte toi", "connexion internet", "va sur internet", "acces internet"))
+            {
+                LocalBrain.SetWebEnabled(true);
+                return new Reply { Text = "Recherche internet activée : pour l'actualité et le temps réel (résultats de match, météo, prix…), je vais chercher en ligne puis je te réponds. Vas-y, demande !", ShowStarters = true };
+            }
+            // Recherche web EXPLICITE : « cherche sur internet X », « google X »…
+            if (Has(s, "cherche sur internet", "cherche sur le web", "recherche internet", "google", "sur internet", "sur le web", "recherche web"))
+                return new Reply { Text = "Je cherche ça sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
+            // Questions d'ACTUALITÉ / TEMPS RÉEL que l'IA locale ne peut pas connaître → recherche web.
+            {
+                Reply web = MaybeWeb(s, q, st);
+                if (web != null) return web;
+            }
             if (Has(s, "active l'ia", "activer l'ia", "active ton ia", "ia locale", "mon ia", "cerveau ia", "ollama", "intelligence artificielle"))
                 return new Reply
                 {
@@ -424,6 +443,28 @@ namespace BTOptimizer
                     ShowStarters = false
                 };
 
+            return null;
+        }
+
+        /// <summary>Détecte une question d'ACTUALITÉ / temps réel (résultat, météo, prix, news,
+        /// date récente…) que le modèle local ne peut pas connaître → recherche web. Renvoie null
+        /// si ce n'est pas ce cas (ou si l'IA/web sont indisponibles : on laisse le routage normal).</summary>
+        private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)
+        {
+            if (!LocalBrain.Enabled || LocalBrain.WebOff()) return null;
+            // On ne vole JAMAIS une question qui parle du PC (« quel est mon dernier crash ») :
+            // ça reste du ressort des mesures/réparations locales.
+            if (Has(s, "pc", "ordi", "jeu", "fps", "ram", "cpu", "gpu", "ecran", "disque", "windows",
+                       "pilote", "son", "wifi", "ping", "clavier", "souris", "bios", "ssd", "crash", "carte graphique"))
+                return null;
+            // Sujet d'ACTUALITÉ / temps réel (hors PC).
+            bool topic = Has(s, "qui a gagne", "qui gagne", "resultat", "score", "match", "meteo", "temps qu'il fait",
+                                "actualite", "actu", "news", "prix de", "coute combien", "cours de", "bourse",
+                                "date de sortie", "quand sort", "classement", "aujourd'hui", "ce soir", "cette semaine",
+                                "en ce moment", "recent", "president", "elu", "vainqueur", "champion", "film", "serie");
+            bool asks = Has(s, "qui", "quel", "quelle", "combien", "quand", "comment", "gagne", "sort", "coute", "resultat", "score");
+            if (topic && asks)
+                return new Reply { Text = "Ça, c'est de l'actualité — je vais voir sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
             return null;
         }
 

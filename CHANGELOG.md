@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.68 — Le Copilote se connecte à internet (actualité en temps réel)
+- **Recherche web** : pour les questions d'actualité que le modèle ne peut pas connaître de tête
+  (« qui a gagné le match ? », météo, prix, news, dates de sortie…), le Copilote **cherche sur
+  le web** (DuckDuckGo) puis fait **répondre le modèle LOCAL à partir des résultats**, en citant
+  la source. Vérifié : « qui a gagné la Ligue des Champions » → « le Paris Saint-Germain »,
+  d'après wikipedia.org.
+- **Déclenchement** : automatique sur une question d'actualité (jamais sur un souci PC, qui reste
+  traité en local), ou explicite avec « cherche sur internet … » / « google … ».
+- **Transparence & contrôle** : la réponse indique « 🌐 recherché sur le web (sources) » ; la
+  recherche est le SEUL moment où l'app sort sur internet. « coupe internet » repasse en
+  100 % hors-ligne, « active internet » la rétablit.
+- Si l'IA n'est pas dispo pour synthétiser, le Copilote affiche quand même les meilleurs
+  résultats bruts. RAG local : aucune clé, aucun abonnement.
+
 ## v14.67 — IA locale : installateur + fiabilité du téléchargement
 - **L'installateur propose l'IA** : case « Installer le cerveau IA local (gratuit, ~2 Go) »
   cochée par défaut. Cochée → l'app installe Ollama et le modèle ADAPTÉ à la machine au 1er
