@@ -23,6 +23,25 @@ namespace BTOptimizer
             @"\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector"
         };
 
+        // Courbes SmoothMouse « MarkC » : mapping strictement 1:1 (aucune accélération résiduelle),
+        // et courbes par défaut de Windows pour le rétablissement. 40 octets chacune (5 × 8).
+        private static readonly byte[] MarkCX_1to1 = {
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0xC0,0xCC,0x0C,0x00,0x00,0x00,0x00,0x00,
+            0x80,0x99,0x19,0x00,0x00,0x00,0x00,0x00, 0x40,0x66,0x26,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x33,0x33,0x00,0x00,0x00,0x00,0x00 };
+        private static readonly byte[] MarkCY_1to1 = {
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x38,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x00,0x70,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0xA8,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x00,0xE0,0x00,0x00,0x00,0x00,0x00 };
+        private static readonly byte[] MarkCX_Default = {
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x15,0x6E,0x00,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x40,0x01,0x00,0x00,0x00,0x00,0x00, 0x29,0xDC,0x03,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x00,0x28,0x00,0x00,0x00,0x00,0x00 };
+        private static readonly byte[] MarkCY_Default = {
+            0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0xFD,0x11,0x01,0x00,0x00,0x00,0x00,0x00,
+            0x00,0x24,0x04,0x00,0x00,0x00,0x00,0x00, 0x00,0xFC,0x12,0x00,0x00,0x00,0x00,0x00,
+            0x00,0xC0,0xBB,0x01,0x00,0x00,0x00,0x00 };
+
         public static List<Tweak> All()
         {
             var list = new List<Tweak>();
@@ -2440,6 +2459,56 @@ namespace BTOptimizer
                 Apply  = () => Sys.ConfigureService("RmSvc", "disabled", true, false),
                 Revert = () => Sys.ConfigureService("RmSvc", "demand", false, false),
                 Check  = () => Sys.ServiceDisabled("RmSvc")
+            });
+
+            // ---- Compléments du pack CAPET (TUTO 2/3) non encore couverts ----
+            list.Add(new Tweak
+            {
+                Id = "background_apps_policy", Category = Cat.Services, Recommended = true, Esport = true,
+                Name = "Forcer l'arrêt des applications en arrière-plan (stratégie Windows 11)",
+                Desc = "Complète « applications en arrière-plan » par la stratégie MACHINE de Windows 11 "
+                     + "(LetAppsRunInBackground) + le nouvel interrupteur de recherche : les applis du Store ne "
+                     + "tournent plus en fond, même après une mise à jour qui réactive le réglage par utilisateur. "
+                     + "Autant de CPU/RAM/réseau rendus au jeu. « Rétablir » enlève la stratégie.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy",
+                                     @"HKCU\Software\Microsoft\Windows\CurrentVersion\Search" },
+                Apply = () =>
+                {
+                    Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground", 2, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle", 0, RegistryValueKind.DWord);
+                },
+                Revert = () =>
+                {
+                    Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
+                    Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle");
+                },
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground"), 2)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "mouse_markc_curve", Category = Cat.Souris, Esport = true,
+                Name = "Courbe de souris 1:1 (fix MarkC, zéro accélération résiduelle)",
+                Desc = "Complète « désactiver l'accélération » avec les courbes SmoothMouse 1:1 de MarkC : déplacement "
+                     + "strictement proportionnel, sans la moindre accélération résiduelle de Windows. Prisé pour la visée. "
+                     + "« Rétablir » remet les courbes par défaut de Windows. Prend effet à la prochaine ouverture de session.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Mouse" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "SmoothMouseXCurve", MarkCX_1to1, RegistryValueKind.Binary);
+                    Sys.SetUser(@"Control Panel\Mouse", "SmoothMouseYCurve", MarkCY_1to1, RegistryValueKind.Binary);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "SmoothMouseXCurve", MarkCX_Default, RegistryValueKind.Binary);
+                    Sys.SetUser(@"Control Panel\Mouse", "SmoothMouseYCurve", MarkCY_Default, RegistryValueKind.Binary);
+                },
+                Check = () =>
+                {
+                    byte[] v = Sys.GetUser(@"Control Panel\Mouse", "SmoothMouseXCurve") as byte[];
+                    if (v == null || v.Length <= 8) return null;   // valeur absente = indéterminé
+                    return v[8] == 0xC0;                           // 0xC0 = courbe 1:1 MarkC ; 0x15 = défaut Windows
+                }
             });
 
             return list;
