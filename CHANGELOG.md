@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.53 — Le rapport d'audit depuis le chat + « Prépare ma partie »
+- **« génère le rapport » / « fais un audit »** → le Copilote produit le **rapport HTML
+  complet** (matériel, toutes les optimisations, diagnostic santé) sur le Bureau et
+  l'ouvre — un clic, rien n'est modifié au système. Le livrable avant/après en une phrase.
+- **« prépare ma partie » / « je vais jouer »** → repérage des applis de fond CONNUES
+  (RGB, lanceurs, fonds animés, overlays, capture, cloud, navigateurs) et **fermeture
+  groupée en un clic**. Discord/Spotify (comms/musique) et Riot (nécessaire pour
+  LoL/Valorant) sont épargnés volontairement. Nouvelle pastille dédiée.
+- BloatForm expose son catalogue d'applis de fond au Copilote (RunningBloat) ; la
+  fermeture douce/forcée est factorisée (CloseByName).
+
 ## v14.52 — La doc CAPET digérée : le bon intégré, les pièges détectés
 Analyse du kit de tutos fourni (TUTO 1-3, ISLC, filtres NVIDIA, scripts d'inversion). La
 moitié était DÉJÀ native (accél. souris, GameDVR, services risqués en opt-in, ISLC/Autoruns/

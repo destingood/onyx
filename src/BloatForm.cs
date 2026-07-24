@@ -187,6 +187,33 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>Applis de fond CONNUES actuellement en cours : { processus, catégorie, conseil }.
+        /// Pour le Copilote (« prépare ma partie »). Jamais un processus critique ; dédoublonné.</summary>
+        public static List<string[]> RunningBloat()
+        {
+            var res = new List<string[]>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var p in Process.GetProcesses())
+                {
+                    try
+                    {
+                        string n = p.ProcessName;
+                        if (seen.Contains(n) || Critical.Contains(n)) continue;
+                        Known k = Lookup(n);
+                        if (k == null) continue;
+                        seen.Add(n);
+                        res.Add(new[] { n, k.Cat, k.Tip });
+                    }
+                    catch { }
+                    finally { try { p.Dispose(); } catch { } }
+                }
+            }
+            catch { }
+            return res;
+        }
+
         private void Scan()
         {
             SetBusy(true);
