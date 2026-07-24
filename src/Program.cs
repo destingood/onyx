@@ -7,11 +7,11 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("ONYX")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
-[assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
+[assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.73.0.0")]
-[assembly: AssemblyFileVersion("14.73.0.0")]
+[assembly: AssemblyVersion("14.74.0.0")]
+[assembly: AssemblyFileVersion("14.74.0.0")]
 
 namespace BTOptimizer
 {

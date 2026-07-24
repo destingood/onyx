@@ -111,7 +111,7 @@ namespace BTOptimizer
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super", "nickel", "cool"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true, Dynamic = true };
             if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
-                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne 100 % sur ta machine (aucune donnée envoyée). Je mesure, je répare, je conseille — et si tu as activé mon cerveau IA local, je réponds à tout. Alors, on regarde quoi ?", ShowStarters = true };
+                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne sur TA machine. Je mesure, je répare, je conseille — et avec mon cerveau IA local, je réponds à tout. Par défaut tout reste local ; si tu actives la recherche web, je vais aussi chercher l'info à jour en ligne (désactivable). Alors, on regarde quoi ?", ShowStarters = true };
 
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {

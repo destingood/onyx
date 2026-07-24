@@ -7,7 +7,7 @@ namespace BTOptimizer
     /// <summary>Conditions d'utilisation + avertissement, à accepter au premier lancement (protection juridique).</summary>
     internal class LicenseForm : Form
     {
-        public const int Version = 1;
+        public const int Version = 2;   // bump → l'utilisateur re-accepte (ajout clause IA & internet)
 
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
 
@@ -31,10 +31,20 @@ namespace BTOptimizer
 "de données, d'une instabilité, d'une baisse de performances, d'une perte de garantie " +
 "matérielle ou de tout dommage direct ou indirect.\r\n" +
 "\r\n" +
-"4. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD ou Intel. " +
-"Toutes les marques citées appartiennent à leurs propriétaires respectifs.\r\n" +
+"4. ASSISTANT IA ET INTERNET (OPTIONNELS). Les mesures et réparations du logiciel fonctionnent " +
+"hors-ligne. En OPTION, l'assistant « Copilote » peut : télécharger et exécuter localement un " +
+"modèle d'intelligence artificielle (Ollama, gratuit) ; effectuer des RECHERCHES WEB et lire des " +
+"pages en ligne ; conserver une mémoire et une base de connaissances dans des fichiers locaux sur " +
+"votre PC. Lorsque la recherche web est activée, votre requête est transmise à un moteur de " +
+"recherche tiers (DuckDuckGo) : ne saisissez pas d'informations sensibles. Ces fonctions sont " +
+"désactivables à tout moment (« coupe internet », « désactive l'ia ») et les données locales sont " +
+"effaçables (« oublie ce que tu sais »). Les réponses de l'IA ou du web peuvent être inexactes ; " +
+"l'éditeur n'en garantit pas l'exactitude et n'en est pas responsable.\r\n" +
 "\r\n" +
-"5. USAGE. Vous êtes responsable de la conformité de l'usage sur les machines que vous " +
+"5. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD, Intel, Ollama " +
+"ou DuckDuckGo. Toutes les marques citées appartiennent à leurs propriétaires respectifs.\r\n" +
+"\r\n" +
+"6. USAGE. Vous êtes responsable de la conformité de l'usage sur les machines que vous " +
 "administrez. N'appliquez ces réglages que sur du matériel dont vous êtes propriétaire ou " +
 "pour lequel vous disposez d'une autorisation.\r\n" +
 "\r\n" +

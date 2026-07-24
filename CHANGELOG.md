@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.74 — Transparence : textes à jour (IA & internet optionnels)
+- **Conditions d'utilisation** : nouvelle clause « Assistant IA et internet (optionnels) » —
+  modèle IA local (Ollama), recherche web (requête envoyée à DuckDuckGo), mémoire/base locales
+  et effaçables, tout désactivable ; réponses IA/web non garanties. Version d'EULA incrémentée
+  → ré-acceptation demandée au prochain lancement.
+- **Copyright** de l'exe et **réponse « qui es-tu »** ajustés (plus de « aucune connexion
+  réseau » absolu : « local par défaut, IA et web optionnels désactivables »).
+- **Marketing** : l'« hors-ligne » recadré sur l'activation (qui reste sans compte ni serveur)
+  + FAQ « L'assistant IA envoie-t-il mes données ? » (local par défaut, web optionnel).
+
 ## v14.73 — Ultra intelligent : il vérifie et se corrige tout seul
 - **Web d'emblée sur le factuel / récent / produits / prix** : une question comme « quel est le
   dernier GPU NVIDIA et son prix » est vérifiée en ligne AVANT de répondre → info à jour
