@@ -470,7 +470,7 @@ namespace BTOptimizer
                 if (ok.Count > 0) sb.Append("Vérifié et sain : ").Append(string.Join(" · ", ok.ToArray())).Append(".\n\n");
                 sb.Append("Si le souci persiste, décris-moi précisément quand il arrive (dans un jeu en particulier ? "
                         + "au démarrage ? après un moment ?) et je creuse ailleurs.");
-                return new DocAssistant.Reply { Text = sb.ToString(), Explain = explain };
+                return new DocAssistant.Reply { Text = sb.ToString(), Explain = explain, Exportable = true };
             }
 
             if (evol != null) sb.Append(evol).Append("\n\n");
@@ -503,7 +503,8 @@ namespace BTOptimizer
                 Footer = foot.ToString().TrimEnd(),
                 Plan = plan.Count > 0 ? plan : null,   // sert au « oui » (re-présentation) — les cartes portent les boutons
                 Action = all,                          // le pilote automatique, sous les cartes
-                Explain = explain
+                Explain = explain,
+                Exportable = true                      // diagnostic exportable en .txt (livrable client)
             };
         }
 

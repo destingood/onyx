@@ -38,6 +38,7 @@ namespace BTOptimizer
             public List<Card> Cards;          // diagnostic STRUCTURÉ : cartes d'impact colorées (enquête)
             public string Footer;             // texte affiché APRÈS les cartes (« vérifié et sain… »)
             public string Explain;            // le raisonnement complet, servi si on demande « pourquoi ? »
+            public bool Exportable;           // propose « Enregistrer ce diagnostic » (.txt sur le Bureau)
         }
 
         /// <summary>Une cause rendue en CARTE dans le chat : pastille d'impact colorée

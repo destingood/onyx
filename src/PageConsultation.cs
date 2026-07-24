@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Text;
 using System.Windows.Forms;
 
 namespace BTOptimizer
@@ -20,9 +21,13 @@ namespace BTOptimizer
         private bool _seeded;
         private Panel _statsRow;                          // cockpit : tuiles d'état en direct
         private Label _vHealth, _vScreen, _vPing, _vGpu;  // valeurs des tuiles
+        private Button _refresh;                          // ↻ du cockpit
         private Panel _inputBar;                          // barre de saisie (carte arrondie)
         private FlowLayoutPanel _quick;                   // raccourcis permanents au-dessus de la saisie
         private bool _proactive;                          // accueil proactif déjà tenté
+        private Panel _typingBubble;                      // bulle « écrit… » (élargie quand le journal parle)
+        private Label _typingDots;                        // points qui pulsent OU dernière ligne du journal
+        private string _typingProgress;                   // null = animation de points ; sinon texte affiché
 
         public PageConsultation(DashboardForm host) : base(host)
         {
@@ -44,6 +49,9 @@ namespace BTOptimizer
             _vScreen = StatTile("ÉCRANS");
             _vPing = StatTile("PING");
             _vGpu = StatTile("GPU");
+            _refresh = FpsUi.GhostButton("↻");
+            _refresh.Click += (s, e) => RefreshTiles();
+            Controls.Add(_refresh);
 
             // --- Barre de saisie « pro » : carte arrondie + bouton d'envoi compact ---
             _inputBar = FpsUi.CardPanel(12f);
@@ -238,10 +246,18 @@ namespace BTOptimizer
         {
             if (a == null || a.Run == null) return;
             ShowTyping();
+            // Journal RELAYÉ dans la bulle « écrit… » : pendant une action longue (installation,
+            // TOUT réparer), chaque étape s'affiche en direct au lieu de trois points muets.
+            Action<string, int> live = delegate (string m, int l)
+            {
+                try { Host.Log(m, l); } catch { }
+                if (string.IsNullOrEmpty(m)) return;
+                try { BeginInvoke((Action)(() => TypingProgress(m))); } catch { }
+            };
             System.Threading.Tasks.Task.Run(() =>
             {
                 DocAssistant.Reply res; bool failed = false;
-                try { res = a.Run(Host.Log); }
+                try { res = a.Run(live); }
                 catch (Exception ex) { failed = true; res = new DocAssistant.Reply { Text = "L'action n'a pas abouti : " + ex.Message }; }
                 try
                 {
@@ -258,6 +274,10 @@ namespace BTOptimizer
                             catch { }
                         }
                         if (res != null) AddBubble(true, res.Text, res);
+                        if (a.IsChange) RefreshTiles();   // le cockpit suit la réalité après une correction
+                        // Enchaînement automatique d'une MESURE portée par le résultat
+                        // (ex. vérification complète après « TOUT réparer »).
+                        if (res != null && res.Action != null && res.Action.AutoRun) RunAction(res.Action);
                     }));
                 }
                 catch { }
@@ -332,6 +352,7 @@ namespace BTOptimizer
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
             var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
             bubble.Controls.Add(dots);
+            _typingBubble = bubble; _typingDots = dots; _typingProgress = null;
             var avatar = MakeAvatar(true);
             var row = new Panel { Size = new Size(AV + GAP + 66, Math.Max(AV, 38)), BackColor = Color.Transparent, Margin = new Padding(6, 7, 10, 7), Tag = "typing" };
             avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0);
@@ -339,14 +360,33 @@ namespace BTOptimizer
             _typingRow = row; _flow.Controls.Add(row); try { _flow.ScrollControlIntoView(row); } catch { }
             _dot = 1;
             _typingAnim = new Timer { Interval = 320 };
-            _typingAnim.Tick += (s, e) => { _dot = _dot % 3 + 1; dots.Text = new string('●', _dot) + new string('·', 3 - _dot); };
+            // Les points ne pulsent que tant que le journal ne parle pas (voir TypingProgress).
+            _typingAnim.Tick += (s, e) => { if (_typingProgress == null) { _dot = _dot % 3 + 1; dots.Text = new string('●', _dot) + new string('·', 3 - _dot); } };
             _typingAnim.Start();
+        }
+
+        /// <summary>Relaye la DERNIÈRE ligne du journal dans la bulle « écrit… » : pendant une
+        /// action longue (installation, TOUT réparer), on voit chaque étape en direct.</summary>
+        private void TypingProgress(string m)
+        {
+            if (_typingDots == null || _typingRow == null) return;
+            _typingProgress = m;
+            if (_typingBubble != null && _typingBubble.Width < 380)
+            {
+                _typingBubble.Width = 380;
+                _typingRow.Width = AV + GAP + 380;
+                _typingDots.Font = FpsUi.Small;
+                _typingDots.TextAlign = ContentAlignment.MiddleLeft;
+                _typingDots.Padding = new Padding(12, 0, 10, 0);
+            }
+            _typingDots.Text = m.Length > 56 ? m.Substring(0, 56) + "…" : m;
         }
 
         private void HideTyping()
         {
             if (_typingAnim != null) { try { _typingAnim.Stop(); _typingAnim.Dispose(); } catch { } _typingAnim = null; }
             if (_typingRow != null) { try { _flow.Controls.Remove(_typingRow); _typingRow.Dispose(); } catch { } _typingRow = null; }
+            _typingBubble = null; _typingDots = null; _typingProgress = null;
             Mascot.CurrentMood = _stats != null ? Mascot.MoodForHealth(_stats.Health) : Mascot.Mood.Calm;
         }
 
@@ -428,6 +468,27 @@ namespace BTOptimizer
                     ForeColor = FpsUi.Dim, BackColor = Color.Transparent,
                     Margin = new Padding(3, 10, 3, 0), Text = reply.Footer
                 });
+            // Diagnostic exportable : un .txt propre sur le Bureau — le livrable à montrer/garder.
+            if (reply != null && reply.Exportable)
+            {
+                var ex = FpsUi.GhostButton("📄  Enregistrer ce diagnostic (Bureau)");
+                ex.AutoSize = false; ex.Size = new Size(Math.Min(maxTextW, 300), 30); ex.Margin = new Padding(0, 8, 0, 0);
+                var rep = reply; string bodyTxt = body ?? "";
+                ex.Click += (s, e) =>
+                {
+                    try
+                    {
+                        string path = System.IO.Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                            "Fluide-diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
+                        System.IO.File.WriteAllText(path, ReplyFullText(rep, bodyTxt), new UTF8Encoding(false));
+                        ex.Text = "✓  Enregistré sur le Bureau"; ex.Enabled = false;
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
+                    }
+                    catch { ex.Text = "⚠  Échec de l'enregistrement"; }
+                };
+                col.Controls.Add(ex);
+            }
             if (reply != null && reply.Tool != null)
             {
                 var btn = FpsUi.NeonButton("Ouvrir « " + reply.Tool.Tool + " »  →");
@@ -448,6 +509,25 @@ namespace BTOptimizer
                 var chips = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, MaximumSize = new Size(maxTextW, 0), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
                 foreach (var st in Starters) { var c = Chip(st.Item1); string sendText = st.Item2; c.Click += (s, e) => Send(sendText); chips.Controls.Add(c); }
                 col.Controls.Add(chips);
+            }
+            // Clic droit n'importe où sur la bulle : copier le message (texte + cartes + pied).
+            {
+                var cms = new ContextMenuStrip();
+                var rep = reply; string bodyTxt = body ?? "";
+                cms.Items.Add("Copier ce message", null, (s, e) =>
+                {
+                    try
+                    {
+                        var t = new StringBuilder(bodyTxt);
+                        if (rep != null && rep.Cards != null)
+                        { int i = 0; foreach (var c in rep.Cards) { i++; t.Append("\r\n\r\n").Append(i).Append(". [IMPACT ").Append(c.Impact).Append("] ").Append(c.Text); } }
+                        if (rep != null && !string.IsNullOrEmpty(rep.Footer)) t.Append("\r\n\r\n").Append(rep.Footer);
+                        Clipboard.SetText(t.ToString().Trim());
+                    }
+                    catch { }
+                });
+                bubble.ContextMenuStrip = cms; col.ContextMenuStrip = cms;
+                foreach (Control cc in col.Controls) if (cc is Label) cc.ContextMenuStrip = cms;
             }
             bubble.Controls.Add(col);
             Size bs = bubble.PreferredSize;
@@ -537,6 +617,29 @@ namespace BTOptimizer
             return pnl;
         }
 
+        /// <summary>Le diagnostic complet mis en page pour un .txt : en-tête daté, causes avec
+        /// impact, points sains, et le raisonnement mesure par mesure — le livrable client.</summary>
+        private static string ReplyFullText(DocAssistant.Reply r, string body)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("DIAGNOSTIC FLUIDE — " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"));
+            sb.AppendLine(new string('=', 48));
+            sb.AppendLine();
+            if (!string.IsNullOrEmpty(body)) { sb.AppendLine(body); sb.AppendLine(); }
+            if (r != null && r.Cards != null)
+            {
+                int i = 0;
+                foreach (var c in r.Cards) { i++; sb.AppendLine(i + ". [IMPACT " + c.Impact + "] " + c.Text); sb.AppendLine(); }
+            }
+            if (r != null && !string.IsNullOrEmpty(r.Footer)) { sb.AppendLine(r.Footer); sb.AppendLine(); }
+            if (r != null && !string.IsNullOrEmpty(r.Explain))
+            {
+                sb.AppendLine(new string('-', 48));
+                sb.AppendLine(r.Explain);
+            }
+            return sb.ToString().TrimEnd() + "\r\n";
+        }
+
         // Ré-aligne les bulles « Toi » à droite quand la largeur change.
         private void RealignUserRows()
         {
@@ -566,16 +669,17 @@ namespace BTOptimizer
             if (_flow == null) return;
             int W = ClientSize.Width, H = ClientSize.Height, m = 34;
 
-            // Cockpit sous le sous-titre (le titre peint finit vers y ≈ 80).
+            // Cockpit sous le sous-titre (le titre peint finit vers y ≈ 80) + ↻ à droite.
             if (_statsRow != null)
             {
-                _statsRow.SetBounds(m, 88, Math.Max(220, W - 2 * m), 46);
+                _statsRow.SetBounds(m, 88, Math.Max(220, W - 2 * m - 38), 46);
                 int n = _statsRow.Controls.Count;
                 if (n > 0)
                 {
                     int gap = 8, tw = (_statsRow.Width - (n - 1) * gap) / n, x = 0;
                     foreach (Control t in _statsRow.Controls) { t.SetBounds(x, 0, tw, 46); x += tw + gap; }
                 }
+                if (_refresh != null) _refresh.SetBounds(W - m - 30, 96, 30, 30);
             }
 
             // Pile du bas : raccourcis permanents, puis barre de saisie.
