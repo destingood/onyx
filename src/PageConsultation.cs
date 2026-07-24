@@ -72,6 +72,7 @@ namespace BTOptimizer
                 ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
                 ("Test ping", "mesure mon ping"),
                 ("Processus gourmands", "quel programme consomme mon cpu en fond"),
+                ("Prépare ma partie", "prépare ma partie"),
                 ("Pourquoi ?", "pourquoi"),
             };
             foreach (var qd in qs) { var c = Chip(qd.Item1); string txt = qd.Item2; c.Click += (s, e) => Send(txt); _quick.Controls.Add(c); }

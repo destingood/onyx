@@ -110,13 +110,30 @@ namespace BTOptimizer
             bool iBoot   = Has(s, "demarrage", "boot", "startup", "allumage", "lent a demarrer", "long a demarrer", "s'allume");
             bool iCrash  = Has(s, "crash", "plante", "bsod", "ecran bleu", "ferme tout seul", "rendu perdu", "dispositif de rendu");
             bool iLat    = Has(s, "input lag", "latence", "reactivite", "micro coupure", "micro-coupure", "gresille", "dpc", "delai souris");
+            bool iReport = Has(s, "rapport", "audit", "imprime", "livrable", "avant apres", "avant-apres");
+            bool iPrep   = Has(s, "je vais jouer", "avant de jouer", "prepare ma partie", "prepare une partie",
+                                  "session de jeu", "pregame", "pre-game", "pret a jouer", "checklist");
+
+            // Commandes explicites (pas des symptômes) : traitées avant tout le reste.
+            if (iReport)
+                return new Reply
+                {
+                    Text = "Je te prépare l'audit complet — un clic, rien n'est modifié au système :",
+                    Action = ChatActions.MakeReport()
+                };
+            if (iPrep)
+                return new Reply
+                {
+                    Text = "Je repère ce qui traîne en fond avant ta session…",
+                    Action = ChatActions.PrepGame()
+                };
             int hits = (iNet ? 1 : 0) + (iHogs ? 1 : 0) + (iScreen ? 1 : 0) + (iHeat ? 1 : 0) + (iClean ? 1 : 0) + (iLibs ? 1 : 0)
                      + (iDns ? 1 : 0) + (iBoot ? 1 : 0) + (iCrash ? 1 : 0) + (iLat ? 1 : 0);
             // Symptôme ressenti (large) vs demande de bilan (méta) : les deux mènent à l'enquête,
             // mais seul le SYMPTÔME est assez fort pour élargir une intention précise en enquête.
             bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas", "perd des fps", "chute de fps");
             bool meta = Has(s, "bilan", "diagnostic", "analyse", "enquete", "verifie", "controle", "passe au crible",
-                               "check up", "checkup", "audit", "probleme", "ca marche pas");
+                               "check up", "checkup", "probleme", "ca marche pas");
             bool asksWhy = Has(s, "pourquoi", "explique", "comment tu sais", "ca veut dire quoi", "detaille", "justifie");
 
             // --- « Pourquoi ? » : il justifie son DERNIER diagnostic, mesure par mesure ---

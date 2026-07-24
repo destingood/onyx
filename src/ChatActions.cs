@@ -543,6 +543,30 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        /// <summary>Ferme tous les processus d'un nom : douce d'abord (CloseMainWindow), forcée
+        /// sinon. Renvoie le nombre fermé ; 'forced' = ceux qu'il a fallu tuer.</summary>
+        private static int CloseByName(string name, out int forced)
+        {
+            int soft = 0; forced = 0;
+            try
+            {
+                foreach (var p in System.Diagnostics.Process.GetProcessesByName(name))
+                {
+                    try
+                    {
+                        bool polite = false;
+                        try { polite = p.CloseMainWindow(); } catch { }
+                        if (polite && p.WaitForExit(3000)) { soft++; continue; }
+                        p.Kill(true); p.WaitForExit(3000); forced++;
+                    }
+                    catch { }
+                    finally { try { p.Dispose(); } catch { } }
+                }
+            }
+            catch { }
+            return soft + forced;
+        }
+
         /// <summary>Ferme proprement tous les processus d'un nom donné (jamais le cœur de Windows) :
         /// fermeture douce d'abord, forcée sinon. L'appli reste installée et relançable.</summary>
         public static DocAssistant.ChatAction FixHog(string name)
@@ -554,29 +578,101 @@ namespace BTOptimizer
             a.Warning = "Ferme cette application (fermeture douce d'abord, forcée sinon). Sauvegarde ton travail dedans avant — tu peux la relancer quand tu veux.";
             a.Run = delegate (Action<string, int> log)
             {
-                int soft = 0, hard = 0;
-                try
-                {
-                    foreach (var p in System.Diagnostics.Process.GetProcessesByName(name))
-                    {
-                        try
-                        {
-                            bool polite = false;
-                            try { polite = p.CloseMainWindow(); } catch { }
-                            if (polite && p.WaitForExit(3000)) { soft++; continue; }
-                            p.Kill(true); p.WaitForExit(3000); hard++;
-                        }
-                        catch { }
-                        finally { try { p.Dispose(); } catch { } }
-                    }
-                }
-                catch { }
-                if (soft + hard == 0) return Say("« " + name + " » ne tourne plus (déjà fermé ?).");
-                return Say("✅ « " + name + " » fermé (" + (soft + hard) + " processus" + (hard > 0 ? ", dont " + hard + " forcé(s)" : "")
+                int forced; int n = CloseByName(name, out forced);
+                if (n == 0) return Say("« " + name + " » ne tourne plus (déjà fermé ?).");
+                return Say("✅ « " + name + " » fermé (" + n + " processus" + (forced > 0 ? ", dont " + forced + " forcé(s)" : "")
                          + "). Ton CPU respire — relance-le quand tu veux.");
             };
             return a;
         }
+
+        // ------------------------------------------------------------------
+        //  « Prépare ma partie » — nettoie le fond AVANT une session de jeu
+        // ------------------------------------------------------------------
+        //  Catégories fermées d'un clic. Comms (Discord) et audio (Spotify) restent
+        //  VOLONTAIREMENT ouverts, et Riot est nécessaire pour LoL/Valorant.
+        private static readonly string[] PrepCats = { "RGB", "lanceur", "fond animé", "overlay", "capture", "stream", "cloud", "navigateur" };
+
+        public static DocAssistant.ChatAction PrepGame()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Repérage avant-partie"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                List<string[]> run = BloatForm.RunningBloat();
+                if (run == null || run.Count == 0)
+                    return Say("Rien de connu ne traîne en fond — ta session est déjà propre. 🎮 Bonne partie !");
+                var close = new List<string>();
+                foreach (var r in run)
+                {
+                    if (r[0].ToLowerInvariant().Contains("riot")) continue;   // nécessaire pour LoL/Valorant
+                    foreach (var c in PrepCats)
+                        if (string.Equals(r[1], c, StringComparison.OrdinalIgnoreCase)) { close.Add(r[0]); break; }
+                }
+                var sb = new StringBuilder("Repérage avant-partie — applis de fond détectées :\n");
+                foreach (var r in run) sb.Append("• ").Append(r[0]).Append("  (").Append(r[1]).Append(")\n");
+                sb.Append('\n');
+                sb.Append(close.Count == 0
+                    ? "Rien à fermer d'office : ce qui tourne (comms/musique) reste ton choix."
+                    : "Je peux fermer les " + close.Count + " non essentielles d'un clic — je laisse exprès Discord/Spotify (comms/musique) et Riot.");
+                var rep = Say(sb.ToString().TrimEnd());
+                if (close.Count > 0)
+                {
+                    var fix = new DocAssistant.ChatAction();
+                    fix.Label = "Fermer " + close.Count + " appli(s) de fond";
+                    fix.IsChange = true;
+                    fix.Warning = "Ferme : " + string.Join(", ", close.ToArray()) + ". Fermeture douce d'abord ; tout se "
+                                + "relance à la main. Enregistre ce que tu veux garder (onglets, projets) avant.";
+                    fix.Run = delegate (Action<string, int> log2)
+                    {
+                        int total = 0, forcedTot = 0;
+                        var sb2 = new StringBuilder();
+                        foreach (var n in close)
+                        {
+                            int f; int c = CloseByName(n, out f);
+                            total += c; forcedTot += f;
+                            if (c > 0) sb2.Append("✅ ").Append(n).Append('\n');
+                        }
+                        if (total == 0) return Say("Tout était déjà fermé. 🎮 Bonne partie !");
+                        sb2.Append('\n').Append(total).Append(" processus fermé(s)")
+                           .Append(forcedTot > 0 ? " (dont " + forcedTot + " forcé(s))" : "")
+                           .Append(" — le fond est propre. 🎮 Bonne partie !");
+                        return Say(sb2.ToString().TrimEnd());
+                    };
+                    rep.Action = fix;
+                }
+                return rep;
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
+        //  Rapport HTML — l'audit complet, généré depuis la conversation
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MakeReport()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Générer le rapport HTML (Bureau)";
+            a.IsChange = true;   // écrit un fichier : action explicite, jamais automatique
+            a.Warning = "Écrit l'audit complet (matériel, toutes les optimisations, diagnostic santé) en HTML sur le "
+                      + "Bureau, puis l'ouvre. Ne modifie RIEN au système. ~10-20 secondes.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                try
+                {
+                    string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
+                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                        "Fluide-rapport-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".html");
+                    File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
+                    return Say("📄 Rapport écrit sur le Bureau : " + Path.GetFileName(path)
+                             + "\nOuvrable dans le navigateur, imprimable en PDF — le livrable avant/après idéal.");
+                }
+                catch (Exception ex) { return Say("Le rapport n'a pas pu être généré : " + ex.Message); }
+            };
+            return a;
+        }
+
 
         // Lancements auto non essentiels connus (gaming/fond) — coupables SANS risque : l'appli
         // reste installée, se lance à la main, et le panneau Démarrage peut tout remettre.
