@@ -4,6 +4,15 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.57 — Les 8 pages au diapason
+- **Système** : les courbes CPU/RAM rejoignent le trio ONYX (ivoire / émeraude — le vert
+  pomme et le cyan juraient sur carbone).
+- **Jeux** : « ● DÉTECTÉ » passe à l'émeraude (une présence est un état, pas une signature)
+  et le dégradé des vignettes sans jaquette se réchauffe.
+- Bilan de la tournée des pages : Optimisations, Check Up+, Laboratoire et Collection
+  avaient déjà tout hérité des fondations (toggles or, cartes carbone, paliers
+  bronze/argent/or) — aucune rustine nécessaire.
+
 ## v14.56 — Dashboard ONYX
 - **Anneau de santé à la bonne couleur** : émeraude quand c'est sain (l'or ne code plus un
   état), halo doux sous l'arc, verdict (« Bon », « Moyen »…) coloré comme l'anneau.

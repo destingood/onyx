@@ -108,7 +108,7 @@ namespace BTOptimizer
             int graphW = ClientSize.Width - L * 2 - rightW - gap;
 
             HwSample s = _last;
-            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, Color.FromArgb(120, 200, 120),
+            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, Color.FromArgb(214, 205, 189),
                 s != null && s.CpuLoad >= 0 ? s.CpuLoad : double.NaN,
                 s != null && !double.IsNaN(s.CpuTempC) ? s.CpuTempC : double.NaN,
                 "CPU", s != null ? Environment.ProcessorCount + " threads" : "");
@@ -119,7 +119,7 @@ namespace BTOptimizer
                 s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.Name : "n/d");
             int r3 = r2 + cardH + gap;
             string ramDetail = s != null && s.RamTotalMB > 0 ? (s.RamUsedMB / 1024.0).ToString("0.0") + " / " + (s.RamTotalMB / 1024.0).ToString("0.0") + " Go" : "";
-            DrawMetric(g, L, r3, graphW, cardH, rightW, "MÉMOIRE RAM", _ram, Color.FromArgb(90, 200, 250),
+            DrawMetric(g, L, r3, graphW, cardH, rightW, "MÉMOIRE RAM", _ram, FpsUi.Ok,
                 s != null ? s.RamLoad : double.NaN, double.NaN, "RAM", ramDetail);
         }
 
