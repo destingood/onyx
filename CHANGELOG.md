@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.51 — Les finitions auxquelles on ne pense pas (mais qui changent tout)
+- **Progression EN DIRECT** : pendant une action longue (installation winget, « TOUT
+  réparer »), la bulle « écrit… » s'élargit et relaie **chaque ligne du journal en temps
+  réel** — fini les trois points muets pendant deux minutes.
+- **Boucle fermée** : après « 🚀 TOUT réparer », le Copilote **relance tout seul une
+  vérification complète** (mesure, lecture seule) → grâce à sa mémoire, il écrit noir sur
+  blanc « Depuis la dernière enquête — réglé ✔ : … ».
+- **Cockpit vivant** : les tuiles (Écrans / Ping / GPU) se **rafraîchissent après chaque
+  correction** — tu passes l'écran à 240 Hz, la tuile suit — + bouton ↻ discret.
+- **📄 Diagnostic exportable** : sous chaque enquête, « Enregistrer ce diagnostic » écrit un
+  .txt propre et daté sur le Bureau (causes avec impact, points sains, raisonnement complet)
+  — le livrable à remettre à un client ou à garder comme trace avant/après.
+- **Copier un message** : clic droit sur n'importe quelle bulle → texte (cartes et pied
+  compris) dans le presse-papiers.
+
 ## v14.50 — Le Copilote RÉPARE (presque) tout — et d'un seul clic
 - **🚀 « TOUT réparer »** : après l'enquête, UN bouton enchaîne toutes les corrections dans
   l'ordre d'impact — point de restauration d'abord (filet), chaque étape isolée (une qui

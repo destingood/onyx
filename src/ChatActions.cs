@@ -424,9 +424,12 @@ namespace BTOptimizer
                     catch (Exception ex) { sb.Append("échec — ").Append(ex.Message).Append('\n'); }
                 }
                 sb.Append('\n').Append("Terminé : ").Append(okN).Append('/').Append(steps.Count)
-                  .Append(" corrections passées — le tout gratuitement. Relance une enquête quand tu veux : "
-                        + "je te dirai exactement ce qui a changé.");
-                return Say(sb.ToString().TrimEnd());
+                  .Append(" corrections passées — le tout gratuitement. Je relance une vérification complète dans la foulée…");
+                var res = Say(sb.ToString().TrimEnd());
+                // Boucle FERMÉE : contrôle automatique après réparations (mesure : elle part seule).
+                // Avec la mémoire d'enquête, le « réglé ✔ » s'affiche noir sur blanc.
+                res.Action = Investigator.Action("vérification après réparations", null);
+                return res;
             };
             return a;
         }
