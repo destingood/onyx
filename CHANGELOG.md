@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.61 — Il comprend le langage de tous les jours
+- **« ça va ? » compris**, y compris les formes familières et sans accent : cava, sava, cv,
+  ça roule, quoi de neuf, tu vas bien… (avant, « cava » partait à l'IA qui répondait sur le
+  vin espagnol !). Réservé aux messages courts : « comment va mon PC » reste une question de
+  santé.
+- **Salutations et au revoir** élargis (yo, wesh, slt, à plus, ciao, bonne journée…) et
+  « qui es-tu ? / tu es une IA ? » répondu directement.
+- Ces échanges du quotidien sont traités par les règles (instantané, juste) au lieu d'être
+  pris au premier degré par le modèle.
+
 ## v14.60 — Un outil pour chaque besoin, avec les risques
 - **Conseiller d'outils** (`ToolAdvisor`) : pour un besoin que l'app ne couvre pas nativement,
   le Copilote propose le BON outil — le sien en 1 clic quand il existe, sinon une
