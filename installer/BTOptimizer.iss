@@ -64,6 +64,11 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"
+; Cerveau IA local (Ollama, gratuit, 100 % hors-ligne). Coché par défaut : l'app installe
+; toute seule, au 1er lancement, le modèle ADAPTÉ à la machine (voir LocalBrain.Bootstrap).
+; Cette case ne fait qu'écrire le consentement (voir [Code]) — aucun téléchargement pendant
+; le setup, pour ne pas l'alourdir : l'app télécharge le modèle en fond, avec progression.
+Name: "installia"; Description: "Installer le cerveau IA local (gratuit, ~2 Go) — le Copilote répond alors à TOUT, 100 % sur ce PC"; GroupDescription: "Assistant IA :"
 
 [Components]
 Name: "app";    Description: "Application ONYX";                                        Types: full compact custom; Flags: fixed
@@ -128,6 +133,28 @@ begin
     until Result or (not FindNext(FR));
   finally
     FindClose(FR);
+  end;
+end;
+
+// Consentement IA écrit APRÈS la copie des fichiers : selon la case « Installer le cerveau IA
+// local », on pré-accorde (bt-ia-consent.txt → l'app installe Ollama + le modèle adapté au 1er
+// lancement, sans re-demander) ou on refuse durablement (bt-ia-off.txt → l'app n'insiste jamais).
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if WizardIsTaskSelected('installia') then
+    begin
+      SaveStringToFile(ExpandConstant('{app}\bt-ia-consent.txt'),
+        'Cerveau IA local accepte via l''installateur. L''app installe le modele adapte au 1er lancement.' + #13#10, False);
+      DeleteFile(ExpandConstant('{app}\bt-ia-off.txt'));
+    end
+    else
+    begin
+      SaveStringToFile(ExpandConstant('{app}\bt-ia-off.txt'),
+        'Cerveau IA local refuse via l''installateur.' + #13#10, False);
+      DeleteFile(ExpandConstant('{app}\bt-ia-consent.txt'));
+    end;
   end;
 end;
 
