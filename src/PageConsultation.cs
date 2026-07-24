@@ -228,6 +228,28 @@ namespace BTOptimizer
                 return;
             }
             ShowTyping();
+            // Accroche PURE (sans donnée) + IA active → on la REFORMULE à chaque fois (jamais deux
+            // fois la même phrase toute faite). Les résultats/chiffres/définitions gardent leur
+            // texte exact (Dynamic = false). Fallback : la phrase d'origine si le modèle traîne.
+            if (reply.Dynamic && LocalBrain.Enabled)
+            {
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    string line = null;
+                    try { line = LocalBrain.Rephrase(reply.Text, LocalBrain.BestModel()); } catch { }
+                    try
+                    {
+                        BeginInvoke((Action)(() =>
+                        {
+                            HideTyping();
+                            AddBubble(true, string.IsNullOrEmpty(line) ? reply.Text : line, reply);
+                            if (reply.Action != null && reply.Action.AutoRun) RunAction(reply.Action);
+                        }));
+                    }
+                    catch { }
+                });
+                return;
+            }
             var t = new Timer { Interval = 650 };
             t.Tick += (s, e) =>
             {
