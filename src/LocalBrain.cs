@@ -450,6 +450,40 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>Reformule une phrase d'accroche du Copilote avec des mots FRAIS et naturels
+        /// (jamais deux fois pareil) — sans toucher au fond, sans inventer de chiffre, en gardant
+        /// les noms entre « ». Court et borné (fallback = phrase d'origine si le modèle traîne).</summary>
+        public static string Rephrase(string text, string model)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(model)) return null;
+            string sys = "Tu es le Copilote, un assistant PC amical qui tutoie. Reformule le message suivant avec TES mots, "
+                       + "un ton vivant et naturel, 1 à 2 phrases MAXIMUM. Garde exactement le même sens et la même intention. "
+                       + "N'invente AUCUNE donnée ni chiffre, n'ajoute pas d'info. Garde INTACTS les noms entre guillemets « ». "
+                       + "Ne salue pas sauf si le message salue. Réponds UNIQUEMENT par la reformulation, sans guillemets autour.";
+            var payload = new Dictionary<string, object>
+            {
+                { "model", model }, { "system", sys }, { "prompt", text }, { "stream", false },
+                { "options", new Dictionary<string, object> { { "temperature", 0.8 }, { "num_predict", 90 } } }
+            };
+            var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            try
+            {
+                using (var cts = new System.Threading.CancellationTokenSource(9000))
+                using (var r = Http.PostAsync(Base + "/api/generate", body, cts.Token).Result)
+                {
+                    string json = r.Content.ReadAsStringAsync().Result;
+                    using (var d = JsonDocument.Parse(json))
+                    {
+                        string o = d.RootElement.GetProperty("response").GetString();
+                        if (string.IsNullOrWhiteSpace(o)) return null;
+                        o = o.Trim().Trim('"', '«', '»', ' ');
+                        return o.Length >= 3 ? o : null;
+                    }
+                }
+            }
+            catch { return null; }
+        }
+
         // ------------------------------------------------------------------
         //  MÉMOIRE DE CONVERSATION — l'IA suit le fil (« et pourquoi ? »…)
         // ------------------------------------------------------------------

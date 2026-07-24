@@ -39,6 +39,7 @@ namespace BTOptimizer
             public string Footer;             // texte affiché APRÈS les cartes (« vérifié et sain… »)
             public string Explain;            // le raisonnement complet, servi si on demande « pourquoi ? »
             public bool Exportable;           // propose « Enregistrer ce diagnostic » (.txt sur le Bureau)
+            public bool Dynamic;              // accroche PURE (sans donnée) → l'IA la reformule à chaque fois
         }
 
         /// <summary>Une cause rendue en CARTE dans le chat : pastille d'impact colorée
@@ -96,19 +97,19 @@ namespace BTOptimizer
             // Salutation SEULE (≤ 3 mots) → on salue. Sinon (« salut j'ai un souci… ») c'est juste
             // un préambule : on ignore la politesse et on traite le vrai message plus bas.
             if (SplitWords(s).Length <= 3 && Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "bonne nuit"))
-                return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
+                return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true, Dynamic = true };
             // « ça va PAS » (négatif) : on ne répond pas « ça va ! », on demande ce qui cloche.
             if (Has(s, "ca va pas", "ca va plus", "sa va pas", "ca marche pas") && SplitWords(s).Length <= 5)
-                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true };
+                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true, Dynamic = true };
             // « ça va ? » et ses formes familières (cava, sava, cv…). Messages COURTS seulement :
             // « comment va mon pc » doit rester une question de santé, pas de la politesse.
             if (SplitWords(s).Length <= 4 && !Has(s, "pc", "jeu")
                 && Has(s, "ca va", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
-                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true };
+                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true, Dynamic = true };
             if (Has(s, "au revoir", "a plus", "bye", "ciao", "a bientot", "bonne journee", "bonne soiree"))
-                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false };
+                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false, Dynamic = true };
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super", "nickel", "cool"))
-                return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
+                return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true, Dynamic = true };
             if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
                 return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne 100 % sur ta machine (aucune donnée envoyée). Je mesure, je répare, je conseille — et si tu as activé mon cerveau IA local, je réponds à tout. Alors, on regarde quoi ?", ShowStarters = true };
 
@@ -237,7 +238,7 @@ namespace BTOptimizer
                 {
                     Text = "Tu décris plusieurs pistes à la fois — je préfère tout vérifier d'un coup. "
                          + "Enquête complète (une quinzaine de mesures, adaptées à ta plainte). Quelques secondes…",
-                    Action = Investigator.Action(q.Trim(), st)
+                    Action = Investigator.Action(q.Trim(), st), Dynamic = true
                 };
             // Demandes précises et fortes : leur mesure dédiée, même au milieu d'un symptôme large.
             if (iNet)
@@ -285,7 +286,7 @@ namespace BTOptimizer
                     Text = "Je lance l'enquête complète : écrans, capteurs, connexion, processus en fond, disque, "
                          + "bibliothèques, réglages néfastes, crashs pilote, RAM/XMP, pilote graphique, démarrage, "
                          + "redémarrage en retard… Les mesures s'adaptent à ta plainte. Quelques secondes…",
-                    Action = Investigator.Action(q.Trim(), st)
+                    Action = Investigator.Action(q.Trim(), st), Dynamic = true
                 };
 
             // --- CONSEILLER D'OUTILS : pour un BESOIN précis (récupérer un fichier, tester la
@@ -307,7 +308,7 @@ namespace BTOptimizer
             HelpCatalog.Entry best = null; int bestScore = 0;
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
             if (best != null && bestScore >= 2)
-                return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best };
+                return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best, Dynamic = true };
 
             // --- CERVEAU IA LOCAL (gratuit) : dès qu'il est prêt, il répond à TOUT ce que les
             //     règles ne traitent pas avec certitude — y compris un signal PC faible (bestScore
@@ -446,6 +447,7 @@ namespace BTOptimizer
         {
             Reply r = WithTool(entries, toolName, text);
             r.Action = action;
+            r.Dynamic = true;   // « je teste… », « je regarde… » : accroche reformulable (aucune donnée)
             return r;
         }
 

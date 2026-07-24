@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.66 — Fini les phrases toutes faites : les accroches sont reformulées à la volée
+- **Quand l'IA locale est active, les phrases d'accroche ne sont plus figées** : « je teste
+  ta connexion », « je lance l'enquête », « salut ! »… sont reformulées par le modèle à
+  CHAQUE fois, avec des mots frais et naturels — jamais deux fois la même réponse prédéfinie.
+- **Les boutons et les données restent intacts** : seule l'accroche PURE (sans chiffre) est
+  reformulée. Les résultats de mesure, les cartes de diagnostic, les définitions du lexique,
+  les conseils d'outils et leurs risques gardent leur texte EXACT (aucune donnée réécrite,
+  aucun risque d'hallucination).
+- Reformulation **bornée** (1-2 phrases, repli instantané sur la phrase d'origine si le modèle
+  traîne) et hors ligne. Sans IA activée, comportement inchangé (phrases fixes fiables).
+
 ## v14.65 — Fusion : le cerveau récent dans l'écrin ONYX
 - Les deux lignées se rejoignent : le **rebranding ONYX « Carbone & Or »** (v14.54-57
   ci-dessous) accueille les évolutions du Copilote v14.58-64 (dépanneur universel,
