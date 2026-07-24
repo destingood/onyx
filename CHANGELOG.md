@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.55 — Le Copilote incarné
+- **Scène d'entrée** : chat vide = accueil composé (anneau d'or sous halo, « LE COPILOTE »
+  gravé en Marcellus, promesse en une ligne, 12 suggestions centrées) au lieu d'une bulle
+  d'intro à froid. Elle s'efface au premier message.
+- **Avatar-anneau** : le monogramme ONYX (anneau + frametime) remplace la mascotte smiley ;
+  le joueur n'a pas d'avatar — l'asymétrie structure la lecture, comme une vraie messagerie.
+- **État vivant** dans l'en-tête : « prêt » / « analyse en cours… » / « N cause(s)
+  identifiée(s) » — le Copilote dit toujours ce qu'il fait.
+- **Réponses écrites en direct** : le texte se rédige (~250 caractères/s), un clic
+  n'importe où sur la bulle affiche tout ; cartes et boutons arrivent à la fin, comme une
+  vraie rédaction. Coupé automatiquement en jeu / harnais (Anim).
+- **Cockpit vivant** : les chiffres COMPTENT jusqu'à leur valeur (santé, ping, GPU) ;
+  sémantique réparée — émeraude = bon, orange = attention, rouge = critique (fini l'or
+  pour dire « tout va bien »).
+- **Conversation centrée** (colonne ≤ 860 px), bulles réchauffées aux coins asymétriques
+  (le coin serré pointe vers l'émetteur), signature « LE COPILOTE » en Marcellus or,
+  bulle joueur bronze éteint, cartes d'impact sur carbone chaud.
+- **Saisie premium** : le liseré de la barre s'allume en or quand le champ a le focus.
+- Entrée en douceur des messages courts (glissement 160 ms), export .txt renommé
+  « DIAGNOSTIC ONYX », mascotte retirée (code mort supprimé).
+
 ## v14.54 — ONYX : rebranding « Carbone & Or » (fondations)
 - **Nouvelle identité** : l'app s'appelle désormais **ONYX**. Palette « Carbone & Or » —
   carbone chaud (fini les noirs bleutés) + or champagne réservé à l'identité (marque,
