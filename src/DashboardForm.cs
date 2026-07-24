@@ -308,19 +308,33 @@ namespace BTOptimizer
                 int mw = 34, mx = _railOpen ? 16 : (_railBrand.Width - mw) / 2;
                 Logo.Draw(gr, new RectangleF(mx, (BrandH - mw) / 2f, mw, mw), FpsUi.Neon, false);
                 if (_railOpen)
+                {
                     TextRenderer.DrawText(gr, "Fluide", FpsUi.H3,
-                        new Rectangle(mx + mw + 12, 0, _railBrand.Width - mx - mw - 20, BrandH), FpsUi.Ink,
+                        new Rectangle(mx + mw + 12, 0, _railBrand.Width - mx - mw - 40, BrandH), FpsUi.Ink,
                         TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    // Pastille discrète = menu épinglé (il ne se referme plus quand on s'éloigne).
+                    if (_railPinned)
+                        using (var br = new SolidBrush(FpsUi.Neon))
+                            gr.FillEllipse(br, _railBrand.Width - 22, BrandH / 2f - 3.5f, 7f, 7f);
+                }
             };
-            _railBrand.Click += (s, e) => ToggleRail();
-            var brandTip = new ToolTip(); brandTip.SetToolTip(_railBrand, "Replier / déplier le menu");
+            // La barre s'ouvre au survol ; le clic sur la marque l'ÉPINGLE (elle reste ouverte).
+            _railBrand.Click += (s, e) =>
+            {
+                _railPinned = !_railPinned;
+                if (_railPinned) { SetRail(true); if (_railHover != null) _railHover.Stop(); }
+                else RailHoverIn();
+                _railBrand.Invalidate();
+            };
+            var brandTip = new ToolTip();
+            brandTip.SetToolTip(_railBrand, "Le menu s'ouvre au survol — clic pour l'épingler / le libérer");
             _rail.Controls.Add(_railBrand);
 
-            // --- Bas : bloc profil (mène à la Collection de badges). ---
+            // --- Bas : bloc profil (mène à « Mon compte »). ---
             _railProfile = new Panel { Dock = DockStyle.Bottom, Height = ProfileH, BackColor = Color.Transparent, Cursor = Cursors.Hand };
             _railProfile.Paint += (s, e) => PaintProfile(e.Graphics);
-            _railProfile.Click += (s, e) => ShowPage(5);   // page Collection
-            var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Ma collection de badges");
+            _railProfile.Click += (s, e) => OpenDialog(new AccountForm());   // Mon compte
+            var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Mon compte");
             _rail.Controls.Add(_railProfile);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
@@ -328,6 +342,7 @@ namespace BTOptimizer
             for (int i = 0; i < glyphs.Length; i++)
             {
                 var cell = new NavCell(glyphs[i], tips[i]);
+                cell.IconId = i;              // icône vectorielle (NavIcons), dans l'ordre des pages
                 int idx = i;
                 cell.Click += (s, e) => ShowPage(idx);
                 _nav.Add(cell);
@@ -336,25 +351,114 @@ namespace BTOptimizer
 
             _tools = new NavCell("⋯", "Outils avancés (optimiseur complet, latence, DNS…)");
             _tools.Label = "Outils avancés";
+            _tools.IconId = NavIcons.Outils;
             _tools.Click += (s, e) => _toolsMenu.Show(_tools, new Point(_tools.Width, 0));
             _rail.Controls.Add(_tools);
 
             LayoutRail();
+            HookRailHover(_rail);   // ouverture automatique dès que le curseur arrive
         }
 
-        /// <summary>Replie / déplie la barre, avec animation de largeur si les animations sont actives.</summary>
-        private void ToggleRail()
-        {
-            _railOpen = !_railOpen;
-            int from = _rail.Width, to = _railOpen ? RailWide : RailNarrow;
+        private Timer _railAnim;
+        private int _railFrom, _railTo, _railElapsed;
+        private const int RailAnimMs = 180, RailFrameMs = 15;
 
+        /// <summary>
+        /// Replie / déplie la barre avec une transition fluide.
+        /// </summary>
+        /// <remarks>
+        /// Animation DÉDIÉE, volontairement indépendante du système Anim global : celui-ci se coupe
+        /// dès qu'un jeu tourne, que le Mode Jeu est actif ou que Windows est réglé sur « meilleures
+        /// performances » — or déplier un menu est une interaction DIRECTE de l'utilisateur, pas un
+        /// effet décoratif : elle doit répondre dans tous les cas. Seul le harnais de test la coupe,
+        /// pour garder des captures déterministes.
+        /// </remarks>
+        private void ToggleRail() { SetRail(!_railOpen); }
+
+        /// <summary>Ouvre/ferme la barre (sans effet si elle est déjà dans l'état demandé).</summary>
+        private void SetRail(bool open)
+        {
+            if (_railOpen == open) return;
+            _railOpen = open;
             foreach (NavCell c in _nav) c.Expanded = _railOpen;
             if (_tools != null) _tools.Expanded = _railOpen;
 
-            if (Anim.On)
-                Anim.Tween(160, p => { _rail.Width = (int)(from + (to - from) * p); LayoutRail(); },
-                           () => { _rail.Width = to; LayoutRail(); });
-            else { _rail.Width = to; LayoutRail(); }
+            _railFrom = _rail.Width;
+            _railTo = _railOpen ? RailWide : RailNarrow;
+
+            if (Anim.ForceOff) { _rail.Width = _railTo; LayoutRail(); return; }
+
+            _railElapsed = 0;
+            if (_railAnim == null)
+            {
+                _railAnim = new Timer();
+                _railAnim.Interval = RailFrameMs;
+                _railAnim.Tick += RailAnimTick;
+            }
+            _railAnim.Start();
+        }
+
+        private void RailAnimTick(object sender, EventArgs e)
+        {
+            _railElapsed += RailFrameMs;
+            float p = Math.Min(1f, (float)_railElapsed / RailAnimMs);
+            float eased = 1f - (float)Math.Pow(1f - p, 3);      // OutCubic : départ franc, arrivée douce
+
+            _rail.SuspendLayout();
+            _rail.Width = (int)(_railFrom + (_railTo - _railFrom) * eased);
+            LayoutRail();
+            _rail.ResumeLayout(true);
+
+            if (p >= 1f)
+            {
+                _railAnim.Stop();
+                _rail.Width = _railTo;
+                LayoutRail();
+            }
+        }
+
+        // ------------------------------------------------------------------
+        //  Ouverture au survol (avec épinglage possible)
+        // ------------------------------------------------------------------
+        private Timer _railHover;
+        private bool _railPinned;
+
+        /// <summary>Le curseur arrive sur la barre : on l'ouvre.</summary>
+        /// <remarks>
+        /// La FERMETURE est détectée par un timer léger, pas par MouseLeave : ce dernier se
+        /// déclenche aussi quand on passe simplement d'un item à l'autre (chaque NavCell est un
+        /// contrôle distinct), ce qui refermerait la barre en permanence. Le timer ne tourne que
+        /// pendant que la barre est ouverte.
+        /// </remarks>
+        private void RailHoverIn()
+        {
+            if (_railPinned) return;
+            SetRail(true);
+            if (_railHover == null)
+            {
+                _railHover = new Timer();
+                _railHover.Interval = 130;
+                _railHover.Tick += RailHoverTick;
+            }
+            _railHover.Start();
+        }
+
+        private void RailHoverTick(object sender, EventArgs e)
+        {
+            if (_railPinned) { _railHover.Stop(); return; }
+            Point p;
+            try { p = _rail.PointToClient(Cursor.Position); }
+            catch { return; }
+            if (_rail.ClientRectangle.Contains(p)) return;   // curseur toujours sur la barre
+            _railHover.Stop();
+            SetRail(false);
+        }
+
+        /// <summary>Branche le survol sur la barre ET tous ses enfants (ils masquent le parent).</summary>
+        private void HookRailHover(Control c)
+        {
+            c.MouseEnter += (s, e) => RailHoverIn();
+            foreach (Control k in c.Controls) HookRailHover(k);
         }
 
         /// <summary>Place les items selon la largeur courante (marque en haut, profil en bas).</summary>
@@ -610,6 +714,11 @@ namespace BTOptimizer
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         public bool Expanded { get { return _expanded; } set { _expanded = value; Invalidate(); } }
 
+        /// <summary>Icône vectorielle à dessiner (voir NavIcons) ; -1 = garder le glyphe emoji.</summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public int IconId { get; set; }
+
         /// <summary>Pastille chiffrée (0 = aucune).</summary>
         [System.ComponentModel.Browsable(false)]
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
@@ -619,6 +728,7 @@ namespace BTOptimizer
         {
             _glyph = glyph;
             Label = tip;
+            IconId = -1;                 // par défaut : ancien rendu emoji
             DoubleBuffered = true; BackColor = Color.Transparent; Cursor = Cursors.Hand;
             var tt = new ToolTip(); tt.SetToolTip(this, tip);
             MouseEnter += (s, e) => { _hover = true; Invalidate(); };
@@ -649,22 +759,28 @@ namespace BTOptimizer
 
             Color fg = _active ? FpsUi.Neon : (_hover ? FpsUi.Ink : FpsUi.Dim);
 
+            const int IcoSz = 24;
             if (_expanded)
             {
-                var iconR = new Rectangle(10, 0, 38, Height);
-                TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, iconR, fg,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                DrawIcon(g, new Rectangle(14, (Height - IcoSz) / 2, IcoSz, IcoSz), fg);
                 var textR = new Rectangle(54, 0, Math.Max(10, Width - 54 - 30), Height);
                 TextRenderer.DrawText(g, (Label ?? "").ToUpperInvariant(), FpsUi.Small, textR, fg,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
             else
             {
-                TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, ClientRectangle, fg,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                DrawIcon(g, new Rectangle((Width - IcoSz) / 2, (Height - IcoSz) / 2, IcoSz, IcoSz), fg);
             }
 
             if (_badge > 0) PaintBadge(g);
+        }
+
+        /// <summary>Icône vectorielle si un id est fourni, sinon repli sur le glyphe d'origine.</summary>
+        private void DrawIcon(Graphics g, Rectangle r, Color fg)
+        {
+            if (IconId >= 0) NavIcons.Draw(g, IconId, new RectangleF(r.X, r.Y, r.Width, r.Height), fg);
+            else TextRenderer.DrawText(g, _glyph, FpsUi.Glyph, r, fg,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
 
         private void PaintBadge(Graphics g)
