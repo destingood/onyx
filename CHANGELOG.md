@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.69 — Mémoire qui apprend + il lit le web (de plus en plus précis)
+- **Mémoire longue durée** (`bt-memoire.txt`, 100 % local) : le Copilote RETIENT et s'en sert
+  dans chaque réponse IA → il devient plus précis d'une session à l'autre.
+  - **« retiens que… »** (ex. « retiens que je joue surtout à Valorant », « retiens que mon
+    budget est 800 € ») ; **« que sais-tu sur moi »** pour voir ; **« oublie ce que tu sais »**
+    pour effacer.
+  - **Profil matériel mémorisé automatiquement** (CPU, RAM, GPU) → conseils adaptés à TA config
+    dès la première conversation.
+- **Il lit les pages web** : colle une URL (ou « résume cette page … ») → il la télécharge,
+  en extrait le texte et te la **résume** via l'IA locale, source citée. Vérifié sur une page
+  Wikipédia (résumé structuré correct).
+- Ces capacités s'ajoutent à la recherche web (v14.68) ; tout reste contrôlable par
+  « coupe/active internet », et la mémoire est effaçable à tout moment.
+
 ## v14.68 — Le Copilote se connecte à internet (actualité en temps réel)
 - **Recherche web** : pour les questions d'actualité que le modèle ne peut pas connaître de tête
   (« qui a gagné le match ? », météo, prix, news, dates de sortie…), le Copilote **cherche sur

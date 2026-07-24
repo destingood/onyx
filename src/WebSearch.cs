@@ -119,6 +119,29 @@ namespace BTOptimizer
             return sb.ToString();
         }
 
+        /// <summary>Télécharge une page et en extrait le TEXTE lisible (sans scripts/styles/balises),
+        /// tronqué. Pour « résume cette page … ». Vide si injoignable. BLOQUANT (tâche de fond).</summary>
+        public static string FetchPage(string url, int maxChars)
+        {
+            try
+            {
+                if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) url = "https://" + url;
+                string html;
+                using (var cts = new System.Threading.CancellationTokenSource(14000))
+                using (var r = Http.GetAsync(url, cts.Token).Result)
+                    html = r.Content.ReadAsStringAsync().Result;
+                if (string.IsNullOrEmpty(html)) return "";
+                // Retire les blocs non textuels, puis les balises ; décode et compacte.
+                html = Regex.Replace(html, "(?is)<(script|style|noscript|head|svg|nav|footer)[^>]*>.*?</\\1>", " ");
+                html = Regex.Replace(html, "(?s)<[^>]+>", " ");
+                html = WebUtility.HtmlDecode(html);
+                html = Regex.Replace(html, "\\s+", " ").Trim();
+                if (html.Length > maxChars) html = html.Substring(0, maxChars);
+                return html;
+            }
+            catch { return ""; }
+        }
+
         /// <summary>Domaines sources distincts (pour citer « d'après lemonde.fr, wikipedia.org »).</summary>
         public static string Sources(List<Result> results)
         {

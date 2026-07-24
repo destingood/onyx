@@ -829,6 +829,33 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  RECHERCHE WEB — le Copilote va chercher l'info d'actualité en ligne
         // ------------------------------------------------------------------
+        /// <summary>Télécharge une page web donnée et la fait RÉSUMER par le modèle local.</summary>
+        public static DocAssistant.ChatAction ReadUrl(string url, string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Lecture de la page"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (LocalBrain.WebOff())
+                    return Say("La recherche internet est coupée. Dis « active internet » pour que je puisse lire des pages web.");
+                if (log != null) log("Lecture de la page " + url + "…", 0);
+                string txt;
+                try { txt = WebSearch.FetchPage(url, 6000); }
+                catch { txt = ""; }
+                if (string.IsNullOrEmpty(txt) || txt.Length < 60)
+                    return Say("Je n'ai pas réussi à lire cette page (injoignable, protégée, ou vide).");
+                if (!LocalBrain.ServerUp(1500) || LocalBrain.BestModel() == null)
+                    return Say("Page lue, mais l'IA locale n'est pas là pour la résumer. Active-la (« active l'ia »).");
+                string demande = string.IsNullOrEmpty(q) ? "Résume cette page en français, points clés." : q;
+                string ans;
+                try { ans = LocalBrain.AskWeb(demande, "Contenu de la page " + url + " :\n" + txt, LocalBrain.BestModel()); }
+                catch (Exception ex) { return Say("Le résumé a échoué : " + ex.Message); }
+                if (string.IsNullOrEmpty(ans)) return Say("Je n'ai pas pu résumer cette page.");
+                return Say(ans.Trim() + "\n\n— 🌐 lu sur " + url + ", synthétisé par l'IA locale.");
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)
@@ -865,6 +892,7 @@ namespace BTOptimizer
         // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
         private static string BrainContext(BadgeCatalog.Stats st)
         {
+            try { Memory.SeedHardwareOnce(); } catch { }   // renseigne CPU/RAM/GPU une fois → conseils adaptés
             var sb = new StringBuilder();
             sb.Append("Tu es « le Copilote » d'ONYX, un assistant polyvalent qui tourne 100 % en local sur le PC de l'utilisateur. ");
             sb.Append("Réponds à N'IMPORTE QUELLE question (PC, jeux, culture générale, aide, conseils…), en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
@@ -881,6 +909,8 @@ namespace BTOptimizer
             if (st != null)
                 sb.Append("État réel du PC de l'utilisateur : santé " + st.Health + " %, " + st.OptiActive + "/" + st.OptiTotal
                         + " optimisations actives, " + st.GamesDet + " jeu(x) détecté(s). ");
+            string mem = Memory.ForPrompt();
+            if (!string.IsNullOrEmpty(mem)) sb.Append("\n\n").Append(mem).Append("Utilise ces infos pour personnaliser tes réponses (sans les répéter inutilement). ");
             return sb.ToString();
         }
 

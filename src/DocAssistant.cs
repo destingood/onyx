@@ -162,6 +162,41 @@ namespace BTOptimizer
                 LocalBrain.SetWebEnabled(true);
                 return new Reply { Text = "Recherche internet activée : pour l'actualité et le temps réel (résultats de match, météo, prix…), je vais chercher en ligne puis je te réponds. Vas-y, demande !", ShowStarters = true };
             }
+            // --- MÉMOIRE : le Copilote retient pour être plus précis d'une fois sur l'autre ---
+            if (Has(s, "retiens que", "souviens toi que", "souviens-toi que", "note que", "rappelle toi que",
+                       "rappelle-toi que", "retiens", "memorise"))
+            {
+                string fact = ExtractAfter(q, new[] { "retiens que", "souviens toi que", "souviens-toi que", "note que",
+                    "rappelle toi que", "rappelle-toi que", "memorise que", "retiens", "memorise" });
+                if (fact.Length < 2)
+                    return new Reply { Text = "Dis-moi quoi retenir, par exemple « retiens que je joue surtout à Valorant » ou « retiens que mon budget est de 800 € ».", ShowStarters = false };
+                Memory.Add(fact);
+                return new Reply { Text = "C'est noté : « " + fact + " ». Je m'en servirai pour te répondre plus juste. (Dis « oublie ce que tu sais » pour effacer.)", ShowStarters = false };
+            }
+            if (Has(s, "que sais tu sur moi", "que sais-tu sur moi", "mes infos", "tu te souviens de quoi", "ta memoire", "qu'est ce que tu sais sur moi"))
+            {
+                var facts = Memory.All();
+                if (facts.Count == 0)
+                    return new Reply { Text = "Je ne retiens rien pour l'instant. Dis « retiens que… » et je garderai l'info d'une session à l'autre pour être plus précis.", ShowStarters = false };
+                return new Reply { Text = "Voilà ce que je retiens sur toi et ton PC :\n\n• " + string.Join("\n• ", facts.ToArray()) + "\n\n« oublie ce que tu sais » pour tout effacer.", ShowStarters = false };
+            }
+            if (Has(s, "oublie ce que tu sais", "oublie moi", "efface ta memoire", "efface ce que tu sais", "vide ta memoire"))
+            {
+                Memory.Clear();
+                return new Reply { Text = "Voilà, j'ai tout oublié sur toi (matériel, préférences, notes). On repart de zéro.", ShowStarters = true };
+            }
+
+            // --- LIRE / RÉSUMER une page web dont l'URL est donnée ---
+            {
+                string url = FindUrl(q);
+                if (url != null && LocalBrain.Enabled && !LocalBrain.WebOff())
+                {
+                    string focus = Has(s, "resume", "resumer", "resume moi") ? "Résume cette page en français, points clés."
+                                 : (Has(s, "lis", "lire", "ouvre", "regarde") ? "" : "");
+                    return new Reply { Text = "Je vais lire cette page pour toi…", Action = ChatActions.ReadUrl(url, focus, st) };
+                }
+            }
+
             // Recherche web EXPLICITE : « cherche sur internet X », « google X »…
             if (Has(s, "cherche sur internet", "cherche sur le web", "recherche internet", "google", "sur internet", "sur le web", "recherche web"))
                 return new Reply { Text = "Je cherche ça sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
@@ -465,6 +500,35 @@ namespace BTOptimizer
             bool asks = Has(s, "qui", "quel", "quelle", "combien", "quand", "comment", "gagne", "sort", "coute", "resultat", "score");
             if (topic && asks)
                 return new Reply { Text = "Ça, c'est de l'actualité — je vais voir sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
+            return null;
+        }
+
+        /// <summary>Texte qui suit le premier marqueur trouvé, sur la question ORIGINALE (accents
+        /// et casse gardés pour la mémoire). Ex. « Retiens que je joue à Valorant » → « je joue à Valorant ».</summary>
+        private static string ExtractAfter(string original, string[] markers)
+        {
+            string low = original.ToLowerInvariant();
+            int best = -1, len = 0;
+            foreach (string m in markers)
+            {
+                int k = low.IndexOf(m, StringComparison.Ordinal);
+                if (k >= 0 && (best < 0 || k < best)) { best = k; len = m.Length; }
+            }
+            if (best < 0) return "";
+            string tail = original.Substring(best + len).Trim();
+            return tail.TrimStart(':', '-', ' ', '"', '«').TrimEnd('"', '»', ' ', '.').Trim();
+        }
+
+        /// <summary>Repère une URL (http(s):// ou www.…) dans le message, ou null.</summary>
+        private static string FindUrl(string text)
+        {
+            try
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(text,
+                    @"((https?://|www\.)[^\s]+\.[^\s]{2,})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (m.Success) return m.Value.TrimEnd('.', ',', ')', ']', '"', '»');
+            }
+            catch { }
             return null;
         }
 
