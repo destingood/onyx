@@ -15,6 +15,7 @@ namespace BTOptimizer
         private Button _send;
         private ScrollWheelFilter _wheel;
         private BadgeCatalog.Stats _stats;
+        private DocAssistant.Reply _last;   // dernière réponse ACTIONNABLE : contexte du prochain « oui »/« non »
         private bool _greeted;
         private bool _seeded;
 
@@ -48,6 +49,7 @@ namespace BTOptimizer
         public override void OnShown()
         {
             DoLayout();
+            try { _input.Focus(); } catch { }   // on peut taper directement, sans cliquer le champ
             Mascot.CurrentMood = Mascot.Mood.Thinking;   // tant que le bilan n'est pas connu
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
             Greet();
@@ -77,7 +79,7 @@ namespace BTOptimizer
         private void Send(string q)
         {
             AddBubble(false, q, null);
-            var reply = DocAssistant.Answer(q, _stats, Host.Log);
+            var reply = DocAssistant.Answer(q, _stats, Host.Log, _last);
             // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Copilote écrit… ».
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
             {
@@ -104,21 +106,31 @@ namespace BTOptimizer
 
         /// <summary>Exécute une action EN TÂCHE DE FOND (certaines durent une minute : point de
         /// restauration, nettoyage) puis affiche le compte-rendu dans la conversation, avec la
-        /// correction correspondante s'il y a réellement quelque chose à corriger.</summary>
-        private void RunAction(DocAssistant.ChatAction a)
+        /// correction correspondante s'il y a réellement quelque chose à corriger.
+        /// 'src' = le bouton qui a lancé : il raconte la fin (« ✓ Terminé », ou ré-armé si échec).</summary>
+        private void RunAction(DocAssistant.ChatAction a, Button src = null)
         {
             if (a == null || a.Run == null) return;
             ShowTyping();
             System.Threading.Tasks.Task.Run(() =>
             {
-                DocAssistant.Reply res;
+                DocAssistant.Reply res; bool failed = false;
                 try { res = a.Run(Host.Log); }
-                catch (Exception ex) { res = new DocAssistant.Reply { Text = "L'action n'a pas abouti : " + ex.Message }; }
+                catch (Exception ex) { failed = true; res = new DocAssistant.Reply { Text = "L'action n'a pas abouti : " + ex.Message }; }
                 try
                 {
                     BeginInvoke((Action)(() =>
                     {
                         HideTyping();
+                        if (src != null)
+                        {
+                            try
+                            {
+                                if (failed) { src.Text = "▶  " + a.Label; src.Enabled = true; }   // on peut retenter
+                                else src.Text = "✓  Terminé";                                      // verrouillé : pas de double exécution
+                            }
+                            catch { }
+                        }
                         if (res != null) AddBubble(true, res.Text, res);
                     }));
                 }
@@ -130,6 +142,7 @@ namespace BTOptimizer
         private void ShowTyping()
         {
             HideTyping();
+            Mascot.CurrentMood = Mascot.Mood.Thinking;   // Flux réfléchit pendant que le Copilote travaille
             var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(20, 20, 31) };
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
             var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
@@ -149,6 +162,7 @@ namespace BTOptimizer
         {
             if (_typingAnim != null) { try { _typingAnim.Stop(); _typingAnim.Dispose(); } catch { } _typingAnim = null; }
             if (_typingRow != null) { try { _flow.Controls.Remove(_typingRow); _typingRow.Dispose(); } catch { } _typingRow = null; }
+            Mascot.CurrentMood = _stats != null ? Mascot.MoodForHealth(_stats.Health) : Mascot.Mood.Calm;
         }
 
         private Panel MakeAvatar(bool doc)
@@ -183,6 +197,7 @@ namespace BTOptimizer
             ("Écran bloqué à 60 Hz", "mon écran semble bloqué à 60 hz"),
             ("Bilan complet du PC", "fais un bilan complet de mon pc"),
             ("Le PC chauffe", "le pc ou le gpu chauffe et bride"),
+            ("Qui bouffe mon CPU ?", "quel programme consomme mon cpu en fond"),
             ("Libérer de l'espace", "libérer de l'espace disque"),
         };
 
@@ -248,6 +263,14 @@ namespace BTOptimizer
             row.Controls.Add(avatar); row.Controls.Add(bubble);
             _flow.Controls.Add(row);
             try { _flow.ScrollControlIntoView(row); } catch { }
+
+            // Suivi de conversation : la dernière réponse ACTIONNABLE devient le contexte du
+            // prochain « oui »/« non » ; et un « oui » sur un outil vaut clic → on l'ouvre.
+            if (doc && reply != null)
+            {
+                if (reply.Tool != null || reply.Action != null || (reply.Plan != null && reply.Plan.Count > 0)) _last = reply;
+                if (reply.OpenToolNow && reply.Tool != null) { try { Host.OpenDialog(reply.Tool.Open()); } catch { } }
+            }
         }
 
         /// <summary>Bouton d'une correction : libellé, puis en petit ce qu'elle va changer.
@@ -256,7 +279,7 @@ namespace BTOptimizer
         {
             var go = FpsUi.NeonButton("▶  " + act.Label);
             go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
-            go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act); };
+            go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
             col.Controls.Add(go);
             if (!string.IsNullOrEmpty(act.Warning))
                 col.Controls.Add(new Label
@@ -319,7 +342,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "COPILOTE", "Le Copilote — décris ton souci, je t'ouvre le bon outil (assistant local, hors-ligne).");
+            PaintTitle(e.Graphics, "COPILOTE", "Le Copilote — il mesure ton PC en direct, trouve les causes et corrige avec ton accord (100 % local).");
         }
     }
 }

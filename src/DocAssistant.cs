@@ -30,6 +30,7 @@ namespace BTOptimizer
         {
             public string Text;
             public HelpCatalog.Entry Tool;   // outil proposé à l'ouverture (bouton), ou null
+            public bool OpenToolNow;          // le « oui » de l'utilisateur vaut clic : la page ouvre l'outil elle-même
             public bool ShowStarters;         // affiche des suggestions cliquables
             public ChatAction Action;         // mesure lancée seule, ou changement à confirmer
             public List<ChatAction> Plan;     // plusieurs corrections classées par impact
@@ -41,26 +42,45 @@ namespace BTOptimizer
             return new Reply
             {
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
-                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) et j'ouvre le bon outil.",
+                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) : "
+                     + "je mesure en direct, je trouve les causes et je corrige — toujours avec ton accord.",
                 ShowStarters = true
             };
         }
 
-        public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log)
+        /// <summary>'last' = dernière réponse du Copilote qui portait quelque chose d'actionnable
+        /// (outil / correction / plan) : un « oui » ou un « non » de l'utilisateur s'y rapporte.</summary>
+        public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
         {
             var entries = HelpCatalog.Entries(log);
             string s = Norm(q);
             if (s.Length == 0) return Intro(st);
+
+            // --- Suivi de conversation : « oui » / « non » répond à la DERNIÈRE proposition ---
+            if (IsYes(s))
+            {
+                if (last != null && last.Plan != null && last.Plan.Count > 0)
+                    return new Reply { Text = "C'est parti — dans l'ordre d'impact, chaque bouton lance sa correction :", Plan = last.Plan };
+                if (last != null && last.Action != null)
+                    return last.Action.IsChange
+                        ? new Reply { Text = "C'est parti — un clic sur le bouton et je lance :", Action = last.Action }
+                        : new Reply { Text = "Je relance la mesure…", Action = last.Action };
+                if (last != null && last.Tool != null)
+                    return new Reply { Text = "J'ouvre « " + last.Tool.Tool + " » tout de suite.", Tool = last.Tool, OpenToolNow = true };
+                return new Reply { Text = "Volontiers — mais dis-moi d'abord ce qui cloche :", ShowStarters = true };
+            }
+            if (IsNo(s))
+                return new Reply { Text = "Pas de souci, on laisse ça de côté. Autre chose à vérifier ?", ShowStarters = true };
 
             if (Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir"))
                 return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
             if (Has(s, "aide", "help", "comment", "que fais", "que peux", "sais tu faire", "tu fais quoi"))
-                return new Reply { Text = "Je diagnostique et j'ouvre les bons outils : santé du PC, FPS, latence, réseau/ping, crashs, écran/souris, disque, démarrage, nettoyage, sauvegarde… Dis-moi ce qui cloche.", ShowStarters = true };
+                return new Reply { Text = "Je diagnostique et je corrige : je mesure ton PC en direct (écrans, ping, capteurs, processus en fond, disque…), je classe les causes par impact et chaque correction attend TON clic. Dis-moi ce qui cloche.", ShowStarters = true };
 
-            // Questions sur l'état réel du PC (vraies données).
-            if (st != null && Has(s, "sante", "etat", "bilan", "score", "va mon pc", "comment va"))
+            // Questions sur l'état réel du PC (vraies données). « bilan » va à l'ENQUÊTE, plus bas.
+            if (st != null && Has(s, "sante", "score", "va mon pc", "comment va", "etat de mon pc"))
                 return WithTool(entries, "Santé de mon PC",
                     "Ton PC est à " + st.Health + " % de santé, avec " + st.OptiActive + " optimisation(s) active(s). " +
                     (st.Health >= 80 ? "C'est du bon état clinique ! ✅" : "On peut clairement mieux faire — j'ouvre le bilan complet ?"));
@@ -69,18 +89,14 @@ namespace BTOptimizer
             if (st != null && Has(s, "combien d'opti", "optimisation active", "mes opti"))
                 return WithTool(entries, "Santé de mon PC", st.OptiActive + " optimisation(s) active(s) sur " + st.OptiTotal + ". Va dans Optimisations pour en activer d'autres (preset « Recommandé »).");
 
-            // --- ENQUÊTE : symptôme large ou demande de bilan → il cherche TOUTES les causes ---
-            if (Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze",
-                       "bilan", "diagnostic", "analyse", "verifie tout", "check up", "checkup",
-                       "fps bas", "perd des fps", "chute de fps", "probleme", "ca marche pas"))
-                return new Reply
-                {
-                    Text = "Je lance l'enquête complète : écrans, températures, mémoire, disque, "
-                         + "bibliothèques et optimisations. Quelques secondes…",
-                    Action = Investigator.Action(q.Trim(), st)
-                };
-
-            // --- Intentions où le Copilote MESURE puis AGIT (avant l'aiguillage générique) ---
+            // --- Intentions PRÉCISES d'abord : le Copilote MESURE puis AGIT. Elles passent AVANT
+            //     l'enquête large, sinon « mon écran a un problème » partirait dans le bilan général. ---
+            if (Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion", "wifi", "deco", "deconnect"))
+                return WithAction(entries, "Qualité réseau",
+                    "Je teste ta connexion en direct (échos réels)…", ChatActions.MeasurePing());
+            if (Has(s, "qui ralentit", "processus", "en fond", "arriere plan", "arriere-plan", "quel programme", "quelle appli", "gourmand", "bouffe", "consomme"))
+                return WithAction(entries, "Qui ralentit mon PC",
+                    "Je mesure ce qui travaille en ce moment (1 seconde)…", ChatActions.MeasureHogs());
             if (Has(s, "ecran", "hz", "hertz", "rafraich", "moniteur", "144", "165", "240", "bloque a 60"))
                 return WithAction(entries, "Réglages d'écran",
                     "Je regarde tes écrans et leur fréquence réelle…", ChatActions.MeasureScreen());
@@ -96,6 +112,18 @@ namespace BTOptimizer
             if (Has(s, "point de restau", "restauration", "sauvegarde", "backup", "avant de toucher", "filet"))
                 return WithAction(entries, "Points de restauration",
                     "Je peux poser un filet de sécurité avant toute manipulation.", ChatActions.MakeRestorePoint());
+
+            // --- ENQUÊTE : symptôme large ou demande de bilan → il cherche TOUTES les causes ---
+            if (Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze",
+                       "bilan", "diagnostic", "analyse", "enquete", "verifie", "controle", "passe au crible",
+                       "check up", "checkup", "audit",
+                       "fps bas", "perd des fps", "chute de fps", "probleme", "ca marche pas"))
+                return new Reply
+                {
+                    Text = "Je lance l'enquête complète : écrans, capteurs, connexion, processus en fond, "
+                         + "disque, bibliothèques, crashs pilote et optimisations. Quelques secondes…",
+                    Action = Investigator.Action(q.Trim(), st)
+                };
 
             // Correspondance symptôme (score par mots-clés).
             HelpCatalog.Entry best = null; int bestScore = 0;
@@ -172,6 +200,25 @@ namespace BTOptimizer
         }
 
         private static bool Has(string s, params string[] ks) { foreach (var k in ks) if (s.Contains(k)) return true; return false; }
+
+        // --- « oui » / « non » : formes courtes uniquement, comparées lettres seules (« Vas-y ! »,
+        //     « d'accord », « ok stp »…). Une vraie phrase ne matche pas et suit le routage normal. ---
+        private static string Squash(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (char c in s) if (char.IsLetter(c)) sb.Append(c);
+            return sb.ToString();
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex YesRx = new System.Text.RegularExpressions.Regex(
+            "^(oui|ouais|ouaip|yes|yep|yeah|ok|okay|oki|daccord|dacc|vasy|go|fonce|lance|faisle|fais|ouvre|carrement|volontiers|banco|camarche|cestparti|allonsy|allezy|allez|montre|montremoi|jeveuxbien|pourquoipas|evidemment|grave)"
+          + "(oui|ouais|ok|vasy|go|lance|faisle|fais|ouvre|montre|stp|silteplait|svp|merci|le|la|ca|moi|donc|maintenant|toutdesuite)*$");
+        private static readonly System.Text.RegularExpressions.Regex NoRx = new System.Text.RegularExpressions.Regex(
+            "^(non|nan|nope|no|pasmaintenant|pastoutdesuite|pasencore|plustard|laisse|laissetomber|annule|annuler|stop|arrete|surtoutpas)"
+          + "(non|nan|laisse|laissetomber|tomber|merci|stp|silteplait|svp)*$");
+
+        private static bool IsYes(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && YesRx.IsMatch(x); }
+        private static bool IsNo(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && NoRx.IsMatch(x); }
 
         // minuscule + sans accents (l'utilisateur tape souvent sans accents).
         private static string Norm(string x)
