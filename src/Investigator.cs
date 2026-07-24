@@ -32,7 +32,9 @@ namespace BTOptimizer
         private static readonly string[] MemLabels =
         {
             "ecrans|écran sous sa fréquence", "crashgpu|crashs du pilote GPU", "disque|disque à nettoyer",
-            "biblio|bibliothèques manquantes", "reglages|réglages néfastes", "opti|optimisations inactives"
+            "biblio|bibliothèques manquantes", "reglages|réglages néfastes", "opti|optimisations inactives",
+            "uptime|PC sans vrai redémarrage", "ramspeed|RAM sous sa vitesse (XMP)",
+            "gpupilote|pilote GPU âgé", "demarrage|démarrage chargé"
         };
 
         private static string MemPath
@@ -44,6 +46,13 @@ namespace BTOptimizer
         {
             foreach (string m in MemLabels) { int i = m.IndexOf('|'); if (m.Substring(0, i) == key) return m.Substring(i + 1); }
             return key;
+        }
+
+        // minuscule + accents plats : le focus vient tel que TAPÉ par l'utilisateur.
+        private static string DocFocusNorm(string focus)
+        {
+            string f = (focus ?? "").ToLowerInvariant();
+            return f.Replace('é', 'e').Replace('è', 'e').Replace('ê', 'e').Replace('à', 'a').Replace('â', 'a');
         }
 
         private static bool IsStable(string key)
@@ -251,19 +260,22 @@ namespace BTOptimizer
                 double avg, jit; int loss;
                 if (ChatActions.PingSample(4, 600, out avg, out jit, out loss))
                 {
+                    bool wifi = false; try { wifi = ChatActions.OnWifi(); } catch { }
                     if (loss > 0 || jit >= 15 || avg >= 80)
                         found.Add(new Finding
                         {
                             Impact = 70,
                             Text = "Ta connexion n'est pas nette : ping moyen " + avg.ToString("0") + " ms, gigue "
                                  + jit.ToString("0.#") + " ms" + (loss > 0 ? ", " + loss + " % de paquets perdus" : "") + ". "
-                                 + "En jeu, ça fait des à-coups et des tirs non comptés. Gratuit : câble Ethernet plutôt que "
-                                 + "Wi-Fi quand c'est possible, et le panneau Qualité réseau départage ta box d'internet.",
+                                 + "En jeu, ça fait des à-coups et des tirs non comptés. "
+                                 + (wifi ? "Et tu es en Wi-Fi : un câble Ethernet, même temporaire, tranche la question gratuitement. "
+                                         : "Gratuit : le panneau Qualité réseau départage ta box d'internet. "),
                             Why = "Connexion — constaté : " + avg.ToString("0") + " ms de ping moyen, " + jit.ToString("0.#")
-                                + " ms de gigue, " + loss + " % de perte sur 4 échos réels vers 1.1.1.1 ; seuils jeu : ~80 ms "
+                                + " ms de gigue, " + loss + " % de perte sur 4 échos réels vers 1.1.1.1"
+                                + (wifi ? ", en Wi-Fi" : "") + " ; seuils jeu : ~80 ms "
                                 + "de ping, 15 ms de gigue, 0 % de perte. La perte « téléporte », la gigue rend le jeu irrégulier."
                         });
-                    else ok.Add("connexion stable (" + avg.ToString("0") + " ms)");
+                    else ok.Add("connexion stable (" + avg.ToString("0") + " ms" + (wifi ? ", Wi-Fi" : "") + ")");
                 }
             }
             catch { }
@@ -285,6 +297,105 @@ namespace BTOptimizer
                             + "de fond qui pèse autant vole des images par seconde à ton jeu ; le fermer est gratuit."
                     });
                 else ok.Add("aucun programme gourmand en fond");
+            }
+            catch { }
+
+            // --- Redémarrage en retard (le « démarrage rapide » endort au lieu d'éteindre) ---
+            try
+            {
+                double up = ChatActions.UptimeDays();
+                if (up >= 7)
+                    found.Add(new Finding
+                    {
+                        Impact = 58, Key = "uptime",
+                        Text = "Ton PC n'a pas VRAIMENT redémarré depuis " + up.ToString("0") + " jours (le « démarrage "
+                             + "rapide » de Windows endort au lieu d'éteindre). Un vrai redémarrage purge pilotes et fuites "
+                             + "mémoire — gratuit, 2 minutes, souvent spectaculaire.",
+                        Why = "Redémarrage — constaté : " + up.ToString("0") + " jours d'uptime système ; seuil : 7 jours. "
+                            + "Pilotes et services accumulent états bancals et fuites ; un redémarrage complet remet tout à plat, gratuitement."
+                    });
+                else if (up >= 0) ok.Add("redémarré récemment");
+            }
+            catch { }
+
+            // --- RAM sous sa vitesse vendue (profil XMP/EXPO non activé dans le BIOS) ---
+            try
+            {
+                var ram = Sys.QueryRam();
+                if (ram.SpeedRated > 0 && ram.SpeedRunning > 0 && ram.SpeedRated - ram.SpeedRunning >= 400)
+                    found.Add(new Finding
+                    {
+                        Impact = 72, Key = "ramspeed",
+                        Text = "Ta RAM tourne à " + ram.SpeedRunning + " MT/s alors qu'elle est vendue pour "
+                             + ram.SpeedRated + " MT/s : le profil XMP/EXPO n'est pas activé dans le BIOS. Ce sont des FPS "
+                             + "gratuits que tu as déjà payés — 2 minutes dans le BIOS (le guide BIOS de l'app, menu ⋯, t'accompagne).",
+                        Why = "RAM — constaté (WMI) : " + ram.SpeedRunning + " MT/s configurés vs " + ram.SpeedRated
+                            + " MT/s annoncés par les barrettes. Sans XMP/EXPO, la carte mère applique une vitesse de "
+                            + "sécurité très inférieure ; l'activer est gratuit et réversible dans le BIOS."
+                    });
+                else if (ram.SpeedRunning > 0) ok.Add("RAM à sa vitesse (" + ram.SpeedRunning + " MT/s)");
+            }
+            catch { }
+
+            // --- Pilote GPU très âgé (correctifs et FPS manqués) ---
+            try
+            {
+                int age = Diagnostics.GpuDriverAgeDays();
+                if (age > 540)
+                    found.Add(new Finding
+                    {
+                        Impact = 62, Key = "gpupilote",
+                        Text = "Ton pilote graphique date d'environ " + (age / 30) + " mois. Les pilotes récents corrigent "
+                             + "des crashs et gagnent des FPS — mise à jour GRATUITE (NVIDIA/AMD/Intel), et DDU (gratuit, "
+                             + "1 clic depuis Bibliothèques) si tu veux repartir propre.",
+                        Why = "Pilote GPU — constaté (WMI DriverDate) : " + age + " jours ; seuil : ~18 mois. Les jeux "
+                            + "récents sont optimisés contre les pilotes récents ; la mise à jour est gratuite chez le constructeur."
+                    });
+                else if (age >= 0) ok.Add("pilote GPU récent");
+            }
+            catch { }
+
+            // --- Démarrage chargé (programmes lancés à chaque allumage) ---
+            try
+            {
+                var stl = Sys.ListStartup(); int en = 0;
+                foreach (var e in stl) if (e.Enabled) en++;
+                if (en >= 8)
+                    found.Add(new Finding
+                    {
+                        Impact = 48, Key = "demarrage",
+                        Text = "" + en + " programmes se lancent à CHAQUE allumage : le PC démarre plus lentement et garde "
+                             + "des poids en fond. Le panneau « Programmes au démarrage » permet d'en couper — gratuit, "
+                             + "réversible, sans rien désinstaller.",
+                        Why = "Démarrage — constaté : " + en + " entrées actives (clés Run du registre) ; seuil : 8. "
+                            + "Chaque entrée ralentit l'allumage et reste souvent résidente ensuite."
+                    });
+                else ok.Add("démarrage léger (" + en + " au boot)");
+            }
+            catch { }
+
+            // --- DNS lent — UNIQUEMENT si la plainte est réseau : l'enquête s'adapte au symptôme ---
+            try
+            {
+                string fl = DocFocusNorm(focus);
+                if (fl.Contains("ping") || fl.Contains("ligne") || fl.Contains("internet") || fl.Contains("reseau")
+                    || fl.Contains("dns") || fl.Contains("lag") || fl.Contains("telecharg"))
+                {
+                    string cur; double curMs, bestMs; string bestName;
+                    if (ChatActions.DnsCompare(out cur, out curMs, out bestMs, out bestName)
+                        && curMs >= 0 && bestMs >= 0 && curMs > bestMs * 2 && curMs - bestMs >= 15)
+                        found.Add(new Finding
+                        {
+                            Impact = 40,
+                            Text = "Ton DNS" + (cur != null ? " (" + cur + ")" : "") + " répond en " + curMs.ToString("0")
+                                 + " ms là où " + bestName + " fait " + bestMs.ToString("0") + " ms. Chaque connexion à un "
+                                 + "serveur attend cette traduction. Le panneau DNS rapide bascule gratuitement (réversible).",
+                            Why = "DNS — constaté : " + curMs.ToString("0") + " ms (actuel) vs " + bestMs.ToString("0")
+                                + " ms (" + bestName + ", gratuit) sur les mêmes requêtes. Mesuré uniquement parce que ta "
+                                + "plainte touche au réseau — l'enquête adapte ses mesures au symptôme."
+                        });
+                    else if (curMs >= 0) ok.Add("DNS réactif (" + curMs.ToString("0") + " ms)");
+                }
             }
             catch { }
 

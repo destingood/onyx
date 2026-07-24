@@ -135,7 +135,9 @@ namespace BTOptimizer
             return f;
         }
 
-        private static int GpuDriverAgeDays()
+        /// <summary>Âge du pilote GPU en jours (WMI DriverDate), −1 si illisible. Public :
+        /// le Copilote s'en sert aussi (pilote très vieux = FPS et correctifs manqués).</summary>
+        public static int GpuDriverAgeDays()
         {
             try
             {

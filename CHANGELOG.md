@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.49 — La boîte à outils du Copilote : 4 mesures, 5 pistes et un lexique de plus
+- **4 nouvelles mesures dans le chat** :
+  - **DNS** — chronomètre TON serveur DNS contre Cloudflare/Google (gratuits) sur les mêmes
+    requêtes ; verdict et bascule gratuite via le panneau DNS rapide.
+  - **Démarrage** — inventaire réel de ce qui se lance à chaque allumage, avec verdict.
+  - **Crashs (14 j)** — relevé pilote GPU + crashs/blocages d'applications (jeux marqués 🎮),
+    et le bon remède gratuit selon le motif (DDU, bibliothèques, stress-test).
+  - **Latence (~5 s)** — timer système, régularité réelle (Sleep 1 ms), pics DPC des pilotes ;
+    la mesure qui départage « machine réactive » et « pilote qui micro-coupe ».
+- **L'enquête passe à ~15 pistes et S'ADAPTE au symptôme** : + redémarrage en retard (uptime,
+  le « démarrage rapide » endort au lieu d'éteindre), + **RAM sous sa vitesse vendue**
+  (XMP/EXPO coupé — des FPS déjà payés), + pilote GPU très âgé, + démarrage chargé, + **DNS
+  lent mesuré UNIQUEMENT quand la plainte est réseau**. Le Wi-Fi est détecté et change les
+  conseils (câble = gratuit).
+- **Lexique pédagogique** : « c'est quoi le DLSS ? », « à quoi sert XMP ? », « ddu » → 20
+  notions expliquées simplement, avec l'outil lié tendu à chaque fois qu'il existe.
+- Nouvelles intentions comprises : DNS, démarrage/boot, crash/écran bleu, input lag/latence —
+  toutes tolérantes aux fautes de frappe, toutes comptées dans le routage raisonné.
+- 2 pastilles d'accueil de plus : « PC lent à s'allumer » et « Ça crash / écran bleu ».
+
 ## v14.48 — Page Copilote « pro » (cockpit) + intelligence proactive
 - **Cockpit en tête de page** : 4 tuiles d'état EN DIRECT — Santé, Écrans (au max ✓ / N sous
   le max), Ping réel (échos), Température GPU — colorées selon les seuils. La page se lit
