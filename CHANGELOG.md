@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.55 — L'IA locale s'installe TOUTE SEULE pour chaque installation
+- **Zéro action requise** : au premier lancement (20 s après l'ouverture, en arrière-plan),
+  l'app installe Ollama (winget, silencieux), démarre le moteur, télécharge le petit modèle
+  (≈ 2 Go, une fois) et active le cerveau — chaque personne qui installe l'app a un Copilote
+  qui répond à tout, sans rien configurer.
+- **Garde-fous** : jamais sans winget ; jamais sous 6 Go libres ; 3 tentatives lourdes
+  maximum (compteur persisté) ; téléchargement interrompu = REPRIS au lancement suivant
+  (Ollama reprend où il en était) ; jamais dans le harnais de test.
+- **Le choix de l'utilisateur reste roi** : « désactive l'ia » coupe ET bloque définitivement
+  l'installation automatique (fichier bt-ia-off.txt) ; « active l'ia » lève ce blocage.
+- **Transparence** : l'accueil du Copilote affiche l'étape en cours (« installation d'Ollama »,
+  « téléchargement du modèle… ») et rappelle comment annuler ; une question posée pendant
+  l'installation reçoit une réponse honnête (« repose-la dans quelques minutes »).
+
 ## v14.54 — Le cerveau IA 100 % LOCAL (optionnel, gratuit) : il répond à tout
 - **« active l'ia »** → le Copilote se branche sur **Ollama** (gratuit, open source) : un
   modèle d'IA qui tourne **sur TA machine** (ta carte graphique fait le travail). Aucune

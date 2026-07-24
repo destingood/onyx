@@ -657,6 +657,7 @@ namespace BTOptimizer
             a.Label = "État de l'IA locale"; a.AutoRun = true; a.IsChange = false;
             a.Run = delegate (Action<string, int> log)
             {
+                LocalBrain.ClearOptOut();   // demande explicite : elle annule un « désactive » passé
                 if (LocalBrain.ServerUp(1500))
                 {
                     string m = LocalBrain.BestModel();

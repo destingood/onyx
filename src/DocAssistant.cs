@@ -53,13 +53,18 @@ namespace BTOptimizer
         public static Reply Intro(BadgeCatalog.Stats st)
         {
             string h = st != null ? "  Santé actuelle de ton PC : " + st.Health + " %." : "";
+            string ia = LocalBrain.SetupStatus;
+            string brain = ia != null
+                ? "\n🧠 Mon cerveau IA local s'installe en arrière-plan (" + ia + ") — gratuit, 100 % sur ta machine. « désactive l'ia » pour annuler."
+                : LocalBrain.Enabled ? "\n🧠 IA locale active : je réponds aussi à tout le reste."
+                : "";
             return new Reply
             {
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
                        "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) : "
                      + "je mesure en direct, je trouve les causes et je corrige — toujours avec ton accord, "
                      + "et toujours gratuitement. Je réponds aussi aux questions : « c'est quoi le DLSS ? », "
-                     + "« à quoi sert XMP ? »…",
+                     + "« à quoi sert XMP ? »…" + brain,
                 ShowStarters = true
             };
         }
@@ -262,13 +267,20 @@ namespace BTOptimizer
                     Tool = best, ShowStarters = true
                 };
 
-            // --- Dernier recours : le CERVEAU IA LOCAL (optionnel, gratuit) s'il est activé ---
+            // --- Dernier recours : le CERVEAU IA LOCAL (gratuit) s'il est prêt ---
             //     Lecture seule : la question part vers le modèle qui tourne SUR cette machine.
             if (LocalBrain.Enabled)
                 return new Reply
                 {
                     Text = "Ça sort de mes règles — je passe la question à mon cerveau IA local…",
                     Action = ChatActions.AskBrain(q.Trim(), st)
+                };
+            if (LocalBrain.SetupStatus != null)
+                return new Reply
+                {
+                    Text = "Mon cerveau IA local s'installe encore en arrière-plan (" + LocalBrain.SetupStatus
+                         + ") — repose-moi cette question dans quelques minutes, ou choisis un souci PC :",
+                    ShowStarters = true
                 };
 
             return new Reply
