@@ -56,57 +56,77 @@ namespace BTOptimizer
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
+        private Button _back, _mode, _launch, _folder, _pro, _close;
+
         private void BuildActions()
         {
-            // Onglet « ‹ BIBLIOTHÈQUE » : ramène à la liste (la fiche se referme).
-            var back = FpsUi.GhostButton("‹  BIBLIOTHÈQUE");
-            back.SetBounds(Pad, 22, 170, 30);
-            back.FlatAppearance.BorderSize = 0;
-            back.BackColor = FpsUi.BgMain; back.ForeColor = FpsUi.Dim;
-            back.Click += (s, e) => Close();
-            Controls.Add(back);
+            // Onglet « ‹ BIBLIOTHÈQUE » : ramène à la liste.
+            _back = FpsUi.GhostButton("‹  BIBLIOTHÈQUE");
+            _back.FlatAppearance.BorderSize = 0;
+            _back.BackColor = FpsUi.BgMain; _back.ForeColor = FpsUi.Dim;
+            _back.Click += (s, e) => Close();
+            Controls.Add(_back);
 
-            var mode = FpsUi.NeonButton("▶  MODE JEU");
-            mode.SetBounds(ClientSize.Width - Pad - 150, 20, 150, 34);
-            mode.Click += (s, e) => { try { Close(); } catch { } };
-            Controls.Add(mode);
+            _mode = FpsUi.NeonButton("▶  MODE JEU");
+            _mode.Click += (s, e) => { try { Close(); } catch { } };
+            Controls.Add(_mode);
 
-            int ay = 448;   // rangée d'actions, sous les conseils FPS
             if (_exes != null)
             {
                 _prio = FpsUi.GhostButton("Priorité CPU : —");
-                _prio.SetBounds(Pad, ay, LeftW, 34);
                 _prio.Click += (s, e) => TogglePrio();
                 Controls.Add(_prio);
             }
 
-            var launch = FpsUi.NeonButton("▶  Lancer");
-            launch.SetBounds(Pad, ay + 42, (LeftW - 12) / 2, 34);
-            launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
-            launch.Click += (s, e) => Launch();
-            Controls.Add(launch);
+            _launch = FpsUi.NeonButton("▶  Lancer");
+            _launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
+            _launch.Click += (s, e) => Launch();
+            Controls.Add(_launch);
 
-            var folder = FpsUi.GhostButton("Ouvrir le dossier");
-            folder.SetBounds(Pad + (LeftW - 12) / 2 + 12, ay + 42, (LeftW - 12) / 2, 34);
-            folder.Enabled = _g.InstallPath != null;
-            folder.Click += (s, e) => OpenFolder();
-            Controls.Add(folder);
+            _folder = FpsUi.GhostButton("Ouvrir le dossier");
+            _folder.Enabled = _g.InstallPath != null;
+            _folder.Click += (s, e) => OpenFolder();
+            Controls.Add(_folder);
 
             BuildBoosts();
 
-            // Appel Pro, sous la jaquette (colonne droite) — visible sans écraser le reste.
             if (!License.ProUnlocked)
             {
-                var pro = FpsUi.NeonButton("◆  PASSER PRO");
-                pro.SetBounds(ClientSize.Width - Pad - CoverW, ClientSize.Height - 62, CoverW, 40);
-                pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
-                Controls.Add(pro);
+                _pro = FpsUi.NeonButton("◆  PASSER PRO");
+                _pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
+                Controls.Add(_pro);
             }
 
-            var close = FpsUi.GhostButton("Fermer");
-            close.SetBounds(Pad, ClientSize.Height - 62, 120, 40);
-            close.Click += (s, e) => Close();
-            Controls.Add(close);
+            _close = FpsUi.GhostButton("Fermer");
+            _close.Click += (s, e) => Close();
+            Controls.Add(_close);
+
+            LayoutControls();
+            Resize += (s, e) => { LayoutControls(); Invalidate(); };
+        }
+
+        /// <summary>Positionne tout d'après la taille COURANTE : la fiche peut ainsi être
+        /// affichée en fenêtre ou intégrée dans la page Jeux, à n'importe quelle taille.</summary>
+        private void LayoutControls()
+        {
+            int W = ClientSize.Width, H = ClientSize.Height, lw = LeftW;
+            if (lw < 200) return;                       // trop étroit : on ne repositionne pas
+
+            if (_back != null) _back.SetBounds(Pad, 22, 170, 30);
+            if (_mode != null) _mode.SetBounds(W - Pad - 150, 20, 150, 34);
+
+            int cardY = 146, cardW = (lw - 16) / 2;
+            if (_cardLight != null) _cardLight.SetBounds(Pad, cardY, cardW, 166);
+            if (_cardFull != null) _cardFull.SetBounds(Pad + cardW + 16, cardY, cardW, 166);
+
+            int ay = 448;
+            if (_prio != null) _prio.SetBounds(Pad, ay, lw, 34);
+            int half = (lw - 12) / 2;
+            if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
+            if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);
+
+            if (_pro != null) _pro.SetBounds(W - Pad - CoverW, H - 62, CoverW, 40);
+            if (_close != null) _close.SetBounds(Pad, H - 62, 120, 40);
         }
 
         // ---- Priorité CPU dédiée (IFEO, comme la page « Priorité par jeu ») ----
@@ -202,9 +222,9 @@ namespace BTOptimizer
 
         private void BuildBoosts()
         {
-            int y = 146, w = (LeftW - 16) / 2;
-            _cardLight = BoostCard(Pad, y, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
-            _cardFull = BoostCard(Pad + w + 16, y, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
+            int w = (LeftW - 16) / 2;
+            _cardLight = BoostCard(Pad, 146, w, "BOOST LÉGER", false, out _nLight, out _btnLight);
+            _cardFull = BoostCard(Pad + w + 16, 146, w, "BOOST COMPLET", true, out _nFull, out _btnFull);
             Controls.Add(_cardLight); Controls.Add(_cardFull);
             CountBoosts();
         }

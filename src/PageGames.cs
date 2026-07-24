@@ -83,18 +83,40 @@ namespace BTOptimizer
             try { scanned = GameLibrary.ScanAll(); } catch { return; }
             if (scanned == null || scanned.Count == 0) return;
 
-            var seen = new System.Collections.Generic.HashSet<string>();
-            foreach (GameScan.GameInfo g in games) { string k = NormName(g.Name); if (k.Length > 0) seen.Add(k); }
+            var byName = new System.Collections.Generic.Dictionary<string, GameScan.GameInfo>();
+            foreach (GameScan.GameInfo g in games)
+            {
+                string k = NormName(g.Name);
+                if (k.Length > 0 && !byName.ContainsKey(k)) byName[k] = g;
+            }
 
             foreach (GameLibrary.InstalledGame s in scanned)
             {
                 string k = NormName(s.Name);
-                if (k.Length == 0 || !seen.Add(k)) continue;
-                games.Add(new GameScan.GameInfo
+                if (k.Length == 0) continue;
+
+                GameScan.GameInfo known;
+                if (byName.TryGetValue(k, out known))
+                {
+                    // Le catalogue connaît déjà ce jeu — mais souvent SANS chemin d'installation :
+                    // GameScan.Detect() peut le marquer « détecté » sur un simple mot-clé de
+                    // désinstallation, en laissant InstallPath à null (cas de World of Warcraft et
+                    // Hearthstone). On ENRICHIT donc l'entrée existante au lieu de jeter la nôtre,
+                    // sinon : pas de dossier → pas d'icône extraite et bouton « Lancer » inerte.
+                    known.Detected = true;
+                    if (string.IsNullOrEmpty(known.InstallPath)) known.InstallPath = s.InstallDir;
+                    if (string.IsNullOrEmpty(known.Store)) known.Store = s.Launcher;
+                    if (known.SteamId <= 0 && s.SteamAppId > 0) known.SteamId = s.SteamAppId;
+                    continue;
+                }
+
+                var added = new GameScan.GameInfo
                 {
                     Name = s.Name, Detected = true, SteamId = s.SteamAppId,
                     InstallPath = s.InstallDir, Store = s.Launcher
-                });
+                };
+                games.Add(added);
+                byName[k] = added;
             }
         }
 
@@ -314,8 +336,54 @@ namespace BTOptimizer
             };
             var tt = new ToolTip(); tt.SetToolTip(card, g.Name + " — clic pour la fiche détaillée");
             card.Cursor = Cursors.Hand;
-            card.Click += (s, e) => { try { using (var f = new GameDetailForm(g, Host.Log)) f.ShowDialog(FindForm()); } catch { } };
+            card.Click += (s, e) => OpenDetail(g);
             return card;
+        }
+
+        // ------------------------------------------------------------------
+        //  Fiche d'un jeu INTÉGRÉE dans la page (pas de fenêtre séparée) : elle
+        //  remplace la grille, et son onglet « ‹ BIBLIOTHÈQUE » la ramène.
+        //  Astuce WinForms : une Form avec TopLevel = false s'héberge dans un
+        //  conteneur — on réutilise toute la fiche sans dupliquer une ligne.
+        // ------------------------------------------------------------------
+        private Form _detail;
+
+        private void OpenDetail(GameScan.GameInfo g)
+        {
+            CloseDetail();
+            try
+            {
+                var f = new GameDetailForm(g, Host.Log);
+                f.TopLevel = false;
+                f.FormBorderStyle = FormBorderStyle.None;
+                f.Dock = DockStyle.Fill;
+                // « Fermer » et « ‹ BIBLIOTHÈQUE » appellent Close() : on l'intercepte
+                // pour revenir à la grille au lieu de détruire la page.
+                f.FormClosing += (s, e) => { e.Cancel = true; CloseDetail(); };
+                _detail = f;
+                Controls.Add(f);
+                f.BringToFront();
+                f.Show();
+                ShowLibraryChrome(false);
+            }
+            catch { CloseDetail(); }
+        }
+
+        private void CloseDetail()
+        {
+            if (_detail == null) return;
+            var f = _detail; _detail = null;
+            try { Controls.Remove(f); f.Dispose(); } catch { }
+            ShowLibraryChrome(true);
+        }
+
+        private void ShowLibraryChrome(bool on)
+        {
+            if (_flow != null) _flow.Visible = on;
+            if (_search != null) _search.Visible = on;
+            if (_mode != null) _mode.Visible = on;
+            if (_prio != null) _prio.Visible = on;
+            Invalidate();
         }
 
         // Rectangle à coins arrondis (les 4).
@@ -387,6 +455,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+            if (_detail != null) return;   // la fiche intégrée dessine son propre en-tête
             PaintTitle(e.Graphics, "BIBLIOTHÈQUE", _subtitle);
         }
 

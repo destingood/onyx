@@ -6,4 +6,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>btkeygen</AssemblyName>
   </PropertyGroup>
+  <!-- Le générateur GRAPHIQUE (seller/gui) a son propre projet WinForms : l'exclure ici,
+       sinon ses .cs seraient happés par ce keygen CLI (deux Main, refs WinForms manquantes). -->
+  <ItemGroup>
+    <Compile Remove="gui/**/*.cs" />
+  </ItemGroup>
 </Project>
