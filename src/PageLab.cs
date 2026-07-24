@@ -30,6 +30,7 @@ namespace BTOptimizer
             AddCard("⏱", "LATENCE DPC/ISR", "Mesure la latence noyau en direct.", false, () => Host.OpenDialog(new LiveMonForm(Host.Log)));
             AddCard("🎥", "STREAMER SANS LAG", "Réglages RTSS / OBS / NVIDIA pour le stream.", false, () => Host.OpenDialog(new StreamGuideForm(Host.Log)));
             AddCard("🧩", "BIOS & MANIPS", "XMP, Resizable BAR et autres réglages BIOS.", false, () => Host.OpenDialog(new BiosGuideForm(Host.Log)));
+            AddCard("🧽", "NETTOYAGE AVANCÉ", "Cache par application (winapp2), mode sûr.", false, () => Host.OpenDialog(new Winapp2Form(Host.Log)));
             Resize += (s, e) => DoLayout();
         }
 
