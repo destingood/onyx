@@ -7,8 +7,9 @@ namespace BTOptimizer
 {
     /// <summary>
     /// L'enquêteur du Copilote : au lieu d'ouvrir un panneau, il lance TOUTES les mesures
-    /// utiles (écrans, crashs pilote GPU, capteurs, disque, bibliothèques, connexion,
-    /// processus en fond, optimisations), croise les résultats, classe les causes par
+    /// utiles (écrans, crashs pilote GPU, capteurs, disque, bibliothèques, réglages
+    /// néfastes, connexion, processus en fond, optimisations), croise les résultats,
+    /// explique son raisonnement (« pourquoi ? ») et classe les causes par
     /// impact réel et rend un plan d'action ordonné. Chaque cause n'apparaît que si elle
     /// est vraiment constatée — jamais de faux problème pour se rendre intéressant.
     /// 100 % local : rien ne quitte la machine (le test de connexion se limite à des
@@ -20,6 +21,7 @@ namespace BTOptimizer
         {
             public int Impact;                       // 0-100, sert au tri
             public string Text;                      // « Ton écran est à 60 Hz… »
+            public string Why;                       // constaté / seuil / conséquence — servi sur « pourquoi ? »
             public DocAssistant.ChatAction Fix;      // correction proposée (peut être null)
         }
 
@@ -41,8 +43,11 @@ namespace BTOptimizer
                     var f = new Finding { Impact = 95, Fix = ChatActions.FixScreen() };
                     f.Text = below.Count == 1
                         ? "Ton écran tourne à " + below[0].CurrentHz + " Hz alors qu'il peut faire " + below[0].MaxHz + " Hz. "
-                          + "C'est de la fluidité que tu as payée et que tu n'utilises pas."
-                        : below.Count + " écrans tournent sous leur fréquence maximale.";
+                          + "C'est de la fluidité que tu as payée et que tu n'utilises pas — correction gratuite et immédiate."
+                        : below.Count + " écrans tournent sous leur fréquence maximale — correction gratuite et immédiate.";
+                    f.Why = "Écrans — constaté via l'API d'affichage Windows : "
+                          + below[0].CurrentHz + " Hz alors que le mode " + below[0].MaxHz + " Hz existe sur le même écran. "
+                          + "Conséquence : chaque image s'affiche plus tard que possible, la fluidité perçue chute. Le passage au maximum est gratuit et réversible.";
                     found.Add(f);
                 }
                 else if (screens != null && screens.Count > 0) ok.Add("écrans à leur fréquence maximale");
@@ -59,7 +64,11 @@ namespace BTOptimizer
                         Impact = 90,
                         Text = "Le pilote de ta carte graphique a signalé " + gpuErr + " erreur(s) ces 14 derniers jours. "
                              + "C'est la signature des crashs « dispositif de rendu perdu » : surchauffe, overclock instable "
-                             + "ou pilote abîmé. Le panneau Stabilité les date précisément."
+                             + "ou pilote abîmé. Gratuit : dépoussiérage + panneau Températures pour surveiller, et si ça "
+                             + "persiste, pilote réinstallé PROPREMENT avec DDU (gratuit, 1 clic depuis Bibliothèques).",
+                        Why = "Crashs GPU — constaté : " + gpuErr + " événement(s) du pilote graphique dans le journal "
+                            + "système Windows sur 14 jours ; attendu sur un PC stable : 0. Chaque événement = le pilote "
+                            + "s'est réinitialisé (freeze/écran noir possible en jeu). Les remèdes proposés sont tous gratuits."
                     });
                 else ok.Add("aucun crash du pilote GPU (14 j)");
             }
@@ -76,7 +85,11 @@ namespace BTOptimizer
                         {
                             Impact = 85,
                             Text = "Ton GPU monte à " + s.Gpu.TempC.ToString("0") + " °C. Au-delà de 85 °C il se bride tout seul : "
-                                 + "les FPS s'effondrent en pleine partie. Regarde le flux d'air et la poussière."
+                                 + "les FPS s'effondrent en pleine partie. Gratuit : dépoussiérage, flux d'air, et courbe de "
+                                 + "ventilation avec Fan Control (gratuit, installable en 1 clic).",
+                            Why = "Température GPU — constaté : " + s.Gpu.TempC.ToString("0") + " °C (capteur constructeur, "
+                                + "lecture en direct) ; seuil : 85 °C = zone où le GPU réduit seul ses fréquences pour se "
+                                + "protéger. Les remèdes efficaces sont d'abord gratuits (poussière, flux d'air, ventilation)."
                         });
                     else if (s.Gpu != null && s.Gpu.Ok && s.Gpu.TempC > 0) ok.Add("températures GPU sous contrôle");
 
@@ -85,7 +98,11 @@ namespace BTOptimizer
                         {
                             Impact = 65,
                             Text = "Ta mémoire est occupée à " + s.RamLoad.ToString("0") + " %. Quand la RAM sature, "
-                                 + "Windows échange sur le disque et le jeu saccade."
+                                 + "Windows échange sur le disque et le jeu saccade. Gratuit : ferme les gourmands "
+                                 + "(panneau « Qui ralentit mon PC ») avant même de penser à acheter des barrettes.",
+                            Why = "Mémoire — constaté : " + s.RamLoad.ToString("0") + " % de RAM occupée ; seuil : 90 % = "
+                                + "Windows commence à échanger sur le disque (bien plus lent), d'où les saccades. Fermer "
+                                + "les programmes de fond est gratuit et se teste immédiatement."
                         });
                     else if (s.RamLoad > 0) ok.Add("mémoire disponible");
                 }
@@ -106,14 +123,21 @@ namespace BTOptimizer
                     {
                         Impact = 80,
                         Text = "Ton disque système est plein à " + (100 - pct) + " % (" + freeGb.ToString("0") + " Go libres). "
-                             + "Sous 10 % de libre, Windows ralentit franchement.",
+                             + "Sous 10 % de libre, Windows ralentit franchement. Le nettoyage est gratuit : uniquement des "
+                             + "fichiers qui se régénèrent (temporaires, caches).",
+                        Why = "Disque système — constaté : " + freeGb.ToString("0") + " Go libres (" + pct + " %) ; seuil : "
+                            + "sous ~10-12 % de libre, Windows manque de place pour ses caches, ses mises à jour et le "
+                            + "fichier d'échange → tout ralentit. Le nettoyage ne touche que du régénérable, gratuit.",
                         Fix = ChatActions.FixDisk()
                     });
                 else if (recov >= 3072)
                     found.Add(new Finding
                     {
                         Impact = 45,
-                        Text = "" + (recov / 1024.0).ToString("0.0") + " Go de temporaires et de caches traînent sur ton disque.",
+                        Text = "" + (recov / 1024.0).ToString("0.0") + " Go de temporaires et de caches traînent sur ton disque "
+                             + "— récupérables gratuitement, sans toucher à tes fichiers.",
+                        Why = "Espace récupérable — constaté : " + (recov / 1024.0).ToString("0.0") + " Go de temporaires et "
+                            + "caches (mesure locale des dossiers) ; ils se régénèrent seuls, leur suppression est sans risque et gratuite.",
                         Fix = ChatActions.FixDisk()
                     });
                 else ok.Add("espace disque suffisant");
@@ -129,13 +153,42 @@ namespace BTOptimizer
                     {
                         Impact = 75,
                         Text = "" + missing + " bibliothèque(s) essentielle(s) manquante(s) (Visual C++, DirectX, .NET). "
-                             + "C'est la cause classique d'un jeu qui refuse de démarrer."
+                             + "C'est la cause classique d'un jeu qui refuse de démarrer. Installation gratuite "
+                             + "(runtimes Microsoft officiels), pré-cochée dans le panneau Bibliothèques.",
+                        Why = "Bibliothèques — constaté : " + missing + " runtime(s) essentiel(s) absent(s) de la base de "
+                            + "désinstallation Windows. Un jeu compilé contre un runtime absent refuse de démarrer ou plante "
+                            + "aussitôt. Ces runtimes sont distribués gratuitement par Microsoft."
                     });
                 else ok.Add("bibliothèques de jeu complètes");
             }
             catch { }
 
-            // --- 4bis. Connexion : ping et stabilité (échos réels vers 1.1.1.1). Si AUCUNE
+            // --- 4bis. Réglages néfastes laissés par d'anciens « optimiseurs » (lecture locale) ---
+            try
+            {
+                List<Checkup.Item> items = Checkup.Analyze();
+                var bad = new List<Checkup.Item>();
+                if (items != null) foreach (var it in items) if (it.Problem) bad.Add(it);
+                if (bad.Count > 0)
+                {
+                    var names = new List<string>(); foreach (var it in bad) names.Add(it.Name);
+                    found.Add(new Finding
+                    {
+                        Impact = 82,
+                        Text = "" + bad.Count + " réglage(s) néfaste(s) laissé(s) par un ancien « optimiseur » ou un mauvais "
+                             + "guide : " + string.Join(" · ", names.ToArray()) + ". Je peux remettre les valeurs saines de "
+                             + "Windows — gratuit et réversible.",
+                        Why = "Réglages néfastes — constaté (lecture locale registre/bcdedit/tâches) : "
+                            + string.Join(" · ", names.ToArray()) + ". Ces réglages sont documentés comme sources de latence, "
+                            + "de crashs ou de risque (données/sécurité) ; la réparation remet la valeur PAR DÉFAUT de Windows, gratuitement.",
+                        Fix = ChatActions.FixCheckup(bad)
+                    });
+                }
+                else ok.Add("aucun réglage néfaste d'ancien optimiseur");
+            }
+            catch { }
+
+            // --- 4ter. Connexion : ping et stabilité (échos réels vers 1.1.1.1). Si AUCUNE
             //     réponse (hors-ligne / ICMP filtré), on ne conclut RIEN — jamais de faux problème. ---
             try
             {
@@ -148,15 +201,18 @@ namespace BTOptimizer
                             Impact = 70,
                             Text = "Ta connexion n'est pas nette : ping moyen " + avg.ToString("0") + " ms, gigue "
                                  + jit.ToString("0.#") + " ms" + (loss > 0 ? ", " + loss + " % de paquets perdus" : "") + ". "
-                                 + "En jeu, ça fait des à-coups et des tirs non comptés. Le panneau Qualité réseau "
-                                 + "départage ta box et internet."
+                                 + "En jeu, ça fait des à-coups et des tirs non comptés. Gratuit : câble Ethernet plutôt que "
+                                 + "Wi-Fi quand c'est possible, et le panneau Qualité réseau départage ta box d'internet.",
+                            Why = "Connexion — constaté : " + avg.ToString("0") + " ms de ping moyen, " + jit.ToString("0.#")
+                                + " ms de gigue, " + loss + " % de perte sur 4 échos réels vers 1.1.1.1 ; seuils jeu : ~80 ms "
+                                + "de ping, 15 ms de gigue, 0 % de perte. La perte « téléporte », la gigue rend le jeu irrégulier."
                         });
                     else ok.Add("connexion stable (" + avg.ToString("0") + " ms)");
                 }
             }
             catch { }
 
-            // --- 4ter. Un programme gourmand en fond (les jeux en cours sont exclus du suspect) ---
+            // --- 4quater. Un programme gourmand en fond (les jeux en cours sont exclus du suspect) ---
             try
             {
                 ChatActions.Hog hog = ChatActions.TopHog(900);
@@ -167,7 +223,10 @@ namespace BTOptimizer
                         Text = "« " + hog.Name + " »" + (hog.Count > 1 ? " (×" + hog.Count + ")" : "") + " consomme "
                              + hog.CpuPct.ToString("0") + " % de ton processeur en ce moment"
                              + (hog.RamMb >= 500 ? " et " + hog.RamMb + " Mo de mémoire" : "") + ". "
-                             + "Le panneau « Qui ralentit mon PC » permet de le fermer proprement."
+                             + "Gratuit : le panneau « Qui ralentit mon PC » permet de le fermer proprement.",
+                        Why = "Processus — constaté : « " + hog.Name + " » à " + hog.CpuPct.ToString("0") + " % CPU pendant "
+                            + "~1 s de mesure des temps processeur (cœur de Windows et jeux en cours exclus). Un programme "
+                            + "de fond qui pèse autant vole des images par seconde à ton jeu ; le fermer est gratuit."
                     });
                 else ok.Add("aucun programme gourmand en fond");
             }
@@ -184,7 +243,11 @@ namespace BTOptimizer
                         {
                             Impact = 55,
                             Text = "" + inactive + " optimisations sont encore inactives et ton score de santé est à "
-                                 + st.Health + " %. Le preset « Recommandé » couvre l'essentiel sans rien risquer."
+                                 + st.Health + " %. Le preset « Recommandé » couvre l'essentiel sans rien risquer — "
+                                 + "gratuit et réversible, comme tout ici.",
+                            Why = "Optimisations — constaté : santé " + st.Health + " % et " + inactive + " réglages "
+                                + "recommandés inactifs. Chacun est documenté, réversible et gratuit ; le preset "
+                                + "« Recommandé » n'active que les sûrs."
                         });
                     else if (st.Health >= 70) ok.Add("optimisations bien engagées (" + st.OptiActive + " actives)");
                 }
@@ -192,6 +255,15 @@ namespace BTOptimizer
             catch { }
 
             found.Sort(delegate (Finding a, Finding b) { return b.Impact.CompareTo(a.Impact); });
+
+            // --- Raisonnement complet, servi si l'utilisateur demande « pourquoi ? » ---
+            var why = new StringBuilder("Mon raisonnement, mesure par mesure :\n\n");
+            foreach (var f in found)
+                if (!string.IsNullOrEmpty(f.Why)) why.Append("• ").Append(f.Why).Append("\n\n");
+            if (ok.Count > 0)
+                why.Append("Mesuré aussi, sans rien trouver d'anormal : ").Append(string.Join(" · ", ok.ToArray())).Append(".\n\n");
+            why.Append("Et la règle de la maison : toutes les corrections que je propose sont gratuites.");
+            string explain = why.ToString().TrimEnd();
 
             // --- Rédaction du compte-rendu ---
             var sb = new StringBuilder();
@@ -203,7 +275,7 @@ namespace BTOptimizer
                 if (ok.Count > 0) sb.Append("Vérifié et sain : ").Append(string.Join(" · ", ok.ToArray())).Append(".\n\n");
                 sb.Append("Si le souci persiste, décris-moi précisément quand il arrive (dans un jeu en particulier ? "
                         + "au démarrage ? après un moment ?) et je creuse ailleurs.");
-                return new DocAssistant.Reply { Text = sb.ToString() };
+                return new DocAssistant.Reply { Text = sb.ToString(), Explain = explain };
             }
 
             sb.Append("J'ai enquêté sur ton PC");
@@ -214,17 +286,19 @@ namespace BTOptimizer
                 sb.Append(i + 1).Append(". ").Append(found[i].Text).Append("\n\n");
             if (ok.Count > 0)
                 sb.Append("Vérifié et sain : ").Append(string.Join(" · ", ok.ToArray())).Append(".");
+            sb.Append("\n\nDemande-moi « pourquoi ? » pour le raisonnement complet, mesure par mesure.");
 
             var plan = new List<DocAssistant.ChatAction>();
             foreach (var f in found) if (f.Fix != null) plan.Add(f.Fix);
 
             if (plan.Count > 0)
-                sb.Append("\n\nCe que je peux corriger tout de suite — tu gardes la main :");
+                sb.Append("\nCe que je peux corriger tout de suite — gratuit, et tu gardes la main :");
 
             return new DocAssistant.Reply
             {
                 Text = sb.ToString().TrimEnd(),
-                Plan = plan.Count > 0 ? plan : null
+                Plan = plan.Count > 0 ? plan : null,
+                Explain = explain
             };
         }
 

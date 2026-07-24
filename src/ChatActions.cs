@@ -382,6 +382,39 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Réglages néfastes d'anciens « optimiseurs » — réparation groupée
+        // ------------------------------------------------------------------
+        /// <summary>Répare d'un coup les réglages néfastes détectés par <see cref="Checkup.Analyze"/> :
+        /// remet les valeurs PAR DÉFAUT de Windows (gratuit, documenté, réversible via le panneau).</summary>
+        public static DocAssistant.ChatAction FixCheckup(List<Checkup.Item> bad)
+        {
+            if (bad == null || bad.Count == 0) return null;
+            var a = new DocAssistant.ChatAction();
+            a.Label = bad.Count == 1 ? "Réparer : " + bad[0].Name : "Réparer les " + bad.Count + " réglages néfastes";
+            a.IsChange = true;
+            bool reboot = false; foreach (var it in bad) if (it.NeedReboot) reboot = true;
+            a.Warning = "Remet les valeurs saines de Windows (gratuit, réversible depuis le panneau Réglages néfastes)."
+                      + (reboot ? " Un redémarrage sera nécessaire pour une partie des réglages." : "");
+            a.Run = delegate (Action<string, int> log)
+            {
+                var sb = new StringBuilder();
+                int okN = 0;
+                foreach (var it in bad)
+                {
+                    try
+                    {
+                        if (it.Fix != null) { it.Fix(log); okN++; sb.Append("✅ ").Append(it.Name).Append('\n'); }
+                    }
+                    catch { sb.Append("⚠ ").Append(it.Name).Append(" : la réparation a échoué\n"); }
+                }
+                sb.Append('\n').Append(okN).Append(" réglage(s) remis aux valeurs saines de Windows — sans rien payer.");
+                if (reboot) sb.Append("\nRedémarre le PC pour que tout prenne effet.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
         //  Filet de sécurité
         // ------------------------------------------------------------------
         public static DocAssistant.ChatAction MakeRestorePoint()

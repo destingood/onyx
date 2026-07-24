@@ -54,7 +54,17 @@ namespace BTOptimizer
             AppStats.Get(a => { try { BeginInvoke((Action)(() => { _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health }; Mascot.CurrentMood = Mascot.MoodForHealth(a.Health); Greet(); Invalidate(true); })); } catch { } });
             Greet();
             // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
-            try { if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"))) { _seeded = true; Send("ça rame en jeu"); } } catch { }
+            // BT_UISHOT_MSG permet au harnais d'envoyer un AUTRE message (test des fautes de frappe…).
+            try
+            {
+                if (!_seeded && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
+                {
+                    _seeded = true;
+                    string demo = Environment.GetEnvironmentVariable("BT_UISHOT_MSG");
+                    Send(string.IsNullOrEmpty(demo) ? "ça rame en jeu" : demo);
+                }
+            }
+            catch { }
         }
 
         private void Greet()
@@ -198,6 +208,7 @@ namespace BTOptimizer
             ("Bilan complet du PC", "fais un bilan complet de mon pc"),
             ("Le PC chauffe", "le pc ou le gpu chauffe et bride"),
             ("Qui bouffe mon CPU ?", "quel programme consomme mon cpu en fond"),
+            ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
             ("Libérer de l'espace", "libérer de l'espace disque"),
         };
 
@@ -264,11 +275,13 @@ namespace BTOptimizer
             _flow.Controls.Add(row);
             try { _flow.ScrollControlIntoView(row); } catch { }
 
-            // Suivi de conversation : la dernière réponse ACTIONNABLE devient le contexte du
-            // prochain « oui »/« non » ; et un « oui » sur un outil vaut clic → on l'ouvre.
+            // Suivi de conversation : la dernière réponse ACTIONNABLE (ou explicable) devient le
+            // contexte du prochain « oui »/« non »/« pourquoi ? » ; un « oui » sur un outil vaut
+            // clic → on l'ouvre.
             if (doc && reply != null)
             {
-                if (reply.Tool != null || reply.Action != null || (reply.Plan != null && reply.Plan.Count > 0)) _last = reply;
+                if (reply.Tool != null || reply.Action != null || (reply.Plan != null && reply.Plan.Count > 0)
+                    || !string.IsNullOrEmpty(reply.Explain)) _last = reply;
                 if (reply.OpenToolNow && reply.Tool != null) { try { Host.OpenDialog(reply.Tool.Open()); } catch { } }
             }
         }

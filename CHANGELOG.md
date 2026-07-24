@@ -4,6 +4,29 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.47 — Le Copilote comprend les fautes de frappe, raisonne et ne propose QUE du gratuit
+- **Tolérance aux fautes de frappe** : « mon ecrqn est bloquer a 60 herz », « grqtuit »,
+  « conexion »… sont compris (distance d'édition bornée par mot : 1 faute dès 5 lettres,
+  2 dès 8 ; mots courts exacts pour éviter les contresens). Appliqué aussi au catalogue
+  symptôme → outil.
+- **Il raisonne comme un technicien** :
+  - plusieurs pistes dans une phrase (« ça chauffe et mon écran est bloqué ») → il préfère
+    TOUT vérifier d'un coup (enquête) au lieu de répondre à moitié ;
+  - une intention précise noyée dans un symptôme large → enquête aussi ;
+  - une demande précise seule → sa mesure dédiée, plus rapide (le réseau reste prioritaire).
+- **« Pourquoi ? » / « explique »** : il justifie son dernier diagnostic **mesure par mesure**
+  (constaté / seuil / conséquence). Chaque enquête garde son raisonnement complet.
+- **Il ne propose QUE du gratuit, et le dit** : nouvelle intention « gratuit / sans payer »
+  (règle de la maison + enquête), chaque cause porte sa **solution gratuite** concrète
+  (dépoussiérage, Fan Control, DDU, runtimes Microsoft, fermer les gourmands…), et jamais
+  d'achat conseillé avant d'avoir tout tenté à 0 €.
+- **L'enquête passe à 10 pistes** : + **réglages néfastes** laissés par d'anciens
+  « optimiseurs » (HPET forcé, TdrLevel=0, Defender coupé, pagefile désactivé, TRIM off…)
+  avec **réparation groupée en un clic** — remet les valeurs par défaut de Windows,
+  gratuit et réversible.
+- Harnais : `BT_UISHOT_MSG` permet de capturer la conversation de démo avec un message
+  arbitraire (vérification réelle de la tolérance aux fautes).
+
 ## v14.46 — Le Copilote SUIT la conversation et mesure plus loin
 - **Il comprend « oui », « ok », « vas-y », « non »** : la réponse se rapporte à sa dernière
   proposition. « J'ouvre le bilan ? » → « oui » → il l'ouvre (avant, ça tombait dans
