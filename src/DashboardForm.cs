@@ -13,6 +13,7 @@ namespace BTOptimizer
     internal class DashboardForm : Form
     {
         private Panel _rail, _host;
+        private FlowLayoutPanel _pageToolBar;
         private readonly System.Collections.Generic.List<NavCell> _nav = new System.Collections.Generic.List<NavCell>();
         private readonly FpsPage[] _pages = new FpsPage[8];
         private int _current = -1;
@@ -46,6 +47,16 @@ namespace BTOptimizer
             _host.Dock = DockStyle.Fill;
             _host.BackColor = FpsUi.BgMain;
             Controls.Add(_host);
+
+            // Barre d'outils PARTAGÉE en bas de _host : les pages (Dock=Fill) rétrécissent
+            // au-dessus d'elle → zéro chevauchement. Son contenu change selon la page (ShowPage).
+            _pageToolBar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom, Height = 48, BackColor = FpsUi.BgMain,
+                Padding = new Padding(34, 9, 20, 9), WrapContents = false, AutoScroll = true, Visible = false
+            };
+            _pageToolBar.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, 0, 0, _pageToolBar.Width, 0); };
+            _host.Controls.Add(_pageToolBar);
             // Réserve la largeur de la barre REPLIÉE : le contenu démarre juste après elle.
             // Quand elle s'ouvre, elle passe PAR-DESSUS le contenu — rien n'est remis en page.
             Padding = new Padding(RailNarrow, 0, 0, 0);
@@ -554,6 +565,8 @@ namespace BTOptimizer
                 if (!_host.Controls.Contains(page)) _host.Controls.Add(page);
                 page.Visible = true;
                 page.BringToFront();
+                RenderPageTools(page.Tools);                              // barre d'outils du bas selon la page
+                if (_pageToolBar != null) _pageToolBar.BringToFront();    // garde son edge en bas (la page Fill rétrécit au-dessus)
                 _host.ResumeLayout();
                 _current = idx;
                 try { page.OnShown(); } catch { }
@@ -562,21 +575,104 @@ namespace BTOptimizer
             commit();   // échange instantané (le cross-fade par capture flashait en noir sur certains GPU)
         }
 
+        // Rebuild la barre d'outils partagée (bas de _host) pour la page courante ; masquée si
+        // la page n'a pas d'outils (Dashboard, Collection, Copilote, Système).
+        private void RenderPageTools(FpsPage.ToolItem[] tools)
+        {
+            if (_pageToolBar == null) return;
+            _pageToolBar.SuspendLayout();
+            var old = new System.Collections.Generic.List<Control>();
+            foreach (Control c in _pageToolBar.Controls) old.Add(c);
+            _pageToolBar.Controls.Clear();
+            foreach (Control c in old) { try { c.Dispose(); } catch { } }
+
+            if (tools == null || tools.Length == 0)
+            {
+                _pageToolBar.Visible = false;
+                _pageToolBar.ResumeLayout();
+                return;
+            }
+            foreach (FpsPage.ToolItem t in tools)
+            {
+                Button b = FpsUi.GhostButton(t.Label);
+                b.AutoSize = true; b.Height = 30; b.Margin = new Padding(0, 0, 8, 0);
+                Action act = t.Act;
+                b.Click += (s, e) => { try { if (act != null) act(); } catch { } };
+                _pageToolBar.Controls.Add(b);
+            }
+            _pageToolBar.Visible = true;
+            _pageToolBar.ResumeLayout();
+        }
+
         private FpsPage CreatePage(int idx)
+        {
+            FpsPage p;
+            switch (idx)
+            {
+                case 0: p = new PageDashboard(this); break;
+                case 1: p = new PageOptimisations(this); break;
+                case 2: p = new PageGames(this); break;
+                case 3: p = new PageCheckup(this); break;
+                case 4: p = new PageLab(this); break;
+                case 5: p = new PageCollection(this); break;
+                case 6: p = new PageConsultation(this); break;
+                case 7: p = new PageSystem(this); break;
+                default: p = new PageDashboard(this); break;
+            }
+            try { AttachPageTools(p, idx); } catch { }
+            return p;
+        }
+
+        // Barre d'outils EN BAS des pages de contenu : les outils avancés de la catégorie
+        // correspondante, directement sur la page (en plus du menu ⋯, qui reste exhaustif).
+        // Le rangement colle au rail : Optimisations / Jeux / Check Up+ / Laboratoire.
+        private void AttachPageTools(FpsPage p, int idx)
         {
             switch (idx)
             {
-                case 0: return new PageDashboard(this);
-                case 1: return new PageOptimisations(this);
-                case 2: return new PageGames(this);
-                case 3: return new PageCheckup(this);
-                case 4: return new PageLab(this);
-                case 5: return new PageCollection(this);
-                case 6: return new PageConsultation(this);
-                case 7: return new PageSystem(this);
-                default: return new PageDashboard(this);
+                case 1: // Optimisations
+                    p.SetTools(
+                        Tool("🛠 Optimiseur complet", () => OpenDialog(new MainForm())),
+                        Tool("🎚 Mode SIMPLE", () => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log))),
+                        Tool("⚡ Config auto", () => OpenDialog(new AutoConfigForm(Log))),
+                        Tool("🔁 Restauration", () => OpenDialog(new RestoreForm(Log))));
+                    break;
+                case 2: // Jeux
+                    p.SetTools(
+                        Tool("🕹 Mes jeux", () => OpenDialog(new GamesForm(Log))),
+                        Tool("Mode Jeu", () => OpenDialog(new GameModeForm(Log))),
+                        Tool("Priorité CPU", () => OpenDialog(new GameProfileForm(Log))),
+                        Tool("🛠 Réparer launchers", () => OpenDialog(new LauncherFixForm(Log))),
+                        Tool("Bibliothèques", () => OpenDialog(new LibsForm(Log))),
+                        Tool("Prérequis auto", () => OpenDialog(new AutoInstallForm(Log))),
+                        Tool("Boutiques en jeu", () => OpenDialog(new ShopFixForm(Log))));
+                    break;
+                case 3: // Check Up+
+                    p.SetTools(
+                        Tool("Santé du PC", () => OpenDialog(new HealthForm(Log))),
+                        Tool("Qui ralentit ?", () => OpenDialog(new BloatForm(Log))),
+                        Tool("Réglages néfastes", () => OpenDialog(new CheckupForm(Log))),
+                        Tool("Stabilité", () => OpenDialog(new StabilityForm(Log))),
+                        Tool("Températures", () => OpenDialog(new ThermalForm(Log))),
+                        Tool("🧰 Entretien", () => OpenDialog(new MaintenanceForm(Log))),
+                        Tool("Rapport HTML", () => GenerateHealthReport()));
+                    break;
+                case 4: // Laboratoire
+                    p.SetTools(
+                        Tool("Objectif 500 FPS", () => OpenDialog(new Fps500Form(Log))),
+                        Tool("FPS en direct", () => OpenDialog(new FpsMonForm(Log))),
+                        Tool("Benchmark FPS", () => OpenDialog(new BenchmarkFpsForm(Log))),
+                        Tool("Benchmark CPU/GPU", () => OpenDialog(new BenchForm(Log))),
+                        Tool("Latence DPC/ISR", () => OpenDialog(new LiveMonForm(Log))),
+                        Tool("🎥 Streamer sans lag", () => OpenDialog(new StreamGuideForm(Log))),
+                        Tool("🧩 BIOS & manips", () => OpenDialog(new BiosGuideForm(Log))));
+                    break;
+                // Page Système : elle a déjà ses propres contrôles en bas (nettoyeur RAM) et ses
+                // boutons en haut ; ses outils restent dans le menu ⋯ → Système pour ne rien chevaucher.
             }
         }
+
+        private static FpsPage.ToolItem Tool(string label, Action act) { return new FpsPage.ToolItem(label, act); }
 
         public void OpenDialog(Form f)
         {
@@ -699,6 +795,20 @@ namespace BTOptimizer
             BackColor = FpsUi.BgMain;
             DoubleBuffered = true;
         }
+
+        /// <summary>Un bouton de la barre d'outils du bas (libellé + action).</summary>
+        public sealed class ToolItem
+        {
+            public readonly string Label;
+            public readonly Action Act;
+            public ToolItem(string label, Action act) { Label = label; Act = act; }
+        }
+
+        /// <summary>Outils avancés de la catégorie de cette page. Rendus par le shell dans une
+        /// barre partagée EN BAS de _host : comme les pages sont Dock=Fill, la barre (Dock=Bottom)
+        /// les fait rétrécir → aucun chevauchement, sur toutes les pages.</summary>
+        public ToolItem[] Tools { get; private set; }
+        public void SetTools(params ToolItem[] tools) { Tools = tools; }
 
         public virtual void OnShown() { }
 
