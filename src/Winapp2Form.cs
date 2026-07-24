@@ -20,7 +20,7 @@ namespace BTOptimizer
         private Button _btnLoad, _btnDownload, _btnClean, _btnClose;
         private List<Winapp2.Entry> _entries = new List<Winapp2.Entry>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public Winapp2Form(Action<string, int> log)
         {
@@ -33,7 +33,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Nettoyage avancé (winapp2.ini)";
+            Text = "ONYX — Nettoyage avancé (winapp2.ini)";
             ClientSize = new Size(600, 540);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -53,7 +53,7 @@ namespace BTOptimizer
             var note = new Label
             {
                 Location = new Point(18, 60), Size = new Size(564, 58), ForeColor = Color.FromArgb(90, 94, 102),
-                Text = "Règles communautaires (base winapp2.ini, comme BleachBit). MODE SÛR : Fluide ne touche "
+                Text = "Règles communautaires (base winapp2.ini, comme BleachBit). MODE SÛR : ONYX ne touche "
                      + "JAMAIS au registre, ne supprime que des fichiers cache sous des dossiers temporaires connus, "
                      + "n'affiche que les applications installées, et ne coche rien d'office. Vérifie la sélection avant de nettoyer."
             };

@@ -30,7 +30,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Viseur (crosshair) — Fluide";
+            Text = "Viseur (crosshair) — ONYX";
             ClientSize = new Size(470, 486);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -202,8 +202,8 @@ namespace BTOptimizer
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = primary ? 0 : 1;
             b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
-            b.BackColor = primary ? Color.FromArgb(79, 70, 229) : Color.White;
-            b.ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52);
+            b.BackColor = primary ? Theme.AccentColor : Color.White;
+            b.ForeColor = primary ? Color.FromArgb(16, 13, 9) : Color.FromArgb(40, 44, 52);
             b.UseVisualStyleBackColor = false;
             return b;
         }

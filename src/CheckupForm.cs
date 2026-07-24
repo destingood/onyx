@@ -283,7 +283,7 @@ namespace BTOptimizer
         private Button _btnScan, _btnFix, _btnClose;
         private List<Checkup.Item> _items = new List<Checkup.Item>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public CheckupForm(Action<string, int> log)
         {
@@ -295,7 +295,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Réglages néfastes";
+            Text = "ONYX — Réglages néfastes";
             ClientSize = new Size(680, 460);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -399,7 +399,7 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_items[i]);
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Coche au moins un réglage à corriger.", "Fluide",
+                MessageBox.Show(this, "Coche au moins un réglage à corriger.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -428,7 +428,7 @@ namespace BTOptimizer
                         Populate(after);
                         if (reboot)
                             MessageBox.Show(this, "Correction terminée. Redémarre le PC pour les points qui le demandent.",
-                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }

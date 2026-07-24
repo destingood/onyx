@@ -70,7 +70,7 @@ namespace BTOptimizer
         private void SaveRamCleanerUi()
         {
             Sys.SaveRamCleaner(_chkRamAuto.Checked, (int)_numRamThresh.Value);
-            _chkRamAuto.ForeColor = _chkRamAuto.Checked ? FpsUi.Neon : FpsUi.Dim;
+            _chkRamAuto.ForeColor = _chkRamAuto.Checked ? FpsUi.Gold : FpsUi.Dim;
         }
 
         public override void OnShown() { PlaceBtn(); Sample(); _timer.Start(); }
@@ -108,18 +108,18 @@ namespace BTOptimizer
             int graphW = ClientSize.Width - L * 2 - rightW - gap;
 
             HwSample s = _last;
-            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, Color.FromArgb(120, 200, 120),
+            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, Color.FromArgb(214, 205, 189),
                 s != null && s.CpuLoad >= 0 ? s.CpuLoad : double.NaN,
                 s != null && !double.IsNaN(s.CpuTempC) ? s.CpuTempC : double.NaN,
                 "CPU", s != null ? Environment.ProcessorCount + " threads" : "");
             int r2 = top + cardH + gap;
             double gu = s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.Util : double.NaN;
             double gt = s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.TempC : double.NaN;
-            DrawMetric(g, L, r2, graphW, cardH, rightW, "CARTE GRAPHIQUE", _gpu, FpsUi.Neon, gu, gt, "GPU",
+            DrawMetric(g, L, r2, graphW, cardH, rightW, "CARTE GRAPHIQUE", _gpu, FpsUi.Gold, gu, gt, "GPU",
                 s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.Name : "n/d");
             int r3 = r2 + cardH + gap;
             string ramDetail = s != null && s.RamTotalMB > 0 ? (s.RamUsedMB / 1024.0).ToString("0.0") + " / " + (s.RamTotalMB / 1024.0).ToString("0.0") + " Go" : "";
-            DrawMetric(g, L, r3, graphW, cardH, rightW, "MÉMOIRE RAM", _ram, Color.FromArgb(90, 200, 250),
+            DrawMetric(g, L, r3, graphW, cardH, rightW, "MÉMOIRE RAM", _ram, FpsUi.Ok,
                 s != null ? s.RamLoad : double.NaN, double.NaN, "RAM", ramDetail);
         }
 
@@ -151,12 +151,12 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, tag, FpsUi.H3, new Point(dx + 16, y + 14), FpsUi.Ink, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "UTILISATION", FpsUi.Small, new Point(dx + 16, y + 48), FpsUi.Dim, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, double.IsNaN(util) ? "n/d" : util.ToString("0") + " %", FpsUi.H2, new Point(dx + 16, y + 64),
-                double.IsNaN(util) ? FpsUi.Dim : (util < 60 ? FpsUi.Neon : util < 85 ? FpsUi.Warn : FpsUi.Err), TextFormatFlags.NoPadding);
+                double.IsNaN(util) ? FpsUi.Dim : (util < 60 ? FpsUi.Gold : util < 85 ? FpsUi.Warn : FpsUi.Err), TextFormatFlags.NoPadding);
             if (!double.IsNaN(temp))
             {
                 TextRenderer.DrawText(g, "TEMPÉRATURE", FpsUi.Small, new Point(dx + 16, y + 96), FpsUi.Dim, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, temp.ToString("0") + " °C", FpsUi.H2, new Point(dx + 16, y + 112),
-                    temp < 70 ? FpsUi.Neon : temp < 84 ? FpsUi.Warn : FpsUi.Err, TextFormatFlags.NoPadding);
+                    temp < 70 ? FpsUi.Gold : temp < 84 ? FpsUi.Warn : FpsUi.Err, TextFormatFlags.NoPadding);
             }
             if (!string.IsNullOrEmpty(detail))
                 TextRenderer.DrawText(g, detail, FpsUi.Small, new Rectangle(dx + 16, y + h - 28, rw - 32, 20), FpsUi.Dim, TextFormatFlags.NoPadding);

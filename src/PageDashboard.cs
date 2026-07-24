@@ -11,6 +11,12 @@ namespace BTOptimizer
     // graphe systeme live, statut patient + badge.
     internal class PageDashboard : FpsPage
     {
+        // Séries du graphe : trio ONYX lisible sur carbone (émeraude / ivoire / or).
+        private static readonly Color SerRam = FpsUi.Ok;
+        private static readonly Color SerCpu = Color.FromArgb(214, 205, 189);
+        private static readonly Color SerGpu = FpsUi.Gold;
+        private static readonly Font GreetFont = Fonts.Make(Fonts.Marcellus, 19f, FontStyle.Regular, "Georgia");
+
         private readonly HwMonitor _mon = new HwMonitor();
         private readonly Timer _timer = new Timer();
         private readonly Queue<double> _cpu = new Queue<double>();
@@ -93,16 +99,16 @@ namespace BTOptimizer
 
         private void Build()
         {
-            _nOpti = MakeStat("🚀", "Optimisations actives", "OPTIMISATIONS", () => Host.Goto(1), 0);
-            _nCheck = MakeStat("💊", "Optimisations au total", "VOIR TOUT", () => Host.Goto(1), 1);
-            _nJeux = MakeStat("🎮", "Jeux boostés", "JEUX", () => Host.Goto(2), 2);
+            _nOpti = MakeStat(NavIcons.Optimisations, "Optimisations actives", "OPTIMISATIONS", () => Host.Goto(1), 0);
+            _nCheck = MakeStat(NavIcons.Collection, "Optimisations au total", "VOIR TOUT", () => Host.Goto(1), 1);
+            _nJeux = MakeStat(NavIcons.Jeux, "Jeux boostés", "JEUX", () => Host.Goto(2), 2);
 
             _graph = new Panel();
             _graph.BackColor = Color.Transparent;
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
-            var prem = FpsUi.NeonButton("◆  PASSER PRO");
+            var prem = FpsUi.GoldButton("◆  PASSER PRO");
             prem.Name = "prem";
             prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm(""));
             Controls.Add(prem);
@@ -110,27 +116,29 @@ namespace BTOptimizer
             Resize += (s, e) => { DoLayout(); Invalidate(); };
         }
 
-        private Label MakeStat(string icon, string label, string btn, Action click, int slot)
+        private Label MakeStat(int iconId, string label, string btn, Action click, int slot)
         {
             var card = new Panel();
             card.BackColor = Color.Transparent;
             card.Tag = "stat" + slot;
-            // Au survol : fond éclairci + liseré néon (la carte réagit sous la souris).
+            // Au survol : fond éclairci + liseré or (la carte réagit sous la souris).
+            // L'icône est VECTORIELLE (celles du rail) : cohérente, dorée, nette — fini l'emoji.
             card.Paint += (s, e) =>
             {
                 var p = (Panel)s;
                 bool hot = _hover.Contains(p);
                 FpsUi.PaintCard(e.Graphics, p.ClientRectangle,
                                 hot ? FpsUi.CardHi : FpsUi.Card,
-                                hot ? FpsUi.NeonDim : FpsUi.Border, 12f);
+                                hot ? FpsUi.GoldDim : FpsUi.Border, 12f);
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                NavIcons.Draw(e.Graphics, iconId, new RectangleF(18, 16, 26, 26), hot ? FpsUi.Gold : FpsUi.GoldDim);
             };
 
-            var ic = FpsUi.Text(icon, FpsUi.Glyph, FpsUi.Ink); ic.Name = "ic"; ic.SetBounds(16, 14, 34, 34); ic.AutoSize = false;
             var num = FpsUi.Text("—", FpsUi.Num, FpsUi.Ink); num.Name = "num"; num.SetBounds(56, 12, 130, 36); num.AutoSize = false;
             var lab = FpsUi.Text(label, FpsUi.Body, FpsUi.Dim); lab.Name = "lab"; lab.SetBounds(18, 54, 230, 20); lab.AutoSize = false;
             var b = FpsUi.GhostButton(btn); b.Name = "btn"; b.SetBounds(16, 84, 210, 32); b.Click += (s, e) => click();
 
-            card.Controls.Add(ic); card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(b);
+            card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(b);
             Controls.Add(card);
             WireHover(card, card);   // après l'ajout des enfants : ils captent aussi la souris
             return num;
@@ -168,10 +176,13 @@ namespace BTOptimizer
                     LayoutStat(c);
                 }
             }
-            if (_graph != null) _graph.SetBounds(L, top + 146, statsW, 250);
-            // Bouton premium sous le graphe (bas-gauche) : évite la mascotte (coin bas-droit).
+            // Le graphe s'ÉTIRE : la page occupe toute la hauteur, plus de vide sous le bouton.
+            int bottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
+            int premH = 46, graphY = top + 146;
+            int graphH = Math.Max(220, bottom - graphY - premH - 16);
+            if (_graph != null) _graph.SetBounds(L, graphY, statsW, graphH);
             var prem = Controls["prem"];
-            if (prem != null) prem.SetBounds(L, top + 146 + 250 + 16, statsW, 46);
+            if (prem != null) prem.SetBounds(L, graphY + graphH + 16, statsW, premH);
         }
 
         // Ajuste les enfants d'une carte stat à sa largeur réelle (évite tout débordement
@@ -179,7 +190,6 @@ namespace BTOptimizer
         private static void LayoutStat(Control card)
         {
             int w = card.Width;
-            var ic = card.Controls["ic"]; if (ic != null) ic.SetBounds(16, 14, 34, 34);
             var num = card.Controls["num"]; if (num != null) num.SetBounds(56, 12, Math.Max(60, w - 72), 36);
             var lab = card.Controls["lab"]; if (lab != null) lab.SetBounds(18, 54, Math.Max(60, w - 32), 22);
             var b = card.Controls["btn"]; if (b != null) b.SetBounds(16, 84, Math.Max(60, w - 32), 32);
@@ -196,18 +206,19 @@ namespace BTOptimizer
             if (string.IsNullOrEmpty(name)) name = Environment.UserName;
             if (string.IsNullOrEmpty(name)) name = "joueur";
 
+            // Le bonjour se grave en Marcellus : la page d'accueil porte la voix de la marque.
             int L = 34;
-            TextRenderer.DrawText(g, "Bonjour, ", FpsUi.H1, new Point(L, 30), FpsUi.Ink, TextFormatFlags.NoPadding);
-            int wHi = TextRenderer.MeasureText(g, "Bonjour, ", FpsUi.H1).Width;
-            TextRenderer.DrawText(g, name + " !", FpsUi.H1, new Point(L + wHi - 6, 30), FpsUi.Neon, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, "Bonjour, ", GreetFont, new Point(L, 30), FpsUi.Ink, TextFormatFlags.NoPadding);
+            int wHi = TextRenderer.MeasureText(g, "Bonjour, ", GreetFont).Width;
+            TextRenderer.DrawText(g, name, GreetFont, new Point(L + wHi - 4, 30), FpsUi.Gold, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "Bienvenue dans ton QG.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
 
+            // La carte santé s'aligne sur le bas de la colonne de gauche (graphe + bouton) :
+            // les deux colonnes finissent sur la même ligne, la page est d'un seul tenant.
             int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
             int patientTop = 118;
-            int patientBottom = Host != null ? Host.ContentBottom(34) : ClientSize.Height - 34;
-            // Carte à hauteur proportionnée (plafonnée) — évite un panneau étiré maintenant que la
-            // mascotte ne réserve plus le coin bas-droit.
-            int patientH = Math.Min(440, Math.Max(320, patientBottom - patientTop));
+            int patientBottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
+            int patientH = Math.Max(320, patientBottom - patientTop);
             DrawPatient(g, rightX, patientTop, rightW, patientH);
         }
 
@@ -224,12 +235,14 @@ namespace BTOptimizer
             int by = y + 52 + ring + 12;
             int statusY = y + h - 34;
             int bs = Math.Min(120, statusY - by - 6);
-            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Neon, false);
+            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Gold, false);
 
-            // Verdict aligné sur le vocabulaire historique du bilan (et les seuils de l'anneau).
+            // Verdict aligné sur le vocabulaire historique du bilan (et les seuils de l'anneau) —
+            // et sur sa COULEUR : le verdict parle la même langue que l'anneau.
             int hp = _health < 0 ? 0 : _health;
             string verdict = hp < 30 ? "À corriger" : hp < 60 ? "Moyen" : hp < 85 ? "Bon" : "Excellent";
-            TextRenderer.DrawText(g, verdict, FpsUi.H2, new Rectangle(x, statusY, w, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
+            Color vc = hp < 30 ? FpsUi.Err : hp < 60 ? FpsUi.Warn : FpsUi.Ok;
+            TextRenderer.DrawText(g, verdict, FpsUi.H2, new Rectangle(x, statusY, w, 24), vc, TextFormatFlags.HorizontalCenter);
         }
 
         private void DrawHealthRing(Graphics g, int x, int y, int size)
@@ -237,12 +250,17 @@ namespace BTOptimizer
             int hp = _health < 0 ? 0 : _health;
             // L'anneau se remplit à l'ouverture ; la COULEUR reste celle du score final
             // (sinon elle virerait rouge → orange → vert pendant le remplissage).
+            // Sémantique ONYX : émeraude = sain (l'or est réservé à la marque).
             int shown = (int)Math.Round(hp * Ease(_animT));
             var rf = new RectangleF(x + 6, y + 6, size - 12, size - 12);
-            using (var back = new Pen(Color.FromArgb(38, 40, 39), 8f)) g.DrawArc(back, rf, 0, 360);
-            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Neon);
+            using (var back = new Pen(Color.FromArgb(42, 37, 29), 8f)) g.DrawArc(back, rf, 0, 360);
+            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Ok);
             if (shown > 0)
+            {
+                // Halo doux sous l'arc : l'anneau semble éclairé de l'intérieur.
+                using (var glow = new Pen(Color.FromArgb(56, arc), 14f)) { glow.StartCap = LineCap.Round; glow.EndCap = LineCap.Round; g.DrawArc(glow, rf, -90, 360f * shown / 100f); }
                 using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * shown / 100f); }
+            }
             TextRenderer.DrawText(g, shown + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
             TextRenderer.DrawText(g, "SANTÉ", FpsUi.Small, new Rectangle(x, y + size / 2 + 14, size, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
         }
@@ -254,17 +272,17 @@ namespace BTOptimizer
             FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
             int pad = 18;
             TextRenderer.DrawText(g, "UTILISATION SYSTÈME", FpsUi.H3, new Point(pad, 14), FpsUi.Ink, TextFormatFlags.NoPadding);
-            Legend(g, r.Width - 320, 15, "RAM", _curRam, Color.FromArgb(120, 200, 120));
-            Legend(g, r.Width - 210, 15, "CPU", _curCpu, Color.FromArgb(90, 200, 250));
-            Legend(g, r.Width - 100, 15, "GPU", _curGpu, FpsUi.Neon);
+            Legend(g, r.Width - 320, 15, "RAM", _curRam, SerRam);
+            Legend(g, r.Width - 210, 15, "CPU", _curCpu, SerCpu);
+            Legend(g, r.Width - 100, 15, "GPU", _curGpu, SerGpu);
 
             var plot = new Rectangle(pad, 48, r.Width - pad * 2, r.Height - 76);
             TextRenderer.DrawText(g, "100%", FpsUi.Small, new Point(pad, 44), FpsUi.Dim2, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "0%", FpsUi.Small, new Point(pad, plot.Bottom - 2), FpsUi.Dim2, TextFormatFlags.NoPadding);
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            Series(g, plot, _ram, Color.FromArgb(120, 200, 120));
-            Series(g, plot, _cpu, Color.FromArgb(90, 200, 250));
-            Series(g, plot, _gpu, FpsUi.Neon);
+            Series(g, plot, _ram, SerRam);
+            Series(g, plot, _cpu, SerCpu);
+            Series(g, plot, _gpu, SerGpu);
         }
 
         private void Legend(Graphics g, int x, int y, string t, double val, Color c)

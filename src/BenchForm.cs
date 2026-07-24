@@ -135,7 +135,7 @@ namespace BTOptimizer
         private Label _cpu1, _cpuN, _ram, _disk, _verdict, _status;
         private Button _btnRun, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public BenchForm(Action<string, int> log)
         {
@@ -146,7 +146,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Benchmark rapide";
+            Text = "ONYX — Benchmark rapide";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

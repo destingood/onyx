@@ -124,7 +124,7 @@ namespace BTOptimizer
                            + "(Téléchargé une seule fois ; tu peux dire « désactive l'ia » à tout moment.)";
                 System.Action show = delegate
                 {
-                    yes = System.Windows.Forms.MessageBox.Show(owner, msg, "Fluide — Cerveau IA local",
+                    yes = System.Windows.Forms.MessageBox.Show(owner, msg, "ONYX — Cerveau IA local",
                         System.Windows.Forms.MessageBoxButtons.YesNo,
                         System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes;
                 };
@@ -244,7 +244,7 @@ namespace BTOptimizer
         }
 
         /// <summary>Démarre le moteur : l'appli de zone de notification si présente (survit à
-        /// la fermeture de Fluide), sinon « ollama serve » caché.</summary>
+        /// la fermeture d'ONYX), sinon « ollama serve » caché.</summary>
         private static void TryStartServer(string exe)
         {
             try

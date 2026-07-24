@@ -155,7 +155,7 @@ namespace BTOptimizer
                 using (var bmp = RenderShowcase())
                 {
                     string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    path = System.IO.Path.Combine(dir, "Fluide-collection.png");
+                    path = System.IO.Path.Combine(dir, "ONYX-collection.png");
                     bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 }
             }
@@ -179,10 +179,10 @@ namespace BTOptimizer
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 using (var bg = new SolidBrush(FpsUi.BgMain)) g.FillRectangle(bg, 0, 0, W, H);
-                using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
+                using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawRectangle(pen, 6, 6, W - 13, H - 13);
                 TextRenderer.DrawText(g, "MA COLLECTION ", FpsUi.H1, new Point(38, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
                 int wt = TextRenderer.MeasureText(g, "MA COLLECTION ", FpsUi.H1).Width;
-                TextRenderer.DrawText(g, "Fluide", FpsUi.H1, new Point(38 + wt, 26), FpsUi.Neon, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "ONYX", FpsUi.H1, new Point(38 + wt, 26), FpsUi.Gold, TextFormatFlags.NoPadding);
                 TextRenderer.DrawText(g, Unlocked() + " / " + BadgeCatalog.All.Length + " badges   ·   santé " + _s.Health + " %   ·   " + _s.GamesDet + " jeu(x)   ·   " + _s.Checkups + " Check Up",
                     FpsUi.Body, new Point(40, 72), FpsUi.Dim, TextFormatFlags.NoPadding);
 
@@ -192,7 +192,7 @@ namespace BTOptimizer
                     int cx = x0 + col * (cellW + gap), cy = y0 + row * (cellH + gap);
                     DrawBadgeCell(g, cx, cy, cellW, BadgeCatalog.All[i], IsUnlocked(BadgeCatalog.All[i]), true);
                 }
-                TextRenderer.DrawText(g, "Optimisé avec Fluide — le QG de ton PC", FpsUi.Small,
+                TextRenderer.DrawText(g, "Optimisé avec ONYX — le QG de ton PC", FpsUi.Small,
                     new Rectangle(0, H - 28, W, 20), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
             }
             return bmp;
@@ -223,7 +223,7 @@ namespace BTOptimizer
             string vname = _s == null ? "Analyse en cours…" : _best != null ? _best.Name : "Aucun badge";
             string vsub = _s == null ? "" : _best != null ? "Ton badge le plus élevé — clique" : "Applique une optimisation pour commencer";
             TextRenderer.DrawText(g, vname, FpsUi.H2, new Rectangle(L, TopY + VH - 96, VW, 26), _best != null ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(g, vsub, FpsUi.Small, new Rectangle(L, TopY + VH - 68, VW, 18), _best != null ? FpsUi.Neon : FpsUi.Dim2, TextFormatFlags.HorizontalCenter);
+            TextRenderer.DrawText(g, vsub, FpsUi.Small, new Rectangle(L, TopY + VH - 68, VW, 18), _best != null ? FpsUi.Gold : FpsUi.Dim2, TextFormatFlags.HorizontalCenter);
             // Petit résumé chiffré sous la vitrine.
             if (_s != null)
                 TextRenderer.DrawText(g, unlocked + " / " + BadgeCatalog.All.Length + " badges  ·  santé " + _s.Health + " %",
@@ -232,7 +232,7 @@ namespace BTOptimizer
             // En-tête de la grille (la grille elle-même est le panneau scrollable _grid).
             int gx = L + VW + 30;
             TextRenderer.DrawText(g, "BADGES", FpsUi.H3, new Point(gx, TopY - 6), FpsUi.Ink, TextFormatFlags.NoPadding);
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, gx, TopY + 14, gx + 64, TopY + 14);
+            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, gx, TopY + 14, gx + 64, TopY + 14);
         }
 
         // Carte d'un badge : cadre + forme/glyphe + nom + critère (ou progression si verrouillé).

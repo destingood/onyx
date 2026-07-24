@@ -19,7 +19,7 @@ namespace BTOptimizer
         private Button _btnAnalyze, _btnRepair, _btnClose;
         private List<ShopFix.Item> _items = new List<ShopFix.Item>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public ShopFixForm(Action<string, int> log)
         {
@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Boutiques & contenu en jeu";
+            Text = "ONYX — Boutiques & contenu en jeu";
             ClientSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -144,7 +144,7 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_items[i]);
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Coche au moins un point à réparer.", "Fluide",
+                MessageBox.Show(this, "Coche au moins un point à réparer.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -185,7 +185,7 @@ namespace BTOptimizer
                         if (needReboot)
                             MessageBox.Show(this,
                                 "Réparation terminée. Redémarre le PC pour appliquer les points qui le demandent (IPv6, HAGS...).",
-                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }

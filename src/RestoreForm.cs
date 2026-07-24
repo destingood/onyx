@@ -19,7 +19,7 @@ namespace BTOptimizer
         private Label _summary;
         private Button _btnCreate, _btnEnable, _btnRollback, _btnScan, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public RestoreForm(Action<string, int> log)
         {
@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Points de restauration";
+            Text = "ONYX — Points de restauration";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -138,7 +138,7 @@ namespace BTOptimizer
 
         private void OnCreate(object sender, EventArgs e)
         {
-            string desc = "Fluide " + DateTime.Now.ToString("dd/MM HH:mm");
+            string desc = "ONYX " + DateTime.Now.ToString("dd/MM HH:mm");
             SetBusy(true);
             _summary.Text = "Création du point de restauration (jusqu'à 1 min)...";
             Task.Run(() =>

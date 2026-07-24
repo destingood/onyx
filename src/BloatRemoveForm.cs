@@ -55,7 +55,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Fluide — Retirer les applis Windows";
+            Text = "ONYX — Retirer les applis Windows";
             ClientSize = new Size(560, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

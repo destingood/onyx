@@ -11,7 +11,7 @@ namespace BTOptimizer
         private StatsOverlaySettings _s;
         private CheckBox _chk;
         private ComboBox _corner;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public StatsOverlayForm(Action<string, int> log)
         {
@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Overlay de stats";
+            Text = "ONYX — Overlay de stats";
             ClientSize = new Size(480, 300);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

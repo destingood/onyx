@@ -7,18 +7,18 @@ using System.Threading;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Présence Discord (Rich Presence) — affiche « Optimise son PC · avec Fluide » dans le statut
+    /// Présence Discord (Rich Presence) — affiche « Optimise son PC · avec ONYX » dans le statut
     /// Discord de l'utilisateur, via l'IPC local de Discord (named pipe discord-ipc-N). AUCUNE
     /// dépendance externe. Se tait proprement si Discord n'est pas lancé, ou si l'App ID n'est pas
     /// encore configuré. Activable/désactivable, choix persisté (bt-discord.txt).
     ///
-    /// ⚠️ POUR L'ACTIVER RÉELLEMENT : crée une application « Fluide » sur
+    /// ⚠️ POUR L'ACTIVER RÉELLEMENT : crée une application « ONYX » sur
     ///    https://discord.com/developers/applications , copie son « APPLICATION ID » dans AppId
     ///    ci-dessous, et dans Rich Presence → Art Assets, uploade un logo nommé exactement "logo".
     /// </summary>
     internal static class DiscordPresence
     {
-        // ⚠️ REMPLACE ces zéros par l'Application ID de ton app Discud « Fluide » (18-19 chiffres).
+        // ⚠️ REMPLACE ces zéros par l'Application ID de ton app Discud « ONYX » (18-19 chiffres).
         private const string AppId = "0000000000000000000";
 
         private static NamedPipeClientStream _pipe;
@@ -132,8 +132,8 @@ namespace BTOptimizer
             string nonce = Guid.NewGuid().ToString();
             string json =
                 "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":\"" + nonce + "\",\"args\":{\"pid\":" + pid + ",\"activity\":{" +
-                "\"details\":\"Optimise son PC\",\"state\":\"avec Fluide\"," +
-                "\"assets\":{\"large_image\":\"logo\",\"large_text\":\"Fluide — l'optimiseur gaming\"}," +
+                "\"details\":\"Optimise son PC\",\"state\":\"avec ONYX\"," +
+                "\"assets\":{\"large_image\":\"logo\",\"large_text\":\"ONYX — l'optimiseur gaming\"}," +
                 "\"timestamps\":{\"start\":" + start + "}}}}";
             try { Write(1, json); ReadFrame(); } catch { }
         }

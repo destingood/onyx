@@ -3,15 +3,15 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Fluide")]
-[assembly: AssemblyProduct("Fluide")]
+[assembly: AssemblyTitle("ONYX")]
+[assembly: AssemblyProduct("ONYX")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.64.0.0")]
-[assembly: AssemblyFileVersion("14.64.0.0")]
+[assembly: AssemblyVersion("14.65.0.0")]
+[assembly: AssemblyFileVersion("14.65.0.0")]
 
 namespace BTOptimizer
 {
@@ -34,8 +34,8 @@ namespace BTOptimizer
             {
                 if (!isNew)
                 {
-                    MessageBox.Show("Fluide est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("ONYX est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -49,8 +49,8 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "Fluide a rencontré une erreur et va se fermer :\n\n" + ex,
-                        "Fluide — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "ONYX a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "ONYX — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 GC.KeepAlive(mutex);
             }
@@ -85,6 +85,46 @@ namespace BTOptimizer
                 autoIds.Sort(StringComparer.Ordinal);
                 foreach (string id in autoIds) Console.WriteLine(id);
                 return;
+            }
+
+            // BT_ICON=<fichier.ico> : génère l'icône d'application ONYX (multi-tailles, entrées
+            // PNG) depuis le logo vectoriel — LA source de vérité du .ico embarqué dans l'exe.
+            string icoOut = Environment.GetEnvironmentVariable("BT_ICON");
+            if (!string.IsNullOrEmpty(icoOut))
+            {
+                int[] sizes = { 16, 20, 24, 32, 40, 48, 64, 128, 256 };
+                var pngs = new System.Collections.Generic.List<byte[]>();
+                foreach (int sz in sizes)
+                {
+                    using (var bmp = new System.Drawing.Bitmap(sz, sz))
+                    {
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        {
+                            g.Clear(System.Drawing.Color.Transparent);
+                            Logo.Draw(g, new System.Drawing.RectangleF(0, 0, sz, sz), FpsUi.Gold, true);
+                        }
+                        using (var ms = new System.IO.MemoryStream())
+                        { bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png); pngs.Add(ms.ToArray()); }
+                    }
+                }
+                using (var fs = System.IO.File.Create(icoOut))
+                using (var bw = new System.IO.BinaryWriter(fs))
+                {
+                    bw.Write((short)0); bw.Write((short)1); bw.Write((short)sizes.Length);
+                    int off = 6 + 16 * sizes.Length;
+                    for (int n = 0; n < sizes.Length; n++)
+                    {
+                        bw.Write((byte)(sizes[n] >= 256 ? 0 : sizes[n]));
+                        bw.Write((byte)(sizes[n] >= 256 ? 0 : sizes[n]));
+                        bw.Write((byte)0); bw.Write((byte)0);
+                        bw.Write((short)1); bw.Write((short)32);
+                        bw.Write(pngs[n].Length); bw.Write(off);
+                        off += pngs[n].Length;
+                    }
+                    foreach (var png in pngs) bw.Write(png);
+                }
+                Console.WriteLine("ICÔNE écrite : " + icoOut + " (" + sizes.Length + " tailles)");
+                Environment.Exit(0);
             }
 
             // BT_FORMSHOT=Nom1,Nom2 : capture chaque fenêtre nommée du menu ⋯ hors-écran (une par
@@ -218,7 +258,7 @@ namespace BTOptimizer
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
 
-            Console.WriteLine("Fluide TEST — contexte :");
+            Console.WriteLine("ONYX TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
             Console.WriteLine("  SID cible      : " + Sys.TargetSid);

@@ -1,5 +1,5 @@
 @echo off
-title DesTinGOOD
+title ONYX
 setlocal
 cd /d "%~dp0"
 

@@ -9,7 +9,7 @@ namespace BTOptimizer
     /// Ce que le Copilote sait FAIRE, et pas seulement dire. Deux familles :
     ///   • MESURES  (IsChange = false, AutoRun = true)  : lecture seule, lancées toutes seules.
     ///   • CHANGEMENTS (IsChange = true)                : jamais sans un clic explicite, avec
-    ///     l'annonce de ce qui va changer — c'est la promesse fondatrice de Fluide.
+    ///     l'annonce de ce qui va changer — c'est la promesse fondatrice de ONYX.
     /// Chaque action renvoie une <see cref="DocAssistant.Reply"/> : elle peut donc enchaîner
     /// d'elle-même sur la correction qui découle de la mesure. Tout tourne en tâche de fond.
     /// </summary>
@@ -408,7 +408,7 @@ namespace BTOptimizer
             a.Run = delegate (Action<string, int> log)
             {
                 var sb = new StringBuilder();
-                try { Sys.CreateRestorePoint("Fluide — TOUT réparer (Copilote)", log); sb.Append("🛟 Point de restauration créé.\n\n"); }
+                try { Sys.CreateRestorePoint("ONYX — TOUT réparer (Copilote)", log); sb.Append("🛟 Point de restauration créé.\n\n"); }
                 catch { sb.Append("⚠ Point de restauration impossible (restauration système coupée ?) — je continue, chaque étape reste réversible.\n\n"); }
                 int okN = 0;
                 foreach (var st in steps)
@@ -829,7 +829,7 @@ namespace BTOptimizer
         private static string BrainContext(BadgeCatalog.Stats st)
         {
             var sb = new StringBuilder();
-            sb.Append("Tu es « le Copilote » de Fluide, un assistant polyvalent qui tourne 100 % en local sur le PC de l'utilisateur. ");
+            sb.Append("Tu es « le Copilote » d'ONYX, un assistant polyvalent qui tourne 100 % en local sur le PC de l'utilisateur. ");
             sb.Append("Réponds à N'IMPORTE QUELLE question (PC, jeux, culture générale, aide, conseils…), en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
             sb.Append("HONNÊTETÉ AVANT TOUT : si tu n'es pas sûr, DIS-LE clairement (« Je ne suis pas certain, mais… », « À vérifier »). ");
             sb.Append("N'invente JAMAIS un fait, un chiffre, une date ou une mesure du PC : mieux vaut admettre « je ne sais pas » qu'affirmer du faux. ");
@@ -863,7 +863,7 @@ namespace BTOptimizer
                 {
                     string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
                     string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                        "Fluide-rapport-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".html");
+                        "ONYX-rapport-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".html");
                     File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
                     try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
                     return Say("📄 Rapport écrit sur le Bureau : " + Path.GetFileName(path)
@@ -937,7 +937,7 @@ namespace BTOptimizer
             a.Warning = "Programme un redémarrage COMPLET dans 60 secondes — enregistre ton travail. Un bouton d'annulation apparaîtra.";
             a.Run = delegate (Action<string, int> log)
             {
-                try { Sys.Run(Sys.Sys32("shutdown.exe"), "/r /t 60 /c \"Fluide : vrai redemarrage demande au Copilote (annulable)\""); }
+                try { Sys.Run(Sys.Sys32("shutdown.exe"), "/r /t 60 /c \"ONYX : vrai redemarrage demande au Copilote (annulable)\""); }
                 catch (Exception ex) { return Say("Impossible de programmer le redémarrage : " + ex.Message); }
                 var r = Say("⏳ Redémarrage complet dans 60 secondes — enregistre ton travail.\nPour annuler, clique ci-dessous.");
                 var cancel = new DocAssistant.ChatAction();
@@ -1225,7 +1225,7 @@ namespace BTOptimizer
             a.Warning = "Ajoute une photo du système Windows. N'efface rien et ne touche pas à tes fichiers. Peut prendre une minute.";
             a.Run = delegate (Action<string, int> log)
             {
-                try { Sys.CreateRestorePoint("Fluide — avant modification", log); }
+                try { Sys.CreateRestorePoint("ONYX — avant modification", log); }
                 catch { return Say("Le point de restauration n'a pas pu être créé (la restauration système est peut-être désactivée)."); }
                 return Say("✅ Point de restauration créé. Tu peux manipuler l'esprit tranquille : Windows sait revenir ici.");
             };

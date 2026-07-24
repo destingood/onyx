@@ -41,7 +41,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Fluide — Mode SIMPLE (interrupteurs immédiats)";
+            Text = "ONYX — Mode SIMPLE (interrupteurs immédiats)";
             ClientSize = new Size(760, 700);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -1,8 +1,18 @@
-# Journal des versions — DesTinGOOD
+# Journal des versions — ONYX
 
 Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (compatible
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
+
+## v14.65 — Fusion : le cerveau récent dans l'écrin ONYX
+- Les deux lignées se rejoignent : le **rebranding ONYX « Carbone & Or »** (v14.54-57
+  ci-dessous) accueille les évolutions du Copilote v14.58-64 (dépanneur universel,
+  conseiller d'outils, langage texto ~190 abréviations, « ça va » compris).
+- Repris de l'ex-v14.58 esthétique : **icône .ico régénérée** depuis le logo vectoriel
+  (anneau d'or, 9 tailles, hook harnais `BT_ICON`) ; **landing resynchronisée** (palette
+  Carbone & Or, l'« avant » en bleu-gris froid, logo serti, capture fraîche) ; README,
+  installateur Inno, .bat et outils vendeur renommés ONYX.
+- Les nouveautés fusionnées parlent ONYX (textes, couleurs, boutons) — aucun résidu indigo.
 
 ## v14.64 — L'IA locale a de la MÉMOIRE (vraie conversation)
 - **Le cerveau IA suit le fil** : via l'API chat d'Ollama, il garde les derniers échanges en
@@ -149,6 +159,66 @@ problème, avec les grandes réparations gratuites et officielles :
   en direct. « désactive l'ia » coupe tout ; sans activation, RIEN ne change.
 - Ollama rejoint le catalogue 📦 Bibliothèques ; « c'est quoi ollama ? » au lexique.
 - Strictement OPT-IN : le seul trafic est vers 127.0.0.1 (ta propre machine).
+
+## v14.57 — Les 8 pages au diapason
+- **Système** : les courbes CPU/RAM rejoignent le trio ONYX (ivoire / émeraude — le vert
+  pomme et le cyan juraient sur carbone).
+- **Jeux** : « ● DÉTECTÉ » passe à l'émeraude (une présence est un état, pas une signature)
+  et le dégradé des vignettes sans jaquette se réchauffe.
+- Bilan de la tournée des pages : Optimisations, Check Up+, Laboratoire et Collection
+  avaient déjà tout hérité des fondations (toggles or, cartes carbone, paliers
+  bronze/argent/or) — aucune rustine nécessaire.
+
+## v14.56 — Dashboard ONYX
+- **Anneau de santé à la bonne couleur** : émeraude quand c'est sain (l'or ne code plus un
+  état), halo doux sous l'arc, verdict (« Bon », « Moyen »…) coloré comme l'anneau.
+- **Bonjour gravé** : le greeting passe en Marcellus (le nom en or).
+- **Icônes vectorielles** sur les cartes stats (celles du rail, dorées) — fini les emoji
+  qui dépendent de la police système.
+- **Palette du graphe accordée** : RAM émeraude, CPU ivoire, GPU or (le bleu froid jurait
+  sur le carbone chaud).
+- **Composition pleine page** : le graphe s'étire en hauteur et les deux colonnes finissent
+  sur la même ligne — plus de vide sous « PASSER PRO ».
+
+## v14.55 — Le Copilote incarné
+- **Scène d'entrée** : chat vide = accueil composé (anneau d'or sous halo, « LE COPILOTE »
+  gravé en Marcellus, promesse en une ligne, 12 suggestions centrées) au lieu d'une bulle
+  d'intro à froid. Elle s'efface au premier message.
+- **Avatar-anneau** : le monogramme ONYX (anneau + frametime) remplace la mascotte smiley ;
+  le joueur n'a pas d'avatar — l'asymétrie structure la lecture, comme une vraie messagerie.
+- **État vivant** dans l'en-tête : « prêt » / « analyse en cours… » / « N cause(s)
+  identifiée(s) » — le Copilote dit toujours ce qu'il fait.
+- **Réponses écrites en direct** : le texte se rédige (~250 caractères/s), un clic
+  n'importe où sur la bulle affiche tout ; cartes et boutons arrivent à la fin, comme une
+  vraie rédaction. Coupé automatiquement en jeu / harnais (Anim).
+- **Cockpit vivant** : les chiffres COMPTENT jusqu'à leur valeur (santé, ping, GPU) ;
+  sémantique réparée — émeraude = bon, orange = attention, rouge = critique (fini l'or
+  pour dire « tout va bien »).
+- **Conversation centrée** (colonne ≤ 860 px), bulles réchauffées aux coins asymétriques
+  (le coin serré pointe vers l'émetteur), signature « LE COPILOTE » en Marcellus or,
+  bulle joueur bronze éteint, cartes d'impact sur carbone chaud.
+- **Saisie premium** : le liseré de la barre s'allume en or quand le champ a le focus.
+- Entrée en douceur des messages courts (glissement 160 ms), export .txt renommé
+  « DIAGNOSTIC ONYX », mascotte retirée (code mort supprimé).
+
+## v14.54 — ONYX : rebranding « Carbone & Or » (fondations)
+- **Nouvelle identité** : l'app s'appelle désormais **ONYX**. Palette « Carbone & Or » —
+  carbone chaud (fini les noirs bleutés) + or champagne réservé à l'identité (marque,
+  navigation active, CTA, focus). Les verdicts gardent leur langue universelle :
+  **émeraude = sain, orange vif = attention, rouge = critique** (l'or ne code jamais un état).
+- **Typographie signature** : **Marcellus** (libre, OFL) pour le logotype et le display —
+  capitales gravées, interlettrées. Remplace la Garet **DEMO** (licence non commerciale :
+  risque légal éliminé). Chargement des polices fiabilisé (repli fichier via %TEMP% :
+  Inter se résout enfin au lieu de retomber sur Segoe UI).
+- **Logo ONYX** : anneau d'or serti de la frametime qui devient plate — la promesse
+  « Mesuré, pas promis. » gravée dans le métal (vectoriel, net du tray au panneau À propos).
+- **Chrome natif carbone** : barre de titre Windows teintée (DWM) sur la fenêtre principale
+  ET tous les dialogues — la fenêtre est d'un seul tenant, Aero Snap intact.
+- **Badges en métaux précieux** : paliers bronze → argent → or (fini indigo/cyan).
+- **~40 dialogues re-tintés d'un coup** : tokens du thème (fonds, encres, liserés, menus)
+  passés au carbone/or ; boutons pleins or avec texte sombre (lisibilité) ; deux couleurs
+  d'état qui affichaient de l'indigo sous le nom « Green » corrigées en émeraude.
+- Migration douce : l'entrée de démarrage automatique « Fluide » est reprise sous « ONYX ».
 
 ## v14.53 — Le rapport d'audit depuis le chat + « Prépare ma partie »
 - **« génère le rapport » / « fais un audit »** → le Copilote produit le **rapport HTML

@@ -227,7 +227,7 @@ namespace BTOptimizer
         public static string ToText(List<Section> sections)
         {
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine("=== COMPOSANTS DU SYSTÈME — Fluide ===");
+            sb.AppendLine("=== COMPOSANTS DU SYSTÈME — ONYX ===");
             sb.AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
             foreach (Section s in sections)
             {

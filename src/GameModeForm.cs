@@ -12,7 +12,7 @@ namespace BTOptimizer
     internal class GameModeForm : Form
     {
         private readonly Action<string, int> _log;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private CheckedListBox _list;
         private readonly string[] _svcs;
 
@@ -27,7 +27,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Réglages Mode Jeu";
+            Text = "ONYX — Réglages Mode Jeu";
             ClientSize = new Size(560, 430);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

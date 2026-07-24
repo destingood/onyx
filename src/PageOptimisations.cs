@@ -73,13 +73,13 @@ namespace BTOptimizer
 
         private void BuildPresets()
         {
-            _bReco = FpsUi.NeonButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
+            _bReco = FpsUi.GoldButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
             _bReco.Click += (s, e) => Batch(t => t.Recommended, true, "Recommandé");
-            _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Neon;
+            _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Gold;
             _bEsport.Click += (s, e) => { if (Pro("Preset eSport")) Batch(t => t.Esport, true, "eSport"); };
             _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
             _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
-            _bAuto = FpsUi.NeonButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
+            _bAuto = FpsUi.GoldButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
             _bAuto.Click += (s, e) => ApplyAuto();
             Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
         }
@@ -110,7 +110,7 @@ namespace BTOptimizer
             foreach (Tweak t in _tweaks) if (selector(t)) list.Add(t);
             if (list.Count == 0) return;
             if (MessageBox.Show(FindForm(), (apply ? "Appliquer" : "Rétablir") + " " + list.Count + " optimisation(s) — " + label + " ?",
-                "Fluide", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                "ONYX", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
             Task.Run(() =>
             {
@@ -159,9 +159,9 @@ namespace BTOptimizer
 
         private void StyleChip(Button b, bool on)
         {
-            b.FlatAppearance.BorderColor = on ? FpsUi.Neon : FpsUi.Border;
+            b.FlatAppearance.BorderColor = on ? FpsUi.Gold : FpsUi.Border;
             b.BackColor = on ? Color.FromArgb(18, 34, 26) : FpsUi.Card;
-            b.ForeColor = on ? FpsUi.Neon : FpsUi.Dim;
+            b.ForeColor = on ? FpsUi.Gold : FpsUi.Dim;
         }
 
         private void Populate()

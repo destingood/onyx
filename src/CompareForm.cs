@@ -15,7 +15,7 @@ namespace BTOptimizer
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color TileBg = Color.FromArgb(28, 30, 38);
-        private static readonly Color Green  = Color.FromArgb(79, 70, 229);
+        private static readonly Color Green  = Color.FromArgb(76, 196, 140);
         private static readonly Color Orange = Color.FromArgb(205, 133, 0);
         private static readonly Color Red    = Color.FromArgb(200, 45, 45);
 
@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Comparaison AVANT / APRÈS";
+            Text = "ONYX — Comparaison AVANT / APRÈS";
             ClientSize = new Size(980, 620);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(780, 480);

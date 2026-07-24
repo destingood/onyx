@@ -16,7 +16,7 @@ namespace BTOptimizer
     internal class SpeedTestForm : Form
     {
         private readonly Action<string, int> _log;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private const string DownUrl = "https://speed.cloudflare.com/__down?bytes=25000000"; // ~25 Mo
 
         private Button _btnRun, _btnClose;
@@ -33,7 +33,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Test de débit réseau";
+            Text = "ONYX — Test de débit réseau";
             ClientSize = new Size(560, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

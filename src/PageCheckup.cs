@@ -108,7 +108,7 @@ namespace BTOptimizer
                 if (local < 0.5f) spike = -(0.5f - Math.Abs(local - 0.25f) * 4) * 34;
                 pts.Add(new PointF(x, baseY + spike));
             }
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLines(pen, pts.ToArray());
+            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLines(pen, pts.ToArray());
         }
 
         private void RunSelected()

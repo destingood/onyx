@@ -17,7 +17,7 @@ namespace BTOptimizer
         private DpcIsrReport _report;
 
         private static readonly Color Bg      = Color.FromArgb(245, 246, 248);
-        private static readonly Color Green   = Color.FromArgb(79, 70, 229);
+        private static readonly Color Green   = Theme.AccentColor;
         private static readonly Color Orange  = Color.FromArgb(205, 133, 0);
         private static readonly Color Red     = Color.FromArgb(200, 45, 45);
         private static readonly Color TileBg  = Color.FromArgb(28, 30, 38);
@@ -32,7 +32,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Analyse de latence DPC/ISR";
+            Text = "ONYX — Analyse de latence DPC/ISR";
             ClientSize = new Size(960, 660);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(760, 520);
@@ -260,7 +260,7 @@ namespace BTOptimizer
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "Lecture impossible :\n" + ex.Message, "Fluide",
+                    MessageBox.Show(this, "Lecture impossible :\n" + ex.Message, "ONYX",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -282,7 +282,7 @@ namespace BTOptimizer
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "Comparaison impossible :\n" + ex.Message, "Fluide",
+                    MessageBox.Show(this, "Comparaison impossible :\n" + ex.Message, "ONYX",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -310,12 +310,12 @@ namespace BTOptimizer
                         d.Module, d.DpcCount, d.DpcMaxUs, d.IsrCount, d.IsrMaxUs,
                         d.DpcTotalUs + d.IsrTotalUs, d.Description));
                 File.WriteAllText(outPath, sb.ToString(), System.Text.Encoding.UTF8);
-                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "Fluide",
+                MessageBox.Show(this, "Résumé enregistré :\n" + outPath, "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "Fluide",
+                MessageBox.Show(this, "Export impossible :\n" + ex.Message, "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

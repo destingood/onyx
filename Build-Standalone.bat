@@ -1,5 +1,5 @@
 @echo off
-title Construction de l'installateur DesTinGOOD - AUTONOME (sans .NET requis)
+title Construction de l'installateur ONYX - AUTONOME (sans .NET requis)
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 

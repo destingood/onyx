@@ -29,7 +29,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — BIOS & manips manuelles";
+            Text = "ONYX — BIOS & manips manuelles";
             ClientSize = new Size(680, 560);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(580, 460);
@@ -106,7 +106,7 @@ namespace BTOptimizer
                 { UseShellExecute = false, CreateNoWindow = true });
                 if (_log != null) _log("Redémarrage dans le BIOS demandé.", 0);
             }
-            catch (Exception ex) { MessageBox.Show(this, "Impossible : " + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { MessageBox.Show(this, "Impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void Add(ListViewGroup g, string name, string what)

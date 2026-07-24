@@ -84,7 +84,7 @@ namespace BTOptimizer
                           WS_EX_NOACTIVATE = 0x8000000, WS_EX_TOPMOST = 0x8;
 
         private static readonly Color Bg = Color.FromArgb(10, 12, 11);
-        private static readonly Color Neon = Color.FromArgb(129, 140, 248);
+        private static readonly Color Neon = FpsUi.Gold;
         private static readonly Color Ink = Color.FromArgb(235, 238, 236);
         private static readonly Color Dim = Color.FromArgb(150, 154, 150);
 
@@ -217,12 +217,12 @@ namespace BTOptimizer
             var r = ClientRectangle;
 
             // Liseré néon fin.
-            using (var pen = new Pen(Color.FromArgb(70, 129, 140, 248))) g.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
+            using (var pen = new Pen(FpsUi.Accent(70))) g.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
 
             // En-tête : marque + nom du jeu détecté (à droite).
             using (var hf = new Font("Segoe UI Semibold", 8f))
             {
-                TextRenderer.DrawText(g, "Fluide", hf, new Point(12, 7), Neon, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, "ONYX", hf, new Point(12, 7), Neon, TextFormatFlags.NoPadding);
                 if (!string.IsNullOrEmpty(_fpsName))
                 {
                     string nm = _fpsName; if (nm.Length > 18) nm = nm.Substring(0, 17) + "…";
@@ -280,7 +280,7 @@ namespace BTOptimizer
                     float py = plot.Bottom - (float)(arr[i] / max) * plot.Height;
                     pts[i] = new PointF(px, py);
                 }
-                using (var pen = new Pen(Color.FromArgb(190, 129, 140, 248), 1.4f)) g.DrawLines(pen, pts);
+                using (var pen = new Pen(Color.FromArgb(190, FpsUi.Gold), 1.4f)) g.DrawLines(pen, pts);
             }
         }
 

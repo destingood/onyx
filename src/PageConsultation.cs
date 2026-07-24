@@ -8,7 +8,9 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // Page Consultation : CHAT avec « Le Copilote » — assistant LOCAL (aucun réseau). Comprend la demande,
-    // s'appuie sur les vraies données du PC, et ouvre le bon outil. Équivalent du /app/chat de FPS Doctor.
+    // s'appuie sur les vraies données du PC, et ouvre le bon outil. Incarnation ONYX : anneau d'or en
+    // avatar, accueil scénarisé quand le chat est vide, réponses qui s'écrivent en direct (clic = tout
+    // afficher), cockpit à compteurs animés, colonne de conversation centrée.
     internal class PageConsultation : FpsPage
     {
         private FlowLayoutPanel _flow;
@@ -22,12 +24,20 @@ namespace BTOptimizer
         private Panel _statsRow;                          // cockpit : tuiles d'état en direct
         private Label _vHealth, _vScreen, _vPing, _vGpu;  // valeurs des tuiles
         private Button _refresh;                          // ↻ du cockpit
-        private Panel _inputBar;                          // barre de saisie (carte arrondie)
+        private Panel _inputBar;                          // barre de saisie (carte arrondie, focus doré)
         private FlowLayoutPanel _quick;                   // raccourcis permanents au-dessus de la saisie
         private bool _proactive;                          // accueil proactif déjà tenté
         private Panel _typingBubble;                      // bulle « écrit… » (élargie quand le journal parle)
         private Label _typingDots;                        // points qui pulsent OU dernière ligne du journal
         private string _typingProgress;                   // null = animation de points ; sinon texte affiché
+        private Panel _hero;                              // accueil scénarisé (chat vide) — retiré au 1er message
+        private FlowLayoutPanel _heroChips;               // suggestions de départ, centrées dans le héros
+        private Label _status;                            // état vivant du Copilote (prêt / écrit / N causes)
+        private int _statusCauses;                        // dernières causes identifiées (pour l'état au repos)
+
+        // Fontes d'incarnation : le nom du Copilote se grave en Marcellus.
+        private static readonly Font HeroTitle = Fonts.Make(Fonts.Marcellus, 21f, FontStyle.Regular, "Georgia");
+        private static readonly Font NameFont = Fonts.Make(Fonts.Marcellus, 8.5f, FontStyle.Regular, "Georgia");
 
         public PageConsultation(DashboardForm host) : base(host)
         {
@@ -42,6 +52,8 @@ namespace BTOptimizer
             _wheel = new ScrollWheelFilter(_flow);
             try { Application.AddMessageFilter(_wheel); } catch { }
 
+            BuildHero();
+
             // --- Cockpit : 4 tuiles d'état EN DIRECT (santé / écrans / ping / GPU) ---
             _statsRow = new Panel { BackColor = Color.Transparent };
             Controls.Add(_statsRow);
@@ -53,14 +65,31 @@ namespace BTOptimizer
             _refresh.Click += (s, e) => RefreshTiles();
             Controls.Add(_refresh);
 
-            // --- Barre de saisie « pro » : carte arrondie + bouton d'envoi compact ---
-            _inputBar = FpsUi.CardPanel(12f);
+            // --- État vivant : le Copilote dit ce qu'il fait (prêt / analyse / bilan). ---
+            _status = new Label
+            {
+                AutoSize = false, Font = FpsUi.Small, BackColor = Color.Transparent,
+                ForeColor = FpsUi.Dim, TextAlign = ContentAlignment.TopRight, Text = ""
+            };
+            Controls.Add(_status);
+            SetStatus(StatusKind.Ready);
+
+            // --- Barre de saisie « pro » : carte arrondie dont le liseré s'allume au focus. ---
+            _inputBar = new Panel { BackColor = Color.Transparent };
+            _inputBar.Paint += (s, e) =>
+            {
+                bool focus = _input != null && _input.Focused;
+                FpsUi.PaintCard(e.Graphics, _inputBar.ClientRectangle, FpsUi.Card,
+                    focus ? FpsUi.Gold : FpsUi.Border, 12f);
+            };
             Controls.Add(_inputBar);
             _input = new TextBox { BorderStyle = BorderStyle.None, BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, Font = FpsUi.Body };
             try { _input.PlaceholderText = "Décris ton souci… (les fautes de frappe sont comprises)"; } catch { }
             _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
+            _input.GotFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
+            _input.LostFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
             _inputBar.Controls.Add(_input);
-            _send = FpsUi.NeonButton("→");
+            _send = FpsUi.GoldButton("→");
             _send.Click += (s, e) => SendInput();
             _inputBar.Controls.Add(_send);
 
@@ -81,23 +110,174 @@ namespace BTOptimizer
             Resize += (s, e) => DoLayout();
         }
 
+        // ------------------------------------------------------------------
+        //  L'état vivant du Copilote (sous-titre de droite)
+        // ------------------------------------------------------------------
+        private enum StatusKind { Ready, Working, Findings }
+
+        private void SetStatus(StatusKind k)
+        {
+            if (_status == null) return;
+            try
+            {
+                switch (k)
+                {
+                    case StatusKind.Working:
+                        _status.ForeColor = FpsUi.Gold; _status.Text = "●  analyse en cours…"; break;
+                    case StatusKind.Findings:
+                        _status.ForeColor = _statusCauses > 0 ? FpsUi.Warn : FpsUi.Ok;
+                        _status.Text = _statusCauses > 0
+                            ? "●  " + _statusCauses + " cause(s) identifiée(s)"
+                            : "●  rien à signaler";
+                        break;
+                    default:
+                        _status.ForeColor = FpsUi.Dim; _status.Text = "●  prêt"; break;
+                }
+            }
+            catch { }
+        }
+
+        // ------------------------------------------------------------------
+        //  Accueil scénarisé : le Copilote reçoit (chat encore vide)
+        // ------------------------------------------------------------------
+        private void BuildHero()
+        {
+            _hero = new BufferedPanel { BackColor = FpsUi.BgMain };
+            _hero.Paint += OnPaintHero;
+            Controls.Add(_hero);
+
+            _heroChips = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
+                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent
+            };
+            foreach (var st in Starters)
+            {
+                var c = Chip(st.Item1); string sendText = st.Item2;
+                c.Click += (s, e) => Send(sendText);
+                _heroChips.Controls.Add(c);
+            }
+            _hero.Controls.Add(_heroChips);
+        }
+
+        private void OnPaintHero(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            int w = _hero.ClientSize.Width;
+            int top = HeroTop();
+
+            // Halo d'or très doux derrière l'anneau : l'écrin, pas un projecteur.
+            int ring = 64, cx = w / 2, cy = top + HeroRingCy;
+            var halo = new Rectangle(cx - 110, cy - 110, 220, 220);
+            using (var path = new GraphicsPath())
+            {
+                path.AddEllipse(halo);
+                using (var pgb = new PathGradientBrush(path))
+                {
+                    pgb.CenterColor = FpsUi.Accent(26);
+                    pgb.SurroundColors = new[] { Color.FromArgb(0, FpsUi.Gold) };
+                    g.FillEllipse(pgb, halo);
+                }
+            }
+            Logo.Draw(g, new RectangleF(cx - ring / 2f, cy - ring / 2f, ring, ring), FpsUi.Gold, false);
+
+            // « Le Copilote » gravé, puis sa promesse en une ligne.
+            float tw = FpsUi.MeasureTracked(g, "LE COPILOTE", HeroTitle, 3f);
+            FpsUi.DrawTracked(g, "LE COPILOTE", HeroTitle, FpsUi.Ink, cx - tw / 2f, cy + 68, 3f);
+            const string tag = "Il mesure en direct, explique son diagnostic et corrige — toujours avec ton accord.";
+            Size tsz = TextRenderer.MeasureText(g, tag, FpsUi.Body);
+            TextRenderer.DrawText(g, tag, FpsUi.Body, new Point(cx - tsz.Width / 2, cy + 92), FpsUi.Dim, TextFormatFlags.NoPrefix);
+
+            // L'invitation, sous les suggestions.
+            const string hint = "…ou décris ton souci dans la barre en bas — les fautes de frappe sont comprises.";
+            Size hsz = TextRenderer.MeasureText(g, hint, FpsUi.Small);
+            int hy = _heroChips != null ? _heroChips.Bottom + 18 : cy + 130;
+            TextRenderer.DrawText(g, hint, FpsUi.Small, new Point(cx - hsz.Width / 2, hy), FpsUi.Dim2, TextFormatFlags.NoPrefix);
+        }
+
+        // Verticales du héros : anneau (centre), nom, accroche, puis suggestions et invitation.
+        private const int HeroRingCy = 46, HeroChipsY = 176;
+
+        /// <summary>Y du bloc central du héros (l'ensemble respire, légèrement au-dessus du milieu).</summary>
+        private int HeroTop()
+        {
+            int contentH = HeroChipsY + (_heroChips != null ? _heroChips.PreferredSize.Height : 60) + 52;
+            return Math.Max(8, (_hero.ClientSize.Height - contentH) / 2);
+        }
+
+        private void LayoutHero()
+        {
+            if (_hero == null || _heroChips == null) return;
+            int w = _hero.ClientSize.Width;
+            int chipsW = Math.Min(660, Math.Max(240, w - 120));
+            _heroChips.MaximumSize = new Size(chipsW, 0);
+            _heroChips.Location = new Point((w - _heroChips.PreferredSize.Width) / 2, HeroTop() + HeroChipsY);
+            _hero.Invalidate();
+        }
+
+        /// <summary>Premier message (envoi, conseil proactif ou capture) : l'accueil s'efface.</summary>
+        private void RemoveHero()
+        {
+            if (_hero == null) return;
+            var h = _hero; _hero = null; _heroChips = null;
+            try { h.Visible = false; Controls.Remove(h); h.Dispose(); } catch { }
+            try { _flow.Visible = true; } catch { }
+        }
+
         /// <summary>Tuile du cockpit : légende + valeur colorée (— tant que la mesure n'est pas là).</summary>
         private Label StatTile(string title)
         {
             var tile = FpsUi.CardPanel(10f);
             var cap = FpsUi.Text(title, FpsUi.Tiny, FpsUi.Dim2); cap.Location = new Point(12, 6);
-            var val = FpsUi.Text("—", FpsUi.H3, FpsUi.Dim); val.Location = new Point(12, 20);
+            var val = FpsUi.Text("—", FpsUi.F(12.5f, true), FpsUi.Dim); val.Location = new Point(12, 19);
             tile.Controls.Add(cap); tile.Controls.Add(val);
             _statsRow.Controls.Add(tile);
             return val;
         }
 
+        /// <summary>Met à jour une tuile ; si l'ancienne et la nouvelle valeur commencent par un
+        /// nombre, il COMPTE jusqu'à la cible (cockpit vivant) au lieu de sauter.</summary>
         private void Tile(Label l, string txt, Color c)
         {
-            try { BeginInvoke((Action)(() => { l.Text = txt; l.ForeColor = c; })); } catch { }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    int from, to; string suffix;
+                    if (Anim.On && LeadingInt(l.Text, out from) && LeadingInt(txt, out to) && from != to
+                        && TrySuffix(txt, out suffix))
+                    {
+                        l.ForeColor = c;
+                        int start = from;
+                        Anim.Tween(450, Ease.OutCubic,
+                            p => { try { l.Text = ((int)Math.Round(start + (to - start) * p)) + suffix; } catch { } },
+                            () => { try { l.Text = txt; } catch { } });
+                    }
+                    else { l.Text = txt; l.ForeColor = c; }
+                }));
+            }
+            catch { }
         }
 
-        /// <summary>Remplit le cockpit en tâche de fond : écrans, ping réel, température GPU.</summary>
+        private static bool LeadingInt(string s, out int v)
+        {
+            v = 0; if (string.IsNullOrEmpty(s)) return false;
+            int i = 0; while (i < s.Length && char.IsDigit(s[i])) i++;
+            return i > 0 && int.TryParse(s.Substring(0, i), out v);
+        }
+
+        private static bool TrySuffix(string s, out string suffix)
+        {
+            suffix = ""; if (string.IsNullOrEmpty(s)) return false;
+            int i = 0; while (i < s.Length && char.IsDigit(s[i])) i++;
+            suffix = s.Substring(i);
+            return true;
+        }
+
+        /// <summary>Remplit le cockpit en tâche de fond : écrans, ping réel, température GPU.
+        /// Sémantique ONYX : émeraude = bon, orange = attention, rouge = critique (jamais d'or).</summary>
         private void RefreshTiles()
         {
             System.Threading.Tasks.Task.Run(() =>
@@ -108,7 +288,7 @@ namespace BTOptimizer
                     var list = DisplayInfo.Query(); int below = 0, max = 0;
                     if (list != null) foreach (var d in list) { if (d.BelowMax) below++; if (d.CurrentHz > max) max = d.CurrentHz; }
                     if (list != null && list.Count > 0)
-                    { scr = below == 0 ? max + " Hz ✓" : below + " sous le max"; scrC = below == 0 ? FpsUi.Neon : FpsUi.Warn; }
+                    { scr = below == 0 ? max + " Hz ✓" : below + " sous le max"; scrC = below == 0 ? FpsUi.Ok : FpsUi.Warn; }
                 }
                 catch { }
                 Tile(_vScreen, scr, scrC);
@@ -118,7 +298,7 @@ namespace BTOptimizer
                 {
                     double avg, jit; int loss;
                     if (ChatActions.PingSample(3, 500, out avg, out jit, out loss))
-                    { png = avg.ToString("0") + " ms"; pngC = avg < 40 && loss == 0 ? FpsUi.Neon : avg < 80 ? FpsUi.Warn : FpsUi.Err; }
+                    { png = avg.ToString("0") + " ms"; pngC = avg < 40 && loss == 0 ? FpsUi.Ok : avg < 80 ? FpsUi.Warn : FpsUi.Err; }
                 }
                 catch { }
                 Tile(_vPing, png, pngC);
@@ -130,7 +310,7 @@ namespace BTOptimizer
                     {
                         HwSample smp = mon.Sample();
                         if (smp.Gpu != null && smp.Gpu.Ok && smp.Gpu.TempC > 0)
-                        { gpu = smp.Gpu.TempC.ToString("0") + " °C"; gpuC = smp.Gpu.TempC < 70 ? FpsUi.Neon : smp.Gpu.TempC < 85 ? FpsUi.Warn : FpsUi.Err; }
+                        { gpu = smp.Gpu.TempC.ToString("0") + " °C"; gpuC = smp.Gpu.TempC < 70 ? FpsUi.Ok : smp.Gpu.TempC < 85 ? FpsUi.Warn : FpsUi.Err; }
                     }
                 }
                 catch { }
@@ -142,7 +322,6 @@ namespace BTOptimizer
         {
             DoLayout();
             try { _input.Focus(); } catch { }   // on peut taper directement, sans cliquer le champ
-            Mascot.CurrentMood = Mascot.Mood.Thinking;   // tant que le bilan n'est pas connu
             AppStats.Get(a =>
             {
                 try
@@ -150,12 +329,8 @@ namespace BTOptimizer
                     BeginInvoke((Action)(() =>
                     {
                         _stats = new BadgeCatalog.Stats { OptiActive = a.OptiActive, OptiTotal = a.OptiTotal, GamesDet = a.GamesDet, Health = a.Health };
-                        Mascot.CurrentMood = Mascot.MoodForHealth(a.Health);
                         if (_vHealth != null)
-                        {
-                            _vHealth.Text = a.Health + " %";
-                            _vHealth.ForeColor = a.Health >= 80 ? FpsUi.Neon : a.Health >= 60 ? FpsUi.Warn : FpsUi.Err;
-                        }
+                            Tile(_vHealth, a.Health + " %", a.Health >= 80 ? FpsUi.Ok : a.Health >= 60 ? FpsUi.Warn : FpsUi.Err);
                         Greet(); Invalidate(true);
                     }));
                 }
@@ -178,7 +353,7 @@ namespace BTOptimizer
                 }
             }
             catch { }
-            // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatars).
+            // Démo pour la capture hors-écran : montre un échange complet (bulles alignées + avatar).
             // BT_UISHOT_MSG permet au harnais d'envoyer un AUTRE message (test des fautes de frappe…).
             try
             {
@@ -186,7 +361,8 @@ namespace BTOptimizer
                 {
                     _seeded = true;
                     string demo = Environment.GetEnvironmentVariable("BT_UISHOT_MSG");
-                    Send(string.IsNullOrEmpty(demo) ? "ça rame en jeu" : demo);
+                    // « accueil » = ne rien envoyer : capture de la scène d'entrée (héros).
+                    if (demo != "accueil") Send(string.IsNullOrEmpty(demo) ? "ça rame en jeu" : demo);
                 }
             }
             catch { }
@@ -196,7 +372,10 @@ namespace BTOptimizer
         {
             if (_greeted) return;
             _greeted = true;
-            AddBubble(true, null, DocAssistant.Intro(_stats));
+            // L'accueil n'est plus une bulle : c'est la scène d'entrée (héros). Le flux reste
+            // masqué tant que la conversation n'a pas commencé.
+            try { _flow.Visible = false; } catch { }
+            LayoutHero();
         }
 
         private void SendInput()
@@ -348,14 +527,14 @@ namespace BTOptimizer
         private void ShowTyping()
         {
             HideTyping();
-            Mascot.CurrentMood = Mascot.Mood.Thinking;   // Flux réfléchit pendant que le Copilote travaille
-            var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(20, 20, 31) };
-            bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
-            var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
+            SetStatus(StatusKind.Working);
+            var bubble = new Panel { Size = new Size(66, 38), BackColor = BubbleDoc };
+            bubble.SizeChanged += (s, e) => { try { using (var p = RoundAsym(bubble.ClientRectangle, 5, 14, 14, 14)) bubble.Region = new Region(p); } catch { } };
+            var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Gold, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
             bubble.Controls.Add(dots);
             _typingBubble = bubble; _typingDots = dots; _typingProgress = null;
-            var avatar = MakeAvatar(true);
-            var row = new Panel { Size = new Size(AV + GAP + 66, Math.Max(AV, 38)), BackColor = Color.Transparent, Margin = new Padding(6, 7, 10, 7), Tag = "typing" };
+            var avatar = MakeAvatar();
+            var row = new Panel { Size = new Size(AV + GAP + 66, Math.Max(AV, 38)), BackColor = Color.Transparent, Margin = new Padding(ColLeft(), 7, 10, 7), Tag = "typing" };
             avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0);
             row.Controls.Add(avatar); row.Controls.Add(bubble);
             _typingRow = row; _flow.Controls.Add(row); try { _flow.ScrollControlIntoView(row); } catch { }
@@ -388,27 +567,21 @@ namespace BTOptimizer
             if (_typingAnim != null) { try { _typingAnim.Stop(); _typingAnim.Dispose(); } catch { } _typingAnim = null; }
             if (_typingRow != null) { try { _flow.Controls.Remove(_typingRow); _typingRow.Dispose(); } catch { } _typingRow = null; }
             _typingBubble = null; _typingDots = null; _typingProgress = null;
-            Mascot.CurrentMood = _stats != null ? Mascot.MoodForHealth(_stats.Health) : Mascot.Mood.Calm;
+            SetStatus(StatusKind.Findings);
         }
 
-        private Panel MakeAvatar(bool doc)
+        /// <summary>Avatar du Copilote : l'anneau d'or sur pastille carbone — le monogramme ONYX,
+        /// pas une mascotte. (Le joueur, lui, n'a pas d'avatar : l'asymétrie structure la lecture.)</summary>
+        private Panel MakeAvatar()
         {
             var avatar = new Panel { Size = new Size(AV, AV), BackColor = Color.Transparent };
             avatar.Paint += (s, e) =>
             {
                 var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
                 var rr = new Rectangle(0, 0, AV - 1, AV - 1);
-                if (doc)
-                {
-                    // Flux, la mascotte : son humeur suit le dernier bilan de santé connu.
-                    Mascot.Draw(g, new RectangleF(0, 0, AV - 1, AV - 1), FpsUi.Neon, Mascot.CurrentMood);
-                }
-                else
-                {
-                    using (var br = new SolidBrush(Color.FromArgb(26, 26, 40))) g.FillEllipse(br, rr);
-                    using (var pen = new Pen(FpsUi.Border, 1.5f)) g.DrawEllipse(pen, rr);
-                    TextRenderer.DrawText(g, "🙂", FpsUi.Glyph, rr, FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-                }
+                using (var br = new SolidBrush(FpsUi.CardHi)) g.FillEllipse(br, rr);
+                using (var pen = new Pen(Color.FromArgb(110, FpsUi.Gold), 1.2f)) g.DrawEllipse(pen, rr);
+                Logo.Draw(g, new RectangleF(6.5f, 6.5f, AV - 14, AV - 14), FpsUi.Gold, false);
             };
             return avatar;
         }
@@ -434,44 +607,85 @@ namespace BTOptimizer
         };
 
         private const int AV = 36, GAP = 10;
+        private const int ColumnW = 860;                                   // largeur maxi de la conversation
+        private static readonly Color BubbleDoc = Color.FromArgb(24, 20, 16);   // carbone chaud (Copilote)
+        private static readonly Color BubbleUser = Color.FromArgb(42, 34, 22);  // bronze éteint (joueur)
+
+        /// <summary>Marge gauche de la colonne : la conversation est CENTRÉE (pas collée au rail).</summary>
+        private int ColLeft()
+        {
+            int w = _flow != null ? _flow.ClientSize.Width : 800;
+            return Math.Max(6, (w - ColumnW) / 2);
+        }
 
         private void AddBubble(bool doc, string text, DocAssistant.Reply reply)
         {
+            RemoveHero();
             string body = doc && reply != null ? reply.Text : text;
             int flowW = _flow.ClientSize.Width;
-            int maxTextW = Math.Min(520, Math.Max(220, flowW - AV - GAP - 150));
+            int colW = Math.Min(ColumnW, flowW - 12);
+            int maxTextW = Math.Min(620, Math.Max(220, colW - AV - GAP - 90));
 
-            // Bulle auto-dimensionnée : Copilote sombre / Toi en indigo, coins arrondis + liseré.
-            Color bg = doc ? Color.FromArgb(20, 20, 31) : Color.FromArgb(32, 30, 68);
-            Color bord = doc ? FpsUi.Border : Color.FromArgb(79, 70, 229);
+            // Bulle auto-dimensionnée : Copilote carbone / Toi bronze, coins arrondis asymétriques
+            // (le coin proche de l'émetteur est serré : la bulle « pointe » vers qui parle).
+            Color bg = doc ? BubbleDoc : BubbleUser;
+            Color bord = doc ? FpsUi.Border : Color.FromArgb(120, FpsUi.GoldDim);
             var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(16, 12, 18, 14), Margin = new Padding(0) };
-            bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
-            bubble.Paint += (s, e) => { try { using (var pen = new Pen(bord)) using (var p = Round(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14)) e.Graphics.DrawPath(pen, p); } catch { } };
+            bubble.SizeChanged += (s, e) =>
+            {
+                try
+                {
+                    using (var p = doc ? RoundAsym(bubble.ClientRectangle, 5, 14, 14, 14)
+                                       : RoundAsym(bubble.ClientRectangle, 14, 5, 14, 14))
+                        bubble.Region = new Region(p);
+                }
+                catch { }
+            };
+            bubble.Paint += (s, e) =>
+            {
+                try
+                {
+                    using (var pen = new Pen(bord))
+                    using (var p = doc ? RoundAsym(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 5, 14, 14, 14)
+                                       : RoundAsym(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14, 5, 14, 14))
+                        e.Graphics.DrawPath(pen, p);
+                }
+                catch { }
+            };
 
             var col = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
             // En-tête : qui parle + l'heure (repère utile quand la conversation s'allonge).
+            // Le nom du Copilote se grave en Marcellus or — c'est sa signature.
             col.Controls.Add(new Label
             {
-                AutoSize = true, Font = FpsUi.Small,
-                ForeColor = doc ? FpsUi.Neon : Color.FromArgb(185, 190, 250),
+                AutoSize = true, Font = doc ? NameFont : FpsUi.Small,
+                ForeColor = doc ? FpsUi.Gold : Color.FromArgb(216, 190, 130),
                 // Même marge gauche que le corps du message (les Label d'un FlowLayoutPanel
                 // ont 3 px par défaut) : sans ça l'en-tête débordait de 3 px vers la gauche
                 // et la première lettre passait sous l'arrondi de la bulle.
                 BackColor = Color.Transparent, Margin = new Padding(3, 0, 3, 5),
-                Text = (doc ? "COPILOTE" : "TOI") + "   " + DateTime.Now.ToString("HH:mm")
+                Text = (doc ? "LE COPILOTE" : "TOI") + "   " + DateTime.Now.ToString("HH:mm")
             });
-            col.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" });
+            var bodyLbl = new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" };
+            col.Controls.Add(bodyLbl);
+
+            // Enfants « riches » (cartes, boutons, pied) : mémorisés pour n'apparaître qu'à la fin
+            // de l'écriture en direct (comme une vraie rédaction), révélés d'un coup si clic.
+            var lateKids = new List<Control>();
 
             // Diagnostic STRUCTURÉ : chaque cause en carte d'impact colorée, bouton intégré.
             if (reply != null && reply.Cards != null)
-                foreach (var cd in reply.Cards) if (cd != null) col.Controls.Add(MakeCard(cd, maxTextW));
+                foreach (var cd in reply.Cards) if (cd != null) { var k = MakeCard(cd, maxTextW); col.Controls.Add(k); lateKids.Add(k); }
             if (reply != null && !string.IsNullOrEmpty(reply.Footer))
-                col.Controls.Add(new Label
+            {
+                var f = new Label
                 {
                     AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
                     ForeColor = FpsUi.Dim, BackColor = Color.Transparent,
                     Margin = new Padding(3, 10, 3, 0), Text = reply.Footer
-                });
+                };
+                col.Controls.Add(f); lateKids.Add(f);
+            }
             // Diagnostic exportable : un .txt propre sur le Bureau — le livrable à montrer/garder.
             if (reply != null && reply.Exportable)
             {
@@ -484,35 +698,35 @@ namespace BTOptimizer
                     {
                         string path = System.IO.Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                            "Fluide-diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
+                            "ONYX-diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
                         System.IO.File.WriteAllText(path, ReplyFullText(rep, bodyTxt), new UTF8Encoding(false));
                         ex.Text = "✓  Enregistré sur le Bureau"; ex.Enabled = false;
                         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
                     }
                     catch { ex.Text = "⚠  Échec de l'enregistrement"; }
                 };
-                col.Controls.Add(ex);
+                col.Controls.Add(ex); lateKids.Add(ex);
             }
             if (reply != null && reply.Tool != null)
             {
-                var btn = FpsUi.NeonButton("Ouvrir « " + reply.Tool.Tool + " »  →");
+                var btn = FpsUi.GoldButton("Ouvrir « " + reply.Tool.Tool + " »  →");
                 btn.AutoSize = false; btn.Size = new Size(Math.Min(maxTextW, 320), 34); btn.Margin = new Padding(0, 8, 0, 2);
                 var entry = reply.Tool;
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
-                col.Controls.Add(btn);
+                col.Controls.Add(btn); lateKids.Add(btn);
             }
             // Action(s) qui MODIFIENT le système : bouton explicite + annonce de ce qui change.
-            // Jamais d'exécution automatique ici — c'est la promesse de Fluide.
+            // Jamais d'exécution automatique ici — c'est la promesse d'ONYX.
             if (reply != null && reply.Action != null && reply.Action.IsChange)
-                AddActionButton(col, reply.Action, maxTextW);
+                foreach (var k in AddActionButton(col, reply.Action, maxTextW)) lateKids.Add(k);
             // Le plan ne se rend en boutons que s'il n'est PAS déjà porté par des cartes.
             if (reply != null && reply.Plan != null && reply.Cards == null)
-                foreach (var step in reply.Plan) if (step != null) AddActionButton(col, step, maxTextW);
+                foreach (var step in reply.Plan) if (step != null) foreach (var k in AddActionButton(col, step, maxTextW)) lateKids.Add(k);
             if (reply != null && reply.ShowStarters)
             {
                 var chips = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.LeftToRight, WrapContents = true, MaximumSize = new Size(maxTextW, 0), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
                 foreach (var st in Starters) { var c = Chip(st.Item1); string sendText = st.Item2; c.Click += (s, e) => Send(sendText); chips.Controls.Add(c); }
-                col.Controls.Add(chips);
+                col.Controls.Add(chips); lateKids.Add(chips);
             }
             // Clic droit n'importe où sur la bulle : copier le message (texte + cartes + pied).
             {
@@ -534,24 +748,81 @@ namespace BTOptimizer
                 foreach (Control cc in col.Controls) if (cc is Label) cc.ContextMenuStrip = cms;
             }
             bubble.Controls.Add(col);
-            Size bs = bubble.PreferredSize;
 
-            var avatar = MakeAvatar(doc);
+            var avatar = doc ? MakeAvatar() : null;
 
-            // Ligne avatar+bulle : Doc à GAUCHE, Toi à DROITE (vraie messagerie).
-            int rowW = AV + GAP + bs.Width, rowH = Math.Max(AV, bs.Height);
-            var row = new Panel { Size = new Size(rowW, rowH), BackColor = Color.Transparent, Tag = doc ? "doc" : "user", Margin = new Padding(doc ? 6 : Math.Max(6, flowW - rowW - 28), 7, 10, 7) };
-            if (doc) { avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0); }
-            else { bubble.Location = new Point(0, 0); avatar.Location = new Point(bs.Width + GAP, 0); }
-            row.Controls.Add(avatar); row.Controls.Add(bubble);
+            // Ligne avatar+bulle : le Copilote à GAUCHE (avec anneau), Toi à DROITE (sans avatar).
+            var row = new Panel { BackColor = Color.Transparent, Tag = doc ? "doc" : "user" };
+            if (doc) { avatar.Location = new Point(0, 0); bubble.Location = new Point(AV + GAP, 0); row.Controls.Add(avatar); }
+            else bubble.Location = new Point(0, 0);
+            row.Controls.Add(bubble);
+
+            // La ligne suit la taille réelle de la bulle (l'écriture en direct la fait grandir).
+            Action sync = delegate
+            {
+                Size bs2 = bubble.PreferredSize;
+                int rw = (doc ? AV + GAP : 0) + bs2.Width;
+                int rh = Math.Max(doc ? AV : 0, bs2.Height);
+                if (row.Width != rw || row.Height != rh)
+                {
+                    row.Size = new Size(rw, rh);
+                    row.Margin = new Padding(doc ? ColLeft() : Math.Max(6, flowW - rw - ColLeft() - 22), 7, 10, 7);
+                }
+            };
+            bubble.SizeChanged += (s, e) => { try { sync(); } catch { } };
+            sync();
             _flow.Controls.Add(row);
             try { _flow.ScrollControlIntoView(row); } catch { }
+
+            // Écriture EN DIRECT des réponses du Copilote : le texte se rédige (≈ 210 caractères/s),
+            // un clic n'importe où sur la bulle affiche tout. Les cartes/boutons arrivent à la fin.
+            bool typewrite = doc && Anim.On && body != null && body.Length > 24
+                             && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT"));
+            if (typewrite)
+            {
+                foreach (Control k in lateKids) k.Visible = false;
+                string full = body;
+                bodyLbl.Text = "";
+                var writer = new Timer { Interval = 16 };
+                int idx = 0, tick = 0;
+                Action finish = delegate
+                {
+                    try { writer.Stop(); writer.Dispose(); } catch { }
+                    bodyLbl.Text = full;
+                    foreach (Control k in lateKids) k.Visible = true;
+                    bubble.Cursor = Cursors.Default; bodyLbl.Cursor = Cursors.Default;
+                    sync();
+                    try { _flow.ScrollControlIntoView(row); } catch { }
+                };
+                bubble.Cursor = Cursors.Hand; bodyLbl.Cursor = Cursors.Hand;
+                EventHandler skip = (s, e) => { if (idx < full.Length) { idx = full.Length; finish(); } };
+                bubble.Click += skip; bodyLbl.Click += skip; col.Click += skip;
+                writer.Tick += (s, e) =>
+                {
+                    idx = Math.Min(full.Length, idx + 4);   // ~250 c/s : rapide, jamais pénible
+                    bodyLbl.Text = full.Substring(0, idx);
+                    if (++tick % 6 == 0) { try { _flow.ScrollControlIntoView(row); } catch { } }
+                    if (idx >= full.Length) finish();
+                };
+                writer.Start();
+            }
+            else if (doc && Anim.On && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
+            {
+                // Messages courts : simple glissement d'entrée (la ligne « pousse » depuis le bas).
+                int target = row.Height;
+                row.Height = Math.Max(8, target / 3);
+                Anim.Tween(160, Ease.OutCubic,
+                    p => { try { row.Height = Math.Max(8, (int)(target * (0.33f + 0.67f * p))); } catch { } },
+                    () => { try { sync(); _flow.ScrollControlIntoView(row); } catch { } });
+            }
 
             // Suivi de conversation : la dernière réponse ACTIONNABLE (ou explicable) devient le
             // contexte du prochain « oui »/« non »/« pourquoi ? » ; un « oui » sur un outil vaut
             // clic → on l'ouvre.
             if (doc && reply != null)
             {
+                _statusCauses = reply.Cards != null ? reply.Cards.Count : 0;
+                SetStatus(StatusKind.Findings);
                 if (reply.Tool != null || reply.Action != null || (reply.Plan != null && reply.Plan.Count > 0)
                     || !string.IsNullOrEmpty(reply.Explain)) _last = reply;
                 if (reply.OpenToolNow && reply.Tool != null) { try { Host.OpenDialog(reply.Tool.Open()); } catch { } }
@@ -559,20 +830,26 @@ namespace BTOptimizer
         }
 
         /// <summary>Bouton d'une correction : libellé, puis en petit ce qu'elle va changer.
-        /// Une fois lancée, le bouton se verrouille (pas de double exécution).</summary>
-        private void AddActionButton(Control col, DocAssistant.ChatAction act, int maxTextW)
+        /// Une fois lancée, le bouton se verrouille (pas de double exécution).
+        /// Renvoie les contrôles créés (pour l'apparition différée pendant l'écriture).</summary>
+        private List<Control> AddActionButton(Control col, DocAssistant.ChatAction act, int maxTextW)
         {
-            var go = FpsUi.NeonButton("▶  " + act.Label);
+            var made = new List<Control>();
+            var go = FpsUi.GoldButton("▶  " + act.Label);
             go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
             go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
-            col.Controls.Add(go);
+            col.Controls.Add(go); made.Add(go);
             if (!string.IsNullOrEmpty(act.Warning))
-                col.Controls.Add(new Label
+            {
+                var w = new Label
                 {
                     AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Small,
                     ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
                     Margin = new Padding(3, 5, 3, 0), Text = act.Warning
-                });
+                };
+                col.Controls.Add(w); made.Add(w);
+            }
+            return made;
         }
 
         /// <summary>Carte d'une cause : barre d'accent + pastille d'impact colorée (rouge ≥ 85,
@@ -584,7 +861,7 @@ namespace BTOptimizer
             var pnl = new Panel { Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
             pnl.Paint += (s, e) =>
             {
-                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, Color.FromArgb(22, 22, 34), FpsUi.Border, 10f);
+                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, Color.FromArgb(28, 24, 19), FpsUi.Border, 10f);
                 using (var br = new SolidBrush(acc)) e.Graphics.FillRectangle(br, 1, 10, 3, pnl.Height - 20);
             };
             var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, acc);
@@ -599,7 +876,7 @@ namespace BTOptimizer
             if (cd.Fix != null)
             {
                 var act = cd.Fix;
-                var go = FpsUi.NeonButton("▶  " + act.Label);
+                var go = FpsUi.GoldButton("▶  " + act.Label);
                 go.AutoSize = false; go.Size = new Size(Math.Min(pnl.Width - 28, 320), 30);
                 go.Location = new Point(14, y + 8);
                 go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
@@ -626,7 +903,7 @@ namespace BTOptimizer
         private static string ReplyFullText(DocAssistant.Reply r, string body)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("DIAGNOSTIC FLUIDE — " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"));
+            sb.AppendLine("DIAGNOSTIC ONYX — " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"));
             sb.AppendLine(new string('=', 48));
             sb.AppendLine();
             if (!string.IsNullOrEmpty(body)) { sb.AppendLine(body); sb.AppendLine(); }
@@ -644,13 +921,20 @@ namespace BTOptimizer
             return sb.ToString().TrimEnd() + "\r\n";
         }
 
-        // Ré-aligne les bulles « Toi » à droite quand la largeur change.
+        // Ré-aligne la colonne quand la largeur change (Copilote à gauche de la colonne,
+        // Toi à droite de la colonne — la colonne elle-même reste centrée).
         private void RealignUserRows()
         {
             if (_flow == null) return;
-            int flowW = _flow.ClientSize.Width;
+            int flowW = _flow.ClientSize.Width, left = ColLeft();
             foreach (Control c in _flow.Controls)
-                if ((c.Tag as string) == "user") { var m = c.Margin; m.Left = Math.Max(6, flowW - c.Width - 28); c.Margin = m; }
+            {
+                string tag = c.Tag as string;
+                var m = c.Margin;
+                if (tag == "user") m.Left = Math.Max(6, flowW - c.Width - left - 22);
+                else m.Left = left;
+                c.Margin = m;
+            }
         }
 
         private static Button Chip(string text)
@@ -660,10 +944,10 @@ namespace BTOptimizer
                 Text = text, AutoSize = false, Height = 28,
                 Width = TextRenderer.MeasureText(text, FpsUi.Small).Width + 24,
                 FlatStyle = FlatStyle.Flat, Font = FpsUi.Small, Cursor = Cursors.Hand,
-                BackColor = Color.FromArgb(20, 20, 31), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
+                BackColor = Color.FromArgb(25, 21, 16), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
             };
             b.FlatAppearance.BorderColor = FpsUi.Border;
-            b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Neon; b.FlatAppearance.BorderColor = FpsUi.Neon; };
+            b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Gold; b.FlatAppearance.BorderColor = FpsUi.Gold; };
             b.MouseLeave += (s, e) => { b.ForeColor = FpsUi.Dim; b.FlatAppearance.BorderColor = FpsUi.Border; };
             return b;
         }
@@ -672,6 +956,9 @@ namespace BTOptimizer
         {
             if (_flow == null) return;
             int W = ClientSize.Width, H = ClientSize.Height, m = 34;
+
+            // État vivant à droite de la ligne de titre.
+            if (_status != null) _status.SetBounds(W - m - 260, 30, 260, 18);
 
             // Cockpit sous le sous-titre (le titre peint finit vers y ≈ 80) + ↻ à droite.
             if (_statsRow != null)
@@ -699,16 +986,23 @@ namespace BTOptimizer
             if (_quick != null) _quick.SetBounds(m - 4, quickY, Math.Max(220, W - 2 * (m - 4)), quickH);
 
             _flow.SetBounds(20, 142, W - 40, Math.Max(120, quickY - 10 - 142));
+            if (_hero != null) { _hero.SetBounds(20, 142, W - 40, Math.Max(120, quickY - 10 - 142)); LayoutHero(); }
             RealignUserRows();
         }
 
-        private static GraphicsPath Round(Rectangle r, int rad)
+        /// <summary>Rectangle arrondi à coins INDÉPENDANTS (tl/tr/br/bl) : le coin serré fait
+        /// « pointer » la bulle vers son émetteur.</summary>
+        private static GraphicsPath RoundAsym(Rectangle r, int tl, int tr, int br, int bl)
         {
-            var p = new GraphicsPath(); int d = rad * 2;
-            if (r.Width < d || r.Height < d) { p.AddRectangle(r); return p; }
-            p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
-            p.CloseFigure(); return p;
+            var p = new GraphicsPath();
+            int maxR = Math.Min(r.Width, r.Height) / 2;
+            tl = Math.Min(tl, maxR); tr = Math.Min(tr, maxR); br = Math.Min(br, maxR); bl = Math.Min(bl, maxR);
+            if (tl > 0) p.AddArc(r.X, r.Y, tl * 2, tl * 2, 180, 90); else p.AddLine(r.X, r.Y, r.X, r.Y);
+            if (tr > 0) p.AddArc(r.Right - tr * 2, r.Y, tr * 2, tr * 2, 270, 90); else p.AddLine(r.Right, r.Y, r.Right, r.Y);
+            if (br > 0) p.AddArc(r.Right - br * 2, r.Bottom - br * 2, br * 2, br * 2, 0, 90); else p.AddLine(r.Right, r.Bottom, r.Right, r.Bottom);
+            if (bl > 0) p.AddArc(r.X, r.Bottom - bl * 2, bl * 2, bl * 2, 90, 90); else p.AddLine(r.X, r.Bottom, r.X, r.Bottom);
+            p.CloseFigure();
+            return p;
         }
 
         protected override void Dispose(bool disposing)

@@ -30,7 +30,7 @@ namespace BTOptimizer
         public GameDetailForm(GameScan.GameInfo g, Action<string, int> log)
         {
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
-            Text = "Fluide — " + g.Name;
+            Text = "ONYX — " + g.Name;
             // Mise en page « fiche pleine largeur » : onglets en haut, optimisations à gauche,
             // grande jaquette à droite, appel Pro en bas — comme une page, pas une boîte.
             ClientSize = new Size(1000, 620);
@@ -38,7 +38,7 @@ namespace BTOptimizer
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = FpsUi.BgMain; Font = FpsUi.Body; DoubleBuffered = true;
-            try { Icon = Logo.MakeIcon(32, FpsUi.Neon); } catch { }
+            try { Icon = Logo.MakeIcon(32, FpsUi.Gold); } catch { }
 
             // Démarre tôt le chargement de la jaquette — y compris pour les jeux SANS AppID
             // (EA, Battle.net…) : ForGame résout d'abord le nom via l'index Steam.
@@ -77,7 +77,7 @@ namespace BTOptimizer
             _back.Click += (s, e) => Close();
             Controls.Add(_back);
 
-            _mode = FpsUi.NeonButton("▶  MODE JEU");
+            _mode = FpsUi.GoldButton("▶  MODE JEU");
             _mode.Click += (s, e) => { try { Close(); } catch { } };
             Controls.Add(_mode);
 
@@ -88,7 +88,7 @@ namespace BTOptimizer
                 Controls.Add(_prio);
             }
 
-            _launch = FpsUi.NeonButton("▶  Lancer");
+            _launch = FpsUi.GoldButton("▶  Lancer");
             _launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
             _launch.Click += (s, e) => Launch();
             Controls.Add(_launch);
@@ -102,7 +102,7 @@ namespace BTOptimizer
 
             if (!License.ProUnlocked)
             {
-                _pro = FpsUi.NeonButton("◆  PASSER PRO");
+                _pro = FpsUi.GoldButton("◆  PASSER PRO");
                 _pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
                 Controls.Add(_pro);
             }
@@ -163,7 +163,7 @@ namespace BTOptimizer
             bool hi = true; foreach (var exe in _exes) if (!ExeHi(exe)) { hi = false; break; }
             _hiPrio = hi;
             _prio.Text = hi ? "Priorité CPU : HAUTE ✓  (rétablir)" : "Priorité CPU normale  →  passer en HAUTE";
-            _prio.ForeColor = hi ? FpsUi.Neon : FpsUi.Ink;
+            _prio.ForeColor = hi ? FpsUi.Gold : FpsUi.Ink;
         }
 
         private void TogglePrio()
@@ -212,7 +212,7 @@ namespace BTOptimizer
                 }
                 OpenFolder();
             }
-            catch (Exception ex) { MessageBox.Show(this, "Impossible de lancer le jeu : " + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            catch (Exception ex) { MessageBox.Show(this, "Impossible de lancer le jeu : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }
 
         // URI officielles du launcher Blizzard (codes produits Battle.net).
@@ -272,18 +272,18 @@ namespace BTOptimizer
         {
             var card = new Panel { Bounds = new Rectangle(x, y, w, 166), BackColor = Color.Transparent };
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
-                pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.NeonDim : FpsUi.Border, 12f);
+                pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.GoldDim : FpsUi.Border, 12f);
 
             // Grand nombre (le compte réel), puis le libellé et l'explication.
-            num = FpsUi.Text("…", FpsUi.Garet, FpsUi.Ink);
+            num = FpsUi.Text("…", FpsUi.Display, FpsUi.Ink);
             num.AutoSize = false; num.SetBounds(20, 16, w - 40, 46);
             var lab = FpsUi.Text("Optimisations", FpsUi.Small, FpsUi.Dim2);
             lab.AutoSize = false; lab.SetBounds(22, 62, w - 44, 18);
-            var sub = FpsUi.Text("", FpsUi.Small, pro ? FpsUi.Neon : FpsUi.Dim);
+            var sub = FpsUi.Text("", FpsUi.Small, pro ? FpsUi.Gold : FpsUi.Dim);
             sub.AutoSize = false; sub.SetBounds(22, 84, w - 44, 34);
             sub.Text = pro ? "Adapté à TON matériel (eSport)." : "Réglages sûrs, tous jeux.";
 
-            btn = pro ? FpsUi.NeonButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
+            btn = pro ? FpsUi.GoldButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
             btn.SetBounds(20, 122, w - 40, 34);
             card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(sub); card.Controls.Add(btn);
 
@@ -339,7 +339,7 @@ namespace BTOptimizer
                 + (full ? "Réglage adapté à ton matériel (niveau eSport).\n" : "Réglages sûrs, valables pour tous les jeux.\n")
                 + "\nUne sauvegarde du registre et un point de restauration sont créés avant, "
                 + "et tout reste réversible depuis la page Optimisations.",
-                "Fluide — " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                "ONYX — " + _g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
 
             Cursor = Cursors.WaitCursor;
             if (_btnLight != null) _btnLight.Enabled = false;
@@ -355,7 +355,7 @@ namespace BTOptimizer
                     if (_btnLight != null) _btnLight.Enabled = true;
                     if (_btnFull != null) _btnFull.Enabled = true;
                     MessageBox.Show(this, n + " optimisation(s) appliquée(s). Bon jeu ! 🎮",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 })); }
                 catch { }
             });
@@ -373,7 +373,7 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, _g.Name.ToUpperInvariant(), FpsUi.H3, new Rectangle(tabX, 26, W - tabX - 210, 22),
                 FpsUi.Ink, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             int tabW = Math.Min(W - tabX - 210, TextRenderer.MeasureText(_g.Name.ToUpperInvariant(), FpsUi.H3).Width);
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, tabX, 52, tabX + tabW, 52);
+            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, tabX, 52, tabX + tabW, 52);
             using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 52, W - Pad, 52);
 
             // --- Colonne droite : grande jaquette ---
@@ -399,7 +399,7 @@ namespace BTOptimizer
                 FpsUi.Ink, TextFormatFlags.NoPrefix);
             string st2 = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
             TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
-                _g.Detected ? FpsUi.Neon : FpsUi.Dim, TextFormatFlags.NoPrefix);
+                _g.Detected ? FpsUi.Gold : FpsUi.Dim, TextFormatFlags.NoPrefix);
 
             // Conseils FPS SOUS les cartes : l'action passe devant l'explication.
             Section(g, "RÉGLAGES À FAIRE DANS LE JEU", 336, Pad, LeftW);
@@ -414,7 +414,7 @@ namespace BTOptimizer
 
         private static void Section(Graphics g, string title, int y, int x, int w)
         {
-            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(x, y, w, 18), FpsUi.NeonDim, TextFormatFlags.NoPrefix);
+            TextRenderer.DrawText(g, title, FpsUi.Small, new Rectangle(x, y, w, 18), FpsUi.GoldDim, TextFormatFlags.NoPrefix);
             using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, x, y + 20, x + w, y + 20);
         }
 

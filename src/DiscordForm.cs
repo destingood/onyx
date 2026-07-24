@@ -59,7 +59,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Discord";
+            Text = "ONYX — Discord";
             ClientSize = new Size(620, 470);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 430);
@@ -96,7 +96,7 @@ namespace BTOptimizer
             {
                 Dock = DockStyle.Top, Height = 150, ForeColor = Color.FromArgb(70, 74, 82),
                 Text = "À régler dans Discord même (honnêteté : ces options ne sont pas exposées à "
-                     + "l'extérieur de l'application, Fluide ne fera donc pas semblant de les changer) :\r\n\r\n"
+                     + "l'extérieur de l'application, ONYX ne fera donc pas semblant de les changer) :\r\n\r\n"
                      + "•  Accélération matérielle — Paramètres ⚙ → Avancés. La couper rend le GPU à ton jeu ;\r\n"
                      + "    c'est LE réglage Discord qui compte le plus si tu joues en 1440p/4K.\r\n"
                      + "•  Overlay en jeu — Paramètres ⚙ → Overlay de jeu. Il s'injecte dans le jeu :\r\n"
@@ -113,7 +113,7 @@ namespace BTOptimizer
             _btnApply = new Button
             {
                 Text = "Appliquer", Width = 130, Dock = DockStyle.Right,
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.FromArgb(16, 13, 9),
                 Font = Own(new Font("Segoe UI Semibold", 9.5f))
             };
             _btnApply.FlatAppearance.BorderSize = 0;
@@ -261,7 +261,7 @@ namespace BTOptimizer
                     ? "Réglages appliqués.\r\n\r\nRedémarre Discord pour que sa configuration soit relue.\r\n"
                       + "Tout est réversible : reviens ici et décoche."
                     : "Réglages partiellement appliqués :\r\n\r\n• " + string.Join("\r\n• ", problems),
-                "Fluide — Discord", MessageBoxButtons.OK,
+                "ONYX — Discord", MessageBoxButtons.OK,
                 problems.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
 
             Reload();
@@ -281,7 +281,7 @@ namespace BTOptimizer
             catch (Exception ex)
             {
                 MessageBox.Show(this, "Impossible d'ouvrir Discord : " + ex.Message,
-                    "Fluide — Discord", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "ONYX — Discord", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

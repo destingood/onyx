@@ -424,7 +424,7 @@ namespace BTOptimizer
             // Applis grand public (pas des jeux)
             "Opera Software", "Discord Inc", "spikehd", "TikTok", "Smart Code OOD", "TechEnClair", "yanis",
             // Nos propres logiciels / concurrents (ne pas s'auto-lister dans la bibliothèque)
-            "BT Optimizer", "Fluide", "FPSDoctor"
+            "BT Optimizer", "ONYX", "FPSDoctor"
         };
 
         // Noms exacts sans éditeur exploitable. Correspondance EXACTE obligatoire : un filtre

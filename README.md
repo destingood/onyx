@@ -1,8 +1,9 @@
-# DesTinGOOD Optimizer
+# ONYX — Carbone & Or
 
-*(anciennement « BT Optimizer » — v10.3 : rebranding. Les fichiers techniques gardent leurs
-noms — `BTOptimizer.exe/.dll`, `Lancer-BTOptimizer.bat`, `bt-*.txt`, sauvegardes — pour que
-lanceurs, licences, profils et gardien continuent de fonctionner sans rien casser.)*
+*(anciennement « BT Optimizer » → « DesTinGOOD » → « ONYX » — v14.54 : rebranding **ONYX**.
+Les fichiers techniques gardent leurs noms — `BTOptimizer.exe/.dll`, `Lancer-BTOptimizer.bat`,
+`bt-*.txt`, sauvegardes — pour que lanceurs, licences, profils et gardien continuent de
+fonctionner sans rien casser.)*
 
 Application Windows 10/11 pour le **gaming** : viser les **500 FPS**, réduire l'**input lag**
 et la **latence**, avec **cases à cocher** : chaque optimisation est optionnelle et
@@ -86,13 +87,13 @@ code existant), **HwMonitor** et **clés de registre** — tout est propre. Seul
 timer principal de la fenêtre est désormais **arrêté en premier** à la fermeture, pour qu'aucun
 tick (mode jeu auto / gardien) ne se déclenche pendant la teardown.
 
-### 💧 Rebrand : DesTinGOOD devient **Fluide** (v14.29)
+### 💧 Rebrand : DesTinGOOD devient **ONYX** (v14.29)
 
 Nouveau nom, nouveau logo (**la frametime qui devient plate**), nouvelle signature
 (**« Mesuré, pas promis. »**) — décidés par interview avec faits vérifiés (domaines,
 collisions de marques). Portée : couche **visible** uniquement — la couche technique
 (`BTOptimizer.exe`, `bt-*.txt`, lanceurs, clés, gardien) est inchangée, exactement
-comme au rebrand v10.3. Installateur : « Fluide Setup » (`Fluide-Setup-x.exe`),
+comme au rebrand v10.3. Installateur : « ONYX Setup » (`ONYX-Setup-x.exe`),
 boutique `fluide.gumroad.com`. Détail complet dans le CHANGELOG (v14.29).
 
 ### 🎯 Correctif critique du viseur — plus aucune perte de FPS (v14.27)

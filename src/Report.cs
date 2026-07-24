@@ -59,10 +59,10 @@ namespace BTOptimizer
             var html = new StringBuilder();
             html.Append("<!doctype html><html lang='fr'><head><meta charset='utf-8'>");
             html.Append("<meta name='viewport' content='width=device-width, initial-scale=1'>");
-            html.Append("<title>Fluide — Rapport de configuration</title><style>");
+            html.Append("<title>ONYX — Rapport de configuration</title><style>");
             html.Append(Css());
             html.Append("</style></head><body><div class='wrap'>");
-            html.Append("<header><div class='brand'>Fluide</div><div class='sub'>Rapport de configuration · ").Append(date).Append("</div></header>");
+            html.Append("<header><div class='brand'>ONYX</div><div class='sub'>Rapport de configuration · ").Append(date).Append("</div></header>");
             html.Append(head);
             html.Append(Diagnostic());
             html.Append(body);

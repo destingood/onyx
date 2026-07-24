@@ -39,7 +39,7 @@ namespace BTOptimizer
         private Rectangle _prevBounds;
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
-        private static readonly Color Green  = Color.FromArgb(79, 70, 229);
+        private static readonly Color Green  = Color.FromArgb(76, 196, 140);
         private static readonly Color Orange = Color.FromArgb(205, 133, 0);
         private static readonly Color Red    = Color.FromArgb(200, 45, 45);
         private static readonly Color TileBg = Color.FromArgb(28, 30, 38);
@@ -60,7 +60,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — FPS EN DIRECT (par jeu, façon PresentMon)";
+            Text = "ONYX — FPS EN DIRECT (par jeu, façon PresentMon)";
             ClientSize = new Size(940, 640);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(760, 520);
@@ -227,7 +227,7 @@ namespace BTOptimizer
                 _bannerTitle.Text = "Mesure impossible";
                 _bannerFps.Text = "—";
                 _bannerDetail.Text = "Cause : " + (_etw.LastError ?? "inconnue")
-                    + ". Lance Fluide en administrateur.";
+                    + ". Lance ONYX en administrateur.";
                 if (_log != null) _log("FPS en direct : session ETW refusée (" + (_etw.LastError ?? "?") + ").", 2);
                 _etw.Dispose();
                 _etw = null;

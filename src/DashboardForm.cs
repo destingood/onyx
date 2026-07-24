@@ -18,7 +18,6 @@ namespace BTOptimizer
         private readonly FpsPage[] _pages = new FpsPage[8];
         private int _current = -1;
 
-        [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int val, int sz);
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
         [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
         private const int HotkeyId = 0xB71, WM_HOTKEY = 0x0312;
@@ -30,7 +29,7 @@ namespace BTOptimizer
 
         public DashboardForm()
         {
-            Text = "Fluide — QG";
+            Text = "ONYX — QG";
             ClientSize = new Size(1200, 760);
             MinimumSize = new Size(1040, 680);
             StartPosition = FormStartPosition.CenterScreen;
@@ -38,7 +37,7 @@ namespace BTOptimizer
             BackColor = FpsUi.BgMain;
             Font = FpsUi.Body;
             DoubleBuffered = true;
-            try { Icon = Logo.MakeIcon(32, FpsUi.Neon); } catch { try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { } }
+            try { Icon = Logo.MakeIcon(32, FpsUi.Gold); } catch { try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { } }
             // Garantit le rendu sombre des menus (⋯, tray) dès le démarrage.
             try { Theme.Prime(); } catch { }
             try { AnimSettings.Recompute(); } catch { }   // état initial de l'interrupteur « Animations »
@@ -103,7 +102,7 @@ namespace BTOptimizer
             if (WindowState == FormWindowState.Minimized)
             {
                 Hide(); _tray.Visible = true;
-                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "Fluide", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
+                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "ONYX", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
                 return;
             }
             // Barre superposée (non dockée) : sa hauteur ne suit plus automatiquement la fenêtre.
@@ -151,11 +150,11 @@ namespace BTOptimizer
                 int n = GameHidden.Count;
                 if (n == 0)
                 {
-                    MessageBox.Show(this, "Aucun jeu n'est masqué.", "Fluide",
+                    MessageBox.Show(this, "Aucun jeu n'est masqué.", "ONYX",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                if (MessageBox.Show(this, "Réafficher les " + n + " jeu(x) masqué(s) ?", "Fluide",
+                if (MessageBox.Show(this, "Réafficher les " + n + " jeu(x) masqué(s) ?", "ONYX",
                         MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
                 GameHidden.ClearAll();
                 ShowPage(2);   // page Jeux : elle se redessine a l'affichage
@@ -205,10 +204,10 @@ namespace BTOptimizer
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
             sys.DropDownItems.Add("🪪 État de la licence Windows (activation, clé OEM)", null, (s, e) => OpenDialog(new WindowsLicenseForm()));
             sys.DropDownItems.Add(new ToolStripSeparator());
-            var autostart = new ToolStripMenuItem("Démarrer Fluide avec Windows") { Checked = AppAutostart.IsEnabled() };
+            var autostart = new ToolStripMenuItem("Démarrer ONYX avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
             sys.DropDownItems.Add(autostart);
-            var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec Fluide »)") { Checked = DiscordPresence.Enabled };
+            var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec ONYX »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
@@ -219,7 +218,7 @@ namespace BTOptimizer
 
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
-            m.Add("ℹ  À propos de Fluide", null, (s, e) => OpenDialog(new AboutForm()));
+            m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
         }
 
@@ -227,10 +226,10 @@ namespace BTOptimizer
         {
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "Fluide"; _tray.Visible = false;
+            _tray.Text = "ONYX"; _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var m = new ContextMenuStrip();
-            m.Items.Add("Ouvrir Fluide", null, (s, e) => RestoreFromTray());
+            m.Items.Add("Ouvrir ONYX", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
             m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
             m.Items.Add("Rapport de santé (HTML)", null, (s, e) => GenerateHealthReport());
@@ -254,7 +253,7 @@ namespace BTOptimizer
             if (MessageBox.Show(this,
                 "Redémarrer l'explorateur Windows ?\n\nLa barre des tâches et le bureau disparaissent ~1 seconde puis reviennent. "
                 + "Utile pour rafraîchir le shell après des réglages, ou débloquer une barre des tâches figée.",
-                "Fluide", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                "ONYX", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
             System.Threading.Tasks.Task.Run(() => AppAutostart.RestartExplorer());
         }
 
@@ -334,7 +333,7 @@ namespace BTOptimizer
         /// <summary>X maximal utilisable par du contenu (plus de mascotte : plein cadre).</summary>
         public int ContentRight(int margin) { return ClientSize.Width - margin; }
 
-        private void SetDark() { try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { } }
+        private void SetDark() { Dwm.Darken(this); }
 
         public void Log(string m, int l) { }
 
@@ -343,6 +342,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         // Barre latérale repliable : étroite (icônes seules) ou large (icônes + libellés).
         private const int RailNarrow = 66, RailWide = 232, BrandH = 64, ProfileH = 64;
+        private static readonly Font BrandFont = Fonts.Make(Fonts.Marcellus, 14.5f, FontStyle.Regular, "Georgia");
         private bool _railOpen;
         private Panel _railBrand, _railProfile;
         private NavCell _tools;
@@ -367,15 +367,14 @@ namespace BTOptimizer
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
                 gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 int mw = 34, mx = _railOpen ? 16 : (_railBrand.Width - mw) / 2;
-                Logo.Draw(gr, new RectangleF(mx, (BrandH - mw) / 2f, mw, mw), FpsUi.Neon, false);
+                Logo.Draw(gr, new RectangleF(mx, (BrandH - mw) / 2f, mw, mw), FpsUi.Gold, false);
                 if (_railOpen)
                 {
-                    TextRenderer.DrawText(gr, "Fluide", FpsUi.H3,
-                        new Rectangle(mx + mw + 12, 0, _railBrand.Width - mx - mw - 40, BrandH), FpsUi.Ink,
-                        TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    // Wordmark gravé : capitales Marcellus or, interlettrées — l'écrin de la marque.
+                    FpsUi.DrawTracked(gr, "ONYX", BrandFont, FpsUi.Gold, mx + mw + 12, BrandH / 2f, 3f);
                     // Pastille discrète = menu épinglé (il ne se referme plus quand on s'éloigne).
                     if (_railPinned)
-                        using (var br = new SolidBrush(FpsUi.Neon))
+                        using (var br = new SolidBrush(FpsUi.Gold))
                             gr.FillEllipse(br, _railBrand.Width - 22, BrandH / 2f - 3.5f, 7f, 7f);
                 }
             };
@@ -542,14 +541,14 @@ namespace BTOptimizer
 
             int d = 34, x = _railOpen ? 16 : (_railProfile.Width - d) / 2, cy = (ProfileH - d) / 2;
             var circ = new RectangleF(x, cy, d, d);
-            using (var br = new SolidBrush(Color.FromArgb(30, 129, 140, 248))) gr.FillEllipse(br, circ);
-            using (var pen = new Pen(Color.FromArgb(120, FpsUi.Neon.R, FpsUi.Neon.G, FpsUi.Neon.B), 1.4f)) gr.DrawEllipse(pen, circ);
-            Logo.Draw(gr, new RectangleF(x + 7, cy + 7, d - 14, d - 14), FpsUi.Neon, false);
+            using (var br = new SolidBrush(FpsUi.Accent(30))) gr.FillEllipse(br, circ);
+            using (var pen = new Pen(Color.FromArgb(120, FpsUi.Gold.R, FpsUi.Gold.G, FpsUi.Gold.B), 1.4f)) gr.DrawEllipse(pen, circ);
+            Logo.Draw(gr, new RectangleF(x + 7, cy + 7, d - 14, d - 14), FpsUi.Gold, false);
 
             if (!_railOpen) return;
 
             int tx = x + d + 12, tw = _railProfile.Width - tx - 26;
-            TextRenderer.DrawText(gr, "DesTinGOOD", FpsUi.Small, new Rectangle(tx, cy - 1, tw, 18), FpsUi.Ink,
+            TextRenderer.DrawText(gr, "Joueur ONYX", FpsUi.Small, new Rectangle(tx, cy - 1, tw, 18), FpsUi.Ink,
                 TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(gr, "Ma collection", FpsUi.Tiny, new Rectangle(tx, cy + 16, tw, 16), FpsUi.Dim,
                 TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
@@ -570,7 +569,7 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, "Impossible d'ouvrir cette page :\n\n" + ex.Message,
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
             }
@@ -702,7 +701,7 @@ namespace BTOptimizer
         public void OpenDialog(Form f)
         {
             try { AnimFx.HookDialog(f); using (f) f.ShowDialog(this); }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         public void Goto(int idx) { ShowPage(idx); }
@@ -722,7 +721,7 @@ namespace BTOptimizer
                 {
                     string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
                     string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                    path = System.IO.Path.Combine(dir, "Fluide-rapport-sante.html");
+                    path = System.IO.Path.Combine(dir, "ONYX-rapport-sante.html");
                     System.IO.File.WriteAllText(path, html, new System.Text.UTF8Encoding(false));
                 }
                 catch (Exception ex) { err = ex.Message; }
@@ -734,9 +733,9 @@ namespace BTOptimizer
                         if (path != null)
                         {
                             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
-                            catch { MessageBox.Show(this, "Rapport enregistré sur le Bureau :\n" + path, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+                            catch { MessageBox.Show(this, "Rapport enregistré sur le Bureau :\n" + path, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information); }
                         }
-                        else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        else MessageBox.Show(this, "Impossible de générer le rapport :\n\n" + err, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
                 catch { }
@@ -748,7 +747,7 @@ namespace BTOptimizer
         public void ExportProfile()
         {
             string file;
-            using (var dlg = new SaveFileDialog { Filter = "Profil Fluide (*.dtg)|*.dtg", FileName = "mon-profil-fluide.dtg", Title = "Exporter mon profil d'optimisations" })
+            using (var dlg = new SaveFileDialog { Filter = "Profil ONYX (*.dtg)|*.dtg", FileName = "mon-profil-onyx.dtg", Title = "Exporter mon profil d'optimisations" })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 file = dlg.FileName;
@@ -767,7 +766,7 @@ namespace BTOptimizer
                     {
                         Cursor = Cursors.Default;
                         if (err == null) MessageBox.Show(this, ids.Count + " optimisation(s) active(s) exportée(s) :\n" + file, "Profil exporté", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        else MessageBox.Show(this, "Échec de l'export :\n\n" + err, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        else MessageBox.Show(this, "Échec de l'export :\n\n" + err, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
                 catch { }
@@ -779,14 +778,14 @@ namespace BTOptimizer
         public void ImportProfile()
         {
             string file;
-            using (var dlg = new OpenFileDialog { Filter = "Profil Fluide (*.dtg)|*.dtg|Tous les fichiers|*.*", Title = "Importer un profil d'optimisations" })
+            using (var dlg = new OpenFileDialog { Filter = "Profil ONYX (*.dtg)|*.dtg|Tous les fichiers|*.*", Title = "Importer un profil d'optimisations" })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 file = dlg.FileName;
             }
             var wanted = new System.Collections.Generic.HashSet<string>();
             try { foreach (string line in System.IO.File.ReadAllLines(file)) { string id = line.Trim(); if (id.Length > 0) wanted.Add(id); } }
-            catch (Exception ex) { MessageBox.Show(this, "Lecture impossible :\n\n" + ex.Message, "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+            catch (Exception ex) { MessageBox.Show(this, "Lecture impossible :\n\n" + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
 
             var list = new System.Collections.Generic.List<Tweak>();
             try { foreach (Tweak t in Catalog.All()) if (wanted.Contains(t.Id)) list.Add(t); } catch { }
@@ -843,7 +842,7 @@ namespace BTOptimizer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             TextRenderer.DrawText(g, title, FpsUi.H3, new Point(34, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
             int w = TextRenderer.MeasureText(g, title, FpsUi.H3).Width;
-            using (var pen = new Pen(FpsUi.Neon, 2f)) g.DrawLine(pen, 34, 50, 34 + w, 50);
+            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, 34, 50, 34 + w, 50);
             using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 34, 51, Width - 34, 51);
             if (!string.IsNullOrEmpty(subtitle))
                 TextRenderer.DrawText(g, subtitle, FpsUi.Body, new Point(34, 64), FpsUi.Dim, TextFormatFlags.NoPadding);
@@ -907,9 +906,9 @@ namespace BTOptimizer
             var rf = new RectangleF(0.5f, 1.5f, Width - 1.5f, Height - 3f);
             using (var path = FpsUi.Round(rf, (Height - 3f) / 2f))
             {
-                using (var fill = new SolidBrush(_hover ? Color.FromArgb(32, 129, 140, 248) : FpsUi.Card))
+                using (var fill = new SolidBrush(_hover ? FpsUi.Accent(32) : FpsUi.Card))
                     g.FillPath(fill, path);
-                using (var pen = new Pen(_hover ? FpsUi.Neon : FpsUi.Border, 1f))
+                using (var pen = new Pen(_hover ? FpsUi.Gold : FpsUi.Border, 1f))
                     g.DrawPath(pen, path);
             }
             TextRenderer.DrawText(g, Text, Font, ClientRectangle, _hover ? FpsUi.Ink : FpsUi.Dim,
@@ -975,8 +974,8 @@ namespace BTOptimizer
                 // comme déplié (la barre latérale d'avant disparaissait une fois le rail élargi).
                 using (var path = FpsUi.Round(rf, 12f))
                 {
-                    using (var br = new SolidBrush(Color.FromArgb(26, 129, 140, 248))) g.FillPath(br, path);
-                    using (var pen = new Pen(FpsUi.Neon, 1.4f)) g.DrawPath(pen, path);
+                    using (var br = new SolidBrush(FpsUi.Accent(26))) g.FillPath(br, path);
+                    using (var pen = new Pen(FpsUi.Gold, 1.4f)) g.DrawPath(pen, path);
                 }
             }
             else if (_hover)
@@ -985,7 +984,7 @@ namespace BTOptimizer
                 using (var br = new SolidBrush(Color.FromArgb(16, 255, 255, 255))) g.FillPath(br, path);
             }
 
-            Color fg = _active ? FpsUi.Neon : (_hover ? FpsUi.Ink : FpsUi.Dim);
+            Color fg = _active ? FpsUi.Gold : (_hover ? FpsUi.Ink : FpsUi.Dim);
 
             const int IcoSz = 24;
             if (_expanded)
@@ -1019,7 +1018,7 @@ namespace BTOptimizer
             int bx = _expanded ? Width - d - 12 : Width / 2 + 6;
             int by = _expanded ? (Height - d) / 2 : 5;
             var circ = new Rectangle(bx, by, d, d);
-            using (var br = new SolidBrush(FpsUi.Neon)) g.FillEllipse(br, circ);
+            using (var br = new SolidBrush(FpsUi.Gold)) g.FillEllipse(br, circ);
             TextRenderer.DrawText(g, txt, FpsUi.Tiny, circ, FpsUi.RailBg,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }

@@ -30,11 +30,12 @@ namespace BTOptimizer
             public string ProgressLabel(Stats s) { return s == null ? "" : Math.Min(Metric(s), Target) + " / " + Target; }
         }
 
+        // Paliers ONYX = métaux précieux : la collection raconte bronze → argent → or.
         public static readonly Color[] TierColor =
         {
-            Color.FromArgb(129, 140, 248),   // palier 1 — vert néon
-            Color.FromArgb(0, 200, 255),   // palier 2 — cyan
-            Color.FromArgb(255, 200, 60),  // palier 3 — or
+            Color.FromArgb(196, 141, 88),    // palier 1 — bronze
+            Color.FromArgb(198, 205, 214),   // palier 2 — argent
+            Color.FromArgb(227, 183, 92),    // palier 3 — or (accent ONYX)
         };
 
         public static readonly Badge[] All =

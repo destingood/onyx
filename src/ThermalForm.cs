@@ -23,7 +23,7 @@ namespace BTOptimizer
         private int _ticks;
         private volatile bool _thBusy;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
         private static readonly Color Bad = Color.FromArgb(200, 60, 40);
 
@@ -36,7 +36,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Températures & throttling";
+            Text = "ONYX — Températures & throttling";
             ClientSize = new Size(600, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
