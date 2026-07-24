@@ -68,18 +68,46 @@ namespace BTOptimizer
             try
             {
                 if (Directory.Exists(Dir))
-                    foreach (string f in Directory.GetFiles(Dir))
+                    // Récursif : les SOUS-DOSSIERS organisent le savoir (livres/chapitres, façon
+                    // wiki BookStack). Formats des exports BookStack : Markdown, texte, HTML.
+                    foreach (string f in Directory.GetFiles(Dir, "*", SearchOption.AllDirectories))
                     {
                         string ext = Path.GetExtension(f).ToLowerInvariant();
-                        if (ext != ".txt" && ext != ".md") continue;
+                        if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm") continue;
                         string raw;
                         try { raw = File.ReadAllText(f); } catch { continue; }
+                        if (ext == ".html" || ext == ".htm") raw = StripHtml(raw);
+                        string src = RelSource(f);
                         foreach (string ch in SplitChunks(raw, 600))
-                            list.Add(new Chunk { Source = Path.GetFileName(f), Text = ch });
+                            list.Add(new Chunk { Source = src, Text = ch });
                     }
             }
             catch { }
             return list;
+        }
+
+        // Source lisible = chemin RELATIF sous bt-savoir (ex. « Reseau/DNS.md ») → montre l'arbo.
+        private static string RelSource(string full)
+        {
+            try
+            {
+                string rel = full.Substring(Dir.Length).TrimStart('\\', '/');
+                return rel.Length > 0 ? rel : Path.GetFileName(full);
+            }
+            catch { return Path.GetFileName(full); }
+        }
+
+        // Texte lisible d'un HTML (export BookStack, page web enregistrée…).
+        private static string StripHtml(string html)
+        {
+            try
+            {
+                html = System.Text.RegularExpressions.Regex.Replace(html, "(?is)<(script|style|head|nav|footer)[^>]*>.*?</\\1>", " ");
+                html = System.Text.RegularExpressions.Regex.Replace(html, "(?s)<[^>]+>", " ");
+                html = System.Net.WebUtility.HtmlDecode(html);
+            }
+            catch { }
+            return html;
         }
 
         private static IEnumerable<string> SplitChunks(string text, int max)
@@ -171,9 +199,11 @@ namespace BTOptimizer
                 string readme = Path.Combine(Dir, "_lisez-moi.txt");
                 if (!File.Exists(readme))
                     File.WriteAllText(readme,
-                        "Dépose ici tes fiches (.txt ou .md) : notes de dépannage, config, procédures…\n" +
-                        "Le Copilote les lit et s'en sert pour te répondre plus précisément.\n" +
-                        "Dis « recharge mon savoir » après avoir ajouté des fichiers.\n");
+                        "Dépose ici tes fiches (.txt, .md, .html) : notes de dépannage, config, procédures…\n" +
+                        "Les SOUS-DOSSIERS organisent le savoir (ex. Reseau\\, Jeux\\) — façon wiki.\n" +
+                        "Le Copilote les lit et s'en sert pour te répondre plus précisément.\n\n" +
+                        "Astuce BookStack : exporte un livre/une page en Markdown ou HTML et dépose le fichier ici.\n" +
+                        "Dis ensuite « recharge mon savoir ».\n");
             }
             catch { }
             return Dir;

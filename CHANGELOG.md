@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.72 — Base de connaissances : imports façon wiki (BookStack & co)
+- **Import direct des exports de wiki** : la base lit désormais tes fichiers **.md / .markdown /
+  .html / .htm** en plus du .txt. BookStack (et la plupart des wikis) exportent une page/un livre
+  en Markdown ou HTML → dépose l'export dans **bt-savoir\**, le Copilote l'apprend.
+- **Organisation façon wiki** : les **sous-dossiers** de bt-savoir\ structurent le savoir
+  (ex. `Reseau\box.md`, `Jeux\fortnite.md`) — lecture récursive, et la source affichée montre
+  l'arborescence.
+- Le HTML est nettoyé (scripts/styles/balises retirés) avant indexation.
+- Vérifié : un export Markdown (sous-dossier) + un HTML déposés → indexés, et « quel est mon
+  réglage d'undervolt 4080 ? » remonte MA note perso en premier.
+- Note : BookStack est une appli serveur (PHP/MySQL) — non embarquée dans l'app ; le pont, c'est
+  l'export de tes pages, indexé 100 % en local.
+
 ## v14.71 — Base de connaissances IA (RAG local, gratuit)
 - **Le Copilote interroge une base de connaissances avant de répondre** (RAG 100 % local) :
   - **base PC/gaming intégrée** (crashs & codes d'exception, FPS, réseau, drivers, BIOS/XMP,
