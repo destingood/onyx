@@ -4,6 +4,29 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.46 — Le Copilote SUIT la conversation et mesure plus loin
+- **Il comprend « oui », « ok », « vas-y », « non »** : la réponse se rapporte à sa dernière
+  proposition. « J'ouvre le bilan ? » → « oui » → il l'ouvre (avant, ça tombait dans
+  « Pas sûr d'avoir bien compris 🤔 »). Un « oui » sur une correction re-présente son bouton —
+  le changement reste TOUJOURS sur clic explicite (promesse fondatrice inchangée).
+- **2 nouvelles mesures en direct dans le chat** :
+  - **Connexion** : 6 échos réels (1.1.1.1) → ping moyen, gigue, perte de paquets, verdict
+    clair (perte = tirs annulés, gigue = jeu irrégulier), et rien d'inventé si ICMP est muet.
+  - **Processus gourmands** : top CPU/RAM mesuré sur ~1 s, agrégé par application (les 20
+    processus d'un navigateur comptent ensemble), cœur de Windows et jeux en cours exclus.
+- **Routage réparé** : « Ping / lag en ligne » lançait l'enquête générique (le mot « lag »)
+  au lieu de tester le réseau ; les intentions précises (écran, chauffe, disque…) passent
+  désormais AVANT le mot « problème », et « bilan complet » va bien à l'enquête (le mot
+  « bilan » était intercepté par la réponse de score santé).
+- **L'enquête vérifie 3 pistes de plus** (9 au total) : **crashs du pilote GPU (14 j)** — LE
+  signal du « dispositif de rendu perdu » —, **stabilité de la connexion** et **programme
+  gourmand en fond**. Toujours classées par impact, et le sain est dit aussi.
+- **Finitions** : le bouton d'une correction affiche « ✓ Terminé » quand elle a abouti (il
+  restait « en cours… » pour toujours) et se ré-arme en cas d'échec ; Flux réfléchit pendant
+  que le Copilote travaille ; le champ de saisie a le focus en arrivant sur la page.
+- Toujours 100 % local : le seul trafic est l'écho ICMP du test réseau — aucune donnée ne
+  quitte la machine.
+
 ## v14.39 — Le Copilote ENQUÊTE (il raisonne comme un technicien)
 - Sur un symptôme large (« ça rame », « FPS bas », « bilan », « diagnostic »…), il ne renvoie
   plus vers un panneau : il lance **toutes les mesures**, **croise** les résultats, **classe

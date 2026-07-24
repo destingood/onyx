@@ -7,10 +7,12 @@ namespace BTOptimizer
 {
     /// <summary>
     /// L'enquêteur du Copilote : au lieu d'ouvrir un panneau, il lance TOUTES les mesures
-    /// utiles, croise les résultats, classe les causes par impact réel et rend un plan
-    /// d'action ordonné. Chaque cause n'apparaît que si elle est vraiment constatée —
-    /// jamais de faux problème pour se rendre intéressant.
-    /// 100 % local : aucune requête réseau, aucune donnée ne quitte la machine.
+    /// utiles (écrans, crashs pilote GPU, capteurs, disque, bibliothèques, connexion,
+    /// processus en fond, optimisations), croise les résultats, classe les causes par
+    /// impact réel et rend un plan d'action ordonné. Chaque cause n'apparaît que si elle
+    /// est vraiment constatée — jamais de faux problème pour se rendre intéressant.
+    /// 100 % local : rien ne quitte la machine (le test de connexion se limite à des
+    /// échos ICMP vers 1.1.1.1 — aucune donnée transmise).
     /// </summary>
     internal static class Investigator
     {
@@ -44,6 +46,22 @@ namespace BTOptimizer
                     found.Add(f);
                 }
                 else if (screens != null && screens.Count > 0) ok.Add("écrans à leur fréquence maximale");
+            }
+            catch { }
+
+            // --- 1bis. Crashs du pilote GPU sur 14 jours (LE signal de l'instabilité en jeu) ---
+            try
+            {
+                int gpuErr = CrashScan.GpuDriverErrors(14);
+                if (gpuErr > 0)
+                    found.Add(new Finding
+                    {
+                        Impact = 90,
+                        Text = "Le pilote de ta carte graphique a signalé " + gpuErr + " erreur(s) ces 14 derniers jours. "
+                             + "C'est la signature des crashs « dispositif de rendu perdu » : surchauffe, overclock instable "
+                             + "ou pilote abîmé. Le panneau Stabilité les date précisément."
+                    });
+                else ok.Add("aucun crash du pilote GPU (14 j)");
             }
             catch { }
 
@@ -114,6 +132,44 @@ namespace BTOptimizer
                              + "C'est la cause classique d'un jeu qui refuse de démarrer."
                     });
                 else ok.Add("bibliothèques de jeu complètes");
+            }
+            catch { }
+
+            // --- 4bis. Connexion : ping et stabilité (échos réels vers 1.1.1.1). Si AUCUNE
+            //     réponse (hors-ligne / ICMP filtré), on ne conclut RIEN — jamais de faux problème. ---
+            try
+            {
+                double avg, jit; int loss;
+                if (ChatActions.PingSample(4, 600, out avg, out jit, out loss))
+                {
+                    if (loss > 0 || jit >= 15 || avg >= 80)
+                        found.Add(new Finding
+                        {
+                            Impact = 70,
+                            Text = "Ta connexion n'est pas nette : ping moyen " + avg.ToString("0") + " ms, gigue "
+                                 + jit.ToString("0.#") + " ms" + (loss > 0 ? ", " + loss + " % de paquets perdus" : "") + ". "
+                                 + "En jeu, ça fait des à-coups et des tirs non comptés. Le panneau Qualité réseau "
+                                 + "départage ta box et internet."
+                        });
+                    else ok.Add("connexion stable (" + avg.ToString("0") + " ms)");
+                }
+            }
+            catch { }
+
+            // --- 4ter. Un programme gourmand en fond (les jeux en cours sont exclus du suspect) ---
+            try
+            {
+                ChatActions.Hog hog = ChatActions.TopHog(900);
+                if (hog != null && hog.CpuPct >= 25)
+                    found.Add(new Finding
+                    {
+                        Impact = 60,
+                        Text = "« " + hog.Name + " »" + (hog.Count > 1 ? " (×" + hog.Count + ")" : "") + " consomme "
+                             + hog.CpuPct.ToString("0") + " % de ton processeur en ce moment"
+                             + (hog.RamMb >= 500 ? " et " + hog.RamMb + " Mo de mémoire" : "") + ". "
+                             + "Le panneau « Qui ralentit mon PC » permet de le fermer proprement."
+                    });
+                else ok.Add("aucun programme gourmand en fond");
             }
             catch { }
 

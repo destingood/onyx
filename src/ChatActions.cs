@@ -222,6 +222,166 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Réseau — ping réel, gigue et perte (triage rapide dans le chat)
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MeasurePing()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Test de ta connexion"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                double avg, jit; int loss;
+                if (!PingSample(6, 900, out avg, out jit, out loss))
+                    return Say("Impossible de joindre internet à l'instant (hors-ligne, ou échos ICMP bloqués).\n"
+                             + "Si tu es bien connecté, le panneau « Qualité réseau » fera le test complet box vs internet.");
+                var sb = new StringBuilder();
+                sb.Append("• Ping moyen : ").Append(avg.ToString("0")).Append(" ms\n");
+                sb.Append("• Gigue (variation) : ").Append(jit.ToString("0.#")).Append(" ms\n");
+                sb.Append("• Perte de paquets : ").Append(loss).Append(" %\n\n");
+                if (loss > 0) sb.Append("⚠ De la perte de paquets — c'est elle qui « téléporte » les joueurs et annule des tirs.");
+                else if (jit >= 15) sb.Append("⚠ Gigue élevée : le ping bouge trop d'une seconde à l'autre, sensation de jeu irrégulière.");
+                else if (avg >= 80) sb.Append("⚠ Ping élevé sur ce test : joue sur des serveurs proches, et vérifie le Wi-Fi vs câble.");
+                else sb.Append("✅ Connexion saine sur ce test rapide. Si ça lag quand même, c'est ponctuel ou côté serveur.");
+                sb.Append("\nPour départager ta box d'internet, le test complet est dans « Qualité réseau ».");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        /// <summary>Échos ICMP vers 1.1.1.1 : moyenne, gigue (variation moyenne entre échos
+        /// successifs) et perte. Renvoie faux si AUCUNE réponse (hors-ligne ou ICMP filtré) —
+        /// dans ce cas on ne conclut RIEN plutôt que d'inventer un problème réseau.</summary>
+        public static bool PingSample(int count, int timeoutMs, out double avg, out double jitter, out int lossPct)
+        {
+            avg = 0; jitter = 0; lossPct = 100;
+            var times = new List<long>();
+            int sent = 0;
+            try
+            {
+                using (var p = new System.Net.NetworkInformation.Ping())
+                    for (int i = 0; i < count; i++)
+                    {
+                        sent++;
+                        try
+                        {
+                            var r = p.Send("1.1.1.1", timeoutMs);
+                            if (r != null && r.Status == System.Net.NetworkInformation.IPStatus.Success)
+                                times.Add(r.RoundtripTime);
+                        }
+                        catch { }
+                    }
+            }
+            catch { return false; }
+            if (times.Count == 0) return false;
+            long sum = 0; foreach (long t in times) sum += t;
+            avg = (double)sum / times.Count;
+            double dsum = 0;
+            for (int i = 1; i < times.Count; i++) dsum += Math.Abs(times[i] - times[i - 1]);
+            jitter = times.Count > 1 ? dsum / (times.Count - 1) : 0;
+            lossPct = (sent - times.Count) * 100 / Math.Max(1, sent);
+            return true;
+        }
+
+        // ------------------------------------------------------------------
+        //  Processus gourmands — qui consomme le CPU, là, tout de suite
+        // ------------------------------------------------------------------
+        public sealed class Hog { public string Name; public double CpuPct; public long RamMb; public int Count; }
+
+        public static DocAssistant.ChatAction MeasureHogs()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Mesure des processus (1 s)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                List<Hog> top = TopHogs(1100, 3);
+                if (top == null || top.Count == 0)
+                    return Say("Rien ne consomme de CPU notable en ce moment (hors Windows). Si ça rame quand même, dis « fais un bilan » et je passe tout au crible.");
+                var sb = new StringBuilder("Voilà ce qui travaille en ce moment (hors Windows et hors jeu) :\n");
+                foreach (var h in top)
+                {
+                    sb.Append("• ").Append(h.Name);
+                    if (h.Count > 1) sb.Append(" (×").Append(h.Count).Append(')');
+                    sb.Append(" : ").Append(h.CpuPct.ToString("0")).Append(" % CPU · ").Append(h.RamMb).Append(" Mo\n");
+                }
+                sb.Append(top[0].CpuPct >= 25
+                    ? "\n⚠ « " + top[0].Name + " » pèse lourd — le panneau « Qui ralentit mon PC » permet de le fermer proprement (jamais un processus système)."
+                    : "\nRien d'alarmant : aucun ne pèse vraiment sur les performances.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        /// <summary>Le plus gros consommateur CPU du moment (hors système / hors jeu), ou null.</summary>
+        public static Hog TopHog(int intervalMs)
+        {
+            List<Hog> l = TopHogs(intervalMs, 1);
+            return l != null && l.Count > 0 ? l[0] : null;
+        }
+
+        // Processus qu'on ne liste JAMAIS comme « gourmands » : cœur de Windows (intouchable)
+        // — les fermer est impossible ou dangereux, donc les montrer n'aiderait personne.
+        private static readonly string[] CoreProc =
+        {
+            "idle", "system", "registry", "memory compression", "secure system", "vmmem",
+            "csrss", "smss", "wininit", "winlogon", "services", "lsass", "svchost",
+            "dwm", "fontdrvhost", "sihost", "audiodg", "wudfhost", "conhost"
+        };
+
+        /// <summary>Top des processus par CPU mesuré sur 'intervalMs', agrégés PAR NOM (les 20
+        /// processus d'un navigateur comptent ensemble), RAM incluse. Jeux connus et cœur de
+        /// Windows exclus : on cherche ce qui vole des ressources, pas ce que tu utilises.</summary>
+        public static List<Hog> TopHogs(int intervalMs, int take)
+        {
+            var result = new List<Hog>();
+            try
+            {
+                var games = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                try { foreach (string exe in GameScan.PriorityExes()) games.Add(Path.GetFileNameWithoutExtension(exe)); } catch { }
+                int self = System.Diagnostics.Process.GetCurrentProcess().Id;
+
+                var t0 = new Dictionary<int, KeyValuePair<string, TimeSpan>>();
+                foreach (var p in System.Diagnostics.Process.GetProcesses())
+                {
+                    try { t0[p.Id] = new KeyValuePair<string, TimeSpan>(p.ProcessName, p.TotalProcessorTime); }
+                    catch { }   // accès refusé (processus protégé) : ignoré
+                    finally { try { p.Dispose(); } catch { } }
+                }
+                System.Threading.Thread.Sleep(Math.Max(300, intervalMs));
+
+                var byName = new Dictionary<string, Hog>(StringComparer.OrdinalIgnoreCase);
+                double denom = Math.Max(300, intervalMs) * Environment.ProcessorCount * 10000.0; // ticks CPU disponibles
+                foreach (var p in System.Diagnostics.Process.GetProcesses())
+                {
+                    try
+                    {
+                        KeyValuePair<string, TimeSpan> prev;
+                        if (!t0.TryGetValue(p.Id, out prev) || p.Id == self) continue;
+                        string name = p.ProcessName;
+                        if (IsCore(name) || games.Contains(name)) continue;
+                        double pct = (p.TotalProcessorTime - prev.Value).Ticks / denom * 100.0;
+                        if (pct < 0) pct = 0;
+                        Hog h;
+                        if (!byName.TryGetValue(name, out h)) { h = new Hog { Name = name }; byName[name] = h; }
+                        h.CpuPct += pct; h.RamMb += p.WorkingSet64 / 1048576; h.Count++;
+                    }
+                    catch { }
+                    finally { try { p.Dispose(); } catch { } }
+                }
+                foreach (var h in byName.Values) if (h.CpuPct >= 2 || h.RamMb >= 300) result.Add(h);
+                result.Sort(delegate (Hog a, Hog b) { return b.CpuPct.CompareTo(a.CpuPct); });
+                if (result.Count > take) result.RemoveRange(take, result.Count - take);
+            }
+            catch { }
+            return result;
+        }
+
+        private static bool IsCore(string name)
+        {
+            foreach (string c in CoreProc) if (string.Equals(name, c, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        // ------------------------------------------------------------------
         //  Filet de sécurité
         // ------------------------------------------------------------------
         public static DocAssistant.ChatAction MakeRestorePoint()
