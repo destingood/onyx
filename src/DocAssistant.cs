@@ -141,8 +141,14 @@ namespace BTOptimizer
             // « désactive » AVANT « active » (l'un contient l'autre).
             if (Has(s, "desactive l'ia", "desactiver l'ia", "coupe l'ia", "coupe ton ia", "sans ia"))
             {
-                LocalBrain.SetEnabled(false);
+                LocalBrain.SetEnabled(false); LocalBrain.ResetHistory();
                 return new Reply { Text = "IA locale désactivée — je reste sur mes règles (toujours 100 % local). Dis « active l'ia » pour la rallumer.", ShowStarters = true };
+            }
+            // Repartir de zéro dans la conversation IA (oublie le contexte précédent).
+            if (Has(s, "nouvelle conversation", "oublie tout", "oublie la conversation", "on repart de zero", "reset la conversation", "efface la conversation"))
+            {
+                LocalBrain.ResetHistory();
+                return new Reply { Text = "C'est oublié — on repart sur une page blanche. Qu'est-ce que je peux faire pour toi ?", ShowStarters = true };
             }
             if (Has(s, "active l'ia", "activer l'ia", "active ton ia", "ia locale", "mon ia", "cerveau ia", "ollama", "intelligence artificielle"))
                 return new Reply
