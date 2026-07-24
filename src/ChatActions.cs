@@ -832,6 +832,9 @@ namespace BTOptimizer
             sb.Append("Tu n'as PAS accès à internet ni à l'heure réelle, la météo ou l'actualité du jour : dis-le si on te le demande, et propose ce que tu peux faire à la place. ");
             sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
             sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit rester gratuit. ");
+            sb.Append("Quand tu conseilles un OUTIL, dis toujours (1) qu'il est gratuit, (2) ses RISQUES ou précautions "
+                    + "(ex. « sauvegarde d'abord », « mauvais disque = perte de données »), (3) de le prendre sur le site "
+                    + "officiel. Méfie-toi des « driver updaters » et « PC boosters » (souvent des arnaques) — déconseille-les. ");
             sb.Append("Pour un VRAI souci PC, rappelle que tu peux AGIR via ces phrases : « fais un bilan complet » (enquête + réparations 1 clic), ");
             sb.Append("« mesure mon ping », « qui bouffe mon cpu », « mesure ma latence », « prépare ma partie », « génère le rapport », « libère de l'espace ». ");
             if (st != null)
