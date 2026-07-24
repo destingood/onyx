@@ -25,7 +25,13 @@ taskkill /IM dotnet.exe /FI "WINDOWTITLE eq DesTinGOOD*" /F >nul 2>&1
 
 echo.
 echo Nettoyage de l'ancien build (evite un dist hybride autonome/framework)...
-if exist dist rd /s /q dist
+rem On PRESERVE les donnees utilisateur : tout ce qui commence par "bt-" (bt-gamecache
+rem = jaquettes + icones extraites, bt-*.txt = reglages). Un "rd /s /q dist" brutal les
+rem effacait a CHAQUE compilation, obligeant a tout re-telecharger ensuite.
+if exist dist (
+    for /d %%D in (dist\*) do echo %%~nxD| findstr /b /i "bt-" >nul || rd /s /q "%%D"
+    for %%F in (dist\*) do echo %%~nxF| findstr /b /i "bt-" >nul || del /q "%%F"
+)
 
 echo.
 echo Compilation .NET 10 AUTONOME (runtime embarque : marche sans installer .NET)...
@@ -36,6 +42,13 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+rem --- Signature (sans effet tant qu'aucun certificat n'est configure) -----------
+rem  On signe la DLL *et* l'EXE. La DLL est INDISPENSABLE : c'est elle que Smart App
+rem  Control refuse ("attempted to load BTOptimizer.dll ... Enterprise signing level").
+rem  En .NET, le .exe n'est qu'un lanceur : tout le code applicatif vit dans la DLL.
+call "%~dp0Sign.bat" "dist\BTOptimizer.dll"
+call "%~dp0Sign.bat" "dist\BTOptimizer.exe"
 
 echo.
 echo OK : dist\BTOptimizer.exe cree (autonome, runtime .NET embarque).

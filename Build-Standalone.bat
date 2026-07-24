@@ -37,7 +37,12 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
-rem Signature du binaire de l'app (sans effet si aucun certificat configure).
+rem Signature des binaires de l'app (sans effet si aucun certificat configure).
+rem  La DLL D'ABORD : c'est ELLE que Smart App Control refuse quand elle n'est pas
+rem  signee ("attempted to load BTOptimizer.dll ... Enterprise signing level").
+rem  Signer le .exe seul ne debloque RIEN : en .NET il n'est qu'un lanceur, tout le
+rem  code applicatif vit dans la DLL.
+call "%~dp0Sign.bat" "dist\BTOptimizer.dll"
 call "%~dp0Sign.bat" "dist\BTOptimizer.exe"
 
 echo === 3/4  Recherche d'Inno Setup (ISCC.exe) ===
