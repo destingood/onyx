@@ -263,7 +263,9 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            _flow.SetBounds(20, 138, ClientSize.Width - 40, ClientSize.Height - 138);
+            if (_chips != null) _chips.Top = Host != null ? Host.ContentTop(90) : 90;
+            int ft = Host != null ? Host.ContentTop(138) : 138;
+            _flow.SetBounds(20, ft, ClientSize.Width - 40, ClientSize.Height - ft);
             if (_bReset != null)
             {
                 int rx = ClientSize.Width - 34;

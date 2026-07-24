@@ -30,7 +30,13 @@ taskkill /IM BTOptimizer.exe /F >nul 2>&1
 echo === 2/4  Publication AUTONOME (.NET embarque, win-x64) ===
 rem Repart d'un dist propre : evite tout melange avec une publication dependante
 rem du runtime (sinon coreclr.dll resterait et fausserait la detection cote .iss).
-if exist dist rmdir /s /q dist
+rem MAIS on PRESERVE les donnees utilisateur (tout ce qui commence par "bt-") :
+rem bt-license.txt (la cle Pro !), bt-trial.txt, bt-gamecache, reglages... Un rmdir
+rem brutal desactivait la licence a CHAQUE compilation.
+if exist dist (
+    for /d %%D in (dist\*) do echo %%~nxD| findstr /b /i "bt-" >nul || rd /s /q "%%D"
+    for %%F in (dist\*) do echo %%~nxF| findstr /b /i "bt-" >nul || del /q "%%F"
+)
 dotnet publish BTOptimizer.csproj -c Release -r win-x64 --self-contained true -o dist --nologo -p:DebugType=none
 if %errorlevel% neq 0 (
     echo [X] Echec de la publication.

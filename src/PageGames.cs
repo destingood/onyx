@@ -13,7 +13,14 @@ namespace BTOptimizer
         private FlowLayoutPanel _flow;
         private Button _mode;
         private Button _prio;
+        private Button _space;
         private TextBox _search;
+
+        // Mode « Espace » : retrie la bibliothèque par espace DORMANT (taille × temps sans jouer)
+        // et affiche taille + dernière partie sur chaque tuile, au lieu du simple « DÉTECTÉ ».
+        private bool _spaceMode, _spaceLoading;
+        private Dictionary<string, DormantGames.Entry> _spaceData;
+        private Dictionary<string, int> _spaceRank;
         private string _query = "";
         private string _subtitle = "Analyse des jeux installés…";
         private List<GameScan.GameInfo> _all;
@@ -36,6 +43,11 @@ namespace BTOptimizer
             _prio.Width = 160; _prio.Height = 34;
             _prio.Click += (s, e) => Host.OpenDialog(new GameProfileForm(Host.Log));
             Controls.Add(_prio);
+
+            _space = FpsUi.GhostButton("🧹  Espace");
+            _space.Width = 128; _space.Height = 34;
+            _space.Click += (s, e) => ToggleSpace();
+            Controls.Add(_space);
 
             _search = new TextBox();
             try { _search.PlaceholderText = "Rechercher un jeu…"; } catch { }
@@ -63,7 +75,9 @@ namespace BTOptimizer
         {
             DoLayout();
             UpdateModeButton();
-            if (_loaded) return;
+            // Deja charge : on redessine quand meme, pour repercuter un masquage fait depuis la
+            // fiche d'un jeu (sinon la tuile resterait visible jusqu'au prochain lancement).
+            if (_loaded) { Render(); return; }
             _loaded = true;
             Task.Run(() =>
             {
@@ -120,6 +134,22 @@ namespace BTOptimizer
             }
         }
 
+        private static string Go(long mb)
+        {
+            return mb >= 1024 ? (mb / 1024.0).ToString("0.0") + " Go" : mb + " Mo";
+        }
+
+        // Texte centré avec ombre portée : garantit la lisibilité par-dessus n'importe quelle
+        // jaquette (claire comme sombre), sans dépendre du seul dégradé.
+        private static void Shadowed(Graphics gr, string text, Font font, Rectangle rect, Color color)
+        {
+            var sh = new Rectangle(rect.X + 1, rect.Y + 1, rect.Width, rect.Height);
+            TextRenderer.DrawText(gr, text, font, sh, Color.FromArgb(205, 0, 0, 0),
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+            TextRenderer.DrawText(gr, text, font, rect, color,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+        }
+
         private static string NormName(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
@@ -159,6 +189,55 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>
+        /// Bascule le mode « Espace ». Le calcul des tailles est lourd (des milliers de fichiers)
+        /// : il tourne en tâche de fond, une seule fois, et DormantGames le met en cache disque.
+        /// </summary>
+        private void ToggleSpace()
+        {
+            _spaceMode = !_spaceMode;
+            if (_space != null) _space.Text = _spaceMode ? "🧹  Espace  ✓" : "🧹  Espace";
+
+            if (_spaceMode && _spaceData == null && !_spaceLoading)
+            {
+                _spaceLoading = true;
+                _subtitle = "Calcul de l'espace occupé… (le premier passage est le plus long, ensuite c'est en cache)";
+                Invalidate();
+                Task.Run(() =>
+                {
+                    List<DormantGames.Entry> res;
+                    try { res = DormantGames.Scan(null); }
+                    catch { res = new List<DormantGames.Entry>(); }
+
+                    var data = new Dictionary<string, DormantGames.Entry>(StringComparer.Ordinal);
+                    var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+                    for (int i = 0; i < res.Count; i++)
+                    {
+                        string k = NormName(res[i].Name);
+                        if (k.Length == 0 || data.ContainsKey(k)) continue;
+                        data[k] = res[i]; rank[k] = i;      // res est déjà trié : rang 0 = plus dormant
+                    }
+                    try { BeginInvoke((Action)(() => { _spaceData = data; _spaceRank = rank; _spaceLoading = false; Render(); })); }
+                    catch { }
+                });
+                return;
+            }
+            Render();
+        }
+
+        // Rang « espace dormant » du jeu (0 = le plus gros gain). Inconnu → renvoyé en fin de liste.
+        private int SpaceRank(GameScan.GameInfo g)
+        {
+            int r;
+            return _spaceRank != null && _spaceRank.TryGetValue(NormName(g.Name), out r) ? r : int.MaxValue;
+        }
+
+        private DormantGames.Entry SpaceInfo(GameScan.GameInfo g)
+        {
+            DormantGames.Entry e;
+            return _spaceData != null && _spaceData.TryGetValue(NormName(g.Name), out e) ? e : null;
+        }
+
         private bool Match(GameScan.GameInfo g)
         {
             if (_query.Length == 0) return true;
@@ -175,7 +254,16 @@ namespace BTOptimizer
 
             var det = new List<GameScan.GameInfo>();
             var other = new List<GameScan.GameInfo>();
-            foreach (var g in _all) { if (!Match(g)) continue; if (g.Detected) det.Add(g); else other.Add(g); }
+            foreach (var g in _all)
+            {
+                if (!Match(g)) continue;
+                if (GameHidden.IsHidden(g.Name)) continue;   // masqué par l'utilisateur (réversible)
+                if (g.Detected) det.Add(g); else other.Add(g);
+            }
+
+            // Mode Espace : les plus gros dormants en premier (classement calculé par DormantGames).
+            if (_spaceMode && _spaceRank != null)
+                det.Sort((a, b) => SpaceRank(a).CompareTo(SpaceRank(b)));
 
             Control last = null;
             if (det.Count > 0)
@@ -200,6 +288,19 @@ namespace BTOptimizer
             int shownDet = det.Count;
             if (_query.Length > 0)
                 _subtitle = (det.Count + other.Count) + " résultat(s) pour « " + _search.Text.Trim() + " »   ·   " + shownDet + " détecté(s)";
+            else if (_spaceMode && _spaceData != null)
+            {
+                long tot = 0, dorm = 0;
+                foreach (GameScan.GameInfo g in det)
+                {
+                    DormantGames.Entry e = SpaceInfo(g);
+                    if (e == null) continue;
+                    tot += e.SizeMB;
+                    if (e.IsDormant) dorm += e.SizeMB;
+                }
+                _subtitle = shownDet + " jeu(x) · " + Go(tot) + " au total · " + Go(dorm)
+                          + " dormants (3 mois sans y jouer) — triés par espace récupérable";
+            }
             else
                 _subtitle = shownDet + " jeu(x) détecté(s) sur ton PC (toutes plateformes)";
             Invalidate();
@@ -255,8 +356,12 @@ namespace BTOptimizer
                     {
                         DrawCover(gr, img, rr);
                         if (!detected) using (var veil = new SolidBrush(Color.FromArgb(155, 9, 11, 10))) gr.FillRectangle(veil, rr);
-                        var scrim = new Rectangle(0, rr.Height - 54, rr.Width + 1, 55);   // dégradé bas → statut lisible
-                        using (var lg = new LinearGradientBrush(scrim, Color.FromArgb(0, 9, 11, 10), Color.FromArgb(210, 9, 11, 10), 90f))
+                        // En mode Espace on affiche 2 lignes (taille + ancienneté) : dégradé plus HAUT
+                        // et plus OPAQUE pour rester lisible même sur une jaquette claire (Borderlands…).
+                        int sh = _spaceMode ? 74 : 54;
+                        int sa = _spaceMode ? 238 : 210;
+                        var scrim = new Rectangle(0, rr.Height - sh, rr.Width + 1, sh + 1);
+                        using (var lg = new LinearGradientBrush(scrim, Color.FromArgb(0, 9, 11, 10), Color.FromArgb(sa, 9, 11, 10), 90f))
                             gr.FillRectangle(lg, scrim);
                     }
                     else
@@ -316,10 +421,24 @@ namespace BTOptimizer
                 }
 
                 // Statut en bas (sur le dégradé).
-                string tag = detected ? "● DÉTECTÉ" : "non installé";
-                Color tc = detected ? FpsUi.Neon : FpsUi.Dim2;
-                TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, rr.Height - 26, rr.Width, 18), tc,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                DormantGames.Entry sp = (detected && _spaceMode) ? SpaceInfo(g) : null;
+                if (sp != null)
+                {
+                    // Ligne 1 : taille, en gros et blanc. Ligne 2 : ancienneté, colorée par dormance.
+                    Shadowed(gr, sp.SizeText, FpsUi.H3, new Rectangle(0, rr.Height - 46, rr.Width, 24), Color.White);
+                    Color ic = sp.Never || sp.DaysIdle >= 180 ? Color.FromArgb(255, 120, 120)   // rouge : à libérer
+                             : sp.DaysIdle >= 90 ? Color.FromArgb(255, 190, 90)                  // orange : peu joué
+                             : sp.DaysIdle < 0 ? Color.FromArgb(170, 176, 186)                   // gris : inconnu
+                             : Color.FromArgb(120, 230, 160);                                     // vert : récent
+                    Shadowed(gr, "● " + sp.IdleText, FpsUi.Tiny, new Rectangle(0, rr.Height - 22, rr.Width, 16), ic);
+                }
+                else
+                {
+                    string tag = detected ? "● DÉTECTÉ" : "non installé";
+                    Color tc = detected ? FpsUi.Neon : FpsUi.Dim2;
+                    TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, rr.Height - 26, rr.Width, 18), tc,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                }
 
                 // Pastille du launcher (coin haut-gauche).
                 if (detected && !string.IsNullOrEmpty(g.Store))
@@ -455,10 +574,12 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            _flow.SetBounds(20, 112, ClientSize.Width - 40, ClientSize.Height - 112);
+            int ft = Host != null ? Host.ContentTop(112) : 112;
+            _flow.SetBounds(20, ft, ClientSize.Width - 40, ClientSize.Height - ft);
             if (_mode != null) _mode.Location = new Point(ClientSize.Width - 34 - _mode.Width, 22);
             if (_prio != null && _mode != null) _prio.Location = new Point(_mode.Left - 12 - _prio.Width, 22);
             if (_search != null && _prio != null) _search.SetBounds(Math.Max(180, _prio.Left - 12 - 200), 26, 200, 26);
+            if (_space != null && _search != null) _space.Location = new Point(Math.Max(20, _search.Left - 12 - _space.Width), 22);
             // Les en-têtes de section suivent la largeur du flux.
             foreach (Control c in _flow.Controls) if (c is Label) c.Width = Math.Max(200, _flow.ClientSize.Width - 60);
         }

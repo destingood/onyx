@@ -74,7 +74,7 @@ namespace BTOptimizer
 
         private void DoLayout()
         {
-            int L = 34, top = 100, gap = 18, cols = 3;
+            int L = 34, top = Host != null ? Host.ContentTop(100) : 100, gap = 18, cols = 3;
             int w = (ClientSize.Width - L * 2 - gap * (cols - 1)) / cols, hgt = 150;
             int i = 0;
             foreach (var r in _routines)

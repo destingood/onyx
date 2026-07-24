@@ -48,14 +48,13 @@ namespace BTOptimizer
             _host.BackColor = FpsUi.BgMain;
             Controls.Add(_host);
 
-            // Barre d'outils PARTAGÉE en bas de _host : les pages (Dock=Fill) rétrécissent
-            // au-dessus d'elle → zéro chevauchement. Son contenu change selon la page (ShowPage).
+            // Rangée d'outils de page (chips), intégrée SOUS LE TITRE : overlay non docké dans _host,
+            // amené au premier plan par-dessus la page. Les pages laissent la place via Host.ContentTop().
             _pageToolBar = new FlowLayoutPanel
             {
-                Dock = DockStyle.Bottom, Height = 48, BackColor = FpsUi.BgMain,
-                Padding = new Padding(34, 9, 20, 9), WrapContents = false, AutoScroll = true, Visible = false
+                BackColor = FpsUi.BgMain, WrapContents = false, AutoScroll = true, Visible = false,
+                Padding = new Padding(0)
             };
-            _pageToolBar.Paint += (s, e) => { using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, 0, 0, _pageToolBar.Width, 0); };
             _host.Controls.Add(_pageToolBar);
             // Réserve la largeur de la barre REPLIÉE : le contenu démarre juste après elle.
             // Quand elle s'ouvre, elle passe PAR-DESSUS le contenu — rien n'est remis en page.
@@ -95,6 +94,7 @@ namespace BTOptimizer
             }
             // Barre superposée (non dockée) : sa hauteur ne suit plus automatiquement la fenêtre.
             if (_rail != null && _rail.Height != ClientSize.Height) _rail.Height = ClientSize.Height;
+            PositionPageTools();   // la rangée d'outils (overlay) suit la largeur
         }
 
         // ------------------------------------------------------------------
@@ -308,6 +308,13 @@ namespace BTOptimizer
 
         /// <summary>Y maximal utilisable par une page (plus de mascotte : plein cadre).</summary>
         public int ContentBottom(int margin) { return ClientSize.Height - margin; }
+
+        private int _headerToolsH;   // hauteur de la rangée d'outils sous le titre (0 si la page n'en a pas)
+
+        /// <summary>Y de départ du contenu d'une page : sous la bande de titre ET sous la rangée
+        /// d'outils (chips) quand elle existe. Miroir de ContentBottom, pour intégrer ces outils
+        /// dans l'en-tête sans chevaucher le contenu.</summary>
+        public int ContentTop(int baseTop) { return baseTop + _headerToolsH; }
 
         /// <summary>X maximal utilisable par du contenu (plus de mascotte : plein cadre).</summary>
         public int ContentRight(int margin) { return ClientSize.Width - margin; }
@@ -588,28 +595,31 @@ namespace BTOptimizer
 
             if (tools == null || tools.Length == 0)
             {
+                _headerToolsH = 0;
                 _pageToolBar.Visible = false;
                 _pageToolBar.ResumeLayout();
                 return;
             }
-            // Petit intitulé de contexte : ces outils complètent la page courante.
-            var cap = new Label
-            {
-                Text = "AUSSI UTILE ICI", Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2,
-                AutoSize = true, BackColor = Color.Transparent, Margin = new Padding(0, 9, 14, 0)
-            };
-            _pageToolBar.Controls.Add(cap);
-
             foreach (FpsPage.ToolItem t in tools)
             {
                 var b = new PillButton(t.Label);
-                b.Height = 30; b.FitWidth(); b.Margin = new Padding(0, 3, 8, 3);
+                b.Height = 30; b.FitWidth(); b.Margin = new Padding(0, 0, 8, 0);
                 Action act = t.Act;
                 b.Click += (s, e) => { try { if (act != null) act(); } catch { } };
                 _pageToolBar.Controls.Add(b);
             }
+            _headerToolsH = 44;                 // réserve la bande sous le titre (Host.ContentTop)
+            PositionPageTools();
             _pageToolBar.Visible = true;
+            _pageToolBar.BringToFront();
             _pageToolBar.ResumeLayout();
+        }
+
+        // Place la rangée d'outils juste SOUS la bande de titre (sous-titre à ~y64), pleine largeur.
+        private void PositionPageTools()
+        {
+            if (_pageToolBar == null || _host == null) return;
+            _pageToolBar.SetBounds(34, 84, Math.Max(200, _host.ClientSize.Width - 54), 34);
         }
 
         private FpsPage CreatePage(int idx)

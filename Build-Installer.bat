@@ -24,7 +24,12 @@ taskkill /IM dotnet.exe /FI "WINDOWTITLE eq BT Optimizer*" /F >nul 2>&1
 echo === 2/4  Publication (.NET 10, dependant du runtime) ===
 rem Repart d'un dist propre : retire l'etat/symboles ET tout reste d'une publication
 rem AUTONOME precedente (coreclr.dll) qui ferait sauter a tort la verif .NET du .iss.
-if exist dist rmdir /s /q dist
+rem MAIS on PRESERVE les donnees utilisateur (tout ce qui commence par "bt-") :
+rem bt-license.txt (la cle Pro !), bt-trial.txt, bt-gamecache, reglages...
+if exist dist (
+    for /d %%D in (dist\*) do echo %%~nxD| findstr /b /i "bt-" >nul || rd /s /q "%%D"
+    for %%F in (dist\*) do echo %%~nxF| findstr /b /i "bt-" >nul || del /q "%%F"
+)
 dotnet publish BTOptimizer.csproj -c Release -o dist --nologo -p:DebugType=none
 if %errorlevel% neq 0 (
     echo [X] Echec de la publication.

@@ -23,6 +23,14 @@ namespace BTOptimizer
             public string InstallDir;   // dossier d'installation (peut être null)
             public string Exe;          // exécutable principal si connu (sinon null)
             public int SteamAppId;      // AppID Steam pour la jaquette officielle (0 sinon)
+
+            /// <summary>Dernière partie. DateTime.MinValue = pas de date (jamais jouée OU hors Steam).</summary>
+            public DateTime LastPlayed;
+
+            /// <summary>Steam a explicitement dit « LastPlayed = 0 » : le jeu est installé mais
+            /// JAMAIS lancé. À distinguer de « inconnue » (launcher qui ne journalise rien) : un
+            /// jeu jamais joué est LE meilleur candidat à désinstaller.</summary>
+            public bool NeverPlayed;
         }
 
         /// <summary>Agrège tous les launchers puis dédoublonne par (launcher + nom).</summary>
@@ -127,6 +135,59 @@ namespace BTOptimizer
             return best;
         }
 
+        /// <summary>
+        /// Commande de désinstallation OFFICIELLE déclarée par le programme lui-même dans le
+        /// registre (QuietUninstallString sinon UninstallString), ou null si introuvable.
+        ///
+        /// On ne supprime JAMAIS de fichiers nous-mêmes : c'est l'éditeur qui sait ce qu'il faut
+        /// retirer et ce qu'il faut garder (sauvegardes, profils, services, clés de licence).
+        /// Effacer un dossier de jeu à la main, c'est risquer de détruire une progression.
+        /// </summary>
+        public static string UninstallCommand(string displayName)
+        {
+            string want = NormKey(displayName);
+            if (want.Length == 0) return null;
+
+            const string Un = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+            const string Un32 = @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall";
+
+            var roots = new List<RegistryKey>();
+            try { roots.Add(Registry.LocalMachine.OpenSubKey(Un)); } catch { }
+            try { roots.Add(Registry.LocalMachine.OpenSubKey(Un32)); } catch { }
+            try { roots.Add(Registry.CurrentUser.OpenSubKey(Un)); } catch { }
+            try { roots.Add(Registry.CurrentUser.OpenSubKey(Un32)); } catch { }
+
+            foreach (RegistryKey k in roots)
+            {
+                if (k == null) continue;
+                try
+                {
+                    foreach (string sub in k.GetSubKeyNames())
+                        using (RegistryKey e = k.OpenSubKey(sub))
+                        {
+                            if (e == null) continue;
+                            if (NormKey(Convert.ToString(e.GetValue("DisplayName"))) != want) continue;
+
+                            string cmd = Convert.ToString(e.GetValue("QuietUninstallString"));
+                            if (string.IsNullOrWhiteSpace(cmd)) cmd = Convert.ToString(e.GetValue("UninstallString"));
+                            if (!string.IsNullOrWhiteSpace(cmd)) return cmd;
+                        }
+                }
+                catch { }
+                finally { try { k.Dispose(); } catch { } }
+            }
+            return null;
+        }
+
+        private static string NormKey(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            var sb = new System.Text.StringBuilder(s.Length);
+            foreach (char c in s.ToLowerInvariant())
+                if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
+        }
+
         // =========================================================== STEAM (.acf)
         private static List<InstalledGame> ScanSteam()
         {
@@ -150,7 +211,14 @@ namespace BTOptimizer
                         // On saute les outils/redist Steam (Steamworks Common Redistributables, etc.).
                         if (name.IndexOf("Redistributable", StringComparison.OrdinalIgnoreCase) >= 0) continue;
                         string install = dir != null ? Path.Combine(apps, "common", dir) : null;
-                        games.Add(new InstalledGame { Name = name, Launcher = "STEAM", InstallDir = install, SteamAppId = id });
+                        // « LastPlayed » présent et numérique : 0 = jamais joué, sinon date. Absent : inconnu.
+                        long lpSec; bool hasField = long.TryParse(VdfValue(txt, "LastPlayed"), out lpSec);
+                        games.Add(new InstalledGame
+                        {
+                            Name = name, Launcher = "STEAM", InstallDir = install, SteamAppId = id,
+                            LastPlayed = (hasField && lpSec > 0) ? DateTimeOffset.FromUnixTimeSeconds(lpSec).LocalDateTime : DateTime.MinValue,
+                            NeverPlayed = hasField && lpSec == 0
+                        });
                     }
                     catch { }
                 }

@@ -66,7 +66,7 @@ namespace BTOptimizer
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
-        private Button _back, _mode, _launch, _folder, _pro, _close;
+        private Button _back, _mode, _launch, _folder, _pro, _close, _hide, _uninstall;
 
         private void BuildActions()
         {
@@ -107,6 +107,16 @@ namespace BTOptimizer
                 Controls.Add(_pro);
             }
 
+            // Deux actions VOLONTAIREMENT distinctes : masquer ne touche à rien sur le disque,
+            // désinstaller délègue au désinstalleur officiel. Ne jamais confondre les deux.
+            _hide = FpsUi.GhostButton(GameHidden.IsHidden(_g.Name) ? "Réafficher" : "Masquer");
+            _hide.Click += (s, e) => ToggleHide();
+            Controls.Add(_hide);
+
+            _uninstall = FpsUi.GhostButton("Désinstaller…");
+            _uninstall.Click += (s, e) => Uninstall();
+            Controls.Add(_uninstall);
+
             _close = FpsUi.GhostButton("Fermer");
             _close.Click += (s, e) => Close();
             Controls.Add(_close);
@@ -137,6 +147,8 @@ namespace BTOptimizer
 
             if (_pro != null) _pro.SetBounds(W - Pad - CoverW, H - 62, CoverW, 40);
             if (_close != null) _close.SetBounds(Pad, H - 62, 120, 40);
+            if (_hide != null) _hide.SetBounds(Pad + 132, H - 62, 130, 40);
+            if (_uninstall != null) _uninstall.SetBounds(Pad + 274, H - 62, 150, 40);
         }
 
         // ---- Priorité CPU dédiée (IFEO, comme la page « Priorité par jeu ») ----
@@ -215,6 +227,23 @@ namespace BTOptimizer
             if (n.Contains("starcraft ii") || n.Contains("starcraft 2")) return "battlenet://S2";
             return null;
         }
+
+        /// <summary>Masque / réaffiche le jeu dans la bibliothèque. Aucun fichier n'est touché.</summary>
+        private void ToggleHide()
+        {
+            bool now = !GameHidden.IsHidden(_g.Name);
+            GameHidden.SetHidden(_g.Name, now);
+            if (_hide != null) _hide.Text = now ? "Réafficher" : "Masquer";
+            if (!now) return;
+            MessageBox.Show(this,
+                "« " + _g.Name + " » est masqué de ta bibliothèque.\n\n"
+                + "Aucun fichier n'a été touché — c'est purement visuel et réversible :\n"
+                + "⋯  →  Jeux  →  « Réafficher les jeux masqués ».",
+                "Masqué", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>Délègue au helper partagé : une seule implémentation de la désinstallation.</summary>
+        private void Uninstall() { GameActions.Uninstall(this, _g.Name, _g.SteamId); }
 
         private void OpenFolder()
         {
