@@ -592,10 +592,18 @@ namespace BTOptimizer
                 _pageToolBar.ResumeLayout();
                 return;
             }
+            // Petit intitulé de contexte : ces outils complètent la page courante.
+            var cap = new Label
+            {
+                Text = "AUSSI UTILE ICI", Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2,
+                AutoSize = true, BackColor = Color.Transparent, Margin = new Padding(0, 9, 14, 0)
+            };
+            _pageToolBar.Controls.Add(cap);
+
             foreach (FpsPage.ToolItem t in tools)
             {
-                Button b = FpsUi.GhostButton(t.Label);
-                b.AutoSize = true; b.Height = 30; b.Margin = new Padding(0, 0, 8, 0);
+                var b = new PillButton(t.Label);
+                b.Height = 30; b.FitWidth(); b.Margin = new Padding(0, 3, 8, 3);
                 Action act = t.Act;
                 b.Click += (s, e) => { try { if (act != null) act(); } catch { } };
                 _pageToolBar.Controls.Add(b);
@@ -657,16 +665,8 @@ namespace BTOptimizer
                         Tool("🧰 Entretien", () => OpenDialog(new MaintenanceForm(Log))),
                         Tool("Rapport HTML", () => GenerateHealthReport()));
                     break;
-                case 4: // Laboratoire
-                    p.SetTools(
-                        Tool("Objectif 500 FPS", () => OpenDialog(new Fps500Form(Log))),
-                        Tool("FPS en direct", () => OpenDialog(new FpsMonForm(Log))),
-                        Tool("Benchmark FPS", () => OpenDialog(new BenchmarkFpsForm(Log))),
-                        Tool("Benchmark CPU/GPU", () => OpenDialog(new BenchForm(Log))),
-                        Tool("Latence DPC/ISR", () => OpenDialog(new LiveMonForm(Log))),
-                        Tool("🎥 Streamer sans lag", () => OpenDialog(new StreamGuideForm(Log))),
-                        Tool("🧩 BIOS & manips", () => OpenDialog(new BiosGuideForm(Log))));
-                    break;
+                // Laboratoire : ses outils sont désormais INTÉGRÉS EN CARTES dans la page
+                // (PageLab.Build) — donc pas de barre en bas ici (sinon doublon).
                 // Page Système : elle a déjà ses propres contrôles en bas (nettoyeur RAM) et ses
                 // boutons en haut ; ses outils restent dans le menu ⋯ → Système pour ne rien chevaucher.
             }
@@ -843,6 +843,52 @@ namespace BTOptimizer
         {
             DoubleBuffered = true;
             ResizeRedraw = true;   // sans ça, l'ancien contenu reste affiché après un resize
+        }
+    }
+
+    /// <summary>
+    /// Pastille de la barre d'outils du bas de page. Dessinée en propre (coins pleins, contour
+    /// discret, teinte néon au survol) pour s'intégrer au thème au lieu du bouton gris « plaqué ».
+    /// </summary>
+    internal class PillButton : Button
+    {
+        private bool _hover;
+
+        public PillButton(string text)
+        {
+            Text = text;
+            Font = FpsUi.Small;
+            FlatStyle = FlatStyle.Flat;
+            FlatAppearance.BorderSize = 0;
+            BackColor = FpsUi.BgMain;
+            ForeColor = FpsUi.Dim;
+            Cursor = Cursors.Hand;
+            AutoSize = false;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint
+                     | ControlStyles.OptimizedDoubleBuffer | ControlStyles.SupportsTransparentBackColor, true);
+            MouseEnter += (s, e) => { _hover = true; Invalidate(); };
+            MouseLeave += (s, e) => { _hover = false; Invalidate(); };
+        }
+
+        /// <summary>Ajuste la largeur au texte (pastille compacte).</summary>
+        public void FitWidth() { Width = TextRenderer.MeasureText(Text, Font).Width + 30; }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.Clear(Parent != null ? Parent.BackColor : FpsUi.BgMain);
+
+            var rf = new RectangleF(0.5f, 1.5f, Width - 1.5f, Height - 3f);
+            using (var path = FpsUi.Round(rf, (Height - 3f) / 2f))
+            {
+                using (var fill = new SolidBrush(_hover ? Color.FromArgb(32, 129, 140, 248) : FpsUi.Card))
+                    g.FillPath(fill, path);
+                using (var pen = new Pen(_hover ? FpsUi.Neon : FpsUi.Border, 1f))
+                    g.DrawPath(pen, path);
+            }
+            TextRenderer.DrawText(g, Text, Font, ClientRectangle, _hover ? FpsUi.Ink : FpsUi.Dim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
     }
 

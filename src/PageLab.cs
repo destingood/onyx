@@ -23,6 +23,13 @@ namespace BTOptimizer
             AddCard("🚄", "SPEED TEST", "Débit descendant + latence réels.", false, () => Host.OpenDialog(new SpeedTestForm(Host.Log)));
             AddCard("🎮", "TEST MANETTE", "Détection + polling rate réel de ta manette.", false, () => Host.OpenDialog(new ControllerForm(Host.Log)));
             AddCard("📊", "OVERLAY STATS", "CPU/GPU/temps en surimpression du jeu.", false, () => Host.OpenDialog(new StatsOverlayForm(Host.Log)));
+            // Outils avancés du Labo, intégrés comme cartes (au lieu d'une barre) :
+            AddCard("🏁", "OBJECTIF 500 FPS", "Vise le très haut FPS, écran + jeux.", false, () => Host.OpenDialog(new Fps500Form(Host.Log)));
+            AddCard("📊", "BENCHMARK FPS", "Compare tes FPS avant / après optimisation.", false, () => Host.OpenDialog(new BenchmarkFpsForm(Host.Log)));
+            AddCard("🧪", "BENCHMARK CPU/GPU", "Petit test de perf rapide du matériel.", false, () => Host.OpenDialog(new BenchForm(Host.Log)));
+            AddCard("⏱", "LATENCE DPC/ISR", "Mesure la latence noyau en direct.", false, () => Host.OpenDialog(new LiveMonForm(Host.Log)));
+            AddCard("🎥", "STREAMER SANS LAG", "Réglages RTSS / OBS / NVIDIA pour le stream.", false, () => Host.OpenDialog(new StreamGuideForm(Host.Log)));
+            AddCard("🧩", "BIOS & MANIPS", "XMP, Resizable BAR et autres réglages BIOS.", false, () => Host.OpenDialog(new BiosGuideForm(Host.Log)));
             Resize += (s, e) => DoLayout();
         }
 
