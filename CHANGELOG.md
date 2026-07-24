@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.62 — Il comprend le langage texto (abréviations + fautes)
+- **Couche d'expansion des abréviations**, appliquée AVANT tout le routage : « slt g un pb
+  mon pc ram bcp pk » devient « salut j'ai un problème mon pc rame beaucoup pourquoi » et part
+  droit à l'enquête. ~90 abréviations courantes : pk/koi/cmt/ki/kan (mots interrogatifs),
+  g/chui/ta/ya/jv (pronoms-verbes), bcp/tjs/tt/mtn/pcq, pb/pblm/prob (problème), maj, ordi→pc,
+  pa/pu/plu (négations), slt/cc/wsh/stp/svp/mrc/dsl, wi/ui/nn/nan (oui-non)…
+- **Se combine avec la tolérance aux fautes déjà en place** (distance d'édition) : abréviation
+  développée PUIS faute corrigée → « pk mon pc ram » compris même mal orthographié.
+- **« ça va pas / ça marche pas »** (négatif) n'est plus pris pour un « ça va ! » : il demande
+  ce qui cloche.
+- Tout profite de la couche : règles, lexique, conseiller d'outils, détection des doutes.
+
 ## v14.61 — Il comprend le langage de tous les jours
 - **« ça va ? » compris**, y compris les formes familières et sans accent : cava, sava, cv,
   ça roule, quoi de neuf, tu vas bien… (avant, « cava » partait à l'IA qui répondait sur le

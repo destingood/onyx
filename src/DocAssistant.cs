@@ -74,7 +74,7 @@ namespace BTOptimizer
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
         {
             var entries = HelpCatalog.Entries(log);
-            string s = Norm(q);
+            string s = Expand(Norm(q));   // accents à plat + abréviations texto développées
             if (s.Length == 0) return Intro(st);
 
             // --- Suivi de conversation : « oui » / « non » répond à la DERNIÈRE proposition ---
@@ -93,12 +93,17 @@ namespace BTOptimizer
             if (IsNo(s))
                 return new Reply { Text = "Pas de souci, on laisse ça de côté. Autre chose à vérifier ?", ShowStarters = true };
 
-            if (Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "yo", "wesh", "slt", "bonne nuit"))
+            // Salutation SEULE (≤ 3 mots) → on salue. Sinon (« salut j'ai un souci… ») c'est juste
+            // un préambule : on ignore la politesse et on traite le vrai message plus bas.
+            if (SplitWords(s).Length <= 3 && Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "bonne nuit"))
                 return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
+            // « ça va PAS » (négatif) : on ne répond pas « ça va ! », on demande ce qui cloche.
+            if (Has(s, "ca va pas", "ca va plus", "sa va pas", "ca marche pas") && SplitWords(s).Length <= 5)
+                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true };
             // « ça va ? » et ses formes familières (cava, sava, cv…). Messages COURTS seulement :
             // « comment va mon pc » doit rester une question de santé, pas de la politesse.
-            if (SplitWords(s).Length <= 4 && !Has(s, "pc", "ordi", "jeu")
-                && Has(s, "ca va", "cava", "sava", "cv", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
+            if (SplitWords(s).Length <= 4 && !Has(s, "pc", "jeu")
+                && Has(s, "ca va", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
                 return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true };
             if (Has(s, "au revoir", "a plus", "bye", "ciao", "a bientot", "bonne journee", "bonne soiree"))
                 return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false };
@@ -648,6 +653,54 @@ namespace BTOptimizer
 
         private static bool IsYes(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && YesRx.IsMatch(x); }
         private static bool IsNo(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && NoRx.IsMatch(x); }
+
+        // --- Développement du langage « texto » : chaque abréviation courante → sa forme pleine,
+        //     AVANT tout le routage (les règles, le lexique et les conseils en profitent tous).
+        //     Ne remplace QUE des tokens entiers, connus et non ambigus dans un contexte d'aide PC.
+        private static readonly System.Collections.Generic.Dictionary<string, string> Abbr =
+            new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // politesse / salutations
+            {"slt","salut"},{"cc","coucou"},{"bjr","bonjour"},{"bsr","bonsoir"},{"wsh","salut"},{"yo","salut"},
+            {"stp","s'il te plait"},{"svp","s'il te plait"},{"mrc","merci"},{"dsl","desole"},{"bnj","bonjour"},
+            // oui / non
+            {"wi","oui"},{"ui","oui"},{"ouai","oui"},{"ouais","oui"},{"nn","non"},{"nan","non"},{"vi","oui"},
+            // mots interrogatifs
+            {"pk","pourquoi"},{"pq","pourquoi"},{"pkoi","pourquoi"},{"prq","pourquoi"},{"koi","quoi"},{"kwa","quoi"},
+            {"ki","qui"},{"kan","quand"},{"kand","quand"},{"cmt","comment"},{"comen","comment"},{"komen","comment"},
+            {"komin","comment"},{"cb","combien"},{"cbien","combien"},
+            // pronoms / verbes fréquents
+            {"g","j'ai"},{"jai","j'ai"},{"j","je"},{"chui","je suis"},{"chuis","je suis"},{"shui","je suis"},
+            {"ta","tu as"},{"tas","tu as"},{"ya","il y a"},{"yaa","il y a"},{"jv","je vais"},{"jvai","je vais"},
+            {"jvais","je vais"},{"jpe","je peux"},{"jsp","je sais pas"},{"jpp","je n'en peux plus"},{"ta's","tu as"},
+            // abréviations courantes
+            {"bcp","beaucoup"},{"tjs","toujours"},{"tjr","toujours"},{"tjrs","toujours"},{"tt","tout"},
+            {"mtn","maintenant"},{"ct","c'etait"},{"tkt","t'inquiete"},{"askip","a ce qu'il parait"},
+            {"qqch","quelque chose"},{"qqn","quelqu'un"},{"qd","quand"},{"ms","mais"},{"pcq","parce que"},
+            {"pck","parce que"},{"prkoi","pourquoi"},{"tmp","temps"},{"bg","beau gosse"},
+            // problème / négations / tech
+            {"pb","probleme"},{"pbm","probleme"},{"pblm","probleme"},{"prob","probleme"},{"probl","probleme"},
+            {"souci","souci"},{"ordi","pc"},{"ordinateur","pc"},{"pc","pc"},{"maj","mise a jour"},
+            {"dl","telechargement"},{"tel","telecharger"},{"pa","pas"},{"pö","pas"},{"po","pas"},{"pu","plus"},
+            {"plu","plus"},{"rien","rien"},{"marche","marche"},{"fonctionne","fonctionne"},
+            // ça va & co (renforce la politesse, même isolé)
+            {"cava","ca va"},{"sava","ca va"},{"cv","ca va"},{"savapa","ca va pas"},{"cvpa","ca va pas"},
+        };
+
+        private static string Expand(string s)
+        {
+            if (string.IsNullOrEmpty(s) || s.IndexOf(' ') < 0 && s.Length > 12) return s;
+            string[] w = s.Split(' ');
+            var sb = new StringBuilder(s.Length + 16);
+            for (int i = 0; i < w.Length; i++)
+            {
+                if (w[i].Length == 0) continue;
+                string rep;
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(Abbr.TryGetValue(w[i], out rep) ? rep : w[i]);
+            }
+            return sb.ToString();
+        }
 
         // minuscule + sans accents (l'utilisateur tape souvent sans accents).
         private static string Norm(string x)
