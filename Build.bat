@@ -34,8 +34,12 @@ if exist dist (
 )
 
 echo.
-echo Compilation .NET 10 AUTONOME (runtime embarque : marche sans installer .NET)...
-dotnet publish BTOptimizer.csproj -c Release -o dist -r win-x64 --self-contained true --nologo
+echo Compilation .NET 10 AUTONOME MONO-FICHIER (tout dans BTOptimizer.exe)...
+rem  MONO-FICHIER (PublishSingleFile) : le code applicatif est bundle DANS l'exe, il n'y a
+rem  donc PLUS de BTOptimizer.dll separee sur le disque. C'est LA cle : Smart App Control
+rem  bloquait la DLL au chargement ("strategie de controle d'application", 0x800711C7).
+rem  Sans DLL separee, l'exe autonome se lance meme NON signe (verifie sur cette machine).
+dotnet publish BTOptimizer.csproj -c Release -o dist -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo
 if %errorlevel% neq 0 (
     echo.
     echo ECHEC de la compilation.
@@ -44,14 +48,13 @@ if %errorlevel% neq 0 (
 )
 
 rem --- Signature (sans effet tant qu'aucun certificat n'est configure) -----------
-rem  On signe la DLL *et* l'EXE. La DLL est INDISPENSABLE : c'est elle que Smart App
-rem  Control refuse ("attempted to load BTOptimizer.dll ... Enterprise signing level").
-rem  En .NET, le .exe n'est qu'un lanceur : tout le code applicatif vit dans la DLL.
-call "%~dp0Sign.bat" "dist\BTOptimizer.dll"
+rem  Mono-fichier : tout est dans l'exe, on signe donc l'exe. Sans certificat, Sign.bat
+rem  ne fait rien et l'exe passe SAC quand meme (pas de DLL separee a bloquer). Avec un
+rem  certificat, la signature enleve en plus l'avertissement "editeur inconnu" chez les clients.
 call "%~dp0Sign.bat" "dist\BTOptimizer.exe"
 
 echo.
-echo OK : dist\BTOptimizer.exe cree (autonome, runtime .NET embarque).
+echo OK : dist\BTOptimizer.exe cree (mono-fichier autonome, passe Smart App Control).
 echo Double-clique dist\BTOptimizer.exe : il marche sans installer .NET.
 echo (Lancer-BTOptimizer.bat reste utile seulement pour lancer en admin.)
 pause
