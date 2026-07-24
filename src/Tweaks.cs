@@ -2351,6 +2351,61 @@ namespace BTOptimizer
                 Check  = () => Sys.AmdUlpsDisabled()
             });
 
+            // ---- Issus du kit CAPET (TUTO 2 + filtres) : réversibles, hors presets ----
+            list.Add(new Tweak
+            {
+                Id = "fast_close", Category = Cat.Rapidite,
+                Name = "Fermetures et menus plus rapides (délais Windows raccourcis)",
+                Desc = "Menus plus vifs (8 ms au lieu de 400) et arrêt du PC plus rapide : les applis qui ne répondent "
+                     + "pas sont fermées après 1-2 s au lieu de 5-20. ATTENTION : à l'arrêt, Windows peut fermer d'office "
+                     + "une appli avec du travail non enregistré (AutoEndTasks). « Rétablir » remet les valeurs par défaut.",
+                BackupKeys = new[] { @"HKCU\Control Panel\Desktop", @"HKLM\SYSTEM\CurrentControlSet\Control" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Desktop", "AutoEndTasks", "1", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "HungAppTimeout", "1000", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "WaitToKillAppTimeout", "2000", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "MenuShowDelay", "8", RegistryValueKind.String);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "2000", RegistryValueKind.String);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Desktop", "AutoEndTasks", "0", RegistryValueKind.String);
+                    Sys.DelUser(@"Control Panel\Desktop", "HungAppTimeout");
+                    Sys.SetUser(@"Control Panel\Desktop", "WaitToKillAppTimeout", "20000", RegistryValueKind.String);
+                    Sys.SetUser(@"Control Panel\Desktop", "MenuShowDelay", "400", RegistryValueKind.String);
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String);
+                },
+                Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "MenuShowDelay"), "8")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "driver_search_off", Category = Cat.Gpu,
+                Name = "Empêcher Windows Update d'écraser tes pilotes",
+                Desc = "Windows Update remplace parfois ton pilote GPU fraîchement installé par une version à lui (souvent "
+                     + "plus vieille) — la cause classique du pilote qui « revient tout seul » après un nettoyage DDU. Ce "
+                     + "réglage lui interdit d'installer des pilotes : tu les mets à jour toi-même (NVIDIA/AMD/Intel). "
+                     + "« Rétablir » réautorise Windows Update à le faire.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" },
+                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching", "SearchOrderConfig", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching", "SearchOrderConfig", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching", "SearchOrderConfig"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "nv_sharpen_legacy", Category = Cat.Gpu, Reboot = true,
+                Name = "NVIDIA : retrouver l'ancien filtre de netteté (sharpen)",
+                Desc = "Ramène l'ancien filtre « Image Sharpening » du panneau NVIDIA (réglage de netteté par jeu, léger). "
+                     + "Réglage communautaire connu (EnableGR535). Cartes NVIDIA uniquement ; prend effet après "
+                     + "redémarrage. « Rétablir » remet le comportement récent du pilote.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS", "EnableGR535"), 0)
+            });
+
             // ---- Services CAPET supplémentaires (non-recommandés, hors presets, avertissement) ----
             list.Add(new Tweak
             {
