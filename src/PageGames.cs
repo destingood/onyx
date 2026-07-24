@@ -195,7 +195,7 @@ namespace BTOptimizer
 
             // Démarre tout de suite le chargement des jaquettes des jeux détectés (priorité à ce
             // qui est visible en haut) ; les autres se chargeront à la demande au défilement.
-            foreach (var g in det) if (g.SteamId > 0) GameArt.Get(g.SteamId, null);
+            foreach (var g in det) GameArt.ForGame(g.Name, g.SteamId, null);   // AppID connu OU résolu par le nom
 
             int shownDet = det.Count;
             if (_query.Length > 0)

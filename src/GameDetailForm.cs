@@ -40,7 +40,9 @@ namespace BTOptimizer
             BackColor = FpsUi.BgMain; Font = FpsUi.Body; DoubleBuffered = true;
             try { Icon = Logo.MakeIcon(32, FpsUi.Neon); } catch { }
 
-            if (g.SteamId > 0) { try { GameArt.Get(g.SteamId, null); } catch { } }   // démarre le chargement de la jaquette tôt
+            // Démarre tôt le chargement de la jaquette — y compris pour les jeux SANS AppID
+            // (EA, Battle.net…) : ForGame résout d'abord le nom via l'index Steam.
+            try { GameArt.ForGame(g.Name, g.SteamId, null); } catch { }
             BuildActions();
             RefreshPrio();
         }
@@ -347,9 +349,8 @@ namespace BTOptimizer
 
             // --- Colonne droite : grande jaquette ---
             var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, 440);
-            Image big = _g.SteamId > 0
-                ? GameArt.Get(_g.SteamId, () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } })
-                : null;
+            Image big = GameArt.ForGame(_g.Name, _g.SteamId,
+                () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } });
             using (var clip = Round(cover, 14))
             {
                 var save = g.Clip; g.SetClip(clip);

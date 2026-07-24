@@ -26,6 +26,18 @@ namespace BTOptimizer
         private static readonly SemaphoreSlim _gate = new SemaphoreSlim(8);  // limite les TÉLÉCHARGEMENTS concurrents
         private static HttpClient _http;
 
+        /// <summary>Jaquette d'un jeu, MÊME s'il ne vient pas de Steam (EA, Battle.net, Epic…) :
+        /// sans AppID on résout d'abord le nom via l'index Steam, puis on charge l'image
+        /// normalement. Beaucoup de jeux non-Steam existent aussi sur Steam et ont donc une
+        /// jaquette officielle ; ceux qui n'y sont pas (WoW, Hearthstone…) retombent sur
+        /// l'icône du jeu, gérée par l'appelant.</summary>
+        public static Image ForGame(string name, int steamId, Action onReady)
+        {
+            int id = steamId;
+            if (id <= 0 && !string.IsNullOrEmpty(name)) id = SteamAppIndex.Resolve(name, onReady);
+            return id > 0 ? Get(id, onReady) : null;
+        }
+
         /// <summary>Image prête (cache mémoire), ou null. Lance un chargement de fond au premier appel ;
         /// chaque onReady non nul est rappelé (thread de fond) quand l'image devient disponible.</summary>
         public static Image Get(int appId, Action onReady)
