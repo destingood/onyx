@@ -734,24 +734,27 @@ namespace BTOptimizer
                 try { ans = LocalBrain.Ask(q, BrainContext(st), model); }
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
-                    return Say("L'IA locale n'a rien répondu — reformule, ou pose-moi un souci PC : là, je suis imbattable.");
+                    return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
                 return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
             };
             return a;
         }
 
-        // Le contexte donné au modèle : rôle, règles d'honnêteté, capacités de l'app, état du PC.
+        // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
         private static string BrainContext(BadgeCatalog.Stats st)
         {
             var sb = new StringBuilder();
-            sb.Append("Tu es « le Copilote » de Fluide, l'assistant PC gaming qui tourne 100 % en local sur le PC de l'utilisateur. ");
-            sb.Append("Réponds en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
-            sb.Append("Sois honnête : si tu n'es pas sûr, dis-le. N'invente JAMAIS une mesure ou un état du PC. ");
-            sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit être gratuit. ");
-            sb.Append("L'app sait déjà faire (suggère la phrase quand c'est pertinent) : « fais un bilan complet » (enquête + réparations 1 clic), ");
+            sb.Append("Tu es « le Copilote » de Fluide, un assistant polyvalent qui tourne 100 % en local sur le PC de l'utilisateur. ");
+            sb.Append("Réponds à N'IMPORTE QUELLE question (PC, jeux, culture générale, aide, conseils…), en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
+            sb.Append("HONNÊTETÉ AVANT TOUT : si tu n'es pas sûr, DIS-LE clairement (« Je ne suis pas certain, mais… », « À vérifier »). ");
+            sb.Append("N'invente JAMAIS un fait, un chiffre, une date ou une mesure du PC : mieux vaut admettre « je ne sais pas » qu'affirmer du faux. ");
+            sb.Append("Tu n'as PAS accès à internet ni à l'heure réelle, la météo ou l'actualité du jour : dis-le si on te le demande, et propose ce que tu peux faire à la place. ");
+            sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
+            sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit rester gratuit. ");
+            sb.Append("Pour un VRAI souci PC, rappelle que tu peux AGIR via ces phrases : « fais un bilan complet » (enquête + réparations 1 clic), ");
             sb.Append("« mesure mon ping », « qui bouffe mon cpu », « mesure ma latence », « prépare ma partie », « génère le rapport », « libère de l'espace ». ");
             if (st != null)
-                sb.Append("État réel du PC : santé " + st.Health + " %, " + st.OptiActive + "/" + st.OptiTotal
+                sb.Append("État réel du PC de l'utilisateur : santé " + st.Health + " %, " + st.OptiActive + "/" + st.OptiTotal
                         + " optimisations actives, " + st.GamesDet + " jeu(x) détecté(s). ");
             return sb.ToString();
         }

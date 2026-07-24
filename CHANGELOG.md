@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.58 — Il répond à TOUT, et il assume ses doutes
+- **Répond à n'importe quelle question** : dès que l'IA locale est active, tout ce que les
+  règles ne traitent pas AVEC CERTITUDE part vers le modèle — y compris un signal PC faible
+  (avant, un mot ambigu déclenchait un « tu veux dire… ? » ; maintenant il répond vraiment).
+  Les vraies commandes PC (mesures, enquête, réparations) gardent la priorité, elles restent
+  imbattables.
+- **Il dit ses doutes** : le modèle a désormais pour consigne stricte de signaler l'incertitude
+  (« Je ne suis pas certain, mais… », « à vérifier »), de ne JAMAIS inventer un fait/chiffre/
+  date/mesure, et d'admettre qu'il n'a ni internet, ni l'heure réelle, ni l'actualité du jour —
+  plutôt que d'affirmer du faux. Il signale aussi quand ses connaissances peuvent être datées.
+- Ton ajusté : sans IA, le signal faible propose « active l'ia pour que je réponde à tout ».
+
 ## v14.57 — Détection d'Ollama fiabilisée + vraie configuration
 - **Détecte Ollama où qu'il soit** : dossier utilisateur, Program Files (x86/x64) ET le PATH
   (« where ollama ») — un Ollama déjà présent ailleurs n'est plus réinstallé par erreur.
