@@ -136,6 +136,13 @@ namespace BTOptimizer
             return 0;
         }
 
+        public static long TotalPhysMB()
+        {
+            var m = new MEMSTAT();
+            if (GlobalMemoryStatusEx(m)) return (long)(m.ullTotalPhys / (1024 * 1024));
+            return 0;
+        }
+
         public static int EmptyAllWorkingSets()
         {
             int done = 0;

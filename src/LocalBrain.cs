@@ -50,6 +50,91 @@ namespace BTOptimizer
             try { if (File.Exists(OffPath)) File.Delete(OffPath); } catch { }
         }
 
+        private static string ConsentPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-consent.txt"); }
+        }
+
+        /// <summary>Vrai si l'utilisateur a déjà répondu à la question « Installer le cerveau IA
+        /// local ? » (Oui → consent, Non → opt-out). Sert à ne demander qu'UNE fois.</summary>
+        public static bool ConsentAnswered
+        {
+            get { try { return OptedOut || File.Exists(ConsentPath); } catch { return false; } }
+        }
+
+        private static void SetConsented()
+        {
+            try { ClearOptOut(); File.WriteAllText(ConsentPath, "L'utilisateur a accepté l'installation du cerveau IA local.\n"); }
+            catch { }
+        }
+
+        // ------------------------------------------------------------------
+        //  Amorçage au démarrage — décide, demande le consentement si besoin
+        // ------------------------------------------------------------------
+        /// <summary>Point d'entrée unique au lancement (tâche de fond). Trois cas :
+        ///  • déjà prêt (serveur + modèle) → on active en silence, RIEN à installer, aucune question ;
+        ///  • l'utilisateur a refusé une fois → on ne fait rien ;
+        ///  • une installation/un téléchargement serait nécessaire → on DEMANDE « Oui/Non » une
+        ///    seule fois (dialogue sur le fil d'interface via 'owner'), et on n'installe qu'après un Oui.</summary>
+        public static void Bootstrap(System.Windows.Forms.Form owner, Action<string, int> log)
+        {
+            try
+            {
+                if (OptedOut) return;
+                if (Enabled) { EnsureServer(); return; }
+
+                // Déjà installé et opérationnel (ex. l'utilisateur avait Ollama) → activation
+                // silencieuse : on ne télécharge rien, donc aucune question à poser.
+                if (ServerUp(1500) && BestModel() != null) { SetEnabled(true); return; }
+
+                // À partir d'ici, activer suppose d'installer Ollama et/ou de télécharger un
+                // modèle (plusieurs centaines de Mo à quelques Go). On demande d'abord.
+                if (!ConsentAnswered)
+                {
+                    if (LibScan.WingetPath() == null) return;      // rien d'automatique possible : inutile de demander
+                    bool yes = AskConsent(owner);
+                    if (!yes) { SetEnabled(false); return; }         // écrit l'opt-out : on ne redemande jamais
+                    SetConsented();
+                }
+                else if (!File.Exists(ConsentPath)) return;         // a répondu Non autrefois
+
+                AutoSetup(log);
+            }
+            catch { }
+        }
+
+        /// <summary>Démarre le moteur Ollama s'il est installé mais éteint (IA déjà activée).</summary>
+        public static void EnsureServer()
+        {
+            try { if (!ServerUp(1200)) { string exe = OllamaExe(); if (exe != null) TryStartServer(exe); } }
+            catch { }
+        }
+
+        private static bool AskConsent(System.Windows.Forms.Form owner)
+        {
+            bool yes = false;
+            try
+            {
+                ModelPick pick = ChooseModel();
+                string msg = "Veux-tu activer le CERVEAU IA LOCAL du Copilote ?\n\n"
+                           + "• Gratuit, open source (Ollama) — aucun abonnement.\n"
+                           + "• Tourne à 100 % sur TON PC : aucune donnée n'est envoyée sur internet.\n"
+                           + "• Le Copilote pourra alors répondre à TOUT, pas seulement aux soucis PC.\n\n"
+                           + "Installation automatique et adaptée à ta machine : " + pick.Human + ".\n"
+                           + "(Téléchargé une seule fois ; tu peux dire « désactive l'ia » à tout moment.)";
+                System.Action show = delegate
+                {
+                    yes = System.Windows.Forms.MessageBox.Show(owner, msg, "Fluide — Cerveau IA local",
+                        System.Windows.Forms.MessageBoxButtons.YesNo,
+                        System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes;
+                };
+                if (owner != null && owner.InvokeRequired) owner.Invoke(show);
+                else show();
+            }
+            catch { yes = false; }
+            return yes;
+        }
+
         public static void SetEnabled(bool on)
         {
             try
@@ -111,12 +196,13 @@ namespace BTOptimizer
 
                 if (BestModel() == null)
                 {
-                    if (FreeSystemGb() < 4) { SetupStatus = null; return; }
-                    SetupStatus = "téléchargement du modèle (≈ 2 Go, une seule fois)";
-                    if (log != null) log("IA locale : téléchargement du modèle llama3.2:3b (≈ 2 Go, une fois)…", 0);
+                    ModelPick pick = ChooseModel();          // ADAPTÉ à la machine (VRAM + RAM)
+                    if (FreeSystemGb() < pick.Gb + 2) { SetupStatus = null; return; }   // marge de sécurité
+                    SetupStatus = "téléchargement du modèle " + pick.Human;
+                    if (log != null) log("IA locale : modèle choisi pour cette machine → " + pick.Human + ". Téléchargement…", 0);
                     BumpTries();
                     string exe2 = OllamaExe(); if (exe2 == null) exe2 = "ollama";
-                    Sys.Run(exe2, "pull llama3.2:3b");       // interrompu ? Ollama REPREND le téléchargement au prochain essai
+                    Sys.Run(exe2, "pull " + pick.Tag);       // interrompu ? Ollama REPREND le téléchargement au prochain essai
                     if (BestModel() == null) { SetupStatus = null; return; }
                 }
 
@@ -186,7 +272,7 @@ namespace BTOptimizer
         }
 
         // Modèles préférés : petits, rapides, corrects en français — du meilleur compromis au repli.
-        private static readonly string[] Preferred = { "qwen2.5:3b", "llama3.2:3b", "llama3.2", "qwen2.5", "mistral", "phi3", "gemma2" };
+        private static readonly string[] Preferred = { "qwen2.5:7b", "qwen2.5:3b", "llama3.2:3b", "llama3.2", "qwen2.5:1.5b", "qwen2.5:0.5b", "qwen2.5", "mistral", "phi3", "gemma2" };
 
         /// <summary>Meilleur modèle DÉJÀ téléchargé, ou null s'il n'y en a aucun.</summary>
         public static string BestModel()
@@ -204,6 +290,79 @@ namespace BTOptimizer
                 return names.Count > 0 ? names[0] : null;
             }
             catch { return null; }
+        }
+
+        // ------------------------------------------------------------------
+        //  Choix du modèle ADAPTÉ à la machine (n'importe quelle config)
+        // ------------------------------------------------------------------
+        public sealed class ModelPick
+        {
+            public string Tag;      // identifiant Ollama à télécharger
+            public double Gb;       // taille approximative du téléchargement
+            public string Human;    // « llama3.2:3b (≈ 2 Go) — équilibré »
+        }
+
+        /// <summary>Sélectionne le meilleur modèle que CETTE machine peut faire tourner
+        /// confortablement, d'après la VRAM du GPU et la RAM. Barème prudent (le modèle doit
+        /// tenir en mémoire tout en laissant de quoi jouer) : du 0.5B universel au 7B sur
+        /// grosse carte. Optimal ET optimisé, quelle que soit la config du client.</summary>
+        public static ModelPick ChooseModel()
+        {
+            int vram = DetectVramMB();
+            int ram = DetectRamMB();
+            // Le facteur limitant : la VRAM si un vrai GPU est détecté, sinon la RAM (exécution CPU).
+            int cap = vram >= 1024 ? vram : Math.Min(ram, 8192);
+
+            if (cap >= 11000 && ram >= 24000)
+                return new ModelPick { Tag = "qwen2.5:7b", Gb = 4.7, Human = "qwen2.5:7b (≈ 4,7 Go) — le plus malin, ta machine encaisse" };
+            if (cap >= 6000 && ram >= 12000)
+                return new ModelPick { Tag = "llama3.2:3b", Gb = 2.0, Human = "llama3.2:3b (≈ 2 Go) — équilibré, le sweet spot" };
+            if (cap >= 3500 && ram >= 8000)
+                return new ModelPick { Tag = "qwen2.5:1.5b", Gb = 1.0, Human = "qwen2.5:1.5b (≈ 1 Go) — léger et vif" };
+            return new ModelPick { Tag = "qwen2.5:0.5b", Gb = 0.4, Human = "qwen2.5:0.5b (≈ 0,4 Go) — ultra-léger, tourne partout" };
+        }
+
+        /// <summary>VRAM dédiée du GPU en Mo, tous constructeurs, SANS pilote noyau : d'abord le
+        /// registre (HardwareInformation.qwMemorySize, fiable et non plafonné), puis les capteurs
+        /// LHM (déjà en-process), puis nvidia-smi. 0 si indéterminé (→ on retombe sur la RAM).</summary>
+        public static int DetectVramMB()
+        {
+            long best = 0;
+            try
+            {
+                using (var cls = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"))
+                {
+                    if (cls != null)
+                        foreach (string sub in cls.GetSubKeyNames())
+                        {
+                            if (sub.Length != 4) continue;   // 0000, 0001… (pas « Properties »)
+                            try
+                            {
+                                using (var k = cls.OpenSubKey(sub))
+                                {
+                                    object v = k != null ? k.GetValue("HardwareInformation.qwMemorySize") : null;
+                                    if (v is long) best = Math.Max(best, (long)v / 1048576);
+                                }
+                            }
+                            catch { }
+                        }
+                }
+            }
+            catch { }
+            if (best <= 0)
+            {
+                try { using (var mon = new HwMonitor()) { HwSample s = mon.Sample(); if (s.Gpu != null && s.Gpu.VramTotalMB > 0) best = s.Gpu.VramTotalMB; } }
+                catch { }
+            }
+            return (int)best;
+        }
+
+        public static int DetectRamMB()
+        {
+            try { long t = NativeMem.TotalPhysMB(); if (t > 0) return (int)t; } catch { }
+            try { var r = Sys.QueryRam(); if (r != null && r.TotalMB > 0) return (int)r.TotalMB; } catch { }
+            return 8192;   // hypothèse prudente à défaut
         }
 
         /// <summary>Chemin de l'exécutable Ollama installé, ou null (on tentera le PATH).</summary>

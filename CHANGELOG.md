@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.56 — IA locale : modèle adapté à CHAQUE machine + consentement Oui/Non
+- **Le modèle est choisi selon la config du client** (VRAM du GPU + RAM détectées, sans
+  pilote noyau — registre `qwMemorySize` tous constructeurs, repli capteurs/RAM). Barème
+  prudent, optimal ET optimisé quelle que soit la machine :
+  - grosse carte (≈ 11 Go VRAM, 24 Go RAM) → **qwen2.5:7b** (le plus malin) ;
+  - config équilibrée (6 Go VRAM, 12 Go RAM) → **llama3.2:3b** (le sweet spot) ;
+  - PC modeste (3,5 Go VRAM, 8 Go RAM) → **qwen2.5:1.5b** (léger et vif) ;
+  - petite config / sans vrai GPU → **qwen2.5:0.5b** (ultra-léger, tourne partout).
+- **Question au premier lancement** : « Installer le cerveau IA local ? Oui / Non » —
+  posée UNE seule fois, et **seulement quand une installation/un téléchargement serait
+  réellement nécessaire** (si Ollama + un modèle sont déjà là, activation silencieuse, zéro
+  question). Non → plus jamais reproposé ; Oui → installe le modèle adapté.
+- La garde d'espace disque s'ajuste à la taille du modèle choisi ; installation guidée et
+  auto utilisent toutes deux le même choix matériel.
+
 ## v14.55 — L'IA locale s'installe TOUTE SEULE pour chaque installation
 - **Zéro action requise** : au premier lancement (20 s après l'ouverture, en arrière-plan),
   l'app installe Ollama (winget, silencieux), démarre le moteur, télécharge le petit modèle
