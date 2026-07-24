@@ -234,10 +234,12 @@ namespace BTOptimizer
                 if (!PingSample(6, 900, out avg, out jit, out loss))
                     return Say("Impossible de joindre internet à l'instant (hors-ligne, ou échos ICMP bloqués).\n"
                              + "Si tu es bien connecté, le panneau « Qualité réseau » fera le test complet box vs internet.");
+                bool wifi = false; try { wifi = OnWifi(); } catch { }
                 var sb = new StringBuilder();
                 sb.Append("• Ping moyen : ").Append(avg.ToString("0")).Append(" ms\n");
                 sb.Append("• Gigue (variation) : ").Append(jit.ToString("0.#")).Append(" ms\n");
-                sb.Append("• Perte de paquets : ").Append(loss).Append(" %\n\n");
+                sb.Append("• Perte de paquets : ").Append(loss).Append(" %\n");
+                sb.Append("• Connexion : ").Append(wifi ? "Wi-Fi (un câble ferait mieux pour jouer)" : "filaire ✅").Append("\n\n");
                 if (loss > 0) sb.Append("⚠ De la perte de paquets — c'est elle qui « téléporte » les joueurs et annule des tirs.");
                 else if (jit >= 15) sb.Append("⚠ Gigue élevée : le ping bouge trop d'une seconde à l'autre, sensation de jeu irrégulière.");
                 else if (avg >= 80) sb.Append("⚠ Ping élevé sur ce test : joue sur des serveurs proches, et vérifie le Wi-Fi vs câble.");
@@ -379,6 +381,199 @@ namespace BTOptimizer
         {
             foreach (string c in CoreProc) if (string.Equals(name, c, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
+        }
+
+        // ------------------------------------------------------------------
+        //  Faits système transverses — réutilisés par le chat ET l'enquête
+        // ------------------------------------------------------------------
+        /// <summary>Jours écoulés depuis le dernier VRAI démarrage (le « démarrage rapide »
+        /// de Windows endort au lieu d'éteindre : l'uptime révèle la vérité).</summary>
+        public static double UptimeDays()
+        {
+            try { return Environment.TickCount64 / 86400000.0; } catch { return -1; }
+        }
+
+        /// <summary>Vrai si la connexion ACTIVE passe par le Wi-Fi (aucune carte filaire avec
+        /// passerelle) — l'info qui change les conseils réseau.</summary>
+        public static bool OnWifi()
+        {
+            bool wifi = false, wired = false;
+            try
+            {
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    System.Net.NetworkInformation.IPInterfaceProperties p;
+                    try { p = ni.GetIPProperties(); } catch { continue; }
+                    if (p == null || p.GatewayAddresses == null || p.GatewayAddresses.Count == 0) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Wireless80211) wifi = true;
+                    else wired = true;
+                }
+            }
+            catch { }
+            return wifi && !wired;
+        }
+
+        /// <summary>Premier serveur DNS IPv4 de la connexion active, ou null.</summary>
+        public static string CurrentDns()
+        {
+            try
+            {
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    System.Net.NetworkInformation.IPInterfaceProperties p;
+                    try { p = ni.GetIPProperties(); } catch { continue; }
+                    if (p == null || p.GatewayAddresses == null || p.GatewayAddresses.Count == 0) continue;
+                    foreach (var d in p.DnsAddresses)
+                        if (d.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) return d.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>Compare le DNS ACTUEL aux références gratuites (Cloudflare/Google).
+        /// Faux si rien n'est mesurable (hors-ligne) — on ne conclut rien.</summary>
+        public static bool DnsCompare(out string cur, out double curMs, out double bestMs, out string bestName)
+        {
+            cur = CurrentDns(); curMs = -1; bestMs = -1; bestName = null;
+            try
+            {
+                if (cur != null) curMs = DnsBench.QueryMs(cur, "www.google.com", 900, 3);
+                double cf = DnsBench.QueryMs("1.1.1.1", "www.google.com", 900, 3);
+                double gg = DnsBench.QueryMs("8.8.8.8", "www.google.com", 900, 3);
+                if (cf >= 0 && (gg < 0 || cf <= gg)) { bestMs = cf; bestName = "Cloudflare (1.1.1.1)"; }
+                else if (gg >= 0) { bestMs = gg; bestName = "Google (8.8.8.8)"; }
+            }
+            catch { }
+            return curMs >= 0 || bestMs >= 0;
+        }
+
+        // ------------------------------------------------------------------
+        //  DNS — le serveur qui traduit les noms en adresses (souvent négligé)
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MeasureDns()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Test de ton DNS"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                string cur; double curMs, bestMs; string bestName;
+                if (!DnsCompare(out cur, out curMs, out bestMs, out bestName))
+                    return Say("Impossible de tester le DNS à l'instant (hors-ligne ?). Réessaie une fois connecté.");
+                var sb = new StringBuilder();
+                sb.Append("• Ton DNS actuel").Append(cur != null ? " (" + cur + ")" : "").Append(" : ")
+                  .Append(curMs >= 0 ? curMs.ToString("0") + " ms" : "ne répond pas").Append('\n');
+                if (bestMs >= 0) sb.Append("• ").Append(bestName).Append(" : ").Append(bestMs.ToString("0")).Append(" ms (gratuit)\n\n");
+                if (curMs < 0 && bestMs >= 0)
+                    sb.Append("⚠ Ton DNS ne répond pas alors qu'internet marche : change-le, c'est gratuit et immédiat.");
+                else if (curMs >= 0 && bestMs >= 0 && curMs > bestMs * 2 && curMs - bestMs >= 15)
+                    sb.Append("⚠ Ton DNS traîne : chaque site, chaque boutique en jeu attend cette traduction. "
+                            + "Le panneau DNS rapide bascule vers le plus rapide — gratuit et réversible.");
+                else
+                    sb.Append("✅ Ton DNS répond bien — rien à gagner de ce côté.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
+        //  Démarrage — ce qui se lance à chaque allumage
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MeasureStartup()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Inventaire du démarrage"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                List<Sys.StartupEntry> list;
+                try { list = Sys.ListStartup(); }
+                catch { return Say("Je n'ai pas pu lire la liste de démarrage."); }
+                var on = new List<Sys.StartupEntry>();
+                foreach (var e in list) if (e.Enabled) on.Add(e);
+                var sb = new StringBuilder();
+                sb.Append(on.Count).Append(" programme(s) se lancent à CHAQUE allumage :\n");
+                for (int i = 0; i < on.Count && i < 6; i++)
+                    sb.Append("• ").Append(on[i].Name).Append(on[i].Machine ? "  (tous les utilisateurs)" : "").Append('\n');
+                if (on.Count > 6) sb.Append("• … et ").Append(on.Count - 6).Append(" autres\n");
+                sb.Append('\n');
+                if (on.Count >= 8) sb.Append("⚠ C'est beaucoup : chacun ralentit l'allumage ET reste souvent en fond ensuite. "
+                                           + "Le panneau « Programmes au démarrage » permet d'en couper — gratuit, réversible, sans rien désinstaller.");
+                else if (on.Count <= 3) sb.Append("✅ Démarrage léger — rien à couper d'urgence.");
+                else sb.Append("Raisonnable. Tu peux quand même couper ceux que tu n'utilises pas tous les jours (réversible).");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
+        //  Crashs — le relevé des 14 derniers jours (GPU + applications)
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MeasureCrashes()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Relevé des crashs (14 j)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                int gpu = -1; List<CrashEvent> evs = null;
+                try { gpu = CrashScan.GpuDriverErrors(14); } catch { }
+                try { evs = CrashScan.Recent(14); } catch { }
+                var sb = new StringBuilder("Relevé des 14 derniers jours (journaux Windows) :\n");
+                sb.Append("• Pilote graphique : ").Append(gpu < 0 ? "illisible" : gpu + " erreur(s)").Append('\n');
+                sb.Append("• Applications : ").Append(evs == null ? "illisible" : evs.Count + " crash(s)/blocage(s)").Append('\n');
+                if (evs != null)
+                    for (int i = 0; i < evs.Count && i < 3; i++)
+                        sb.Append("   – ").Append(evs[i].Time.ToString("dd/MM HH:mm")).Append("  ").Append(evs[i].Kind)
+                          .Append(" : ").Append(evs[i].Detail).Append(evs[i].IsGame ? "  🎮" : "").Append('\n');
+                sb.Append('\n');
+                bool gameCrash = false; if (evs != null) foreach (var e in evs) if (e.IsGame) gameCrash = true;
+                if (gpu > 0)
+                    sb.Append("⚠ Des erreurs du pilote GPU : c'est la piste n°1 (« dispositif de rendu perdu »). "
+                            + "Gratuit : surveille la température (panneau Températures), et pilote réinstallé proprement avec DDU si ça persiste.");
+                else if (gameCrash)
+                    sb.Append("⚠ Des jeux crashent alors que le pilote GPU est propre : pense bibliothèques manquantes "
+                            + "(je peux vérifier : dis « vérifie mes bibliothèques ») et stress-test gratuit (OCCT) pour tester la stabilité.");
+                else if (evs != null && evs.Count == 0 && gpu == 0)
+                    sb.Append("✅ Aucun crash relevé — ta machine est stable sur la période.");
+                else
+                    sb.Append("Le panneau Stabilité date chaque événement précisément et repère les motifs.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
+        //  Latence — micro-mesure réelle (timer, gigue de Sleep, pics DPC)
+        // ------------------------------------------------------------------
+        public static DocAssistant.ChatAction MeasureLatency()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Mesure de latence (~5 s)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                BenchResult r;
+                try { r = Bench.Run(4, log); }
+                catch { return Say("La mesure de latence n'a pas pu se faire à l'instant."); }
+                var sb = new StringBuilder();
+                sb.Append("• Timer système : ").Append(r.TimerMs.ToString("0.0")).Append(" ms")
+                  .Append(r.TimerMs <= 1.05 ? "  ✅ (1 ms = idéal jeu)" : "  ⚠ (1 ms attendu en jeu)").Append('\n');
+                sb.Append("• Régularité (Sleep 1 ms réel) : moy ").Append(r.SleepAvgMs.ToString("0.00"))
+                  .Append(" ms · pire ").Append(r.SleepMaxMs.ToString("0.00")).Append(" ms\n");
+                if (r.DpcMax >= 0) sb.Append("• Pics DPC (pilotes) : ").Append(r.DpcMax.ToString("0.0")).Append(" % max\n");
+                sb.Append('\n');
+                if (r.DpcMax >= 8)
+                    sb.Append("⚠ Un pilote monopolise le processeur par à-coups (DPC élevés) — c'est LA cause des "
+                            + "micro-coupures de son et de souris. Le panneau « Latence en direct » identifie lequel, gratuitement.");
+                else if (r.TimerMs > 1.5)
+                    sb.Append("⚠ Le timer système est lent : l'optimisation « Timer 1 ms » de l'app corrige ça gratuitement.");
+                else if (r.SleepMaxMs >= 6)
+                    sb.Append("⚠ De grosses irrégularités ponctuelles : regarde ce qui tourne en fond (dis « qui ralentit mon pc »).");
+                else
+                    sb.Append("✅ Machine réactive et régulière — l'input lag ne vient pas de là.");
+                return Say(sb.ToString().TrimEnd());
+            };
+            return a;
         }
 
         // ------------------------------------------------------------------

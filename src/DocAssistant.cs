@@ -56,7 +56,8 @@ namespace BTOptimizer
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
                        "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) : "
                      + "je mesure en direct, je trouve les causes et je corrige — toujours avec ton accord, "
-                     + "et toujours gratuitement (je ne recommande jamais rien de payant).",
+                     + "et toujours gratuitement. Je réponds aussi aux questions : « c'est quoi le DLSS ? », "
+                     + "« à quoi sert XMP ? »…",
                 ShowStarters = true
             };
         }
@@ -90,6 +91,12 @@ namespace BTOptimizer
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
 
+            // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
+            {
+                Reply lx = Lexi(s, entries);
+                if (lx != null) return lx;
+            }
+
             // --- Lecture d'intentions (tolérante aux fautes de frappe, voir FuzzyWord) -------------
             bool iNet    = Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion", "wifi", "deco", "deconnect");
             bool iHogs   = Has(s, "qui ralentit", "processus", "en fond", "arriere plan", "arriere-plan", "quel programme", "quelle appli", "gourmand", "bouffe", "consomme");
@@ -97,7 +104,12 @@ namespace BTOptimizer
             bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu", "charge gpu", "surchauff");
             bool iClean  = Has(s, "espace", "disque plein", "nettoy", "liberer", "place disque", "temporaire", "saturé", "sature");
             bool iLibs   = Has(s, "dll", "manquante", "demarre pas", "refuse de demarrer", "visual c", "directx", "redist", "bibliotheque");
-            int hits = (iNet ? 1 : 0) + (iHogs ? 1 : 0) + (iScreen ? 1 : 0) + (iHeat ? 1 : 0) + (iClean ? 1 : 0) + (iLibs ? 1 : 0);
+            bool iDns    = Has(s, "dns", "resolution de nom");
+            bool iBoot   = Has(s, "demarrage", "boot", "startup", "allumage", "lent a demarrer", "long a demarrer", "s'allume");
+            bool iCrash  = Has(s, "crash", "plante", "bsod", "ecran bleu", "ferme tout seul", "rendu perdu", "dispositif de rendu");
+            bool iLat    = Has(s, "input lag", "latence", "reactivite", "micro coupure", "micro-coupure", "gresille", "dpc", "delai souris");
+            int hits = (iNet ? 1 : 0) + (iHogs ? 1 : 0) + (iScreen ? 1 : 0) + (iHeat ? 1 : 0) + (iClean ? 1 : 0) + (iLibs ? 1 : 0)
+                     + (iDns ? 1 : 0) + (iBoot ? 1 : 0) + (iCrash ? 1 : 0) + (iLat ? 1 : 0);
             // Symptôme ressenti (large) vs demande de bilan (méta) : les deux mènent à l'enquête,
             // mais seul le SYMPTÔME est assez fort pour élargir une intention précise en enquête.
             bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas", "perd des fps", "chute de fps");
@@ -154,15 +166,28 @@ namespace BTOptimizer
                 return new Reply
                 {
                     Text = "Tu décris plusieurs pistes à la fois — je préfère tout vérifier d'un coup. "
-                         + "Enquête complète : écrans, capteurs, connexion, processus en fond, disque, "
-                         + "bibliothèques, réglages néfastes, crashs pilote et optimisations. Quelques secondes…",
+                         + "Enquête complète (une quinzaine de mesures, adaptées à ta plainte). Quelques secondes…",
                     Action = Investigator.Action(q.Trim(), st)
                 };
+            // Demandes précises et fortes : leur mesure dédiée, même au milieu d'un symptôme large.
             if (iNet)
                 return WithAction(entries, "Qualité réseau",
                     "Je teste ta connexion en direct (échos réels)…", ChatActions.MeasurePing());
+            if (iDns)
+                return WithAction(entries, "DNS rapide",
+                    "Je chronomètre ton DNS contre les références gratuites…", ChatActions.MeasureDns());
+            if (iLat)
+                return WithAction(entries, "Latence en direct",
+                    "Je mesure la réactivité réelle de ta machine (~5 s : timer, régularité, pics pilotes)…",
+                    ChatActions.MeasureLatency());
+            if (iBoot)
+                return WithAction(entries, "Programmes au démarrage",
+                    "J'inventorie ce qui se lance à chaque allumage…", ChatActions.MeasureStartup());
             if (hits == 1 && !symptom)
             {
+                if (iCrash)
+                    return WithAction(entries, "Stabilité (14 j)",
+                        "Je relève les crashs des 14 derniers jours (pilote GPU + applications)…", ChatActions.MeasureCrashes());
                 if (iHogs)
                     return WithAction(entries, "Qui ralentit mon PC",
                         "Je mesure ce qui travaille en ce moment (1 seconde)…", ChatActions.MeasureHogs());
@@ -187,8 +212,9 @@ namespace BTOptimizer
             if (symptom || meta || hits == 1)
                 return new Reply
                 {
-                    Text = "Je lance l'enquête complète : écrans, capteurs, connexion, processus en fond, "
-                         + "disque, bibliothèques, réglages néfastes, crashs pilote et optimisations. Quelques secondes…",
+                    Text = "Je lance l'enquête complète : écrans, capteurs, connexion, processus en fond, disque, "
+                         + "bibliothèques, réglages néfastes, crashs pilote, RAM/XMP, pilote graphique, démarrage, "
+                         + "redémarrage en retard… Les mesures s'adaptent à ta plainte. Quelques secondes…",
                     Action = Investigator.Action(q.Trim(), st)
                 };
 
@@ -223,6 +249,57 @@ namespace BTOptimizer
             return r;
         }
 
+
+        // --- Lexique : notions gaming/PC expliquées simplement, outil lié tendu quand il existe.
+        //     Format : { "alias1;alias2", "définition", "outil du catalogue ou null" }.
+        private static readonly string[][] Lexicon =
+        {
+            new[] { "ddu", "DDU (Display Driver Uninstaller) : un outil GRATUIT qui désinstalle ton pilote graphique À FOND (restes compris) pour repartir sur une installation propre — le remède aux pilotes abîmés. Installable en 1 clic depuis les Bibliothèques.", "Bibliothèques de jeu" },
+            new[] { "gigue;jitter", "La gigue (jitter), c'est la VARIATION du ping d'une seconde à l'autre. Un 30 ms stable se joue très bien ; un ping qui saute de 20 à 80 ms rend le jeu irrégulier même si la moyenne semble bonne. En jeu, la stabilité compte plus que la moyenne.", "Qualité réseau" },
+            new[] { "vram", "La VRAM est la mémoire de ta carte graphique (textures, images en préparation). Quand elle déborde, le jeu pioche dans la RAM classique, bien plus lente → grosses saccades. Baisser la qualité des textures est le remède gratuit.", null },
+            new[] { "hags", "HAGS (planification GPU accélérée par matériel) : Windows confie la file d'attente du GPU… au GPU lui-même. Selon les jeux et pilotes, ça aide ou ça gêne — c'est l'une des optimisations réversibles de l'app.", null },
+            new[] { "dpc", "Les DPC sont des mini-tâches que les PILOTES exécutent en priorité absolue. Un pilote mal écrit y traîne → micro-coupures de son et de souris. Dis « mesure ma latence » et je regarde tes pics DPC en vrai.", "Latence en direct" },
+            new[] { "xmp;expo", "XMP (Intel) / EXPO (AMD) : le profil qui fait tourner ta RAM à sa VRAIE vitesse. Sans lui (réglage d'usine), ta RAM tourne bridée. Ça s'active dans le BIOS en 2 minutes — des FPS gratuits que tu as déjà payés.", null },
+            new[] { "vsync;v-sync", "La V-Sync synchronise le jeu sur l'écran pour éviter les images déchirées — au prix d'input lag. En compétitif on la coupe, et on préfère G-Sync/FreeSync + une limite de FPS.", null },
+            new[] { "gsync;g-sync;freesync", "G-Sync / FreeSync : l'écran s'adapte au rythme du jeu (au lieu de l'inverse) → fluide SANS l'input lag de la V-Sync. Ça s'active dans le panneau NVIDIA/AMD et le menu de l'écran.", "Réglages d'écran" },
+            new[] { "dlss;fsr;upscaling", "DLSS (NVIDIA) / FSR (AMD) : le jeu calcule l'image en plus petit et l'algorithme l'agrandit proprement → beaucoup de FPS gagnés pour une perte visuelle minime. GRATUIT — à activer dans les options du jeu.", null },
+            new[] { "hpet", "Le HPET est un timer matériel. Le FORCER (vieux « guides boost ») ajoute de la latence — un mythe tenace. L'app détecte et répare ce réglage néfaste gratuitement.", "Réglages néfastes" },
+            new[] { "trim", "Le TRIM dit au SSD quelles cases sont libres, pour qu'il reste rapide dans la durée. Certains « optimiseurs » le coupent — l'app le détecte et le réactive gratuitement.", "Réglages néfastes" },
+            new[] { "pagefile;fichier d'echange", "Le fichier d'échange est le débordement de la RAM sur le disque. Le désactiver (mauvais conseil courant) fait planter les jeux gourmands (« out of memory »). On le laisse géré par Windows.", "Réglages néfastes" },
+            new[] { "throttling;bridage", "Le throttling, c'est ton matériel qui SE BRIDE pour ne pas surchauffer : les FPS s'effondrent d'un coup en pleine partie. Causes classiques : poussière, flux d'air, pâte thermique sèche. Remèdes d'abord gratuits.", "Températures & throttling" },
+            new[] { "polling", "Le polling, c'est la fréquence à laquelle ta souris parle au PC : 1000 Hz = toutes les 1 ms. Une souris restée à 125 Hz ajoute ~7 ms d'input lag — vérifie la tienne en direct.", "Fréquence de la souris" },
+            new[] { "mpo", "MPO (Multi-Plane Overlay) : Windows compose certaines fenêtres directement dans l'écran. Bugué sur certains pilotes → scintillements et saccades en fenêtré. L'app propose le réglage inverse, réversible.", null },
+            new[] { "input lag", "L'input lag est le délai entre ton geste et l'effet à l'écran : souris → jeu → GPU → écran. Chaque maillon compte : polling souris, file d'images, V-Sync, mode plein écran, fréquence de l'écran. Dis « mesure ma latence » pour du concret.", "Latence en direct" },
+            new[] { "overlay", "Un overlay est une appli qui se dessine PAR-DESSUS ton jeu (Discord, GeForce Experience, Medal…). Chacun coûte des FPS et peut créer des conflits. En couper est un gain gratuit.", "Qui ralentit mon PC" },
+            new[] { "runtime;redist;redistributable", "Les runtimes (Visual C++, DirectX, .NET) sont des briques Microsoft GRATUITES dont les jeux dépendent. Il en manque une → le jeu refuse de démarrer (erreur dll). L'app les installe en 1 clic.", "Bibliothèques de jeu" },
+            new[] { "smart;s.m.a.r.t", "Le S.M.A.R.T., c'est l'auto-diagnostic des disques : usure SSD, secteurs défaillants… L'app le lit nativement et te prévient AVANT la panne — sauvegarde tes données au premier ⚠.", "Jeux & disques" },
+            new[] { "nagle", "L'algorithme de Nagle regroupe les petits paquets réseau pour économiser la bande passante — bien pour le web, mauvais pour le jeu (il retarde tes actions). L'app propose le réglage anti-Nagle, réversible.", "Réglages TCP/IP" },
+        };
+
+        /// <summary>« C'est quoi X ? » (ou juste « X ? ») → définition claire + l'outil lié.
+        /// Un terme seulement CITÉ dans une vraie phrase ne déclenche pas le cours.</summary>
+        private static Reply Lexi(string s, List<HelpCatalog.Entry> entries)
+        {
+            bool asks = Has(s, "c'est quoi", "cest quoi", "c est quoi", "ca veut dire", "sa veut dire",
+                               "definition", "explique moi", "a quoi sert", "ca sert a quoi", "kesako", "kezako");
+            string[] w = SplitWords(s);
+            // Sans question explicite, seul un message d'UN mot (« ddu », « xmp ») vaut demande de
+            // définition — un terme cité dans une phrase suit le routage normal (mesures d'abord).
+            if (!asks && w.Length != 1) return null;
+            foreach (var e in Lexicon)
+            {
+                foreach (var raw in e[0].Split(';'))
+                {
+                    string k = raw.Trim();
+                    bool hit = k.IndexOf(' ') >= 0 ? FuzzyKey(w, k) : FuzzyWord(w, k);
+                    if (!hit) continue;
+                    var r = new Reply { Text = e[1] };
+                    if (e[2] != null) foreach (var t in entries) if (t.Tool == e[2]) { r.Tool = t; break; }
+                    return r;
+                }
+            }
+            return null;
+        }
 
         private static int Score(string q, HelpCatalog.Entry e)
         {

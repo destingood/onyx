@@ -384,6 +384,8 @@ namespace BTOptimizer
             ("Le PC chauffe", "le pc ou le gpu chauffe et bride"),
             ("Qui bouffe mon CPU ?", "quel programme consomme mon cpu en fond"),
             ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
+            ("PC lent à s'allumer", "mon pc est long a demarrer, trop de programmes au boot"),
+            ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
             ("Libérer de l'espace", "libérer de l'espace disque"),
         };
 
