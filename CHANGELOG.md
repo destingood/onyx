@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.59 — Dépanneur PC universel : bien au-delà du gaming
+Le Copilote ne se limite plus aux soucis de jeu — il aide à réparer un PC quel que soit le
+problème, avec les grandes réparations gratuites et officielles :
+- **« répare Windows »** → DISM /RestoreHealth + SFC /scannow : LE remède aux corruptions
+  système (crashs qui persistent, MAJ qui échoue, apps qui ne s'ouvrent plus). Gratuit, sans
+  risque.
+- **« plus d'internet »** → réinitialisation de la pile réseau (Winsock + TCP/IP + DNS/ARP,
+  commandes officielles Windows) : répare la plupart des connexions coupées par un VPN ou un
+  antivirus, avec redémarrage proposé pour finaliser.
+- **« plus de son »** → relance du moteur audio (services Windows) : le son revient sans
+  redémarrer.
+- **écran bleu / BSOD** → réparation Windows + relevé des plantages datés, et lecture du
+  « code d'arrêt » si tu le donnes.
+- **Ce que le logiciel NE PEUT PAS faire depuis Windows** (PC qui ne démarre pas, écran noir,
+  périphérique USB/Bluetooth/imprimante mort) → **guides sûrs pas-à-pas** : câble/entrée écran,
+  reset d'alimentation, mode sans échec, réinstallation de pilote, ré-appairage… puis « dis-moi
+  où ça bloque et je continue avec toi ».
+- 3 pastilles d'accueil (Réparer Windows · Plus de son · Plus d'internet) ; `Sys.RestartService`.
+- Et pour tout le reste, l'IA locale prend le relais (si activée).
+
 ## v14.58 — Il répond à TOUT, et il assume ses doutes
 - **Répond à n'importe quelle question** : dès que l'IA locale est active, tout ce que les
   règles ne traitent pas AVEC CERTITUDE part vers le modèle — y compris un signal PC faible

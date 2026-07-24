@@ -821,6 +821,16 @@ namespace BTOptimizer
         public static void StopService(string name) { Run(Sys32("sc.exe"), "stop " + name); }
         public static void StartService(string name) { Run(Sys32("sc.exe"), "start " + name); }
 
+        /// <summary>Arrête puis redémarre un service (courte attente entre les deux). Utilisé pour
+        /// les réparations « à chaud » (audio, etc.). Un service qui refuse de s'arrêter n'empêche
+        /// pas la tentative de démarrage.</summary>
+        public static void RestartService(string name)
+        {
+            try { StopService(name); } catch { }
+            try { System.Threading.Thread.Sleep(1200); } catch { }
+            try { StartService(name); } catch { }
+        }
+
         public static void SetScheduledTask(string taskPath, bool enable)
         {
             Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));

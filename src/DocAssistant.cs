@@ -61,10 +61,10 @@ namespace BTOptimizer
             return new Reply
             {
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
-                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) : "
-                     + "je mesure en direct, je trouve les causes et je corrige — toujours avec ton accord, "
-                     + "et toujours gratuitement. Je réponds aussi aux questions : « c'est quoi le DLSS ? », "
-                     + "« à quoi sert XMP ? »…" + brain,
+                       "\nDis-moi ce qui cloche — je dépanne ton PC quel que soit le souci : jeux qui rament, plus de "
+                     + "son, plus d'internet, Windows corrompu, écran noir, ça crash… je mesure, je répare (gratuitement, "
+                     + "avec ton accord), et pour ce que le logiciel ne peut pas faire seul, je te guide pas à pas. "
+                     + "Je réponds aussi aux questions : « c'est quoi le DLSS ? »…" + brain,
                 ShowStarters = true
             };
         }
@@ -138,6 +138,13 @@ namespace BTOptimizer
                     Text = "Je te prépare l'audit complet — un clic, rien n'est modifié au système :",
                     Action = ChatActions.MakeReport()
                 };
+
+            // --- DÉPANNAGE PC (au-delà du gaming) : les grandes réparations gratuites, et des
+            //     guides sûrs pour ce que le logiciel ne peut pas faire seul. ---
+            {
+                Reply fx = RepairRouter(s);
+                if (fx != null) return fx;
+            }
             if (iPrep)
                 return new Reply
                 {
@@ -293,6 +300,88 @@ namespace BTOptimizer
                      + "ou dis « active l'ia » : un cerveau IA local (gratuit, 100 % sur ta machine) qui répond à tout.",
                 ShowStarters = true
             };
+        }
+
+        /// <summary>Dépannage PC universel : un souci grave (son, internet, Windows corrompu,
+        /// écran noir…) → la grande réparation gratuite quand elle existe, sinon un guide sûr,
+        /// pas-à-pas. Renvoie null si ce n'est pas un cas de dépannage (on continue le routage).</summary>
+        private static Reply RepairRouter(string s)
+        {
+            // « Plus de son »
+            if (Has(s, "pas de son", "plus de son", "aucun son", "son coupe", "audio ne marche", "pas d'audio", "muet"))
+                return new Reply
+                {
+                    Text = "Pas de son — je commence par le plus efficace : relancer le moteur audio de Windows (le son "
+                         + "revient sans redémarrer). Si ça ne suffit pas, on vérifiera le périphérique de sortie.",
+                    Action = ChatActions.RepairAudio()
+                };
+
+            // « Plus d'internet » (coupé, pas de connexion — distinct de « ça lag »)
+            if (Has(s, "plus d'internet", "pas d'internet", "pas de connexion", "aucune connexion", "internet coupe",
+                       "connexion coupee", "pas de wifi", "wifi marche pas", "reseau marche pas", "pas de reseau"))
+                return new Reply
+                {
+                    Text = "Connexion coupée alors que tout semble branché — le remède standard : réinitialiser la pile "
+                         + "réseau de Windows (Winsock + TCP/IP + DNS). Souvent laissé cassé par un VPN ou un antivirus. "
+                         + "Un redémarrage finalise.",
+                    Action = ChatActions.RepairNetwork()
+                };
+
+            // Windows corrompu / MAJ qui échoue / apps qui ne s'ouvrent plus / réparer Windows
+            if (Has(s, "repare windows", "reparer windows", "windows corrompu", "fichiers systeme", "sfc", "dism",
+                       "mise a jour echoue", "maj echoue", "windows update marche pas", "0x", "apps s'ouvrent plus",
+                       "rien ne s'ouvre", "windows bug", "restaurer windows"))
+                return new Reply
+                {
+                    Text = "Ça sent la corruption système (la cause n°1 des soucis « impossibles à régler »). Je lance les "
+                         + "réparateurs officiels de Windows, DISM puis SFC — gratuit, sans risque, mais compte 10-20 min.",
+                    Action = ChatActions.RepairWindows()
+                };
+
+            // Écran noir / ne démarre pas / ne boote pas → GUIDE (le logiciel ne peut rien faire depuis Windows)
+            if (Has(s, "ne demarre pas", "demarre plus", "ne s'allume pas", "ecran noir", "pas d'affichage", "aucun affichage",
+                       "boot", "ne boote pas", "reste sur le logo", "bloque au demarrage"))
+                return new Reply
+                {
+                    Text = "Un PC qui ne démarre pas ou reste noir, ça se règle AVANT Windows — voici les gestes sûrs et "
+                         + "gratuits, dans l'ordre :\n\n"
+                         + "1. Écran : bon câble (HDMI/DP), bonne entrée, et branché sur la CARTE GRAPHIQUE (pas la carte mère).\n"
+                         + "2. Courant : teste une autre prise ; sur PC portable, laisse le chargeur 15 min puis rallume.\n"
+                         + "3. Reset d'alim : PC éteint, débranche, garde le bouton power appuyé 15 s, rebranche, rallume.\n"
+                         + "4. Écran noir APRÈS le logo Windows : force 3 arrêts par le bouton → Windows ouvre la "
+                         + "réparation automatique. Choisis « Mode sans échec » et dis-le-moi : de là, je peux agir.\n"
+                         + "5. RAM : PC débranché, ré-enfonce bien les barrettes (clic des deux côtés).\n\n"
+                         + "Dis-moi à quelle étape ça bloque et ce que tu vois — je continue avec toi.",
+                    ShowStarters = false
+                };
+
+            // Écran bleu / BSOD
+            if (Has(s, "ecran bleu", "bsod", "blue screen", "stop code", "code d'arret", "code arret"))
+                return new Reply
+                {
+                    Text = "Un écran bleu, c'est Windows qui s'arrête pour se protéger — souvent un PILOTE ou la corruption "
+                         + "système. Le plan gratuit : d'abord je répare l'intégrité de Windows (DISM + SFC), et je peux "
+                         + "relever tes derniers plantages datés. Si tu as noté le « code d'arrêt » (ex. "
+                         + "IRQL_NOT_LESS_OR_EQUAL), donne-le-moi, il pointe la cause.",
+                    Action = ChatActions.RepairWindows()
+                };
+
+            // Périphérique USB / Bluetooth / imprimante → GUIDE court (matériel/pilote)
+            if (Has(s, "bluetooth marche pas", "pas de bluetooth", "usb marche pas", "peripherique", "manette marche pas",
+                       "clavier marche pas", "souris marche pas", "imprimante", "casque marche pas", "micro marche pas"))
+                return new Reply
+                {
+                    Text = "Périphérique qui ne répond pas — les réflexes gratuits qui marchent 8 fois sur 10 :\n\n"
+                         + "1. Débranche/rebranche (autre port USB, de préférence à l'arrière du PC fixe).\n"
+                         + "2. Bluetooth : retire l'appareil puis re-apparie-le ; vérifie qu'il est bien en mode appairage.\n"
+                         + "3. Pilote : clic droit sur Démarrer → Gestionnaire de périphériques → l'appareil avec un ⚠ → "
+                         + "« Désinstaller », puis débranche/rebranche : Windows réinstalle le pilote proprement.\n"
+                         + "4. Sans fil : change les piles / recharge, et rapproche le récepteur.\n\n"
+                         + "Dis-moi lequel et ce qu'il fait (rien ? clignote ? détecté mais muet ?) et je précise.",
+                    ShowStarters = false
+                };
+
+            return null;
         }
 
         private static Reply WithTool(List<HelpCatalog.Entry> entries, string toolName, string text)
