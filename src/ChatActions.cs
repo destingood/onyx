@@ -647,6 +647,111 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Cerveau IA LOCAL (optionnel, gratuit) — « il répond à tout »
+        // ------------------------------------------------------------------
+        /// <summary>Inspecte l'état (Ollama installé ? serveur ? modèle ?) et propose la BONNE
+        /// prochaine étape — active le cerveau dès que tout est prêt.</summary>
+        public static DocAssistant.ChatAction SetupBrain()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "État de l'IA locale"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (LocalBrain.ServerUp(1500))
+                {
+                    string m = LocalBrain.BestModel();
+                    if (m != null)
+                    {
+                        LocalBrain.SetEnabled(true);
+                        return Say("🧠 IA locale ACTIVÉE (" + m + ") — gratuite, 100 % sur ta machine, rien ne sort du PC.\n"
+                                 + "Désormais, tout ce que mes règles ne comprennent pas, je le lui demande — pose-moi "
+                                 + "n'importe quelle question ! (« désactive l'ia » pour couper.)");
+                    }
+                    var r0 = Say("Ollama tourne, mais aucun modèle n'est téléchargé. Je peux m'en charger "
+                               + "(llama3.2:3b, ≈ 2 Go, gratuit, une seule fois — il tourne ensuite hors-ligne) :");
+                    r0.Action = PullModel();
+                    return r0;
+                }
+                if (LocalBrain.OllamaExe() != null)
+                    return Say("Ollama est installé mais son serveur ne tourne pas : lance « Ollama » depuis le menu "
+                             + "Démarrer (il s'installe dans la zone de notification), puis redis « active l'ia ».");
+                var r = Say("Pour me donner un cerveau IA local — gratuit, open source, 100 % sur ta machine, aucune "
+                          + "donnée envoyée, aucun abonnement — il me faut Ollama :");
+                r.Action = InstallTool("Ollama.Ollama", "Ollama (IA locale)");
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Télécharge le petit modèle multilingue de référence (une seule fois).</summary>
+        public static DocAssistant.ChatAction PullModel()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Télécharger le modèle (≈ 2 Go, gratuit)";
+            a.IsChange = true;
+            a.Warning = "Télécharge llama3.2:3b via Ollama (une seule fois, ≈ 2 Go). Le modèle tourne ensuite 100 % "
+                      + "hors-ligne sur ta machine. Peut prendre plusieurs minutes selon ta connexion.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
+                if (log != null) log("Téléchargement du modèle llama3.2:3b (Ollama)…", 0);
+                try { Sys.Run(exe, "pull llama3.2:3b"); }
+                catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
+                if (LocalBrain.BestModel() != null)
+                {
+                    LocalBrain.SetEnabled(true);
+                    return Say("🧠 Modèle prêt — IA locale ACTIVÉE. Pose-moi n'importe quelle question !");
+                }
+                return Say("Le modèle ne s'est pas installé (connexion ? espace disque ?). Réessaie dans un moment.");
+            };
+            return a;
+        }
+
+        /// <summary>Passe la question au modèle LOCAL (lecture seule : ça ne modifie rien).</summary>
+        public static DocAssistant.ChatAction AskBrain(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Je réfléchis (IA locale)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (!LocalBrain.ServerUp(1500))
+                    return Say("Mon cerveau IA local ne répond pas : lance Ollama (menu Démarrer), puis repose ta "
+                             + "question. (« active l'ia » refait le point si besoin.)");
+                string model = LocalBrain.BestModel();
+                if (model == null)
+                {
+                    var r0 = Say("Ollama tourne mais aucun modèle n'est téléchargé — je peux m'en charger :");
+                    r0.Action = PullModel();
+                    return r0;
+                }
+                if (log != null) log("IA locale (" + model + ") réfléchit…", 0);
+                string ans;
+                try { ans = LocalBrain.Ask(q, BrainContext(st), model); }
+                catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
+                if (string.IsNullOrEmpty(ans))
+                    return Say("L'IA locale n'a rien répondu — reformule, ou pose-moi un souci PC : là, je suis imbattable.");
+                return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
+            };
+            return a;
+        }
+
+        // Le contexte donné au modèle : rôle, règles d'honnêteté, capacités de l'app, état du PC.
+        private static string BrainContext(BadgeCatalog.Stats st)
+        {
+            var sb = new StringBuilder();
+            sb.Append("Tu es « le Copilote » de Fluide, l'assistant PC gaming qui tourne 100 % en local sur le PC de l'utilisateur. ");
+            sb.Append("Réponds en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
+            sb.Append("Sois honnête : si tu n'es pas sûr, dis-le. N'invente JAMAIS une mesure ou un état du PC. ");
+            sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit être gratuit. ");
+            sb.Append("L'app sait déjà faire (suggère la phrase quand c'est pertinent) : « fais un bilan complet » (enquête + réparations 1 clic), ");
+            sb.Append("« mesure mon ping », « qui bouffe mon cpu », « mesure ma latence », « prépare ma partie », « génère le rapport », « libère de l'espace ». ");
+            if (st != null)
+                sb.Append("État réel du PC : santé " + st.Health + " %, " + st.OptiActive + "/" + st.OptiTotal
+                        + " optimisations actives, " + st.GamesDet + " jeu(x) détecté(s). ");
+            return sb.ToString();
+        }
+
+        // ------------------------------------------------------------------
         //  Rapport HTML — l'audit complet, généré depuis la conversation
         // ------------------------------------------------------------------
         public static DocAssistant.ChatAction MakeReport()
