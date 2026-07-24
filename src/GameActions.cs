@@ -38,8 +38,12 @@ namespace BTOptimizer
                 string cmd = GameLibrary.UninstallCommand(name);
                 if (!string.IsNullOrEmpty(cmd))
                 {
-                    Process.Start(new ProcessStartInfo("cmd.exe", "/c start \"\" " + cmd)
-                    { UseShellExecute = true, CreateNoWindow = true });
+                    // Lance le désinstalleur DIRECTEMENT (sans passer par cmd.exe). Faire lancer
+                    // cmd.exe avec une commande dynamique par un exe non signé est un motif que
+                    // Smart App Control / SmartScreen fichent comme suspect (« living off the land »).
+                    string exe, args;
+                    SplitCommand(cmd, out exe, out args);
+                    Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true });
                     return true;
                 }
 
@@ -59,6 +63,21 @@ namespace BTOptimizer
                     "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
+        }
+
+        /// <summary>Découpe une ligne de commande « "chemin\exe" args » en exe + arguments,
+        /// pour lancer le désinstalleur directement (sans cmd.exe).</summary>
+        private static void SplitCommand(string cmd, out string exe, out string args)
+        {
+            cmd = (cmd ?? "").Trim();
+            if (cmd.StartsWith("\""))
+            {
+                int end = cmd.IndexOf('"', 1);
+                if (end > 0) { exe = cmd.Substring(1, end - 1); args = cmd.Substring(end + 1).Trim(); return; }
+            }
+            int sp = cmd.IndexOf(' ');
+            if (sp > 0) { exe = cmd.Substring(0, sp); args = cmd.Substring(sp + 1).Trim(); }
+            else { exe = cmd; args = ""; }
         }
 
         /// <summary>Ouvre le dossier d'installation dans l'Explorateur.</summary>
