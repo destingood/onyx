@@ -356,15 +356,17 @@ namespace BTOptimizer
                 var f = new GameDetailForm(g, Host.Log);
                 f.TopLevel = false;
                 f.FormBorderStyle = FormBorderStyle.None;
+                f.StartPosition = FormStartPosition.Manual;   // CenterParent n'a aucun sens intégré
                 f.Dock = DockStyle.Fill;
-                // « Fermer » et « ‹ BIBLIOTHÈQUE » appellent Close() : on l'intercepte
-                // pour revenir à la grille au lieu de détruire la page.
-                f.FormClosing += (s, e) => { e.Cancel = true; CloseDetail(); };
+                // « Fermer » et « ‹ BIBLIOTHÈQUE » appellent Close() : on l'intercepte pour
+                // revenir à la grille. Le retrait/Dispose est DIFFÉRÉ (BeginInvoke) : détruire
+                // une Form pendant son propre FormClosing laisse une fenêtre fantôme.
+                f.FormClosing += (s, e) => { e.Cancel = true; try { BeginInvoke((Action)CloseDetail); } catch { } };
                 _detail = f;
-                Controls.Add(f);
-                f.BringToFront();
-                f.Show();
                 ShowLibraryChrome(false);
+                Controls.Add(f);
+                f.Show();
+                f.BringToFront();
             }
             catch { CloseDetail(); }
         }
@@ -373,8 +375,10 @@ namespace BTOptimizer
         {
             if (_detail == null) return;
             var f = _detail; _detail = null;
-            try { Controls.Remove(f); f.Dispose(); } catch { }
             ShowLibraryChrome(true);
+            try { Controls.Remove(f); } catch { }
+            try { f.Dispose(); } catch { }
+            try { if (_flow != null) _flow.BringToFront(); } catch { }
         }
 
         private void ShowLibraryChrome(bool on)

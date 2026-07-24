@@ -16,6 +16,11 @@
     <ApplicationManifest>src\app.manifest</ApplicationManifest>
     <ApplicationIcon>src\app.ico</ApplicationIcon>
 
+    <!-- Prise en charge du DPI : WinForms exige de la déclarer ici plutôt que dans le manifeste
+         (WFO0003). SystemAware = strict équivalent de l'ancien <dpiAware>true</dpiAware>, donc
+         AUCUN changement de rendu. -->
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+
     <!-- Seuls les .cs de src\ sont du code applicatif. -->
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>

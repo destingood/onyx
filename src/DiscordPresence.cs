@@ -110,11 +110,19 @@ namespace BTOptimizer
 
         private static void ReadFrame()
         {
+            // Un pipe peut rendre MOINS d'octets que demandé : un seul Read() tronquait
+            // silencieusement l'en-tête (donc la longueur lue était fausse), et le corps était
+            // lu partiellement en laissant des octets dans le tuyau — de quoi désynchroniser
+            // toutes les trames suivantes. ReadExactly boucle jusqu'à complétion et lève si le
+            // flux se termine avant : les catch reproduisent l'ancien « on abandonne » (CA2022).
             byte[] head = new byte[8];
-            int n = _pipe.Read(head, 0, 8);
-            if (n < 8) return;
+            try { _pipe.ReadExactly(head, 0, 8); } catch { return; }
+
             int len = BitConverter.ToInt32(head, 4);
-            if (len > 0 && len < 65536) { byte[] buf = new byte[len]; _pipe.Read(buf, 0, len); }
+            if (len <= 0 || len >= 65536) return;
+
+            byte[] buf = new byte[len];
+            try { _pipe.ReadExactly(buf, 0, len); } catch { }
         }
 
         private static void SendActivity()

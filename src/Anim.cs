@@ -16,7 +16,9 @@ namespace BTOptimizer
     internal static class Anim
     {
         /// <summary>Harnais de test : force l'absence totale d'animation (captures déterministes).</summary>
-        public static bool ForceOff;
+        /// <remarks>Initialisé explicitement : seul le harnais l'assigne (Program.cs, sous
+        /// compilation conditionnelle), le compilateur le croyait donc jamais assigné (CS0649).</remarks>
+        public static bool ForceOff = false;
 
         /// <summary>Recalculé par AnimSettings (choix utilisateur ET Windows ET pas en jeu).</summary>
         public static bool Enabled = true;
@@ -26,7 +28,9 @@ namespace BTOptimizer
 
         /// <summary>Jeton d'annulation : mettre Cancelled=true stoppe l'animation en cours
         /// (utilisé pour re-cibler une valeur, ex. survol entré puis ressorti avant la fin).</summary>
-        internal sealed class Handle { public bool Cancelled; }
+        /// <remarks>Initialisé explicitement : ce drapeau est destiné à être mis à true par
+        /// l'APPELANT qui détient le Handle, jamais depuis cette classe (d'où CS0649).</remarks>
+        internal sealed class Handle { public bool Cancelled = false; }
 
         private sealed class Item
         {

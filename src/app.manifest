@@ -17,11 +17,9 @@
       <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
     </application>
   </compatibility>
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
-    </windowsSettings>
-  </application>
+  <!-- La prise en charge du DPI n'est PLUS déclarée ici : WinForms exige désormais de la
+       configurer via <ApplicationHighDpiMode> dans le .csproj (avertissement WFO0003).
+       Équivalent conservé à l'identique : SystemAware == l'ancien <dpiAware>true</dpiAware>. -->
   <dependency>
     <dependentAssembly>
       <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls"
