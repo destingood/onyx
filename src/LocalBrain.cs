@@ -175,23 +175,30 @@ namespace BTOptimizer
 
                 if (!ServerUp(1500))
                 {
+                    // 1) DÉTECTE Ollama. Absent → on l'INSTALLE (winget, silencieux).
                     string exe = OllamaExe();
                     if (exe == null)
                     {
                         string winget = LibScan.WingetPath();
                         if (winget == null) { SetupStatus = null; return; }      // rien de silencieux possible
-                        if (FreeSystemGb() < 6) { SetupStatus = null; return; }  // on n'impose pas ~2 Go sans place
+                        if (FreeSystemGb() < 6) { SetupStatus = null; return; }  // on n'impose pas l'install sans place
                         SetupStatus = "installation d'Ollama (gratuit)";
-                        if (log != null) log("IA locale : installation d'Ollama (winget, gratuit)…", 0);
+                        if (log != null) log("IA locale : Ollama absent → installation (winget, gratuit)…", 0);
                         BumpTries();
                         Sys.Run(winget, "install --id Ollama.Ollama --exact --silent --accept-package-agreements --accept-source-agreements");
+                        for (int i = 0; i < 6 && OllamaExe() == null; i++) System.Threading.Thread.Sleep(1500); // laisse le disque se poser
                         exe = OllamaExe();
                         if (exe == null) { SetupStatus = null; return; }
+                        if (log != null) log("IA locale : Ollama installé (" + exe + ").", 1);
                     }
+                    else if (log != null) log("IA locale : Ollama déjà présent (" + exe + ") — pas de réinstallation.", 1);
+
+                    // 2) CONFIGURE : démarre le moteur et s'assure qu'il se relancera au boot.
                     SetupStatus = "démarrage du moteur IA";
                     TryStartServer(exe);
                     for (int i = 0; i < 20 && !ServerUp(1000); i++) System.Threading.Thread.Sleep(1000);
                     if (!ServerUp(1000)) { SetupStatus = null; return; }
+                    Configure(exe, log);
                 }
 
                 if (BestModel() == null)
@@ -211,6 +218,29 @@ namespace BTOptimizer
                 if (log != null) log("🧠 IA locale prête (installation automatique) — le Copilote répond maintenant à tout.", 1);
             }
             catch { SetupStatus = null; }
+        }
+
+        /// <summary>Configure Ollama pour qu'il soit toujours prêt : (1) l'appli de zone de
+        /// notification (« ollama app.exe ») démarre AVEC Windows via sa propre entrée Run — on la
+        /// pose si l'installeur ne l'a pas fait ; (2) le modèle reste chargé 30 min entre deux
+        /// questions (OLLAMA_KEEP_ALIVE, réglé par utilisateur) → réponses instantanées.</summary>
+        private static void Configure(string exe, Action<string, int> log)
+        {
+            try
+            {
+                string app = Path.Combine(Path.GetDirectoryName(exe) ?? "", "ollama app.exe");
+                if (File.Exists(app))
+                {
+                    object cur = Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Run", "Ollama");
+                    if (cur == null)
+                        Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\Run", "Ollama",
+                                    "\"" + app + "\"", Microsoft.Win32.RegistryValueKind.String);
+                }
+                // Garde le modèle en mémoire un moment : la 1re réponse « réveille », les suivantes sont immédiates.
+                Sys.SetUserEnv("OLLAMA_KEEP_ALIVE", "30m");
+                if (log != null) log("IA locale : Ollama configuré (démarrage auto + modèle gardé en mémoire).", 1);
+            }
+            catch { }
         }
 
         /// <summary>Démarre le moteur : l'appli de zone de notification si présente (survit à
@@ -365,18 +395,40 @@ namespace BTOptimizer
             return 8192;   // hypothèse prudente à défaut
         }
 
-        /// <summary>Chemin de l'exécutable Ollama installé, ou null (on tentera le PATH).</summary>
+        /// <summary>Détecte l'exécutable Ollama où qu'il soit installé (tous les emplacements
+        /// connus des différents installeurs + le PATH), ou null s'il est vraiment absent.
+        /// Robuste : évite de réinstaller un Ollama déjà présent ailleurs que le dossier par défaut.</summary>
         public static string OllamaExe()
         {
+            string[] cands =
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Ollama\ollama.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Ollama\ollama.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Ollama\ollama.exe"),
+            };
+            foreach (string p in cands) { try { if (File.Exists(p)) return p; } catch { } }
+            // Dernier recours : le PATH (« where ollama »).
             try
             {
-                string p = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                        @"Programs\Ollama\ollama.exe");
-                if (File.Exists(p)) return p;
+                var psi = new System.Diagnostics.ProcessStartInfo("where", "ollama")
+                { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
+                using (var pr = System.Diagnostics.Process.Start(psi))
+                {
+                    string outp = pr.StandardOutput.ReadToEnd();
+                    pr.WaitForExit(4000);
+                    foreach (string line in outp.Split('\n'))
+                    {
+                        string f = line.Trim();
+                        if (f.EndsWith("ollama.exe", StringComparison.OrdinalIgnoreCase) && File.Exists(f)) return f;
+                    }
+                }
             }
             catch { }
             return null;
         }
+
+        /// <summary>Vrai si Ollama est détecté sur la machine (installé), quel que soit l'emplacement.</summary>
+        public static bool Installed { get { return OllamaExe() != null; } }
 
         /// <summary>Pose la question au modèle local. BLOQUANT (à appeler en tâche de fond).</summary>
         public static string Ask(string question, string systemContext, string model)

@@ -100,6 +100,23 @@ namespace BTOptimizer
                 k.SetValue(name, val, kind);
         }
 
+        /// <summary>Variable d'environnement UTILISATEUR persistante (survit au redémarrage) :
+        /// écrite sous HKCU\Environment ET dans le process courant, sans écraser si déjà identique.</summary>
+        public static void SetUserEnv(string name, string value)
+        {
+            try
+            {
+                using (RegistryKey k = UserBase().CreateSubKey(UserPrefix() + "Environment"))
+                {
+                    object cur = k.GetValue(name);
+                    if (cur is string && string.Equals((string)cur, value, StringComparison.Ordinal)) return;
+                    k.SetValue(name, value, RegistryValueKind.String);
+                }
+                try { Environment.SetEnvironmentVariable(name, value); } catch { }
+            }
+            catch { }
+        }
+
         public static object GetUser(string sub, string name)
         {
             using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub))

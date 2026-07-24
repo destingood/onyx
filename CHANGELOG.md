@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.57 — Détection d'Ollama fiabilisée + vraie configuration
+- **Détecte Ollama où qu'il soit** : dossier utilisateur, Program Files (x86/x64) ET le PATH
+  (« where ollama ») — un Ollama déjà présent ailleurs n'est plus réinstallé par erreur.
+- **Installe s'il manque, configure toujours** : après installation (ou détection), l'app
+  **configure** Ollama pour qu'il soit toujours prêt :
+  - démarrage AUTOMATIQUE avec Windows (entrée Run « Ollama » posée si l'installeur ne l'a
+    pas fait — le moteur est là à chaque session sans rien lancer) ;
+  - modèle gardé en mémoire 30 min entre deux questions (OLLAMA_KEEP_ALIVE) → après la
+    première réponse, les suivantes sont quasi instantanées.
+- Journal explicite à chaque étape (« Ollama absent → installation », « déjà présent — pas de
+  réinstallation », « configuré : démarrage auto + modèle gardé en mémoire »).
+- `Sys.SetUserEnv` : variable d'environnement utilisateur persistante (n'écrase pas si identique).
+
 ## v14.56 — IA locale : modèle adapté à CHAQUE machine + consentement Oui/Non
 - **Le modèle est choisi selon la config du client** (VRAM du GPU + RAM détectées, sans
   pilote noyau — registre `qwMemorySize` tous constructeurs, repli capteurs/RAM). Barème
