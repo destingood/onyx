@@ -115,6 +115,18 @@ namespace BTOptimizer
                                   "session de jeu", "pregame", "pre-game", "pret a jouer", "checklist");
 
             // Commandes explicites (pas des symptômes) : traitées avant tout le reste.
+            // « désactive » AVANT « active » (l'un contient l'autre).
+            if (Has(s, "desactive l'ia", "desactiver l'ia", "coupe l'ia", "coupe ton ia", "sans ia"))
+            {
+                LocalBrain.SetEnabled(false);
+                return new Reply { Text = "IA locale désactivée — je reste sur mes règles (toujours 100 % local). Dis « active l'ia » pour la rallumer.", ShowStarters = true };
+            }
+            if (Has(s, "active l'ia", "activer l'ia", "active ton ia", "ia locale", "mon ia", "cerveau ia", "ollama", "intelligence artificielle"))
+                return new Reply
+                {
+                    Text = "Je vérifie l'état de mon cerveau IA local (gratuit, 100 % sur ta machine)…",
+                    Action = ChatActions.SetupBrain()
+                };
             if (iReport)
                 return new Reply
                 {
@@ -250,7 +262,21 @@ namespace BTOptimizer
                     Tool = best, ShowStarters = true
                 };
 
-            return new Reply { Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, ou choisis un souci courant :", ShowStarters = true };
+            // --- Dernier recours : le CERVEAU IA LOCAL (optionnel, gratuit) s'il est activé ---
+            //     Lecture seule : la question part vers le modèle qui tourne SUR cette machine.
+            if (LocalBrain.Enabled)
+                return new Reply
+                {
+                    Text = "Ça sort de mes règles — je passe la question à mon cerveau IA local…",
+                    Action = ChatActions.AskBrain(q.Trim(), st)
+                };
+
+            return new Reply
+            {
+                Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, choisis un souci courant — "
+                     + "ou dis « active l'ia » : un cerveau IA local (gratuit, 100 % sur ta machine) qui répond à tout.",
+                ShowStarters = true
+            };
         }
 
         private static Reply WithTool(List<HelpCatalog.Entry> entries, string toolName, string text)
@@ -297,6 +323,7 @@ namespace BTOptimizer
             new[] { "markc", "Le « MarkC fix » est la méthode historique pour désactiver TOTALEMENT l'accélération de la souris (déplacement 1:1). L'optimisation souris de l'app fait l'équivalent proprement — et c'est réversible.", "Fréquence de la souris" },
             new[] { "sharpness;nettete;sharpen", "Le filtre de netteté NVIDIA (sharpen) redonne du piqué à l'image, utile avec DLSS/upscaling. L'app propose le réglage communautaire qui ramène l'ANCIEN filtre par jeu (EnableGR535), réversible, dans Optimisations → GPU.", null },
             new[] { "wub;update blocker", "Windows Update Blocker (Wub) coupe le service de mise à jour : plus AUCUN correctif, même de sécurité — le PC accumule des failles connues. L'app le détecte dans « Réglages néfastes » et le répare en un clic.", "Réglages néfastes" },
+            new[] { "ollama;ia locale", "Ollama fait tourner des modèles d'IA GRATUITS et open source directement sur ta machine (ta carte graphique fait le travail) : rien n'est envoyé sur internet, aucun abonnement. C'est le cerveau étendu optionnel du Copilote — dis « active l'ia ».", null },
         };
 
         /// <summary>« C'est quoi X ? » (ou juste « X ? ») → définition claire + l'outil lié.
@@ -332,7 +359,9 @@ namespace BTOptimizer
             {
                 string k = Norm(kw);
                 if (k.Length < 3) continue;
-                if (q.Contains(k) || FuzzyKey(w, k)) sc += k.Length >= 5 ? 2 : 1;
+                // Même discipline que Has : pas de sous-chaîne globale sur un mot court.
+                bool hit = k.IndexOf(' ') >= 0 ? (q.Contains(k) || FuzzyKey(w, k)) : FuzzyWord(w, k);
+                if (hit) sc += k.Length >= 5 ? 2 : 1;
             }
             return sc;
         }
@@ -388,9 +417,17 @@ namespace BTOptimizer
             string[] w = null;
             foreach (var k in ks)
             {
-                if (s.Contains(k)) return true;
+                if (k.IndexOf(' ') >= 0)
+                {
+                    // Phrase : sous-chaîne exacte, sinon tous les mots présents (ordre libre).
+                    if (s.Contains(k)) return true;
+                    if (w == null) w = SplitWords(s);
+                    if (FuzzyKey(w, k)) return true;
+                    continue;
+                }
+                // Mot simple : JAMAIS de sous-chaîne globale — « blague » contiendrait « lag ».
                 if (w == null) w = SplitWords(s);
-                if (FuzzyKey(w, k)) return true;
+                if (FuzzyWord(w, k)) return true;
             }
             return false;
         }
@@ -416,10 +453,23 @@ namespace BTOptimizer
             int tol = k.Length >= 8 ? 2 : k.Length >= 5 ? 1 : 0;
             foreach (var w in words)
             {
-                if (w == k || (w.Length > k.Length && w.Contains(k))) return true;
+                if (w == k) return true;
+                // Sous-chaîne INTERNE réservée aux clés longues (« surchauffe » ⊃ « chauffe ») :
+                // sur les clés courtes elle créait des contresens (« blague » ⊃ « lag »).
+                if (k.Length >= 5 && w.Length > k.Length && w.Contains(k)) return true;
+                if (k.Length >= 3 && k.Length <= 4 && w.Length > k.Length && w.StartsWith(k, StringComparison.Ordinal)) return true; // « lags », « dlls »
+                if (UnitHit(w, k)) return true;                                       // « 60hz », « 144fps », « 1000hz »
                 if (tol > 0 && Math.Abs(w.Length - k.Length) <= tol && Lev(w, k, tol) <= tol) return true;
             }
             return false;
+        }
+
+        // Nombre collé à son unité : « 60hz » pour la clé « hz », « 240fps » pour « fps ».
+        private static bool UnitHit(string w, string k)
+        {
+            if (k.Length > 3 || w.Length <= k.Length || !w.EndsWith(k, StringComparison.Ordinal)) return false;
+            for (int i = 0; i < w.Length - k.Length; i++) if (!char.IsDigit(w[i])) return false;
+            return true;
         }
 
         /// <summary>Distance d'édition (Levenshtein) avec sortie anticipée au-delà de 'max'.</summary>

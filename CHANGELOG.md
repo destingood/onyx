@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.54 — Le cerveau IA 100 % LOCAL (optionnel, gratuit) : il répond à tout
+- **« active l'ia »** → le Copilote se branche sur **Ollama** (gratuit, open source) : un
+  modèle d'IA qui tourne **sur TA machine** (ta carte graphique fait le travail). Aucune
+  donnée envoyée, aucun abonnement, aucune clé — la promesse « 100 % local » tient.
+- **Répartition intelligente** : les règles répondent d'abord (mesures réelles, réparations,
+  lexique — imbattables sur le PC) ; tout ce qu'elles ne comprennent pas part vers l'IA
+  locale, qui connaît l'état réel du PC (santé, optimisations, jeux) et les commandes de
+  l'app — et qui a interdiction d'inventer des mesures ou de recommander du payant.
+- **Installation guidée depuis le chat** : Ollama absent → installation winget en un clic ;
+  aucun modèle → téléchargement de llama3.2:3b (≈ 2 Go, une fois) en un clic, progression
+  en direct. « désactive l'ia » coupe tout ; sans activation, RIEN ne change.
+- Ollama rejoint le catalogue 📦 Bibliothèques ; « c'est quoi ollama ? » au lexique.
+- Strictement OPT-IN : le seul trafic est vers 127.0.0.1 (ta propre machine).
+
 ## v14.53 — Le rapport d'audit depuis le chat + « Prépare ma partie »
 - **« génère le rapport » / « fais un audit »** → le Copilote produit le **rapport HTML
   complet** (matériel, toutes les optimisations, diagnostic santé) sur le Bureau et
