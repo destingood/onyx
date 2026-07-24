@@ -394,6 +394,17 @@ namespace BTOptimizer
                 }
             });
 
+            list.Add(new Tweak
+            {
+                Id = "svchost_group", Category = Cat.Systeme, Reboot = true,
+                Name = "Regrouper les services système (svchost) — moins de processus, un peu moins de RAM",
+                Desc = "Depuis Windows 10, chaque service tourne dans son propre processus svchost sur les PC de 3,5 Go de RAM ou plus (meilleure isolation, mais des dizaines de processus et un surcoût mémoire). Ce réglage les regroupe : moins de lignes dans le Gestionnaire des tâches et quelques dizaines de Mo de RAM récupérés. Contrepartie : un service fautif est un peu moins isolé. 100 % réversible (« Rétablir » remet le comportement Windows par défaut), effet au redémarrage.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control" },
+                Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB", unchecked((int)0xFFFFFFFF), RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB", 3670016, RegistryValueKind.DWord),
+                Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "SvcHostSplitThresholdInKB"), -1)
+            });
+
             // ================= RAPIDITÉ & DÉMARRAGE =================
             list.Add(new Tweak
             {

@@ -140,7 +140,10 @@ namespace BTOptimizer
             _status.ForeColor = Theme.InkDimColor;
             _status.Text = "Prêt.";
 
-            Controls.AddRange(new Control[] { intro, _btnAll, _status });
+            var btnWinapp2 = MakeBtn("🧩 Nettoyage avancé par application (règles winapp2.ini, mode sûr)…", 16, y + 52, 688, 34, false);
+            btnWinapp2.Click += (s, e) => { using (var f = new Winapp2Form(_log)) f.ShowDialog(this); };
+
+            Controls.AddRange(new Control[] { intro, _btnAll, _status, btnWinapp2 });
         }
 
         // --- Exécution ---------------------------------------------------------
