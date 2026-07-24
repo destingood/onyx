@@ -119,19 +119,37 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>Formats Steam essayés dans l'ordre. Tous les jeux n'ont PAS la jaquette
+        /// portrait (library_600x900) : sans repli, un jeu récent ou un portage sortait avec
+        /// une tuile vide alors que son bandeau existe. On dégrade donc proprement.</summary>
+        private static readonly string[] ArtFiles =
+        {
+            "library_600x900.jpg",   // vraie jaquette verticale
+            "library_600x900_2x.jpg",
+            "portrait.png",
+            "header.jpg",            // bandeau 460x215 — présent sur quasiment tous les jeux
+            "capsule_616x353.jpg"
+        };
+
         private static async Task<Image> DownloadAsync(int appId)
         {
-            try
+            if (_http == null)
+                lock (_lock) { if (_http == null) { var h = new HttpClient(); h.Timeout = TimeSpan.FromSeconds(8); _http = h; } }
+
+            foreach (string file in ArtFiles)
             {
-                if (_http == null)
-                    lock (_lock) { if (_http == null) { var h = new HttpClient(); h.Timeout = TimeSpan.FromSeconds(8); _http = h; } }
-                string url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/library_600x900.jpg";
-                byte[] data = await _http.GetByteArrayAsync(url).ConfigureAwait(false);
-                if (data == null || data.Length < 100) return null;
-                try { string p = DiskPath(appId); Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { }
-                return FromBytes(data);
+                try
+                {
+                    string url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/" + file;
+                    byte[] data = await _http.GetByteArrayAsync(url).ConfigureAwait(false);
+                    if (data == null || data.Length < 100) continue;
+                    try { string p = DiskPath(appId); Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { }
+                    Image img = FromBytes(data);
+                    if (img != null) return img;
+                }
+                catch { }   // 404 sur ce format : on tente le suivant
             }
-            catch { return null; }
+            return null;
         }
 
         // Décode entièrement dans un Bitmap indépendant (le flux peut se fermer sans casser le dessin GDI+).
