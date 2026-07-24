@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.56 — Dashboard ONYX
+- **Anneau de santé à la bonne couleur** : émeraude quand c'est sain (l'or ne code plus un
+  état), halo doux sous l'arc, verdict (« Bon », « Moyen »…) coloré comme l'anneau.
+- **Bonjour gravé** : le greeting passe en Marcellus (le nom en or).
+- **Icônes vectorielles** sur les cartes stats (celles du rail, dorées) — fini les emoji
+  qui dépendent de la police système.
+- **Palette du graphe accordée** : RAM émeraude, CPU ivoire, GPU or (le bleu froid jurait
+  sur le carbone chaud).
+- **Composition pleine page** : le graphe s'étire en hauteur et les deux colonnes finissent
+  sur la même ligne — plus de vide sous « PASSER PRO ».
+
 ## v14.55 — Le Copilote incarné
 - **Scène d'entrée** : chat vide = accueil composé (anneau d'or sous halo, « LE COPILOTE »
   gravé en Marcellus, promesse en une ligne, 12 suggestions centrées) au lieu d'une bulle
