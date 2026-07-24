@@ -34,7 +34,18 @@ namespace BTOptimizer
             public bool ShowStarters;         // affiche des suggestions cliquables
             public ChatAction Action;         // mesure lancée seule, ou changement à confirmer
             public List<ChatAction> Plan;     // plusieurs corrections classées par impact
+            public List<Card> Cards;          // diagnostic STRUCTURÉ : cartes d'impact colorées (enquête)
+            public string Footer;             // texte affiché APRÈS les cartes (« vérifié et sain… »)
             public string Explain;            // le raisonnement complet, servi si on demande « pourquoi ? »
+        }
+
+        /// <summary>Une cause rendue en CARTE dans le chat : pastille d'impact colorée
+        /// (rouge ≥ 85, orange ≥ 65, jaune sinon), texte, et sa correction sur clic.</summary>
+        public sealed class Card
+        {
+            public int Impact;
+            public string Text;
+            public ChatAction Fix;
         }
 
         public static Reply Intro(BadgeCatalog.Stats st)
@@ -186,6 +197,13 @@ namespace BTOptimizer
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
             if (best != null && bestScore >= 2)
                 return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best };
+            // Signal FAIBLE : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
+            if (best != null && bestScore == 1)
+                return new Reply
+                {
+                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule en quelques mots.",
+                    Tool = best, ShowStarters = true
+                };
 
             return new Reply { Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, ou choisis un souci courant :", ShowStarters = true };
         }
