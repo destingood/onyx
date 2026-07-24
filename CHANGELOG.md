@@ -4,15 +4,151 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v14.58 — L'identité ONYX jusqu'au bout des ongles
-- **Icône d'application régénérée** depuis le logo vectoriel (anneau d'or sur plaque
-  carbone, 9 tailles 16→256) via le nouveau hook harnais `BT_ICON` — l'Explorateur,
-  la barre des tâches et l'installateur montrent enfin le même ONYX que l'app.
-- **Landing resynchronisée** (les 2 exemplaires) : palette Carbone & Or (l'« avant »
-  passe en bleu-gris froid — l'ancien monde — au lieu d'un ambre qui singeait l'or),
-  logo serti dans l'anneau, capture d'écran fraîche du QG v14.57, bloc téléchargement
-  à jour. README, installateur Inno Setup, .bat et outils vendeur renommés ONYX.
-- Les documents de plan de lancement et posts restent volontairement intacts.
+## v14.64 — Fusion : le cerveau récent dans l'écrin ONYX
+- Les deux lignées se rejoignent : le **rebranding ONYX « Carbone & Or »** (v14.54-57
+  ci-dessous) accueille les évolutions du Copilote v14.58-63 (dépanneur universel,
+  conseiller d'outils, langage texto ~190 abréviations, « ça va » compris).
+- Repris de l'ex-v14.58 esthétique : **icône .ico régénérée** depuis le logo vectoriel
+  (anneau d'or, 9 tailles, hook harnais `BT_ICON`) ; **landing resynchronisée** (palette
+  Carbone & Or, l'« avant » en bleu-gris froid, logo serti, capture fraîche) ; README,
+  installateur Inno, .bat et outils vendeur renommés ONYX.
+- Les nouveautés fusionnées parlent ONYX (textes, couleurs, boutons) — aucun résidu indigo.
+
+## v14.63 — Encore plus de vocabulaire compris
+- **Dictionnaire texto étendu à ~190 entrées** : vraiment (vrmt/vrm), trop (tro/tr), jamais
+  (jms), aujourd'hui (auj/ajd), parce que (psk/pask), ok (dak/okey/oke), en fait, faut (fo),
+  vas-y (vazy)…
+- **Vocabulaire de panne enrichi** — le Copilote comprend les mille façons de dire qu'un PC
+  déconne : ça mouline / patine / traîne / broute / rame / est poussif / à-coups ; ça
+  gèle / fige / freeze / bug / buggue / plante ; ça chauffe / brûle / fournaise / ventilo à
+  fond ; réseau qui décroche / téléporte / rubber. Variantes d'orthographe absorbées
+  (lague/laggue/lagg, freez/frize, bugg/beug…).
+- Tout passe par la même couche : abréviation développée → synonyme reconnu → faute corrigée.
+  « sa mouline de ouf » ou « mon pc beug tt le tps » sont compris.
+
+## v14.62 — Il comprend le langage texto (abréviations + fautes)
+- **Couche d'expansion des abréviations**, appliquée AVANT tout le routage : « slt g un pb
+  mon pc ram bcp pk » devient « salut j'ai un problème mon pc rame beaucoup pourquoi » et part
+  droit à l'enquête. ~90 abréviations courantes : pk/koi/cmt/ki/kan (mots interrogatifs),
+  g/chui/ta/ya/jv (pronoms-verbes), bcp/tjs/tt/mtn/pcq, pb/pblm/prob (problème), maj, ordi→pc,
+  pa/pu/plu (négations), slt/cc/wsh/stp/svp/mrc/dsl, wi/ui/nn/nan (oui-non)…
+- **Se combine avec la tolérance aux fautes déjà en place** (distance d'édition) : abréviation
+  développée PUIS faute corrigée → « pk mon pc ram » compris même mal orthographié.
+- **« ça va pas / ça marche pas »** (négatif) n'est plus pris pour un « ça va ! » : il demande
+  ce qui cloche.
+- Tout profite de la couche : règles, lexique, conseiller d'outils, détection des doutes.
+
+## v14.61 — Il comprend le langage de tous les jours
+- **« ça va ? » compris**, y compris les formes familières et sans accent : cava, sava, cv,
+  ça roule, quoi de neuf, tu vas bien… (avant, « cava » partait à l'IA qui répondait sur le
+  vin espagnol !). Réservé aux messages courts : « comment va mon PC » reste une question de
+  santé.
+- **Salutations et au revoir** élargis (yo, wesh, slt, à plus, ciao, bonne journée…) et
+  « qui es-tu ? / tu es une IA ? » répondu directement.
+- Ces échanges du quotidien sont traités par les règles (instantané, juste) au lieu d'être
+  pris au premier degré par le modèle.
+
+## v14.60 — Un outil pour chaque besoin, avec les risques
+- **Conseiller d'outils** (`ToolAdvisor`) : pour un besoin que l'app ne couvre pas nativement,
+  le Copilote propose le BON outil — le sien en 1 clic quand il existe, sinon une
+  **recommandation gratuite externe**, toujours accompagnée de **son risque/précaution** et de
+  « prends-le sur le site officiel ». Couvre : récupérer un fichier supprimé (Recuva), tester
+  la RAM (MemTest86), cloner/partitionner un disque, créer une clé USB Windows, scan malware
+  (Malwarebytes Free), désinstaller proprement (BCUninstaller), contrôle à distance, mot de
+  passe Windows oublié, éditeur du registre…
+- **Mises en garde intégrées** : les « driver updaters »/« PC boosters », CCleaner et les
+  **arnaques au faux support** sont explicitement déconseillés (pourquoi + quoi faire à la
+  place) — le Copilote protège l'utilisateur, il ne se contente pas de proposer.
+- **L'IA locale suit la même règle** : quand elle conseille un outil, elle doit dire qu'il est
+  gratuit, énoncer les risques et renvoyer au site officiel.
+
+## v14.59 — Dépanneur PC universel : bien au-delà du gaming
+Le Copilote ne se limite plus aux soucis de jeu — il aide à réparer un PC quel que soit le
+problème, avec les grandes réparations gratuites et officielles :
+- **« répare Windows »** → DISM /RestoreHealth + SFC /scannow : LE remède aux corruptions
+  système (crashs qui persistent, MAJ qui échoue, apps qui ne s'ouvrent plus). Gratuit, sans
+  risque.
+- **« plus d'internet »** → réinitialisation de la pile réseau (Winsock + TCP/IP + DNS/ARP,
+  commandes officielles Windows) : répare la plupart des connexions coupées par un VPN ou un
+  antivirus, avec redémarrage proposé pour finaliser.
+- **« plus de son »** → relance du moteur audio (services Windows) : le son revient sans
+  redémarrer.
+- **écran bleu / BSOD** → réparation Windows + relevé des plantages datés, et lecture du
+  « code d'arrêt » si tu le donnes.
+- **Ce que le logiciel NE PEUT PAS faire depuis Windows** (PC qui ne démarre pas, écran noir,
+  périphérique USB/Bluetooth/imprimante mort) → **guides sûrs pas-à-pas** : câble/entrée écran,
+  reset d'alimentation, mode sans échec, réinstallation de pilote, ré-appairage… puis « dis-moi
+  où ça bloque et je continue avec toi ».
+- 3 pastilles d'accueil (Réparer Windows · Plus de son · Plus d'internet) ; `Sys.RestartService`.
+- Et pour tout le reste, l'IA locale prend le relais (si activée).
+
+## v14.58 — Il répond à TOUT, et il assume ses doutes
+- **Répond à n'importe quelle question** : dès que l'IA locale est active, tout ce que les
+  règles ne traitent pas AVEC CERTITUDE part vers le modèle — y compris un signal PC faible
+  (avant, un mot ambigu déclenchait un « tu veux dire… ? » ; maintenant il répond vraiment).
+  Les vraies commandes PC (mesures, enquête, réparations) gardent la priorité, elles restent
+  imbattables.
+- **Il dit ses doutes** : le modèle a désormais pour consigne stricte de signaler l'incertitude
+  (« Je ne suis pas certain, mais… », « à vérifier »), de ne JAMAIS inventer un fait/chiffre/
+  date/mesure, et d'admettre qu'il n'a ni internet, ni l'heure réelle, ni l'actualité du jour —
+  plutôt que d'affirmer du faux. Il signale aussi quand ses connaissances peuvent être datées.
+- Ton ajusté : sans IA, le signal faible propose « active l'ia pour que je réponde à tout ».
+
+## v14.57 — Détection d'Ollama fiabilisée + vraie configuration
+- **Détecte Ollama où qu'il soit** : dossier utilisateur, Program Files (x86/x64) ET le PATH
+  (« where ollama ») — un Ollama déjà présent ailleurs n'est plus réinstallé par erreur.
+- **Installe s'il manque, configure toujours** : après installation (ou détection), l'app
+  **configure** Ollama pour qu'il soit toujours prêt :
+  - démarrage AUTOMATIQUE avec Windows (entrée Run « Ollama » posée si l'installeur ne l'a
+    pas fait — le moteur est là à chaque session sans rien lancer) ;
+  - modèle gardé en mémoire 30 min entre deux questions (OLLAMA_KEEP_ALIVE) → après la
+    première réponse, les suivantes sont quasi instantanées.
+- Journal explicite à chaque étape (« Ollama absent → installation », « déjà présent — pas de
+  réinstallation », « configuré : démarrage auto + modèle gardé en mémoire »).
+- `Sys.SetUserEnv` : variable d'environnement utilisateur persistante (n'écrase pas si identique).
+
+## v14.56 — IA locale : modèle adapté à CHAQUE machine + consentement Oui/Non
+- **Le modèle est choisi selon la config du client** (VRAM du GPU + RAM détectées, sans
+  pilote noyau — registre `qwMemorySize` tous constructeurs, repli capteurs/RAM). Barème
+  prudent, optimal ET optimisé quelle que soit la machine :
+  - grosse carte (≈ 11 Go VRAM, 24 Go RAM) → **qwen2.5:7b** (le plus malin) ;
+  - config équilibrée (6 Go VRAM, 12 Go RAM) → **llama3.2:3b** (le sweet spot) ;
+  - PC modeste (3,5 Go VRAM, 8 Go RAM) → **qwen2.5:1.5b** (léger et vif) ;
+  - petite config / sans vrai GPU → **qwen2.5:0.5b** (ultra-léger, tourne partout).
+- **Question au premier lancement** : « Installer le cerveau IA local ? Oui / Non » —
+  posée UNE seule fois, et **seulement quand une installation/un téléchargement serait
+  réellement nécessaire** (si Ollama + un modèle sont déjà là, activation silencieuse, zéro
+  question). Non → plus jamais reproposé ; Oui → installe le modèle adapté.
+- La garde d'espace disque s'ajuste à la taille du modèle choisi ; installation guidée et
+  auto utilisent toutes deux le même choix matériel.
+
+## v14.55 — L'IA locale s'installe TOUTE SEULE pour chaque installation
+- **Zéro action requise** : au premier lancement (20 s après l'ouverture, en arrière-plan),
+  l'app installe Ollama (winget, silencieux), démarre le moteur, télécharge le petit modèle
+  (≈ 2 Go, une fois) et active le cerveau — chaque personne qui installe l'app a un Copilote
+  qui répond à tout, sans rien configurer.
+- **Garde-fous** : jamais sans winget ; jamais sous 6 Go libres ; 3 tentatives lourdes
+  maximum (compteur persisté) ; téléchargement interrompu = REPRIS au lancement suivant
+  (Ollama reprend où il en était) ; jamais dans le harnais de test.
+- **Le choix de l'utilisateur reste roi** : « désactive l'ia » coupe ET bloque définitivement
+  l'installation automatique (fichier bt-ia-off.txt) ; « active l'ia » lève ce blocage.
+- **Transparence** : l'accueil du Copilote affiche l'étape en cours (« installation d'Ollama »,
+  « téléchargement du modèle… ») et rappelle comment annuler ; une question posée pendant
+  l'installation reçoit une réponse honnête (« repose-la dans quelques minutes »).
+
+## v14.54 — Le cerveau IA 100 % LOCAL (optionnel, gratuit) : il répond à tout
+- **« active l'ia »** → le Copilote se branche sur **Ollama** (gratuit, open source) : un
+  modèle d'IA qui tourne **sur TA machine** (ta carte graphique fait le travail). Aucune
+  donnée envoyée, aucun abonnement, aucune clé — la promesse « 100 % local » tient.
+- **Répartition intelligente** : les règles répondent d'abord (mesures réelles, réparations,
+  lexique — imbattables sur le PC) ; tout ce qu'elles ne comprennent pas part vers l'IA
+  locale, qui connaît l'état réel du PC (santé, optimisations, jeux) et les commandes de
+  l'app — et qui a interdiction d'inventer des mesures ou de recommander du payant.
+- **Installation guidée depuis le chat** : Ollama absent → installation winget en un clic ;
+  aucun modèle → téléchargement de llama3.2:3b (≈ 2 Go, une fois) en un clic, progression
+  en direct. « désactive l'ia » coupe tout ; sans activation, RIEN ne change.
+- Ollama rejoint le catalogue 📦 Bibliothèques ; « c'est quoi ollama ? » au lexique.
+- Strictement OPT-IN : le seul trafic est vers 127.0.0.1 (ta propre machine).
 
 ## v14.57 — Les 8 pages au diapason
 - **Système** : les courbes CPU/RAM rejoignent le trio ONYX (ivoire / émeraude — le vert

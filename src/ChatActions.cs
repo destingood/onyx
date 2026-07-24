@@ -646,6 +646,203 @@ namespace BTOptimizer
             return a;
         }
 
+        // ==================================================================
+        //  DÉPANNAGE PC UNIVERSEL — les grandes réparations, gratuites
+        // ==================================================================
+
+        /// <summary>Répare l'intégrité de Windows : DISM /RestoreHealth puis SFC /scannow. C'est LE
+        /// remède universel aux corruptions système (crashs, plantages, MAJ qui échoue, apps qui
+        /// ne s'ouvrent plus). Long (10-20 min), gratuit, officiel Microsoft, sans risque.</summary>
+        public static DocAssistant.ChatAction RepairWindows()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Réparer Windows (DISM + SFC, 10-20 min)";
+            a.IsChange = true;
+            a.Warning = "Lance les réparateurs officiels de Windows (DISM puis SFC). Gratuit, sans risque, mais LONG "
+                      + "(10-20 min) — tu peux continuer à utiliser le PC. Un redémarrage peut être demandé ensuite.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Réparation d'intégrité Windows (DISM /RestoreHealth puis SFC /scannow)…", 0);
+                try { Sys.RepairWindows(log); }
+                catch (Exception ex) { return Say("La réparation n'a pas pu aller au bout : " + ex.Message); }
+                return Say("✅ Réparation Windows terminée (DISM + SFC). Si des fichiers ont été réparés, redémarre le PC "
+                         + "pour finaliser. Beaucoup de problèmes « impossibles à régler » partent après ça.");
+            };
+            return a;
+        }
+
+        /// <summary>Réinitialise la PILE réseau : Winsock + TCP/IP + cache DNS/ARP + IP renouvelée.
+        /// LE remède au « plus d'internet » quand tout semble branché (souvent laissé par un VPN,
+        /// un antivirus ou un mauvais « optimiseur »). Gratuit ; un redémarrage finalise.</summary>
+        public static DocAssistant.ChatAction RepairNetwork()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Réinitialiser la connexion réseau";
+            a.IsChange = true; a.NoChain = true;
+            a.Warning = "Remet à zéro Winsock, la pile TCP/IP et les caches DNS/ARP (commandes officielles Windows). "
+                      + "Répare la plupart des « plus d'internet ». Un REDÉMARRAGE est nécessaire ensuite pour finaliser.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string sh = Sys.Sys32("netsh.exe"), ip = Sys.Sys32("ipconfig.exe");
+                try
+                {
+                    if (log != null) log("Réinitialisation réseau : Winsock…", 0);
+                    Sys.Run(sh, "winsock reset");
+                    if (log != null) log("Réinitialisation réseau : pile TCP/IP…", 0);
+                    Sys.Run(sh, "int ip reset");
+                    Sys.Run(sh, "int ipv6 reset");
+                    Sys.Run(sh, "winhttp reset proxy");
+                    Sys.Run(ip, "/flushdns");
+                    Sys.Run(ip, "/release");
+                    Sys.Run(ip, "/renew");
+                }
+                catch (Exception ex) { return Say("La réinitialisation réseau a échoué : " + ex.Message); }
+                var r = Say("✅ Pile réseau réinitialisée (Winsock, TCP/IP, DNS/ARP). ⚠ REDÉMARRE le PC pour finaliser — "
+                          + "c'est après le redémarrage que la connexion revient. Je peux le programmer :");
+                r.Action = RestartAction();
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Relance le moteur audio de Windows (services Audiosrv + AudioEndpointBuilder).
+        /// Corrige la majorité des « plus de son » sans redémarrer. Gratuit, immédiat.</summary>
+        public static DocAssistant.ChatAction RepairAudio()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Relancer le son de Windows";
+            a.IsChange = true;
+            a.Warning = "Redémarre les services audio de Windows. Le son se coupe une seconde puis revient. Sans risque.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                try
+                {
+                    if (log != null) log("Redémarrage du moteur audio (AudioEndpointBuilder + Audiosrv)…", 0);
+                    Sys.RestartService("AudioEndpointBuilder");   // porte Audiosrv (dépendance) : le relance aussi
+                }
+                catch (Exception ex) { return Say("Je n'ai pas pu relancer l'audio : " + ex.Message); }
+                return Say("✅ Moteur audio relancé. Si le son ne revient pas : vérifie le bon périphérique de sortie "
+                         + "(clic sur l'icône 🔊 près de l'horloge) et le volume de l'appli. Sinon, dis-moi et je creuse.");
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
+        //  Cerveau IA LOCAL (optionnel, gratuit) — « il répond à tout »
+        // ------------------------------------------------------------------
+        /// <summary>Inspecte l'état (Ollama installé ? serveur ? modèle ?) et propose la BONNE
+        /// prochaine étape — active le cerveau dès que tout est prêt.</summary>
+        public static DocAssistant.ChatAction SetupBrain()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "État de l'IA locale"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                LocalBrain.ClearOptOut();   // demande explicite : elle annule un « désactive » passé
+                if (LocalBrain.ServerUp(1500))
+                {
+                    string m = LocalBrain.BestModel();
+                    if (m != null)
+                    {
+                        LocalBrain.SetEnabled(true);
+                        return Say("🧠 IA locale ACTIVÉE (" + m + ") — gratuite, 100 % sur ta machine, rien ne sort du PC.\n"
+                                 + "Désormais, tout ce que mes règles ne comprennent pas, je le lui demande — pose-moi "
+                                 + "n'importe quelle question ! (« désactive l'ia » pour couper.)");
+                    }
+                    LocalBrain.ModelPick pk = LocalBrain.ChooseModel();
+                    var r0 = Say("Ollama tourne, mais aucun modèle n'est téléchargé. J'ai choisi celui qui convient le "
+                               + "mieux à ta machine : " + pk.Human + " — gratuit, une seule fois, il tourne ensuite hors-ligne :");
+                    r0.Action = PullModel();
+                    return r0;
+                }
+                if (LocalBrain.Installed)
+                    return Say("✅ Ollama est bien installé, mais son moteur ne tourne pas à l'instant. Lance « Ollama » "
+                             + "depuis le menu Démarrer (il se met dans la zone de notification), puis redis « active l'ia » — "
+                             + "je m'occupe du reste (modèle adapté à ta machine + configuration).");
+                var r = Say("Ollama n'est pas installé sur ce PC. Je peux l'installer pour toi — gratuit, open source, "
+                          + "100 % sur ta machine, aucune donnée envoyée, aucun abonnement — puis je le configure et "
+                          + "télécharge le modèle adapté :");
+                r.Action = InstallTool("Ollama.Ollama", "Ollama (IA locale)");
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Télécharge le modèle ADAPTÉ à la machine (une seule fois).</summary>
+        public static DocAssistant.ChatAction PullModel()
+        {
+            LocalBrain.ModelPick pick = LocalBrain.ChooseModel();
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Télécharger le modèle (" + pick.Human.Split('—')[0].Trim() + ", gratuit)";
+            a.IsChange = true;
+            a.Warning = "Télécharge " + pick.Human + " via Ollama (une seule fois). Modèle choisi pour TA config. "
+                      + "Il tourne ensuite 100 % hors-ligne. Peut prendre plusieurs minutes selon ta connexion.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
+                if (log != null) log("Téléchargement du modèle " + pick.Tag + " (Ollama)…", 0);
+                try { Sys.Run(exe, "pull " + pick.Tag); }
+                catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
+                if (LocalBrain.BestModel() != null)
+                {
+                    LocalBrain.SetEnabled(true);
+                    return Say("🧠 Modèle prêt (" + pick.Tag + ") — IA locale ACTIVÉE. Pose-moi n'importe quelle question !");
+                }
+                return Say("Le modèle ne s'est pas installé (connexion ? espace disque ?). Réessaie dans un moment.");
+            };
+            return a;
+        }
+
+        /// <summary>Passe la question au modèle LOCAL (lecture seule : ça ne modifie rien).</summary>
+        public static DocAssistant.ChatAction AskBrain(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Je réfléchis (IA locale)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (!LocalBrain.ServerUp(1500))
+                    return Say("Mon cerveau IA local ne répond pas : lance Ollama (menu Démarrer), puis repose ta "
+                             + "question. (« active l'ia » refait le point si besoin.)");
+                string model = LocalBrain.BestModel();
+                if (model == null)
+                {
+                    var r0 = Say("Ollama tourne mais aucun modèle n'est téléchargé — je peux m'en charger :");
+                    r0.Action = PullModel();
+                    return r0;
+                }
+                if (log != null) log("IA locale (" + model + ") réfléchit…", 0);
+                string ans;
+                try { ans = LocalBrain.Ask(q, BrainContext(st), model); }
+                catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
+                if (string.IsNullOrEmpty(ans))
+                    return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
+                return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
+            };
+            return a;
+        }
+
+        // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
+        private static string BrainContext(BadgeCatalog.Stats st)
+        {
+            var sb = new StringBuilder();
+            sb.Append("Tu es « le Copilote » d'ONYX, un assistant polyvalent qui tourne 100 % en local sur le PC de l'utilisateur. ");
+            sb.Append("Réponds à N'IMPORTE QUELLE question (PC, jeux, culture générale, aide, conseils…), en FRANÇAIS, ton direct et amical (tutoiement), 130 mots MAXIMUM. ");
+            sb.Append("HONNÊTETÉ AVANT TOUT : si tu n'es pas sûr, DIS-LE clairement (« Je ne suis pas certain, mais… », « À vérifier »). ");
+            sb.Append("N'invente JAMAIS un fait, un chiffre, une date ou une mesure du PC : mieux vaut admettre « je ne sais pas » qu'affirmer du faux. ");
+            sb.Append("Tu n'as PAS accès à internet ni à l'heure réelle, la météo ou l'actualité du jour : dis-le si on te le demande, et propose ce que tu peux faire à la place. ");
+            sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
+            sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit rester gratuit. ");
+            sb.Append("Quand tu conseilles un OUTIL, dis toujours (1) qu'il est gratuit, (2) ses RISQUES ou précautions "
+                    + "(ex. « sauvegarde d'abord », « mauvais disque = perte de données »), (3) de le prendre sur le site "
+                    + "officiel. Méfie-toi des « driver updaters » et « PC boosters » (souvent des arnaques) — déconseille-les. ");
+            sb.Append("Pour un VRAI souci PC, rappelle que tu peux AGIR via ces phrases : « fais un bilan complet » (enquête + réparations 1 clic), ");
+            sb.Append("« mesure mon ping », « qui bouffe mon cpu », « mesure ma latence », « prépare ma partie », « génère le rapport », « libère de l'espace ». ");
+            if (st != null)
+                sb.Append("État réel du PC de l'utilisateur : santé " + st.Health + " %, " + st.OptiActive + "/" + st.OptiTotal
+                        + " optimisations actives, " + st.GamesDet + " jeu(x) détecté(s). ");
+            return sb.ToString();
+        }
+
         // ------------------------------------------------------------------
         //  Rapport HTML — l'audit complet, généré depuis la conversation
         // ------------------------------------------------------------------

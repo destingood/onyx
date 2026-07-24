@@ -53,13 +53,18 @@ namespace BTOptimizer
         public static Reply Intro(BadgeCatalog.Stats st)
         {
             string h = st != null ? "  Santé actuelle de ton PC : " + st.Health + " %." : "";
+            string ia = LocalBrain.SetupStatus;
+            string brain = ia != null
+                ? "\n🧠 Mon cerveau IA local s'installe en arrière-plan (" + ia + ") — gratuit, 100 % sur ta machine. « désactive l'ia » pour annuler."
+                : LocalBrain.Enabled ? "\n🧠 IA locale active : je réponds aussi à tout le reste."
+                : "";
             return new Reply
             {
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
-                       "\nDis-moi ce qui cloche (ça rame, ça crash, ping élevé, écran bloqué à 60 Hz, FPS bas…) : "
-                     + "je mesure en direct, je trouve les causes et je corrige — toujours avec ton accord, "
-                     + "et toujours gratuitement. Je réponds aussi aux questions : « c'est quoi le DLSS ? », "
-                     + "« à quoi sert XMP ? »…",
+                       "\nDis-moi ce qui cloche — je dépanne ton PC quel que soit le souci : jeux qui rament, plus de "
+                     + "son, plus d'internet, Windows corrompu, écran noir, ça crash… je mesure, je répare (gratuitement, "
+                     + "avec ton accord), et pour ce que le logiciel ne peut pas faire seul, je te guide pas à pas. "
+                     + "Je réponds aussi aux questions : « c'est quoi le DLSS ? »…" + brain,
                 ShowStarters = true
             };
         }
@@ -69,7 +74,7 @@ namespace BTOptimizer
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
         {
             var entries = HelpCatalog.Entries(log);
-            string s = Norm(q);
+            string s = Expand(Norm(q));   // accents à plat + abréviations texto développées
             if (s.Length == 0) return Intro(st);
 
             // --- Suivi de conversation : « oui » / « non » répond à la DERNIÈRE proposition ---
@@ -88,10 +93,24 @@ namespace BTOptimizer
             if (IsNo(s))
                 return new Reply { Text = "Pas de souci, on laisse ça de côté. Autre chose à vérifier ?", ShowStarters = true };
 
-            if (Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir"))
+            // Salutation SEULE (≤ 3 mots) → on salue. Sinon (« salut j'ai un souci… ») c'est juste
+            // un préambule : on ignore la politesse et on traite le vrai message plus bas.
+            if (SplitWords(s).Length <= 3 && Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "bonne nuit"))
                 return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
-            if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super"))
+            // « ça va PAS » (négatif) : on ne répond pas « ça va ! », on demande ce qui cloche.
+            if (Has(s, "ca va pas", "ca va plus", "sa va pas", "ca marche pas") && SplitWords(s).Length <= 5)
+                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true };
+            // « ça va ? » et ses formes familières (cava, sava, cv…). Messages COURTS seulement :
+            // « comment va mon pc » doit rester une question de santé, pas de la politesse.
+            if (SplitWords(s).Length <= 4 && !Has(s, "pc", "jeu")
+                && Has(s, "ca va", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
+                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true };
+            if (Has(s, "au revoir", "a plus", "bye", "ciao", "a bientot", "bonne journee", "bonne soiree"))
+                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false };
+            if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super", "nickel", "cool"))
                 return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
+            if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
+                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne 100 % sur ta machine (aucune donnée envoyée). Je mesure, je répare, je conseille — et si tu as activé mon cerveau IA local, je réponds à tout. Alors, on regarde quoi ?", ShowStarters = true };
 
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {
@@ -100,10 +119,14 @@ namespace BTOptimizer
             }
 
             // --- Lecture d'intentions (tolérante aux fautes de frappe, voir FuzzyWord) -------------
-            bool iNet    = Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion", "wifi", "deco", "deconnect");
+            bool iNet    = Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion",
+                                  "wifi", "deco", "deconnect", "latence reseau", "perte de", "rubber", "teleporte",
+                                  "decroche", "coupure reseau");
             bool iHogs   = Has(s, "qui ralentit", "processus", "en fond", "arriere plan", "arriere-plan", "quel programme", "quelle appli", "gourmand", "bouffe", "consomme");
             bool iScreen = Has(s, "ecran", "hz", "hertz", "rafraich", "moniteur", "144", "165", "240", "bloque a 60");
-            bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu", "charge gpu", "surchauff");
+            bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu",
+                                  "charge gpu", "surchauff", "brulant", "fournaise", "cuit", "ventilo", "ventilateur",
+                                  "souffle", "bruyant", "degre");
             bool iClean  = Has(s, "espace", "disque plein", "nettoy", "liberer", "place disque", "temporaire", "saturé", "sature");
             bool iLibs   = Has(s, "dll", "manquante", "demarre pas", "refuse de demarrer", "visual c", "directx", "redist", "bibliotheque");
             bool iDns    = Has(s, "dns", "resolution de nom");
@@ -115,12 +138,31 @@ namespace BTOptimizer
                                   "session de jeu", "pregame", "pre-game", "pret a jouer", "checklist");
 
             // Commandes explicites (pas des symptômes) : traitées avant tout le reste.
+            // « désactive » AVANT « active » (l'un contient l'autre).
+            if (Has(s, "desactive l'ia", "desactiver l'ia", "coupe l'ia", "coupe ton ia", "sans ia"))
+            {
+                LocalBrain.SetEnabled(false);
+                return new Reply { Text = "IA locale désactivée — je reste sur mes règles (toujours 100 % local). Dis « active l'ia » pour la rallumer.", ShowStarters = true };
+            }
+            if (Has(s, "active l'ia", "activer l'ia", "active ton ia", "ia locale", "mon ia", "cerveau ia", "ollama", "intelligence artificielle"))
+                return new Reply
+                {
+                    Text = "Je vérifie l'état de mon cerveau IA local (gratuit, 100 % sur ta machine)…",
+                    Action = ChatActions.SetupBrain()
+                };
             if (iReport)
                 return new Reply
                 {
                     Text = "Je te prépare l'audit complet — un clic, rien n'est modifié au système :",
                     Action = ChatActions.MakeReport()
                 };
+
+            // --- DÉPANNAGE PC (au-delà du gaming) : les grandes réparations gratuites, et des
+            //     guides sûrs pour ce que le logiciel ne peut pas faire seul. ---
+            {
+                Reply fx = RepairRouter(s);
+                if (fx != null) return fx;
+            }
             if (iPrep)
                 return new Reply
                 {
@@ -131,7 +173,10 @@ namespace BTOptimizer
                      + (iDns ? 1 : 0) + (iBoot ? 1 : 0) + (iCrash ? 1 : 0) + (iLat ? 1 : 0);
             // Symptôme ressenti (large) vs demande de bilan (méta) : les deux mènent à l'enquête,
             // mais seul le SYMPTÔME est assez fort pour élargir une intention précise en enquête.
-            bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas", "perd des fps", "chute de fps");
+            bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas",
+                                  "perd des fps", "chute de fps", "mouline", "patine", "traine", "poussif",
+                                  "a-coups", "acoups", "broute", "gele", "fige", "bug", "buggue", "plante",
+                                  "lourd", "ramollo", "au ralenti", "lenteur");
             bool meta = Has(s, "bilan", "diagnostic", "analyse", "enquete", "verifie", "controle", "passe au crible",
                                "check up", "checkup", "probleme", "ca marche pas");
             bool asksWhy = Has(s, "pourquoi", "explique", "comment tu sais", "ca veut dire quoi", "detaille", "justifie");
@@ -237,20 +282,150 @@ namespace BTOptimizer
                     Action = Investigator.Action(q.Trim(), st)
                 };
 
+            // --- CONSEILLER D'OUTILS : pour un BESOIN précis (récupérer un fichier, tester la
+            //     RAM, désinstaller proprement, malware, enregistrer l'écran…), propose LE bon
+            //     outil — le sien en 1 clic, sinon un gratuit externe AVEC ses risques. Inclut des
+            //     mises en garde (outils à éviter). Placé AVANT le match de panneau : ces besoins
+            //     spécifiques priment sur une correspondance de symptôme approximative. ---
+            {
+                ToolAdvisor.Rec rec = ToolAdvisor.Advise(s);
+                if (rec != null)
+                    return new Reply
+                    {
+                        Text = rec.Text,
+                        Action = rec.WingetId != null ? ChatActions.InstallTool(rec.WingetId, ToolName(rec.WingetId)) : null
+                    };
+            }
+
             // Correspondance symptôme (score par mots-clés).
             HelpCatalog.Entry best = null; int bestScore = 0;
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
             if (best != null && bestScore >= 2)
                 return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best };
-            // Signal FAIBLE : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
+
+            // --- CERVEAU IA LOCAL (gratuit) : dès qu'il est prêt, il répond à TOUT ce que les
+            //     règles ne traitent pas avec certitude — y compris un signal PC faible (bestScore
+            //     == 1), où il vaut mieux une vraie réponse qu'un « tu veux dire… ? ». ---
+            if (LocalBrain.Enabled)
+                return new Reply
+                {
+                    Text = best != null && bestScore == 1
+                        ? "Je regarde ça pour toi…"
+                        : "Bonne question — je réfléchis…",
+                    Action = ChatActions.AskBrain(q.Trim(), st)
+                };
+            // Signal FAIBLE sans IA : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
             if (best != null && bestScore == 1)
                 return new Reply
                 {
-                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule en quelques mots.",
+                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule, "
+                         + "ou dis « active l'ia » pour que je réponde à tout.",
                     Tool = best, ShowStarters = true
                 };
+            if (LocalBrain.SetupStatus != null)
+                return new Reply
+                {
+                    Text = "Mon cerveau IA local s'installe encore en arrière-plan (" + LocalBrain.SetupStatus
+                         + ") — repose-moi cette question dans quelques minutes, ou choisis un souci PC :",
+                    ShowStarters = true
+                };
 
-            return new Reply { Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, ou choisis un souci courant :", ShowStarters = true };
+            return new Reply
+            {
+                Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, choisis un souci courant — "
+                     + "ou dis « active l'ia » : un cerveau IA local (gratuit, 100 % sur ta machine) qui répond à tout.",
+                ShowStarters = true
+            };
+        }
+
+        /// <summary>Dépannage PC universel : un souci grave (son, internet, Windows corrompu,
+        /// écran noir…) → la grande réparation gratuite quand elle existe, sinon un guide sûr,
+        /// pas-à-pas. Renvoie null si ce n'est pas un cas de dépannage (on continue le routage).</summary>
+        private static Reply RepairRouter(string s)
+        {
+            // « Plus de son »
+            if (Has(s, "pas de son", "plus de son", "aucun son", "son coupe", "audio ne marche", "pas d'audio", "muet"))
+                return new Reply
+                {
+                    Text = "Pas de son — je commence par le plus efficace : relancer le moteur audio de Windows (le son "
+                         + "revient sans redémarrer). Si ça ne suffit pas, on vérifiera le périphérique de sortie.",
+                    Action = ChatActions.RepairAudio()
+                };
+
+            // « Plus d'internet » (coupé, pas de connexion — distinct de « ça lag »)
+            if (Has(s, "plus d'internet", "pas d'internet", "pas de connexion", "aucune connexion", "internet coupe",
+                       "connexion coupee", "pas de wifi", "wifi marche pas", "reseau marche pas", "pas de reseau"))
+                return new Reply
+                {
+                    Text = "Connexion coupée alors que tout semble branché — le remède standard : réinitialiser la pile "
+                         + "réseau de Windows (Winsock + TCP/IP + DNS). Souvent laissé cassé par un VPN ou un antivirus. "
+                         + "Un redémarrage finalise.",
+                    Action = ChatActions.RepairNetwork()
+                };
+
+            // Windows corrompu / MAJ qui échoue / apps qui ne s'ouvrent plus / réparer Windows
+            if (Has(s, "repare windows", "reparer windows", "windows corrompu", "fichiers systeme", "sfc", "dism",
+                       "mise a jour echoue", "maj echoue", "windows update marche pas", "0x", "apps s'ouvrent plus",
+                       "rien ne s'ouvre", "windows bug", "restaurer windows"))
+                return new Reply
+                {
+                    Text = "Ça sent la corruption système (la cause n°1 des soucis « impossibles à régler »). Je lance les "
+                         + "réparateurs officiels de Windows, DISM puis SFC — gratuit, sans risque, mais compte 10-20 min.",
+                    Action = ChatActions.RepairWindows()
+                };
+
+            // Écran noir / ne démarre pas / ne boote pas → GUIDE (le logiciel ne peut rien faire depuis Windows)
+            if (Has(s, "ne demarre pas", "demarre plus", "ne s'allume pas", "ecran noir", "pas d'affichage", "aucun affichage",
+                       "boot", "ne boote pas", "reste sur le logo", "bloque au demarrage"))
+                return new Reply
+                {
+                    Text = "Un PC qui ne démarre pas ou reste noir, ça se règle AVANT Windows — voici les gestes sûrs et "
+                         + "gratuits, dans l'ordre :\n\n"
+                         + "1. Écran : bon câble (HDMI/DP), bonne entrée, et branché sur la CARTE GRAPHIQUE (pas la carte mère).\n"
+                         + "2. Courant : teste une autre prise ; sur PC portable, laisse le chargeur 15 min puis rallume.\n"
+                         + "3. Reset d'alim : PC éteint, débranche, garde le bouton power appuyé 15 s, rebranche, rallume.\n"
+                         + "4. Écran noir APRÈS le logo Windows : force 3 arrêts par le bouton → Windows ouvre la "
+                         + "réparation automatique. Choisis « Mode sans échec » et dis-le-moi : de là, je peux agir.\n"
+                         + "5. RAM : PC débranché, ré-enfonce bien les barrettes (clic des deux côtés).\n\n"
+                         + "Dis-moi à quelle étape ça bloque et ce que tu vois — je continue avec toi.",
+                    ShowStarters = false
+                };
+
+            // Écran bleu / BSOD
+            if (Has(s, "ecran bleu", "bsod", "blue screen", "stop code", "code d'arret", "code arret"))
+                return new Reply
+                {
+                    Text = "Un écran bleu, c'est Windows qui s'arrête pour se protéger — souvent un PILOTE ou la corruption "
+                         + "système. Le plan gratuit : d'abord je répare l'intégrité de Windows (DISM + SFC), et je peux "
+                         + "relever tes derniers plantages datés. Si tu as noté le « code d'arrêt » (ex. "
+                         + "IRQL_NOT_LESS_OR_EQUAL), donne-le-moi, il pointe la cause.",
+                    Action = ChatActions.RepairWindows()
+                };
+
+            // Périphérique USB / Bluetooth / imprimante → GUIDE court (matériel/pilote)
+            if (Has(s, "bluetooth marche pas", "pas de bluetooth", "usb marche pas", "peripherique", "manette marche pas",
+                       "clavier marche pas", "souris marche pas", "imprimante", "casque marche pas", "micro marche pas"))
+                return new Reply
+                {
+                    Text = "Périphérique qui ne répond pas — les réflexes gratuits qui marchent 8 fois sur 10 :\n\n"
+                         + "1. Débranche/rebranche (autre port USB, de préférence à l'arrière du PC fixe).\n"
+                         + "2. Bluetooth : retire l'appareil puis re-apparie-le ; vérifie qu'il est bien en mode appairage.\n"
+                         + "3. Pilote : clic droit sur Démarrer → Gestionnaire de périphériques → l'appareil avec un ⚠ → "
+                         + "« Désinstaller », puis débranche/rebranche : Windows réinstalle le pilote proprement.\n"
+                         + "4. Sans fil : change les piles / recharge, et rapproche le récepteur.\n\n"
+                         + "Dis-moi lequel et ce qu'il fait (rien ? clignote ? détecté mais muet ?) et je précise.",
+                    ShowStarters = false
+                };
+
+            return null;
+        }
+
+        // Nom lisible d'un outil du catalogue à partir de son id winget (pour le bouton).
+        private static string ToolName(string wingetId)
+        {
+            try { foreach (var it in LibScan.Items()) if (string.Equals(it.WingetId, wingetId, StringComparison.OrdinalIgnoreCase)) return it.Name; }
+            catch { }
+            return wingetId;
         }
 
         private static Reply WithTool(List<HelpCatalog.Entry> entries, string toolName, string text)
@@ -297,6 +472,7 @@ namespace BTOptimizer
             new[] { "markc", "Le « MarkC fix » est la méthode historique pour désactiver TOTALEMENT l'accélération de la souris (déplacement 1:1). L'optimisation souris de l'app fait l'équivalent proprement — et c'est réversible.", "Fréquence de la souris" },
             new[] { "sharpness;nettete;sharpen", "Le filtre de netteté NVIDIA (sharpen) redonne du piqué à l'image, utile avec DLSS/upscaling. L'app propose le réglage communautaire qui ramène l'ANCIEN filtre par jeu (EnableGR535), réversible, dans Optimisations → GPU.", null },
             new[] { "wub;update blocker", "Windows Update Blocker (Wub) coupe le service de mise à jour : plus AUCUN correctif, même de sécurité — le PC accumule des failles connues. L'app le détecte dans « Réglages néfastes » et le répare en un clic.", "Réglages néfastes" },
+            new[] { "ollama;ia locale", "Ollama fait tourner des modèles d'IA GRATUITS et open source directement sur ta machine (ta carte graphique fait le travail) : rien n'est envoyé sur internet, aucun abonnement. C'est le cerveau étendu optionnel du Copilote — dis « active l'ia ».", null },
         };
 
         /// <summary>« C'est quoi X ? » (ou juste « X ? ») → définition claire + l'outil lié.
@@ -332,7 +508,9 @@ namespace BTOptimizer
             {
                 string k = Norm(kw);
                 if (k.Length < 3) continue;
-                if (q.Contains(k) || FuzzyKey(w, k)) sc += k.Length >= 5 ? 2 : 1;
+                // Même discipline que Has : pas de sous-chaîne globale sur un mot court.
+                bool hit = k.IndexOf(' ') >= 0 ? (q.Contains(k) || FuzzyKey(w, k)) : FuzzyWord(w, k);
+                if (hit) sc += k.Length >= 5 ? 2 : 1;
             }
             return sc;
         }
@@ -388,9 +566,17 @@ namespace BTOptimizer
             string[] w = null;
             foreach (var k in ks)
             {
-                if (s.Contains(k)) return true;
+                if (k.IndexOf(' ') >= 0)
+                {
+                    // Phrase : sous-chaîne exacte, sinon tous les mots présents (ordre libre).
+                    if (s.Contains(k)) return true;
+                    if (w == null) w = SplitWords(s);
+                    if (FuzzyKey(w, k)) return true;
+                    continue;
+                }
+                // Mot simple : JAMAIS de sous-chaîne globale — « blague » contiendrait « lag ».
                 if (w == null) w = SplitWords(s);
-                if (FuzzyKey(w, k)) return true;
+                if (FuzzyWord(w, k)) return true;
             }
             return false;
         }
@@ -416,10 +602,23 @@ namespace BTOptimizer
             int tol = k.Length >= 8 ? 2 : k.Length >= 5 ? 1 : 0;
             foreach (var w in words)
             {
-                if (w == k || (w.Length > k.Length && w.Contains(k))) return true;
+                if (w == k) return true;
+                // Sous-chaîne INTERNE réservée aux clés longues (« surchauffe » ⊃ « chauffe ») :
+                // sur les clés courtes elle créait des contresens (« blague » ⊃ « lag »).
+                if (k.Length >= 5 && w.Length > k.Length && w.Contains(k)) return true;
+                if (k.Length >= 3 && k.Length <= 4 && w.Length > k.Length && w.StartsWith(k, StringComparison.Ordinal)) return true; // « lags », « dlls »
+                if (UnitHit(w, k)) return true;                                       // « 60hz », « 144fps », « 1000hz »
                 if (tol > 0 && Math.Abs(w.Length - k.Length) <= tol && Lev(w, k, tol) <= tol) return true;
             }
             return false;
+        }
+
+        // Nombre collé à son unité : « 60hz » pour la clé « hz », « 240fps » pour « fps ».
+        private static bool UnitHit(string w, string k)
+        {
+            if (k.Length > 3 || w.Length <= k.Length || !w.EndsWith(k, StringComparison.Ordinal)) return false;
+            for (int i = 0; i < w.Length - k.Length; i++) if (!char.IsDigit(w[i])) return false;
+            return true;
         }
 
         /// <summary>Distance d'édition (Levenshtein) avec sortie anticipée au-delà de 'max'.</summary>
@@ -461,6 +660,76 @@ namespace BTOptimizer
 
         private static bool IsYes(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && YesRx.IsMatch(x); }
         private static bool IsNo(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && NoRx.IsMatch(x); }
+
+        // --- Développement du langage « texto » : chaque abréviation courante → sa forme pleine,
+        //     AVANT tout le routage (les règles, le lexique et les conseils en profitent tous).
+        //     Ne remplace QUE des tokens entiers, connus et non ambigus dans un contexte d'aide PC.
+        private static readonly System.Collections.Generic.Dictionary<string, string> Abbr =
+            new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // politesse / salutations
+            {"slt","salut"},{"cc","coucou"},{"bjr","bonjour"},{"bsr","bonsoir"},{"wsh","salut"},{"yo","salut"},
+            {"stp","s'il te plait"},{"svp","s'il te plait"},{"mrc","merci"},{"dsl","desole"},{"bnj","bonjour"},
+            // oui / non
+            {"wi","oui"},{"ui","oui"},{"ouai","oui"},{"ouais","oui"},{"nn","non"},{"nan","non"},{"vi","oui"},
+            // mots interrogatifs
+            {"pk","pourquoi"},{"pq","pourquoi"},{"pkoi","pourquoi"},{"prq","pourquoi"},{"koi","quoi"},{"kwa","quoi"},
+            {"ki","qui"},{"kan","quand"},{"kand","quand"},{"cmt","comment"},{"comen","comment"},{"komen","comment"},
+            {"komin","comment"},{"cb","combien"},{"cbien","combien"},
+            // pronoms / verbes fréquents
+            {"g","j'ai"},{"jai","j'ai"},{"j","je"},{"chui","je suis"},{"chuis","je suis"},{"shui","je suis"},
+            {"ta","tu as"},{"tas","tu as"},{"ya","il y a"},{"yaa","il y a"},{"jv","je vais"},{"jvai","je vais"},
+            {"jvais","je vais"},{"jpe","je peux"},{"jsp","je sais pas"},{"jpp","je n'en peux plus"},{"ta's","tu as"},
+            // abréviations courantes
+            {"bcp","beaucoup"},{"tjs","toujours"},{"tjr","toujours"},{"tjrs","toujours"},{"tt","tout"},
+            {"mtn","maintenant"},{"ct","c'etait"},{"tkt","t'inquiete"},{"askip","a ce qu'il parait"},
+            {"qqch","quelque chose"},{"qqn","quelqu'un"},{"qd","quand"},{"ms","mais"},{"pcq","parce que"},
+            {"pck","parce que"},{"prkoi","pourquoi"},{"tmp","temps"},{"bg","beau gosse"},
+            // problème / négations / tech
+            {"pb","probleme"},{"pbm","probleme"},{"pblm","probleme"},{"prob","probleme"},{"probl","probleme"},
+            {"souci","souci"},{"ordi","pc"},{"ordinateur","pc"},{"pc","pc"},{"maj","mise a jour"},
+            {"dl","telechargement"},{"tel","telecharger"},{"pa","pas"},{"pö","pas"},{"po","pas"},{"pu","plus"},
+            {"plu","plus"},{"rien","rien"},{"marche","marche"},{"fonctionne","fonctionne"},
+            // ça va & co (renforce la politesse, même isolé)
+            {"cava","ca va"},{"sava","ca va"},{"cv","ca va"},{"savapa","ca va pas"},{"cvpa","ca va pas"},
+            // --- 2e vague : adverbes, temps, accords ---
+            {"vrmt","vraiment"},{"vrm","vraiment"},{"vraimen","vraiment"},{"grv","grave"},{"tro","trop"},
+            {"tr","trop"},{"jms","jamais"},{"jame","jamais"},{"tjt","toujours"},{"auj","aujourd'hui"},
+            {"ajd","aujourd'hui"},{"dmain","demain"},{"enfait","en fait"},{"enfai","en fait"},{"anfin","enfin"},
+            {"fo","faut"},{"fau","faut"},{"vazy","vas y"},{"vazi","vas y"},{"jariv","j'arrive"},
+            {"psk","parce que"},{"pask","parce que"},{"parceke","parce que"},{"tfk","tu fais"},{"tufe","tu fais"},
+            {"jte","je te"},{"jtai","je t'ai"},{"cetai","c'etait"},{"quand","quand"},{"dak","ok"},{"dac","ok"},
+            {"dacc","ok"},{"okey","ok"},{"okay","ok"},{"oke","ok"},{"nikel","nickel"},{"trkl","tranquille"},
+            {"pfff","bof"},{"bref","bref"},
+            // --- 3e vague : vocabulaire panne (variantes de saisie → mot canonique) ---
+            {"lague","lag"},{"laggue","lag"},{"lagge","lag"},{"laggs","lag"},{"lagg","lag"},{"laag","lag"},
+            {"freez","freeze"},{"frize","freeze"},{"frise","freeze"},{"fige","freeze"},{"gele","freeze"},
+            {"bugg","bug"},{"buggue","bug"},{"bugue","bug"},{"boggue","bug"},{"boque","bug"},{"beug","bug"},
+            {"plante","plante"},{"plente","plante"},{"crash","crash"},{"krash","crash"},{"crache","crash"},
+            {"mouline","rame"},{"patine","rame"},{"ramme","rame"},{"ramette","rame"},
+            {"saccade","saccade"},{"sacade","saccade"},{"stotter","stutter"},{"stutt","stutter"},
+            {"reboot","redemarre"},{"restart","redemarre"},{"redemare","redemarre"},{"bloque","bloque"},
+            {"lenteur","lent"},{"lag","lag"},{"co","connexion"},{"deco","deconnecte"},{"deconecte","deconnecte"},
+            {"chaud","chaud"},{"brulant","chaud"},{"cramme","chaud"},{"fournaise","chaud"},{"bruyant","bruyant"},
+            {"ventilo","ventilateur"},{"ventilos","ventilateur"},{"screen","ecran"},{"moniteur","ecran"},
+            {"ecran","ecran"},{"clavié","clavier"},{"souri","souris"},{"soury","souris"},{"micro","micro"},
+            {"manette","manette"},{"drivers","pilotes"},{"driver","pilote"},
+        };
+
+        private static string Expand(string s)
+        {
+            if (string.IsNullOrEmpty(s) || s.IndexOf(' ') < 0 && s.Length > 12) return s;
+            string[] w = s.Split(' ');
+            var sb = new StringBuilder(s.Length + 16);
+            for (int i = 0; i < w.Length; i++)
+            {
+                if (w[i].Length == 0) continue;
+                string rep;
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(Abbr.TryGetValue(w[i], out rep) ? rep : w[i]);
+            }
+            return sb.ToString();
+        }
 
         // minuscule + sans accents (l'utilisateur tape souvent sans accents).
         private static string Norm(string x)

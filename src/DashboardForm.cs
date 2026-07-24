@@ -80,6 +80,20 @@ namespace BTOptimizer
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
                 try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
             };
+
+#if !BTTEST
+            // Cerveau IA LOCAL : amorçage au démarrage (gratuit, 100 % sur la machine). Bootstrap
+            // décide seul — activation silencieuse si déjà prêt, sinon UNE question « Oui/Non » puis
+            // installation du modèle ADAPTÉ à cette machine. Différé de 20 s (ne pas gêner le
+            // démarrage) ; jamais dans le harnais de test ; « désactive l'ia » coupe et bloque.
+            var iaTimer = new Timer { Interval = 20000 };
+            iaTimer.Tick += (s, e) =>
+            {
+                iaTimer.Stop(); iaTimer.Dispose();
+                System.Threading.Tasks.Task.Run(() => LocalBrain.Bootstrap(this, Log));
+            };
+            iaTimer.Start();
+#endif
             FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
