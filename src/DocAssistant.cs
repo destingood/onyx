@@ -119,10 +119,14 @@ namespace BTOptimizer
             }
 
             // --- Lecture d'intentions (tolérante aux fautes de frappe, voir FuzzyWord) -------------
-            bool iNet    = Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion", "wifi", "deco", "deconnect");
+            bool iNet    = Has(s, "ping", "en ligne", "jitter", "gigue", "paquet", "serveur", "internet", "connexion",
+                                  "wifi", "deco", "deconnect", "latence reseau", "perte de", "rubber", "teleporte",
+                                  "decroche", "coupure reseau");
             bool iHogs   = Has(s, "qui ralentit", "processus", "en fond", "arriere plan", "arriere-plan", "quel programme", "quelle appli", "gourmand", "bouffe", "consomme");
             bool iScreen = Has(s, "ecran", "hz", "hertz", "rafraich", "moniteur", "144", "165", "240", "bloque a 60");
-            bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu", "charge gpu", "surchauff");
+            bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu",
+                                  "charge gpu", "surchauff", "brulant", "fournaise", "cuit", "ventilo", "ventilateur",
+                                  "souffle", "bruyant", "degre");
             bool iClean  = Has(s, "espace", "disque plein", "nettoy", "liberer", "place disque", "temporaire", "saturé", "sature");
             bool iLibs   = Has(s, "dll", "manquante", "demarre pas", "refuse de demarrer", "visual c", "directx", "redist", "bibliotheque");
             bool iDns    = Has(s, "dns", "resolution de nom");
@@ -169,7 +173,10 @@ namespace BTOptimizer
                      + (iDns ? 1 : 0) + (iBoot ? 1 : 0) + (iCrash ? 1 : 0) + (iLat ? 1 : 0);
             // Symptôme ressenti (large) vs demande de bilan (méta) : les deux mènent à l'enquête,
             // mais seul le SYMPTÔME est assez fort pour élargir une intention précise en enquête.
-            bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas", "perd des fps", "chute de fps");
+            bool symptom = Has(s, "rame", "saccade", "lent", "ralenti", "stutter", "lag", "freeze", "fps bas",
+                                  "perd des fps", "chute de fps", "mouline", "patine", "traine", "poussif",
+                                  "a-coups", "acoups", "broute", "gele", "fige", "bug", "buggue", "plante",
+                                  "lourd", "ramollo", "au ralenti", "lenteur");
             bool meta = Has(s, "bilan", "diagnostic", "analyse", "enquete", "verifie", "controle", "passe au crible",
                                "check up", "checkup", "probleme", "ca marche pas");
             bool asksWhy = Has(s, "pourquoi", "explique", "comment tu sais", "ca veut dire quoi", "detaille", "justifie");
@@ -685,6 +692,28 @@ namespace BTOptimizer
             {"plu","plus"},{"rien","rien"},{"marche","marche"},{"fonctionne","fonctionne"},
             // ça va & co (renforce la politesse, même isolé)
             {"cava","ca va"},{"sava","ca va"},{"cv","ca va"},{"savapa","ca va pas"},{"cvpa","ca va pas"},
+            // --- 2e vague : adverbes, temps, accords ---
+            {"vrmt","vraiment"},{"vrm","vraiment"},{"vraimen","vraiment"},{"grv","grave"},{"tro","trop"},
+            {"tr","trop"},{"jms","jamais"},{"jame","jamais"},{"tjt","toujours"},{"auj","aujourd'hui"},
+            {"ajd","aujourd'hui"},{"dmain","demain"},{"enfait","en fait"},{"enfai","en fait"},{"anfin","enfin"},
+            {"fo","faut"},{"fau","faut"},{"vazy","vas y"},{"vazi","vas y"},{"jariv","j'arrive"},
+            {"psk","parce que"},{"pask","parce que"},{"parceke","parce que"},{"tfk","tu fais"},{"tufe","tu fais"},
+            {"jte","je te"},{"jtai","je t'ai"},{"cetai","c'etait"},{"quand","quand"},{"dak","ok"},{"dac","ok"},
+            {"dacc","ok"},{"okey","ok"},{"okay","ok"},{"oke","ok"},{"nikel","nickel"},{"trkl","tranquille"},
+            {"pfff","bof"},{"bref","bref"},
+            // --- 3e vague : vocabulaire panne (variantes de saisie → mot canonique) ---
+            {"lague","lag"},{"laggue","lag"},{"lagge","lag"},{"laggs","lag"},{"lagg","lag"},{"laag","lag"},
+            {"freez","freeze"},{"frize","freeze"},{"frise","freeze"},{"fige","freeze"},{"gele","freeze"},
+            {"bugg","bug"},{"buggue","bug"},{"bugue","bug"},{"boggue","bug"},{"boque","bug"},{"beug","bug"},
+            {"plante","plante"},{"plente","plante"},{"crash","crash"},{"krash","crash"},{"crache","crash"},
+            {"mouline","rame"},{"patine","rame"},{"ramme","rame"},{"ramette","rame"},
+            {"saccade","saccade"},{"sacade","saccade"},{"stotter","stutter"},{"stutt","stutter"},
+            {"reboot","redemarre"},{"restart","redemarre"},{"redemare","redemarre"},{"bloque","bloque"},
+            {"lenteur","lent"},{"lag","lag"},{"co","connexion"},{"deco","deconnecte"},{"deconecte","deconnecte"},
+            {"chaud","chaud"},{"brulant","chaud"},{"cramme","chaud"},{"fournaise","chaud"},{"bruyant","bruyant"},
+            {"ventilo","ventilateur"},{"ventilos","ventilateur"},{"screen","ecran"},{"moniteur","ecran"},
+            {"ecran","ecran"},{"clavié","clavier"},{"souri","souris"},{"soury","souris"},{"micro","micro"},
+            {"manette","manette"},{"drivers","pilotes"},{"driver","pilote"},
         };
 
         private static string Expand(string s)
