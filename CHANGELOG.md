@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.67 — IA locale : installateur + fiabilité du téléchargement
+- **L'installateur propose l'IA** : case « Installer le cerveau IA local (gratuit, ~2 Go) »
+  cochée par défaut. Cochée → l'app installe Ollama et le modèle ADAPTÉ à la machine au 1er
+  lancement, sans re-demander ; décochée → elle n'insiste jamais. (Le setup n'alourdit rien :
+  le modèle se télécharge en fond dans l'app, avec progression.)
+- **Correctif fiabilité** : l'installation d'Ollama et le téléchargement du modèle passaient
+  par le délai par défaut (10 min) → sur une connexion normale, un modèle de 2-5 Go était
+  COUPÉ avant la fin. Ils utilisent désormais le délai long (60 min) — le téléchargement va
+  jusqu'au bout en une fois (et Ollama reprend là où il en était s'il est interrompu).
+- Vérifié : ID winget `Ollama.Ollama` valide ; le choix du modèle s'adapte bien (7B sur grosse
+  carte → 0,5B sur petit PC / iGPU) ; `ollama pull` fonctionne de bout en bout.
+
 ## v14.66 — Fini les phrases toutes faites : les accroches sont reformulées à la volée
 - **Quand l'IA locale est active, les phrases d'accroche ne sont plus figées** : « je teste
   ta connexion », « je lance l'enquête », « salut ! »… sont reformulées par le modèle à

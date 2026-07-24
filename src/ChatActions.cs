@@ -781,7 +781,8 @@ namespace BTOptimizer
             {
                 string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
                 if (log != null) log("Téléchargement du modèle " + pick.Tag + " (Ollama)…", 0);
-                try { Sys.Run(exe, "pull " + pick.Tag); }
+                // 60 min : un modèle de plusieurs Go sur une connexion normale dépasse le délai par défaut (10 min).
+                try { Sys.Run(exe, "pull " + pick.Tag, Sys.LongRunTimeoutMs); }
                 catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
                 if (LocalBrain.BestModel() != null)
                 {

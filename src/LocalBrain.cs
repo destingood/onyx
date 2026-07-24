@@ -185,7 +185,8 @@ namespace BTOptimizer
                         SetupStatus = "installation d'Ollama (gratuit)";
                         if (log != null) log("IA locale : Ollama absent → installation (winget, gratuit)…", 0);
                         BumpTries();
-                        Sys.Run(winget, "install --id Ollama.Ollama --exact --silent --accept-package-agreements --accept-source-agreements");
+                        // Délai généreux (60 min) : le paquet Ollama + son install peuvent traîner sur une connexion modeste.
+                        Sys.Run(winget, "install --id Ollama.Ollama --exact --silent --accept-package-agreements --accept-source-agreements", Sys.LongRunTimeoutMs);
                         for (int i = 0; i < 6 && OllamaExe() == null; i++) System.Threading.Thread.Sleep(1500); // laisse le disque se poser
                         exe = OllamaExe();
                         if (exe == null) { SetupStatus = null; return; }
@@ -209,7 +210,9 @@ namespace BTOptimizer
                     if (log != null) log("IA locale : modèle choisi pour cette machine → " + pick.Human + ". Téléchargement…", 0);
                     BumpTries();
                     string exe2 = OllamaExe(); if (exe2 == null) exe2 = "ollama";
-                    Sys.Run(exe2, "pull " + pick.Tag);       // interrompu ? Ollama REPREND le téléchargement au prochain essai
+                    // 60 min : un modèle de 2 à 5 Go sur une connexion normale dépasse les 10 min par défaut
+                    // (sinon coupé et jamais fini). Interrompu ? Ollama REPREND au prochain essai.
+                    Sys.Run(exe2, "pull " + pick.Tag, Sys.LongRunTimeoutMs);
                     if (BestModel() == null) { SetupStatus = null; return; }
                 }
 
