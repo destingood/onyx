@@ -812,10 +812,14 @@ namespace BTOptimizer
                 }
                 if (log != null) log("IA locale (" + model + ") réfléchit…", 0);
                 string ans;
-                try { ans = LocalBrain.Ask(q, BrainContext(st), model); }
+                // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
+                // (« et pourquoi ? », « développe »… gardent leur sens).
+                LocalBrain.PushUser(q);
+                try { ans = LocalBrain.AskChat(BrainContext(st), model); }
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
+                LocalBrain.PushAssistant(ans.Trim());
                 return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
             };
             return a;

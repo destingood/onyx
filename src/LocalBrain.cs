@@ -430,7 +430,7 @@ namespace BTOptimizer
         /// <summary>Vrai si Ollama est détecté sur la machine (installé), quel que soit l'emplacement.</summary>
         public static bool Installed { get { return OllamaExe() != null; } }
 
-        /// <summary>Pose la question au modèle local. BLOQUANT (à appeler en tâche de fond).</summary>
+        /// <summary>Pose la question au modèle local (sans mémoire). BLOQUANT (tâche de fond).</summary>
         public static string Ask(string question, string systemContext, string model)
         {
             var payload = new Dictionary<string, object>
@@ -447,6 +447,52 @@ namespace BTOptimizer
                 string json = r.Content.ReadAsStringAsync().Result;
                 using (var d = JsonDocument.Parse(json))
                     return d.RootElement.GetProperty("response").GetString();
+            }
+        }
+
+        // ------------------------------------------------------------------
+        //  MÉMOIRE DE CONVERSATION — l'IA suit le fil (« et pourquoi ? »…)
+        // ------------------------------------------------------------------
+        //  On garde les derniers échanges IA (rôle + texte) pour que les questions de suivi
+        //  gardent leur contexte. Borné : on ne renvoie que les 8 derniers messages (~4 tours).
+        private static readonly List<string[]> _history = new List<string[]>();
+        private const int MaxTurns = 8;
+
+        public static void PushUser(string text) { Push("user", text); }
+        public static void PushAssistant(string text) { Push("assistant", text); }
+        public static void ResetHistory() { lock (_history) _history.Clear(); }
+
+        private static void Push(string role, string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            lock (_history)
+            {
+                _history.Add(new[] { role, text });
+                while (_history.Count > MaxTurns) _history.RemoveAt(0);
+            }
+        }
+
+        /// <summary>Réponse EN CONTEXTE : envoie le système + l'historique récent (dont la dernière
+        /// question) au modèle via /api/chat. BLOQUANT (tâche de fond).</summary>
+        public static string AskChat(string systemContext, string model)
+        {
+            var msgs = new List<object> { new Dictionary<string, object> { { "role", "system" }, { "content", systemContext } } };
+            lock (_history)
+                foreach (var h in _history)
+                    msgs.Add(new Dictionary<string, object> { { "role", h[0] }, { "content", h[1] } });
+            var payload = new Dictionary<string, object>
+            {
+                { "model", model },
+                { "messages", msgs },
+                { "stream", false },
+                { "options", new Dictionary<string, object> { { "temperature", 0.4 }, { "num_predict", 350 } } }
+            };
+            var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using (var r = Http.PostAsync(Base + "/api/chat", body).Result)
+            {
+                string json = r.Content.ReadAsStringAsync().Result;
+                using (var d = JsonDocument.Parse(json))
+                    return d.RootElement.GetProperty("message").GetProperty("content").GetString();
             }
         }
     }

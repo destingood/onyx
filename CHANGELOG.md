@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.64 — L'IA locale a de la MÉMOIRE (vraie conversation)
+- **Le cerveau IA suit le fil** : via l'API chat d'Ollama, il garde les derniers échanges en
+  contexte. « Et pourquoi ? », « développe », « un exemple ? », « et sur mon PC ? » gardent
+  enfin leur sens — comme une vraie IA, plus une suite de questions isolées.
+- Mémoire **bornée** (les ~4 derniers tours) pour rester rapide et 100 % local.
+- **« nouvelle conversation » / « oublie tout »** repart sur une page blanche ; couper l'IA
+  efface aussi le contexte.
+- Testé en direct : à « Je joue à Valorant » puis « quel FPS viser sur mon écran 240 Hz ? »,
+  le modèle relie bien les deux et répond dans le contexte.
+
 ## v14.63 — Encore plus de vocabulaire compris
 - **Dictionnaire texto étendu à ~190 entrées** : vraiment (vrmt/vrm), trop (tro/tr), jamais
   (jms), aujourd'hui (auj/ajd), parce que (psk/pask), ok (dak/okey/oke), en fait, faut (fo),
