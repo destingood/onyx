@@ -22,7 +22,7 @@ namespace BTOptimizer
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         // Domaines du benchmark : un généraliste + deux « jeux » (résolus en continu par les lanceurs).
         private static readonly string[] BenchDomains = { "www.google.com", "steampowered.com", "riotgames.com" };
@@ -67,7 +67,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — DNS";
+            Text = "ONYX — DNS";
             ClientSize = new Size(640, 532);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -276,7 +276,7 @@ namespace BTOptimizer
                             reverted
                                 ? "Ce résolveur est injoignable depuis ton réseau.\n\n• IPv4 : tes réglages précédents ont été restaurés à l'identique.\n• IPv6 : remis en automatique (état sûr et joignable).\n\nRien n'est cassé."
                                 : "DNS mis à jour (IPv4 + IPv6).",
-                            "Fluide", MessageBoxButtons.OK,
+                            "ONYX", MessageBoxButtons.OK,
                             reverted ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
                     }));
                 }

@@ -17,7 +17,7 @@ namespace BTOptimizer
 
         public WindowsLicenseForm()
         {
-            Text = "Fluide — État de la licence Windows";
+            Text = "ONYX — État de la licence Windows";
             ClientSize = new Size(560, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -67,7 +67,7 @@ namespace BTOptimizer
             var openAct = new Button
             {
                 Text = "Ouvrir l'activation Windows", Location = new Point(20, 356), Size = new Size(220, 30),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White
+                FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.White
             };
             openAct.FlatAppearance.BorderSize = 0;
             openAct.Click += (s, e) => { try { Process.Start(new ProcessStartInfo("ms-settings:activation") { UseShellExecute = true }); } catch { } };

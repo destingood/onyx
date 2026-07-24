@@ -16,7 +16,7 @@ namespace BTOptimizer
     internal class ControllerForm : Form
     {
         private readonly Action<string, int> _log;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         [DllImport("xinput1_4.dll")] private static extern int XInputGetState(int dwUserIndex, out XINPUT_STATE state);
         [StructLayout(LayoutKind.Sequential)] private struct XINPUT_STATE { public uint dwPacketNumber; public XINPUT_GAMEPAD Gamepad; }
@@ -42,7 +42,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Test manette";
+            Text = "ONYX — Test manette";
             ClientSize = new Size(560, 430);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

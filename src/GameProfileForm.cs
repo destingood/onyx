@@ -20,7 +20,7 @@ namespace BTOptimizer
         private Game _selectedGame;
         private int _cpuCores;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private class Game
         {
@@ -79,7 +79,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Booster de jeu (Priorité & Affinité)";
+            Text = "ONYX — Booster de jeu (Priorité & Affinité)";
             ClientSize = new Size(680, 480);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -292,7 +292,7 @@ namespace BTOptimizer
         {
             using (var f = new Form
             {
-                Text = "Fluide — Ajouter un jeu", ClientSize = new Size(380, 132), FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "ONYX — Ajouter un jeu", ClientSize = new Size(380, 132), FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent, MaximizeBox = false, MinimizeBox = false, Font = new Font("Segoe UI", 9f)
             })
             {

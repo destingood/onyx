@@ -188,7 +188,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnScan, _btnRepair, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private const int Days = 14;
 
         public StabilityForm(Action<string, int> log)
@@ -201,7 +201,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Stabilité du PC";
+            Text = "ONYX — Stabilité du PC";
             ClientSize = new Size(680, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

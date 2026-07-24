@@ -34,7 +34,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            _mode = FpsUi.NeonButton("▶  MODE JEU");
+            _mode = FpsUi.GoldButton("▶  MODE JEU");
             _mode.Width = 150; _mode.Height = 34;
             _mode.Click += (s, e) => ToggleBoost();
             Controls.Add(_mode);
@@ -268,7 +268,7 @@ namespace BTOptimizer
             Control last = null;
             if (det.Count > 0)
             {
-                AddHeader("DÉTECTÉS SUR CE PC", det.Count, FpsUi.Neon);
+                AddHeader("DÉTECTÉS SUR CE PC", det.Count, FpsUi.Gold);
                 foreach (var g in det) { last = Card(g, true); _flow.Controls.Add(last); }
             }
             if (other.Count > 0)
@@ -369,7 +369,7 @@ namespace BTOptimizer
                         // Placeholder soigné pour les jeux hors Steam (Riot/Epic/Blizzard…) : dégradé +
                         // pastille ronde à la manette + nom bien lisible (au lieu d'une boîte vide).
                         using (var lg = new LinearGradientBrush(rr, Color.FromArgb(26, 31, 28), Color.FromArgb(12, 15, 13), 90f)) gr.FillRectangle(lg, rr);
-                        Color ac = detected ? FpsUi.Neon : FpsUi.Dim2;
+                        Color ac = detected ? FpsUi.Gold : FpsUi.Dim2;
 
                         // Aucune jaquette Steam possible (Battle.net, EA app, jeux hors launcher) :
                         // on affiche l'icône HAUTE RÉSOLUTION du jeu, extraite de son exécutable.
@@ -435,7 +435,7 @@ namespace BTOptimizer
                 else
                 {
                     string tag = detected ? "● DÉTECTÉ" : "non installé";
-                    Color tc = detected ? FpsUi.Neon : FpsUi.Dim2;
+                    Color tc = detected ? FpsUi.Gold : FpsUi.Dim2;
                     TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, rr.Height - 26, rr.Width, 18), tc,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
                 }
@@ -446,7 +446,7 @@ namespace BTOptimizer
                     Size ts = TextRenderer.MeasureText(g.Store, FpsUi.Tiny);
                     var chip = new Rectangle(8, 8, ts.Width + 12, 17);
                     using (var b = new SolidBrush(Color.FromArgb(200, 0, 0, 0))) gr.FillRectangle(b, chip);
-                    TextRenderer.DrawText(gr, g.Store, FpsUi.Tiny, chip, FpsUi.Neon,
+                    TextRenderer.DrawText(gr, g.Store, FpsUi.Tiny, chip, FpsUi.Gold,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                 }
 
@@ -566,8 +566,8 @@ namespace BTOptimizer
             else
             {
                 _mode.Text = "▶  MODE JEU";
-                _mode.ForeColor = FpsUi.Neon;
-                _mode.FlatAppearance.BorderColor = FpsUi.Neon;
+                _mode.ForeColor = FpsUi.Gold;
+                _mode.FlatAppearance.BorderColor = FpsUi.Gold;
             }
         }
 

@@ -177,7 +177,7 @@ namespace BTOptimizer
         private void OnUninstall(object sender, EventArgs e)
         {
             DormantGames.Entry it = Sel();
-            if (it == null) { MessageBox.Show(this, "Sélectionne un jeu.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (it == null) { MessageBox.Show(this, "Sélectionne un jeu.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
             if (GameActions.Uninstall(this, it.Name, it.Game.SteamAppId))
                 _log("Désinstallation lancée : " + it.Name + " (" + it.SizeText + " à récupérer).", 0);
         }
@@ -185,7 +185,7 @@ namespace BTOptimizer
         private void OnHide(object sender, EventArgs e)
         {
             DormantGames.Entry it = Sel();
-            if (it == null) { MessageBox.Show(this, "Sélectionne un jeu.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (it == null) { MessageBox.Show(this, "Sélectionne un jeu.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
             GameHidden.SetHidden(it.Name, true);
             _log("« " + it.Name + " » masqué de la bibliothèque (aucun fichier touché).", 0);
             Populate(_entries);

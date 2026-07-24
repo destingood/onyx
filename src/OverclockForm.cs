@@ -47,7 +47,7 @@ namespace BTOptimizer
 
         private static readonly Color Bg     = Color.FromArgb(245, 246, 248);
         private static readonly Color Header = Color.FromArgb(28, 30, 38);
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private static readonly Color Warn   = Color.FromArgb(205, 90, 40);
 
         public OverclockForm(Action<string, int> log)
@@ -61,7 +61,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Overclock automatique (GPU & CPU)";
+            Text = "ONYX — Overclock automatique (GPU & CPU)";
             ClientSize = new Size(660, 690);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -422,7 +422,7 @@ namespace BTOptimizer
                         MessageBox.Show(this,
                             apply ? "Boost CPU maximal appliqué. La fréquence effective ci-dessus doit tenir le turbo."
                                   : "Boost CPU rétabli aux valeurs par défaut de Windows.",
-                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { }
@@ -476,7 +476,7 @@ namespace BTOptimizer
             else if (Sys.OcGuardExists()) Sys.SetOcGuard(false, Application.ExecutablePath, _log);
             _gpu = Sys.QueryGpuOc();
             MessageBox.Show(this, "Power limit GPU appliqué (fréquences gérées par le pilote).",
-                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnApplyNvidia(object sender, EventArgs e)
@@ -498,7 +498,7 @@ namespace BTOptimizer
                     Cursor = Cursors.Default;
                     if (btn != null) btn.Enabled = true;
                     MessageBox.Show(this, "Profil NVIDIA appliqué. Certains réglages prennent effet au prochain lancement du jeu.",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -512,7 +512,7 @@ namespace BTOptimizer
             _gpu = Sys.QueryGpuOc();
             UpdatePlLabel();
             MessageBox.Show(this, "GPU remis aux réglages par défaut du constructeur.",
-                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         protected override void Dispose(bool disposing)

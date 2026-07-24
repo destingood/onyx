@@ -16,7 +16,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnOpen, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private class Entry { public string Symptom, Tool; public Func<Form> Open; }
         private readonly List<Entry> _entries = new List<Entry>();
@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — J'ai un problème…";
+            Text = "ONYX — J'ai un problème…";
             ClientSize = new Size(700, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

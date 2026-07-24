@@ -18,7 +18,7 @@ namespace BTOptimizer
     ///   • on ne montre QUE les sections dont l'application est réellement détectée (installée) ;
     ///   • rien n'est coché par défaut, la taille est mesurée et affichée avant toute suppression.
     /// Aucun téléchargement automatique : l'utilisateur charge un fichier local, ou clique lui-même
-    /// sur « Télécharger les règles ». Fluide informe et nettoie du cache — il ne bricole rien.
+    /// sur « Télécharger les règles ». ONYX informe et nettoie du cache — il ne bricole rien.
     /// </summary>
     internal static class Winapp2
     {
@@ -68,7 +68,7 @@ namespace BTOptimizer
             using (var http = new HttpClient())
             {
                 http.Timeout = TimeSpan.FromSeconds(60);
-                http.DefaultRequestHeaders.Add("User-Agent", "Fluide-Optimizer");
+                http.DefaultRequestHeaders.Add("User-Agent", "ONYX-Optimizer");
                 byte[] bytes = http.GetByteArrayAsync(SourceUrl).GetAwaiter().GetResult();
                 string text = Decode(bytes);
                 try { File.WriteAllText(LocalPath, text, new UTF8Encoding(false)); } catch { }

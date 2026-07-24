@@ -21,7 +21,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnScan, _btnBoost, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private class CheckResult
         {
@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Prêt pour le match ?";
+            Text = "ONYX — Prêt pour le match ?";
             ClientSize = new Size(640, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

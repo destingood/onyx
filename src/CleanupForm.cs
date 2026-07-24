@@ -15,7 +15,7 @@ namespace BTOptimizer
         private Button _btnAnalyze, _btnClean, _btnClose;
         private List<Sys.CleanTarget> _targets = new List<Sys.CleanTarget>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public CleanupForm(Action<string, int> log)
         {
@@ -27,7 +27,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Nettoyage disque";
+            Text = "ONYX — Nettoyage disque";
             ClientSize = new Size(520, 380);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -3,15 +3,15 @@ using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Fluide")]
-[assembly: AssemblyProduct("Fluide")]
+[assembly: AssemblyTitle("ONYX")]
+[assembly: AssemblyProduct("ONYX")]
 [assembly: AssemblyDescription("Optimiseur latence / input lag / rapidité pour Windows 10 et 11")]
 [assembly: AssemblyCompany("BT")]
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.53.0.0")]
-[assembly: AssemblyFileVersion("14.53.0.0")]
+[assembly: AssemblyVersion("14.54.0.0")]
+[assembly: AssemblyFileVersion("14.54.0.0")]
 
 namespace BTOptimizer
 {
@@ -34,8 +34,8 @@ namespace BTOptimizer
             {
                 if (!isNew)
                 {
-                    MessageBox.Show("Fluide est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("ONYX est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 Application.EnableVisualStyles();
@@ -49,8 +49,8 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "Fluide a rencontré une erreur et va se fermer :\n\n" + ex,
-                        "Fluide — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "ONYX a rencontré une erreur et va se fermer :\n\n" + ex,
+                        "ONYX — erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 GC.KeepAlive(mutex);
             }
@@ -218,7 +218,7 @@ namespace BTOptimizer
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
 
-            Console.WriteLine("Fluide TEST — contexte :");
+            Console.WriteLine("ONYX TEST — contexte :");
             Console.WriteLine("  OS             : " + Sys.OsDescription());
             Console.WriteLine("  SID courant    : " + Sys.CurrentSid);
             Console.WriteLine("  SID cible      : " + Sys.TargetSid);

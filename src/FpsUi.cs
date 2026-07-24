@@ -7,29 +7,47 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // ----------------------------------------------------------------------
-    //  Primitives d'interface style DTG : palette noir profond + vert
-    //  néon #00FF88, cartes arrondies, interrupteurs, boutons pilule. Partagé
-    //  par toutes les pages du shell.
+    //  Primitives d'interface ONYX : carbone chaud + or champagne, cartes
+    //  arrondies, interrupteurs, boutons pilule. Partagé par toutes les
+    //  pages du shell.
     // ----------------------------------------------------------------------
     internal static class FpsUi
     {
-        // Palette Fluide : noirs légèrement bleutés + accent indigo #818CF8.
+        // Palette ONYX « Carbone & Or » : noirs chauds (jamais bleutés) + or champagne.
         // Une seule source de vérité : changer l'accent ici le change dans tout le shell
         // (logo, rail, anneau de santé, boutons, overlay).
-        public static readonly Color BgMain = Color.FromArgb(8, 8, 12);      // #08080C
-        public static readonly Color RailBg = Color.FromArgb(13, 13, 20);    // #0D0D14 (.frame)
-        public static readonly Color Card   = Color.FromArgb(16, 16, 24);    // #101018
-        public static readonly Color CardHi = Color.FromArgb(26, 26, 40);    // #1A1A28 (survol)
-        public static readonly Color Border = Color.FromArgb(34, 34, 47);    // #22222F
-        public static readonly Color Neon   = Color.FromArgb(129, 140, 248); // #818CF8 (accent)
-        public static readonly Color NeonDim= Color.FromArgb(102, 112, 214); // #6670D6
-        public static readonly Color Ink    = Color.FromArgb(255, 255, 255); // #FFFFFF
-        public static readonly Color Dim    = Color.FromArgb(176, 176, 176); // #B0B0B0
-        public static readonly Color Dim2   = Color.FromArgb(137, 137, 137); // #898989
-        public static readonly Color Warn   = Color.FromArgb(255, 208, 0);   // #FFD000
-        public static readonly Color Err    = Color.FromArgb(255, 107, 107); // #FF6B6B
+        //
+        // RÈGLE SÉMANTIQUE : l'or SIGNE (marque, nav active, CTA, focus) mais ne code
+        // JAMAIS un état. Les verdicts parlent leur langue universelle : Ok = émeraude,
+        // Warn = orange vif (bien distinct du champagne), Err = rouge.
+        public static readonly Color BgMain  = Color.FromArgb(11, 10, 9);      // #0B0A09
+        public static readonly Color RailBg  = Color.FromArgb(16, 14, 12);     // #100E0C (.frame)
+        public static readonly Color Card    = Color.FromArgb(22, 19, 15);     // #16130F
+        public static readonly Color CardHi  = Color.FromArgb(32, 28, 22);     // #201C16 (survol)
+        public static readonly Color Border  = Color.FromArgb(43, 37, 29);     // #2B251D
+        public static readonly Color Gold    = Color.FromArgb(227, 183, 92);   // #E3B75C (accent identité)
+        public static readonly Color GoldDim = Color.FromArgb(176, 139, 70);   // #B08B46
+        public static readonly Color Ink     = Color.FromArgb(243, 237, 226);  // #F3EDE2 (ivoire)
+        public static readonly Color Dim     = Color.FromArgb(180, 170, 154);  // #B4AA9A
+        public static readonly Color Dim2    = Color.FromArgb(134, 125, 111);  // #867D6F
+        public static readonly Color Ok      = Color.FromArgb(76, 196, 140);   // #4CC48C (émeraude sobre)
+        public static readonly Color Warn    = Color.FromArgb(240, 148, 54);   // #F09436 (orange vif ≠ or)
+        public static readonly Color Err     = Color.FromArgb(232, 90, 80);    // #E85A50
 
-        // Polices Fluide : Ubuntu (titres/nav), Inter (corps), Garet (display) — toutes libres.
+        /// <summary>Or translucide (survols, fonds actifs, halos) — alpha 0-255.</summary>
+        public static Color Accent(int alpha) { return Color.FromArgb(alpha, Gold); }
+
+        /// <summary>Mélange opaque fond+or (les FlatAppearance de WinForms refusent l'alpha).</summary>
+        public static Color BlendGold(Color bg, float amount)
+        {
+            return Color.FromArgb(
+                (int)(bg.R + (Gold.R - bg.R) * amount),
+                (int)(bg.G + (Gold.G - bg.G) * amount),
+                (int)(bg.B + (Gold.B - bg.B) * amount));
+        }
+
+        // Polices ONYX : Marcellus (display/logo — l'or gravé), Ubuntu (titres/nav),
+        // Inter (corps). Toutes libres (OFL / Ubuntu Font Licence).
         public static Font F(float size, bool semibold)
         {
             return semibold ? Fonts.Make(Fonts.Ubuntu, size, FontStyle.Bold, "Segoe UI Semibold")
@@ -42,7 +60,8 @@ namespace BTOptimizer
         public static readonly Font Small = Fonts.Make(Fonts.Inter,  8.5f, FontStyle.Regular, "Segoe UI");
         public static readonly Font Tiny  = Fonts.Make(Fonts.Inter,  7.5f, FontStyle.Regular, "Segoe UI");
         public static readonly Font Num   = Fonts.Make(Fonts.Ubuntu, 20f,  FontStyle.Bold,    "Segoe UI Semibold");
-        public static readonly Font Garet = Fonts.Make(Fonts.Garet,  22f,  FontStyle.Regular, "Segoe UI Semibold");
+        public static readonly Font Display  = Fonts.Make(Fonts.Marcellus, 22f, FontStyle.Regular, "Georgia");
+        public static readonly Font DisplayL = Fonts.Make(Fonts.Marcellus, 30f, FontStyle.Regular, "Georgia");
         public static readonly Font Glyph = new Font("Segoe UI Emoji", 15f);
         public static readonly Font GlyphL  = new Font("Segoe UI Emoji", 30f);
         public static readonly Font GlyphXL = new Font("Segoe UI Emoji", 42f);
@@ -67,8 +86,8 @@ namespace BTOptimizer
         }
 
         /// <summary>Peint une carte arrondie (fond + bordure) sur toute la surface donnée. Léger dégradé
-        /// vertical (haut plus clair) + liseré haut : donne de la PROFONDEUR sur fond noir (pas d'ombre
-        /// possible sur du noir pur).</summary>
+        /// vertical (haut plus clair) + liseré haut ivoire chaud : donne de la PROFONDEUR sur fond
+        /// carbone (pas d'ombre possible sur du noir).</summary>
         public static void PaintCard(Graphics g, Rectangle r, Color fill, Color border, float radius)
         {
             if (r.Width < 4 || r.Height < 4) return;
@@ -79,8 +98,8 @@ namespace BTOptimizer
                 using (var br = new LinearGradientBrush(new RectangleF(rf.X, rf.Y - 1, rf.Width, rf.Height + 2), Lighten(fill, 8), fill, 90f))
                     g.FillPath(br, path);
                 using (var pen = new Pen(border)) g.DrawPath(pen, path);
-                // liseré supérieur légèrement plus clair = arête éclairée.
-                using (var pen = new Pen(Color.FromArgb(22, 255, 255, 255)))
+                // liseré supérieur légèrement plus clair = arête éclairée (teinte chaude, pas blanc froid).
+                using (var pen = new Pen(Color.FromArgb(20, 255, 238, 200)))
                     g.DrawLine(pen, rf.X + radius, rf.Y + 1f, rf.Right - radius, rf.Y + 1f);
             }
         }
@@ -100,10 +119,10 @@ namespace BTOptimizer
             b.Text = text;
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = 0;
-            b.BackColor = Color.FromArgb(28, 28, 42);
+            b.BackColor = Color.FromArgb(31, 27, 22);
             // Retours au survol / à l'appui : un bouton qui ne réagit pas fait « maquette ».
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 40, 58);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(20, 20, 30);
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(44, 39, 31);
+            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(23, 20, 16);
             b.ForeColor = Ink;
             b.Font = Small;
             b.Cursor = Cursors.Hand;
@@ -111,22 +130,47 @@ namespace BTOptimizer
             return b;
         }
 
-        public static Button NeonButton(string text)
+        public static Button GoldButton(string text)
         {
             var b = new Button();
             b.Text = text;
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderColor = Neon;
+            b.FlatAppearance.BorderColor = Gold;
             b.FlatAppearance.BorderSize = 1;
             b.BackColor = Card;
             // L'accent « chauffe » au survol, puis s'enfonce à l'appui.
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(34, 32, 72);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(22, 21, 48);
-            b.ForeColor = Neon;
+            b.FlatAppearance.MouseOverBackColor = BlendGold(Card, 0.16f);
+            b.FlatAppearance.MouseDownBackColor = BlendGold(Card, 0.07f);
+            b.ForeColor = Gold;
             b.Font = H3;
             b.Cursor = Cursors.Hand;
             b.UseVisualStyleBackColor = false;
             return b;
+        }
+
+        /// <summary>Capitales gravées : interlettrage manuel (GDI ne sait pas espacer), centré
+        /// verticalement sur cy. Renvoie le X de fin (pour enchaîner un élément à droite).</summary>
+        public static float DrawTracked(Graphics g, string text, Font f, Color c, float x, float cy, float tracking)
+        {
+            const TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+            foreach (char ch in text)
+            {
+                string s = ch.ToString();
+                Size sz = TextRenderer.MeasureText(g, s, f, new Size(int.MaxValue, int.MaxValue), flags);
+                TextRenderer.DrawText(g, s, f, new Point((int)Math.Round(x), (int)Math.Round(cy - sz.Height / 2f)), c, flags);
+                x += sz.Width + tracking;
+            }
+            return x - tracking;
+        }
+
+        /// <summary>Largeur d'un texte gravé (même métrique que DrawTracked).</summary>
+        public static float MeasureTracked(Graphics g, string text, Font f, float tracking)
+        {
+            const TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix;
+            float w = 0;
+            foreach (char ch in text)
+                w += TextRenderer.MeasureText(g, ch.ToString(), f, new Size(int.MaxValue, int.MaxValue), flags).Width + tracking;
+            return Math.Max(0, w - tracking);
         }
 
         public static Label Text(string t, Font f, Color c)
@@ -140,7 +184,7 @@ namespace BTOptimizer
     }
 
     // ----------------------------------------------------------------------
-    //  Interrupteur néon (toggle) style DTG.
+    //  Interrupteur (toggle) style ONYX.
     // ----------------------------------------------------------------------
     internal class ToggleSwitch : Control
     {
@@ -189,15 +233,15 @@ namespace BTOptimizer
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var r = new RectangleF(1, 1, Width - 2, Height - 2);
-            Color track = _on ? FpsUi.Neon : Color.FromArgb(48, 48, 62);
-            if (_locked) track = Color.FromArgb(40, 40, 52);
+            Color track = _on ? FpsUi.Gold : Color.FromArgb(52, 46, 38);
+            if (_locked) track = Color.FromArgb(43, 38, 31);
             using (var path = FpsUi.Round(r, r.Height / 2f))
             using (var br = new SolidBrush(track))
                 g.FillPath(br, path);
 
             int d = Height - 8;
             int kx = _on ? Width - d - 4 : 4;
-            Color knob = _on ? Color.FromArgb(10, 10, 16) : Color.FromArgb(180, 180, 190);
+            Color knob = _on ? Color.FromArgb(16, 13, 9) : Color.FromArgb(188, 180, 166);
             using (var br = new SolidBrush(knob))
                 g.FillEllipse(br, kx, 4, d, d);
         }

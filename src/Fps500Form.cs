@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Objectif 500 FPS (écran 500 Hz)";
+            Text = "ONYX — Objectif 500 FPS (écran 500 Hz)";
             ClientSize = new Size(920, 640);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(900, 500);
@@ -321,7 +321,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this, "Le mode " + target.MaxHz + " Hz a été refusé par le pilote.\n"
                     + "Vérifie le câble (DisplayPort) et le menu de l'écran (OSD), puis passe par « Réglages écran... ».",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

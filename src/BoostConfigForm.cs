@@ -36,7 +36,7 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Mode jeu — services coupés & exclusions — Fluide";
+            Text = "Mode jeu — services coupés & exclusions — ONYX";
             ClientSize = new Size(560, 128 + GameBoost.AffectedServices.Length * 30);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

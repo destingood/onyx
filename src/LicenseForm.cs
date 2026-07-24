@@ -14,7 +14,7 @@ namespace BTOptimizer
         private const string Eula =
 "CONDITIONS D'UTILISATION ET AVERTISSEMENT\r\n" +
 "\r\n" +
-"Fluide (« le logiciel ») modifie des paramètres système de Windows : registre, " +
+"ONYX (« le logiciel ») modifie des paramètres système de Windows : registre, " +
 "plan d'alimentation, services, réglages réseau, DNS et pilote graphique.\r\n" +
 "\r\n" +
 "1. RISQUES. Certaines options réduisent volontairement des protections de sécurité " +
@@ -42,7 +42,7 @@ namespace BTOptimizer
 
         public LicenseForm()
         {
-            Text = "Fluide — Conditions d'utilisation";
+            Text = "ONYX — Conditions d'utilisation";
             ClientSize = new Size(620, 480);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -73,7 +73,7 @@ namespace BTOptimizer
             var accept = new Button
             {
                 Text = "J'accepte", Width = 160, Dock = DockStyle.Right,
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10f), DialogResult = DialogResult.OK
             };
             var decline = new Button

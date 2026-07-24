@@ -21,7 +21,7 @@ namespace BTOptimizer
         private Button _btnApply, _btnScan, _btnClose;
         private List<Row> _rows = new List<Row>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private class Row { public string Name; public string Path; public bool Excluded; }
 
@@ -35,7 +35,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Exclusions antivirus (jeux)";
+            Text = "ONYX — Exclusions antivirus (jeux)";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -153,7 +153,7 @@ namespace BTOptimizer
                 if (wanted[i] && !_rows[i].Excluded) toAdd++;
                 else if (!wanted[i] && _rows[i].Excluded) toRemove++;
             }
-            if (toAdd == 0 && toRemove == 0) { MessageBox.Show(this, "Aucun changement.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (toAdd == 0 && toRemove == 0) { MessageBox.Show(this, "Aucun changement.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
 
             string msg = "Appliquer les exclusions antivirus ?\n\n";
             if (toAdd > 0) msg += "• " + toAdd + " dossier(s) de jeu à EXCLURE de l'analyse (moins de saccades).\n";

@@ -29,7 +29,7 @@ namespace BTOptimizer
         private Label _big, _status;
         private Button _btnStart, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private static readonly Color Warn   = Color.FromArgb(205, 133, 0);
         private static readonly Color Bad    = Color.FromArgb(200, 45, 45);
 
@@ -49,7 +49,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Test de stress CPU (intégré)";
+            Text = "ONYX — Test de stress CPU (intégré)";
             ClientSize = new Size(560, 320);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -24,7 +24,7 @@ namespace BTOptimizer
         private Button _btnOptimize, _btnRevert, _btnScan, _btnClose;
         private List<Adapter> _adapters = new List<Adapter>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private const string ClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
 
         // Réglages gérés : clé pilote (standardisée) -> (libellé, valeur « latence min »).
@@ -54,7 +54,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Carte réseau (latence)";
+            Text = "ONYX — Carte réseau (latence)";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -300,7 +300,7 @@ namespace BTOptimizer
         private void AfterApply(bool optimize, int changed, List<Adapter> toRestart)
         {
             if (_log != null) _log("Carte réseau : " + changed + " réglage(s) " + (optimize ? "optimisé(s)" : "rétabli(s)") + ".", 1);
-            if (changed == 0) { SetBusy(false); MessageBox.Show(this, "Aucun changement.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            if (changed == 0) { SetBusy(false); MessageBox.Show(this, "Aucun changement.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
 
             var connected = toRestart.Where(a => a.Connected && !string.IsNullOrEmpty(a.Connection)).ToList();
             bool restart = false;
@@ -335,7 +335,7 @@ namespace BTOptimizer
                 SetBusy(false);
                 Scan();
                 MessageBox.Show(this, "Réglages enregistrés. Effet au prochain redémarrage du PC (ou de la carte).",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

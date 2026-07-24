@@ -102,7 +102,7 @@ namespace BTOptimizer
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
-            var prem = FpsUi.NeonButton("◆  PASSER PRO");
+            var prem = FpsUi.GoldButton("◆  PASSER PRO");
             prem.Name = "prem";
             prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm(""));
             Controls.Add(prem);
@@ -122,7 +122,7 @@ namespace BTOptimizer
                 bool hot = _hover.Contains(p);
                 FpsUi.PaintCard(e.Graphics, p.ClientRectangle,
                                 hot ? FpsUi.CardHi : FpsUi.Card,
-                                hot ? FpsUi.NeonDim : FpsUi.Border, 12f);
+                                hot ? FpsUi.GoldDim : FpsUi.Border, 12f);
             };
 
             var ic = FpsUi.Text(icon, FpsUi.Glyph, FpsUi.Ink); ic.Name = "ic"; ic.SetBounds(16, 14, 34, 34); ic.AutoSize = false;
@@ -199,7 +199,7 @@ namespace BTOptimizer
             int L = 34;
             TextRenderer.DrawText(g, "Bonjour, ", FpsUi.H1, new Point(L, 30), FpsUi.Ink, TextFormatFlags.NoPadding);
             int wHi = TextRenderer.MeasureText(g, "Bonjour, ", FpsUi.H1).Width;
-            TextRenderer.DrawText(g, name + " !", FpsUi.H1, new Point(L + wHi - 6, 30), FpsUi.Neon, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, name + " !", FpsUi.H1, new Point(L + wHi - 6, 30), FpsUi.Gold, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "Bienvenue dans ton QG.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
 
             int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
@@ -224,7 +224,7 @@ namespace BTOptimizer
             int by = y + 52 + ring + 12;
             int statusY = y + h - 34;
             int bs = Math.Min(120, statusY - by - 6);
-            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Neon, false);
+            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Gold, false);
 
             // Verdict aligné sur le vocabulaire historique du bilan (et les seuils de l'anneau).
             int hp = _health < 0 ? 0 : _health;
@@ -240,7 +240,7 @@ namespace BTOptimizer
             int shown = (int)Math.Round(hp * Ease(_animT));
             var rf = new RectangleF(x + 6, y + 6, size - 12, size - 12);
             using (var back = new Pen(Color.FromArgb(38, 40, 39), 8f)) g.DrawArc(back, rf, 0, 360);
-            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Neon);
+            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Gold);
             if (shown > 0)
                 using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * shown / 100f); }
             TextRenderer.DrawText(g, shown + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
@@ -256,7 +256,7 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, "UTILISATION SYSTÈME", FpsUi.H3, new Point(pad, 14), FpsUi.Ink, TextFormatFlags.NoPadding);
             Legend(g, r.Width - 320, 15, "RAM", _curRam, Color.FromArgb(120, 200, 120));
             Legend(g, r.Width - 210, 15, "CPU", _curCpu, Color.FromArgb(90, 200, 250));
-            Legend(g, r.Width - 100, 15, "GPU", _curGpu, FpsUi.Neon);
+            Legend(g, r.Width - 100, 15, "GPU", _curGpu, FpsUi.Gold);
 
             var plot = new Rectangle(pad, 48, r.Width - pad * 2, r.Height - 76);
             TextRenderer.DrawText(g, "100%", FpsUi.Small, new Point(pad, 44), FpsUi.Dim2, TextFormatFlags.NoPadding);
@@ -264,7 +264,7 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             Series(g, plot, _ram, Color.FromArgb(120, 200, 120));
             Series(g, plot, _cpu, Color.FromArgb(90, 200, 250));
-            Series(g, plot, _gpu, FpsUi.Neon);
+            Series(g, plot, _gpu, FpsUi.Gold);
         }
 
         private void Legend(Graphics g, int x, int y, string t, double val, Color c)

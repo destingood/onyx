@@ -1,8 +1,27 @@
-# Journal des versions — DesTinGOOD
+# Journal des versions — ONYX
 
 Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (compatible
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
+
+## v14.54 — ONYX : rebranding « Carbone & Or » (fondations)
+- **Nouvelle identité** : l'app s'appelle désormais **ONYX**. Palette « Carbone & Or » —
+  carbone chaud (fini les noirs bleutés) + or champagne réservé à l'identité (marque,
+  navigation active, CTA, focus). Les verdicts gardent leur langue universelle :
+  **émeraude = sain, orange vif = attention, rouge = critique** (l'or ne code jamais un état).
+- **Typographie signature** : **Marcellus** (libre, OFL) pour le logotype et le display —
+  capitales gravées, interlettrées. Remplace la Garet **DEMO** (licence non commerciale :
+  risque légal éliminé). Chargement des polices fiabilisé (repli fichier via %TEMP% :
+  Inter se résout enfin au lieu de retomber sur Segoe UI).
+- **Logo ONYX** : anneau d'or serti de la frametime qui devient plate — la promesse
+  « Mesuré, pas promis. » gravée dans le métal (vectoriel, net du tray au panneau À propos).
+- **Chrome natif carbone** : barre de titre Windows teintée (DWM) sur la fenêtre principale
+  ET tous les dialogues — la fenêtre est d'un seul tenant, Aero Snap intact.
+- **Badges en métaux précieux** : paliers bronze → argent → or (fini indigo/cyan).
+- **~40 dialogues re-tintés d'un coup** : tokens du thème (fonds, encres, liserés, menus)
+  passés au carbone/or ; boutons pleins or avec texte sombre (lisibilité) ; deux couleurs
+  d'état qui affichaient de l'indigo sous le nom « Green » corrigées en émeraude.
+- Migration douce : l'entrée de démarrage automatique « Fluide » est reprise sous « ONYX ».
 
 ## v14.53 — Le rapport d'audit depuis le chat + « Prépare ma partie »
 - **« génère le rapport » / « fais un audit »** → le Copilote produit le **rapport HTML

@@ -14,11 +14,23 @@ namespace BTOptimizer
     internal static class AppAutostart
     {
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string ValueName = "Fluide";
+        private const string ValueName = "ONYX";
+        private const string LegacyName = "Fluide";   // renommage v14.54 : migrer l'ancienne entrée
 
         public static bool IsEnabled()
         {
-            try { using (var k = Registry.CurrentUser.OpenSubKey(RunKey)) return k != null && k.GetValue(ValueName) != null; }
+            try
+            {
+                using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true))
+                {
+                    if (k == null) return false;
+                    if (k.GetValue(LegacyName) != null)
+                    {   // l'utilisateur avait activé l'autostart sous l'ancien nom : même réglage, nouveau nom
+                        try { k.SetValue(ValueName, LaunchCommand()); k.DeleteValue(LegacyName, false); } catch { }
+                    }
+                    return k.GetValue(ValueName) != null;
+                }
+            }
             catch { return false; }
         }
 
@@ -45,6 +57,7 @@ namespace BTOptimizer
                 using (var k = Registry.CurrentUser.CreateSubKey(RunKey))
                 {
                     if (k == null) return false;
+                    try { k.DeleteValue(LegacyName, false); } catch { }   // purge l'entrée pré-renommage
                     if (on) k.SetValue(ValueName, LaunchCommand());
                     else k.DeleteValue(ValueName, false);
                 }

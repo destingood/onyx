@@ -21,7 +21,7 @@ namespace BTOptimizer
         private Label _verdict;
         private Button _btnTrace, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
         private const int MaxHops = 30;
 
@@ -36,7 +36,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Trajet réseau";
+            Text = "ONYX — Trajet réseau";
             ClientSize = new Size(660, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

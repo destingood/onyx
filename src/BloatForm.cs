@@ -20,7 +20,7 @@ namespace BTOptimizer
         private ListView _list;
         private Label _summary;
         private Button _btnScan, _btnClose, _btnKill;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         // Processus système à ne JAMAIS proposer de fermer.
         private static readonly HashSet<string> Critical = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -101,7 +101,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Qui ralentit mon PC ?";
+            Text = "ONYX — Qui ralentit mon PC ?";
             ClientSize = new Size(700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -289,7 +289,7 @@ namespace BTOptimizer
         {
             if (_list.SelectedItems.Count != 1)
             {
-                MessageBox.Show(this, "Sélectionne d'abord une application dans la liste.", "Fluide",
+                MessageBox.Show(this, "Sélectionne d'abord une application dans la liste.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -298,7 +298,7 @@ namespace BTOptimizer
             if (Critical.Contains(r.Name))
             {
                 MessageBox.Show(this, "« " + r.Name + " » est un processus système : fermeture refusée pour ta sécurité.",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (MessageBox.Show(this,

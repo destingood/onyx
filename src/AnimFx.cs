@@ -11,10 +11,11 @@ namespace BTOptimizer
     /// </summary>
     internal static class AnimFx
     {
-        /// <summary>À appeler AVANT ShowDialog : la fenêtre apparaît en fondu.</summary>
+        /// <summary>À appeler AVANT ShowDialog : chrome carbone + apparition en fondu.</summary>
         public static void HookDialog(Form f)
         {
             if (f == null) return;
+            Dwm.Darken(f);   // barre de titre carbone sur TOUS les dialogues, pas seulement le shell
             if (Anim.On) { try { f.Opacity = 0.0; } catch { } }   // évite un éclair pleine opacité avant le fondu
             f.Shown += delegate { FadeIn(f, 150); };
         }

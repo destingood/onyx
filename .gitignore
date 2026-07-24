@@ -63,3 +63,7 @@ BTTest-out.txt
 bt-health-history.txt
 bt-nic-backup.txt
 testbin/
+
+# Artefacts du harnais visuel (captures/logs regenerables)
+shots-*/
+uitest-*.log

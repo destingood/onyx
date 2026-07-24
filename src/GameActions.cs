@@ -12,7 +12,7 @@ namespace BTOptimizer
     internal static class GameActions
     {
         /// <summary>
-        /// Lance le désinstalleur OFFICIEL du jeu, après confirmation. Fluide ne supprime jamais
+        /// Lance le désinstalleur OFFICIEL du jeu, après confirmation. ONYX ne supprime jamais
         /// de fichiers lui-même : seul l'éditeur sait quoi retirer et quoi CONSERVER (sauvegardes,
         /// profils, services). Renvoie true si un désinstalleur a bien été lancé.
         /// </summary>
@@ -21,7 +21,7 @@ namespace BTOptimizer
             string via = steamAppId > 0 ? "Steam" : "le désinstalleur du jeu";
             if (MessageBox.Show(owner,
                     "Désinstaller « " + name + " » ?\n\n"
-                    + "Fluide ne supprime aucun fichier lui-même : il ouvre " + via + ", qui fera le "
+                    + "ONYX ne supprime aucun fichier lui-même : il ouvre " + via + ", qui fera le "
                     + "ménage proprement (fichiers, clés de registre, services).\n\n"
                     + "Si tu veux seulement ne plus le voir dans la liste, utilise « Masquer ».",
                     "Désinstaller", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
@@ -60,7 +60,7 @@ namespace BTOptimizer
             catch (Exception ex)
             {
                 MessageBox.Show(owner, "Impossible d'ouvrir le désinstalleur : " + ex.Message,
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
         }

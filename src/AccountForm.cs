@@ -17,7 +17,7 @@ namespace BTOptimizer
 
         public AccountForm()
         {
-            Text = "Fluide — Mon compte";
+            Text = "ONYX — Mon compte";
             ClientSize = new Size(560, 490);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -49,7 +49,7 @@ namespace BTOptimizer
             _activate = new Button
             {
                 Location = new Point(16, 92), Size = new Size(260, 32), FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
+                BackColor = Theme.AccentColor, ForeColor = Color.FromArgb(16, 13, 9),
                 Font = new Font("Segoe UI Semibold", 9.5f), Cursor = Cursors.Hand
             };
             _activate.FlatAppearance.BorderSize = 0;

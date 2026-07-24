@@ -23,12 +23,16 @@ namespace BTOptimizer
         public static bool Dark { get; private set; }
 
         // Repères des couleurs codées en dur dans les fenêtres.
-        private static readonly Color HeaderBg = Color.FromArgb(12, 12, 18);   // bandeau quasi-noir (identité Fluide)
-        private static readonly Color AccentRef = Color.FromArgb(79, 70, 229);
+        private static readonly Color HeaderBg = Color.FromArgb(16, 14, 12);   // bandeau carbone (identité ONYX)
+        private static readonly Color AccentRef = Color.FromArgb(79, 70, 229); // repère HÉRITÉ (classification de vieux boutons accent)
 
-        // Liseré signature sous les bandeaux (identité Fluide) : indigo → violet.
-        private static readonly Color BrandA = Color.FromArgb(129, 140, 248);  // #818CF8
-        private static readonly Color BrandB = Color.FromArgb(167, 139, 250);  // #A78BFA
+        // Métaux ONYX : or champagne (sombre) et bronze profond (clair, lisible sur blanc).
+        private static readonly Color GoldRef = Color.FromArgb(227, 183, 92);   // #E3B75C
+        private static readonly Color BronzeRef = Color.FromArgb(158, 116, 49); // #9E7431
+
+        // Liseré signature sous les bandeaux (identité ONYX) : or → bronze.
+        private static readonly Color BrandA = Color.FromArgb(227, 183, 92);   // #E3B75C
+        private static readonly Color BrandB = Color.FromArgb(176, 139, 70);   // #B08B46
 
         // Tokens (basculent avec le thème).
         private static Color Bg, Panel, Ink, InkDim, Line, GroupInk, FieldBg;
@@ -40,14 +44,14 @@ namespace BTOptimizer
         public static Color PanelColor { get { return Panel; } }
         public static Color FieldColor { get { return FieldBg; } }
         public static Color LineColor { get { return Line; } }
-        public static Color OkColor { get { return Dark ? Color.FromArgb(70, 200, 130) : Color.FromArgb(0, 130, 0); } }
-        public static Color AccentColor { get { return Dark ? Color.FromArgb(0, 190, 120) : AccentRef; } }
+        public static Color OkColor { get { return Dark ? Color.FromArgb(76, 196, 140) : Color.FromArgb(0, 130, 60); } }
+        public static Color AccentColor { get { return Dark ? GoldRef : BronzeRef; } }
 
         private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-theme.txt"); } }
 
         static Theme()
         {
-            // Sombre par défaut (identité gaming Fluide) ; le choix de l'utilisateur,
+            // Sombre par défaut (identité gaming ONYX) ; le choix de l'utilisateur,
             // une fois fait, est respecté (bt-theme.txt).
             try
             {
@@ -70,24 +74,25 @@ namespace BTOptimizer
         {
             if (Dark)
             {
-                // Palette Fluide : noirs bleutés + accent indigo, alignée sur le shell (FpsUi).
+                // Palette ONYX : carbone chaud + or champagne, alignée sur le shell (FpsUi).
                 // Toutes les fenêtres du menu ⋯ passent par ces tokens (Theme.Apply) — les
                 // retoucher ici reskin les ~40 fenêtres ET le menu lui-même d'un coup.
-                Bg = Color.FromArgb(8, 8, 12); Panel = Color.FromArgb(16, 16, 24);
-                Ink = Color.FromArgb(240, 241, 245); InkDim = Color.FromArgb(150, 152, 166);
-                Line = Color.FromArgb(34, 34, 47); GroupInk = Color.FromArgb(165, 172, 220);
-                FieldBg = Color.FromArgb(13, 13, 20);
-                MenuBg = Color.FromArgb(16, 16, 24); MenuHot = Color.FromArgb(34, 32, 72);
-                MenuLine = Color.FromArgb(34, 34, 47);
+                Bg = Color.FromArgb(11, 10, 9); Panel = Color.FromArgb(22, 19, 15);
+                Ink = Color.FromArgb(243, 237, 226); InkDim = Color.FromArgb(172, 163, 148);
+                Line = Color.FromArgb(43, 37, 29); GroupInk = Color.FromArgb(214, 186, 124);
+                FieldBg = Color.FromArgb(16, 14, 12);
+                MenuBg = Color.FromArgb(22, 19, 15); MenuHot = Color.FromArgb(54, 45, 28);
+                MenuLine = Color.FromArgb(43, 37, 29);
             }
             else
             {
-                Bg = Color.FromArgb(245, 246, 248); Panel = Color.White;
-                Ink = Color.FromArgb(45, 49, 57); InkDim = Color.FromArgb(110, 115, 125);
-                Line = Color.FromArgb(200, 204, 210); GroupInk = Color.FromArgb(79, 70, 229);
+                // Clair ONYX : neutres chauds (papier ivoire), bronze pour l'accent.
+                Bg = Color.FromArgb(246, 244, 240); Panel = Color.White;
+                Ink = Color.FromArgb(44, 40, 33); InkDim = Color.FromArgb(117, 110, 99);
+                Line = Color.FromArgb(211, 205, 196); GroupInk = Color.FromArgb(158, 116, 49);
                 FieldBg = Color.White;
-                MenuBg = Color.White; MenuHot = Color.FromArgb(232, 236, 242);
-                MenuLine = Color.FromArgb(205, 209, 216);
+                MenuBg = Color.White; MenuHot = Color.FromArgb(240, 235, 226);
+                MenuLine = Color.FromArgb(209, 203, 193);
             }
         }
 
@@ -134,26 +139,21 @@ namespace BTOptimizer
             try { return v * c.DeviceDpi / 96f; } catch { return v; }
         }
 
-        /// <summary>Wordmark « DesTin » blanc + « GOOD » dégradé ; renvoie la largeur peinte.</summary>
+        /// <summary>Wordmark « ONYX » : capitales Marcellus or, interlettrées (gravure) ;
+        /// renvoie la largeur peinte. La taille suit la police passée par la fenêtre.</summary>
         internal static float DrawWordmark(Graphics g, Font font, float x, float y)
         {
             var old = g.TextRenderingHint;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            float w;
-            using (var sf = (StringFormat)StringFormat.GenericTypographic.Clone())
+            using (Font f = Fonts.Make(Fonts.Marcellus, font.Size, FontStyle.Regular, "Georgia"))
             {
-                sf.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
-                SizeF a = g.MeasureString("DesTin", font, PointF.Empty, sf);
-                SizeF b = g.MeasureString("GOOD", font, PointF.Empty, sf);
-                using (var br = new SolidBrush(Color.White))
-                    g.DrawString("DesTin", font, br, x, y, sf);
-                var gr = new RectangleF(x + a.Width, y, b.Width + 2f, b.Height);
-                using (var lg = new LinearGradientBrush(gr, Color.FromArgb(0, 225, 140), Color.FromArgb(0, 170, 255), 0f))
-                    g.DrawString("GOOD", font, lg, x + a.Width, y, sf);
-                w = a.Width + b.Width;
+                float track = Math.Max(1.5f, font.Size * 0.18f);
+                float h = TextRenderer.MeasureText(g, "O", f, new Size(int.MaxValue, int.MaxValue),
+                    TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height;
+                float end = FpsUi.DrawTracked(g, "ONYX", f, GoldRef, x, y + h / 2f, track);
+                g.TextRenderingHint = old;
+                return end - x;
             }
-            g.TextRenderingHint = old;
-            return w;
         }
 
         /// <summary>Rectangle arrondi (partagé avec les fenêtres pour puces et cartes).</summary>
@@ -196,7 +196,7 @@ namespace BTOptimizer
                     DwmSetWindowAttribute(f.Handle, DwmDarkModeOld, ref on, 4);
                 int cap = ColorRef(HeaderBg);
                 DwmSetWindowAttribute(f.Handle, DwmCaptionColor, ref cap, 4);
-                int txt = ColorRef(Color.White);
+                int txt = ColorRef(Color.FromArgb(243, 237, 226));   // ivoire ONYX
                 DwmSetWindowAttribute(f.Handle, DwmTextColor, ref txt, 4);
             }
             catch { }
@@ -226,9 +226,9 @@ namespace BTOptimizer
             public override Color MenuItemPressedGradientEnd { get { return MenuBg; } }
             public override Color SeparatorDark { get { return MenuLine; } }
             public override Color SeparatorLight { get { return MenuBg; } }
-            public override Color CheckBackground { get { return AccentRef; } }
-            public override Color CheckSelectedBackground { get { return AccentRef; } }
-            public override Color CheckPressedBackground { get { return AccentRef; } }
+            public override Color CheckBackground { get { return AccentColor; } }
+            public override Color CheckSelectedBackground { get { return AccentColor; } }
+            public override Color CheckPressedBackground { get { return AccentColor; } }
             public override Color ToolStripBorder { get { return MenuLine; } }
         }
 
@@ -570,7 +570,7 @@ namespace BTOptimizer
             }
             g.SmoothingMode = old;
 
-            Color bar = Dark ? Color.FromArgb(0, 190, 120) : AccentRef;
+            Color bar = AccentColor;
             using (var br = new SolidBrush(bar))
                 g.FillRectangle(br, 12, 6, 3, 11);
             TextRenderer.DrawText(g, gb.Text, gb.Font,
@@ -630,7 +630,7 @@ namespace BTOptimizer
         {
             var lv = (ListView)sender;
             Rectangle r = e.Bounds;
-            using (var br = new SolidBrush(Dark ? Color.FromArgb(36, 40, 48) : Color.FromArgb(240, 242, 245)))
+            using (var br = new SolidBrush(Dark ? Color.FromArgb(38, 33, 26) : Color.FromArgb(242, 239, 233)))
                 e.Graphics.FillRectangle(br, r);
             using (var pen = new Pen(Line))
                 e.Graphics.DrawLine(pen, r.Left, r.Bottom - 1, r.Right, r.Bottom - 1);

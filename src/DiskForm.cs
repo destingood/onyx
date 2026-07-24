@@ -19,7 +19,7 @@ namespace BTOptimizer
         private ListView _drives, _games;
         private Label _verdict;
         private Button _btnScan, _btnClose;
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public DiskForm(Action<string, int> log)
         {
@@ -31,7 +31,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Jeux & disques";
+            Text = "ONYX — Jeux & disques";
             ClientSize = new Size(680, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -8,7 +8,7 @@ namespace BTOptimizer
     /// Lecture SEULE et LÉGALE de l'état de licence Windows : activé ou non, type de licence
     /// (OEM / Retail / Volume), édition, clé partielle, et la clé OEM gravée dans le firmware
     /// (MSDM) — qui appartient à l'utilisateur et lui sert à réactiver Windows après une
-    /// réinstallation. Fluide ne modifie ni ne contourne RIEN : il informe, c'est tout.
+    /// réinstallation. ONYX ne modifie ni ne contourne RIEN : il informe, c'est tout.
     /// </summary>
     internal static class WindowsLicense
     {

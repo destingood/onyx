@@ -17,7 +17,7 @@ namespace BTOptimizer
 
         public LicenseKeyForm(string feature)
         {
-            Text = "Fluide — Version Pro";
+            Text = "ONYX — Version Pro";
             ClientSize = new Size(520, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -56,7 +56,7 @@ namespace BTOptimizer
             var activate = new Button
             {
                 Text = "Activer", Width = 110, Location = new Point(392, 250),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(79, 70, 229), ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 10f)
             };
             activate.FlatAppearance.BorderSize = 0;
@@ -72,7 +72,7 @@ namespace BTOptimizer
                     Text = "Démarrer l'essai Pro gratuit de 7 jours", Width = 254, Location = new Point(266, 250),
                     FlatStyle = FlatStyle.Flat, BackColor = Color.White, Font = new Font("Segoe UI", 9f)
                 };
-                trial.FlatAppearance.BorderColor = Color.FromArgb(79, 70, 229);
+                trial.FlatAppearance.BorderColor = Theme.AccentColor;
                 trial.ForeColor = Color.FromArgb(67, 56, 202);
                 trial.Location = new Point(18, 250);
                 _status.Location = new Point(18, 250);
@@ -83,7 +83,7 @@ namespace BTOptimizer
                     if (License.StartTrial())
                     {
                         MessageBox.Show(this, "Essai Pro activé : " + License.TrialDaysLeft + " jours. Toutes les fonctions sont débloquées.",
-                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         DialogResult = DialogResult.OK; Close();
                     }
                 };
@@ -130,7 +130,7 @@ namespace BTOptimizer
             {
                 Text = "🛒 Pas encore de clé ? Passer Pro — 49 €/an, ou 127 € une seule fois.",
                 Location = new Point(18, 306), AutoSize = true,
-                LinkColor = Color.FromArgb(79, 70, 229), ActiveLinkColor = Color.FromArgb(67, 56, 202),
+                LinkColor = Theme.AccentColor, ActiveLinkColor = Color.FromArgb(67, 56, 202),
                 LinkBehavior = LinkBehavior.HoverUnderline, BackColor = Color.Transparent
             };
             buy.LinkClicked += (s, e) =>
@@ -139,7 +139,7 @@ namespace BTOptimizer
                 catch
                 {
                     MessageBox.Show(this, "Ouvre cette adresse dans ton navigateur :\r\n" + BuyUrl,
-                        "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
             Controls.Add(buy);
@@ -153,7 +153,7 @@ namespace BTOptimizer
                     ? "\r\nAbonnement valable jusqu'au " + License.Expiry.Value.ToString("dd/MM/yyyy") + "."
                     : "\r\nLicence à vie — merci !";
                 MessageBox.Show(this, "Édition Pro activée pour : " + License.Licensee + until,
-                    "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "ONYX Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 DialogResult = DialogResult.OK;
                 Close();
             }
@@ -165,7 +165,7 @@ namespace BTOptimizer
                 // Le label est masqué quand le bouton d'essai occupe sa place → boîte de dialogue
                 // (avant, l'erreur était tout simplement invisible dans ce cas).
                 if (_status.Visible) _status.Text = err;
-                else MessageBox.Show(this, err, "Fluide Pro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else MessageBox.Show(this, err, "ONYX Pro", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

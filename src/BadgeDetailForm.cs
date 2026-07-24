@@ -20,7 +20,7 @@ namespace BTOptimizer
         public BadgeDetailForm(BadgeCatalog.Badge b, BadgeCatalog.Stats s, bool ok, Action goTo)
         {
             _b = b; _s = s; _ok = ok; _goTo = goTo;
-            Text = "Fluide — " + b.Name;
+            Text = "ONYX — " + b.Name;
             ClientSize = new Size(400, 360);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -30,7 +30,7 @@ namespace BTOptimizer
             DoubleBuffered = true;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-            var go = FpsUi.NeonButton("Y aller  →");
+            var go = FpsUi.GoldButton("Y aller  →");
             go.SetBounds(24, 302, 200, 40);
             go.Click += (s2, e2) => { try { if (_goTo != null) _goTo(); } catch { } Close(); };
             var close = FpsUi.GhostButton("Fermer");
@@ -76,7 +76,7 @@ namespace BTOptimizer
 
             TextRenderer.DrawText(g, "Objectif : " + _b.Crit, FpsUi.Body, new Rectangle(24, 250, w - 48, 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
             if (!_ok)
-                TextRenderer.DrawText(g, "→ " + PageName(_b.Page) + " pour progresser", FpsUi.Small, new Rectangle(24, 276, w - 48, 20), FpsUi.NeonDim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, "→ " + PageName(_b.Page) + " pour progresser", FpsUi.Small, new Rectangle(24, 276, w - 48, 20), FpsUi.GoldDim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
         }
     }
 }

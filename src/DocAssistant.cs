@@ -13,7 +13,7 @@ namespace BTOptimizer
     internal static class DocAssistant
     {
         /// <summary>Ce que le Copilote peut EXÉCUTER depuis la conversation.
-        /// IsChange = true → jamais sans un clic explicite (promesse fondatrice de Fluide).
+        /// IsChange = true → jamais sans un clic explicite (promesse fondatrice de ONYX).
         /// AutoRun = true → mesure en lecture seule, lancée d'elle-même en tâche de fond.</summary>
         public sealed class ChatAction
         {

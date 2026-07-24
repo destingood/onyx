@@ -48,10 +48,10 @@ namespace BTOptimizer
         private bool _trayTipShown;
         private BenchResult _lastBench;
 
-        private static readonly Color Accent    = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent    = Theme.AccentColor;
         private static readonly Color HeaderBg  = Color.FromArgb(28, 30, 38);
         private static readonly Color ColInfo   = Color.FromArgb(110, 115, 125);
-        private static readonly Color ColOk     = Color.FromArgb(79, 70, 229);
+        private static readonly Color ColOk     = Theme.AccentColor;
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
 
@@ -126,7 +126,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildUi()
         {
-            Text = "Fluide " + AppVer + " — optimise, diagnostique & répare ton PC de jeu (Windows 10/11)";
+            Text = "ONYX " + AppVer + " — optimise, diagnostique & répare ton PC de jeu (Windows 10/11)";
             ClientSize = new Size(900, 868);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -147,7 +147,7 @@ namespace BTOptimizer
             _btnBoost.SetBounds(700, 12, 142, 38);
             _btnBoost.FlatStyle = FlatStyle.Flat;
             _btnBoost.FlatAppearance.BorderSize = 0;
-            _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
+            _btnBoost.BackColor = Theme.AccentColor;
             _btnBoost.ForeColor = Color.White;
             _btnBoost.Font = new Font("Segoe UI Semibold", 9.5f);
             _btnBoost.Click += OnBoostToggle;
@@ -268,7 +268,7 @@ namespace BTOptimizer
                 {
                     string p = System.IO.Path.Combine(Application.StartupPath, "bt-optimizer-log.txt");
                     if (System.IO.File.Exists(p)) Process.Start("notepad.exe", "\"" + p + "\"");
-                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else MessageBox.Show(this, "Aucun journal fichier pour l'instant.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch { }
             });
@@ -276,7 +276,7 @@ namespace BTOptimizer
             _menu.Items.Add(new ToolStripSeparator());
             // --- Application ---
             _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
-            _menu.Items.Add("À propos de Fluide", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
+            _menu.Items.Add("À propos de ONYX", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
             _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
             {
                 using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
@@ -518,11 +518,11 @@ namespace BTOptimizer
             // Zone de notification : réduire la fenêtre garde l'app (et le timer 1 ms) active.
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
-            _tray.Text = "Fluide";
+            _tray.Text = "ONYX";
             _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("Ouvrir Fluide", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Ouvrir ONYX", null, (s, e) => RestoreFromTray());
             trayMenu.Items.Add("▶ MODE JEU on/off   (Ctrl+Alt+G)", null, (s, e) => OnBoostToggle(s, e));
             trayMenu.Items.Add("Timer 1 ms on/off", null, (s, e) => _chkTimer.Checked = !_chkTimer.Checked);
             trayMenu.Items.Add(new ToolStripSeparator());
@@ -589,7 +589,7 @@ namespace BTOptimizer
             {
                 OnBoostToggle(this, EventArgs.Empty);
                 if (!Visible && _tray != null && _tray.Visible)
-                    _tray.ShowBalloonTip(1500, "Fluide",
+                    _tray.ShowBalloonTip(1500, "ONYX",
                         GameBoost.IsActive ? "MODE JEU activé (Ctrl+Alt+G)" : "MODE JEU désactivé (Ctrl+Alt+G)",
                         ToolTipIcon.Info);
             }
@@ -607,7 +607,7 @@ namespace BTOptimizer
                 string tip = Native.TimerActive
                     ? "Toujours actif — le timer 1 ms reste maintenu. Double-clic pour rouvrir."
                     : "Toujours actif en arrière-plan. Double-clic pour rouvrir.";
-                _tray.ShowBalloonTip(2500, "Fluide", tip, ToolTipIcon.Info);
+                _tray.ShowBalloonTip(2500, "ONYX", tip, ToolTipIcon.Info);
             }
         }
 
@@ -992,7 +992,7 @@ namespace BTOptimizer
                         Log("" + drifted.Count + " optimisation(s) de ton profil ne sont PLUS actives "
                             + "(mise à jour Windows ?) — menu ☰ → « Mon profil a-t-il été annulé ? » pour les ré-appliquer.", 2);
                         if (_tray != null)
-                            _tray.ShowBalloonTip(4000, "Fluide",
+                            _tray.ShowBalloonTip(4000, "ONYX",
                                 drifted.Count + " optimisation(s) annulée(s) par Windows — ré-application possible (menu ☰).",
                                 ToolTipIcon.Warning);
                     }));
@@ -1043,7 +1043,7 @@ namespace BTOptimizer
             }
             using (var d = new SaveFileDialog
             {
-                Filter = "Profil Fluide (*.txt)|*.txt", FileName = "fluide-profil.txt",
+                Filter = "Profil ONYX (*.txt)|*.txt", FileName = "fluide-profil.txt",
                 Title = "Exporter le profil (" + sel.Count + " optimisations cochées)"
             })
             {
@@ -1061,7 +1061,7 @@ namespace BTOptimizer
         {
             using (var d = new OpenFileDialog
             {
-                Filter = "Profil Fluide (*.txt)|*.txt|Tous les fichiers (*.*)|*.*",
+                Filter = "Profil ONYX (*.txt)|*.txt|Tous les fichiers (*.*)|*.*",
                 Title = "Importer un profil d'optimisations"
             })
             {
@@ -1120,7 +1120,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Aucune optimisation cochée.", "Fluide",
+                MessageBox.Show(this, "Aucune optimisation cochée.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1138,7 +1138,7 @@ namespace BTOptimizer
             List<Tweak> sel = Selection();
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "Fluide",
+                MessageBox.Show(this, "Cochez les optimisations à rétablir.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -1171,7 +1171,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this,
                     "Une erreur est survenue avant l'application :\n\n" + res.PrepError,
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (res.RebootNeeded)
@@ -1205,7 +1205,7 @@ namespace BTOptimizer
 
             if (MessageBox.Show(this,
                     "Voir ton nouveau score « Santé de mon PC » ?",
-                    "Fluide", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
                 using (var f = new HealthForm(Log)) f.ShowDialog(this);
         }
 
@@ -1315,7 +1315,7 @@ namespace BTOptimizer
             if (!System.IO.Directory.Exists(tools))
             {
                 MessageBox.Show(this, "Aucun dossier « tools ». Lance d'abord une capture (Mesurer latence → ETW).",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var files = new System.IO.DirectoryInfo(tools).GetFiles("dpcisr-*.txt");
@@ -1323,7 +1323,7 @@ namespace BTOptimizer
             {
                 MessageBox.Show(this, "Il faut au moins 2 rapports DPC/ISR dans « tools » pour comparer.\n" +
                     "Fais deux captures (Mesurer latence → Oui à l'ETW), avant et après tes changements.",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             Array.Sort(files, (a, b) => b.LastWriteTime.CompareTo(a.LastWriteTime));
@@ -1388,7 +1388,7 @@ namespace BTOptimizer
                     else
                     {
                         _btnBoost.Text = "▶ MODE JEU";
-                        _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
+                        _btnBoost.BackColor = Theme.AccentColor;
                     }
                 })); } catch { }
             });
@@ -1425,7 +1425,7 @@ namespace BTOptimizer
                     RefreshStates();
                     Log("Réinitialisation terminée.", 1);
                     MessageBox.Show(this, "Toutes les optimisations ont été rétablies aux valeurs Windows.\nUn redémarrage est conseillé.",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }));
             });
         }
@@ -1536,7 +1536,7 @@ namespace BTOptimizer
             else
             {
                 _btnBoost.Text = "▶ MODE JEU";
-                _btnBoost.BackColor = Color.FromArgb(79, 70, 229);
+                _btnBoost.BackColor = Theme.AccentColor;
             }
         }
 
@@ -1713,7 +1713,7 @@ namespace BTOptimizer
             {
                 BeginInvoke((Action)(() =>
                 {
-                    try { if (_tray != null) _tray.ShowBalloonTip(5000, "Fluide — surveillance", msg, ToolTipIcon.Warning); }
+                    try { if (_tray != null) _tray.ShowBalloonTip(5000, "ONYX — surveillance", msg, ToolTipIcon.Warning); }
                     catch { }
                 }));
             }
@@ -1737,7 +1737,7 @@ namespace BTOptimizer
                 if (sel.Count == 0)
                 {
                     MessageBox.Show(this, "Coche d'abord les optimisations à inclure dans ton profil,\npuis active le gardien.",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _guardEventSuppressed = true;
                     _chkGuard.Checked = false;
                     _guardEventSuppressed = false;

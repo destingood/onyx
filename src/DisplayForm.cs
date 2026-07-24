@@ -21,7 +21,7 @@ namespace BTOptimizer
         private Button _btnScan, _btnMax, _btnWin, _btnGpu, _btnClose;
         private List<DisplayInfo.DisplayMode> _modes = new List<DisplayInfo.DisplayMode>();
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private static readonly Color Warn = Color.FromArgb(200, 110, 0);
 
         public DisplayForm(Action<string, int> log)
@@ -34,7 +34,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Réglages d'écran";
+            Text = "ONYX — Réglages d'écran";
             ClientSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -152,7 +152,7 @@ namespace BTOptimizer
             }
             MessageBox.Show(this,
                 done + " écran(s) passé(s) à leur fréquence max" + (fail > 0 ? ", " + fail + " échec(s)" : "") + ".",
-                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Scan();
         }
 

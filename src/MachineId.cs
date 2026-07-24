@@ -48,7 +48,7 @@ namespace BTOptimizer
 
             byte[] h;
             using (SHA256 sha = SHA256.Create())
-                h = sha.ComputeHash(Encoding.UTF8.GetBytes("Fluide-machine|" + raw));
+                h = sha.ComputeHash(Encoding.UTF8.GetBytes("ONYX-machine|" + raw));
             return Format(h);
         }
 

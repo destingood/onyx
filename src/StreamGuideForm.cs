@@ -30,7 +30,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Streamer sans lag";
+            Text = "ONYX — Streamer sans lag";
             ClientSize = new Size(680, 580);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(580, 480);

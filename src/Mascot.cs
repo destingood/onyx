@@ -31,7 +31,7 @@ namespace BTOptimizer
             return health < 60 ? Mood.Alert : Mood.Calm;
         }
 
-        /// <summary>Dessine Flux dans 'box'. 'accent' pilote le trait (indigo Fluide).</summary>
+        /// <summary>Dessine Flux dans 'box'. 'accent' pilote le trait (indigo ONYX).</summary>
         public static void Draw(Graphics g, RectangleF box, Color accent, Mood mood)
         {
             SmoothingMode sm = g.SmoothingMode;

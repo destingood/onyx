@@ -60,7 +60,7 @@ namespace BTOptimizer
             try { _input.PlaceholderText = "Décris ton souci… (les fautes de frappe sont comprises)"; } catch { }
             _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
             _inputBar.Controls.Add(_input);
-            _send = FpsUi.NeonButton("→");
+            _send = FpsUi.GoldButton("→");
             _send.Click += (s, e) => SendInput();
             _inputBar.Controls.Add(_send);
 
@@ -108,7 +108,7 @@ namespace BTOptimizer
                     var list = DisplayInfo.Query(); int below = 0, max = 0;
                     if (list != null) foreach (var d in list) { if (d.BelowMax) below++; if (d.CurrentHz > max) max = d.CurrentHz; }
                     if (list != null && list.Count > 0)
-                    { scr = below == 0 ? max + " Hz ✓" : below + " sous le max"; scrC = below == 0 ? FpsUi.Neon : FpsUi.Warn; }
+                    { scr = below == 0 ? max + " Hz ✓" : below + " sous le max"; scrC = below == 0 ? FpsUi.Gold : FpsUi.Warn; }
                 }
                 catch { }
                 Tile(_vScreen, scr, scrC);
@@ -118,7 +118,7 @@ namespace BTOptimizer
                 {
                     double avg, jit; int loss;
                     if (ChatActions.PingSample(3, 500, out avg, out jit, out loss))
-                    { png = avg.ToString("0") + " ms"; pngC = avg < 40 && loss == 0 ? FpsUi.Neon : avg < 80 ? FpsUi.Warn : FpsUi.Err; }
+                    { png = avg.ToString("0") + " ms"; pngC = avg < 40 && loss == 0 ? FpsUi.Gold : avg < 80 ? FpsUi.Warn : FpsUi.Err; }
                 }
                 catch { }
                 Tile(_vPing, png, pngC);
@@ -130,7 +130,7 @@ namespace BTOptimizer
                     {
                         HwSample smp = mon.Sample();
                         if (smp.Gpu != null && smp.Gpu.Ok && smp.Gpu.TempC > 0)
-                        { gpu = smp.Gpu.TempC.ToString("0") + " °C"; gpuC = smp.Gpu.TempC < 70 ? FpsUi.Neon : smp.Gpu.TempC < 85 ? FpsUi.Warn : FpsUi.Err; }
+                        { gpu = smp.Gpu.TempC.ToString("0") + " °C"; gpuC = smp.Gpu.TempC < 70 ? FpsUi.Gold : smp.Gpu.TempC < 85 ? FpsUi.Warn : FpsUi.Err; }
                     }
                 }
                 catch { }
@@ -154,7 +154,7 @@ namespace BTOptimizer
                         if (_vHealth != null)
                         {
                             _vHealth.Text = a.Health + " %";
-                            _vHealth.ForeColor = a.Health >= 80 ? FpsUi.Neon : a.Health >= 60 ? FpsUi.Warn : FpsUi.Err;
+                            _vHealth.ForeColor = a.Health >= 80 ? FpsUi.Gold : a.Health >= 60 ? FpsUi.Warn : FpsUi.Err;
                         }
                         Greet(); Invalidate(true);
                     }));
@@ -351,7 +351,7 @@ namespace BTOptimizer
             Mascot.CurrentMood = Mascot.Mood.Thinking;   // Flux réfléchit pendant que le Copilote travaille
             var bubble = new Panel { Size = new Size(66, 38), BackColor = Color.FromArgb(20, 20, 31) };
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
-            var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Neon, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
+            var dots = new Label { Dock = DockStyle.Fill, Font = FpsUi.H3, ForeColor = FpsUi.Gold, TextAlign = ContentAlignment.MiddleCenter, Text = "●··", BackColor = Color.Transparent };
             bubble.Controls.Add(dots);
             _typingBubble = bubble; _typingDots = dots; _typingProgress = null;
             var avatar = MakeAvatar(true);
@@ -401,7 +401,7 @@ namespace BTOptimizer
                 if (doc)
                 {
                     // Flux, la mascotte : son humeur suit le dernier bilan de santé connu.
-                    Mascot.Draw(g, new RectangleF(0, 0, AV - 1, AV - 1), FpsUi.Neon, Mascot.CurrentMood);
+                    Mascot.Draw(g, new RectangleF(0, 0, AV - 1, AV - 1), FpsUi.Gold, Mascot.CurrentMood);
                 }
                 else
                 {
@@ -440,7 +440,7 @@ namespace BTOptimizer
 
             // Bulle auto-dimensionnée : Copilote sombre / Toi en indigo, coins arrondis + liseré.
             Color bg = doc ? Color.FromArgb(20, 20, 31) : Color.FromArgb(32, 30, 68);
-            Color bord = doc ? FpsUi.Border : Color.FromArgb(79, 70, 229);
+            Color bord = doc ? FpsUi.Border : Theme.AccentColor;
             var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(16, 12, 18, 14), Margin = new Padding(0) };
             bubble.SizeChanged += (s, e) => { try { using (var p = Round(bubble.ClientRectangle, 14)) bubble.Region = new Region(p); } catch { } };
             bubble.Paint += (s, e) => { try { using (var pen = new Pen(bord)) using (var p = Round(new Rectangle(0, 0, bubble.Width - 1, bubble.Height - 1), 14)) e.Graphics.DrawPath(pen, p); } catch { } };
@@ -450,7 +450,7 @@ namespace BTOptimizer
             col.Controls.Add(new Label
             {
                 AutoSize = true, Font = FpsUi.Small,
-                ForeColor = doc ? FpsUi.Neon : Color.FromArgb(185, 190, 250),
+                ForeColor = doc ? FpsUi.Gold : Color.FromArgb(185, 190, 250),
                 // Même marge gauche que le corps du message (les Label d'un FlowLayoutPanel
                 // ont 3 px par défaut) : sans ça l'en-tête débordait de 3 px vers la gauche
                 // et la première lettre passait sous l'arrondi de la bulle.
@@ -481,7 +481,7 @@ namespace BTOptimizer
                     {
                         string path = System.IO.Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                            "Fluide-diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
+                            "ONYX-diagnostic-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
                         System.IO.File.WriteAllText(path, ReplyFullText(rep, bodyTxt), new UTF8Encoding(false));
                         ex.Text = "✓  Enregistré sur le Bureau"; ex.Enabled = false;
                         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); } catch { }
@@ -492,14 +492,14 @@ namespace BTOptimizer
             }
             if (reply != null && reply.Tool != null)
             {
-                var btn = FpsUi.NeonButton("Ouvrir « " + reply.Tool.Tool + " »  →");
+                var btn = FpsUi.GoldButton("Ouvrir « " + reply.Tool.Tool + " »  →");
                 btn.AutoSize = false; btn.Size = new Size(Math.Min(maxTextW, 320), 34); btn.Margin = new Padding(0, 8, 0, 2);
                 var entry = reply.Tool;
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
                 col.Controls.Add(btn);
             }
             // Action(s) qui MODIFIENT le système : bouton explicite + annonce de ce qui change.
-            // Jamais d'exécution automatique ici — c'est la promesse de Fluide.
+            // Jamais d'exécution automatique ici — c'est la promesse de ONYX.
             if (reply != null && reply.Action != null && reply.Action.IsChange)
                 AddActionButton(col, reply.Action, maxTextW);
             // Le plan ne se rend en boutons que s'il n'est PAS déjà porté par des cartes.
@@ -559,7 +559,7 @@ namespace BTOptimizer
         /// Une fois lancée, le bouton se verrouille (pas de double exécution).</summary>
         private void AddActionButton(Control col, DocAssistant.ChatAction act, int maxTextW)
         {
-            var go = FpsUi.NeonButton("▶  " + act.Label);
+            var go = FpsUi.GoldButton("▶  " + act.Label);
             go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
             go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
             col.Controls.Add(go);
@@ -596,7 +596,7 @@ namespace BTOptimizer
             if (cd.Fix != null)
             {
                 var act = cd.Fix;
-                var go = FpsUi.NeonButton("▶  " + act.Label);
+                var go = FpsUi.GoldButton("▶  " + act.Label);
                 go.AutoSize = false; go.Size = new Size(Math.Min(pnl.Width - 28, 320), 30);
                 go.Location = new Point(14, y + 8);
                 go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
@@ -660,7 +660,7 @@ namespace BTOptimizer
                 BackColor = Color.FromArgb(20, 20, 31), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
             };
             b.FlatAppearance.BorderColor = FpsUi.Border;
-            b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Neon; b.FlatAppearance.BorderColor = FpsUi.Neon; };
+            b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Gold; b.FlatAppearance.BorderColor = FpsUi.Gold; };
             b.MouseLeave += (s, e) => { b.ForeColor = FpsUi.Dim; b.FlatAppearance.BorderColor = FpsUi.Border; };
             return b;
         }

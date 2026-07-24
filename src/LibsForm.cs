@@ -394,9 +394,9 @@ namespace BTOptimizer
             if (installed)
             {
                 if (MessageBox.Show(owner, item.Name + " est déjà installé. ✔\n\nL'ouvrir maintenant ?",
-                        "Fluide", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
+                        "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
                     MessageBox.Show(owner, "Impossible de le localiser automatiquement — ouvre-le depuis le menu Démarrer.",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -427,14 +427,14 @@ namespace BTOptimizer
                         if (res)
                         {
                             if (MessageBox.Show(owner, item.Name + " installé. ✔\n\nL'ouvrir maintenant ?",
-                                    "Fluide", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
+                                    "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes && !TryLaunch(item))
                                 MessageBox.Show(owner, "Installé — ouvre-le depuis le menu Démarrer.",
-                                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                             MessageBox.Show(owner,
                                 item.Name + " : l'installation a échoué (voir le journal). Réessaie, ou installe-le depuis le site de l'éditeur.",
-                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }));
                 }
                 catch { }
@@ -623,7 +623,7 @@ namespace BTOptimizer
         private List<LibScan.LibItem> _items = new List<LibScan.LibItem>();
         private string _winget;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private readonly string[] _highlight;
 
@@ -642,7 +642,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Bibliothèques & applis de jeu";
+            Text = "ONYX — Bibliothèques & applis de jeu";
             ClientSize = new Size(680, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -772,7 +772,7 @@ namespace BTOptimizer
             if (!here) return;   // pas installé : le double-clic sert juste à cocher pour installer
             if (!LibScan.TryLaunch(it))
                 MessageBox.Show(this, it.Name + " est installé mais introuvable automatiquement — ouvre-le depuis le menu Démarrer.",
-                    "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnInstall(object sender, EventArgs e)
@@ -782,7 +782,7 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_items[i]);
             if (sel.Count == 0)
             {
-                MessageBox.Show(this, "Coche au moins un élément à installer.", "Fluide",
+                MessageBox.Show(this, "Coche au moins un élément à installer.", "ONYX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }

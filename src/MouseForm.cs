@@ -34,7 +34,7 @@ namespace BTOptimizer
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool RegisterRawInputDevices(RAWINPUTDEVICE[] pRawInputDevices, uint uiNumDevices, uint cbSize);
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         public MouseForm(Action<string, int> log)
         {
@@ -45,7 +45,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Fréquence de la souris";
+            Text = "ONYX — Fréquence de la souris";
             ClientSize = new Size(560, 340);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

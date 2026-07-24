@@ -9,7 +9,7 @@ namespace BTOptimizer
     /// <summary>Inventaire matériel + diagnostic santé avec corrections en un clic.</summary>
     internal class SystemInfoForm : Form
     {
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         private readonly Action<string, int> _log;
         private ListView _list;
@@ -33,7 +33,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Composants & diagnostic";
+            Text = "ONYX — Composants & diagnostic";
             ClientSize = new Size(660, 580);
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(560, 480);
@@ -332,11 +332,11 @@ namespace BTOptimizer
                     SetBusy(false);
                     if (n > 0)
                         MessageBox.Show(this, "Samsung CoreSync neutralisé (" + n + " action(s)) : appli fermée et/ou démarrage automatique coupé.",
-                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     else
                         MessageBox.Show(this, "Rien à faire : CoreSync ne tournait pas et aucun démarrage automatique n'a été trouvé.\n"
                             + "Si les saccades persistent, désactive aussi CoreSync dans le menu du moniteur (Jeu → Éclairage Core).",
-                            "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     Reload();
                 })); } catch { }
             });
@@ -364,7 +364,7 @@ namespace BTOptimizer
                     MessageBox.Show(this,
                         n > 0 ? "Samsung Display Manager neutralisé (" + n + " action(s))."
                               : "Rien à faire : l'appli ne tournait pas et aucun démarrage automatique ni service MAPT n'a été trouvé.",
-                        "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     Reload();
                 })); } catch { }
             });
@@ -397,12 +397,12 @@ namespace BTOptimizer
                         bool ok = res != null && !res.PrepFailed && res.Ok > 0 && res.Ko == 0;
                         if (ok)
                             MessageBox.Show(this, "Intégrité de la mémoire désactivée.\nRedémarre pour que le changement prenne effet.",
-                                "Fluide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         else
                         {
                             string why = res == null ? "erreur inconnue"
                                 : (res.PrepFailed ? res.PrepError : "l'écriture registre a échoué (droits administrateur requis)");
-                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "Fluide",
+                            MessageBox.Show(this, "Échec : " + why + ".\nAucun changement appliqué.", "ONYX",
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
                     }));

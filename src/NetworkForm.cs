@@ -21,7 +21,7 @@ namespace BTOptimizer
         private ListView _list;
         private Button _btnScan, _btnRepair, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
         private const int Pings = 20;
 
         private class Hop
@@ -46,7 +46,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Qualité réseau en jeu";
+            Text = "ONYX — Qualité réseau en jeu";
             ClientSize = new Size(680, 460);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

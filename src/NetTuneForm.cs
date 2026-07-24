@@ -18,7 +18,7 @@ namespace BTOptimizer
         private TextBox _state;
         private Button _btnApply, _btnRevert, _btnRefresh, _btnClose;
 
-        private static readonly Color Accent = Color.FromArgb(79, 70, 229);
+        private static readonly Color Accent = Theme.AccentColor;
 
         // Réglages recommandés (jeu + téléchargements). Valeurs = tokens netsh, non traduits.
         private static readonly string[][] Recommended =
@@ -50,7 +50,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "Fluide — Réglages TCP/IP";
+            Text = "ONYX — Réglages TCP/IP";
             ClientSize = new Size(660, 470);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
