@@ -27,6 +27,10 @@ seller/gui/obj/
 # Generateur de cles compile a la racine (outil vendeur - binaire non versionne)
 /FluideKeygen.exe
 /FluideKeygen.pdb
+# Raccourci du generateur (chemins absolus, specifique a la machine)
+*.lnk
+# Journal des licences emises (donnees clients - ne pas versionner)
+seller/licences-emises.csv
 installer/Output/
 installer/Output-fix/
 installer/Output*/
