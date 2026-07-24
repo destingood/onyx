@@ -1216,6 +1216,108 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  CAUSE EXACTE d'un crash — quel que soit l'app/jeu
+        // ------------------------------------------------------------------
+        /// <summary>Analyse les crashs récents et donne la CAUSE EXACTE (module fautif + code
+        /// d'exception → diagnostic) pour l'app nommée, ou pour l'app qui plante le plus.
+        /// Attache le bon correctif gratuit, et peut enrichir un module inconnu via le web.</summary>
+        public static DocAssistant.ChatAction AnalyseCrash(string appHint, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Analyse des crashs"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse des crashs (journal Windows, 14 j)…", 0);
+                List<CrashInfo> all;
+                try { all = CrashScan.RecentDetailed(14); } catch { all = null; }
+                int gpuErr = 0; try { gpuErr = CrashScan.GpuDriverErrors(14); } catch { }
+
+                if ((all == null || all.Count == 0))
+                {
+                    if (gpuErr > 0)
+                        return Say("Aucun crash d'application relevé sur 14 jours, MAIS ton pilote graphique a signalé "
+                                 + gpuErr + " erreur(s) — c'est la piste des freezes/écrans noirs. Répare le pilote proprement "
+                                 + "(DDU, gratuit) et surveille la température.");
+                    return Say("Bonne nouvelle : aucun crash d'application relevé dans le journal Windows sur 14 jours. "
+                             + "Si un jeu a planté sans laisser de trace, dis-moi précisément lequel et quand.");
+                }
+
+                // Choix de l'app à analyser : celle nommée, sinon celle qui plante le plus (récente en cas d'égalité).
+                var byExe = new Dictionary<string, List<CrashInfo>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var ci in all)
+                {
+                    string key = ci.Exe;
+                    if (!byExe.ContainsKey(key)) byExe[key] = new List<CrashInfo>();
+                    byExe[key].Add(ci);
+                }
+                List<CrashInfo> target = null; string exeName = null;
+                if (!string.IsNullOrEmpty(appHint))
+                {
+                    string hint = appHint.ToLowerInvariant();
+                    foreach (var kv in byExe)
+                        if (kv.Key.ToLowerInvariant().Contains(hint)) { target = kv.Value; exeName = kv.Key; break; }
+                    if (target == null)
+                        return Say("Je ne trouve aucun crash de « " + appHint + " » dans le journal des 14 derniers jours. "
+                                 + "Il a peut-être planté sans erreur enregistrée, ou sous un autre nom d'exe. Dis « analyse mes crashs » pour voir tout ce qui a planté.");
+                }
+                else
+                {
+                    int best = 0;
+                    foreach (var kv in byExe) if (kv.Value.Count > best) { best = kv.Value.Count; target = kv.Value; exeName = kv.Key; }
+                }
+
+                // Crash le plus récent de cette app = représentatif.
+                CrashInfo top = target[0];
+                foreach (var ci in target) if (ci.Time > top.Time) top = ci;
+
+                var diag = CrashAnalyzer.FromModule(top.Exe, top.Module, top.Code);
+                string meaning = CrashAnalyzer.CodeMeaning(top.Code);
+
+                var sb = new StringBuilder();
+                sb.Append("🔎 « ").Append(exeName).Append(" » a planté ").Append(target.Count)
+                  .Append(target.Count > 1 ? " fois" : " fois").Append(" ces 14 jours (dernier : ")
+                  .Append(top.Time.ToString("dd/MM à HH:mm")).Append(").\n\n");
+                if (top.Hang)
+                    sb.Append("C'était un BLOCAGE (appli figée) : souvent une attente sur le réseau, le disque ou un périphérique.\n");
+                else
+                {
+                    if (!string.IsNullOrEmpty(top.Module)) sb.Append("• Module fautif : ").Append(top.Module).Append('\n');
+                    if (!string.IsNullOrEmpty(top.Code)) sb.Append("• Code : ").Append(top.Code).Append(string.IsNullOrEmpty(meaning) ? "" : " — " + meaning).Append('\n');
+                    sb.Append("\n➡ Cause probable : ").Append(diag.Cause).Append(".\n");
+                }
+                sb.Append("💡 Remède gratuit : ").Append(diag.Remedy);
+
+                var r = Say(sb.ToString());
+                r.Action = FixForCrash(diag.Fix);   // bouton adapté (DDU, VC++, DISM/SFC…) ou null
+
+                // Module inconnu + IA + web → on va chercher ce module/ce code sur le web pour préciser.
+                if (!diag.Known && !top.Hang && !string.IsNullOrEmpty(top.Module) && LocalBrain.Enabled && !LocalBrain.WebOff())
+                {
+                    var web = new DocAssistant.ChatAction();
+                    web.Label = "Chercher « " + top.Module + " » sur le web"; web.AutoRun = false; web.IsChange = false;
+                    string query = top.Exe + " " + top.Module + " " + top.Code + " crash fix";
+                    web.Run = delegate (Action<string, int> log2) { return WebAnswer(query, st).Run(log2); };
+                    r.Action = web;   // remplace le fix générique par la recherche ciblée
+                }
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Correctif câblé selon la cause du crash (clé de CrashAnalyzer.Diag.Fix).
+        /// « ram / game / anticheat » n'ont pas de correctif 1 clic — le remède est dans le texte.</summary>
+        private static DocAssistant.ChatAction FixForCrash(string kind)
+        {
+            switch (kind)
+            {
+                case "libs": return FixLibs();                                          // runtimes VC++/DirectX/.NET manquants
+                case "gpu": return InstallTool("Wagnardsoft.DisplayDriverUninstaller", "DDU");
+                case "system": return RepairWindows();                                  // DISM + SFC
+                default: return null;
+            }
+        }
+
+        // ------------------------------------------------------------------
         //  Latence — micro-mesure réelle (timer, gigue de Sleep, pics DPC)
         // ------------------------------------------------------------------
         public static DocAssistant.ChatAction MeasureLatency()

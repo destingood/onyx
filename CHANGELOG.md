@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.70 — La CAUSE EXACTE d'un crash (n'importe quel app/jeu)
+- **Le Copilote lit le module fautif ET le code d'exception** que Windows enregistre à chaque
+  crash (Application Error 1000), puis les traduit en **cause probable + remède gratuit** via
+  une base de connaissance locale :
+  - pilote GPU (nvlddmkm/amdkmdag/igd…) → DDU + pilote à jour ;
+  - DirectX (d3d/dxgi) → runtime DirectX ; Visual C++/.NET (msvcp/vcruntime/clr) → runtimes ;
+  - anti-triche (EasyAntiCheat, Vanguard…) → réparer l'anti-triche ;
+  - ntdll/kernel + violation d'accès → RAM instable (XMP) / overclock / fichiers Windows
+    (MemTest86, DISM+SFC) ; module = l'app → bug interne (mise à jour + vérif des fichiers).
+  - le **code d'exception est expliqué** (c0000005 = violation d'accès mémoire, c0000409 =
+    dépassement de tampon, e0434352 = exception .NET…).
+- **Bouton de correction adapté à la cause** (DDU, VC++, réparer Windows…) ; pour un module
+  inconnu, il propose de **le chercher sur le web** (IA + recherche) pour préciser.
+- Dis « pourquoi ça crash », « analyse mes crashs », ou « pourquoi <jeu> plante » → il cible ce jeu.
+- Vérifié sur 50 crashs réels de cette machine : steam/python311.dll → composant Python ;
+  forzahorizon6.exe → violation d'accès mémoire (bug du jeu), etc.
+
 ## v14.69 — Mémoire qui apprend + il lit le web (de plus en plus précis)
 - **Mémoire longue durée** (`bt-memoire.txt`, 100 % local) : le Copilote RETIENT et s'en sert
   dans chaque réponse IA → il devient plus précis d'une session à l'autre.

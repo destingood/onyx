@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — aucune connexion réseau")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.69.0.0")]
-[assembly: AssemblyFileVersion("14.69.0.0")]
+[assembly: AssemblyVersion("14.70.0.0")]
+[assembly: AssemblyFileVersion("14.70.0.0")]
 
 namespace BTOptimizer
 {
@@ -156,6 +156,23 @@ namespace BTOptimizer
                 string html = Report.BuildHtml(Catalog.All(), Hardware.Detect());
                 System.IO.File.WriteAllText(repOut, html, new System.Text.UTF8Encoding(false));
                 Console.WriteLine("RAPPORT écrit : " + repOut + " (" + html.Length + " octets)");
+                Environment.Exit(0);
+            }
+
+            // BT_CRASH=1 : analyse les crashs réels de cette machine (cause exacte) et sort — vérif.
+            if (Environment.GetEnvironmentVariable("BT_CRASH") == "1")
+            {
+                var crashes = CrashScan.RecentDetailed(30);
+                Console.WriteLine("Crashs détaillés (30 j) : " + crashes.Count);
+                int shown = 0;
+                foreach (var ci in crashes)
+                {
+                    if (shown++ >= 6) break;
+                    var d = CrashAnalyzer.FromModule(ci.Exe, ci.Module, ci.Code);
+                    Console.WriteLine("• " + ci.Exe + "  module=" + ci.Module + "  code=" + ci.Code
+                                    + "\n    cause : " + d.Cause + "  [fix=" + (d.Fix ?? "-") + ", connu=" + d.Known + "]"
+                                    + "\n    sens  : " + CrashAnalyzer.CodeMeaning(ci.Code));
+                }
                 Environment.Exit(0);
             }
 

@@ -310,9 +310,6 @@ namespace BTOptimizer
                     "J'inventorie ce qui se lance à chaque allumage…", ChatActions.MeasureStartup());
             if (hits == 1 && !symptom)
             {
-                if (iCrash)
-                    return WithAction(entries, "Stabilité (14 j)",
-                        "Je relève les crashs des 14 derniers jours (pilote GPU + applications)…", ChatActions.MeasureCrashes());
                 if (iHogs)
                     return WithAction(entries, "Qui ralentit mon PC",
                         "Je mesure ce qui travaille en ce moment (1 seconde)…", ChatActions.MeasureHogs());
@@ -332,6 +329,12 @@ namespace BTOptimizer
             if (hits == 0 && Has(s, "point de restau", "restauration", "sauvegarde", "backup", "avant de toucher", "filet"))
                 return WithAction(entries, "Points de restauration",
                     "Je peux poser un filet de sécurité avant toute manipulation.", ChatActions.MakeRestorePoint());
+
+            // CRASH : la CAUSE EXACTE prime (même si « plante »/« bug » comptent aussi comme symptôme).
+            if (iCrash)
+                return WithAction(entries, "Stabilité (14 j)",
+                    "Je cherche la CAUSE EXACTE de tes crashs (module fautif + code d'exception)…",
+                    ChatActions.AnalyseCrash(CrashApp(s, q), st));
 
             // --- ENQUÊTE : symptôme large, demande de bilan, ou intention noyée dans un symptôme ---
             if (symptom || meta || hits == 1)
@@ -517,6 +520,23 @@ namespace BTOptimizer
             if (best < 0) return "";
             string tail = original.Substring(best + len).Trim();
             return tail.TrimStart(':', '-', ' ', '"', '«').TrimEnd('"', '»', ' ', '.').Trim();
+        }
+
+        /// <summary>Nom d'un jeu/app cité dans le message (pour cibler l'analyse de crash), ou null.
+        /// S'appuie sur les exes de jeux connus ; sinon laisse l'analyseur prendre le pire crasheur.</summary>
+        private static string CrashApp(string s, string q)
+        {
+            try
+            {
+                foreach (string exe in GameScan.PriorityExes())
+                {
+                    string baseName = exe.ToLowerInvariant().Replace(".exe", "");
+                    // nom distinctif d'au moins 4 lettres présent dans le message
+                    if (baseName.Length >= 4 && s.Contains(baseName)) return baseName;
+                }
+            }
+            catch { }
+            return null;
         }
 
         /// <summary>Repère une URL (http(s):// ou www.…) dans le message, ou null.</summary>

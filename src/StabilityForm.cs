@@ -17,6 +17,18 @@ namespace BTOptimizer
         public bool IsGame;
     }
 
+    /// <summary>Crash DÉTAILLÉ (Application Error 1000) : app + module fautif + code d'exception —
+    /// de quoi déterminer la cause EXACTE (voir CrashAnalyzer).</summary>
+    internal class CrashInfo
+    {
+        public DateTime Time;
+        public string Exe;      // application qui a planté (ex. « valorant.exe »)
+        public string Module;   // module fautif (la DLL qui a lâché, ex. « nvwgf2umx.dll »)
+        public string Code;     // code d'exception (ex. « c0000005 »)
+        public bool Hang;       // blocage (figé) plutôt que crash franc
+        public bool IsGame;
+    }
+
     /// <summary>
     /// Lecture (seule) des journaux Windows via wevtutil : crashs d'applications/jeux,
     /// erreurs du pilote GPU, BSOD, coupures de courant et erreurs matérielles WHEA.
@@ -174,6 +186,48 @@ namespace BTOptimizer
             }
             catch { }
             return events;
+        }
+
+        /// <summary>Crashs DÉTAILLÉS (app + module fautif + code d'exception) — la matière première
+        /// de l'analyse « cause exacte ». Bruit de développement filtré.</summary>
+        public static List<CrashInfo> RecentDetailed(int days)
+        {
+            var list = new List<CrashInfo>();
+            string xml = Query("Application",
+                "*[System[(Provider[@Name='Application Error'] or Provider[@Name='Application Hang']) and " + TimeFilter(days) + "]]", 80);
+            if (xml == null) return list;
+            try
+            {
+                var doc = new XmlDocument();
+                doc.LoadXml("<r>" + xml + "</r>");
+                foreach (XmlNode ev in doc.SelectNodes("//*[local-name()='Event']"))
+                {
+                    string provider = "", systemTime = "";
+                    var data = new List<string>();
+                    foreach (XmlNode node in ev.SelectNodes(".//*"))
+                    {
+                        if (node.LocalName == "Provider" && node.Attributes["Name"] != null) provider = node.Attributes["Name"].Value;
+                        else if (node.LocalName == "TimeCreated" && node.Attributes["SystemTime"] != null) systemTime = node.Attributes["SystemTime"].Value;
+                        else if (node.LocalName == "Data") data.Add(node.InnerText);
+                    }
+                    string exe = data.Count > 0 ? data[0] : "?";
+                    if (exe == "?" || IsNoise(exe)) continue;
+                    bool hang = provider == "Application Hang";
+                    DateTime t;
+                    if (!DateTime.TryParse(systemTime, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out t)) t = DateTime.UtcNow;
+                    list.Add(new CrashInfo
+                    {
+                        Time = t.ToLocalTime(),
+                        Exe = exe,
+                        Module = (!hang && data.Count > 3) ? data[3] : "",
+                        Code = (!hang && data.Count > 6) ? data[6] : "",
+                        Hang = hang,
+                        IsGame = LooksLikeGame(exe)
+                    });
+                }
+            }
+            catch { }
+            return list;
         }
     }
 
