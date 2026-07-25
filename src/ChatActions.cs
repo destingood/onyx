@@ -858,7 +858,7 @@ namespace BTOptimizer
                 // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
                 // (« et pourquoi ? », « développe »… gardent leur sens).
                 LocalBrain.PushUser(q);
-                try { ans = LocalBrain.AskChat(sysCtx, model, factual ? FactualTemp : NormalTemp); }
+                try { ans = LocalBrain.AskChat(sysCtx, model, factual ? FactualTemp : NormalTemp, factual ? FactualTopP : NormalTopP); }
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
@@ -891,7 +891,7 @@ namespace BTOptimizer
                         {
                             LocalBrain.PushAssistant(better.Trim());
                             LocalBrain.RememberFact(q, better.Trim());   // cohérence : ne plus se contredire là-dessus
-                            return Say(better.Trim() + "\n\n— 🧠+🌐 vérifié sur le web plutôt que deviné ("
+                            return Say(better.Trim() + "\n\n— " + Reliability(true, false) + " ("
                                      + WebSearch.Sources(res) + ").");
                         }
                     }
@@ -914,7 +914,7 @@ namespace BTOptimizer
                 }
 
                 LocalBrain.PushAssistant(ans.Trim());
-                return Say(ans.Trim() + "\n\n— 🧠 IA locale (" + model + "), 100 % sur ta machine, gratuit.");
+                return Say(ans.Trim() + "\n\n— " + Reliability(false, grounded) + " · IA locale (" + model + "), 100 % sur ta machine.");
             };
             return a;
         }
@@ -1009,13 +1009,27 @@ namespace BTOptimizer
             return false;
         }
 
-        // Températures de génération. Proche de 0 pour le factuel (moins d'invention), plus souple
-        // pour le bavardage/conseils. Baisser la température est une technique reconnue anti-hallucination.
+        // Températures + top-p de génération. Proche de 0 / restreint pour le factuel (moins
+        // d'invention), plus souple pour le bavardage/conseils. Techniques reconnues anti-hallucination.
         private const double FactualTemp = 0.15;
         private const double NormalTemp  = 0.4;
+        private const double FactualTopP = 0.5;
+        private const double NormalTopP  = 0.9;
 
         /// <summary>Température à utiliser pour cette question : quasi nulle si factuelle, normale sinon.</summary>
         internal static double ChatTemperature(string q) { return IsFactualLookup(q) ? FactualTemp : NormalTemp; }
+
+        /// <summary>top-p à utiliser : restreint si factuelle, large sinon.</summary>
+        internal static double ChatTopP(string q) { return IsFactualLookup(q) ? FactualTopP : NormalTopP; }
+
+        /// <summary>Indicateur de fiabilité AFFICHÉ à l'utilisateur (recommandé par l'état de l'art :
+        /// « établir un score de certitude et l'afficher »). Élevée = ancré (web ou base), sinon moyenne.</summary>
+        internal static string Reliability(bool webVerified, bool grounded)
+        {
+            if (webVerified) return "✅ Fiabilité élevée · vérifié en ligne";
+            if (grounded)    return "✅ Fiabilité élevée · source : ta base de connaissances";
+            return "🧠 Fiabilité moyenne · connaissances générales";
+        }
 
         // La question demande-t-elle un FAIT vérifiable (personne, marque, produit, lieu, date,
         // chiffre, définition d'entité…) ? Ce sont les sujets où un petit modèle local invente

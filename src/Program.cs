@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.80.0.0")]
-[assembly: AssemblyFileVersion("14.80.0.0")]
+[assembly: AssemblyVersion("14.81.0.0")]
+[assembly: AssemblyFileVersion("14.81.0.0")]
 
 namespace BTOptimizer
 {
@@ -272,8 +272,45 @@ namespace BTOptimizer
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  temp=" + t + " (" + (fac ? "factuel->basse" : "libre->normale") + ")  « " + q + " »");
                 }
 
-                int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length;
-                int good = ok + ok2 + ok3 + ok4 + ok5;
+                // top-p dynamique : restreint sur le factuel, large sinon.
+                int ok6 = 0;
+                foreach (var c in tempCases)
+                {
+                    string q = (string)c[0]; bool fac = (bool)c[1];
+                    double p = ChatActions.ChatTopP(q);
+                    bool pass = fac ? (p <= 0.6) : (p >= 0.8); if (pass) ok6++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  top_p=" + p + " (" + (fac ? "factuel->restreint" : "libre->large") + ")  « " + q + " »");
+                }
+                // Indicateur de fiabilité affiché (web = élevée, base = élevée, sinon moyenne).
+                int ok7 = 0;
+                string rWeb = ChatActions.Reliability(true, false), rBase = ChatActions.Reliability(false, true), rGen = ChatActions.Reliability(false, false);
+                bool pWeb  = rWeb.Contains("élevée") && rWeb.Contains("ligne");
+                bool pBase = rBase.Contains("élevée") && rBase.Contains("base");
+                bool pGen  = rGen.Contains("moyenne");
+                if (pWeb) ok7++;  Console.WriteLine((pWeb ? "OK  " : "FAIL") + "  fiabilite web = elevee+ligne");
+                if (pBase) ok7++; Console.WriteLine((pBase ? "OK  " : "FAIL") + "  fiabilite base = elevee+base");
+                if (pGen) ok7++;  Console.WriteLine((pGen ? "OK  " : "FAIL") + "  fiabilite parametrique = moyenne");
+                // Oubli contextuel.
+                var forgetCases = new[]
+                {
+                    new object[]{ "oublie le contexte", true },
+                    new object[]{ "nouveau sujet", true },
+                    new object[]{ "on repart de zero", true },
+                    new object[]{ "c'est quoi le dlss", false },
+                    new object[]{ "qui est macron", false },
+                };
+                int ok8 = 0;
+                foreach (var c in forgetCases)
+                {
+                    string q = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = DocAssistant.IsForget(q);
+                    bool pass = got == exp; if (pass) ok8++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  oubli=" + got + " (attendu " + exp + ")  « " + q + " »");
+                }
+
+                int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
+                          + tempCases.Length + 3 + forgetCases.Length;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

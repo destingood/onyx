@@ -113,6 +113,14 @@ namespace BTOptimizer
             if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
                 return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne sur TA machine. Je mesure, je répare, je conseille — et avec mon cerveau IA local, je réponds à tout. Par défaut tout reste local ; si tu actives la recherche web, je vais aussi chercher l'info à jour en ligne (désactivable). Alors, on regarde quoi ?", ShowStarters = true };
 
+            // --- Oubli contextuel (technique anti-hallucination : réduire la fenêtre pour ne pas
+            //     être influencé par les échanges précédents). « nouveau sujet », « oublie »… ---
+            if (IsForget(s))
+            {
+                try { LocalBrain.ResetHistory(); } catch { }
+                return new Reply { Text = "Contexte oublié — on repart de zéro. 🧹 Pose ta nouvelle question !", ShowStarters = true };
+            }
+
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {
                 Reply lx = Lexi(s, entries);
@@ -513,6 +521,16 @@ namespace BTOptimizer
         /// <summary>Détecte une question d'ACTUALITÉ / temps réel (résultat, météo, prix, news,
         /// date récente…) que le modèle local ne peut pas connaître → recherche web. Renvoie null
         /// si ce n'est pas ce cas (ou si l'IA/web sont indisponibles : on laisse le routage normal).</summary>
+        /// <summary>L'utilisateur demande-t-il d'oublier le contexte / repartir de zéro ?
+        /// (oubli contextuel = technique anti-hallucination reconnue).</summary>
+        internal static bool IsForget(string s)
+        {
+            return Has(s, "oublie le contexte", "oublie tout", "oublie ce qu'on", "oublie ce que",
+                          "nouveau sujet", "change de sujet", "on recommence", "on repart de zero",
+                          "reprenons a zero", "efface le contexte", "reinitialise le contexte",
+                          "reset le contexte", "vide le contexte", "table rase");
+        }
+
         private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)
         {
             if (!LocalBrain.Enabled || LocalBrain.WebOff()) return null;

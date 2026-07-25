@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.81 — top-p, indicateur de fiabilité affiché, et oubli contextuel
+- **top-p dynamique** (couplé à la température, comme le recommande l'état de l'art) : 0.5 (restreint
+  aux mots les plus probables) sur une question factuelle, 0.9 (large) sinon ; web à 0.5.
+- **Indicateur de fiabilité AFFICHÉ** (« établir un score de certitude et le montrer à l'utilisateur ») :
+  chaque réponse indique désormais **✅ Fiabilité élevée · vérifié en ligne**, **✅ Fiabilité élevée ·
+  source : ta base**, ou **🧠 Fiabilité moyenne · connaissances générales** — tu sais d'un coup d'œil
+  à quel point tu peux t'y fier.
+- **Oubli contextuel** (technique reconnue : réduire la fenêtre pour ne pas être influencé par les
+  échanges précédents) : dis **« nouveau sujet »**, **« oublie le contexte »**, **« on repart de
+  zéro »**… et le Copilote efface historique + faits de session, pour repartir propre.
+- Vérifié : **45/45** (tri, fait daté, clé, mémoire, température, **top-p**, **fiabilité**, **oubli**),
+  exécuté sur le vrai code compilé.
+
 ## v14.80 — Température dynamique + Chain-of-Thought (techniques anti-hallucination reconnues)
 - **Température dynamique** : pour une question **factuelle**, la génération passe à 0.15 (quasi
   nulle) → beaucoup moins de « créativité », donc moins d'invention. Pour le bavardage/conseils,
