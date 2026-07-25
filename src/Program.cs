@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.01.0.0")]
-[assembly: AssemblyFileVersion("15.01.0.0")]
+[assembly: AssemblyVersion("15.02.0.0")]
+[assembly: AssemblyFileVersion("15.02.0.0")]
 
 namespace BTOptimizer
 {
@@ -486,9 +486,30 @@ namespace BTOptimizer
                 if (off1) ok19++; Console.WriteLine((off1 ? "OK  " : "FAIL") + "  web hors-sujet detecte -> fiabilite faible");
                 if (off2) ok19++; Console.WriteLine((off2 ? "OK  " : "FAIL") + "  vraie reponse web -> pas faible");
 
+                // Heure/date locale (hors-ligne) : routage + format.
+                int ok20 = 0;
+                var timeCases = new[]
+                {
+                    new object[]{ "quelle heure est-il", true },
+                    new object[]{ "on est quel jour", true },
+                    new object[]{ "quelle date on est", true },
+                    new object[]{ "quel temps fait il", false },   // meteo, pas l'heure
+                    new object[]{ "comment optimiser mon pc", false },
+                };
+                foreach (var c in timeCases)
+                {
+                    string t = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = DocAssistant.IsTimeQuery(t);
+                    bool pass = got == exp; if (pass) ok20++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  heure=" + got + " (attendu " + exp + ")  « " + t + " »");
+                }
+                string now = LiveData.TimeNow();
+                bool tf = now.Contains("Il est") && now.Contains("h") && now.Contains("20");   // format + annee
+                if (tf) ok20++; Console.WriteLine((tf ? "OK  " : "FAIL") + "  TimeNow format local : " + now);
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

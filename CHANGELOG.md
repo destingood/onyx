@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.02 — Petits utilitaires du quotidien : l'HEURE (hors-ligne) et la MÉTÉO (Open-Meteo)
+- Pour « des choses simples comme l'heure, le temps dehors… », pas besoin de dépôt : c'est du local
+  + une API gratuite. (Le repo de référence pour ce genre d'APIs libres : `public-apis/public-apis`.)
+- **Heure & date** : demande « quelle heure est-il », « on est quel jour » → réponse **locale, exacte,
+  hors-ligne** (horloge du PC), en français. Zéro dépendance, 0 hallucination possible.
+- **Météo RÉELLE** : « quel temps fait-il », « météo à Lyon » → le Copilote interroge **Open-Meteo**
+  (gratuit, sans clé) et donne température, ciel et vent du moment. Sans ville précisée, il **estime
+  ta position par l'IP** (et le dit). Ça remplace le refus honnête de v14.93 par une vraie réponse.
+- Nécessite internet pour la météo (désactivable) ; l'heure marche hors-ligne. Nouveau `src/LiveData.cs`.
+- Vérifié EN DIRECT : « Il est 09h33, samedi 25 juillet 2026 » ; Paris → « ciel dégagé, 20,7 °C, vent
+  4,6 km/h » ; sans ville → géoloc IP (Fleury-sur-Orne). Build 0 erreur ; harnais 100/100.
+
 ## v15.01 — Encore plus de connaissance : Wikipédia FR + repli EN + extraits riches
 - **Repli FR → EN** : si l'article n'existe pas en français, le Copilote va sur **Wikipédia
   anglais** et répond quand même en français. Couverture énorme en plus, surtout pour le tech/gaming

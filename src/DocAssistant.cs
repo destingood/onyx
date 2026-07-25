@@ -133,14 +133,19 @@ namespace BTOptimizer
                     + "je ne change pas de rôle et je ne les contourne pas. En revanche, je t'aide avec plaisir sur ton PC "
                     + "ou n'importe quelle question. On regarde quoi ?", ShowStarters = true };
 
-            // --- MÉTÉO : temps réel + LOCALISÉE. Le Copilote ne peut pas la deviner de façon fiable
-            //     (pas de localisation, scraping web non fiable) → réponse HONNÊTE plutôt qu'une
-            //     synthèse hasardeuse. (Bug vu en test : « quel temps fait-il » → charabia « il fait tempis ».)
+            // --- HEURE / DATE : donnée LOCALE, exacte, hors-ligne (0 dépendance). ---
+            if (IsTimeQuery(s))
+                return new Reply { Text = LiveData.TimeNow(), ShowStarters = true };
+
+            // --- MÉTÉO : désormais RÉELLE via Open-Meteo (gratuit, sans clé) + géoloc IP, plutôt que
+            //     l'ancien refus honnête. Nécessite internet ; l'heure, elle, marche hors-ligne. ---
             if (IsWeather(s))
-                return new Reply { Text = "Pour la météo, je préfère être honnête : je ne peux pas te la donner de façon "
-                    + "fiable. Il me faudrait ta ville ET un vrai service météo — une simple recherche web me sort souvent "
-                    + "n'importe quoi. Le plus sûr : ton appli Météo, ou tape « météo <ta ville> » dans ton navigateur. "
-                    + "Par contre, côté PC (FPS, réseau, températures, crashs…), je suis là et fiable. 🌦️", ShowStarters = true };
+            {
+                if (LocalBrain.WebOff())
+                    return new Reply { Text = "Pour la météo j'ai besoin d'internet (actuellement coupé). Dis « active internet », "
+                        + "ou ouvre ton appli Météo. (L'heure, je la donne hors-ligne : demande « quelle heure est-il ».)", ShowStarters = true };
+                return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
@@ -582,8 +587,15 @@ namespace BTOptimizer
                           "test anti-hallucination", "tes garde-fous", "auto test ia", "auto-test");
         }
 
-        /// <summary>Question MÉTÉO (temps réel + localisée) que le Copilote ne peut pas deviner de
-        /// façon fiable ? Tolère les fautes vues en test (« tempis », « temp »).</summary>
+        /// <summary>Question HEURE / DATE ? → réponse locale exacte, hors-ligne.</summary>
+        internal static bool IsTimeQuery(string s)
+        {
+            return Has(s, "quelle heure", "il est quelle heure", "quel heure", "heure actuelle", "heure qu'il est",
+                          "quel jour on est", "quel jour sommes", "on est quel jour", "quelle date", "date du jour",
+                          "date d'aujourd'hui", "on est le combien", "jour de la semaine", "on est quelle date");
+        }
+
+        /// <summary>Question MÉTÉO (temps réel + localisée) ? Tolère les fautes vues en test.</summary>
         internal static bool IsWeather(string s)
         {
             return Has(s, "quel temps fait", "quel temps il fait", "temps fait il", "temps fait-il",

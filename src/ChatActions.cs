@@ -958,6 +958,46 @@ namespace BTOptimizer
             return a;
         }
 
+        // Ville mentionnée dans une question météo (« météo à Lyon » → « lyon »), ou "" → géoloc IP.
+        private static string ExtractCity(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return "";
+            string low = Deaccent(q.ToLowerInvariant());
+            string[] marks = { "meteo a ", "meteo de ", "meteo sur ", "temps a ", "meteo ", " a " };
+            int best = -1, len = 0;
+            foreach (string m in marks) { int k = low.IndexOf(m, StringComparison.Ordinal); if (k >= 0 && (best < 0 || k < best)) { best = k; len = m.Length; } }
+            if (best < 0) return "";
+            string tail = low.Substring(best + len).Trim().TrimEnd('?', '!', '.', ' ');
+            // retire les mots de liaison résiduels et borne à un nom de ville court
+            foreach (string junk in new[] { "fait il", "fait-il", "aujourd'hui", "demain", "maintenant", "dehors", "il fait" })
+                tail = tail.Replace(junk, "").Trim();
+            if (tail.Length > 40) tail = tail.Substring(0, 40).Trim();
+            return tail;
+        }
+
+        /// <summary>Météo actuelle via Open-Meteo (gratuit, sans clé). Ville extraite de la question,
+        /// sinon estimée par l'IP. Action asynchrone (appels réseau hors du fil de l'UI).</summary>
+        public static DocAssistant.ChatAction WeatherAction(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Météo (Open-Meteo)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Météo en direct (Open-Meteo, gratuit)…", 0);
+                LiveData.Meteo m = null;
+                try { m = LiveData.Current(ExtractCity(q)); } catch { }
+                if (m == null)
+                    return Say("Je n'ai pas réussi à récupérer la météo (ville introuvable ou connexion coupée). "
+                             + "Précise ta ville : « météo à <ta ville> ».");
+                string src = m.FromIp ? " (ville estimée d'après ta connexion)" : "";
+                string t = m.Temp.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+                string w = m.Wind.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return Say("🌦️ À " + m.City + src + " : " + m.Desc + ", " + t + " °C, vent " + w + " km/h.\n"
+                         + "— Open-Meteo (gratuit), relevé du moment.");
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)
