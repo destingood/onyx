@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.00 — Connecteur Wikipédia : une base de connaissances universelle (« pour tout »)
+- Impossible de baker « tout » dans un exe de 60 Mo (Wikipédia = plusieurs Go). La bonne approche :
+  **se brancher en direct sur LA base universelle — Wikipédia — de façon sourcée et ancrée**.
+- Nouveau **connecteur Wikipédia** (`src/Wikipedia.cs`) : pour une question sur une entité / un concept
+  (personne, marque, lieu, notion…), le Copilote récupère le **résumé encyclopédique français** (API
+  REST publique, gratuite, sans clé) et **ancre sa réponse dessus**, en **citant l'article**.
+- Branché **en priorité** dans la recherche web : Wikipédia d'abord (fiable, sourcé) → repli sur
+  DuckDuckGo si pas d'article ou hors-sujet. La réponse est mémorisée (mémoire apprise) et passe le
+  garde anti-conseil-dangereux.
+- **Anti-hallucination** : une réponse ancrée sur Wikipédia + citée vaut bien mieux qu'une invention ;
+  et si l'extrait ne répond pas, le garde « hors-sujet » (v14.93) évite la fausse « fiabilité élevée ».
+- Vérifié EN DIRECT : Elon Musk, Tour Eiffel, Valorant, photosynthèse → résumés FR corrects ; « RTX
+  4090 » et requête bidon → aucun article (repli propre). Build 0 erreur ; harnais 96/96.
+- Rappel : nécessite la recherche web activée (comme le reste du web) ; désactivable, respect vie privée
+  (garde PII conservé). Le modèle local seul garde sa culture générale hors-ligne.
+
 ## v14.99 — Base de connaissances : pépites distillées de GamingPCSetup (252 → 268)
 - Sur ta demande d'un « gros dépôt de savoir », j'ai trouvé, vérifié la licence, et **distillé** les
   pépites grand public du projet **GamingPCSetup** (djdallmann, **licence MIT**, recherche mesurée

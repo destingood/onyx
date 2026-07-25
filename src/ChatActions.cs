@@ -974,6 +974,26 @@ namespace BTOptimizer
                     return Say("⚠️ Ta demande contient une info personnelle (" + string.Join(", ", pii.ToArray()) + "). "
                              + "Je ne l'envoie PAS à un moteur de recherche externe (vie privée). Retire l'info sensible et "
                              + "redemande, ou pose-moi ça autrement — les mesures et réparations restent 100 % sur ta machine.");
+                // BASE UNIVERSELLE : Wikipédia d'abord (encyclopédie sourcée) pour les entités/concepts —
+                // bien plus fiable qu'un scraping. On ancre la réponse dessus et on cite l'article.
+                if (LocalBrain.ServerUp(1500) && LocalBrain.BestModel() != null)
+                {
+                    Wikipedia.Page wp = null;
+                    try { wp = Wikipedia.Lookup(q); } catch { }
+                    if (wp != null)
+                    {
+                        if (log != null) log("Wikipédia (« " + wp.Title + " »)…", 0);
+                        string wa = null;
+                        try { wa = LocalBrain.AskWeb(q, Wikipedia.Context(wp), LocalBrain.BestModel()); } catch { }
+                        if (!string.IsNullOrEmpty(wa) && !WebLooksOffTopic(wa))
+                        {
+                            LocalBrain.PushAssistant(wa.Trim());
+                            LocalBrain.RememberFact(q, wa.Trim());
+                            return Say(ReasonCheck.Enhance(wa.Trim()) + "\n\n— 📚 " + Reliability(true, false)
+                                     + " (Wikipédia : " + wp.Url + ").");
+                        }
+                    }
+                }
                 if (log != null) log("Recherche web (DuckDuckGo)…", 0);
                 List<WebSearch.Result> res;
                 try { res = WebSearch.Query(q, 5); }
