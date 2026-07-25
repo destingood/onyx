@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.84 — Auto-diagnostic des garde-fous (« mesurer le succès »)
+- Le dernier article insiste sur **la mesure** (« mesurer la réduction des hallucinations, le
+  respect des formats… contrôle continu »). J'avais un harnais de test (BT_HALLU) mais **côté
+  développeur seulement** — je l'expose maintenant **dans l'app**.
+- Nouvelle commande **« teste ta fiabilité »** (ou « auto-diagnostic », « vérifie tes garde-fous ») :
+  le Copilote mesure EN DIRECT que ses 6 garde-fous anti-hallucination fonctionnent et affiche un
+  bilan clair (✅/❌ par couche, « 6/6 garde-fous actifs · Système sain »).
+- Rend le système **observable** : tu peux vérifier toi-même, à tout moment, que l'anti-hallucination
+  tourne — au lieu de le croire sur parole.
+- Vérifié : **57/57** sur le vrai code compilé.
+- Note d'honnêteté : cet article était une version condensée du guide précédent ; toutes ses autres
+  techniques applicables (prompt engineering, RAG) étaient déjà en place, et le fine-tuning reste
+  hors-scope pour une app locale gratuite. L'auto-diagnostic est le seul apport non-redondant.
+
 ## v14.83 — Prompt engineering avancé : prompt structuré + exemples (few-shot)
 - Le system prompt était devenu un **mur de phrases** : à mesure qu'on ajoutait des règles, le
   risque de « lost in the middle » (le modèle se perd dans un contexte trop dense) augmentait —

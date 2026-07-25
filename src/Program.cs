@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.83.0.0")]
-[assembly: AssemblyFileVersion("14.83.0.0")]
+[assembly: AssemblyVersion("14.84.0.0")]
+[assembly: AssemblyFileVersion("14.84.0.0")]
 
 namespace BTOptimizer
 {
@@ -342,9 +342,17 @@ namespace BTOptimizer
                 if (s2) ok10++; Console.WriteLine((s2 ? "OK  " : "FAIL") + "  few-shot present (Q/R + exemple pagefile)");
                 if (s3) ok10++; Console.WriteLine((s3 ? "OK  " : "FAIL") + "  regles cles conservees (honnetete, 130 mots)");
 
+                // Auto-diagnostic in-app (« mesurer le succes »).
+                int ok11 = 0;
+                bool d1 = DocAssistant.IsSelfTest("teste ta fiabilite") && !DocAssistant.IsSelfTest("qui est macron");
+                if (d1) ok11++; Console.WriteLine((d1 ? "OK  " : "FAIL") + "  routage auto-diagnostic");
+                string diag = ChatActions.SelfDiagnostic();
+                bool d2 = diag.Contains("6/6") && diag.Contains("Système sain");
+                if (d2) ok11++; Console.WriteLine((d2 ? "OK  " : "FAIL") + "  auto-diagnostic : 6/6 garde-fous actifs");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

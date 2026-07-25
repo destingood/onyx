@@ -121,6 +121,11 @@ namespace BTOptimizer
                 return new Reply { Text = "Contexte oublié — on repart de zéro. 🧹 Pose ta nouvelle question !", ShowStarters = true };
             }
 
+            // --- Auto-diagnostic : mesurer en direct que les garde-fous anti-hallucination tournent
+            //     (« mesurer le succès » / observabilité). « teste ta fiabilité », « diagnostic ia »… ---
+            if (IsSelfTest(s))
+                return new Reply { Text = ChatActions.SelfDiagnostic(), ShowStarters = true };
+
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {
                 Reply lx = Lexi(s, entries);
@@ -529,6 +534,15 @@ namespace BTOptimizer
                           "nouveau sujet", "change de sujet", "on recommence", "on repart de zero",
                           "reprenons a zero", "efface le contexte", "reinitialise le contexte",
                           "reset le contexte", "vide le contexte", "table rase");
+        }
+
+        /// <summary>L'utilisateur demande-t-il un auto-diagnostic des garde-fous anti-hallucination ?
+        /// (« mesurer le succès » / observabilité, rendue accessible dans l'app).</summary>
+        internal static bool IsSelfTest(string s)
+        {
+            return Has(s, "teste ta fiabilite", "test de fiabilite", "auto diagnostic", "auto-diagnostic",
+                          "diagnostic ia", "diagnostic de l'ia", "verifie tes garde-fous", "test anti hallucination",
+                          "test anti-hallucination", "tes garde-fous", "auto test ia", "auto-test");
         }
 
         private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)

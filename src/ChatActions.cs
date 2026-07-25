@@ -1036,6 +1036,32 @@ namespace BTOptimizer
             return "🧠 Fiabilité moyenne · connaissances générales";
         }
 
+        private static string DiagLine(bool ok, string label) { return "• " + (ok ? "✅" : "❌") + " " + label + "\n"; }
+
+        /// <summary>Auto-diagnostic AFFICHÉ : mesure en direct que les garde-fous anti-hallucination
+        /// fonctionnent (recommandation « mesurer le succès / contrôle continu »). Rend le système
+        /// observable dans l'app, pas seulement dans le harnais de test développeur.</summary>
+        internal static string SelfDiagnostic()
+        {
+            int ok = 0, n = 0;
+            var sb = new StringBuilder("🩺 Auto-diagnostic des garde-fous anti-hallucination :\n");
+            n++; bool c1 = IsFactualLookup("qui est untel") && !IsFactualLookup("salut ca va");
+            if (c1) ok++; sb.Append(DiagLine(c1, "Détection des questions factuelles → vérification web"));
+            n++; bool c2 = AnswerHasHardFact("il est ne en 1990") && !AnswerHasHardFact("ta souris est a 144 hz");
+            if (c2) ok++; sb.Append(DiagLine(c2, "Détection des faits datés non vérifiés"));
+            n++; bool c3 = ReasonCheck.Check("desactive ton pagefile").Count > 0 && ReasonCheck.Check("active le dlss").Count == 0;
+            if (c3) ok++; sb.Append(DiagLine(c3, "Raisonnement automatique (règles de domaine)"));
+            n++; bool c4 = ChatTemperature("qui est untel") < ChatTemperature("raconte une blague");
+            if (c4) ok++; sb.Append(DiagLine(c4, "Température & top-p dynamiques"));
+            n++; bool c5 = !string.IsNullOrEmpty(LocalBrain.ExtractKey("c'est qui clio williams"));
+            if (c5) ok++; sb.Append(DiagLine(c5, "Mémoire des faits vérifiés (anti flip-flop)"));
+            n++; bool c6 = DocAssistant.IsForget("nouveau sujet");
+            if (c6) ok++; sb.Append(DiagLine(c6, "Oubli contextuel (« nouveau sujet »)"));
+            sb.Append("\nBilan : ").Append(ok).Append('/').Append(n).Append(ok == n ? " garde-fous actifs. ✅ Système sain." : " — ⚠️ anomalie détectée.");
+            sb.Append("\nAutres couches toujours en place : RAG (ta base de connaissances), vérification web, prompt structuré + exemples, citations, indicateur de fiabilité.");
+            return sb.ToString();
+        }
+
         // La question demande-t-elle un FAIT vérifiable (personne, marque, produit, lieu, date,
         // chiffre, définition d'entité…) ? Ce sont les sujets où un petit modèle local invente
         // avec aplomb → on force la vérification web, même si la réponse a l'air sûre. On reste
