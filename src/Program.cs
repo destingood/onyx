@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.76.0.0")]
-[assembly: AssemblyFileVersion("14.76.0.0")]
+[assembly: AssemblyVersion("14.77.0.0")]
+[assembly: AssemblyFileVersion("14.77.0.0")]
 
 namespace BTOptimizer
 {
@@ -169,6 +169,39 @@ namespace BTOptimizer
                 Console.WriteLine("\nQuestion : " + kbQ);
                 Console.WriteLine("Extraits retrouvés :\n" + KnowledgeBase.Search(kbQ, 4));
                 Environment.Exit(0);
+            }
+
+            // BT_HALLU=1 : teste le classifieur anti-hallucination (question factuelle → vérif web ?)
+            // sur un jeu d'exemples, et sort. Prouve le tri sans avoir besoin d'Ollama.
+            if (Environment.GetEnvironmentVariable("BT_HALLU") == "1")
+            {
+                var cases = new[]
+                {
+                    new object[]{ "c'est qui clio williams", true },
+                    new object[]{ "Clio Williams", true },
+                    new object[]{ "qui est elon musk ?", true },
+                    new object[]{ "parle moi de la rtx 5090", true },
+                    new object[]{ "date de sortie de gta 6", true },
+                    new object[]{ "combien coute une rtx 4090", true },
+                    new object[]{ "capitale de l'australie", true },
+                    new object[]{ "quel age a macron", true },
+                    new object[]{ "raconte moi une blague", false },
+                    new object[]{ "comment optimiser mon pc", false },
+                    new object[]{ "salut ca va", false },
+                    new object[]{ "mon jeu rame que faire", false },
+                    new object[]{ "traduis bonjour en anglais", false },
+                    new object[]{ "c'est quoi le dlss", false },
+                };
+                int ok = 0;
+                foreach (var c in cases)
+                {
+                    string q = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = ChatActions.IsFactualLookup(q);
+                    bool pass = got == exp; if (pass) ok++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  factuel=" + got + " (attendu " + exp + ")  « " + q + " »");
+                }
+                Console.WriteLine("\nBT_HALLU : " + ok + "/" + cases.Length + " cas corrects");
+                Environment.Exit(ok == cases.Length ? 0 : 1);
             }
 
             // BT_CRASH=1 : analyse les crashs réels de cette machine (cause exacte) et sort — vérif.

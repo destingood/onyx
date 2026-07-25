@@ -844,7 +844,7 @@ namespace BTOptimizer
                 {
                     string kb = KnowledgeBase.Search(q, 5);
                     if (!string.IsNullOrEmpty(kb))
-                        sysCtx += "\n\n" + kb + "Appuie-toi sur ces extraits quand ils sont pertinents (cite « base de connaissances ») ; sinon, réponds avec tes propres connaissances.";
+                        sysCtx += "\n\n" + kb + "Sers-toi de ces extraits pour tout fait qu'ils couvrent (cite « base de connaissances »). S'ils ne couvrent pas la question, ne force pas et n'invente rien.";
                 }
                 catch { }
                 // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
@@ -855,11 +855,19 @@ namespace BTOptimizer
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
 
-                // AUTO-VÉRIFICATION (« ultra intelligent ») : si le modèle DOUTE de sa propre réponse
-                // et qu'internet est actif, il va vérifier sur le web et se corrige tout seul.
-                if (LooksUnsure(ans) && LocalBrain.Enabled && !LocalBrain.WebOff())
+                // ══ ANTI-HALLUCINATION ══════════════════════════════════════════════════════
+                // Le vrai piège n'est PAS seulement le doute avoué : c'est l'hallucination
+                // CONFIANTE (inventer une bio, une fiche technique, une date, un chiffre sans la
+                // moindre hésitation — le bug « Clio Williams »). Donc on vérifie sur le web dès
+                // que la question est FACTUELLE (personne, marque, produit, lieu, date, chiffre,
+                // définition d'entité…), MÊME si la réponse a l'air parfaitement sûre.
+                bool factual = IsFactualLookup(q);
+                bool webOk   = LocalBrain.Enabled && !LocalBrain.WebOff();
+
+                if ((factual || LooksUnsure(ans)) && webOk)
                 {
-                    if (log != null) log("Réponse incertaine → vérification sur le web…", 0);
+                    if (log != null) log(factual ? "Question factuelle → je vérifie sur le web…"
+                                                  : "Réponse incertaine → vérification sur le web…", 0);
                     List<WebSearch.Result> res = null;
                     try { res = WebSearch.Query(q, 5); } catch { }
                     if (res != null && res.Count > 0)
@@ -869,10 +877,26 @@ namespace BTOptimizer
                         if (!string.IsNullOrEmpty(better))
                         {
                             LocalBrain.PushAssistant(better.Trim());
-                            return Say(better.Trim() + "\n\n— 🧠+🌐 je n'étais pas sûr, alors j'ai vérifié sur le web ("
+                            return Say(better.Trim() + "\n\n— 🧠+🌐 vérifié sur le web plutôt que deviné ("
                                      + WebSearch.Sources(res) + ").");
                         }
                     }
+                    // Question factuelle mais web injoignable / rien trouvé : ne JAMAIS faire passer
+                    // une réponse peut-être inventée pour une certitude → on prévient honnêtement.
+                    if (factual)
+                    {
+                        LocalBrain.PushAssistant(ans.Trim());
+                        return Say(ans.Trim() + "\n\n⚠️ Je n'ai pas pu vérifier ça en ligne (web injoignable ou rien "
+                                 + "trouvé) — à prendre avec des pincettes, je peux me tromper sur ce point précis.");
+                    }
+                }
+                // Question factuelle SANS internet : le modèle local seul invente facilement des
+                // faits précis → on l'assume clairement et on propose la vérification.
+                else if (factual && !webOk)
+                {
+                    LocalBrain.PushAssistant(ans.Trim());
+                    return Say(ans.Trim() + "\n\n⚠️ Réponse de mémoire, NON vérifiée en ligne (sur les faits précis "
+                             + "je peux me tromper). Dis « active internet » et je confirme sur le web.");
                 }
 
                 LocalBrain.PushAssistant(ans.Trim());
@@ -963,10 +987,78 @@ namespace BTOptimizer
                 "au-dela de mes connaissances", "au-delà de mes connaissances", "ma base de connaissances",
                 "date de coupure", "ma derniere mise a jour", "ma dernière mise à jour", "apres ma formation",
                 "pas encore realise", "pas encore réalisé", "n'est pas encore", "futur lointain",
-                "en temps reel", "en temps réel", "informations en direct"
+                "en temps reel", "en temps réel", "informations en direct",
+                "je n'ai pas cette information", "je ne dispose pas de", "je ne saurais",
+                "sans certitude", "de memoire", "de mémoire", "je crois que", "il se peut"
             };
             foreach (string c in cues) if (a.Contains(c)) return true;
             return false;
+        }
+
+        // La question demande-t-elle un FAIT vérifiable (personne, marque, produit, lieu, date,
+        // chiffre, définition d'entité…) ? Ce sont les sujets où un petit modèle local invente
+        // avec aplomb → on force la vérification web, même si la réponse a l'air sûre. On reste
+        // PRUDENT (on exclut bavardage, aide PC, opinions, créatif) pour ne pas web-chercher à tort.
+        internal static bool IsFactualLookup(string q)
+        {
+            string n = Deaccent((q ?? "").ToLowerInvariant());
+            if (n.Length == 0) return false;
+
+            // Exclusions : créatif / opinion / how-to → aucune vérification factuelle utile.
+            string[] notFactual =
+            {
+                "raconte", "blague", "invente", "imagine", "ecris", "redige", "traduis", "corrige",
+                "ton avis", "tu penses", "tu preferes", "que penses tu", "donne moi une idee",
+                "propose moi", "comment faire", "comment je", "comment optimiser", "comment ameliorer",
+                "comment regler", "comment booster"
+            };
+            foreach (string x in notFactual) if (n.Contains(x)) return false;
+
+            // Marqueurs de RECHERCHE DE FAIT / D'ENTITÉ.
+            string[] cues =
+            {
+                "qui est", "c'est qui", "cest qui", "qui sont", "qui etait", "qui a invente",
+                "qui a cree", "qui a ecrit", "qui a realise", "qui a fonde", "qui joue dans",
+                "info sur", "infos sur", "renseigne", "biographie", "bio de", "parle moi de",
+                "parle-moi de", "presente moi", "presente-moi", "c'est quoi que", "qu'est ce que c'est que",
+                "date de", "quand est", "quand a ", "quand sort", "quand sortira", "en quelle annee",
+                "quelle annee", "population de", "capitale de", "capitale du", "combien coute",
+                "combien mesure", "combien d'habitants", "quel est le prix", "quelle est la hauteur",
+                "quelle est la taille", "record du", "record de", "auteur de", "createur de",
+                "createur du", "fondateur de", "specifications de", "caracteristiques de",
+                "fiche technique", "ou se trouve", "ou est situe", "de quel pays", "nationalite de",
+                "quel age a", "age de "
+            };
+            foreach (string c in cues) if (n.Contains(c)) return true;
+
+            // Deux mots (ou plus) qui se suivent en Majuscule dans la question ORIGINALE = très
+            // probablement un nom propre (personne, marque, jeu) → recherche d'entité, quel que
+            // soit le phrasé. Ex. « Clio Williams », « Grand Theft Auto ». (≥3 lettres → écarte « Je Suis ».)
+            try
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(q ?? "",
+                    @"\b\p{Lu}\p{Ll}{2,}\s+\p{Lu}\p{Ll}{2,}"))
+                    return true;
+            }
+            catch { }
+            return false;
+        }
+
+        // Minuscules sans accents — pour comparer du texte tapé « à la va-vite ».
+        private static string Deaccent(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s ?? "";
+            try
+            {
+                string f = s.Normalize(System.Text.NormalizationForm.FormD);
+                var sb = new StringBuilder(f.Length);
+                foreach (char c in f)
+                    if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                        != System.Globalization.UnicodeCategory.NonSpacingMark)
+                        sb.Append(c);
+                return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
+            }
+            catch { return s; }
         }
 
         // Le contexte donné au modèle : rôle, HONNÊTETÉ (dire ses doutes), capacités de l'app, état du PC.
@@ -979,6 +1071,9 @@ namespace BTOptimizer
             sb.Append("HONNÊTETÉ AVANT TOUT : si tu n'es pas sûr, DIS-LE clairement (« Je ne suis pas certain, mais… », « À vérifier »). ");
             sb.Append("N'invente JAMAIS un fait, un chiffre, une date ou une mesure du PC : mieux vaut admettre « je ne sais pas » qu'affirmer du faux. ");
             sb.Append("Si on te demande QUI EST une personne / une marque / un groupe que tu ne connais pas PRÉCISÉMENT, ne devine pas et n'invente aucune biographie : dis « je ne suis pas sûr de qui il s'agit » et propose de chercher sur le web. ");
+            sb.Append("PROTOCOLE ANTI-INVENTION : avant d'affirmer un fait précis (nom, biographie, fiche technique, date, prix, chiffre, résultat), demande-toi — est-ce dans les preuves fournies, ou une certitude absolue ? Si non : n'invente RIEN, réponds « je ne suis pas sûr » et propose une recherche web. Une réponse honnête « je ne sais pas » vaut mille fois mieux qu'un faux dit avec assurance. ");
+            sb.Append("COHÉRENCE : ne te contredis pas d'un message à l'autre ; si tu viens de dire ne pas savoir, ne fabrique pas une réponse au tour suivant. ");
+            sb.Append("Quand des PREUVES te sont fournies (base de connaissances, page web), tes affirmations factuelles doivent venir UNIQUEMENT d'elles — n'ajoute aucun fait qui n'y figure pas. ");
             sb.Append("Pour une info d'ACTUALITÉ ou de temps réel (résultat de match, météo, prix, news du jour), tu ne la connais pas de tête, MAIS le Copilote peut chercher sur le web : invite l'utilisateur à demander « cherche sur internet … » (ou réponds simplement, une recherche web sera lancée). ");
             sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
             sb.Append("Ne recommande JAMAIS de logiciel payant : tout doit rester gratuit. ");

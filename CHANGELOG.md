@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.77 — Anti-hallucination renforcé (la vérification bat l'assurance)
+- Le vrai piège n'est pas le doute avoué, c'est l'hallucination **confiante** (inventer une
+  bio, une fiche technique, une date sans hésiter — le bug « Clio Williams »). Le filet ne
+  se déclenchait qu'au doute avoué ; désormais il attrape aussi les réponses trop sûres.
+- **Classifieur de questions factuelles** : personne / marque / produit / lieu / date / chiffre /
+  définition d'entité, **plus** détection des noms propres (« Clio Williams » même sans phrase).
+  Ces questions forcent une **vérification web** avant de répondre, même si le modèle a l'air sûr.
+  Vérifié : 14/14 cas de tri corrects (`BT_HALLU`), sans web-chercher le bavardage / l'aide PC / le créatif.
+- **Aveu honnête** : si le web est coupé ou ne trouve rien sur une question factuelle, le Copilote
+  ne fait plus passer une possible invention pour une certitude — il prévient (« à prendre avec des
+  pincettes », ou « réponse non vérifiée, dis "active internet" »).
+- **Prompt durci** : protocole anti-invention (se relire avant d'affirmer un fait), **cohérence**
+  (ne pas se contredire d'un message à l'autre) et faits **uniquement** issus des preuves fournies.
+- Ancrage RAG plus strict : les faits viennent des extraits de ta base, pas d'une invention.
+
 ## v14.76 — Base de connaissances : DOCX, OCR d'images, et modèle bge-m3
 - **Word (.docx)** lu directement (extraction du texte, sans dépendance).
 - **OCR intégré** : dépose une image (.png/.jpg/.bmp/.tiff — capture d'écran, photo de manuel) et
