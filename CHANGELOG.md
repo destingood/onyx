@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.94 — Base de connaissances intégrée × 3 (23 → 71 fiches)
+- La base PC/gaming **intégrée** (celle qui rend le Copilote pertinent hors-ligne, sans que tu
+  déposes de documents) passe de **23 à 71 fiches** — toutes **bakées dans l'exe**, aucun
+  téléchargement.
+- Nouveaux domaines couverts, tous **factuels et vérifiés** (c'est une app anti-hallucination, la
+  base DOIT être juste) :
+  - **Perfs** : VRAM qui déborde, CPU-bound vs GPU-bound, mode d'alimentation, Mode Jeu, Resizable
+    BAR, compilation des shaders, limite de FPS, captures/overlays, plein écran exclusif.
+  - **Thermique/matériel** : throttling CPU, undervolt, RAM double canal, 16 Go mini, alim (PSU).
+  - **Réseau/latence** : latence DPC (LatencyMon), polling souris, Wi-Fi 5 GHz, rubber-banding,
+    région serveur, bufferbloat/QoS, carte réseau qui s'endort.
+  - **Crashs/BSOD** : WHEA, IRQL, TDR, Kernel-Power 41, « device removed », MemTest86, stress-test,
+    vérif d'intégrité des jeux.
+  - **Stockage/écran** : SSD (charge, ≥10 % libre, santé), défrag HDD only, combo G-Sync+V-Sync+cap,
+    ghosting/overdrive, fréquence d'écran.
+  - **Outils gratuits** (HWiNFO, CapFrameX, CrystalDiskInfo, Afterburner…), anti-triche (Vanguard),
+    dépannage (démarrage minimal, une chose à la fois, pilote GPU en premier), anti-arnaque « +200 % FPS ».
+- Le RAG (sémantique + re-ranking hybride) les exploite déjà ; l'index se reconstruit tout seul.
+- Vérifié : build 0 erreur ; base intégrée = **71 passages** ; harnais 96/96.
+
 ## v14.93 — Correctifs vus en test réel : météo + fausse « fiabilité élevée »
 - **Bug météo** : « quel temps fait-il » était mal compris — le Copilote partait sur l'ORTHOGRAPHE
   (« il fait tempis ») ou la GRAMMAIRE de la phrase, au lieu de la météo. Corrigé : la météo est
