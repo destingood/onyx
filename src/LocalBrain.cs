@@ -550,7 +550,7 @@ namespace BTOptimizer
             var payload = new Dictionary<string, object>
             {
                 { "model", model }, { "system", sys }, { "prompt", question }, { "stream", false },
-                { "options", new Dictionary<string, object> { { "temperature", 0.3 }, { "num_predict", 320 } } }
+                { "options", new Dictionary<string, object> { { "temperature", 0.2 }, { "num_predict", 320 } } }
             };
             var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using (var r = Http.PostAsync(Base + "/api/generate", body).Result)
@@ -710,7 +710,7 @@ namespace BTOptimizer
 
         /// <summary>Réponse EN CONTEXTE : envoie le système + l'historique récent (dont la dernière
         /// question) au modèle via /api/chat. BLOQUANT (tâche de fond).</summary>
-        public static string AskChat(string systemContext, string model)
+        public static string AskChat(string systemContext, string model, double temperature = 0.4)
         {
             var msgs = new List<object> { new Dictionary<string, object> { { "role", "system" }, { "content", systemContext } } };
             lock (_history)
@@ -721,7 +721,7 @@ namespace BTOptimizer
                 { "model", model },
                 { "messages", msgs },
                 { "stream", false },
-                { "options", new Dictionary<string, object> { { "temperature", 0.4 }, { "num_predict", 350 } } }
+                { "options", new Dictionary<string, object> { { "temperature", temperature }, { "num_predict", 350 } } }
             };
             var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using (var r = Http.PostAsync(Base + "/api/chat", body).Result)

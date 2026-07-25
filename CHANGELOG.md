@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.80 — Température dynamique + Chain-of-Thought (techniques anti-hallucination reconnues)
+- **Température dynamique** : pour une question **factuelle**, la génération passe à 0.15 (quasi
+  nulle) → beaucoup moins de « créativité », donc moins d'invention. Pour le bavardage/conseils,
+  elle reste à 0.4 (naturel). Le chemin web (déjà ancré) descend de 0.3 à 0.2.
+- **Chain-of-Thought léger** : le Copilote doit d'abord **distinguer ce qu'il SAIT de ce qu'il
+  SUPPOSE**, n'affirmer que le certain et présenter le reste comme hypothèse (« probablement »).
+- **Citations renforcées** : quand un fait vient d'une preuve (base ou web), il doit **nommer la
+  source** ; si c'est de mémoire, le dire.
+- **Anti-certitude-absolue** : plus de « c'est sûr à 100 %, sans aucun doute » sur du non-vérifié.
+- Vérifié : 33/33 (tri + fait daté + clé + mémoire + **température**), exécuté sur le vrai code compilé.
+
 ## v14.79 — Anti flip-flop : mémoire des faits vérifiés (de plus en plus précis)
 - Le bug historique « Clio Williams » : l'IA se contredisait d'un tour à l'autre (actrice…
   puis chanteuse… puis voiture). En cause : l'historique ne garde que ~4 tours, donc un fait

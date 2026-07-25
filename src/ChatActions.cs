@@ -851,10 +851,14 @@ namespace BTOptimizer
                     }
                 }
                 catch { }
+                // Température DYNAMIQUE (technique reconnue anti-hallucination) : quasi nulle pour
+                // une question FACTUELLE (moins de « créativité » = moins d'invention), normale pour
+                // le bavardage / les conseils où un peu de naturel est bienvenu.
+                bool factual = IsFactualLookup(q);
                 // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
                 // (« et pourquoi ? », « développe »… gardent leur sens).
                 LocalBrain.PushUser(q);
-                try { ans = LocalBrain.AskChat(sysCtx, model); }
+                try { ans = LocalBrain.AskChat(sysCtx, model, factual ? FactualTemp : NormalTemp); }
                 catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
@@ -865,8 +869,7 @@ namespace BTOptimizer
                 // moindre hésitation — le bug « Clio Williams »). Donc on vérifie sur le web dès
                 // que la question est FACTUELLE (personne, marque, produit, lieu, date, chiffre,
                 // définition d'entité…), MÊME si la réponse a l'air parfaitement sûre.
-                bool factual = IsFactualLookup(q);
-                bool webOk   = LocalBrain.Enabled && !LocalBrain.WebOff();
+                bool webOk   = LocalBrain.Enabled && !LocalBrain.WebOff();   // factual déjà calculé plus haut
                 // Garde côté RÉPONSE : une réponse NON ancrée (ni base, ni web) qui assène un fait
                 // daté (« né en 1997 », « fondée en 2010 ») est typiquement une invention confiante,
                 // même quand la QUESTION n'avait rien de factuel → on la traite pareil.
@@ -1006,6 +1009,14 @@ namespace BTOptimizer
             return false;
         }
 
+        // Températures de génération. Proche de 0 pour le factuel (moins d'invention), plus souple
+        // pour le bavardage/conseils. Baisser la température est une technique reconnue anti-hallucination.
+        private const double FactualTemp = 0.15;
+        private const double NormalTemp  = 0.4;
+
+        /// <summary>Température à utiliser pour cette question : quasi nulle si factuelle, normale sinon.</summary>
+        internal static double ChatTemperature(string q) { return IsFactualLookup(q) ? FactualTemp : NormalTemp; }
+
         // La question demande-t-elle un FAIT vérifiable (personne, marque, produit, lieu, date,
         // chiffre, définition d'entité…) ? Ce sont les sujets où un petit modèle local invente
         // avec aplomb → on force la vérification web, même si la réponse a l'air sûre. On reste
@@ -1103,6 +1114,8 @@ namespace BTOptimizer
             sb.Append("PROTOCOLE ANTI-INVENTION : avant d'affirmer un fait précis (nom, biographie, fiche technique, date, prix, chiffre, résultat), demande-toi — est-ce dans les preuves fournies, ou une certitude absolue ? Si non : n'invente RIEN, réponds « je ne suis pas sûr » et propose une recherche web. Une réponse honnête « je ne sais pas » vaut mille fois mieux qu'un faux dit avec assurance. ");
             sb.Append("COHÉRENCE : ne te contredis pas d'un message à l'autre ; si tu viens de dire ne pas savoir, ne fabrique pas une réponse au tour suivant. ");
             sb.Append("Évite les formules d'absolue certitude (« c'est sûr à 100 % », « sans aucun doute ») sur un fait que tu n'as pas vérifié. ");
+            sb.Append("MÉTHODE (raisonne AVANT de répondre) : distingue en toi-même ce que tu SAIS de source sûre de ce que tu SUPPOSES ; n'affirme que le certain et présente le reste comme une hypothèse (« probablement », « il me semble »). ");
+            sb.Append("Quand un fait vient d'une preuve (base ou web), NOMME la source ; si c'est de ta mémoire, dis-le. ");
             sb.Append("Quand des PREUVES te sont fournies (base de connaissances, page web), tes affirmations factuelles doivent venir UNIQUEMENT d'elles — n'ajoute aucun fait qui n'y figure pas. ");
             sb.Append("Pour une info d'ACTUALITÉ ou de temps réel (résultat de match, météo, prix, news du jour), tu ne la connais pas de tête, MAIS le Copilote peut chercher sur le web : invite l'utilisateur à demander « cherche sur internet … » (ou réponds simplement, une recherche web sera lancée). ");
             sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");

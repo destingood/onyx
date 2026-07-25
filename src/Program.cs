@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.79.0.0")]
-[assembly: AssemblyFileVersion("14.79.0.0")]
+[assembly: AssemblyVersion("14.80.0.0")]
+[assembly: AssemblyFileVersion("14.80.0.0")]
 
 namespace BTOptimizer
 {
@@ -255,8 +255,25 @@ namespace BTOptimizer
                 bool m4 = LocalBrain.VerifiedFactsBlock() == ""; if (m4) ok4++;
                 Console.WriteLine((m4 ? "OK  " : "FAIL") + "  ResetHistory vide les faits");
 
-                int total = cases.Length + ansCases.Length + keyCases.Length + 4;
-                int good = ok + ok2 + ok3 + ok4;
+                // Température dynamique : quasi nulle sur le factuel, souple sinon.
+                var tempCases = new[]
+                {
+                    new object[]{ "qui est elon musk", true },
+                    new object[]{ "combien coute une rtx 4090", true },
+                    new object[]{ "raconte moi une blague", false },
+                    new object[]{ "comment optimiser mon pc", false },
+                };
+                int ok5 = 0;
+                foreach (var c in tempCases)
+                {
+                    string q = (string)c[0]; bool fac = (bool)c[1];
+                    double t = ChatActions.ChatTemperature(q);
+                    bool pass = fac ? (t <= 0.2) : (t >= 0.35); if (pass) ok5++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  temp=" + t + " (" + (fac ? "factuel->basse" : "libre->normale") + ")  « " + q + " »");
+                }
+
+                int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length;
+                int good = ok + ok2 + ok3 + ok4 + ok5;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
