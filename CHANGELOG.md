@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.96 — Base de connaissances intégrée : 115 → 157 fiches
+- Troisième lot de savoir **baké dans l'exe**, factuel et sûr (pas de conseil dangereux) :
+  - **Overclocking/undervolt** : GPU (Afterburner, par paliers), CPU (PBO/Curve Optimizer), RAM
+    (MemTest86/TestMem5) — avec l'undervolt présenté comme l'option sans risque.
+  - **Refroidissement** : AIO (placement radiateur, bulle d'air), PWM vs DC, courbe de ventilation.
+  - **Écran** : OLED & burn-in (rafraîchissement pixels), HDMI 2.1/DisplayPort pour 4K120/144 Hz+,
+    overclock d'écran (CRU) & frame skipping, chaîne d'input lag, temps de réponse vs Hz.
+  - **Stream/VR** : NVENC vs x264, dropped vs skipped frames, VR (ASW, fréquence native, USB).
+  - **Dépannage démarrage** : récupération Windows, bootrec, mode sans échec, « no boot device ».
+  - **Panneaux pilote** : NVIDIA (low latency, power management), AMD (Anti-Lag, Enhanced Sync, RSR),
+    pilotes de chipset, économie d'énergie USB.
+  - **Divers** : DPI vs sensibilité, switches clavier, sans-fil vs Bluetooth, GPU sag, nettoyage air
+    sec, Secure Boot/TPM & mbr2gpt, benchmark (3DMark/Cinebench), Steam (options, cache shaders),
+    sauvegarde, filtrage textures.
+- La base intégrée compte désormais **157 passages** (vérifié). Soit **× 6,8** depuis v14.93 (23).
+- Vérifié : build 0 erreur ; harnais 96/96.
+
 ## v14.95 — Base de connaissances intégrée : 71 → 115 fiches
 - Deuxième gros lot de savoir **baké dans l'exe** (aucun téléchargement), toujours **factuel et vérifié** :
   - **Périphériques/input** : accélération souris (« améliorer la précision »), drift manette, raw input,
