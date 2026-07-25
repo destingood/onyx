@@ -4,6 +4,13 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.15 — Consolidation (suite) : collisions avec le vocabulaire PC d'ONYX
+- **Séismes** : « mon écran a des **secousses** » ne part plus vers la liste des séismes (« secousse » seul
+  était ambigu → on exige « séisme / tremblement de terre / sismique / secousse tellurique »).
+- **Nutrition** : « **composition** de mon PC » (matériel) ne part plus vers Open Food Facts (garde
+  PC/CPU/GPU/RAM/config/processeur/carte graphique). « composition du nutella » marche toujours.
+- Tests de non-régression ajoutés (**143/143**). Toujours 0 nouvelle dépendance.
+
 ## v15.14 — Consolidation : anti-collisions de routage (durcissement, pas de nouveauté)
 - Relecture des 27 outils. Deux **détournements** de questions légitimes corrigés :
   - **Séries TV** : « une série DE problèmes », « numéro de série Windows », « composants en série » ne

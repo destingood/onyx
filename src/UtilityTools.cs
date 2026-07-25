@@ -188,6 +188,8 @@ namespace BTOptimizer
                 || n.Contains("composition") || n.Contains("nutritionnel") || n.Contains("calorie")
                 || n.Contains("ingredient") || Regex.IsMatch(n, "\\bnova\\b");
             if (!food) return null;
+            // « composition / ingrédients de mon PC » = matériel, pas alimentaire.
+            if (Regex.IsMatch(n, "\\b(pc|cpu|gpu|ram|ordi|ordinateur|config|systeme|processeur)\\b") || n.Contains("carte graphique")) return null;
             // Produit = ce qui suit une préposition, en fin de phrase.
             var m = Regex.Match(q, "(?i)(?:de\\s+la\\s+|de\\s+l['’]|du\\s+|des\\s+|de\\s+|d['’]|dans\\s+(?:le|la|les|l['’])\\s*|sur\\s+|pour\\s+|produit\\s+)([\\p{L}0-9][\\p{L}0-9 '’&.\\-]{1,40})\\s*[?.!]*$");
             if (!m.Success) return null;
@@ -281,11 +283,13 @@ namespace BTOptimizer
             string n = Deacc((s ?? "").ToLowerInvariant());
             return n.Contains("phase de la lune") || n.Contains("pleine lune") || Regex.IsMatch(n, "\\blune\\b");
         }
-        /// <summary>« derniers séismes », « tremblement de terre » → vrai.</summary>
+        /// <summary>« derniers séismes », « tremblement de terre » → vrai (pas « secousses » d'un écran).</summary>
         internal static bool IsQuake(string s)
         {
             string n = Deacc((s ?? "").ToLowerInvariant());
-            return n.Contains("seisme") || n.Contains("tremblement de terre") || n.Contains("sismique") || n.Contains("secousse");
+            // « secousse » seul est ambigu (écran qui saccade) → on exige un contexte sismique explicite.
+            return n.Contains("seisme") || n.Contains("tremblement de terre") || n.Contains("sismique")
+                || n.Contains("secousse tellurique") || n.Contains("secousse sismique");
         }
         /// <summary>« où est l'ISS », « station spatiale » → vrai (pas « la suisse »).</summary>
         internal static bool IsIss(string s)

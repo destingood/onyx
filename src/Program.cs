@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.14.0.0")]
-[assembly: AssemblyFileVersion("15.14.0.0")]
+[assembly: AssemblyVersion("15.15.0.0")]
+[assembly: AssemblyFileVersion("15.15.0.0")]
 
 namespace BTOptimizer
 {
@@ -595,9 +595,14 @@ namespace BTOptimizer
                     && UtilityTools.BookQuery("la livre sterling") == null
                     && UtilityTools.BookQuery("delivre moi") == null; if (cc2) ok32++; Console.WriteLine((cc2 ? "OK  " : "FAIL") + "  livre : titre OK, 'livre sterling'/'delivre' exclus");
 
+                // v15.15 CONSOLIDATION suite : collisions avec le vocabulaire PC (secousse ecran / composition PC).
+                int ok33 = 0;
+                bool cc3 = !UtilityTools.IsQuake("mon ecran a des secousses") && UtilityTools.IsQuake("un seisme au japon"); if (cc3) ok33++; Console.WriteLine((cc3 ? "OK  " : "FAIL") + "  seisme : 'secousses ecran' exclu, vrai seisme OK");
+                bool cc4 = UtilityTools.FoodQuery("composition du nutella") == "nutella" && UtilityTools.FoodQuery("la composition de mon pc") == null; if (cc4) ok33++; Console.WriteLine((cc4 ? "OK  " : "FAIL") + "  food : 'composition nutella' OK, 'composition de mon pc' exclu");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
