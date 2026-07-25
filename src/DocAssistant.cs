@@ -262,6 +262,15 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour la position de l'ISS j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je localise l'ISS…", Action = ChatActions.IssAction(st), Dynamic = true };
             }
+            // 18) ACTUALITÉS (Google Actualités RSS FR) — réseau, sans clé. "" = à la une, sinon recherche.
+            {
+                string news = UtilityTools.NewsQuery(q);
+                if (news != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour les actualités j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde les actualités…", Action = ChatActions.NewsAction(news, st), Dynamic = true };
+                }
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

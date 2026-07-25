@@ -659,6 +659,47 @@ namespace BTOptimizer
             return null;
         }
 
+        // ---- ACTUALITÉS (Google Actualités RSS FR, gratuit sans clé) ----
+        /// <summary>Titres de presse : à la une (topic vide) ou recherche sur un sujet. null si échec.</summary>
+        public static string News(string topic)
+        {
+            try
+            {
+                string url = string.IsNullOrWhiteSpace(topic)
+                    ? "https://news.google.com/rss?hl=fr&gl=FR&ceid=FR:fr"
+                    : "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q=" + Uri.EscapeDataString(topic);
+                string xml = Get(url);
+                if (string.IsNullOrEmpty(xml)) return null;
+                var items = System.Text.RegularExpressions.Regex.Matches(xml, "<item>(.*?)</item>", System.Text.RegularExpressions.RegexOptions.Singleline);
+                if (items.Count == 0) return null;
+                var sb = new System.Text.StringBuilder();
+                sb.Append(string.IsNullOrWhiteSpace(topic) ? "📰 À la une en ce moment :\n" : "📰 Actus « " + topic.Trim() + " » :\n");
+                int n = 0;
+                foreach (System.Text.RegularExpressions.Match it in items)
+                {
+                    if (n >= 5) break;
+                    var tm = System.Text.RegularExpressions.Regex.Match(it.Groups[1].Value, "<title>(.*?)</title>", System.Text.RegularExpressions.RegexOptions.Singleline);
+                    if (!tm.Success) continue;
+                    string title = CleanXml(tm.Groups[1].Value);
+                    if (string.IsNullOrEmpty(title)) continue;
+                    sb.Append("• ").Append(title).Append('\n');
+                    n++;
+                }
+                if (n == 0) return null;
+                sb.Append("— source : Google Actualités (gratuit). Ce sont des TITRES de presse, pas des faits que j'affirme.");
+                return sb.ToString();
+            }
+            catch { }
+            return null;
+        }
+        private static string CleanXml(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            s = s.Replace("<![CDATA[", "").Replace("]]>", "");
+            s = System.Text.RegularExpressions.Regex.Replace(s, "<.*?>", "");
+            return System.Net.WebUtility.HtmlDecode(s).Trim();
+        }
+
         internal static string FrDate(string iso)
         {
             try

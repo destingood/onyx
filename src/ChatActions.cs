@@ -1268,6 +1268,22 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Titres d'actualité via Google Actualités RSS FR (gratuit, sans clé). Action asynchrone.
+        /// topic vide = à la une ; sinon recherche sur le sujet.</summary>
+        public static DocAssistant.ChatAction NewsAction(string topic, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Actualités"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Actualités (Google Actualités)…", 0);
+                string r = null;
+                try { r = LiveData.News(topic); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer les actualités (hors-ligne ?)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

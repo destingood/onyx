@@ -386,6 +386,28 @@ namespace BTOptimizer
             return w.Length >= 2 ? w : null;
         }
 
+        // ---- ACTUALITÉS (Google Actualités RSS) ----
+        /// <summary>« les actualités » → "" (à la une) ; « actu nvidia » → "nvidia" ; sinon null.</summary>
+        internal static string NewsQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant());
+            bool isNews = Regex.IsMatch(n, "\\bactu(alit[eé]s?)?\\b") || n.Contains("les news")
+                || n.Contains("quoi de neuf") || n.Contains("dernieres nouvelles") || n.Contains("derniere nouvelle")
+                || n.Contains("infos du jour") || n.Contains("info du jour") || n.Contains("les nouvelles");
+            if (!isNews) return null;
+            var m = Regex.Match(q, "(?i)(?:actualit[eé]s?|actu|news|nouvelles?|infos?)\\s+(?:sur\\s+|de\\s+|du\\s+|des\\s+|d['’]|concernant\\s+|a\\s+propos\\s+de\\s+)?(.+?)\\s*[?.!]*$");
+            if (m.Success)
+            {
+                string topic = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
+                string td = Deacc(topic.ToLowerInvariant());
+                string[] stop = { "jour", "du jour", "aujourd'hui", "aujourdhui", "maintenant", "recente", "recentes",
+                                  "recents", "recent", "en france", "france", "monde", "du monde", "importantes", "importante" };
+                if (topic.Length >= 2 && Array.IndexOf(stop, td) < 0) return topic;
+            }
+            return "";   // actualités générales (à la une)
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.11 — Actualités en français (l'idée « NewsAPI » de l'article, mais GRATUITE sans clé)
+- **📰 Actualités** : « les actualités » / « quoi de neuf » → les gros titres à la une ; « actu nvidia »,
+  « news sur les cartes graphiques » → titres ciblés sur un sujet. Idéal pour le public jeu/PC (Cowcotland,
+  GinjFo, prix GPU, sorties…).
+- Source : **Google Actualités RSS FR**, gratuit **sans clé** — là où le « NewsAPI » de l'article exige une clé.
+- Anti-hallucination : la réponse précise que ce sont des **titres de presse**, pas des faits que le Copilote
+  affirme (il relaie, il n'invente pas). Garde-fou : « actuellement » ne déclenche pas les actus.
+- Vérifié EN DIRECT : « actu nvidia » → hausses de prix GPU, DLSS 5 à la SIGGRAPH… Build 0 erreur ; harnais 133/133.
+- **Contexte** : l'article (listicle sponsorisé Gravitee) proposait 10 APIs ; 9 exigent une clé/compte/paiement
+  ou sont des plateformes serveur (Gravitee, Twilio, Stripe, Firebase, IBM Watson, Google Maps, OpenWeather,
+  Spotify) — écartées. Seule l'idée « news » était récupérable gratuitement : c'est fait, autrement.
+
 ## v15.10 — Calculatrice locale + jours fériés d'autres pays + définition de mots
 - **🧮 Calculatrice EN LOCAL (hors-ligne)** : « 15% de 240 », « racine de 2 », « 3+4*2 », « combien font 12*8 »
   → résultat immédiat, calculé sur ta machine (mini-évaluateur maison, aucun `eval` système, zéro hallucination).
