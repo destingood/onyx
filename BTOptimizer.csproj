@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- SDK Windows 10 ciblé pour l'OCR intégré (Windows.Media.Ocr) de la base de connaissances. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>BTOptimizer</AssemblyName>
     <RootNamespace>BTOptimizer</RootNamespace>

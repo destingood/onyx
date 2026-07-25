@@ -334,30 +334,45 @@ namespace BTOptimizer
         // Modèles préférés : petits, rapides, corrects en français — du meilleur compromis au repli.
         private static readonly string[] Preferred = { "qwen2.5:7b", "qwen2.5:3b", "llama3.2:3b", "llama3.2", "qwen2.5:1.5b", "qwen2.5:0.5b", "qwen2.5", "mistral", "phi3", "gemma2" };
 
-        public const string EmbedModel = "nomic-embed-text";
+        public const string EmbedModel = "nomic-embed-text";        // défaut léger (~275 Mo), installé auto
+        public const string EmbedModelPro = "bge-m3";                // meilleur en français (~1,2 Go), optionnel
 
-        /// <summary>Le modèle d'embeddings est-il téléchargé ? (pour la base de connaissances RAG)</summary>
-        public static bool HasEmbedModel()
+        /// <summary>Meilleur modèle d'embeddings DISPONIBLE : bge-m3 (plus précis) s'il est
+        /// téléchargé, sinon nomic-embed-text, sinon null. Sert au RAG.</summary>
+        public static string EmbedModelName()
         {
             try
             {
                 string json = Http.GetStringAsync(Base + "/api/tags").Result;
+                bool nomic = false, bge = false;
                 using (var d = JsonDocument.Parse(json))
                     foreach (var m in d.RootElement.GetProperty("models").EnumerateArray())
-                        if ((m.GetProperty("name").GetString() ?? "").StartsWith("nomic-embed", StringComparison.OrdinalIgnoreCase)) return true;
+                    {
+                        string n = (m.GetProperty("name").GetString() ?? "").ToLowerInvariant();
+                        if (n.StartsWith("bge-m3", StringComparison.Ordinal)) bge = true;
+                        else if (n.StartsWith("nomic-embed", StringComparison.Ordinal)) nomic = true;
+                    }
+                return bge ? EmbedModelPro : (nomic ? EmbedModel : null);
             }
-            catch { }
-            return false;
+            catch { return null; }
         }
 
-        /// <summary>Vecteur d'un texte (768 dim) via Ollama. 'isQuery' ajoute le préfixe de tâche
-        /// attendu par nomic (search_query/search_document). Null si indisponible. BLOQUANT.</summary>
+        /// <summary>Un modèle d'embeddings est-il disponible ? (pour la base de connaissances RAG)</summary>
+        public static bool HasEmbedModel() { return EmbedModelName() != null; }
+
+        /// <summary>Vecteur d'un texte via Ollama, avec le meilleur modèle dispo. Les préfixes de
+        /// tâche (search_query/search_document) ne concernent QUE nomic ; bge-m3 n'en veut pas.
+        /// Null si indisponible. BLOQUANT.</summary>
         public static float[] Embed(string text, bool isQuery)
         {
             try
             {
-                string prompt = (isQuery ? "search_query: " : "search_document: ") + text;
-                var payload = new Dictionary<string, object> { { "model", EmbedModel }, { "prompt", prompt } };
+                string model = EmbedModelName();
+                if (model == null) return null;
+                string prompt = model.StartsWith("nomic", StringComparison.Ordinal)
+                    ? (isQuery ? "search_query: " : "search_document: ") + text
+                    : text;
+                var payload = new Dictionary<string, object> { { "model", model }, { "prompt", prompt } };
                 var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
                 using (var cts = new System.Threading.CancellationTokenSource(20000))
                 using (var r = Http.PostAsync(Base + "/api/embeddings", body, cts.Token).Result)

@@ -208,6 +208,14 @@ namespace BTOptimizer
             if (Has(s, "que contient ta base", "ta base de connaissances", "que sais tu faire de ta base", "contenu de ta base", "tes documents"))
                 return new Reply { Text = "Ma base de connaissances contient :\n\n" + KnowledgeBase.Describe()
                     + "\n\nPour l'enrichir, dépose des .txt/.md dans le dossier bt-savoir (dis « ou mettre mes documents ») puis « recharge mon savoir ».", ShowStarters = false };
+            if (Has(s, "installe bge", "meilleur modele de recherche", "ameliore ta base", "ameliore la recherche",
+                       "modele plus precis", "bge-m3", "bge m3"))
+                return new Reply
+                {
+                    Text = "Je télécharge un modèle de recherche plus précis (bge-m3, ~1,2 Go, meilleur en français) puis "
+                         + "je ré-indexe ta base avec — un clic :",
+                    Action = ChatActions.UpgradeEmbed()
+                };
             if (Has(s, "ou mettre mes documents", "ou ajouter des documents", "ou deposer mes fiches", "dossier savoir", "ajouter un document"))
             {
                 string folder = KnowledgeBase.FolderPath();

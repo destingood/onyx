@@ -794,6 +794,30 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Télécharge bge-m3 (embeddings plus précis, français) et ré-indexe la base.</summary>
+        public static DocAssistant.ChatAction UpgradeEmbed()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Installer bge-m3 (~1,2 Go) + ré-indexer";
+            a.IsChange = true;
+            a.Warning = "Télécharge un modèle de recherche plus précis (bge-m3) via Ollama, puis reconstruit l'index de "
+                      + "ta base de connaissances avec. Une seule fois ; ~1,2 Go.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (!LocalBrain.ServerUp(1500)) return Say("Ollama ne répond pas — lance-le (« active l'ia »), puis réessaie.");
+                string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
+                if (log != null) log("Téléchargement du modèle de recherche bge-m3 (~1,2 Go)…", 0);
+                try { Sys.Run(exe, "pull " + LocalBrain.EmbedModelPro, Sys.LongRunTimeoutMs); }
+                catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
+                if (LocalBrain.EmbedModelName() != LocalBrain.EmbedModelPro)
+                    return Say("Le modèle ne s'est pas installé (connexion ? espace ?). Réessaie plus tard.");
+                if (log != null) log("Ré-indexation de la base avec bge-m3…", 0);
+                try { KnowledgeBase.Invalidate(); KnowledgeBase.EnsureIndex(); } catch { }
+                return Say("✅ bge-m3 installé et base ré-indexée — la recherche dans tes documents est maintenant plus précise (surtout en français).");
+            };
+            return a;
+        }
+
         /// <summary>Passe la question au modèle LOCAL (lecture seule : ça ne modifie rien).</summary>
         public static DocAssistant.ChatAction AskBrain(string q, BadgeCatalog.Stats st)
         {

@@ -54,7 +54,7 @@ namespace BTOptimizer
         /// savoir s'il faut reconstruire l'index.</summary>
         private static string Signature(List<Chunk> source)
         {
-            var sb = new StringBuilder(LocalBrain.EmbedModel).Append('|');
+            var sb = new StringBuilder(LocalBrain.EmbedModelName() ?? "none").Append('|');
             foreach (var c in source) sb.Append(c.Source).Append(':').Append(c.Text.Length).Append(';');
             int h = sb.ToString().GetHashCode();
             return h.ToString();
@@ -73,9 +73,13 @@ namespace BTOptimizer
                     foreach (string f in Directory.GetFiles(Dir, "*", SearchOption.AllDirectories))
                     {
                         string ext = Path.GetExtension(f).ToLowerInvariant();
-                        if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm" && ext != ".pdf") continue;
+                        bool img = ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tif" || ext == ".tiff";
+                        if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm"
+                            && ext != ".pdf" && ext != ".docx" && !img) continue;
                         string raw;
                         if (ext == ".pdf") { raw = ExtractPdf(f); if (string.IsNullOrEmpty(raw)) continue; }
+                        else if (ext == ".docx") { raw = ExtractDocx(f); if (string.IsNullOrEmpty(raw)) continue; }
+                        else if (img) { raw = Ocr.Read(f); if (string.IsNullOrEmpty(raw)) continue; }   // OCR (captures, photos de manuel)
                         else { try { raw = File.ReadAllText(f); } catch { continue; } }
                         if (ext == ".html" || ext == ".htm") raw = StripHtml(raw);
                         string src = RelSource(f);
@@ -112,6 +116,26 @@ namespace BTOptimizer
                         if (sb.Length > 200000) break;   // garde-fou sur un très gros PDF
                     }
                 return sb.ToString();
+            }
+            catch { return ""; }
+        }
+
+        // Texte d'un .docx (Word) : c'est un ZIP ; on lit word/document.xml et on retire le balisage.
+        // Sans dépendance (System.IO.Compression). Les paragraphes deviennent des sauts de ligne.
+        private static string ExtractDocx(string path)
+        {
+            try
+            {
+                using (var zip = System.IO.Compression.ZipFile.OpenRead(path))
+                {
+                    var entry = zip.GetEntry("word/document.xml");
+                    if (entry == null) return "";
+                    string xml;
+                    using (var sr = new StreamReader(entry.Open())) xml = sr.ReadToEnd();
+                    xml = System.Text.RegularExpressions.Regex.Replace(xml, "(?i)</w:p>", "\n");   // fin de paragraphe → saut
+                    xml = System.Text.RegularExpressions.Regex.Replace(xml, "(?s)<[^>]+>", "");     // retire les balises
+                    return System.Net.WebUtility.HtmlDecode(xml);
+                }
             }
             catch { return ""; }
         }
@@ -218,12 +242,15 @@ namespace BTOptimizer
                 string readme = Path.Combine(Dir, "_lisez-moi.txt");
                 if (!File.Exists(readme))
                     File.WriteAllText(readme,
-                        "Dépose ici tes fiches (.txt, .md, .html, .pdf) : notes de dépannage, config, manuels, procédures…\n" +
+                        "Dépose ici tes documents : .txt, .md, .html, .pdf, .docx (Word), et images (.png/.jpg — lues par OCR).\n" +
+                        "Notes de dépannage, config, manuels, captures d'écran, procédures…\n" +
                         "Les SOUS-DOSSIERS organisent le savoir (ex. Reseau\\, Jeux\\) — façon wiki.\n" +
                         "Le Copilote les lit et s'en sert pour te répondre plus précisément.\n\n" +
-                        "PDF : le texte est extrait automatiquement (les PDF scannés en image ne sont pas lus).\n" +
-                        "Astuce BookStack : exporte un livre/une page en Markdown, HTML ou PDF et dépose le fichier ici.\n" +
-                        "Dis ensuite « recharge mon savoir ».\n");
+                        "PDF : texte extrait automatiquement (un PDF scanné-image passe par l'OCR si tu l'exportes en .png).\n" +
+                        "Images : le texte est reconnu par l'OCR intégré de Windows (aucun téléchargement).\n" +
+                        "Astuce BookStack : exporte un livre/une page en Markdown, HTML ou PDF et dépose le fichier ici.\n\n" +
+                        "Pour une recherche encore plus précise (surtout en français), dis « installe bge-m3 ».\n" +
+                        "Après tout ajout, dis « recharge mon savoir ».\n");
             }
             catch { }
             return Dir;
@@ -236,8 +263,15 @@ namespace BTOptimizer
             try
             {
                 if (!File.Exists(IndexPath)) return map;
+                string want = LocalBrain.EmbedModelName() ?? "none";
                 foreach (string line in File.ReadAllLines(IndexPath))
                 {
+                    // En-tête « #MODEL\t<nom> » : vecteurs d'un AUTRE modèle → cache incompatible, on rejette.
+                    if (line.StartsWith("#MODEL\t", StringComparison.Ordinal))
+                    {
+                        if (line.Substring(7).Trim() != want) return new Dictionary<string, float[]>();
+                        continue;
+                    }
                     int tab = line.IndexOf('\t');
                     if (tab <= 0) continue;
                     string text = line.Substring(0, tab).Replace("\\n", "\n");
@@ -257,6 +291,7 @@ namespace BTOptimizer
             try
             {
                 var sb = new StringBuilder();
+                sb.Append("#MODEL\t").Append(LocalBrain.EmbedModelName() ?? "none").Append('\n');
                 foreach (var c in chunks)
                 {
                     if (c.Vec == null) continue;

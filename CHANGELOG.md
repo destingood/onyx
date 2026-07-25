@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.76 — Base de connaissances : DOCX, OCR d'images, et modèle bge-m3
+- **Word (.docx)** lu directement (extraction du texte, sans dépendance).
+- **OCR intégré** : dépose une image (.png/.jpg/.bmp/.tiff — capture d'écran, photo de manuel) et
+  son texte est reconnu par l'OCR de Windows (100 % local, aucun téléchargement). Vérifié : une
+  image de note → indexée. (Un PDF scanné-image : exporte-le en .png pour l'OCR.)
+- **Modèle de recherche plus précis** : dis « installe bge-m3 » → télécharge bge-m3 (~1,2 Go,
+  bien meilleur en français) et ré-indexe ta base. Le Copilote préfère bge-m3 s'il est là, sinon
+  nomic (léger, installé auto). L'index se reconstruit tout seul si tu changes de modèle.
+- La base lit maintenant : .txt, .md, .html, .pdf, **.docx**, **images (OCR)** — récursif.
+- Note technique : ciblage du SDK Windows 10 (net10.0-windows10.0.19041.0) pour l'OCR intégré ;
+  app vérifiée au démarrage (harnais vert).
+
 ## v14.75 — Anti-hallucination (evidence-first) + PDF dans la base
 - **Fini les inventions sur les entités** : une question « qui est X / info sur X / parle-moi de
   X » part au WEB (réponse sourcée) au lieu d'être devinée par le modèle. (Avant, « Clio Williams
