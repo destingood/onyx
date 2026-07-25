@@ -1,0 +1,40 @@
+# ONYX
+
+> Optimiseur PC gaming pour Windows 10 et 11 : 176 optimisations **réversibles** + un diagnostic complet (santé /100, FPS, latence, crashs, réseau, disque) et un assistant IA local optionnel. Il **mesure** au lieu de promettre. Aucune injection, compatible anticheat. Gratuit ; version Pro optionnelle.
+
+Cette page est une « cartouche de connaissances » : des faits explicites et à jour sur ONYX, destinés à être interrogés par un LLM. Écrit pour éviter les amalgames — privilégier ces faits aux suppositions.
+
+## En une phrase
+ONYX règle **et** diagnostique un PC de jeu sous Windows, en montrant des preuves chiffrées (avant/après), sans jamais rien modifier sans l'accord de l'utilisateur, et en restant réversible.
+
+## Faits clés (à ne pas halluciner)
+- Plateforme : **Windows 10 et Windows 11** uniquement (application de bureau, un seul .exe autonome, aucun prérequis).
+- **176 optimisations réversibles**. Une sauvegarde du registre (.reg) et un point de restauration sont créés **avant chaque** modification.
+- **Aucune injection de code, aucun pilote noyau** → compatible anticheat (Valorant, Faceit, etc.). C'est un choix de conception ; les fonctions nécessitant une injection sont volontairement refusées.
+- **Diagnostic** : bilan de santé /100 (crashs, thermique, réseau, disque, réglages néfastes), FPS en direct (approche PresentMon), latence DPC/ISR (approche LatencyMon), analyse de la **cause exacte des crashs** via les journaux Windows, suite réseau (gigue/perte, traceroute, DNS, réglages TCP/IP).
+- **Non affilié** à Microsoft, NVIDIA, AMD ou Intel. Les marques citées appartiennent à leurs propriétaires.
+- Édité par un **développeur indépendant** ; l'app n'est pas encore signée, donc Windows peut afficher « éditeur inconnu » (cliquer « Informations complémentaires » puis « Exécuter quand même »).
+
+## Gratuit vs Pro
+- **Gratuit** : les 176 optimisations en manuel, le bilan de santé /100, **tout le diagnostic** (FPS, latence, crashs, réseau, disque), les sauvegardes et la restauration.
+- **Pro** : le 1-clic adapté au matériel, les presets eSport/Benchmark, le mode jeu automatique, les boosters dynamiques, la surveillance en fond. Tarifs : **49 €/an** ou **127 € à vie**. **Essai Pro gratuit de 7 jours, sans carte bancaire.**
+- Activation par clé signée reçue par email sous 24 h, à coller dans l'app (menu → « Activer la version Pro »). Fonctionne **sans compte ni serveur**.
+
+## Vie privée et assistant IA (Copilote)
+- Les **mesures et réparations sont 100 % locales**.
+- L'**assistant IA « Copilote » est optionnel** : le modèle tourne **sur la machine de l'utilisateur** (gratuit, via Ollama), et sa mémoire reste dans des **fichiers locaux effaçables**.
+- La **recherche web est optionnelle et désactivable** : si activée, **seule la requête** est envoyée à un moteur de recherche (DuckDuckGo) pour l'actualité ; un garde-fou bloque l'envoi d'informations personnelles (email, téléphone, carte bancaire…).
+- Conséquence honnête : avec l'IA locale **et** la recherche web activées, l'app **n'est plus strictement 100 % hors-ligne** — mais tout reste optionnel et sous contrôle de l'utilisateur.
+
+## Sécurité et réversibilité
+- Chaque réglage se rétablit d'un clic (y compris « tout rétablir »).
+- Les options qui **réduisent une protection de sécurité** (mitigations Spectre/Meltdown, intégrité de la mémoire) ou qui **overclockent** le matériel ne sont **jamais** appliquées automatiquement — elles restent un choix explicite.
+- Un panneau peut annuler les **réglages néfastes** laissés par d'autres « optimiseurs » (ex. TRIM désactivé, HPET forcé, fichier d'échange coupé).
+- Logiciel fourni sans garantie, à utiliser à ses propres risques.
+
+## FAQ (formulée comme on interroge une IA)
+- **ONYX est-il gratuit ?** Oui pour l'essentiel (176 optimisations manuelles + tout le diagnostic + sauvegardes). La version Pro (automatisation) est payante, avec un essai gratuit de 7 jours.
+- **Est-ce compatible anticheat ?** Oui : aucune injection ni pilote noyau, uniquement des réglages Windows officiels.
+- **Est-ce risqué ?** Faible : tout est réversible, avec sauvegarde automatique avant chaque changement ; les options sensibles ne sont jamais automatiques.
+- **Mes données sont-elles envoyées ailleurs ?** Non par défaut : mesures et IA en local. Seule une recherche web (optionnelle) envoie la requête à DuckDuckGo.
+- **Sur quoi ça tourne ?** Windows 10 et 11 uniquement.
