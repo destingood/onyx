@@ -75,7 +75,8 @@ namespace BTOptimizer
         private static List<Chunk> Collect()
         {
             var list = new List<Chunk>();
-            foreach (string t in Builtin) list.Add(new Chunk { Source = "PC/gaming (intégré)", Text = t, When = DateTime.MinValue });
+            var seen = new HashSet<string>(StringComparer.Ordinal);   // déduplication des passages identiques
+            foreach (string t in Builtin) { if (seen.Add(t)) list.Add(new Chunk { Source = "PC/gaming (intégré)", Text = t, When = DateTime.MinValue }); }
             try
             {
                 if (Directory.Exists(Dir))
@@ -83,6 +84,8 @@ namespace BTOptimizer
                     // wiki BookStack). Formats des exports BookStack : Markdown, texte, HTML.
                     foreach (string f in Directory.GetFiles(Dir, "*", SearchOption.AllDirectories))
                     {
+                        string rel0 = f.Substring(Dir.Length).TrimStart('\\', '/');
+                        if (IsExcludedRel(rel0)) continue;   // _lisez-moi, _archive\… → hors index (gestion de la désuétude)
                         string ext = Path.GetExtension(f).ToLowerInvariant();
                         bool img = ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tif" || ext == ".tiff";
                         if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm"
@@ -96,11 +99,24 @@ namespace BTOptimizer
                         string src = RelSource(f);
                         DateTime when; try { when = File.GetLastWriteTime(f); } catch { when = DateTime.Now; }
                         foreach (string ch in SplitChunks(raw, 600))
+                        {
+                            if (!seen.Add(ch)) continue;   // doublon exact (même passage ailleurs) → ignoré
                             list.Add(new Chunk { Source = src, Text = ch, When = when });
+                        }
                     }
             }
             catch { }
             return list;
+        }
+
+        // Un fichier/dossier dont un segment commence par « _ » est HORS index : le mode d'emploi
+        // (_lisez-moi) et surtout le dossier _archive\ pour ranger le contenu PÉRIMÉ sans polluer
+        // le RAG (l'archivage séparé est une bonne pratique de gouvernance de la base).
+        internal static bool IsExcludedRel(string rel)
+        {
+            if (string.IsNullOrEmpty(rel)) return false;
+            foreach (string seg in rel.Split('\\', '/')) if (seg.StartsWith("_", StringComparison.Ordinal)) return true;
+            return false;
         }
 
         // Source lisible = chemin RELATIF sous bt-savoir (ex. « Reseau/DNS.md ») → montre l'arbo.
@@ -165,14 +181,38 @@ namespace BTOptimizer
             return html;
         }
 
-        private static IEnumerable<string> SplitChunks(string text, int max)
+        // Découpe SÉMANTIQUE : on regroupe des PHRASES entières jusqu'à ~max caractères, sans jamais
+        // couper une phrase en deux → chunks « autonomes » et cohérents (meilleurs embeddings, moins
+        // d'hallucination). Une phrase plus longue que max est tranchée en dernier recours.
+        internal static IEnumerable<string> SplitChunks(string text, int max)
         {
             text = System.Text.RegularExpressions.Regex.Replace(text ?? "", "\\s+", " ").Trim();
-            for (int i = 0; i < text.Length; i += max)
+            if (text.Length == 0) yield break;
+            string[] sentences = System.Text.RegularExpressions.Regex.Split(text, "(?<=[.!?…])\\s+");
+            var sb = new StringBuilder();
+            foreach (string raw in sentences)
             {
-                string c = text.Substring(i, Math.Min(max, text.Length - i)).Trim();
-                if (c.Length >= 20) yield return c;
+                string sent = raw.Trim();
+                if (sent.Length == 0) continue;
+                if (sb.Length > 0 && sb.Length + 1 + sent.Length > max)
+                {
+                    string chunk = sb.ToString().Trim();
+                    if (chunk.Length >= 20) yield return chunk;
+                    sb.Length = 0;
+                }
+                if (sent.Length > max)   // phrase géante : tranchage de secours
+                {
+                    for (int i = 0; i < sent.Length; i += max)
+                    {
+                        string piece = sent.Substring(i, Math.Min(max, sent.Length - i)).Trim();
+                        if (piece.Length >= 20) yield return piece;
+                    }
+                    continue;
+                }
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(sent);
             }
+            if (sb.Length > 0) { string chunk = sb.ToString().Trim(); if (chunk.Length >= 20) yield return chunk; }
         }
 
         /// <summary>Construit l'index (vectorise ce qui manque) si le serveur + le modèle d'embed
@@ -267,6 +307,9 @@ namespace BTOptimizer
                         "PDF : texte extrait automatiquement (un PDF scanné-image passe par l'OCR si tu l'exportes en .png).\n" +
                         "Images : le texte est reconnu par l'OCR intégré de Windows (aucun téléchargement).\n" +
                         "Astuce BookStack : exporte un livre/une page en Markdown, HTML ou PDF et dépose le fichier ici.\n\n" +
+                        "Fraîcheur : au-delà de 18 mois, un document est signalé « peut-être daté » à la citation.\n" +
+                        "Archivage : place le contenu PÉRIMÉ dans un sous-dossier « _archive\\ » — il est CONSERVÉ mais\n" +
+                        "  IGNORÉ par le Copilote (les noms commençant par « _ » ne sont jamais indexés).\n\n" +
                         "Pour une recherche encore plus précise (surtout en français), dis « installe bge-m3 ».\n" +
                         "Après tout ajout, dis « recharge mon savoir ».\n");
             }

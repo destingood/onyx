@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.87 — Meilleure structuration de la base : chunking sémantique + archivage + dédup
+- **Chunking sémantique** : la découpe des documents coupait bêtement **tous les 600 caractères**,
+  en plein milieu d'un mot ou d'une phrase → embeddings dégradés. Désormais on regroupe des
+  **phrases entières** jusqu'à ~600 car., sans jamais couper une phrase en deux → des extraits
+  **autonomes et cohérents** (meilleure récupération, moins d'hallucination), comme le préconise
+  l'article sur les « unités d'information atomiques ».
+- **Archivage du périmé** : range tes vieux documents dans un sous-dossier **`_archive\`** — ils sont
+  **conservés mais ignorés** par le Copilote (tout nom commençant par `_` n'est jamais indexé).
+  C'est la bonne pratique « archive séparée, non accessible par le RAG ».
+- **Déduplication** : un passage identique présent dans deux fichiers n'est indexé **qu'une fois**
+  (moins de bruit, récupération plus nette).
+- Effet de bord corrigé : le `_lisez-moi.txt` n'est plus indexé comme du « savoir ».
+- L'index se reconstruit automatiquement (la découpe a changé). Vérifié : **70/70** sur le vrai code.
+
 ## v14.86 — Fraîcheur de la base de connaissances (gouvernance KB : le périmé devient visible)
 - Distinction clé : la **base de connaissances** (ce qu'on sait) et le **RAG** (comment on le
   récupère) sont des dépendances séquentielles — la **qualité de la KB plafonne le RAG**. La cause

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.86.0.0")]
-[assembly: AssemblyFileVersion("14.86.0.0")]
+[assembly: AssemblyVersion("14.87.0.0")]
+[assembly: AssemblyFileVersion("14.87.0.0")]
 
 namespace BTOptimizer
 {
@@ -382,9 +382,22 @@ namespace BTOptimizer
                 if (f3) ok13++; Console.WriteLine((f3 ? "OK  " : "FAIL") + "  tag ancien : « peut-être daté »");
                 if (f4) ok13++; Console.WriteLine((f4 ? "OK  " : "FAIL") + "  integre : aucun tag");
 
+                // Chunking semantique (phrases entieres) + exclusion « _ » (archive/mode d'emploi).
+                int ok14 = 0;
+                var chunks = new System.Collections.Generic.List<string>(KnowledgeBase.SplitChunks(
+                    "Premiere phrase courte. Deuxieme phrase un peu plus longue ici. Troisieme phrase finale.", 45));
+                bool ch1 = chunks.Count >= 2;   // decoupe en plusieurs chunks
+                bool ch2 = true; foreach (var c in chunks) { char last = c.TrimEnd()[c.TrimEnd().Length - 1]; if (last != '.' && last != '!' && last != '?' && last != '…') { ch2 = false; break; } }
+                if (ch1) ok14++; Console.WriteLine((ch1 ? "OK  " : "FAIL") + "  chunking : plusieurs unites (" + chunks.Count + ")");
+                if (ch2) ok14++; Console.WriteLine((ch2 ? "OK  " : "FAIL") + "  chunking : chaque chunk finit sur une phrase complete");
+                bool exA = KnowledgeBase.IsExcludedRel("_lisez-moi.txt") && KnowledgeBase.IsExcludedRel("_archive\\vieux.txt");
+                bool exB = !KnowledgeBase.IsExcludedRel("Reseau/DNS.md") && !KnowledgeBase.IsExcludedRel("manuel.pdf");
+                if (exA) ok14++; Console.WriteLine((exA ? "OK  " : "FAIL") + "  exclusion : _lisez-moi et _archive\\ ignores");
+                if (exB) ok14++; Console.WriteLine((exB ? "OK  " : "FAIL") + "  exclusion : documents normaux indexes");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
