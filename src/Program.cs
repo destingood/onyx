@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.13.0.0")]
-[assembly: AssemblyFileVersion("15.13.0.0")]
+[assembly: AssemblyVersion("15.14.0.0")]
+[assembly: AssemblyFileVersion("15.14.0.0")]
 
 namespace BTOptimizer
 {
@@ -586,9 +586,18 @@ namespace BTOptimizer
                 var nb = UtilityTools.NobelQuery("prix nobel de physique 2023");
                 bool pk3 = nb != null && nb.Cat == "phy" && nb.Year == "2023" && UtilityTools.NobelQuery("nobel de la paix") != null && UtilityTools.NobelQuery("bonjour") == null; if (pk3) ok31++; Console.WriteLine((pk3 ? "OK  " : "FAIL") + "  nobel : phy/2023, paix ok, bonjour null");
 
+                // v15.14 CONSOLIDATION : non-régression des collisions de routage (serie / livre).
+                int ok32 = 0;
+                bool cc1 = UtilityTools.ShowQuery("serie breaking bad") == "breaking bad"
+                    && UtilityTools.ShowQuery("une serie de problemes") == null
+                    && UtilityTools.ShowQuery("numero de serie windows") == null; if (cc1) ok32++; Console.WriteLine((cc1 ? "OK  " : "FAIL") + "  serie : titre OK, 'serie de problemes'/'numero de serie' exclus");
+                bool cc2 = UtilityTools.BookQuery("livre harry potter") == "harry potter"
+                    && UtilityTools.BookQuery("la livre sterling") == null
+                    && UtilityTools.BookQuery("delivre moi") == null; if (cc2) ok32++; Console.WriteLine((cc2 ? "OK  " : "FAIL") + "  livre : titre OK, 'livre sterling'/'delivre' exclus");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

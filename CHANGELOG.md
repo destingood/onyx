@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.14 — Consolidation : anti-collisions de routage (durcissement, pas de nouveauté)
+- Relecture des 27 outils. Deux **détournements** de questions légitimes corrigés :
+  - **Séries TV** : « une série DE problèmes », « numéro de série Windows », « composants en série » ne
+    déclenchent plus la recherche de série TV. Un vrai titre (« série Breaking Bad ») marche toujours.
+  - **Livres** : « la livre sterling » (monnaie), « délivre-moi », « livre » + euro/dollar/taux/change ne
+    déclenchent plus la recherche de livre. « livre Harry Potter » marche toujours.
+- Ajout de `\b` (frontière de mot) devant les déclencheurs « livre/série » pour ne plus matcher l'intérieur
+  d'un autre mot (délivre, livrer…).
+- Tests de non-régression ajoutés au harnais (désormais **141/141**). Aucune nouvelle dépendance, 0 erreur.
+
 ## v15.13 — Toutes les catégories passées au crible : Pokémon + séries TV + prix Nobel
 - **🔴 Pokémon** (PokéAPI, sans clé) : « pokémon pikachu » → type (en français : Électrik, Feu…), taille, poids,
   n° du Pokédex. (Noms à donner en anglais côté API : pikachu, mewtwo…)

@@ -441,11 +441,18 @@ namespace BTOptimizer
         }
 
         // ---- LIVRES (Open Library) ----
-        /// <summary>« livre harry potter », « un roman de Tolkien » → requête livre, sinon null.</summary>
+        /// <summary>« livre harry potter », « un roman de Tolkien » → requête livre, sinon null
+        /// (pas « livre sterling » = monnaie, ni l'intérieur de « délivre »).</summary>
         internal static string BookQuery(string q)
         {
             if (string.IsNullOrEmpty(q)) return null;
-            var m = Regex.Match(q, "(?i)(?:livre|bouquin|roman)\\s+(?:sur\\s+|de\\s+|intitul[eé]\\s+|qui\\s+parle\\s+de\\s+)?(.+?)\\s*[?.!]*$");
+            string n = Deacc(q.ToLowerInvariant());
+            // « livre sterling / turque… » = monnaie ; « livre » + euro/dollar/taux = change, pas un bouquin.
+            if (n.Contains("sterling") || n.Contains("livre turque") || n.Contains("livre egyptienne")
+                || n.Contains("livre libanaise") || n.Contains("livre syrienne")
+                || (n.Contains("livre") && (n.Contains("euro") || n.Contains("dollar") || n.Contains("cours de la livre") || n.Contains("taux") || n.Contains("change")))) return null;
+            // \b devant le déclencheur : « délivre », « livrer », « livraison » ne matchent pas.
+            var m = Regex.Match(q, "(?i)\\b(?:livres?|bouquins?|romans?)\\s+(?:sur\\s+|de\\s+|intitul[eé]\\s+|qui\\s+parle\\s+de\\s+)?(.+?)\\s*[?.!]*$");
             if (!m.Success) return null;
             string w = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
             return w.Length >= 2 ? w : null;
@@ -465,16 +472,22 @@ namespace BTOptimizer
         }
 
         // ---- SÉRIES TV ----
-        /// <summary>« série breaking bad », « la série the office » → titre, sinon null (pas « numéro de série »).</summary>
+        /// <summary>« série breaking bad », « la série the office » → titre, sinon null (pas « numéro de série »
+        /// ni « série DE problèmes »).</summary>
         internal static string ShowQuery(string q)
         {
             if (string.IsNullOrEmpty(q)) return null;
             string n = Deacc(q.ToLowerInvariant());
             if (n.Contains("numero de serie") || n.Contains("cle de serie") || n.Contains("clef de serie")
-                || n.Contains("serial") || n.Contains("port serie") || n.Contains("numero serie")) return null;
-            var m = Regex.Match(q, "(?i)(?:s[eé]rie(?:\\s+t[eé]l[eé])?|tv\\s*show)\\s+(?:sur\\s+|de\\s+|intitul[eé]e?\\s+|qui\\s+parle\\s+de\\s+)?(.+?)\\s*[?.!]*$");
+                || n.Contains("serial") || n.Contains("port serie") || n.Contains("numero serie")
+                || n.Contains("mise en serie") || n.Contains("en serie")) return null;
+            // \b devant « série » (évite d'attraper l'intérieur d'un mot) ; « de/des/du/d' » retirés du préfixe.
+            var m = Regex.Match(q, "(?i)\\b(?:s[eé]rie(?:\\s+t[eé]l[eé])?|tv\\s*show)\\s+(?:sur\\s+|intitul[eé]e?\\s+)?(.+?)\\s*[?.!]*$");
             if (!m.Success) return null;
             string w = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
+            string wd = Deacc(w.ToLowerInvariant());
+            // « série de problèmes / soucis / bugs » n'est pas un titre de série.
+            if (wd.StartsWith("de ") || wd.StartsWith("des ") || wd.StartsWith("du ") || wd.StartsWith("d'") || wd.StartsWith("d’") || wd == "tv") return null;
             return w.Length >= 2 ? w : null;
         }
 
