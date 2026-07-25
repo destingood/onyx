@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.90 — Garde-fou vie privée : anti-fuite de données perso (PII) vers le web
+- L'article (gestion des connaissances IA) recommande un **filtrage automatique des données
+  personnelles (PII)**. Le vrai risque ici : lors d'une **recherche web**, ta requête part vers
+  DuckDuckGo — si elle contient un email / téléphone / carte bancaire, ça **fuiterait**.
+- Nouveau **garde-fou PII actif** : avant tout envoi au web, le Copilote détecte e-mail, numéro de
+  téléphone, carte bancaire, IBAN, n° de sécurité sociale → et **bloque l'envoi** avec un message
+  clair (« retire l'info sensible »). Fini l'avertissement seulement passif.
+- S'applique aux **deux** chemins web : la recherche explicite ET la vérification factuelle
+  automatique (aucune PII ne part vérifier un fait).
+- **Prudent côté domaine PC** : une **adresse IP** (192.168.x.x) n'est PAS traitée comme PII —
+  c'est banal dans une question réseau/gaming, on ne t'embête pas pour ça.
+- Renforce la promesse « 100 % local / vie privée » de l'app (EULA & marketing).
+- Vérifié : **81/81** sur le vrai code compilé.
+- Note : filtre anti-jurons (HAP) volontairement écarté — sur-censurer des joueurs FR serait
+  contre-productif, et le modèle local instruct n'est pas un générateur de propos haineux.
+
 ## v14.89 — TTL sur la mémoire apprise (retirer l'état périmé)
 - La mémoire persistante de la v14.88 accumulait des faits **datés mais sans expiration** — un fait
   web vieux de 2 ans finirait par être réinjecté comme s'il était actuel (« stale state »). C'est

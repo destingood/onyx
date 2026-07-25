@@ -881,7 +881,7 @@ namespace BTOptimizer
                 bool needVerify  = factual || riskyFact || LooksUnsure(ans);
                 bool needHonesty = factual || riskyFact;   // ne doit jamais passer pour une certitude
 
-                if (needVerify && webOk)
+                if (needVerify && webOk && !PrivacyGuard.HasPII(q))   // jamais de PII vers le web
                 {
                     if (log != null) log(needHonesty ? "Vérification factuelle sur le web…"
                                                      : "Réponse incertaine → vérification sur le web…", 0);
@@ -964,6 +964,12 @@ namespace BTOptimizer
             {
                 if (LocalBrain.WebOff())
                     return Say("La recherche internet est coupée. Dis « active internet » pour que je puisse chercher l'actualité en ligne.");
+                // Garde-fou VIE PRIVÉE : ne jamais envoyer une info perso à un moteur externe.
+                var pii = PrivacyGuard.Detect(q);
+                if (pii.Count > 0)
+                    return Say("⚠️ Ta demande contient une info personnelle (" + string.Join(", ", pii.ToArray()) + "). "
+                             + "Je ne l'envoie PAS à un moteur de recherche externe (vie privée). Retire l'info sensible et "
+                             + "redemande, ou pose-moi ça autrement — les mesures et réparations restent 100 % sur ta machine.");
                 if (log != null) log("Recherche web (DuckDuckGo)…", 0);
                 List<WebSearch.Result> res;
                 try { res = WebSearch.Query(q, 5); }

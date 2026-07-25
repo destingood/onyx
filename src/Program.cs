@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.89.0.0")]
-[assembly: AssemblyFileVersion("14.89.0.0")]
+[assembly: AssemblyVersion("14.90.0.0")]
+[assembly: AssemblyFileVersion("14.90.0.0")]
 
 namespace BTOptimizer
 {
@@ -413,9 +413,28 @@ namespace BTOptimizer
                 if (ttl3) ok15++; Console.WriteLine((ttl3 ? "OK  " : "FAIL") + "  TTL : fait de 6 mois -> valide");
                 if (ttl4) ok15++; Console.WriteLine((ttl4 ? "OK  " : "FAIL") + "  TTL : date vide -> tolere (valide)");
 
+                // Garde-fou PII (ne pas envoyer d'info perso au web). IP NON consideree comme PII.
+                int ok16 = 0;
+                var piiCases = new[]
+                {
+                    new object[]{ "mon email jean.dupont@gmail.com", true },
+                    new object[]{ "appelle moi au 06 12 34 56 78", true },
+                    new object[]{ "ma carte 4111 1111 1111 1111 est bloquee", true },
+                    new object[]{ "mon ip est 192.168.1.1 et mes fps sont bas", false },
+                    new object[]{ "comment optimiser mon pc pour valorant", false },
+                    new object[]{ "qui est macron", false },
+                };
+                foreach (var c in piiCases)
+                {
+                    string t = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = PrivacyGuard.HasPII(t);
+                    bool pass = got == exp; if (pass) ok16++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  pii=" + got + " (attendu " + exp + ")  « " + t + " »");
+                }
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
