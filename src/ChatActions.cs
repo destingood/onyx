@@ -1233,6 +1233,41 @@ namespace BTOptimizer
             return act;
         }
 
+        /// <summary>Prochains jours fériés d'un pays donné via Nager.Date (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction HolidaysCountryAction(string iso, string name, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Jours fériés"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Jours fériés (" + name + ")…", 0);
+                string list = null;
+                try { list = LiveData.NextHolidaysFor(iso); } catch { }
+                if (string.IsNullOrEmpty(list)) return Say("Je n'ai pas trouvé les jours fériés pour « " + name + " » (pays non couvert par la source, ou hors-ligne).");
+                return Say("📅 Prochains jours fériés en " + name + " :\n" + list + "\n— source : Nager.Date (gratuit).");
+            };
+            return a;
+        }
+
+        /// <summary>Définition/explication d'un mot via Wikipédia FR (gratuit, sans clé, sans IA locale). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction DefineAction(string word, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Définition"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Définition (Wikipédia)…", 0);
+                Wikipedia.Page wp = null;
+                try { wp = Wikipedia.Lookup(word); } catch { }
+                if (wp == null || string.IsNullOrEmpty(wp.Extract))
+                    return Say("Je n'ai pas trouvé de définition pour « " + word + " » (ou hors-ligne). Tu peux aussi demander « c'est quoi " + word + " ».");
+                string ex = wp.Extract.Trim();
+                if (ex.Length > 500) { int cut = ex.LastIndexOf('.', Math.Min(499, ex.Length - 1)); ex = (cut > 120) ? ex.Substring(0, cut + 1) : ex.Substring(0, 500) + "…"; }
+                return Say("📖 " + wp.Title + " : " + ex + "\n— 📚 Wikipédia (" + wp.Url + ").");
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

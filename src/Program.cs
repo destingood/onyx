@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.09.0.0")]
-[assembly: AssemblyFileVersion("15.09.0.0")]
+[assembly: AssemblyVersion("15.10.0.0")]
+[assembly: AssemblyFileVersion("15.10.0.0")]
 
 namespace BTOptimizer
 {
@@ -560,9 +560,17 @@ namespace BTOptimizer
                 bool qx3 = UtilityTools.IsQuake("les derniers seismes") && !UtilityTools.IsQuake("bonjour"); if (qx3) ok27++; Console.WriteLine((qx3 ? "OK  " : "FAIL") + "  seismes : detecte, pas un bonjour");
                 bool qx4 = UtilityTools.IsIss("ou est l'iss") && !UtilityTools.IsIss("la suisse"); if (qx4) ok27++; Console.WriteLine((qx4 ? "OK  " : "FAIL") + "  ISS : detecte, 'suisse' exclu");
 
+                // Outils v15.10 : calculatrice locale + feries multi-pays + definition (Wikipedia).
+                int ok28 = 0;
+                bool cx1 = UtilityTools.Calc("3+4*2").Contains("11") && UtilityTools.Calc("15% de 240").Contains("36"); if (cx1) ok28++; Console.WriteLine((cx1 ? "OK  " : "FAIL") + "  calc : 3+4*2=11 et 15% de 240=36");
+                bool cx2 = UtilityTools.Calc("racine de 9").Contains("3") && UtilityTools.Calc("bonjour") == null; if (cx2) ok28++; Console.WriteLine((cx2 ? "OK  " : "FAIL") + "  calc : racine de 9=3, 'bonjour' non");
+                var hit = UtilityTools.HolidayCountryQuery("jours feries en allemagne");
+                bool cx3 = hit != null && hit.Iso == "DE" && UtilityTools.HolidayCountryQuery("prochain jour ferie") == null; if (cx3) ok28++; Console.WriteLine((cx3 ? "OK  " : "FAIL") + "  feries : allemagne=DE, generique=France(null)");
+                bool cx4 = UtilityTools.DefineQuery("definition de procrastination") == "procrastination" && UtilityTools.DefineQuery("comment ca va") == null; if (cx4) ok28++; Console.WriteLine((cx4 ? "OK  " : "FAIL") + "  definition : mot extrait, pas de faux positif");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

@@ -153,6 +153,11 @@ namespace BTOptimizer
                 string u = UtilityTools.LocalUnit(q);
                 if (u != null) return new Reply { Text = u, ShowStarters = true };
             }
+            // 1bis) CALCULATRICE : LOCALE, hors-ligne (« 15% de 240 », « 3+4*2 », « racine de 2 »).
+            {
+                string calc = UtilityTools.Calc(q);
+                if (calc != null) return new Reply { Text = calc, ShowStarters = true };
+            }
             // 2) DEVISES (Frankfurter/BCE), 3) CRYPTO (CoinGecko), 4) JOURS FÉRIÉS (Nager.Date) — réseau.
             {
                 UtilityTools.Triple cur = UtilityTools.Currency(q);
@@ -173,6 +178,9 @@ namespace BTOptimizer
             if (UtilityTools.IsHoliday(s))
             {
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour les jours fériés j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                UtilityTools.CountryHit ch = UtilityTools.HolidayCountryQuery(s);
+                if (ch != null && ch.Iso != "FR")
+                    return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysCountryAction(ch.Iso, ch.Name, st), Dynamic = true };
                 return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysAction(st), Dynamic = true };
             }
             // 5) TRADUCTION (MyMemory) — si web actif ; sinon on laisse l'IA locale traduire (hors-ligne).
@@ -278,6 +286,15 @@ namespace BTOptimizer
             {
                 Reply lx = Lexi(s, entries);
                 if (lx != null) return lx;
+            }
+            // DÉFINITION d'un mot hors-jeu (« définition de X », « que veut dire X ») → Wikipédia FR.
+            {
+                string def = UtilityTools.DefineQuery(q);
+                if (def != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une définition j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche la définition…", Action = ChatActions.DefineAction(def, st), Dynamic = true };
+                }
             }
 
             // --- Lecture d'intentions (tolérante aux fautes de frappe, voir FuzzyWord) -------------

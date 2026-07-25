@@ -152,11 +152,13 @@ namespace BTOptimizer
         }
 
         // ---- JOURS FÉRIÉS (Nager.Date, gratuit) ----
-        public static string NextHolidays()
+        public static string NextHolidays() { return NextHolidaysFor("FR"); }
+        /// <summary>Prochains jours fériés d'un pays (code ISO2). null si pays non couvert / hors-ligne.</summary>
+        public static string NextHolidaysFor(string iso)
         {
             try
             {
-                string json = Get("https://date.nager.at/api/v3/NextPublicHolidays/FR");
+                string json = Get("https://date.nager.at/api/v3/NextPublicHolidays/" + Uri.EscapeDataString(iso));
                 if (string.IsNullOrEmpty(json)) return null;
                 using (var d = JsonDocument.Parse(json))
                 {
@@ -165,9 +167,9 @@ namespace BTOptimizer
                     foreach (var h in d.RootElement.EnumerateArray())
                     {
                         if (n++ >= 5) break;
-                        string iso = h.GetProperty("date").GetString();
+                        string dateIso = h.GetProperty("date").GetString();
                         string name = h.TryGetProperty("localName", out var ln) ? ln.GetString() : h.GetProperty("name").GetString();
-                        sb.Append("• ").Append(FrDate(iso)).Append(" — ").Append(name).Append('\n');
+                        sb.Append("• ").Append(FrDate(dateIso)).Append(" — ").Append(name).Append('\n');
                     }
                     return sb.ToString().TrimEnd();
                 }

@@ -294,6 +294,98 @@ namespace BTOptimizer
             return Regex.IsMatch(n, "\\biss\\b") || n.Contains("station spatiale");
         }
 
+        // ---- JOURS FÉRIÉS D'UN AUTRE PAYS (Nager.Date) ----
+        internal sealed class CountryHit { public string Iso; public string Name; }
+        private static readonly (string name, string iso, string disp)[] Countries = new (string, string, string)[]
+        {
+            ("allemagne","DE","Allemagne"), ("espagne","ES","Espagne"), ("italie","IT","Italie"),
+            ("royaume-uni","GB","Royaume-Uni"), ("angleterre","GB","Royaume-Uni"), ("etats-unis","US","États-Unis"),
+            ("usa","US","États-Unis"), ("belgique","BE","Belgique"), ("suisse","CH","Suisse"),
+            ("canada","CA","Canada"), ("portugal","PT","Portugal"), ("pays-bas","NL","Pays-Bas"),
+            ("hollande","NL","Pays-Bas"), ("irlande","IE","Irlande"), ("autriche","AT","Autriche"),
+            ("pologne","PL","Pologne"), ("suede","SE","Suède"), ("norvege","NO","Norvège"),
+            ("danemark","DK","Danemark"), ("finlande","FI","Finlande"), ("grece","GR","Grèce"),
+            ("japon","JP","Japon"), ("bresil","BR","Brésil"), ("mexique","MX","Mexique"),
+            ("australie","AU","Australie"), ("luxembourg","LU","Luxembourg"), ("croatie","HR","Croatie"),
+            ("hongrie","HU","Hongrie"), ("roumanie","RO","Roumanie"), ("slovaquie","SK","Slovaquie"),
+            ("ukraine","UA","Ukraine"), ("nouvelle-zelande","NZ","Nouvelle-Zélande"), ("argentine","AR","Argentine"),
+            ("france","FR","France")
+        };
+        /// <summary>Si « férié(s) » + un pays connu est nommé → code ISO2 + nom, sinon null (→ France par défaut).</summary>
+        internal static CountryHit HolidayCountryQuery(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (!n.Contains("ferie")) return null;
+            foreach (var c in Countries)
+                if (n.Contains(c.name)) return new CountryHit { Iso = c.iso, Name = c.disp };
+            return null;
+        }
+
+        // ---- CALCULATRICE (locale, hors-ligne) ----
+        /// <summary>« 15% de 240 », « racine de 2 », « 3+4*2 », « combien font 12*8 » → résultat, sinon null.</summary>
+        internal static string Calc(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant()).Trim();
+            var mp = Regex.Match(n, "(\\d+(?:[.,]\\d+)?)\\s*(?:%|pour ?cent)\\s+de\\s+(\\d+(?:[.,]\\d+)?)");
+            if (mp.Success) { double x = D(mp.Groups[1].Value), y = D(mp.Groups[2].Value); return "🧮 " + FmtN(y * x / 100) + "  (" + FmtN(x) + " % de " + FmtN(y) + ")"; }
+            var mr = Regex.Match(n, "racine(?:\\s+carree)?\\s+de\\s+(\\d+(?:[.,]\\d+)?)");
+            if (mr.Success) { double x = D(mr.Groups[1].Value); return x < 0 ? "🧮 racine d'un nombre négatif : indéfini dans les réels." : "🧮 racine de " + FmtN(x) + " = " + FmtN(Math.Sqrt(x)); }
+            var mw = Regex.Match(n, "(\\d+(?:[.,]\\d+)?)\\s*(?:\\^|puissance)\\s*(\\d+(?:[.,]\\d+)?)");
+            if (mw.Success) { double a = D(mw.Groups[1].Value), b = D(mw.Groups[2].Value); return "🧮 " + FmtN(a) + " puissance " + FmtN(b) + " = " + FmtN(Math.Pow(a, b)); }
+            string body = Regex.Replace(n, "^(?:calcule(?:r)?|combien\\s+(?:font|fait)|ca\\s+fait\\s+combien|resultat\\s+de|resultat|=)\\s*", "");
+            string expr = body.Replace(" ", "").Replace(",", ".");
+            if (Regex.IsMatch(expr, "^[0-9+\\-*/().]+$") && Regex.IsMatch(expr, "[+\\-*/]"))
+            {
+                try
+                {
+                    var e = new Expr(expr);
+                    double d = e.Eval();
+                    if (!e.Done() || double.IsNaN(d) || double.IsInfinity(d)) return null;
+                    return "🧮 " + body.Replace(".", ",").Trim() + " = " + FmtN(d);
+                }
+                catch { return null; }
+            }
+            return null;
+        }
+        private static double D(string s) { double d; double.TryParse(s.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out d); return d; }
+        internal static string FmtN(double v)
+        {
+            if (Math.Abs(v - Math.Round(v)) < 1e-9 && Math.Abs(v) < 1e15) return ((long)Math.Round(v)).ToString(CultureInfo.InvariantCulture);
+            return Math.Round(v, 4).ToString("0.####", CultureInfo.InvariantCulture).Replace('.', ',');
+        }
+        // mini-évaluateur récursif (+ - * / parenthèses), hors-ligne et sûr (pas d'eval système).
+        private sealed class Expr
+        {
+            private readonly string s; private int i;
+            public Expr(string t) { s = t; i = 0; }
+            public bool Done() { return i >= s.Length; }
+            public double Eval() { return E(); }
+            private double E() { double v = T(); while (i < s.Length && (s[i] == '+' || s[i] == '-')) { char op = s[i++]; double r = T(); v = op == '+' ? v + r : v - r; } return v; }
+            private double T() { double v = F(); while (i < s.Length && (s[i] == '*' || s[i] == '/')) { char op = s[i++]; double r = F(); v = op == '*' ? v * r : v / r; } return v; }
+            private double F()
+            {
+                if (i < s.Length && s[i] == '(') { i++; double v = E(); if (i < s.Length && s[i] == ')') i++; return v; }
+                if (i < s.Length && s[i] == '-') { i++; return -F(); }
+                if (i < s.Length && s[i] == '+') { i++; return F(); }
+                int st = i; while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.')) i++;
+                if (i == st) throw new FormatException();
+                return double.Parse(s.Substring(st, i - st), CultureInfo.InvariantCulture);
+            }
+        }
+
+        // ---- DÉFINITION D'UN MOT (rendue via Wikipédia FR) ----
+        /// <summary>« définition de X », « que veut dire X », « que signifie X » → le mot, sinon null.</summary>
+        internal static string DefineQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            var m = Regex.Match(q, "(?i)(?:d[eé]finition\\s+(?:de\\s+la\\s+|de\\s+l['’]|de\\s+|du\\s+|des\\s+|d['’])?|que\\s+veut\\s+dire\\s+|que\\s+signifie\\s+|signification\\s+(?:de\\s+la\\s+|de\\s+l['’]|de\\s+|du\\s+|d['’])?|d[eé]finis\\s+|sens\\s+du\\s+mot\\s+)(.+?)\\s*[?.!]*$");
+            if (!m.Success) return null;
+            string w = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
+            w = Regex.Replace(w, "^(?i)(?:le|la|les|un|une|l['’]|du|des|de)\\s+", "");
+            return w.Length >= 2 ? w : null;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

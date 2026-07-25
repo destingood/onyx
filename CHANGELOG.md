@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.10 — Calculatrice locale + jours fériés d'autres pays + définition de mots
+- **🧮 Calculatrice EN LOCAL (hors-ligne)** : « 15% de 240 », « racine de 2 », « 3+4*2 », « combien font 12*8 »
+  → résultat immédiat, calculé sur ta machine (mini-évaluateur maison, aucun `eval` système, zéro hallucination).
+- **📅 Jours fériés d'un autre pays** (Nager.Date, sans clé) : « jours fériés en Allemagne », « fériés au Japon »…
+  → les 5 prochains. ~30 pays reconnus ; sans pays précisé, ça reste la France.
+- **📖 Définition d'un mot** : « définition de X », « que veut dire X » → explication tirée de **Wikipédia FR**
+  (sourcée, marche même sans l'IA locale). Honnête : il n'existe pas d'API de dictionnaire FR gratuite sans clé
+  fiable (le Wiktionnaire REST renvoie une erreur 501), donc on s'appuie sur Wikipédia, source citée.
+- Les termes de jeu (« c'est quoi le DLSS ») restent gérés par le lexique intégré, pas par Wikipédia.
+- Vérifié EN DIRECT : fériés Allemagne (Mariä Himmelfahrt…), « Procrastination » définie ; calculs au harnais.
+  Build 0 erreur ; harnais 131/131.
+
 ## v15.09 — 4 outils « culture générale » gratuits sans clé
 - **📏 Distance entre 2 villes** : « distance entre Paris et Lyon », « combien de km de X à Y » → distance à vol
   d'oiseau. Géocodage Open-Meteo (sans clé) + **calcul local** (Haversine). Vérifié : Paris–Lyon = 393 km.
