@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.91 — Recherche plus précise : re-ranking hybride (sémantique + lexical)
+- La recherche dans la base était **purement sémantique** (cosinus). L'article recommande un
+  « module de réorganisation » (re-ranking) pour affiner. Ajouté : un **re-ranking hybride**.
+- Après le filtre sémantique (seuil de pertinence conservé), les extraits sont **ré-ordonnés** en
+  combinant le cosinus avec un **score lexical** (recouvrement des mots-clés de ta question).
+- Gros gain dans le domaine PC où le **terme exact** compte : nom de jeu, modèle GPU (RTX 4080),
+  code d'erreur (`nvlddmkm`), acronymes (`dns`, `fps`, `ssd`, `dpc`) — que les embeddings seuls
+  peuvent sous-classer. Ces acronymes courts sont explicitement gardés.
+- Poids lexical volontairement modéré : il **affine** le classement sans écraser le sémantique.
+  Aucun impact sur les vecteurs ni le cache (pas de réindexation).
+- Vérifié : **85/85** sur le vrai code compilé.
+
 ## v14.90 — Garde-fou vie privée : anti-fuite de données perso (PII) vers le web
 - L'article (gestion des connaissances IA) recommande un **filtrage automatique des données
   personnelles (PII)**. Le vrai risque ici : lors d'une **recherche web**, ta requête part vers

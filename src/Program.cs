@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.90.0.0")]
-[assembly: AssemblyFileVersion("14.90.0.0")]
+[assembly: AssemblyVersion("14.91.0.0")]
+[assembly: AssemblyFileVersion("14.91.0.0")]
 
 namespace BTOptimizer
 {
@@ -432,9 +432,19 @@ namespace BTOptimizer
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  pii=" + got + " (attendu " + exp + ")  « " + t + " »");
                 }
 
+                // Re-ranking hybride : score lexical (recouvrement de mots-cles ; acronymes PC gardes).
+                int ok17 = 0;
+                double lHit = KnowledgeBase.LexicalScore("optimiser fps valorant", "guide pour optimiser valorant et gagner des fps");
+                double lMiss = KnowledgeBase.LexicalScore("optimiser fps valorant", "recette de gateau au chocolat");
+                double lDns = KnowledgeBase.LexicalScore("changer mon dns", "un dns plus rapide accelere la resolution de noms");
+                bool lx1 = lHit > 0.6; if (lx1) ok17++; Console.WriteLine((lx1 ? "OK  " : "FAIL") + "  lexical : requete couverte -> score haut (" + lHit.ToString("0.00") + ")");
+                bool lx2 = lMiss == 0.0; if (lx2) ok17++; Console.WriteLine((lx2 ? "OK  " : "FAIL") + "  lexical : hors-sujet -> 0");
+                bool lx3 = lHit > lMiss; if (lx3) ok17++; Console.WriteLine((lx3 ? "OK  " : "FAIL") + "  lexical : pertinent > hors-sujet");
+                bool lx4 = lDns > 0.0; if (lx4) ok17++; Console.WriteLine((lx4 ? "OK  " : "FAIL") + "  lexical : acronyme court 'dns' pris en compte (" + lDns.ToString("0.00") + ")");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

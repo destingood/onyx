@@ -243,6 +243,44 @@ namespace BTOptimizer
 
         /// <summary>Extraits les plus pertinents pour la question (top-k), ou "" si la base n'est
         /// pas prête. Le modèle lit ces extraits pour ancrer sa réponse.</summary>
+        // --- Re-ranking HYBRIDE : score lexical (recouvrement de mots-clés) combiné au sémantique ---
+        private const double LexWeight = 0.12;   // affine le classement sans écraser le sémantique
+        private static readonly HashSet<string> LexStop = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "les","des","une","mon","ton","son","ses","est","que","qui","pas","sur","par","aux","ces","mes","tes",
+            "pour","avec","dans","mais","donc","quoi","cette","cela","sont","elle","vous","nous","leur","plus",
+            "tout","tous","fait","etre","avoir","quel","comment","vers","chez","sans","sous","c'est"
+        };
+
+        private static string Deacc(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            try
+            {
+                string f = s.Normalize(NormalizationForm.FormD);
+                var sb = new StringBuilder(f.Length);
+                foreach (char c in f)
+                    if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark) sb.Append(c);
+                return sb.ToString();
+            }
+            catch { return s; }
+        }
+
+        /// <summary>Fraction (0..1) des mots-clés significatifs de la requête présents dans le texte.
+        /// Garde les acronymes PC courts (dns, fps, ssd, gpu, dpc…) qui sont très distinctifs.</summary>
+        internal static double LexicalScore(string query, string text)
+        {
+            if (string.IsNullOrEmpty(query) || string.IsNullOrEmpty(text)) return 0.0;
+            string t = Deacc(text.ToLowerInvariant());
+            var terms = new List<string>();
+            foreach (string w in System.Text.RegularExpressions.Regex.Split(Deacc(query.ToLowerInvariant()), "[^a-z0-9]+"))
+                if (w.Length >= 3 && !LexStop.Contains(w) && !terms.Contains(w)) terms.Add(w);
+            if (terms.Count == 0) return 0.0;
+            int hit = 0;
+            foreach (string term in terms) if (t.Contains(term)) hit++;
+            return (double)hit / terms.Count;
+        }
+
         public static string Search(string query, int k)
         {
             try
@@ -254,16 +292,25 @@ namespace BTOptimizer
                 float[] q = LocalBrain.Embed(query, true);
                 if (q == null) return "";
 
-                var scored = new List<KeyValuePair<double, Chunk>>();
-                foreach (var c in idx) if (c.Vec != null) scored.Add(new KeyValuePair<double, Chunk>(Cosine(q, c.Vec), c));
-                scored.Sort(delegate (KeyValuePair<double, Chunk> a, KeyValuePair<double, Chunk> b) { return b.Key.CompareTo(a.Key); });
+                // 1) Récupération SÉMANTIQUE : cosinus, on garde ce qui passe le seuil de pertinence.
+                var cand = new List<KeyValuePair<double, Chunk>>();   // clé = score combiné (ré-ordonné)
+                foreach (var c in idx)
+                {
+                    if (c.Vec == null) continue;
+                    double cos = Cosine(q, c.Vec);
+                    if (cos < 0.35) continue;   // trop peu pertinent : le lexical ne doit pas le repêcher
+                    // 2) Re-ranking HYBRIDE : cosinus + recouvrement lexical (termes exacts).
+                    double combined = cos + LexicalScore(query, c.Text) * LexWeight;
+                    cand.Add(new KeyValuePair<double, Chunk>(combined, c));
+                }
+                if (cand.Count == 0) return "";
+                cand.Sort(delegate (KeyValuePair<double, Chunk> a, KeyValuePair<double, Chunk> b) { return b.Key.CompareTo(a.Key); });
 
                 var sb = new StringBuilder("Base de connaissances (extraits pertinents) :\n");
-                int n = Math.Min(k, scored.Count); int kept = 0;
+                int n = Math.Min(k, cand.Count); int kept = 0;
                 for (int i = 0; i < n; i++)
                 {
-                    if (scored[i].Key < 0.35) break;   // trop peu pertinent : on n'encombre pas
-                    var c = scored[i].Value;
+                    var c = cand[i].Value;
                     sb.Append("- ").Append(c.Text).Append(" [").Append(c.Source).Append(FreshTag(c.When)).Append("]\n");
                     kept++;
                 }
