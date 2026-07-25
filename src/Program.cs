@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.03.0.0")]
-[assembly: AssemblyFileVersion("15.03.0.0")]
+[assembly: AssemblyVersion("15.04.0.0")]
+[assembly: AssemblyFileVersion("15.04.0.0")]
 
 namespace BTOptimizer
 {
@@ -518,9 +518,17 @@ namespace BTOptimizer
                 bool ux5 = UtilityTools.CryptoId("prix du bitcoin") == "bitcoin" && UtilityTools.CryptoId("comment optimiser") == null; if (ux5) ok21++; Console.WriteLine((ux5 ? "OK  " : "FAIL") + "  crypto : detecte bitcoin, pas une question PC");
                 bool ux6 = UtilityTools.IsHoliday("prochain jour ferie") && !UtilityTools.IsHoliday("comment ca va"); if (ux6) ok21++; Console.WriteLine((ux6 ? "OK  " : "FAIL") + "  ferie : detecte, pas un bonjour");
 
+                // Outils v15.04 : traduction (parse), mon IP, soleil, garde heure/soleil.
+                int ok22 = 0;
+                var tj = UtilityTools.TranslateJob("traduis bonjour le monde en anglais");
+                bool vx1 = tj != null && tj.To == "en" && tj.From == "fr" && tj.Text.Contains("bonjour"); if (vx1) ok22++; Console.WriteLine((vx1 ? "OK  " : "FAIL") + "  traduction parse : fr->en");
+                bool vx2 = UtilityTools.IsMyIp("quelle est mon ip") && !UtilityTools.IsMyIp("comment ca va"); if (vx2) ok22++; Console.WriteLine((vx2 ? "OK  " : "FAIL") + "  mon IP : detecte, pas bonjour");
+                bool vx3 = UtilityTools.IsSun("a quelle heure se couche le soleil") && !UtilityTools.IsSun("comment optimiser"); if (vx3) ok22++; Console.WriteLine((vx3 ? "OK  " : "FAIL") + "  soleil : detecte");
+                bool vx4 = !DocAssistant.IsTimeQuery("a quelle heure se couche le soleil") && DocAssistant.IsTimeQuery("quelle heure est-il"); if (vx4) ok22++; Console.WriteLine((vx4 ? "OK  " : "FAIL") + "  garde : 'heure...soleil' -> pas l'heure");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

@@ -190,6 +190,76 @@ namespace BTOptimizer
             return null;
         }
 
+        // ---- TRADUCTION (MyMemory, gratuit sans clé) ----
+        public static string Translate(string text, string from, string to)
+        {
+            try
+            {
+                string json = Get("https://api.mymemory.translated.net/get?langpair=" + from + "|" + to + "&q=" + Uri.EscapeDataString(text));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                    if (d.RootElement.TryGetProperty("responseData", out var rd) && rd.TryGetProperty("translatedText", out var tt))
+                    {
+                        string s = tt.GetString();
+                        return string.IsNullOrEmpty(s) ? null : System.Net.WebUtility.HtmlDecode(s);
+                    }
+            }
+            catch { }
+            return null;
+        }
+
+        // ---- MON IP PUBLIQUE (ipwho.is, gratuit) ----
+        public static string MyIp()
+        {
+            try
+            {
+                string json = Get("https://ipwho.is/");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    string ip = r.TryGetProperty("ip", out var i) ? i.GetString() : "?";
+                    string city = r.TryGetProperty("city", out var c) ? c.GetString() : "";
+                    string isp = "";
+                    if (r.TryGetProperty("connection", out var con) && con.TryGetProperty("isp", out var ii)) isp = ii.GetString();
+                    return "🌐 Ton IP PUBLIQUE : " + ip + (string.IsNullOrEmpty(city) ? "" : " — " + city)
+                         + (string.IsNullOrEmpty(isp) ? "" : " (" + isp + ")") + ".\n(Ton IP LOCALE, elle, se voit avec « ipconfig ».)";
+                }
+            }
+            catch { return null; }
+        }
+
+        // ---- LEVER / COUCHER DU SOLEIL (Open-Meteo daily) ----
+        public sealed class Sun { public string City; public string Rise; public string Set; public bool FromIp; }
+        public static Sun SunTimes(string city)
+        {
+            try
+            {
+                double lat, lon; string nm; bool fromIp = false;
+                if (!string.IsNullOrWhiteSpace(city)) { if (!Geocode(city.Trim(), out lat, out lon, out nm)) return null; }
+                else { if (!GeoByIp(out lat, out lon, out nm)) return null; fromIp = true; }
+                string url = "https://api.open-meteo.com/v1/forecast?daily=sunrise,sunset&timezone=auto"
+                           + "&latitude=" + lat.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                           + "&longitude=" + lon.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("daily", out var dd)) return null;
+                    string rise = dd.GetProperty("sunrise")[0].GetString();
+                    string set = dd.GetProperty("sunset")[0].GetString();
+                    return new Sun { City = nm, Rise = Hm(rise), Set = Hm(set), FromIp = fromIp };
+                }
+            }
+            catch { return null; }
+        }
+        private static string Hm(string iso)
+        {
+            int t = iso.IndexOf('T'); if (t < 0) return iso;
+            string hm = iso.Substring(t + 1); if (hm.Length >= 5) hm = hm.Substring(0, 5);
+            return hm.Replace(':', 'h');
+        }
+
         // « 2026-08-15 » → « 15 août 2026 »
         internal static string FrDate(string iso)
         {

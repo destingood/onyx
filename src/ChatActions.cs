@@ -1048,6 +1048,54 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Traduction via MyMemory (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction TranslateAction(string text, string from, string to, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Traduction"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Traduction (MyMemory)…", 0);
+                string r = null;
+                try { r = LiveData.Translate(text, from, to); } catch { }
+                if (string.IsNullOrEmpty(r)) return Say("Je n'ai pas réussi à traduire (hors-ligne ?). L'IA locale peut essayer si tu reformules.");
+                return Say("🌍 " + r + "\n— traduction " + from + "→" + to + " (MyMemory, gratuit).");
+            };
+            return a;
+        }
+
+        /// <summary>IP publique + FAI via ipwho.is (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction MyIpAction(BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Mon IP publique"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Adresse IP (ipwho.is)…", 0);
+                string r = null;
+                try { r = LiveData.MyIp(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer ton IP publique (hors-ligne ?)." : r);
+            };
+            return a;
+        }
+
+        /// <summary>Lever/coucher du soleil via Open-Meteo (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction SunAction(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Soleil"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Lever/coucher du soleil (Open-Meteo)…", 0);
+                LiveData.Sun s = null;
+                try { s = LiveData.SunTimes(ExtractCity(q)); } catch { }
+                if (s == null) return Say("Je n'ai pas pu récupérer les horaires du soleil (ville introuvable ou hors-ligne).");
+                string src = s.FromIp ? " (ville estimée d'après ta connexion)" : "";
+                return Say("☀️ À " + s.City + src + " : lever du soleil à " + s.Rise + ", coucher à " + s.Set + ".\n— Open-Meteo (gratuit).");
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

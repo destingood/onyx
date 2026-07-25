@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.04 — Encore 3 outils gratuits sans clé (APIs des annuaires publicapis.io / .dev)
+- **Traduction** (MyMemory, gratuit sans clé) : « traduis bonjour le monde en anglais » → « hello world ».
+  Comprend ~19 langues (anglais, espagnol, allemand, italien, russe, japonais, chinois…).
+- **Mon IP publique** (ipwho.is, gratuit) : « quelle est mon IP » → IP + ville + opérateur. Rien n'est
+  envoyé à un tiers hormis la requête (la réponse n'est pas mémorisée).
+- **Lever / coucher du soleil** (Open-Meteo, gratuit) : « à quelle heure se couche le soleil »,
+  « lever du soleil à Lyon » → horaires du jour. Sans ville, estime via l'IP (et le dit).
+- Garde-fou routage : « à quelle heure se couche le soleil » ne répond plus l'heure courante.
+- Vérifié EN DIRECT : traduction fr→en OK ; IP publique résolue avec ville ; soleil Paris (lever/coucher).
+  Build 0 erreur ; harnais 110/110.
+- APIs issues des annuaires `publicapis.io` / `publicapis.dev` (références citées), gratuites et sans clé.
+
 ## v15.03 — Boîte à outils « plein de choses » (idées de public-apis/public-apis)
 - **Conversions d'unités — en LOCAL, exactes, hors-ligne** (zéro hallucination) : « 100 km en miles »,
   « 20°C en fahrenheit », « 5 kg en livres », « 60 mph en km/h », « 2 litres en gallons »… (longueur,

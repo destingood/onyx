@@ -137,6 +137,46 @@ namespace BTOptimizer
             return null;
         }
 
+        // ---- TRADUCTION ----
+        internal sealed class TransJob { public string Text; public string From; public string To; }
+        private static readonly Dictionary<string, string> Langs = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            {"anglais","en"},{"english","en"},{"francais","fr"},{"espagnol","es"},{"allemand","de"},
+            {"italien","it"},{"portugais","pt"},{"neerlandais","nl"},{"russe","ru"},{"japonais","ja"},
+            {"chinois","zh"},{"coreen","ko"},{"arabe","ar"},{"turc","tr"},{"polonais","pl"},
+            {"suedois","sv"},{"grec","el"},{"hindi","hi"},{"latin","la"}
+        };
+
+        /// <summary>« traduis <texte> en <langue> » → texte + langues, sinon null.</summary>
+        internal static TransJob TranslateJob(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            var m = Regex.Match(q, "(?i)\\btradui(?:s|t|re)?\\b\\s+(?:moi\\s+)?(.+?)\\s+en\\s+([A-Za-zÀ-ÿ]+)");
+            if (!m.Success) m = Regex.Match(q, "(?i)\\btraduction\\s+(?:de\\s+)?(.+?)\\s+en\\s+([A-Za-zÀ-ÿ]+)");
+            if (!m.Success) return null;
+            string text = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ');
+            if (text.Length < 1) return null;
+            string to;
+            if (!Langs.TryGetValue(Deacc(m.Groups[2].Value.ToLowerInvariant()), out to)) return null;
+            string from = (to == "fr") ? "en" : "fr";   // heuristique : sinon on part du français
+            return new TransJob { Text = text, From = from, To = to };
+        }
+
+        // ---- MON IP / SOLEIL ----
+        internal static bool IsMyIp(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("mon ip") || n.Contains("mon adresse ip") || n.Contains("quelle est mon ip")
+                || n.Contains("mon adresse i.p") || n.Contains("adresse ip publique");
+        }
+        internal static bool IsSun(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("coucher du soleil") || n.Contains("lever du soleil")
+                || n.Contains("soleil se couche") || n.Contains("soleil se leve")
+                || (n.Contains("soleil") && (n.Contains("heure") || n.Contains("couche") || n.Contains("leve")));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

@@ -175,6 +175,24 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour les jours fériés j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysAction(st), Dynamic = true };
             }
+            // 5) TRADUCTION (MyMemory) — si web actif ; sinon on laisse l'IA locale traduire (hors-ligne).
+            if (!LocalBrain.WebOff())
+            {
+                UtilityTools.TransJob tj = UtilityTools.TranslateJob(q);
+                if (tj != null)
+                    return new Reply { Text = "Je traduis…", Action = ChatActions.TranslateAction(tj.Text, tj.From, tj.To, st), Dynamic = true };
+            }
+            // 6) MON IP publique (ipwho.is), 7) LEVER/COUCHER DU SOLEIL (Open-Meteo) — réseau.
+            if (UtilityTools.IsMyIp(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour ton IP PUBLIQUE j'ai besoin d'internet (coupé). Ton IP LOCALE se voit avec « ipconfig ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde ton IP…", Action = ChatActions.MyIpAction(st), Dynamic = true };
+            }
+            if (UtilityTools.IsSun(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les horaires du soleil j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde le soleil…", Action = ChatActions.SunAction(q, st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
@@ -619,6 +637,7 @@ namespace BTOptimizer
         /// <summary>Question HEURE / DATE ? → réponse locale exacte, hors-ligne.</summary>
         internal static bool IsTimeQuery(string s)
         {
+            if (s != null && s.Contains("soleil")) return false;   // « à quelle heure se couche le soleil » → route soleil
             return Has(s, "quelle heure", "il est quelle heure", "quel heure", "heure actuelle", "heure qu'il est",
                           "quel jour on est", "quel jour sommes", "on est quel jour", "quelle date", "date du jour",
                           "date d'aujourd'hui", "on est le combien", "jour de la semaine", "on est quelle date");
