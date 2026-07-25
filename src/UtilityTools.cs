@@ -177,6 +177,44 @@ namespace BTOptimizer
                 || (n.Contains("soleil") && (n.Contains("heure") || n.Contains("couche") || n.Contains("leve")));
         }
 
+        // ---- PRODUIT / NUTRITION (Open Food Facts) ----
+        /// <summary>« nutriscore du nutella », « calories du coca », « composition du X » → nom du produit, sinon null.</summary>
+        internal static string FoodQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant());
+            bool food = n.Contains("nutriscore") || n.Contains("nutri-score") || n.Contains("nutri score")
+                || n.Contains("open food facts") || n.Contains("openfoodfacts") || n.Contains("additif")
+                || n.Contains("composition") || n.Contains("nutritionnel") || n.Contains("calorie")
+                || n.Contains("ingredient") || Regex.IsMatch(n, "\\bnova\\b");
+            if (!food) return null;
+            // Produit = ce qui suit une préposition, en fin de phrase.
+            var m = Regex.Match(q, "(?i)(?:de\\s+la\\s+|de\\s+l['’]|du\\s+|des\\s+|de\\s+|d['’]|dans\\s+(?:le|la|les|l['’])\\s*|sur\\s+|pour\\s+|produit\\s+)([\\p{L}0-9][\\p{L}0-9 '’&.\\-]{1,40})\\s*[?.!]*$");
+            if (!m.Success) return null;
+            string prod = m.Groups[1].Value.Trim().Trim('?', '.', '!', ' ');
+            if (prod.Length < 2) return null;
+            string pd = Deacc(prod.ToLowerInvariant());
+            // rejette le cas où on n'a capté qu'un mot déclencheur (« c'est quoi le nutriscore »).
+            if (pd == "calories" || pd == "composition" || pd == "nutriscore" || pd == "nova"
+                || pd == "additifs" || pd == "ingredients" || pd == "nutrition") return null;
+            return prod;
+        }
+
+        // ---- CODE POSTAL → VILLE (Zippopotam) ----
+        /// <summary>« code postal 75001 », « quelle ville pour 69001 », ou « 16000 » seul → code à 5 chiffres, sinon null.</summary>
+        internal static string PostalQuery(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return null;
+            string n = Deacc(s.ToLowerInvariant());
+            var m = Regex.Match(s, "\\b(\\d{5})\\b");
+            if (!m.Success) return null;
+            bool ctx = n.Contains("code postal") || n.Contains("quelle ville") || n.Contains("quelle commune")
+                || n.Contains("ville de") || n.Contains("ville du") || n.Contains("commune")
+                || n.Contains("c'est ou") || n.Contains("c est ou") || n.Contains("ou se trouve")
+                || Regex.IsMatch(n.Trim(), "^\\d{5}$");
+            return ctx ? m.Groups[1].Value : null;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

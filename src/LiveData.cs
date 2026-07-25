@@ -260,6 +260,123 @@ namespace BTOptimizer
             return hm.Replace(':', 'h');
         }
 
+        // ---- PRODUIT / NUTRITION (Open Food Facts, gratuit sans clé) ----
+        /// <summary>Fiche nutrition d'un produit alimentaire (Nutri-Score, NOVA, valeurs /100 g). null si rien.</summary>
+        public static string Food(string query)
+        {
+            try
+            {
+                // API de recherche moderne (« search-a-licious ») : rapide + pertinente et renvoie du JSON
+                // (l'ancien cgi/search.pl répond souvent une page HTML « temporarily unavailable »).
+                string url = "https://search.openfoodfacts.org/search?page_size=1"
+                           + "&fields=product_name,product_name_fr,brands,nutriscore_grade,nova_group,nutriments"
+                           + "&q=" + Uri.EscapeDataString(query);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("hits", out var ps) || ps.ValueKind != JsonValueKind.Array || ps.GetArrayLength() == 0) return null;
+                    var p = ps[0];
+                    string name = Str(p, "product_name_fr"); if (string.IsNullOrEmpty(name)) name = Str(p, "product_name");
+                    if (string.IsNullOrEmpty(name)) return null;
+
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🍽️ ").Append(name);
+                    string brand = FirstBrand(p);
+                    if (!string.IsNullOrEmpty(brand)) sb.Append(" (").Append(brand).Append(')');
+                    sb.Append('\n');
+
+                    string nutri = Str(p, "nutriscore_grade");
+                    bool hasNutri = nutri.Length == 1 && nutri[0] >= 'a' && nutri[0] <= 'e';
+                    if (hasNutri) sb.Append("Nutri-Score : ").Append(nutri.ToUpperInvariant());
+                    double? novaN = Num(p, "nova_group");
+                    if (novaN.HasValue) sb.Append(hasNutri ? " · groupe NOVA " : "Groupe NOVA ").Append((int)novaN.Value).Append(NovaHint((int)novaN.Value));
+
+                    if (p.TryGetProperty("nutriments", out var nut) && nut.ValueKind == JsonValueKind.Object)
+                    {
+                        string per100 = Per100(nut);
+                        if (!string.IsNullOrEmpty(per100)) sb.Append(hasNutri || novaN.HasValue ? "\n" : "").Append("Pour 100 g/ml : ").Append(per100);
+                    }
+                    sb.Append("\n— source : Open Food Facts (base communautaire, gratuite).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private static string NovaHint(int nova)
+        {
+            switch (nova) { case 1: return " (peu ou pas transformé)"; case 4: return " (ultra-transformé)"; default: return ""; }
+        }
+        // « brands » peut être un tableau (search-a-licious) ou une chaîne « a,b » (ancienne API).
+        private static string FirstBrand(JsonElement p)
+        {
+            if (!p.TryGetProperty("brands", out var b)) return "";
+            if (b.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var x in b.EnumerateArray())
+                    if (x.ValueKind == JsonValueKind.String) { string s = x.GetString(); if (!string.IsNullOrWhiteSpace(s)) return s.Trim(); }
+                return "";
+            }
+            if (b.ValueKind == JsonValueKind.String) { string s = b.GetString(); return string.IsNullOrEmpty(s) ? "" : s.Split(',')[0].Trim(); }
+            return "";
+        }
+        private static string Per100(JsonElement nut)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            double? kcal = Num(nut, "energy-kcal_100g"); if (kcal == null) kcal = Num(nut, "energy-kcal");
+            if (kcal != null) parts.Add(G(kcal.Value) + " kcal");
+            double? sug = Num(nut, "sugars_100g"); if (sug != null) parts.Add(G(sug.Value) + " g de sucres");
+            double? fat = Num(nut, "fat_100g"); if (fat != null) parts.Add(G(fat.Value) + " g de matières grasses");
+            double? sel = Num(nut, "salt_100g"); if (sel != null) parts.Add(G(sel.Value) + " g de sel");
+            double? prot = Num(nut, "proteins_100g"); if (prot != null) parts.Add(G(prot.Value) + " g de protéines");
+            return string.Join(" · ", parts);
+        }
+
+        // ---- CODE POSTAL → VILLE (Zippopotam, gratuit sans clé) ----
+        /// <summary>Ville(s) d'un code postal français via Zippopotam. null si introuvable.</summary>
+        public static string Postal(string code)
+        {
+            try
+            {
+                string json = Get("https://api.zippopotam.us/fr/" + Uri.EscapeDataString(code));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var root = d.RootElement;
+                    if (!root.TryGetProperty("places", out var pl) || pl.ValueKind != JsonValueKind.Array || pl.GetArrayLength() == 0) return null;
+                    var p0 = pl[0];
+                    string place = p0.TryGetProperty("place name", out var pn) ? pn.GetString() : "";
+                    if (string.IsNullOrEmpty(place)) return null;
+                    string state = p0.TryGetProperty("state", out var stt) ? stt.GetString() : "";
+                    string extra = string.IsNullOrEmpty(state) ? "" : " (" + state + ")";
+                    string more = pl.GetArrayLength() > 1 ? " — et " + (pl.GetArrayLength() - 1) + " autre(s) commune(s)" : "";
+                    return "📮 " + code + " → " + place + extra + more + ", France.\n— source : Zippopotam (gratuit).";
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // helpers JSON/format partagés
+        private static string Str(JsonElement e, string prop)
+        {
+            if (e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.String) { string s = v.GetString(); return s == null ? "" : s.Trim(); }
+            return "";
+        }
+        private static double? Num(JsonElement e, string prop)
+        {
+            if (!e.TryGetProperty(prop, out var v)) return null;
+            if (v.ValueKind == JsonValueKind.Number) return v.GetDouble();
+            if (v.ValueKind == JsonValueKind.String && double.TryParse(v.GetString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double r)) return r;
+            return null;
+        }
+        private static string G(double v)  // grammes/kcal : 57.5 → « 57,5 »
+        {
+            return Math.Round(v, 1).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+        }
+
         // « 2026-08-15 » → « 15 août 2026 »
         internal static string FrDate(string iso)
         {

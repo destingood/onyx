@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.05 — Deux outils de plus (article code-garage) : nutrition et code postal
+- **Produit / nutrition** (Open Food Facts, gratuit sans clé) : « nutriscore du nutella », « composition du
+  coca », « calories du X » → Nutri-Score, groupe NOVA (transformation) et valeurs pour 100 g (kcal, sucres,
+  matières grasses, sel, protéines). Utilise l'API de recherche moderne `search.openfoodfacts.org`
+  (l'ancienne `cgi/search.pl` renvoyait souvent une page HTML « indisponible »).
+- **Code postal → ville** (Zippopotam, gratuit sans clé) : « code postal 75001 », « quelle ville pour 69001 »,
+  ou juste « 16000 » → la ou les communes françaises correspondantes.
+- Détection à haute précision (pas de faux positif sur « bonjour » ni « c'est quoi le nutriscore »).
+- Vérifié EN DIRECT : Coca-Cola → Nutri-Score E, 42 kcal, 10,6 g de sucres ; 75001 → Paris 01 Louvre ;
+  69001 → Lyon 01. Build 0 erreur ; harnais 114/114.
+- **Honnêteté sur l'article cité** (code-garage « 13 APIs gratuites ») : la plupart de sa liste demande une
+  clé (OpenWeather, TheMovieDB, Giphy, CloudConvert, CountryLayer) ou est un outil de dev / lien mort. Je n'ai
+  câblé QUE les APIs réellement gratuites, sans clé et fiables — le reste aurait été une fausse fonctionnalité.
+
 ## v15.04 — Encore 3 outils gratuits sans clé (APIs des annuaires publicapis.io / .dev)
 - **Traduction** (MyMemory, gratuit sans clé) : « traduis bonjour le monde en anglais » → « hello world ».
   Comprend ~19 langues (anglais, espagnol, allemand, italien, russe, japonais, chinois…).

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.04.0.0")]
-[assembly: AssemblyFileVersion("15.04.0.0")]
+[assembly: AssemblyVersion("15.05.0.0")]
+[assembly: AssemblyFileVersion("15.05.0.0")]
 
 namespace BTOptimizer
 {
@@ -526,9 +526,17 @@ namespace BTOptimizer
                 bool vx3 = UtilityTools.IsSun("a quelle heure se couche le soleil") && !UtilityTools.IsSun("comment optimiser"); if (vx3) ok22++; Console.WriteLine((vx3 ? "OK  " : "FAIL") + "  soleil : detecte");
                 bool vx4 = !DocAssistant.IsTimeQuery("a quelle heure se couche le soleil") && DocAssistant.IsTimeQuery("quelle heure est-il"); if (vx4) ok22++; Console.WriteLine((vx4 ? "OK  " : "FAIL") + "  garde : 'heure...soleil' -> pas l'heure");
 
+                // Outils v15.05 : produit/nutrition (Open Food Facts) + code postal (Zippopotam).
+                int ok23 = 0;
+                string fq = UtilityTools.FoodQuery("nutriscore du nutella");
+                bool wx1 = fq != null && fq.ToLowerInvariant().Contains("nutella"); if (wx1) ok23++; Console.WriteLine((wx1 ? "OK  " : "FAIL") + "  produit : extrait 'nutella'");
+                bool wx2 = UtilityTools.FoodQuery("c'est quoi le nutriscore") == null && UtilityTools.FoodQuery("comment ca va") == null; if (wx2) ok23++; Console.WriteLine((wx2 ? "OK  " : "FAIL") + "  produit : pas de faux positif (mot seul / bonjour)");
+                bool wx3 = UtilityTools.PostalQuery("code postal 75001") == "75001" && UtilityTools.PostalQuery("75001") == "75001"; if (wx3) ok23++; Console.WriteLine((wx3 ? "OK  " : "FAIL") + "  code postal : 75001 detecte (avec contexte et seul)");
+                bool wx4 = UtilityTools.PostalQuery("merci beaucoup") == null; if (wx4) ok23++; Console.WriteLine((wx4 ? "OK  " : "FAIL") + "  code postal : pas de faux positif");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

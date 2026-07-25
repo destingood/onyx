@@ -193,6 +193,23 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour les horaires du soleil j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je regarde le soleil…", Action = ChatActions.SunAction(q, st), Dynamic = true };
             }
+            // 8) PRODUIT / NUTRITION (Open Food Facts), 9) CODE POSTAL → VILLE (Zippopotam) — réseau.
+            {
+                string prod = UtilityTools.FoodQuery(q);
+                if (prod != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour les infos produit j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche le produit…", Action = ChatActions.FoodAction(prod, st), Dynamic = true };
+                }
+            }
+            {
+                string cp = UtilityTools.PostalQuery(s);
+                if (cp != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la ville d'un code postal j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le code postal…", Action = ChatActions.PostalAction(cp, st), Dynamic = true };
+                }
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

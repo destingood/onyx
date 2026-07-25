@@ -1096,6 +1096,38 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Fiche produit / nutrition via Open Food Facts (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction FoodAction(string product, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Produit / nutrition"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Produit (Open Food Facts)…", 0);
+                string r = null;
+                try { r = LiveData.Food(product); } catch { }
+                if (string.IsNullOrEmpty(r)) return Say("Je n'ai pas trouvé « " + product + " » dans Open Food Facts (ou hors-ligne). Essaie un nom précis, ex. « nutriscore du nutella ».");
+                return Say(r);
+            };
+            return a;
+        }
+
+        /// <summary>Ville d'un code postal français via Zippopotam (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction PostalAction(string code, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Code postal"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Code postal (Zippopotam)…", 0);
+                string r = null;
+                try { r = LiveData.Postal(code); } catch { }
+                if (string.IsNullOrEmpty(r)) return Say("Je n'ai pas trouvé le code postal « " + code + " » (code français à 5 chiffres, ou hors-ligne ?).");
+                return Say(r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)
