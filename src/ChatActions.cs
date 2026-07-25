@@ -863,6 +863,10 @@ namespace BTOptimizer
                 if (string.IsNullOrEmpty(ans))
                     return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
 
+                // RAISONNEMENT AUTOMATIQUE : valide la réponse contre les règles déterministes du
+                // domaine PC (mythes / conseils dangereux). Si invalide, on y adjoint la correction.
+                ans = ReasonCheck.Enhance(ans.Trim());
+
                 // ══ ANTI-HALLUCINATION ══════════════════════════════════════════════════════
                 // Le vrai piège n'est PAS seulement le doute avoué : c'est l'hallucination
                 // CONFIANTE (inventer une bio, une fiche technique, une date, un chiffre sans la
@@ -889,9 +893,10 @@ namespace BTOptimizer
                         try { better = LocalBrain.AskWeb(q, WebSearch.Context(res), model); } catch { }
                         if (!string.IsNullOrEmpty(better))
                         {
-                            LocalBrain.PushAssistant(better.Trim());
-                            LocalBrain.RememberFact(q, better.Trim());   // cohérence : ne plus se contredire là-dessus
-                            return Say(better.Trim() + "\n\n— " + Reliability(true, false) + " ("
+                            string bt = better.Trim();
+                            LocalBrain.PushAssistant(bt);
+                            LocalBrain.RememberFact(q, bt);   // cohérence : ne plus se contredire là-dessus
+                            return Say(ReasonCheck.Enhance(bt) + "\n\n— " + Reliability(true, false) + " ("
                                      + WebSearch.Sources(res) + ").");
                         }
                     }

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.81.0.0")]
-[assembly: AssemblyFileVersion("14.81.0.0")]
+[assembly: AssemblyVersion("14.82.0.0")]
+[assembly: AssemblyFileVersion("14.82.0.0")]
 
 namespace BTOptimizer
 {
@@ -308,9 +308,33 @@ namespace BTOptimizer
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  oubli=" + got + " (attendu " + exp + ")  « " + q + " »");
                 }
 
+                // Raisonnement automatique : valide/invalide contre les regles de domaine.
+                var rcCases = new[]
+                {
+                    new object[]{ "Pour gagner des FPS, desactive ton pagefile.", "AR-PAGEFILE" },
+                    new object[]{ "Utilise un nettoyeur de registre pour booster.", "AR-REGCLEANER" },
+                    new object[]{ "Tu peux supprimer System32 pour liberer de la place.", "AR-DESTRUCTIF" },
+                    new object[]{ "Surtout ne desactive pas ton pagefile.", "" },   // negation -> valide
+                    new object[]{ "Baisse les textures et active le DLSS.", "" },    // sain -> valide
+                };
+                int ok9 = 0;
+                foreach (var c in rcCases)
+                {
+                    string a = (string)c[0]; string expId = (string)c[1];
+                    var hits = ReasonCheck.Check(a);
+                    bool pass = string.IsNullOrEmpty(expId) ? hits.Count == 0 : hits.Contains(expId);
+                    if (pass) ok9++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  regles=[" + string.Join(",", hits) + "] att «" + expId + "»  « " + a + " »");
+                }
+                // Enhance : adjoint la correction si invalide, laisse tel quel si valide.
+                bool e1 = ReasonCheck.Enhance("Desactive ton pagefile.").Contains("AR-PAGEFILE");
+                bool e2 = ReasonCheck.Enhance("Active le DLSS.") == "Active le DLSS.";
+                if (e1) ok9++; Console.WriteLine((e1 ? "OK  " : "FAIL") + "  Enhance ajoute la correction (invalide)");
+                if (e2) ok9++; Console.WriteLine((e2 ? "OK  " : "FAIL") + "  Enhance laisse tel quel (valide)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

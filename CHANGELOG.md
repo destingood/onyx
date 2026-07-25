@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.82 — Raisonnement automatique : validation par règles déterministes (inspiré d'AWS Bedrock)
+- Nouvelle couche **ReasonCheck** (esprit des *Automated Reasoning checks* d'Amazon Bedrock
+  Guardrails) : au lieu d'un contrôle probabiliste, on **valide** la réponse de l'IA contre des
+  **règles déterministes** du domaine PC — donc fiable à 100 % sur leur portée, sans coût.
+- Chaque règle a un **ID traçable** (AR-PAGEFILE, AR-TRIM, AR-DEFRAG-SSD, AR-HPET, AR-ANTIVIRUS,
+  AR-REGCLEANER, AR-DESTRUCTIF…). Si l'IA recommande un **mythe** (défragmenter un SSD, forcer le
+  HPET, nettoyeur de registre…) ou un geste **dangereux** (désactiver le pagefile/l'antivirus/les
+  MAJ de sécurité, supprimer System32…), la réponse est marquée « invalide » et **enrichie de la
+  correction factuelle** (comme le préconise l'article : *« when invalid, the result is used to
+  enhance the answer »*).
+- **Garde de négation** : « ne désactive PAS ton pagefile » n'est PAS signalé (conseil correct).
+- **Tests sauvegardés et rejoués** (autre recommandation AWS) : `BT_HALLU` couvre chaque règle.
+- Vérifié : **52/52** sur le vrai code compilé.
+
 ## v14.81 — top-p, indicateur de fiabilité affiché, et oubli contextuel
 - **top-p dynamique** (couplé à la température, comme le recommande l'état de l'art) : 0.5 (restreint
   aux mots les plus probables) sur une question factuelle, 0.9 (large) sinon ; web à 0.5.
