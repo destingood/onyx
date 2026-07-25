@@ -840,11 +840,15 @@ namespace BTOptimizer
                 // RAG : on récupère les extraits pertinents de la base de connaissances (intégrée +
                 // tes documents) et on les ajoute au contexte → réponses ancrées et précises.
                 string sysCtx = BrainContext(st);
+                bool grounded = false;   // la réponse s'appuiera-t-elle sur des preuves (base) ?
                 try
                 {
                     string kb = KnowledgeBase.Search(q, 5);
                     if (!string.IsNullOrEmpty(kb))
+                    {
                         sysCtx += "\n\n" + kb + "Sers-toi de ces extraits pour tout fait qu'ils couvrent (cite « base de connaissances »). S'ils ne couvrent pas la question, ne force pas et n'invente rien.";
+                        grounded = true;
+                    }
                 }
                 catch { }
                 // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
@@ -863,11 +867,17 @@ namespace BTOptimizer
                 // définition d'entité…), MÊME si la réponse a l'air parfaitement sûre.
                 bool factual = IsFactualLookup(q);
                 bool webOk   = LocalBrain.Enabled && !LocalBrain.WebOff();
+                // Garde côté RÉPONSE : une réponse NON ancrée (ni base, ni web) qui assène un fait
+                // daté (« né en 1997 », « fondée en 2010 ») est typiquement une invention confiante,
+                // même quand la QUESTION n'avait rien de factuel → on la traite pareil.
+                bool riskyFact   = !grounded && AnswerHasHardFact(ans);
+                bool needVerify  = factual || riskyFact || LooksUnsure(ans);
+                bool needHonesty = factual || riskyFact;   // ne doit jamais passer pour une certitude
 
-                if ((factual || LooksUnsure(ans)) && webOk)
+                if (needVerify && webOk)
                 {
-                    if (log != null) log(factual ? "Question factuelle → je vérifie sur le web…"
-                                                  : "Réponse incertaine → vérification sur le web…", 0);
+                    if (log != null) log(needHonesty ? "Vérification factuelle sur le web…"
+                                                     : "Réponse incertaine → vérification sur le web…", 0);
                     List<WebSearch.Result> res = null;
                     try { res = WebSearch.Query(q, 5); } catch { }
                     if (res != null && res.Count > 0)
@@ -881,18 +891,18 @@ namespace BTOptimizer
                                      + WebSearch.Sources(res) + ").");
                         }
                     }
-                    // Question factuelle mais web injoignable / rien trouvé : ne JAMAIS faire passer
-                    // une réponse peut-être inventée pour une certitude → on prévient honnêtement.
-                    if (factual)
+                    // Fait à vérifier mais web injoignable / rien trouvé : ne JAMAIS faire passer une
+                    // réponse peut-être inventée pour une certitude → on prévient honnêtement.
+                    if (needHonesty)
                     {
                         LocalBrain.PushAssistant(ans.Trim());
                         return Say(ans.Trim() + "\n\n⚠️ Je n'ai pas pu vérifier ça en ligne (web injoignable ou rien "
                                  + "trouvé) — à prendre avec des pincettes, je peux me tromper sur ce point précis.");
                     }
                 }
-                // Question factuelle SANS internet : le modèle local seul invente facilement des
-                // faits précis → on l'assume clairement et on propose la vérification.
-                else if (factual && !webOk)
+                // Fait à affirmer SANS internet : le modèle local seul invente facilement des faits
+                // précis → on l'assume clairement et on propose la vérification.
+                else if (needHonesty && !webOk)
                 {
                     LocalBrain.PushAssistant(ans.Trim());
                     return Say(ans.Trim() + "\n\n⚠️ Réponse de mémoire, NON vérifiée en ligne (sur les faits précis "
@@ -1039,6 +1049,24 @@ namespace BTOptimizer
                 if (System.Text.RegularExpressions.Regex.IsMatch(q ?? "",
                     @"\b\p{Lu}\p{Ll}{2,}\s+\p{Lu}\p{Ll}{2,}"))
                     return true;
+            }
+            catch { }
+            return false;
+        }
+
+        // La RÉPONSE assène-t-elle un fait daté précis (« né en 1997 », « fondée en 2010 »,
+        // « sorti en 2013 ») ? Sur une réponse NON ancrée, c'est le marqueur d'une invention
+        // confiante — même quand la question semblait anodine. Volontairement TRÈS étroit (une
+        // ANNÉE explicite « en 18xx/19xx/20xx ») pour ne jamais s'alarmer des chiffres techniques
+        // légitimes d'un dépannage PC (« 1000 Hz », « 16 Go », « 30 ms », « 144 Hz »).
+        internal static bool AnswerHasHardFact(string ans)
+        {
+            string n = Deaccent((ans ?? "").ToLowerInvariant());
+            if (n.Length == 0) return false;
+            try
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(n, @"\ben\s+(1[89]\d{2}|20\d{2})\b"))
+                    return true;   // « en 1971 », « en 2013 », « en 2024 » = affirmation historique/bio
             }
             catch { }
             return false;

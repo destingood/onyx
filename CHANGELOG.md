@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.78 — Anti-hallucination : garde aussi côté RÉPONSE + web plus strict
+- Le tri v14.77 agissait sur la QUESTION. Nouveau garde côté **réponse** : si le Copilote
+  assène un **fait daté** (« né en 1971 », « fondée en 2010 », « sorti en 2013 ») dans une
+  réponse **non ancrée** (ni base, ni web), il le vérifie sur le web — ou l'assume honnêtement.
+  Attrape les inventions confiantes même quand la question semblait anodine.
+- Volontairement **étroit et sûr** : détecte une **année explicite** (« en 20xx »), jamais les
+  chiffres techniques légitimes (« 1000 Hz », « 16 Go », « 30 ms », « 144 Hz »). Vérifié : `BT_HALLU` 20/20.
+- **Chemin web durci** : quand une recherche web est maigre ou hors-sujet, le modèle a désormais
+  l'interdiction de **compléter avec ses souvenirs** — il dit qu'il n'a pas trouvé plutôt que d'inventer.
+- La réponse indique clairement sa source : « vérifié sur le web » vs « réponse de mémoire, non vérifiée ».
+
 ## v14.77 — Anti-hallucination renforcé (la vérification bat l'assurance)
 - Le vrai piège n'est pas le doute avoué, c'est l'hallucination **confiante** (inventer une
   bio, une fiche technique, une date sans hésiter — le bug « Clio Williams »). Le filet ne

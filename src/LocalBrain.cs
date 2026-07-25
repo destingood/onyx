@@ -545,7 +545,8 @@ namespace BTOptimizer
             string sys = "Tu es le Copilote. On vient de faire une RECHERCHE WEB pour toi ; les résultats sont ci-dessous. "
                        + "Réponds à la question de l'utilisateur en t'appuyant UNIQUEMENT sur ces résultats, en FRANÇAIS, "
                        + "ton direct, 120 mots max. Donne la réponse d'abord, puis cite brièvement la source (le site). "
-                       + "Si les résultats ne contiennent pas la réponse, dis-le honnêtement — n'invente rien.\n\n" + webContext;
+                       + "Ne COMPLÈTE PAS avec tes propres souvenirs : si les résultats ne le disent pas, ne l'affirme pas. "
+                       + "Si les résultats ne contiennent pas la réponse (ou sont hors-sujet), dis-le honnêtement — n'invente rien.\n\n" + webContext;
             var payload = new Dictionary<string, object>
             {
                 { "model", model }, { "system", sys }, { "prompt", question }, { "stream", false },

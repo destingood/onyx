@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.77.0.0")]
-[assembly: AssemblyFileVersion("14.77.0.0")]
+[assembly: AssemblyVersion("14.78.0.0")]
+[assembly: AssemblyFileVersion("14.78.0.0")]
 
 namespace BTOptimizer
 {
@@ -200,8 +200,28 @@ namespace BTOptimizer
                     bool pass = got == exp; if (pass) ok++;
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  factuel=" + got + " (attendu " + exp + ")  « " + q + " »");
                 }
-                Console.WriteLine("\nBT_HALLU : " + ok + "/" + cases.Length + " cas corrects");
-                Environment.Exit(ok == cases.Length ? 0 : 1);
+                // Garde côté RÉPONSE : détecte un fait daté (invention confiante) mais PAS les
+                // chiffres techniques légitimes d'un dépannage PC.
+                var ansCases = new[]
+                {
+                    new object[]{ "Elon Musk est ne en 1971 en Afrique du Sud.", true },
+                    new object[]{ "Ce studio a ete fonde en 2010.", true },
+                    new object[]{ "Le jeu est sorti en 2013 sur PC.", true },
+                    new object[]{ "Ta RAM tourne a 1000 Hz, 16 Go detectes.", false },
+                    new object[]{ "Ton ping est de 30 ms, ta souris a 144 Hz.", false },
+                    new object[]{ "Baisse les textures pour gagner des FPS.", false },
+                };
+                int ok2 = 0;
+                foreach (var c in ansCases)
+                {
+                    string ans = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = ChatActions.AnswerHasHardFact(ans);
+                    bool pass = got == exp; if (pass) ok2++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  fait-date=" + got + " (attendu " + exp + ")  « " + ans + " »");
+                }
+                int total = cases.Length + ansCases.Length, good = ok + ok2;
+                Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
+                Environment.Exit(good == total ? 0 : 1);
             }
 
             // BT_CRASH=1 : analyse les crashs réels de cette machine (cause exacte) et sort — vérif.
