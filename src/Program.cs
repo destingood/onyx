@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.07.0.0")]
-[assembly: AssemblyFileVersion("15.07.0.0")]
+[assembly: AssemblyVersion("15.08.0.0")]
+[assembly: AssemblyFileVersion("15.08.0.0")]
 
 namespace BTOptimizer
 {
@@ -547,9 +547,14 @@ namespace BTOptimizer
                 bool dx2 = UtilityTools.IsDebt("la dette de l'etat") && !UtilityTools.IsDebt("j'ai des dettes"); if (dx2) ok25++; Console.WriteLine((dx2 ? "OK  " : "FAIL") + "  dette : 'dette de l'etat' oui, 'j'ai des dettes' non");
                 bool dx3 = !UtilityTools.IsDebt("comment ca va"); if (dx3) ok25++; Console.WriteLine((dx3 ? "OK  " : "FAIL") + "  dette : pas de faux positif");
 
+                // Outil v15.08 : qualité de l'air (Open-Meteo).
+                int ok26 = 0;
+                bool ex1 = UtilityTools.IsAir("quelle est la qualite de l'air") && UtilityTools.IsAir("pollution a lyon"); if (ex1) ok26++; Console.WriteLine((ex1 ? "OK  " : "FAIL") + "  air : 'qualite de l'air' et 'pollution'");
+                bool ex2 = !UtilityTools.IsAir("quel temps fait il") && !UtilityTools.IsAir("bonjour"); if (ex2) ok26++; Console.WriteLine((ex2 ? "OK  " : "FAIL") + "  air : pas de faux positif (meteo / bonjour)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

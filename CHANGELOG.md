@@ -4,6 +4,15 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.08 — Qualité de l'air (Open-Meteo, gratuit sans clé)
+- **🌬️ Qualité de l'air** : « qualité de l'air », « pollution à Lyon », « particules fines » → indice européen
+  EAQI (très bon → extrêmement mauvais) + PM2.5 et PM10 en µg/m³. Sans ville, estime par l'IP (et le dit).
+- Prolonge la météo (même fournisseur Open-Meteo, sans clé). Utile et concret pour la santé.
+- Garde-fou : « quel temps fait-il » reste la météo, pas la qualité de l'air.
+- Vérifié EN DIRECT : Paris EAQI 44 (moyen), PM2.5 8,1 · PM10 13,9 ; Lyon 46. Build 0 erreur ; harnais 123/123.
+- (Contexte : pages publicapis.io « analytics » et « data-access » écartées — toutes à clé + compte perso, ou
+  US/niche : rien d'utilisable sans compte pour un assistant grand public. Voir la réponse détaillée.)
+
 ## v15.07 — La dette de la France EN DIRECT (dettedelafrance.fr, gratuit sans clé)
 - **🇫🇷 Dette publique en temps réel** : « quelle est la dette de la France », « dette publique », « dette de
   l'État » → montant en milliards, ratio dette/PIB, dette par habitant et **cadence d'augmentation par seconde**.

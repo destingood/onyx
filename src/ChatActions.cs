@@ -1173,6 +1173,21 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Qualité de l'air (indice EAQI + particules) via Open-Meteo (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction AirAction(string q, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Qualité de l'air"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Qualité de l'air (Open-Meteo)…", 0);
+                string r = null;
+                try { r = LiveData.AirNow(ExtractCity(q)); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer la qualité de l'air (ville introuvable ou hors-ligne)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

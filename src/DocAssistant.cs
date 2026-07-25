@@ -227,6 +227,12 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour la dette de la France en direct j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je regarde la dette en direct…", Action = ChatActions.DebtAction(st), Dynamic = true };
             }
+            // 13) QUALITÉ DE L'AIR (Open-Meteo) — réseau, sans clé.
+            if (UtilityTools.IsAir(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la qualité de l'air j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la qualité de l'air…", Action = ChatActions.AirAction(q, st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

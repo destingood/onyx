@@ -491,6 +491,57 @@ namespace BTOptimizer
         }
 
         // « 2026-08-15 » → « 15 août 2026 »
+        // ---- QUALITE DE L'AIR (Open-Meteo, gratuit sans cle) ----
+        /// <summary>Qualite de l'air pour une ville (ou position par IP) : indice EAQI + particules. null si echec.</summary>
+        public static string AirNow(string city)
+        {
+            try
+            {
+                double lat, lon; string nm; bool fromIp = false;
+                if (!string.IsNullOrWhiteSpace(city)) { if (!Geocode(city.Trim(), out lat, out lon, out nm)) return null; }
+                else { if (!GeoByIp(out lat, out lon, out nm)) return null; fromIp = true; }
+                if (string.IsNullOrEmpty(nm)) nm = "ta position";
+                string url = "https://air-quality-api.open-meteo.com/v1/air-quality?current=european_aqi,pm2_5,pm10&timezone=auto"
+                           + "&latitude=" + Inv(lat) + "&longitude=" + Inv(lon);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("current", out var cur)) return null;
+                    int aqi = cur.TryGetProperty("european_aqi", out var aq) && aq.ValueKind == JsonValueKind.Number ? aq.GetInt32() : -1;
+                    double? pm25 = Num(cur, "pm2_5");
+                    double? pm10 = Num(cur, "pm10");
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🌬️ Qualité de l'air à ").Append(nm).Append(fromIp ? " (estimée d'après ta connexion)" : "").Append(" : ");
+                    if (aqi >= 0) { string lab = AqiLabel(aqi); sb.Append("indice européen ").Append(aqi).Append(lab.Length > 0 ? " (" + lab + ")" : ""); }
+                    else sb.Append("indice indisponible");
+                    sb.Append('.');
+                    if (pm25 != null || pm10 != null)
+                    {
+                        sb.Append("\nParticules fines :");
+                        if (pm25 != null) sb.Append(" PM2.5 ").Append(G(pm25.Value));
+                        if (pm10 != null) sb.Append(pm25 != null ? " · PM10 " : " PM10 ").Append(G(pm10.Value));
+                        sb.Append(" µg/m³");
+                    }
+                    sb.Append("\n— source : Open-Meteo (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+        // Indice europeen de qualite de l'air (EAQI 0->100+) -> mot francais.
+        private static string AqiLabel(int aqi)
+        {
+            if (aqi < 0) return "";
+            if (aqi <= 20) return "très bon";
+            if (aqi <= 40) return "bon";
+            if (aqi <= 60) return "moyen";
+            if (aqi <= 80) return "mauvais";
+            if (aqi <= 100) return "très mauvais";
+            return "extrêmement mauvais";
+        }
+
         internal static string FrDate(string iso)
         {
             try

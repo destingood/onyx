@@ -246,6 +246,17 @@ namespace BTOptimizer
                 || n.Contains("nationale") || n.Contains("pays") || n.Contains("etat") || n.Contains("pib");
         }
 
+        // ---- QUALITÉ DE L'AIR ----
+        /// <summary>« qualité de l'air », « pollution à Lyon », « particules fines » → vrai (pas « quel temps »).</summary>
+        internal static bool IsAir(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("qualite de l'air") || n.Contains("qualite de l air") || n.Contains("qualite d'air")
+                || n.Contains("pollution") || n.Contains("air pollue") || n.Contains("indice atmo")
+                || n.Contains("particules fines") || n.Contains("pm2.5") || n.Contains("pm10")
+                || (n.Contains("air") && n.Contains("respire"));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {
