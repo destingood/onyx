@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.92.0.0")]
-[assembly: AssemblyFileVersion("14.92.0.0")]
+[assembly: AssemblyVersion("14.93.0.0")]
+[assembly: AssemblyFileVersion("14.93.0.0")]
 
 namespace BTOptimizer
 {
@@ -462,9 +462,33 @@ namespace BTOptimizer
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  injection=" + got + " (attendu " + exp + ")  « " + t + " »");
                 }
 
+                // Bug reel (test) : meteo mal comprise + fausse « fiabilite elevee » sur web hors-sujet.
+                int ok19 = 0;
+                var wthCases = new[]
+                {
+                    new object[]{ "quel temps fait il", true },
+                    new object[]{ "dit moi quelle tempis fait til", true },   // faute vue en test
+                    new object[]{ "quel temp fait til", true },               // faute vue en test
+                    new object[]{ "il va pleuvoir demain", true },
+                    new object[]{ "comment optimiser mon pc", false },
+                    new object[]{ "combien de temps met mon jeu a charger", false },   // « temps » != meteo
+                    new object[]{ "qui est macron", false },
+                };
+                foreach (var c in wthCases)
+                {
+                    string t = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = DocAssistant.IsWeather(t);
+                    bool pass = got == exp; if (pass) ok19++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  meteo=" + got + " (attendu " + exp + ")  « " + t + " »");
+                }
+                bool off1 = ChatActions.WebLooksOffTopic("Les resultats ne contiennent pas d'informations meteorologiques.");
+                bool off2 = !ChatActions.WebLooksOffTopic("Canberra est la capitale de l'Australie.");
+                if (off1) ok19++; Console.WriteLine((off1 ? "OK  " : "FAIL") + "  web hors-sujet detecte -> fiabilite faible");
+                if (off2) ok19++; Console.WriteLine((off2 ? "OK  " : "FAIL") + "  vraie reponse web -> pas faible");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

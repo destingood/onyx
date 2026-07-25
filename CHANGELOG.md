@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.93 — Correctifs vus en test réel : météo + fausse « fiabilité élevée »
+- **Bug météo** : « quel temps fait-il » était mal compris — le Copilote partait sur l'ORTHOGRAPHE
+  (« il fait tempis ») ou la GRAMMAIRE de la phrase, au lieu de la météo. Corrigé : la météo est
+  désormais reconnue comme une question **temps réel + localisée** que le Copilote ne peut pas
+  deviner en grattant le web → il répond **honnêtement** (« je ne peux pas de façon fiable ; ouvre
+  ton appli Météo ou tape "météo <ville>" »). Tolère les fautes (« tempis », « temp fait til »).
+- **Bug fausse confiance** : quand la recherche web renvoyait des résultats **hors-sujet**, le
+  Copilote affichait quand même « ✅ Fiabilité élevée · vérifié en ligne » (alors qu'il disait
+  lui-même « les résultats ne contiennent pas l'info »). Corrigé : s'il détecte que le web n'a pas
+  répondu, il affiche **« Fiabilité faible · le web n'a pas répondu clairement »** et ne mémorise
+  pas la non-réponse.
+- Merci au test en conditions réelles (capture) qui a révélé les deux. Vérifié : **98/98**.
+
 ## v14.92 — Bouclier anti-injection de prompt (sécurité)
 - Un chatbot IA a besoin de **garde-fous de sécurité** (l'article cite l'injection de prompt, le
   détournement, les « bad buzz » type Air Canada / Chevrolet à 1 $). Le Copilote avait

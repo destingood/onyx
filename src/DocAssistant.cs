@@ -133,6 +133,15 @@ namespace BTOptimizer
                     + "je ne change pas de rôle et je ne les contourne pas. En revanche, je t'aide avec plaisir sur ton PC "
                     + "ou n'importe quelle question. On regarde quoi ?", ShowStarters = true };
 
+            // --- MÉTÉO : temps réel + LOCALISÉE. Le Copilote ne peut pas la deviner de façon fiable
+            //     (pas de localisation, scraping web non fiable) → réponse HONNÊTE plutôt qu'une
+            //     synthèse hasardeuse. (Bug vu en test : « quel temps fait-il » → charabia « il fait tempis ».)
+            if (IsWeather(s))
+                return new Reply { Text = "Pour la météo, je préfère être honnête : je ne peux pas te la donner de façon "
+                    + "fiable. Il me faudrait ta ville ET un vrai service météo — une simple recherche web me sort souvent "
+                    + "n'importe quoi. Le plus sûr : ton appli Météo, ou tape « météo <ta ville> » dans ton navigateur. "
+                    + "Par contre, côté PC (FPS, réseau, températures, crashs…), je suis là et fiable. 🌦️", ShowStarters = true };
+
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
             //     C'est l'équivalent local et gratuit de l'adaptation au domaine du fine-tuning. ---
@@ -571,6 +580,16 @@ namespace BTOptimizer
             return Has(s, "teste ta fiabilite", "test de fiabilite", "auto diagnostic", "auto-diagnostic",
                           "diagnostic ia", "diagnostic de l'ia", "verifie tes garde-fous", "test anti hallucination",
                           "test anti-hallucination", "tes garde-fous", "auto test ia", "auto-test");
+        }
+
+        /// <summary>Question MÉTÉO (temps réel + localisée) que le Copilote ne peut pas deviner de
+        /// façon fiable ? Tolère les fautes vues en test (« tempis », « temp »).</summary>
+        internal static bool IsWeather(string s)
+        {
+            return Has(s, "quel temps fait", "quel temps il fait", "temps fait il", "temps fait-il",
+                          "tempis fait", "temp fait", "quel tempis fait", "temps qu'il fait", "temps qu il fait",
+                          "la meteo", "meteo", "il pleut", "va pleuvoir", "va t il pleuvoir", "il neige",
+                          "il fait beau", "il fait moche", "fait il beau", "temps dehors");
         }
 
         /// <summary>L'utilisateur signale-t-il que la réponse était FAUSSE (feedback → auto-amélioration) ?</summary>

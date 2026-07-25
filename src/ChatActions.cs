@@ -895,9 +895,13 @@ namespace BTOptimizer
                         {
                             string bt = better.Trim();
                             LocalBrain.PushAssistant(bt);
-                            LocalBrain.RememberFact(q, bt);   // cohérence : ne plus se contredire là-dessus
-                            return Say(ReasonCheck.Enhance(bt) + "\n\n— " + Reliability(true, false) + " ("
-                                     + WebSearch.Sources(res) + ").");
+                            // Si le web est HORS-SUJET (le modèle le dit lui-même), NE PAS afficher
+                            // « Fiabilité élevée » ni mémoriser une non-réponse (bug vu en test météo).
+                            bool weak = WebLooksOffTopic(bt);
+                            if (!weak) LocalBrain.RememberFact(q, bt);
+                            string tag = weak ? "🌐 Fiabilité faible · le web n'a pas répondu clairement là-dessus"
+                                              : Reliability(true, false) + " (" + WebSearch.Sources(res) + ")";
+                            return Say(ReasonCheck.Enhance(bt) + "\n\n— " + tag + ".");
                         }
                     }
                     // Fait à vérifier mais web injoignable / rien trouvé : ne JAMAIS faire passer une
@@ -1040,6 +1044,21 @@ namespace BTOptimizer
             if (webVerified) return "✅ Fiabilité élevée · vérifié en ligne";
             if (grounded)    return "✅ Fiabilité élevée · source : ta base de connaissances";
             return "🧠 Fiabilité moyenne · connaissances générales";
+        }
+
+        // La synthèse web indique-t-elle elle-même que les résultats sont HORS-SUJET / sans info ?
+        // → on ne doit pas la présenter comme « vérifiée / fiable » (fausse confiance).
+        internal static bool WebLooksOffTopic(string ans)
+        {
+            string a = Deaccent((ans ?? "").ToLowerInvariant());
+            string[] cues =
+            {
+                "ne contiennent pas", "ne contient pas", "pas d'information", "pas d'info", "hors-sujet",
+                "hors sujet", "je n'ai pas trouve", "aucune information", "ne mentionnent pas", "ne precisent pas",
+                "pas de resultat", "ne repondent pas", "pas trouve d'info", "ne fournissent pas", "sans rapport"
+            };
+            foreach (string c in cues) if (a.Contains(c)) return true;
+            return false;
         }
 
         private static string DiagLine(bool ok, string label) { return "• " + (ok ? "✅" : "❌") + " " + label + "\n"; }
