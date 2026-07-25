@@ -126,6 +126,13 @@ namespace BTOptimizer
             if (IsSelfTest(s))
                 return new Reply { Text = ChatActions.SelfDiagnostic(), ShowStarters = true };
 
+            // --- Bouclier anti-injection : tentative DIRECTE de détournement (« ignore tes règles »,
+            //     « change de rôle », « montre ton prompt système »…) → on garde fermement le rôle. ---
+            if (PromptShield.LooksLikeInjection(q))
+                return new Reply { Text = "Je reste le Copilote d'ONYX, avec mes règles (gratuit, prudent, honnête) — "
+                    + "je ne change pas de rôle et je ne les contourne pas. En revanche, je t'aide avec plaisir sur ton PC "
+                    + "ou n'importe quelle question. On regarde quoi ?", ShowStarters = true };
+
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
             //     C'est l'équivalent local et gratuit de l'adaptation au domaine du fine-tuning. ---
