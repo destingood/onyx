@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.13 — Toutes les catégories passées au crible : Pokémon + séries TV + prix Nobel
+- **🔴 Pokémon** (PokéAPI, sans clé) : « pokémon pikachu » → type (en français : Électrik, Feu…), taille, poids,
+  n° du Pokédex. (Noms à donner en anglais côté API : pikachu, mewtwo…)
+- **📺 Séries TV** (TVMaze, sans clé) : « série breaking bad » → genres (traduits), année, note /10. Garde-fou :
+  « numéro de série Windows » ne déclenche PAS la recherche de série.
+- **🏅 Prix Nobel** (NobelPrize.org, sans clé) : « prix Nobel de physique 2023 », « Nobel de la paix » →
+  lauréats (sans année précisée = le plus récent). Vérifié : physique 2025 = Clarke, Devoret, Martinis.
+- Build 0 erreur ; harnais 139/139.
+- **Bilan des 17 catégories publicapis.dev** : ajoutées = games (Pokémon), entertainment (séries), open-data
+  (Nobel). **Déjà couvertes** = geocoding, dictionaries, environment, calendar, health, books, science (espace).
+  **Rien d'exploitable** (clé/compte/OAuth ou hors-scope) = authentication, social, security, anti-malware,
+  documents-productivity, government. **Écarté** = vehicle (NHTSA = base US only, inutile pour un Français).
+
 ## v15.12 — Jeux gratuits (pile pour ONYX !) + recherche de livres
 - **🎮 Jeux gratuits PC** (FreeToGame, sans clé) : « jeux gratuits », « jeux gratuits FPS », « jeux gratuits
   MMORPG / battle royale / course / horreur… » → liste de free-to-play sur PC, filtrable par genre.

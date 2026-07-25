@@ -289,6 +289,31 @@ namespace BTOptimizer
                     return new Reply { Text = "Je cherche le livre…", Action = ChatActions.BookAction(book, st), Dynamic = true };
                 }
             }
+            // 21) POKÉMON (PokéAPI), 22) SÉRIES TV (TVMaze), 23) PRIX NOBEL — réseau, sans clé.
+            {
+                string poke = UtilityTools.PokemonQuery(q);
+                if (poke != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche Pokémon j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le Pokédex…", Action = ChatActions.PokemonAction(poke, st), Dynamic = true };
+                }
+            }
+            {
+                string show = UtilityTools.ShowQuery(q);
+                if (show != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche série j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche la série…", Action = ChatActions.ShowAction(show, st), Dynamic = true };
+                }
+            }
+            {
+                UtilityTools.NobelHit nob = UtilityTools.NobelQuery(s);
+                if (nob != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le prix Nobel j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le prix Nobel…", Action = ChatActions.NobelAction(nob.Cat, nob.CatFr, nob.Year, st), Dynamic = true };
+                }
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

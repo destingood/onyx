@@ -451,6 +451,52 @@ namespace BTOptimizer
             return w.Length >= 2 ? w : null;
         }
 
+        // ---- POKÉMON ----
+        /// <summary>« pokémon pikachu », « c'est quoi le pokemon mew » → nom (anglais), sinon null.</summary>
+        internal static string PokemonQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            var m = Regex.Match(q, "(?i)pok[eé]mon\\s+(?:numero\\s+|n°\\s*)?([\\p{L}0-9\\-']{2,20})");
+            if (!m.Success) return null;
+            string w = m.Groups[1].Value.Trim().Trim('\'', '-');
+            string wd = Deacc(w.ToLowerInvariant());
+            if (w.Length < 2 || wd == "est" || wd == "le" || wd == "la" || wd == "un" || wd == "une" || wd == "quoi") return null;
+            return w;
+        }
+
+        // ---- SÉRIES TV ----
+        /// <summary>« série breaking bad », « la série the office » → titre, sinon null (pas « numéro de série »).</summary>
+        internal static string ShowQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant());
+            if (n.Contains("numero de serie") || n.Contains("cle de serie") || n.Contains("clef de serie")
+                || n.Contains("serial") || n.Contains("port serie") || n.Contains("numero serie")) return null;
+            var m = Regex.Match(q, "(?i)(?:s[eé]rie(?:\\s+t[eé]l[eé])?|tv\\s*show)\\s+(?:sur\\s+|de\\s+|intitul[eé]e?\\s+|qui\\s+parle\\s+de\\s+)?(.+?)\\s*[?.!]*$");
+            if (!m.Success) return null;
+            string w = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
+            return w.Length >= 2 ? w : null;
+        }
+
+        // ---- PRIX NOBEL ----
+        internal sealed class NobelHit { public string Cat; public string CatFr; public string Year; }
+        /// <summary>« prix nobel de physique 2023 », « nobel de la paix » → catégorie (+année option), sinon null.</summary>
+        internal static NobelHit NobelQuery(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (!n.Contains("nobel")) return null;
+            string cat = null, catFr = null;
+            if (n.Contains("physique")) { cat = "phy"; catFr = "physique"; }
+            else if (n.Contains("chimie")) { cat = "che"; catFr = "chimie"; }
+            else if (n.Contains("medecine") || n.Contains("physiologie")) { cat = "med"; catFr = "médecine"; }
+            else if (n.Contains("litterature")) { cat = "lit"; catFr = "littérature"; }
+            else if (n.Contains("paix")) { cat = "pea"; catFr = "la paix"; }
+            else if (n.Contains("economie")) { cat = "eco"; catFr = "économie"; }
+            else return null;
+            var my = Regex.Match(n, "\\b(?:19|20)\\d{2}\\b");
+            return new NobelHit { Cat = cat, CatFr = catFr, Year = my.Success ? my.Value : null };
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

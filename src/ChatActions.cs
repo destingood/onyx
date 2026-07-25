@@ -1314,6 +1314,51 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Fiche Pokémon via PokéAPI (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction PokemonAction(string name, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Pokémon"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Pokémon (PokéAPI)…", 0);
+                string r = null;
+                try { r = LiveData.Pokemon(name); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas trouvé le Pokémon « " + name + " » (essaie son nom anglais, ex. « pokémon pikachu »)." : r);
+            };
+            return a;
+        }
+
+        /// <summary>Fiche série TV via TVMaze (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction ShowAction(string query, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Série TV"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Série TV (TVMaze)…", 0);
+                string r = null;
+                try { r = LiveData.Show(query); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas trouvé la série « " + query + " » (ou hors-ligne)." : r);
+            };
+            return a;
+        }
+
+        /// <summary>Lauréats du prix Nobel via NobelPrize.org (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction NobelAction(string cat, string catFr, string year, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Prix Nobel"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Prix Nobel (NobelPrize.org)…", 0);
+                string r = null;
+                try { r = LiveData.Nobel(cat, catFr, year); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer ce prix Nobel (année sans lauréat, ou hors-ligne)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

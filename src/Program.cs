@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.12.0.0")]
-[assembly: AssemblyFileVersion("15.12.0.0")]
+[assembly: AssemblyVersion("15.13.0.0")]
+[assembly: AssemblyFileVersion("15.13.0.0")]
 
 namespace BTOptimizer
 {
@@ -579,9 +579,16 @@ namespace BTOptimizer
                 bool gx2 = UtilityTools.FreeGamesQuery("mon jeu gratuit rame") == null && UtilityTools.FreeGamesQuery("comment ca va") == null; if (gx2) ok30++; Console.WriteLine((gx2 ? "OK  " : "FAIL") + "  jeux : 'jeu gratuit rame'->diagnostic (null)");
                 bool gx3 = UtilityTools.BookQuery("livre harry potter") == "harry potter" && UtilityTools.BookQuery("comment ca va") == null; if (gx3) ok30++; Console.WriteLine((gx3 ? "OK  " : "FAIL") + "  livre : 'livre harry potter'->harry potter");
 
+                // Outils v15.13 : Pokemon (PokeAPI) + series TV (TVMaze) + prix Nobel.
+                int ok31 = 0;
+                bool pk1 = UtilityTools.PokemonQuery("pokemon pikachu") == "pikachu" && UtilityTools.PokemonQuery("comment ca va") == null; if (pk1) ok31++; Console.WriteLine((pk1 ? "OK  " : "FAIL") + "  pokemon : pikachu / null");
+                bool pk2 = UtilityTools.ShowQuery("serie breaking bad") == "breaking bad" && UtilityTools.ShowQuery("numero de serie windows") == null; if (pk2) ok31++; Console.WriteLine((pk2 ? "OK  " : "FAIL") + "  serie : breaking bad / 'numero de serie' exclu");
+                var nb = UtilityTools.NobelQuery("prix nobel de physique 2023");
+                bool pk3 = nb != null && nb.Cat == "phy" && nb.Year == "2023" && UtilityTools.NobelQuery("nobel de la paix") != null && UtilityTools.NobelQuery("bonjour") == null; if (pk3) ok31++; Console.WriteLine((pk3 ? "OK  " : "FAIL") + "  nobel : phy/2023, paix ok, bonjour null");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

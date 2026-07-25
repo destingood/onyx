@@ -776,6 +776,135 @@ namespace BTOptimizer
             return null;
         }
 
+        // ---- POKÉMON (PokéAPI, gratuit sans clé) ----
+        /// <summary>Fiche d'un Pokémon (type, taille, poids). Noms en anglais côté API. null si inconnu.</summary>
+        public static string Pokemon(string name)
+        {
+            try
+            {
+                string json = Get("https://pokeapi.co/api/v2/pokemon/" + Uri.EscapeDataString(name.ToLowerInvariant()));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    string nm = r.TryGetProperty("name", out var nn) ? nn.GetString() : name;
+                    int id = r.TryGetProperty("id", out var idv) && idv.ValueKind == JsonValueKind.Number ? idv.GetInt32() : 0;
+                    var types = new System.Collections.Generic.List<string>();
+                    if (r.TryGetProperty("types", out var ts) && ts.ValueKind == JsonValueKind.Array)
+                        foreach (var t in ts.EnumerateArray())
+                            if (t.TryGetProperty("type", out var ty) && ty.TryGetProperty("name", out var tn)) types.Add(PkType(tn.GetString()));
+                    double h = r.TryGetProperty("height", out var hv) && hv.ValueKind == JsonValueKind.Number ? hv.GetInt32() / 10.0 : 0;
+                    double w = r.TryGetProperty("weight", out var wv) && wv.ValueKind == JsonValueKind.Number ? wv.GetInt32() / 10.0 : 0;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🔴 ").Append(Cap(nm));
+                    if (types.Count > 0) sb.Append(" — type ").Append(string.Join(" / ", types));
+                    sb.Append('.');
+                    if (h > 0 || w > 0) sb.Append(" Taille ").Append(G(h)).Append(" m, poids ").Append(G(w)).Append(" kg.");
+                    if (id > 0) sb.Append(" (n°").Append(id).Append(')');
+                    sb.Append("\n— source : PokéAPI (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+        private static string PkType(string t)
+        {
+            switch (t)
+            {
+                case "normal": return "Normal"; case "fire": return "Feu"; case "water": return "Eau";
+                case "electric": return "Électrik"; case "grass": return "Plante"; case "ice": return "Glace";
+                case "fighting": return "Combat"; case "poison": return "Poison"; case "ground": return "Sol";
+                case "flying": return "Vol"; case "psychic": return "Psy"; case "bug": return "Insecte";
+                case "rock": return "Roche"; case "ghost": return "Spectre"; case "dragon": return "Dragon";
+                case "dark": return "Ténèbres"; case "steel": return "Acier"; case "fairy": return "Fée";
+                default: return t;
+            }
+        }
+        private static string Cap(string s) { return string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1); }
+
+        // ---- SÉRIES TV (TVMaze, gratuit sans clé) ----
+        /// <summary>Fiche d'une série TV (genres, année, note). null si rien.</summary>
+        public static string Show(string query)
+        {
+            try
+            {
+                string json = Get("https://api.tvmaze.com/singlesearch/shows?q=" + Uri.EscapeDataString(query));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    if (r.ValueKind != JsonValueKind.Object) return null;
+                    string nm = r.TryGetProperty("name", out var nn) ? nn.GetString() : null;
+                    if (string.IsNullOrEmpty(nm)) return null;
+                    var genres = new System.Collections.Generic.List<string>();
+                    if (r.TryGetProperty("genres", out var gs) && gs.ValueKind == JsonValueKind.Array)
+                        foreach (var g in gs.EnumerateArray()) if (g.ValueKind == JsonValueKind.String) genres.Add(TvGenre(g.GetString()));
+                    string prem = r.TryGetProperty("premiered", out var pv) && pv.ValueKind == JsonValueKind.String ? pv.GetString() : "";
+                    string year = prem.Length >= 4 ? prem.Substring(0, 4) : "";
+                    double? note = null;
+                    if (r.TryGetProperty("rating", out var rt) && rt.TryGetProperty("average", out var av) && av.ValueKind == JsonValueKind.Number) note = av.GetDouble();
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("📺 ").Append(nm);
+                    if (genres.Count > 0) sb.Append(" — ").Append(string.Join(", ", genres));
+                    sb.Append('.');
+                    if (!string.IsNullOrEmpty(year)) sb.Append(" Depuis ").Append(year).Append('.');
+                    if (note != null) sb.Append(" Note ").Append(G(note.Value)).Append("/10.");
+                    sb.Append("\n— source : TVMaze (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+        private static string TvGenre(string g)
+        {
+            switch (g)
+            {
+                case "Drama": return "Drame"; case "Comedy": return "Comédie"; case "Crime": return "Policier";
+                case "Science-Fiction": return "Science-fiction"; case "Horror": return "Horreur"; case "Fantasy": return "Fantastique";
+                case "Adventure": return "Aventure"; case "Mystery": return "Mystère"; case "Anime": return "Animé";
+                case "Family": return "Famille"; case "War": return "Guerre"; case "Sports": return "Sport";
+                case "Music": return "Musique"; case "Supernatural": return "Surnaturel"; case "Medical": return "Médical";
+                case "Legal": return "Judiciaire"; case "History": return "Histoire"; case "Romance": return "Romance";
+                default: return g;
+            }
+        }
+
+        // ---- PRIX NOBEL (NobelPrize.org, gratuit sans clé) ----
+        /// <summary>Lauréats du Nobel (catégorie + année ; sans année → le plus récent). null si échec.</summary>
+        public static string Nobel(string cat, string catFr, string year)
+        {
+            try
+            {
+                string url = "https://api.nobelprize.org/2.1/nobelPrizes?nobelPrizeCategory=" + cat
+                           + (string.IsNullOrEmpty(year) ? "&sort=desc&limit=1" : "&nobelPrizeYear=" + year);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("nobelPrizes", out var arr) || arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() == 0) return null;
+                    var p = arr[0];
+                    string yr = p.TryGetProperty("awardYear", out var yv) ? yv.GetString() : year;
+                    var laur = new System.Collections.Generic.List<string>();
+                    if (p.TryGetProperty("laureates", out var ls) && ls.ValueKind == JsonValueKind.Array)
+                        foreach (var l in ls.EnumerateArray())
+                        {
+                            if (l.TryGetProperty("knownName", out var kn) && kn.TryGetProperty("en", out var en)) laur.Add(en.GetString());
+                            else if (l.TryGetProperty("orgName", out var og) && og.TryGetProperty("en", out var oen)) laur.Add(oen.GetString());
+                        }
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🏅 Prix Nobel de ").Append(catFr);
+                    if (!string.IsNullOrEmpty(yr)) sb.Append(' ').Append(yr);
+                    sb.Append(" : ").Append(laur.Count > 0 ? string.Join(", ", laur) : "—").Append('.');
+                    sb.Append("\n— source : NobelPrize.org (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         internal static string FrDate(string iso)
         {
             try
