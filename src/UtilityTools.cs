@@ -408,6 +408,49 @@ namespace BTOptimizer
             return "";   // actualités générales (à la une)
         }
 
+        // ---- JEUX GRATUITS PC (FreeToGame) ----
+        private static readonly Dictionary<string, string> GameGenres = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            {"fps","shooter"},{"tir","shooter"},{"shooter","shooter"},{"tps","third-person"},
+            {"mmorpg","mmorpg"},{"mmofps","mmofps"},{"mmo","mmo"},{"moba","moba"},
+            {"battle royale","battle-royale"},{"battle-royale","battle-royale"},{"br","battle-royale"},
+            {"strategie","strategy"},{"strategy","strategy"},{"rts","strategy"},
+            {"course","racing"},{"racing","racing"},{"sport","sports"},{"sports","sports"},
+            {"combat","fighting"},{"baston","fighting"},{"fighting","fighting"},
+            {"carte","card"},{"cartes","card"},{"card","card"},{"horreur","horror"},{"horror","horror"},
+            {"survie","survival"},{"survival","survival"},{"zombie","zombie"},{"zombies","zombie"},
+            {"anime","anime"},{"manga","anime"},{"action","action"},{"tower defense","tower-defense"},
+            {"action rpg","action-rpg"},{"arpg","action-rpg"},{"aventure","open-world"},{"espace","space"}
+        };
+        /// <summary>« jeux gratuits », « jeux gratuits fps » → genre FreeToGame ou "" ; sinon null (jamais sur une panne).</summary>
+        internal static string FreeGamesQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant());
+            bool wantGames = n.Contains("jeux gratuit") || n.Contains("free to play") || n.Contains("free-to-play")
+                || Regex.IsMatch(n, "\\bf2p\\b") || n.Contains("jeux free")
+                || (n.Contains("jeu") && n.Contains("gratuit") && (n.Contains("montre") || n.Contains("liste")
+                    || n.Contains("propose") || n.Contains("recommande") || n.Contains("quel") || n.Contains("des jeux") || n.Contains("un jeu")));
+            if (!wantGames) return null;
+            // ne JAMAIS détourner une plainte technique vers une liste de jeux.
+            if (n.Contains("rame") || n.Contains("lag") || n.Contains("plante") || n.Contains("crash")
+                || n.Contains("freeze") || n.Contains("saccade") || n.Contains("marche pas") || n.Contains("bug")) return null;
+            foreach (var kv in GameGenres)
+                if (Regex.IsMatch(n, "\\b" + Regex.Escape(kv.Key) + "\\b")) return kv.Value;
+            return "";
+        }
+
+        // ---- LIVRES (Open Library) ----
+        /// <summary>« livre harry potter », « un roman de Tolkien » → requête livre, sinon null.</summary>
+        internal static string BookQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            var m = Regex.Match(q, "(?i)(?:livre|bouquin|roman)\\s+(?:sur\\s+|de\\s+|intitul[eé]\\s+|qui\\s+parle\\s+de\\s+)?(.+?)\\s*[?.!]*$");
+            if (!m.Success) return null;
+            string w = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.', '?', '!');
+            return w.Length >= 2 ? w : null;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

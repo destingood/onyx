@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.12 — Jeux gratuits (pile pour ONYX !) + recherche de livres
+- **🎮 Jeux gratuits PC** (FreeToGame, sans clé) : « jeux gratuits », « jeux gratuits FPS », « jeux gratuits
+  MMORPG / battle royale / course / horreur… » → liste de free-to-play sur PC, filtrable par genre.
+  **Sur-mesure pour le public d'ONYX.** Garde-fou : « mon jeu gratuit rame » va au DIAGNOSTIC, pas à la liste.
+- **📚 Livres** (Open Library, sans clé) : « livre harry potter », « un roman de Tolkien » → titre, auteur, année.
+- Vérifié EN DIRECT : FPS → Overwatch/PUBG/Enlisted (117 jeux) ; « seigneur des anneaux » → Tolkien (1954).
+  Build 0 erreur ; harnais 136/136.
+- **Contexte** : 17 catégories publicapis.dev envoyées. Plutôt que d'éplucher 17 pages (majorité à clé), j'ai
+  ciblé les 2 qui collent vraiment (games, books). Les autres (auth, social, health, government…) sont surtout
+  à clé/compte ou déjà couvertes (géocodage, dictionnaire, environnement/air, calendrier/fériés).
+
 ## v15.11 — Actualités en français (l'idée « NewsAPI » de l'article, mais GRATUITE sans clé)
 - **📰 Actualités** : « les actualités » / « quoi de neuf » → les gros titres à la une ; « actu nvidia »,
   « news sur les cartes graphiques » → titres ciblés sur un sujet. Idéal pour le public jeu/PC (Cowcotland,

@@ -271,6 +271,24 @@ namespace BTOptimizer
                     return new Reply { Text = "Je regarde les actualités…", Action = ChatActions.NewsAction(news, st), Dynamic = true };
                 }
             }
+            // 19) JEUX GRATUITS PC (FreeToGame) — réseau, sans clé. "" = tous, sinon par genre.
+            {
+                string genre = UtilityTools.FreeGamesQuery(q);
+                if (genre != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la liste des jeux gratuits j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche des jeux gratuits…", Action = ChatActions.FreeGamesAction(genre, st), Dynamic = true };
+                }
+            }
+            // 20) LIVRES (Open Library) — réseau, sans clé.
+            {
+                string book = UtilityTools.BookQuery(q);
+                if (book != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour chercher un livre j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche le livre…", Action = ChatActions.BookAction(book, st), Dynamic = true };
+                }
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

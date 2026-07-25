@@ -1284,6 +1284,36 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Liste de jeux gratuits (free-to-play) PC via FreeToGame (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction FreeGamesAction(string genre, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Jeux gratuits"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Jeux gratuits (FreeToGame)…", 0);
+                string r = null;
+                try { r = LiveData.FreeGames(genre); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer la liste des jeux gratuits (hors-ligne ?)." : r);
+            };
+            return a;
+        }
+
+        /// <summary>Recherche de livres via Open Library (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction BookAction(string query, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Livres"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Livres (Open Library)…", 0);
+                string r = null;
+                try { r = LiveData.Book(query); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas trouvé de livre pour « " + query + " » (ou hors-ligne)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

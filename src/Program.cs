@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.11.0.0")]
-[assembly: AssemblyFileVersion("15.11.0.0")]
+[assembly: AssemblyVersion("15.12.0.0")]
+[assembly: AssemblyFileVersion("15.12.0.0")]
 
 namespace BTOptimizer
 {
@@ -573,9 +573,15 @@ namespace BTOptimizer
                 bool nx1 = UtilityTools.NewsQuery("les actualites") == "" && UtilityTools.NewsQuery("actu nvidia") == "nvidia"; if (nx1) ok29++; Console.WriteLine((nx1 ? "OK  " : "FAIL") + "  news : 'les actualites'=une, 'actu nvidia'=nvidia");
                 bool nx2 = UtilityTools.NewsQuery("quoi de neuf") == "" && UtilityTools.NewsQuery("comment ca va") == null; if (nx2) ok29++; Console.WriteLine((nx2 ? "OK  " : "FAIL") + "  news : 'quoi de neuf'=une, 'comment ca va'=null");
 
+                // Outils v15.12 : jeux gratuits (FreeToGame) + livres (Open Library).
+                int ok30 = 0;
+                bool gx1 = UtilityTools.FreeGamesQuery("jeux gratuits") == "" && UtilityTools.FreeGamesQuery("jeux gratuits fps") == "shooter"; if (gx1) ok30++; Console.WriteLine((gx1 ? "OK  " : "FAIL") + "  jeux : 'jeux gratuits'=tous, '...fps'=shooter");
+                bool gx2 = UtilityTools.FreeGamesQuery("mon jeu gratuit rame") == null && UtilityTools.FreeGamesQuery("comment ca va") == null; if (gx2) ok30++; Console.WriteLine((gx2 ? "OK  " : "FAIL") + "  jeux : 'jeu gratuit rame'->diagnostic (null)");
+                bool gx3 = UtilityTools.BookQuery("livre harry potter") == "harry potter" && UtilityTools.BookQuery("comment ca va") == null; if (gx3) ok30++; Console.WriteLine((gx3 ? "OK  " : "FAIL") + "  livre : 'livre harry potter'->harry potter");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

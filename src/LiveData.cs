@@ -700,6 +700,82 @@ namespace BTOptimizer
             return System.Net.WebUtility.HtmlDecode(s).Trim();
         }
 
+        // ---- JEUX GRATUITS PC (FreeToGame, gratuit sans clé) ----
+        /// <summary>Liste de jeux free-to-play PC (option : genre FreeToGame). null si échec.</summary>
+        public static string FreeGames(string genre)
+        {
+            try
+            {
+                string url = "https://www.freetogame.com/api/games?platform=pc";
+                if (!string.IsNullOrWhiteSpace(genre)) url += "&category=" + Uri.EscapeDataString(genre);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (d.RootElement.ValueKind != JsonValueKind.Array || d.RootElement.GetArrayLength() == 0) return null;
+                    int total = d.RootElement.GetArrayLength();
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🎮 Jeux gratuits (free-to-play) sur PC");
+                    if (!string.IsNullOrWhiteSpace(genre)) sb.Append(" — genre « ").Append(genre).Append(" »");
+                    sb.Append(" :\n");
+                    int n = 0;
+                    foreach (var g in d.RootElement.EnumerateArray())
+                    {
+                        if (n >= 7) break;
+                        string title = g.TryGetProperty("title", out var t) ? t.GetString() : null;
+                        if (string.IsNullOrEmpty(title)) continue;
+                        string gen = g.TryGetProperty("genre", out var ge) ? ge.GetString() : "";
+                        sb.Append("• ").Append(title);
+                        if (!string.IsNullOrEmpty(gen)) sb.Append(" — ").Append(gen);
+                        sb.Append('\n');
+                        n++;
+                    }
+                    if (n == 0) return null;
+                    sb.Append("— source : FreeToGame (gratuit). ").Append(total).Append(" jeu(x) au total.");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // ---- LIVRES (Open Library, gratuit sans clé) ----
+        /// <summary>Recherche de livres (titre, auteur, année). null si rien.</summary>
+        public static string Book(string query)
+        {
+            try
+            {
+                string json = Get("https://openlibrary.org/search.json?limit=3&fields=title,author_name,first_publish_year&q=" + Uri.EscapeDataString(query));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("docs", out var docs) || docs.ValueKind != JsonValueKind.Array || docs.GetArrayLength() == 0) return null;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("📚 Livres trouvés pour « ").Append(query.Trim()).Append(" » :\n");
+                    int n = 0;
+                    foreach (var b in docs.EnumerateArray())
+                    {
+                        if (n >= 3) break;
+                        string title = b.TryGetProperty("title", out var t) ? t.GetString() : null;
+                        if (string.IsNullOrEmpty(title)) continue;
+                        string author = "";
+                        if (b.TryGetProperty("author_name", out var au) && au.ValueKind == JsonValueKind.Array && au.GetArrayLength() > 0) author = au[0].GetString();
+                        string year = b.TryGetProperty("first_publish_year", out var y) && y.ValueKind == JsonValueKind.Number ? y.GetInt32().ToString() : "";
+                        sb.Append("• ").Append(title);
+                        if (!string.IsNullOrEmpty(author)) sb.Append(" — ").Append(author);
+                        if (!string.IsNullOrEmpty(year)) sb.Append(" (").Append(year).Append(')');
+                        sb.Append('\n');
+                        n++;
+                    }
+                    if (n == 0) return null;
+                    sb.Append("— source : Open Library (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         internal static string FrDate(string iso)
         {
             try
