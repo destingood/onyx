@@ -520,15 +520,20 @@ namespace BTOptimizer
             // culture générale factuelle. Le modèle répond souvent avec assurance MAIS périmé/faux
             // là-dessus → on vérifie sur le web d'emblée.
             bool needsWeb = Has(s,
+                // récence / produits / prix / comparatifs
                 "dernier", "derniere", "recent", "recente", "actuel", "actuelle", "nouveau", "nouvelle",
                 "meilleur", "meilleure", "top ", "prix", "coute", "combien coute", "vaut le coup", "vaut il",
                 "comparer", "comparatif", "versus", "sortie", "date de sortie", "quand sort", "quand sortira",
                 "2024", "2025", "2026", "classement", "qui a gagne", "qui gagne", "resultat", "score", "match",
                 "meteo", "actualite", "actu", "news", "president", "elu", "vainqueur", "champion", "film", "serie",
-                "cours de", "bourse", "cotation", "population de", "capitale de", "combien de", "record du");
+                "cours de", "bourse", "cotation", "population de", "capitale de", "combien de", "record du",
+                // recherche d'ENTITÉ (personne, marque, groupe…) — évite les inventions de l'IA
+                "c'est qui", "cest qui", "qui est", "qui sont", "info sur", "infos sur", "info", "infos",
+                "renseignement", "biographie", "parle moi de", "parle-moi de", "presente moi", "présente moi",
+                "c'est quoi comme", "definition de");
             if (!needsWeb) return null;
 
-            return new Reply { Text = "Je vérifie l'info à jour sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
+            return new Reply { Text = "Je vérifie l'info sur le web plutôt que de deviner…", Action = ChatActions.WebAnswer(q.Trim(), st) };
         }
 
         /// <summary>Texte qui suit le premier marqueur trouvé, sur la question ORIGINALE (accents

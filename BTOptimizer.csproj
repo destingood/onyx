@@ -48,6 +48,8 @@
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.4" />
     <PackageReference Include="System.Management" Version="10.0.2" />
+    <!-- Extraction de texte des PDF pour la base de connaissances (100 % managé, MIT). -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
   </ItemGroup>
 
 </Project>

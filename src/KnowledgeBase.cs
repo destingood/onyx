@@ -73,9 +73,10 @@ namespace BTOptimizer
                     foreach (string f in Directory.GetFiles(Dir, "*", SearchOption.AllDirectories))
                     {
                         string ext = Path.GetExtension(f).ToLowerInvariant();
-                        if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm") continue;
+                        if (ext != ".txt" && ext != ".md" && ext != ".markdown" && ext != ".html" && ext != ".htm" && ext != ".pdf") continue;
                         string raw;
-                        try { raw = File.ReadAllText(f); } catch { continue; }
+                        if (ext == ".pdf") { raw = ExtractPdf(f); if (string.IsNullOrEmpty(raw)) continue; }
+                        else { try { raw = File.ReadAllText(f); } catch { continue; } }
                         if (ext == ".html" || ext == ".htm") raw = StripHtml(raw);
                         string src = RelSource(f);
                         foreach (string ch in SplitChunks(raw, 600))
@@ -95,6 +96,24 @@ namespace BTOptimizer
                 return rel.Length > 0 ? rel : Path.GetFileName(full);
             }
             catch { return Path.GetFileName(full); }
+        }
+
+        // Texte d'un PDF (manuels, fiches, articles…) via PdfPig — 100 % local, aucun OCR
+        // (les PDF scannés-image ne rendent rien : c'est attendu).
+        private static string ExtractPdf(string path)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                using (var doc = UglyToad.PdfPig.PdfDocument.Open(path))
+                    foreach (var page in doc.GetPages())
+                    {
+                        sb.Append(page.Text).Append('\n');
+                        if (sb.Length > 200000) break;   // garde-fou sur un très gros PDF
+                    }
+                return sb.ToString();
+            }
+            catch { return ""; }
         }
 
         // Texte lisible d'un HTML (export BookStack, page web enregistrée…).
@@ -199,10 +218,11 @@ namespace BTOptimizer
                 string readme = Path.Combine(Dir, "_lisez-moi.txt");
                 if (!File.Exists(readme))
                     File.WriteAllText(readme,
-                        "Dépose ici tes fiches (.txt, .md, .html) : notes de dépannage, config, procédures…\n" +
+                        "Dépose ici tes fiches (.txt, .md, .html, .pdf) : notes de dépannage, config, manuels, procédures…\n" +
                         "Les SOUS-DOSSIERS organisent le savoir (ex. Reseau\\, Jeux\\) — façon wiki.\n" +
                         "Le Copilote les lit et s'en sert pour te répondre plus précisément.\n\n" +
-                        "Astuce BookStack : exporte un livre/une page en Markdown ou HTML et dépose le fichier ici.\n" +
+                        "PDF : le texte est extrait automatiquement (les PDF scannés en image ne sont pas lus).\n" +
+                        "Astuce BookStack : exporte un livre/une page en Markdown, HTML ou PDF et dépose le fichier ici.\n" +
                         "Dis ensuite « recharge mon savoir ».\n");
             }
             catch { }

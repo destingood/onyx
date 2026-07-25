@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.75 — Anti-hallucination (evidence-first) + PDF dans la base
+- **Fini les inventions sur les entités** : une question « qui est X / info sur X / parle-moi de
+  X » part au WEB (réponse sourcée) au lieu d'être devinée par le modèle. (Avant, « Clio Williams
+  info » donnait une actrice inventée, puis une chanteuse, puis une voiture — l'IA hallucinait.)
+- **Consigne evidence-first** renforcée : si le modèle ne connaît pas précisément une personne /
+  marque / groupe, il doit le DIRE et proposer une recherche, jamais inventer une biographie.
+- **PDF dans la base de connaissances** (skill n°1 des bases locales) : dépose des .pdf dans
+  bt-savoir\, leur texte est extrait automatiquement (PdfPig, 100 % local ; les PDF scannés-image
+  ne sont pas lus, faute d'OCR). Vérifié : un PDF réel → 7 passages indexés.
+- La base lit maintenant : .txt, .md, .html, **.pdf** (récursif, sous-dossiers = wiki).
+
 ## v14.74 — Transparence : textes à jour (IA & internet optionnels)
 - **Conditions d'utilisation** : nouvelle clause « Assistant IA et internet (optionnels) » —
   modèle IA local (Ollama), recherche web (requête envoyée à DuckDuckGo), mémoire/base locales
