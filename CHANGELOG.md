@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.89 — TTL sur la mémoire apprise (retirer l'état périmé)
+- La mémoire persistante de la v14.88 accumulait des faits **datés mais sans expiration** — un fait
+  web vieux de 2 ans finirait par être réinjecté comme s'il était actuel (« stale state »). C'est
+  précisément ce que l'article sur la mémoire/état recommande d'éviter via un **TTL (time-to-live)**.
+- Ajout d'un **TTL de 18 mois** : au rechargement, un fait appris trop vieux est **automatiquement
+  retiré** (et purgé du fichier `bt-appris.md` à la prochaine écriture). La connaissance apprise
+  reste ainsi **fraîche**, sans intervention.
+- Complète le tableau « mémoire & état » déjà en place : fenêtre glissante (historique borné à
+  ~4 tours), mémoire persistante, entités spécialisées (matériel), bascule sémantique
+  (« nouveau sujet »), core/archival, écriture/lecture intelligentes.
+- Vérifié : **75/75** sur le vrai code compilé.
+
 ## v14.88 — Mémoire qui s'accumule (méthode Karpathy, version locale & gouvernée)
 - Idée de Karpathy (LLM knowledge base) : la connaissance doit **s'accumuler**, pas se ré-inventer
   à chaque fois. Adaptée ici SANS le pipeline entreprise (n8n + API Claude **payante** + Obsidian),

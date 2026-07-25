@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.88.0.0")]
-[assembly: AssemblyFileVersion("14.88.0.0")]
+[assembly: AssemblyVersion("14.89.0.0")]
+[assembly: AssemblyFileVersion("14.89.0.0")]
 
 namespace BTOptimizer
 {
@@ -399,9 +399,23 @@ namespace BTOptimizer
                 if (exA) ok14++; Console.WriteLine((exA ? "OK  " : "FAIL") + "  exclusion : _lisez-moi et _archive\\ ignores");
                 if (exB) ok14++; Console.WriteLine((exB ? "OK  " : "FAIL") + "  exclusion : documents normaux indexes");
 
+                // TTL des faits appris (retirer l'etat perime).
+                int ok15 = 0;
+                string sNow = DateTime.Now.ToString("MM/yyyy");
+                string sOld = DateTime.Now.AddMonths(-24).ToString("MM/yyyy");
+                string sRecent = DateTime.Now.AddMonths(-6).ToString("MM/yyyy");
+                bool ttl1 = !LocalBrain.IsStampExpired(sNow);
+                bool ttl2 = LocalBrain.IsStampExpired(sOld);
+                bool ttl3 = !LocalBrain.IsStampExpired(sRecent);
+                bool ttl4 = !LocalBrain.IsStampExpired("");
+                if (ttl1) ok15++; Console.WriteLine((ttl1 ? "OK  " : "FAIL") + "  TTL : fait de ce mois -> valide");
+                if (ttl2) ok15++; Console.WriteLine((ttl2 ? "OK  " : "FAIL") + "  TTL : fait de 24 mois -> perime");
+                if (ttl3) ok15++; Console.WriteLine((ttl3 ? "OK  " : "FAIL") + "  TTL : fait de 6 mois -> valide");
+                if (ttl4) ok15++; Console.WriteLine((ttl4 ? "OK  " : "FAIL") + "  TTL : date vide -> tolere (valide)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

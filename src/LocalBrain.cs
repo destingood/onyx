@@ -630,7 +630,23 @@ namespace BTOptimizer
         private static readonly List<string[]> _facts = new List<string[]>();   // [clé, énoncé, date MM/yyyy]
         private static bool _learnedLoaded;
         private const int MaxFacts = 30;
+        private const int LearnedTtlMonths = 18;   // TTL : au-delà, un fait appris est périmé et retiré
         private static string LearnedPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-appris.md"); } }
+
+        /// <summary>Un fait daté « MM/yyyy » a-t-il dépassé son TTL (état périmé à retirer) ?</summary>
+        internal static bool IsStampExpired(string stamp)
+        {
+            if (string.IsNullOrEmpty(stamp)) return false;
+            try
+            {
+                int slash = stamp.IndexOf('/'); if (slash <= 0) return false;
+                int mm = int.Parse(stamp.Substring(0, slash).Trim(), System.Globalization.CultureInfo.InvariantCulture);
+                int yy = int.Parse(stamp.Substring(slash + 1).Trim(), System.Globalization.CultureInfo.InvariantCulture);
+                if (mm < 1) mm = 1; if (mm > 12) mm = 12;
+                return new DateTime(yy, mm, 1) < DateTime.Now.AddMonths(-LearnedTtlMonths);
+            }
+            catch { return false; }
+        }
 
         // Charge le fichier une fois (appelé sous lock(_facts)).
         private static void EnsureLearned()
@@ -647,6 +663,7 @@ namespace BTOptimizer
                     int rb = t.IndexOf(']'); if (rb < 0) continue;
                     int sep = t.IndexOf(" :: ", rb, StringComparison.Ordinal); if (sep < 0) continue;
                     string stamp = t.Substring(3, rb - 3).Trim();
+                    if (IsStampExpired(stamp)) continue;   // TTL : on ne recharge pas un fait périmé
                     string key = t.Substring(rb + 1, sep - rb - 1).Trim();
                     string stmt = t.Substring(sep + 4).Trim();
                     if (key.Length > 0 && stmt.Length > 0) _facts.Add(new[] { key, stmt, stamp });
