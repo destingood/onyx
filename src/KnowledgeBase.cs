@@ -239,6 +239,76 @@ namespace BTOptimizer
             "Un site qui promet de « booster vos FPS » ou « nettoyer votre PC » via un .exe à télécharger est presque toujours une arnaque ou un malware : s'en tenir aux outils reconnus et gratuits, depuis leur site officiel.",
             "Ne jamais donner l'accès à distance de son PC à un « support technique » non sollicité (faux appels ou pop-ups « Microsoft ») : c'est une escroquerie classique.",
             "Écran qui reste en 60 Hz malgré un écran 144 Hz : vérifier le câble (DisplayPort ou HDMI 2.1), la bonne entrée, et régler la fréquence dans Paramètres → Affichage → Avancé ; certains câbles bas de gamme bloquent le haut rafraîchissement.",
+
+            // ═══ RÉSEAU (diagnostic latence, perte de paquets, box, ports) ═══
+            "Diagnostic latence en 3 temps : ping vers ta box (192.168.1.1, doit être <1 ms), ping vers 8.8.8.8 (ta latence internet réelle), ping vers le serveur du jeu. Ping déjà haut vers la box = souci LOCAL (Wi-Fi, câble) ; haut seulement au-delà = FAI ou serveur.",
+            "Mesurer la perte de paquets : « ping -n 100 8.8.8.8 » (regarder « perdus = X% ») ou « pathping 8.8.8.8 » qui montre à quel saut la perte apparaît. Perte dès le 1er saut = ton réseau local ; plus loin = FAI/serveur.",
+            "Un ping qui grimpe SEULEMENT quand quelqu'un télécharge à la maison = bufferbloat : activer la QoS/SQM du routeur (limiter un peu le débit) lisse la latence en jeu.",
+            "Le lag du soir (18h-23h) vient souvent de la congestion : réseau du FAI saturé, serveur du jeu bondé, ou Wi-Fi encombré par les voisins (changer de canal 5 GHz dans la box).",
+            "NAT strict/type 3 (Xbox/PlayStation) gêne le multijoueur et le matchmaking. Le rendre modéré/ouvert : activer l'UPnP sur la box, ou rediriger (port forwarding) les ports du jeu vers l'IP locale fixe de la machine.",
+            "Rediriger des ports : trouver les ports du jeu sur le site de l'éditeur, puis dans l'interface de la box (souvent 192.168.1.1) les pointer vers l'IP locale de la machine, idéalement réservée en DHCP.",
+            "Ethernet ne marche pas : tester un autre câble et un autre port, vérifier la LED du port, mettre à jour le pilote réseau ; « ipconfig » — une adresse en 169.254.x.x signifie qu'aucune IP n'a été attribuée (souci DHCP/box).",
+            "Double NAT (box + un autre routeur en cascade) casse le port forwarding et aggrave le NAT : mettre le second appareil en mode bridge / point d'accès.",
+            "MTU standard = 1500 (1492 en PPPoE/ADSL) : rarement la cause d'un lag, à ne toucher qu'en dernier recours. Un câble Cat 5e suffit pour 1 Gb/s.",
+            "Un test de débit sépare le DÉBIT (Mb/s, pour télécharger) et le PING/latence (ms, pour le jeu) : pour le jeu, un ping bas et STABLE prime sur un gros débit. Le Wi-Fi et le CPL ajoutent de la latence face à l'Ethernet.",
+
+            // ═══ CRASHS / ÉCRANS BLEUS (codes BSOD + méthodo Observateur) ═══
+            "Méthodo Observateur d'événements : Journaux Windows → Système et Application, filtrer « Erreur » et « Critique » à l'heure du crash. « Application Error » (1000) donne l'exe et le module fautifs ; « Kernel-Power » (41) = extinction brutale ; « BugCheck » (1001) = code de l'écran bleu.",
+            "Écran bleu : noter le STOP CODE (ex. VIDEO_TDR_FAILURE). Le minidump (C:\\Windows\\Minidump) s'analyse GRATUITEMENT avec BlueScreenView ou WhoCrashed, qui pointent souvent le pilote (.sys) coupable.",
+            "Désactiver le redémarrage automatique (Système → Paramètres avancés → Démarrage et récupération) permet de LIRE le code d'écran bleu avant qu'il disparaisse.",
+            "BSOD VIDEO_TDR_FAILURE (nvlddmkm.sys / atikmpag.sys) : pilote GPU — réinstaller proprement (DDU), retirer l'overclock, vérifier alimentation et températures.",
+            "BSOD IRQL_NOT_LESS_OR_EQUAL : accès mémoire invalide par un PILOTE — mettre à jour ou revenir en arrière le pilote récemment changé ; tester la RAM si ça persiste.",
+            "BSOD PAGE_FAULT_IN_NONPAGED_AREA ou MEMORY_MANAGEMENT : souvent RAM instable ou pilote — MemTest86 plusieurs passes, baisser le profil XMP/EXPO, réparer les fichiers système (DISM puis SFC).",
+            "BSOD WHEA_UNCORRECTABLE_ERROR : erreur MATÉRIELLE (CPU/RAM/overclock instable, parfois alimentation) — tout remettre par défaut dans le BIOS puis tester la stabilité (OCCT).",
+            "BSOD DPC_WATCHDOG_VIOLATION : un pilote (souvent stockage/SSD ou chipset) bloque trop longtemps — mettre à jour le firmware du SSD et les pilotes de chipset/AHCI.",
+            "BSOD CLOCK_WATCHDOG_TIMEOUT : un cœur CPU ne répond plus — souvent un overclock CPU instable ou un souci d'alimentation/thermique : revenir aux valeurs par défaut.",
+            "BSOD KERNEL_SECURITY_CHECK_FAILURE ou SYSTEM_SERVICE_EXCEPTION : corruption (pilote, RAM, fichiers système) — SFC/DISM, MemTest86, mise à jour des pilotes ; un antivirus tiers est parfois en cause.",
+            "BSOD CRITICAL_PROCESS_DIED ou INACCESSIBLE_BOOT_DEVICE : fichiers système ou pilote de disque cassés — réparation du démarrage, DISM/SFC, vérifier le disque (chkdsk).",
+            "Redémarrages SANS écran bleu (le PC coupe net) : suspecter l'alimentation (PSU), une surchauffe (arrêt de sécurité), ou un OC instable ; « Kernel-Power 41 » dans les journaux le confirme.",
+            "Freeze complet (image figée, son qui boucle) : souvent GPU (pilote/OC/alim), RAM instable, ou surchauffe — mêmes pistes matérielles qu'un écran bleu.",
+            "Après avoir identifié un pilote coupable : le désinstaller, redémarrer, installer la DERNIÈRE version depuis le site du fabricant ; si le souci est apparu APRÈS une mise à jour, revenir en arrière (Gestionnaire de périphériques → Propriétés → Pilote → Restaurer).",
+
+            // ═══ PC PORTABLES (thermique, MUX, alimentation) ═══
+            "Un portable gaming bride quand il chauffe : jouer BRANCHÉ sur secteur (pas sur batterie), sur une surface dure (pas un lit qui bouche les grilles), arrière surélevé, grilles dépoussiérées.",
+            "Sur batterie, un portable réduit VOLONTAIREMENT ses performances : pour la pleine puissance, rester branché et choisir le profil « Performances/Turbo » dans le logiciel du constructeur (Armoury Crate, MSI Center, Omen…).",
+            "Forcer un jeu sur le GPU DÉDIÉ d'un portable (pas l'intégré Intel/AMD) : Paramètres graphiques de Windows, ou panneau NVIDIA → « Processeur graphique préféré : GPU hautes performances ».",
+            "Le MUX switch, s'il existe, relie l'écran directement au GPU dédié (sans passer par l'iGPU) : de quelques % à plus de 10 % de FPS, à activer dans le logiciel du constructeur (redémarrage requis).",
+            "Undervolter le CPU d'un portable (ThrottleStop côté Intel, si non verrouillé) réduit fortement chaleur et throttling à performances égales : souvent le levier le plus efficace sur un laptop.",
+            "Un portable qui s'éteint en jeu : surchauffe (throttling puis arrêt de sécurité), ou chargeur trop juste (CPU+GPU dépassent ce qu'il fournit, la batterie compense puis lâche) — utiliser le chargeur d'origine.",
+            "Batterie de portable qui GONFLE : danger — arrêter de l'utiliser, ne pas percer, la faire remplacer (risque d'incendie).",
+
+            // ═══ STREAMING / OBS ═══
+            "OBS, réglage clé : encodeur MATÉRIEL (NVENC sur NVIDIA, AMF sur AMD, QuickSync sur Intel) plutôt que x264 (CPU) — quasi gratuit en FPS et de bonne qualité sur GPU récent.",
+            "Bitrate de stream : rester sous ~70-80 % de ta vitesse d'UPLOAD (ex. ~6000 kbps en 1080p pour Twitch). Trop haut pour ton upload = images perdues.",
+            "OBS, comprendre les images manquées : perdues (dropped) = réseau/upload saturé → baisser le bitrate ; ignorées (rendering lag) = GPU surchargé → baisser la qualité/résolution ; sautées (skipped, encodage) = CPU/GPU trop juste.",
+            "Streamer en 1080p60 demande une bonne machine ; 1080p30 ou 900p60 soulage. La résolution de SORTIE (canvas) peut être inférieure à celle du jeu.",
+            "Désynchro audio/vidéo dans OBS : ajouter un décalage (offset) sur la source audio dans le mixeur (Filtres → Décalage de synchro).",
+            "Micro propre sans matériel : filtre de suppression de bruit (RNNoise, gratuit, dans OBS) + un noise gate coupent ventilateurs et bruits de fond.",
+            "Le double PC (un pour jouer, un pour encoder via carte de capture ou NDI) supprime tout impact du stream sur le jeu — la solution des streamers exigeants.",
+            "Écran noir dans OBS en capturant un jeu : préférer « Capture de jeu » (Game Capture) à la capture d'écran pour le plein écran ; lancer OBS en administrateur aide pour certains jeux.",
+
+            // ═══ OVERCLOCK / UNDERVOLT (détaillé) ═══
+            "Undervolt GPU (le plus sûr) : dans MSI Afterburner, ouvrir la courbe (Ctrl+F), fixer une fréquence cible à une tension plus basse (ex. 900 mV), aplatir la courbe au-delà, tester en jeu/OCCT. Résultat : plus frais, plus silencieux, souvent aussi rapide.",
+            "Overclock GPU : limite de puissance au max, puis +core par paliers de ~15 MHz en testant, puis +mémoire par paliers de ~50 MHz. Artefacts (points, scintillement) ou crash = trop loin, redescendre de 2 crans.",
+            "Attention à la mémoire GPU : trop poussée, elle corrige silencieusement ses erreurs et FAIT BAISSER les perfs sans planter — viser le point stable et rapide, pas le maximum.",
+            "Overclock CPU : sur les puces récentes l'auto-boost fait presque tout. AMD : activer PBO + un Curve Optimizer NÉGATIF (undervolt) gagne perfs et fraîcheur ; Intel : un offset de tension négatif réduit la chaleur.",
+            "Overclock RAM : d'abord activer XMP/EXPO (déjà un OC). Aller plus loin (fréquence, timings serrés) demande de valider LONGUEMENT (MemTest86 ou TestMem5, plusieurs heures) — une RAM instable plante de façon imprévisible.",
+            "Valider un OC : températures sous contrôle (HWiNFO) ET stabilité (OCCT pour CPU+RAM, jeu réel + FurMark/OCCT pour GPU) plusieurs heures sans erreur, artefact ni crash.",
+            "L'undervolt ne présente quasi aucun risque (on baisse tension et chaleur) ; l'overclock pousse tension et chaleur, use plus vite s'il est agressif, et peut annuler une garantie — rester raisonnable.",
+            "« Silicon lottery » : deux puces identiques n'overclockent pas pareil — copier les réglages d'un autre PC ne garantit rien, il faut valider les siens. Gain réel d'un OC : souvent 5-10 %, moins qu'un undervolt qui supprime le throttling.",
+
+            // ═══ JEUX POPULAIRES (soucis connus + réglages) ═══
+            "Valorant : exige TPM 2.0 + Secure Boot (BIOS). Une erreur « VAN » au lancement vient souvent de Vanguard : redémarrer le PC (Vanguard démarre avec Windows). Jeu très léger : viser un ping bas et un écran haute fréquence.",
+            "CS2 (Counter-Strike 2) : très dépendant du CPU. Couper les applis de fond, activer le mode faible latence / Reflex, désactiver la V-Sync, privilégier une haute fréquence d'écran (144 Hz+) pour la réactivité.",
+            "Fortnite : le mode de rendu « Performances » (au lieu de DirectX 12) débloque énormément de FPS sur PC modeste. Vider le cache shaders si micro-saccades après une mise à jour.",
+            "Apex Legends : plafonné à 144 FPS par défaut — le débloquer via l'option de lancement « +fps_max unlimited ». 16 Go de RAM conseillés ; sensible aux fuites mémoire sur longues sessions.",
+            "League of Legends : très léger, tourne sur presque tout. Les lags viennent quasi toujours du RÉSEAU (bon serveur, câble) ou d'un pic de latence, rarement des FPS.",
+            "GTA V / GTA Online : SSD réduit fortement les chargements. Le MSAA est très coûteux (le baisser), régler la distance d'affichage et la densité de population gagne beaucoup de FPS.",
+            "Call of Duty (Warzone / MW) : énorme consommateur de VRAM et de stockage — baisser la qualité des textures si la VRAM sature (saccades), garder de l'espace disque libre, vérifier les fichiers après chaque grosse mise à jour.",
+            "Minecraft : la version Java dépend du CPU et de la RAM allouée (mais trop de RAM allouée nuit) ; installer Fabric + Sodium (gratuit) multiplie les FPS. La version Bedrock est plus légère.",
+            "Cyberpunk 2077 et jeux lourds : activer DLSS/FSR/XeSS est quasi indispensable, surtout en ray tracing ; la génération d'images (FG) aide si le framerate de base est correct (~60).",
+            "Rocket League : compétitif et léger — désactiver la V-Sync, activer une limite de FPS élevée et stable, viser un ping bas ; la fluidité prime sur les graphismes.",
+            "Un jeu qui « stutter » à la première rencontre d'un effet ou d'un ennemi = compilation de shaders à la volée : ça s'atténue en rejouant la zone ; garder le pilote GPU à jour et laisser Steam pré-compiler.",
         };
 
         /// <summary>Empreinte du savoir SOURCE (intégré + fichiers utilisateur + modèle) : sert à

@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.98 — Base de connaissances : approfondissement ciblé (194 → 252 fiches)
+- Gros lot **profond et ciblé** (à ta demande) sur 6 domaines, tout **factuel** :
+  - **Réseau** (10) : diagnostic latence en 3 pings, mesure de perte de paquets (ping -n / pathping),
+    bufferbloat/QoS, lag du soir, NAT strict & port forwarding, double NAT, 169.254 = pas d'IP, MTU.
+  - **Crashs/BSOD** (14) : méthodo Observateur d'événements (1000/41/1001), minidump + BlueScreenView,
+    et **tous les grands codes** (VIDEO_TDR, IRQL, MEMORY_MANAGEMENT, WHEA, DPC_WATCHDOG,
+    CLOCK_WATCHDOG, KERNEL_SECURITY, CRITICAL_PROCESS_DIED…) avec leur cause et remède.
+  - **Portables** (7) : throttling, secteur vs batterie, GPU dédié, MUX switch, undervolt ThrottleStop,
+    chargeur trop juste, batterie qui gonfle (danger).
+  - **Streaming/OBS** (8) : NVENC vs x264, bitrate vs upload, dropped/rendering-lag/skipped, offset audio,
+    RNNoise, double PC, écran noir Game Capture.
+  - **Overclock/undervolt** (8) : courbe Afterburner, paliers GPU, mémoire qui « corrige » en douce,
+    PBO/Curve Optimizer, RAM (TestMem5), validation, silicon lottery.
+  - **Jeux populaires** (11) : Valorant (Vanguard/TPM), CS2 (CPU), Fortnite (mode Performances),
+    Apex (fps_max unlimited), LoL, GTA V, Warzone (VRAM), Minecraft (Sodium), Cyberpunk (DLSS), Rocket League.
+- La base intégrée compte désormais **252 passages** (vérifié). **× 11** depuis v14.93 (23 fiches).
+- Vérifié : build 0 erreur ; harnais 96/96.
+
 ## v14.97 — Base de connaissances intégrée : 157 → 194 fiches
 - Quatrième lot, orienté **références utiles et diagnostic du quotidien** (pas de la niche) :
   - **Références** : plages de températures NORMALES (CPU/GPU idle & charge, hotspot/mémoire),
