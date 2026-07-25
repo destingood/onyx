@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.01 — Encore plus de connaissance : Wikipédia FR + repli EN + extraits riches
+- **Repli FR → EN** : si l'article n'existe pas en français, le Copilote va sur **Wikipédia
+  anglais** et répond quand même en français. Couverture énorme en plus, surtout pour le tech/gaming
+  mondial (« RTX 4090 », « DirectStorage »… absents du FR). Vérifié en direct.
+- **Extraits plus riches** : on récupère désormais **l'introduction complète** de l'article (jusqu'à
+  ~1500 caractères), pas juste une phrase → réponses plus complètes et mieux ancrées.
+- Garde d'homonymie : les pages « peut faire référence à… / may refer to… » sont ignorées.
+- La citation indique la source (fr/en.wikipedia.org). Web requis, désactivable, garde PII conservé.
+- Vérifié EN DIRECT : Elon Musk (FR, riche), RTX 4090 (**EN**, série RTX 40), DirectStorage (EN),
+  Cyberpunk 2077 (FR), photosynthèse (FR). Build 0 erreur ; harnais 96/96.
+
 ## v15.00 — Connecteur Wikipédia : une base de connaissances universelle (« pour tout »)
 - Impossible de baker « tout » dans un exe de 60 Mo (Wikipédia = plusieurs Go). La bonne approche :
   **se brancher en direct sur LA base universelle — Wikipédia — de façon sourcée et ancrée**.
