@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.99 — Base de connaissances : pépites distillées de GamingPCSetup (252 → 268)
+- Sur ta demande d'un « gros dépôt de savoir », j'ai trouvé, vérifié la licence, et **distillé** les
+  pépites grand public du projet **GamingPCSetup** (djdallmann, **licence MIT**, recherche mesurée
+  xperf/iperf) — **avec crédit** (le repo demande « give due credit »).
+- 16 fiches FR exactes, plutôt que déverser 6 Mo d'anglais hyper-pointu et de tweaks agressifs :
+  - **Réseau mesuré** : modération d'interruption (Moyen/Adaptatif > Off pour le ressenti d'input,
+    contre-mythe), NetworkThrottlingIndex (garder activé ≈10-20, pas « désactiver »), mode MSI/MSI-X
+    (`Get-NetAdapterHardwareInfo`), binding RSS sur d'autres cœurs que le Cœur 0, offloading, NetBIOS
+    sur TCP/IP, Flow Control (à laisser), timer 15,6 ms.
+  - **Périphériques** : nettoyage capteur souris, LOD & surface, modération d'interruption USB.
+  - **Méthode** : MESURER (WPT/xperf, LatencyMon) avant de tweaker, interférences électriques,
+    standardiser sa config. + un pointeur vers le repo comme référence libre.
+- La base intégrée compte désormais **268 passages**. Crédit : GamingPCSetup (MIT), djdallmann.
+- Vérifié : build 0 erreur ; harnais 96/96.
+
 ## v14.98 — Base de connaissances : approfondissement ciblé (194 → 252 fiches)
 - Gros lot **profond et ciblé** (à ta demande) sur 6 domaines, tout **factuel** :
   - **Réseau** (10) : diagnostic latence en 3 pings, mesure de perte de paquets (ping -n / pathping),

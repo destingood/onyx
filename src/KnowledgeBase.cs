@@ -309,6 +309,24 @@ namespace BTOptimizer
             "Cyberpunk 2077 et jeux lourds : activer DLSS/FSR/XeSS est quasi indispensable, surtout en ray tracing ; la génération d'images (FG) aide si le framerate de base est correct (~60).",
             "Rocket League : compétitif et léger — désactiver la V-Sync, activer une limite de FPS élevée et stable, viser un ping bas ; la fluidité prime sur les graphismes.",
             "Un jeu qui « stutter » à la première rencontre d'un effet ou d'un ennemi = compilation de shaders à la volée : ça s'atténue en rejouant la zone ; garder le pilote GPU à jour et laisser Steam pré-compiler.",
+
+            // ═══ Distillé de GamingPCSetup (djdallmann, licence MIT — crédit dû), recherches mesurées ═══
+            "Savoir utile (recherche mesurée, projet GamingPCSetup) : contrairement au conseil répandu « désactive la modération d'interruption (interrupt moderation) de la carte réseau », les mesures (xperf/iperf) montrent qu'un réglage MOYEN ou ADAPTATIF donne un meilleur ressenti d'input sous charge mixte (audio + GPU + USB + réseau). La couper n'aide que pour un usage purement réseau/CPU.",
+            "Le NetworkThrottlingIndex : le tweak « désactive-le » est discutable ; des mesures suggèrent plutôt de le GARDER activé avec une valeur modérée (≈10-20). C'est un réglage registre avancé, à ne toucher qu'en connaissance de cause. (d'après GamingPCSetup)",
+            "Une carte réseau en mode MSI/MSI-X (défaut sur la plupart des cartes modernes) alloue ISR et DPC aux mêmes cœurs CPU → traitement plus efficace. Vérifier avec « Get-NetAdapterHardwareInfo | fl » (MsiInterruptSupported / MsiXInterruptSupported = True). (d'après GamingPCSetup)",
+            "Par défaut, Windows concentre beaucoup de travail réseau sur le Cœur 0 du CPU : lier les files RSS (Receive Side Scaling) à d'autres cœurs (ex. Set-NetAdapterRSS -BaseProcessorNumber 2 sur un 4-cœurs) peut réduire la latence de traitement DPC. Avancé, nécessite MSI activé. (d'après GamingPCSetup)",
+            "Les fonctions d'« offloading » de la carte réseau déchargent le CPU d'une partie du traitement des paquets → plus de temps CPU pour le jeu : à laisser activées par défaut. (d'après GamingPCSetup)",
+            "Désactiver « NetBIOS sur TCP/IP » (propriétés TCP/IPv4 → Avancé → WINS) retire un service d'écoute SYSTEM inutile chez la plupart des particuliers : petit gain de propreté et de sécurité, réversible. (d'après GamingPCSetup)",
+            "Le « Flow Control » de la carte réseau : le désactiver peut CAUSER des pertes de trames dans certains cas (le streaming vidéo peut en souffrir) — mieux vaut le laisser par défaut sauf raison précise. (d'après GamingPCSetup)",
+            "Philosophie d'optimisation sérieuse (projet GamingPCSetup) : MESURER avec des outils (Windows Performance Toolkit / xperf, LatencyMon pour les DPC) plutôt qu'empiler des tweaks « miracles » copiés-collés — beaucoup n'ont aucun effet mesurable, voire nuisent.",
+            "La résolution du minuteur (timer) par défaut de Windows est ~15,6 ms ; certains jeux la baissent d'eux-mêmes. La forcer globalement (vieux tweak) a un effet variable, ce n'est pas une solution universelle. (d'après GamingPCSetup)",
+            "Nettoyer la lentille du capteur optique de la souris (air sec, ou coton-tige léger) quand le curseur devient erratique : la poussière dessus dégrade le suivi. (d'après GamingPCSetup)",
+            "Le LOD (Lift-Off Distance) d'une souris — la hauteur à laquelle elle cesse de suivre quand on la soulève — varie selon la surface : un tapis usé peut modifier le suivi à LOD égal. (d'après GamingPCSetup)",
+            "La modération d'interruption existe aussi pour les CONTRÔLEURS USB et influence la latence des périphériques (souris/clavier) : un facteur de réactivité perçue au-delà du seul polling rate. (d'après GamingPCSetup)",
+            "Diagnostic système fin : le Windows Performance Toolkit (WPR/WPA), les Sysinternals (Microsoft) et LatencyMon montrent OÙ le temps est passé (pilote, DPC, ISR) au lieu de deviner. (d'après GamingPCSetup)",
+            "Parasites/interférences électriques (écran, câbles) : router les câbles de données à l'écart des câbles d'alimentation, utiliser des câbles blindés et un châssis bien relié réduit le couplage — cause rare mais réelle. (d'après GamingPCSetup)",
+            "Standardiser sa config PC (mêmes réglages BIOS/Windows documentés, vérifiables) permet de reproduire un état stable et de repérer vite ce qui a changé quand un souci apparaît. (esprit du projet GamingPCSetup)",
+            "Base de savoir de référence, libre (MIT) et sourcée pour aller plus loin sur l'optimisation PC gaming : le projet GamingPCSetup de djdallmann sur GitHub — approche par la mesure et les preuves.",
         };
 
         /// <summary>Empreinte du savoir SOURCE (intégré + fichiers utilisateur + modèle) : sert à
