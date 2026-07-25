@@ -605,7 +605,7 @@ namespace BTOptimizer
 
         public static void PushUser(string text) { Push("user", text); }
         public static void PushAssistant(string text) { Push("assistant", text); }
-        public static void ResetHistory() { lock (_history) _history.Clear(); }
+        public static void ResetHistory() { lock (_history) _history.Clear(); lock (_facts) _facts.Clear(); }
 
         private static void Push(string role, string text)
         {
@@ -615,6 +615,97 @@ namespace BTOptimizer
                 _history.Add(new[] { role, text });
                 while (_history.Count > MaxTurns) _history.RemoveAt(0);
             }
+        }
+
+        // ------------------------------------------------------------------
+        //  FAITS VÉRIFIÉS de la session — anti « flip-flop » (l'IA se contredisait
+        //  d'un tour à l'autre : « actrice »… puis « chanteuse »… puis « voiture »).
+        //  L'historique ne garde que ~4 tours ; ces faits SOURCÉS (web) survivent à la
+        //  troncature et sont réinjectés → la réponse reste cohérente toute la session,
+        //  et le Copilote devient « de plus en plus précis » au fil de la conversation.
+        // ------------------------------------------------------------------
+        private static readonly List<string[]> _facts = new List<string[]>();   // [clé, énoncé]
+        private const int MaxFacts = 6;
+
+        /// <summary>Mémorise un fait VÉRIFIÉ sur le web (clé = entité de la question) pour rester
+        /// cohérent aux tours suivants. Ignore les « je n'ai pas trouvé ».</summary>
+        public static void RememberFact(string question, string answer)
+        {
+            if (string.IsNullOrEmpty(answer)) return;
+            string low = NormLite(answer);   // minuscules SANS accents → le garde ne rate pas « vérifier »
+            if (low.Contains("pas trouve") || low.Contains("je ne sais pas") || low.Contains("aucun resultat")
+                || low.Contains("pas pu verifier") || low.Contains("non verifiee") || low.Contains("avec des pincettes")) return;
+            string key = ExtractKey(question);
+            if (string.IsNullOrEmpty(key)) return;
+            string stmt = answer.Replace("\r", " ").Replace("\n", " ").Trim();
+            if (stmt.Length > 180) stmt = stmt.Substring(0, 180).TrimEnd() + "…";
+            lock (_facts)
+            {
+                for (int i = _facts.Count - 1; i >= 0; i--)
+                    if (_facts[i][0] == key) _facts.RemoveAt(i);   // le plus récent gagne
+                _facts.Add(new[] { key, stmt });
+                while (_facts.Count > MaxFacts) _facts.RemoveAt(0);
+            }
+        }
+
+        /// <summary>Bloc « faits déjà vérifiés » à injecter dans le contexte système, ou "" si aucun.</summary>
+        public static string VerifiedFactsBlock()
+        {
+            lock (_facts)
+            {
+                if (_facts.Count == 0) return "";
+                var sb = new StringBuilder("FAITS DÉJÀ VÉRIFIÉS cette session (garde la MÊME réponse, ne te contredis pas) :\n");
+                foreach (var f in _facts) sb.Append("• ").Append(f[0]).Append(" : ").Append(f[1]).Append('\n');
+                return sb.ToString();
+            }
+        }
+
+        // Extrait l'entité/sujet d'une question (retire « qui est », « c'est quoi », « parle moi de »…)
+        // pour servir de clé stable : « Clio Williams » et « c'est qui clio williams » → même clé.
+        internal static string ExtractKey(string question)
+        {
+            string n = NormLite(question);
+            if (n.Length == 0) return "";
+            string[] strip =
+            {
+                "c'est qui", "cest qui", "qui est", "qui sont", "qui etait", "c'est quoi que",
+                "c'est quoi", "cest quoi", "qu'est ce que", "quest ce que", "info sur", "infos sur",
+                "parle moi de", "parle-moi de", "presente moi", "presente-moi", "renseigne moi sur",
+                "definition de", "date de sortie de", "date de sortie", "date de", "combien coute",
+                "prix de", "caracteristiques de", "fiche technique de", "fiche technique", "quel age a",
+                "age de", "capitale de", "capitale du", "population de", "biographie de", "bio de"
+            };
+            bool changed = true;
+            while (changed)
+            {
+                changed = false;
+                n = n.Trim().TrimStart(':', '-', ' ', '"', '\'', '?', '!', '.', ',');
+                foreach (string s in strip)
+                    if (n == s) { n = ""; changed = true; break; }
+                    else if (n.StartsWith(s + " ", StringComparison.Ordinal)) { n = n.Substring(s.Length + 1); changed = true; break; }
+            }
+            n = n.Trim().TrimEnd('?', '!', '.', ',', ' ').TrimStart(':', '-', ' ', '"', '\'').Trim();
+            foreach (string art in new[] { "le ", "la ", "les ", "un ", "une ", "du ", "de la ", "de " })
+                if (n.StartsWith(art, StringComparison.Ordinal)) { n = n.Substring(art.Length).Trim(); break; }
+            if (n.Length > 40) n = n.Substring(0, 40).Trim();
+            return n;
+        }
+
+        // Minuscules, sans accents, espaces normalisés — pour une clé stable.
+        private static string NormLite(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            try
+            {
+                string f = s.ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD);
+                var sb = new StringBuilder(f.Length);
+                foreach (char c in f)
+                    if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                        != System.Globalization.UnicodeCategory.NonSpacingMark)
+                        sb.Append(c);
+                return System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+            }
+            catch { return s.ToLowerInvariant().Trim(); }
         }
 
         /// <summary>Réponse EN CONTEXTE : envoie le système + l'historique récent (dont la dernière

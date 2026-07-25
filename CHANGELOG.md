@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.79 — Anti flip-flop : mémoire des faits vérifiés (de plus en plus précis)
+- Le bug historique « Clio Williams » : l'IA se contredisait d'un tour à l'autre (actrice…
+  puis chanteuse… puis voiture). En cause : l'historique ne garde que ~4 tours, donc un fait
+  établi au début **disparaissait** et l'IA ré-inventait.
+- **Cache de faits vérifiés (session)** : chaque réponse **confirmée sur le web** est mémorisée
+  (clé = l'entité de la question) et **réinjectée** dans le contexte à chaque tour → le Copilote
+  garde la MÊME réponse toute la conversation et devient **de plus en plus précis**.
+- **Clé d'entité stable** : « Clio Williams » et « c'est qui clio williams » pointent la même
+  fiche → pas de doublon, le fait le plus récent gagne. Les « je n'ai pas trouvé » ne sont pas
+  mémorisés (on ne fige pas une non-réponse). Nouvelle conversation = table rase.
+- **Garde anti-certitude-absolue** : interdiction des « c'est sûr à 100 %, sans aucun doute »
+  sur un fait non vérifié.
+- Vérifié : `BT_HALLU` **29/29** (tri question + fait daté + clé d'entité + mémoire), `BT_UITEST` 40/40.
+
 ## v14.78 — Anti-hallucination : garde aussi côté RÉPONSE + web plus strict
 - Le tri v14.77 agissait sur la QUESTION. Nouveau garde côté **réponse** : si le Copilote
   assène un **fait daté** (« né en 1971 », « fondée en 2010 », « sorti en 2013 ») dans une

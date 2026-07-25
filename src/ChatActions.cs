@@ -887,6 +887,7 @@ namespace BTOptimizer
                         if (!string.IsNullOrEmpty(better))
                         {
                             LocalBrain.PushAssistant(better.Trim());
+                            LocalBrain.RememberFact(q, better.Trim());   // cohérence : ne plus se contredire là-dessus
                             return Say(better.Trim() + "\n\n— 🧠+🌐 vérifié sur le web plutôt que deviné ("
                                      + WebSearch.Sources(res) + ").");
                         }
@@ -1101,6 +1102,7 @@ namespace BTOptimizer
             sb.Append("Si on te demande QUI EST une personne / une marque / un groupe que tu ne connais pas PRÉCISÉMENT, ne devine pas et n'invente aucune biographie : dis « je ne suis pas sûr de qui il s'agit » et propose de chercher sur le web. ");
             sb.Append("PROTOCOLE ANTI-INVENTION : avant d'affirmer un fait précis (nom, biographie, fiche technique, date, prix, chiffre, résultat), demande-toi — est-ce dans les preuves fournies, ou une certitude absolue ? Si non : n'invente RIEN, réponds « je ne suis pas sûr » et propose une recherche web. Une réponse honnête « je ne sais pas » vaut mille fois mieux qu'un faux dit avec assurance. ");
             sb.Append("COHÉRENCE : ne te contredis pas d'un message à l'autre ; si tu viens de dire ne pas savoir, ne fabrique pas une réponse au tour suivant. ");
+            sb.Append("Évite les formules d'absolue certitude (« c'est sûr à 100 % », « sans aucun doute ») sur un fait que tu n'as pas vérifié. ");
             sb.Append("Quand des PREUVES te sont fournies (base de connaissances, page web), tes affirmations factuelles doivent venir UNIQUEMENT d'elles — n'ajoute aucun fait qui n'y figure pas. ");
             sb.Append("Pour une info d'ACTUALITÉ ou de temps réel (résultat de match, météo, prix, news du jour), tu ne la connais pas de tête, MAIS le Copilote peut chercher sur le web : invite l'utilisateur à demander « cherche sur internet … » (ou réponds simplement, une recherche web sera lancée). ");
             sb.Append("Tes connaissances peuvent être incomplètes ou datées — signale-le sur les sujets pointus ou récents. ");
@@ -1115,6 +1117,8 @@ namespace BTOptimizer
                         + " optimisations actives, " + st.GamesDet + " jeu(x) détecté(s). ");
             string mem = Memory.ForPrompt();
             if (!string.IsNullOrEmpty(mem)) sb.Append("\n\n").Append(mem).Append("Utilise ces infos pour personnaliser tes réponses (sans les répéter inutilement). ");
+            string vf = LocalBrain.VerifiedFactsBlock();   // faits sourcés déjà établis cette session → cohérence
+            if (!string.IsNullOrEmpty(vf)) sb.Append("\n\n").Append(vf);
             return sb.ToString();
         }
 

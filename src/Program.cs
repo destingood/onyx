@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.78.0.0")]
-[assembly: AssemblyFileVersion("14.78.0.0")]
+[assembly: AssemblyVersion("14.79.0.0")]
+[assembly: AssemblyFileVersion("14.79.0.0")]
 
 namespace BTOptimizer
 {
@@ -219,7 +219,44 @@ namespace BTOptimizer
                     bool pass = got == exp; if (pass) ok2++;
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  fait-date=" + got + " (attendu " + exp + ")  « " + ans + " »");
                 }
-                int total = cases.Length + ansCases.Length, good = ok + ok2;
+                // Clé d'entité : « Clio Williams » et « c'est qui clio williams » → MÊME clé (cohérence).
+                var keyCases = new[]
+                {
+                    new object[]{ "c'est qui clio williams", "clio williams" },
+                    new object[]{ "Clio Williams", "clio williams" },
+                    new object[]{ "qui est elon musk ?", "elon musk" },
+                    new object[]{ "combien coute une rtx 4090", "rtx 4090" },
+                    new object[]{ "parle moi de la formule 1", "formule 1" },
+                };
+                int ok3 = 0;
+                foreach (var c in keyCases)
+                {
+                    string q = (string)c[0]; string exp = (string)c[1];
+                    string got = LocalBrain.ExtractKey(q);
+                    bool pass = got == exp; if (pass) ok3++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  cle=« " + got + " » (attendu « " + exp + " »)  <- « " + q + " »");
+                }
+                // Mémoire de faits vérifiés : mémorise, réinjecte, ignore les « pas trouvé », clé cohérente.
+                LocalBrain.ResetHistory();
+                LocalBrain.RememberFact("c'est qui clio williams", "Clio Williams est une joueuse de tennis britannique.");
+                LocalBrain.RememberFact("info sur xyznope", "Je n'ai pas pu vérifier ça en ligne.");   // doit être ignoré
+                string block = LocalBrain.VerifiedFactsBlock();
+                int ok4 = 0;
+                bool m1 = block.Contains("clio williams") && block.Contains("tennis"); if (m1) ok4++;
+                Console.WriteLine((m1 ? "OK  " : "FAIL") + "  fait memorise et reinjecte (clio -> tennis)");
+                bool m2 = !block.Contains("xyznope"); if (m2) ok4++;
+                Console.WriteLine((m2 ? "OK  " : "FAIL") + "  « pas trouve » NON memorise");
+                LocalBrain.RememberFact("Clio Williams", "Clio Williams : mise a jour du meme sujet.");
+                string block2 = LocalBrain.VerifiedFactsBlock();
+                int clioCount = 0, idx = 0; while ((idx = block2.IndexOf("clio williams", idx, StringComparison.Ordinal)) >= 0) { clioCount++; idx += 5; }
+                bool m3 = clioCount == 1; if (m3) ok4++;   // même clé → une seule entrée (le plus récent gagne)
+                Console.WriteLine((m3 ? "OK  " : "FAIL") + "  meme entite = 1 seule entree (pas de doublon)");
+                LocalBrain.ResetHistory();
+                bool m4 = LocalBrain.VerifiedFactsBlock() == ""; if (m4) ok4++;
+                Console.WriteLine((m4 ? "OK  " : "FAIL") + "  ResetHistory vide les faits");
+
+                int total = cases.Length + ansCases.Length + keyCases.Length + 4;
+                int good = ok + ok2 + ok3 + ok4;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
