@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.95 — Base de connaissances intégrée : 71 → 115 fiches
+- Deuxième gros lot de savoir **baké dans l'exe** (aucun téléchargement), toujours **factuel et vérifié** :
+  - **Périphériques/input** : accélération souris (« améliorer la précision »), drift manette, raw input,
+    hub USB, coil whine.
+  - **Audio** : grésillement (pilote/mode exclusif/fréquence), suppression de bruit micro.
+  - **Écran/GPU** : multi-écrans à Hz différents, plage de couleurs limited/full (noirs délavés),
+    frame generation & latence, bug MPO (scintillement/écran noir), Auto HDR, DLDSR/VSR.
+  - **Windows** : priorité « temps réel » à éviter, P/E-cores & Thread Director, VBS/HVCI (arbitrage
+    sécu/perf), OneDrive, exclusions antivirus, logiciels RGB en conflit.
+  - **Réseau avancé** : NAT strict/UPnP, ping -t / pathping, VPN & latence, câble Cat 5e.
+  - **Matériel/thermique** : portable branché, flux d'air, hotspot/temp mémoire GPU, connecteur
+    12VHPWR, pâte thermique, test RAM barrette par barrette, reseat, BIOS/Clear CMOS.
+  - **Stockage** : disque séparé, HDD mourant (SMART), DirectStorage.
+  - **Réglages jeu** : compétitif (flou/DoF/V-Sync off, Reflex), TAA vs DLAA.
+  - **Portable** : GPU dédié vs intégré, MUX switch.
+- La base intégrée compte désormais **115 passages** (vérifié). Le RAG les exploite déjà, index auto.
+- Vérifié : build 0 erreur ; harnais 96/96.
+
 ## v14.94 — Base de connaissances intégrée × 3 (23 → 71 fiches)
 - La base PC/gaming **intégrée** (celle qui rend le Copilote pertinent hors-ligne, sans que tu
   déposes de documents) passe de **23 à 71 fiches** — toutes **bakées dans l'exe**, aucun
