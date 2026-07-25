@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.83 — Prompt engineering avancé : prompt structuré + exemples (few-shot)
+- Le system prompt était devenu un **mur de phrases** : à mesure qu'on ajoutait des règles, le
+  risque de « lost in the middle » (le modèle se perd dans un contexte trop dense) augmentait —
+  un piège documenté. Je l'ai **restructuré en sections** claires : `## RÔLE`, `## RÈGLES D'OR`,
+  `## MÉTHODE`, `## FORMAT`, `## EXEMPLES` (technique du *structured prompting*).
+- **Few-shot** : le prompt se termine par 3 **exemples** qui MONTRENT le bon comportement plutôt
+  que de seulement l'expliquer — admettre l'incertitude (« je ne suis pas sûr, je vérifie sur le
+  web »), agir sur un souci PC (« fais un bilan complet »), corriger un mythe (pagefile). Montrer
+  vaut mieux qu'expliquer (recommandation clé du guide).
+- Aucune règle perdue : honnêteté, anti-invention, cohérence, preuves/citations, tout-gratuit,
+  phrases d'action… tout est conservé, mais mieux rangé.
+- Vérifié : **55/55** sur le vrai code compilé.
+- Note : niveaux 3-4 du guide (fine-tuning, distillation, RLHF) volontairement hors-scope — l'app
+  est **locale et gratuite**, et le guide lui-même rappelle que 82 % des cas se règlent aux
+  niveaux 1-2 (prompt engineering + RAG), tous deux couverts ici.
+
 ## v14.82 — Raisonnement automatique : validation par règles déterministes (inspiré d'AWS Bedrock)
 - Nouvelle couche **ReasonCheck** (esprit des *Automated Reasoning checks* d'Amazon Bedrock
   Guardrails) : au lieu d'un contrôle probabiliste, on **valide** la réponse de l'IA contre des

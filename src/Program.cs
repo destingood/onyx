@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.82.0.0")]
-[assembly: AssemblyFileVersion("14.82.0.0")]
+[assembly: AssemblyVersion("14.83.0.0")]
+[assembly: AssemblyFileVersion("14.83.0.0")]
 
 namespace BTOptimizer
 {
@@ -332,9 +332,19 @@ namespace BTOptimizer
                 if (e1) ok9++; Console.WriteLine((e1 ? "OK  " : "FAIL") + "  Enhance ajoute la correction (invalide)");
                 if (e2) ok9++; Console.WriteLine((e2 ? "OK  " : "FAIL") + "  Enhance laisse tel quel (valide)");
 
+                // Prompt structure + few-shot (prompt engineering avance).
+                string skel = ChatActions.PromptSkeleton();
+                int ok10 = 0;
+                bool s1 = skel.Contains("## RÔLE") && skel.Contains("## RÈGLES") && skel.Contains("## FORMAT") && skel.Contains("## EXEMPLES");
+                bool s2 = skel.Contains("Q :") && skel.Contains("R :") && skel.Contains("pagefile");   // few-shot present
+                bool s3 = skel.Contains("HONNÊTETÉ") && skel.Contains("130 mots");
+                if (s1) ok10++; Console.WriteLine((s1 ? "OK  " : "FAIL") + "  prompt structure (RÔLE/RÈGLES/FORMAT/EXEMPLES)");
+                if (s2) ok10++; Console.WriteLine((s2 ? "OK  " : "FAIL") + "  few-shot present (Q/R + exemple pagefile)");
+                if (s3) ok10++; Console.WriteLine((s3 ? "OK  " : "FAIL") + "  regles cles conservees (honnetete, 130 mots)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
