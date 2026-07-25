@@ -126,6 +126,25 @@ namespace BTOptimizer
             if (IsSelfTest(s))
                 return new Reply { Text = ChatActions.SelfDiagnostic(), ShowStarters = true };
 
+            // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
+            //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
+            //     C'est l'équivalent local et gratuit de l'adaptation au domaine du fine-tuning. ---
+            if (IsCorrection(s))
+            {
+                string corr = ExtractAfter(q, new[] { "en fait c'est", "en fait c est", "non c'est plutot",
+                    "non c'est plutôt", "c'est plutot", "c'est plutôt", "la bonne reponse c'est", "la bonne reponse est",
+                    "la bonne réponse c'est", "la bonne réponse est", "en realite c'est", "en réalité c'est",
+                    "la verite c'est", "la vérité c'est", "en fait", "correction" });
+                if (!string.IsNullOrEmpty(corr) && corr.Length >= 2)
+                {
+                    try { Memory.Add("Correction de l'utilisateur : " + corr); } catch { }
+                    return new Reply { Text = "Merci pour la correction — c'est noté et RETENU durablement : « " + corr
+                        + " ». Je m'en servirai pour être plus juste la prochaine fois. 🙏", ShowStarters = true };
+                }
+                return new Reply { Text = "Désolé pour l'erreur. Dis-moi la bonne réponse (« en fait c'est… ») et je la "
+                    + "retiens d'une session à l'autre, ou dis « cherche sur internet » et je vérifie en ligne.", ShowStarters = false };
+            }
+
             // --- Lexique pédagogique : « c'est quoi le DLSS ? » → il explique ET tend l'outil lié ---
             {
                 Reply lx = Lexi(s, entries);
@@ -543,6 +562,15 @@ namespace BTOptimizer
             return Has(s, "teste ta fiabilite", "test de fiabilite", "auto diagnostic", "auto-diagnostic",
                           "diagnostic ia", "diagnostic de l'ia", "verifie tes garde-fous", "test anti hallucination",
                           "test anti-hallucination", "tes garde-fous", "auto test ia", "auto-test");
+        }
+
+        /// <summary>L'utilisateur signale-t-il que la réponse était FAUSSE (feedback → auto-amélioration) ?</summary>
+        internal static bool IsCorrection(string s)
+        {
+            return Has(s, "c'est faux", "cest faux", "c'est pas vrai", "c'est pas ca", "c'est pas ça",
+                          "tu te trompes", "tu as tort", "t'as tort", "mauvaise reponse", "mauvaise réponse",
+                          "reponse fausse", "c'est incorrect", "c'est inexact", "tu dis n'importe quoi",
+                          "c'est errone", "c'est erroné", "c'est pas exact");
         }
 
         private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)

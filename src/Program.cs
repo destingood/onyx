@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.84.0.0")]
-[assembly: AssemblyFileVersion("14.84.0.0")]
+[assembly: AssemblyVersion("14.85.0.0")]
+[assembly: AssemblyFileVersion("14.85.0.0")]
 
 namespace BTOptimizer
 {
@@ -350,9 +350,27 @@ namespace BTOptimizer
                 bool d2 = diag.Contains("6/6") && diag.Contains("Système sain");
                 if (d2) ok11++; Console.WriteLine((d2 ? "OK  " : "FAIL") + "  auto-diagnostic : 6/6 garde-fous actifs");
 
+                // Boucle de feedback (correction utilisateur -> auto-amelioration).
+                var corrCases = new[]
+                {
+                    new object[]{ "c'est faux", true },
+                    new object[]{ "non tu te trompes", true },
+                    new object[]{ "mauvaise reponse", true },
+                    new object[]{ "c'est quoi le dlss", false },
+                    new object[]{ "qui est macron", false },
+                };
+                int ok12 = 0;
+                foreach (var c in corrCases)
+                {
+                    string q = (string)c[0]; bool exp = (bool)c[1];
+                    bool got = DocAssistant.IsCorrection(q);
+                    bool pass = got == exp; if (pass) ok12++;
+                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  correction=" + got + " (attendu " + exp + ")  « " + q + " »");
+                }
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

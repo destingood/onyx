@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.85 — Boucle de feedback : le Copilote apprend de tes corrections (sans ré-entraînement)
+- Le fine-tuning (ré-entraîner le modèle) est **hors-scope** pour une app locale gratuite (GPU,
+  datasets étiquetés, experts ML, surapprentissage). Mais l'article rappelle l'alternative :
+  **l'auto-amélioration par essais-erreurs / feedback**. Voilà l'équivalent local et gratuit.
+- **Corrige le Copilote et il retient** : s'il se trompe, dis « c'est faux, en fait c'est … » (ou
+  « non, c'est plutôt … », « la bonne réponse c'est … ») → la correction est **mémorisée
+  durablement** (bt-memoire.txt) et réinjectée dans ses réponses futures. Il devient plus juste au
+  fil du temps, sur TON contexte.
+- Sans correction explicite (« c'est faux » tout court) : il s'excuse et te propose de donner la
+  bonne réponse ou de vérifier sur le web.
+- S'appuie sur la mémoire persistante existante (« retiens que… », « oublie ce que tu sais »).
+- Vérifié : **62/62** sur le vrai code compilé.
+- Rappel honnête : c'est de l'adaptation au domaine SANS toucher aux poids du modèle — pas du vrai
+  fine-tuning, mais le bon compromis pour rester 100 % local et gratuit.
+
 ## v14.84 — Auto-diagnostic des garde-fous (« mesurer le succès »)
 - Le dernier article insiste sur **la mesure** (« mesurer la réduction des hallucinations, le
   respect des formats… contrôle continu »). J'avais un harnais de test (BT_HALLU) mais **côté
