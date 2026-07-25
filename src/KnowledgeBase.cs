@@ -14,7 +14,18 @@ namespace BTOptimizer
     /// </summary>
     internal static class KnowledgeBase
     {
-        private sealed class Chunk { public string Source; public string Text; public float[] Vec; }
+        private sealed class Chunk { public string Source; public string Text; public float[] Vec; public DateTime When; }
+
+        // Fraîcheur : au-delà de ce délai, un document de bt-savoir est signalé « peut-être daté »
+        // (le savoir périmé est LA cause n°1 d'échec RAG en entreprise — on le rend visible).
+        private const int StaleMonths = 18;
+        internal static bool IsStale(DateTime when) { return when != DateTime.MinValue && when < DateTime.Now.AddMonths(-StaleMonths); }
+        /// <summary>Étiquette de fraîcheur d'une source (« · maj 03/2024 · ⚠ peut-être daté »), ou "" si intégré.</summary>
+        internal static string FreshTag(DateTime when)
+        {
+            if (when == DateTime.MinValue) return "";
+            return " · maj " + when.ToString("MM/yyyy") + (IsStale(when) ? " · ⚠ peut-être daté" : "");
+        }
 
         private static readonly object Gate = new object();
         private static List<Chunk> _index;          // en mémoire (chargé/reconstruit une fois)
@@ -64,7 +75,7 @@ namespace BTOptimizer
         private static List<Chunk> Collect()
         {
             var list = new List<Chunk>();
-            foreach (string t in Builtin) list.Add(new Chunk { Source = "PC/gaming (intégré)", Text = t });
+            foreach (string t in Builtin) list.Add(new Chunk { Source = "PC/gaming (intégré)", Text = t, When = DateTime.MinValue });
             try
             {
                 if (Directory.Exists(Dir))
@@ -83,8 +94,9 @@ namespace BTOptimizer
                         else { try { raw = File.ReadAllText(f); } catch { continue; } }
                         if (ext == ".html" || ext == ".htm") raw = StripHtml(raw);
                         string src = RelSource(f);
+                        DateTime when; try { when = File.GetLastWriteTime(f); } catch { when = DateTime.Now; }
                         foreach (string ch in SplitChunks(raw, 600))
-                            list.Add(new Chunk { Source = src, Text = ch });
+                            list.Add(new Chunk { Source = src, Text = ch, When = when });
                     }
             }
             catch { }
@@ -211,7 +223,8 @@ namespace BTOptimizer
                 for (int i = 0; i < n; i++)
                 {
                     if (scored[i].Key < 0.35) break;   // trop peu pertinent : on n'encombre pas
-                    sb.Append("- ").Append(scored[i].Value.Text).Append(" [").Append(scored[i].Value.Source).Append("]\n");
+                    var c = scored[i].Value;
+                    sb.Append("- ").Append(c.Text).Append(" [").Append(c.Source).Append(FreshTag(c.When)).Append("]\n");
                     kept++;
                 }
                 return kept > 0 ? sb.ToString() : "";
@@ -224,9 +237,14 @@ namespace BTOptimizer
         {
             var source = Collect();
             var bySrc = new Dictionary<string, int>();
-            foreach (var c in source) { int n; bySrc.TryGetValue(c.Source, out n); bySrc[c.Source] = n + 1; }
+            var whenOf = new Dictionary<string, DateTime>();
+            foreach (var c in source)
+            {
+                int n; bySrc.TryGetValue(c.Source, out n); bySrc[c.Source] = n + 1;
+                if (!whenOf.ContainsKey(c.Source)) whenOf[c.Source] = c.When;
+            }
             var sb = new StringBuilder();
-            foreach (var kv in bySrc) sb.Append("• ").Append(kv.Key).Append(" : ").Append(kv.Value).Append(" passage(s)\n");
+            foreach (var kv in bySrc) sb.Append("• ").Append(kv.Key).Append(FreshTag(whenOf[kv.Key])).Append(" : ").Append(kv.Value).Append(" passage(s)\n");
             return sb.ToString().TrimEnd();
         }
 

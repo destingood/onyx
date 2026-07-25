@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.86 — Fraîcheur de la base de connaissances (gouvernance KB : le périmé devient visible)
+- Distinction clé : la **base de connaissances** (ce qu'on sait) et le **RAG** (comment on le
+  récupère) sont des dépendances séquentielles — la **qualité de la KB plafonne le RAG**. La cause
+  n°1 d'échec RAG en entreprise n'est pas la récupération, c'est une KB **périmée** (le fameux
+  « stale policy » : le système ressort un vieux doc avec assurance).
+- Le Copilote couvrait couverture + cohérence, mais **pas la fraîcheur**. Désormais :
+  chaque document de `bt-savoir\` porte sa **date de mise à jour**, et au-delà de **18 mois** il est
+  signalé **« ⚠ peut-être daté »** — à la citation ET dans « que contient ta base ».
+- Le modèle est **instruit** de prévenir quand il s'appuie sur une source datée → fini le vieux doc
+  ressorti comme parole d'évangile. (Les 22 chunks intégrés, toujours à jour, ne portent aucun tag.)
+- C'est l'équivalent, à l'échelle d'une app locale, des « freshness signals » que l'article décrit
+  comme l'une des deux interventions de gouvernance KB à plus fort impact.
+- Vérifié : **66/66** sur le vrai code compilé.
+
 ## v14.85 — Boucle de feedback : le Copilote apprend de tes corrections (sans ré-entraînement)
 - Le fine-tuning (ré-entraîner le modèle) est **hors-scope** pour une app locale gratuite (GPU,
   datasets étiquetés, experts ML, surapprentissage). Mais l'article rappelle l'alternative :

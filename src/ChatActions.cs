@@ -846,7 +846,7 @@ namespace BTOptimizer
                     string kb = KnowledgeBase.Search(q, 5);
                     if (!string.IsNullOrEmpty(kb))
                     {
-                        sysCtx += "\n\n" + kb + "Sers-toi de ces extraits pour tout fait qu'ils couvrent (cite « base de connaissances »). S'ils ne couvrent pas la question, ne force pas et n'invente rien.";
+                        sysCtx += "\n\n" + kb + "Sers-toi de ces extraits pour tout fait qu'ils couvrent (cite « base de connaissances »). Si une source est marquée « ⚠ peut-être daté », préviens que l'info n'est peut-être plus à jour. S'ils ne couvrent pas la question, ne force pas et n'invente rien.";
                         grounded = true;
                     }
                 }
