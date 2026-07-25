@@ -212,10 +212,12 @@ namespace BTOptimizer
                     return new Reply { Text = "Je ne retiens rien pour l'instant. Dis « retiens que… » et je garderai l'info d'une session à l'autre pour être plus précis.", ShowStarters = false };
                 return new Reply { Text = "Voilà ce que je retiens sur toi et ton PC :\n\n• " + string.Join("\n• ", facts.ToArray()) + "\n\n« oublie ce que tu sais » pour tout effacer.", ShowStarters = false };
             }
-            if (Has(s, "oublie ce que tu sais", "oublie moi", "efface ta memoire", "efface ce que tu sais", "vide ta memoire"))
+            if (Has(s, "oublie ce que tu sais", "oublie moi", "efface ta memoire", "efface ce que tu sais",
+                       "vide ta memoire", "oublie ce que tu as appris", "efface ce que tu as appris"))
             {
                 Memory.Clear();
-                return new Reply { Text = "Voilà, j'ai tout oublié sur toi (matériel, préférences, notes). On repart de zéro.", ShowStarters = true };
+                LocalBrain.ForgetLearned();   // efface aussi les faits appris/vérifiés persistants
+                return new Reply { Text = "Voilà, j'ai tout oublié (matériel, préférences, notes, et les faits que j'avais appris/vérifiés). On repart de zéro.", ShowStarters = true };
             }
 
             // --- LIRE / RÉSUMER une page web dont l'URL est donnée ---

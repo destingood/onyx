@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("14.87.0.0")]
-[assembly: AssemblyFileVersion("14.87.0.0")]
+[assembly: AssemblyVersion("14.88.0.0")]
+[assembly: AssemblyFileVersion("14.88.0.0")]
 
 namespace BTOptimizer
 {
@@ -236,8 +236,9 @@ namespace BTOptimizer
                     bool pass = got == exp; if (pass) ok3++;
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  cle=« " + got + " » (attendu « " + exp + " »)  <- « " + q + " »");
                 }
-                // Mémoire de faits vérifiés : mémorise, réinjecte, ignore les « pas trouvé », clé cohérente.
-                LocalBrain.ResetHistory();
+                // Mémoire de faits APPRIS (persistante) : mémorise, réinjecte, ignore les « pas trouvé »,
+                // clé cohérente, SURVIT à ResetHistory (accumulation), effacée par ForgetLearned.
+                LocalBrain.ForgetLearned();   // etat propre
                 LocalBrain.RememberFact("c'est qui clio williams", "Clio Williams est une joueuse de tennis britannique.");
                 LocalBrain.RememberFact("info sur xyznope", "Je n'ai pas pu vérifier ça en ligne.");   // doit être ignoré
                 string block = LocalBrain.VerifiedFactsBlock();
@@ -252,8 +253,11 @@ namespace BTOptimizer
                 bool m3 = clioCount == 1; if (m3) ok4++;   // même clé → une seule entrée (le plus récent gagne)
                 Console.WriteLine((m3 ? "OK  " : "FAIL") + "  meme entite = 1 seule entree (pas de doublon)");
                 LocalBrain.ResetHistory();
-                bool m4 = LocalBrain.VerifiedFactsBlock() == ""; if (m4) ok4++;
-                Console.WriteLine((m4 ? "OK  " : "FAIL") + "  ResetHistory vide les faits");
+                bool m4 = LocalBrain.VerifiedFactsBlock().Contains("clio williams"); if (m4) ok4++;   // PERSISTE (accumulation)
+                Console.WriteLine((m4 ? "OK  " : "FAIL") + "  faits appris SURVIVENT a ResetHistory (accumulation)");
+                LocalBrain.ForgetLearned();
+                bool m5 = LocalBrain.VerifiedFactsBlock() == ""; if (m5) ok4++;
+                Console.WriteLine((m5 ? "OK  " : "FAIL") + "  ForgetLearned efface les faits appris");
 
                 // Température dynamique : quasi nulle sur le factuel, souple sinon.
                 var tempCases = new[]
@@ -395,7 +399,7 @@ namespace BTOptimizer
                 if (exA) ok14++; Console.WriteLine((exA ? "OK  " : "FAIL") + "  exclusion : _lisez-moi et _archive\\ ignores");
                 if (exB) ok14++; Console.WriteLine((exB ? "OK  " : "FAIL") + "  exclusion : documents normaux indexes");
 
-                int total = cases.Length + ansCases.Length + keyCases.Length + 4 + tempCases.Length
+                int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
                           + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4;
                 int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");

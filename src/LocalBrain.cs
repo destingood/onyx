@@ -605,7 +605,9 @@ namespace BTOptimizer
 
         public static void PushUser(string text) { Push("user", text); }
         public static void PushAssistant(string text) { Push("assistant", text); }
-        public static void ResetHistory() { lock (_history) _history.Clear(); lock (_facts) _facts.Clear(); }
+        // « nouveau sujet » n'efface QUE la conversation — les faits APPRIS persistent (la
+        // connaissance s'accumule ; pour les effacer : « oublie ce que tu as appris »).
+        public static void ResetHistory() { lock (_history) _history.Clear(); }
 
         private static void Push(string role, string text)
         {
@@ -618,17 +620,62 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
-        //  FAITS VÉRIFIÉS de la session — anti « flip-flop » (l'IA se contredisait
-        //  d'un tour à l'autre : « actrice »… puis « chanteuse »… puis « voiture »).
-        //  L'historique ne garde que ~4 tours ; ces faits SOURCÉS (web) survivent à la
-        //  troncature et sont réinjectés → la réponse reste cohérente toute la session,
-        //  et le Copilote devient « de plus en plus précis » au fil de la conversation.
+        //  FAITS APPRIS (vérifiés sur le web) — mémoire PERSISTANTE et auditable.
+        //  Idée « LLM knowledge base » (Karpathy) adaptée en local & gouvernée : la
+        //  connaissance s'ACCUMULE d'une session à l'autre au lieu d'être re-dérivée à
+        //  chaque fois. Anti flip-flop AUSSI (mêmes faits réinjectés). Gouvernance :
+        //  fichier Markdown LISIBLE (bt-appris.md), daté, EFFAÇABLE (« oublie ce que tu
+        //  as appris ») et écrasé par tes corrections. Borné pour ne pas gonfler le prompt.
         // ------------------------------------------------------------------
-        private static readonly List<string[]> _facts = new List<string[]>();   // [clé, énoncé]
-        private const int MaxFacts = 6;
+        private static readonly List<string[]> _facts = new List<string[]>();   // [clé, énoncé, date MM/yyyy]
+        private static bool _learnedLoaded;
+        private const int MaxFacts = 30;
+        private static string LearnedPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-appris.md"); } }
 
-        /// <summary>Mémorise un fait VÉRIFIÉ sur le web (clé = entité de la question) pour rester
-        /// cohérent aux tours suivants. Ignore les « je n'ai pas trouvé ».</summary>
+        // Charge le fichier une fois (appelé sous lock(_facts)).
+        private static void EnsureLearned()
+        {
+            if (_learnedLoaded) return;
+            _learnedLoaded = true;
+            try
+            {
+                if (!File.Exists(LearnedPath)) return;
+                foreach (string line in File.ReadAllLines(LearnedPath))
+                {
+                    string t = line.Trim();
+                    if (!t.StartsWith("- [", StringComparison.Ordinal)) continue;
+                    int rb = t.IndexOf(']'); if (rb < 0) continue;
+                    int sep = t.IndexOf(" :: ", rb, StringComparison.Ordinal); if (sep < 0) continue;
+                    string stamp = t.Substring(3, rb - 3).Trim();
+                    string key = t.Substring(rb + 1, sep - rb - 1).Trim();
+                    string stmt = t.Substring(sep + 4).Trim();
+                    if (key.Length > 0 && stmt.Length > 0) _facts.Add(new[] { key, stmt, stamp });
+                }
+                while (_facts.Count > MaxFacts) _facts.RemoveAt(0);
+            }
+            catch { }
+        }
+
+        private static void SaveLearned()
+        {
+            try
+            {
+                var sb = new StringBuilder("# Ce que le Copilote a appris (vérifié sur le web) — lisible, modifiable, effaçable\n\n");
+                foreach (var f in _facts) sb.Append("- [").Append(f.Length > 2 ? f[2] : "").Append("] ").Append(f[0]).Append(" :: ").Append(f[1]).Append('\n');
+                File.WriteAllText(LearnedPath, sb.ToString());
+            }
+            catch { }
+        }
+
+        /// <summary>Efface toute la connaissance APPRISE (RAM + fichier) — gouvernance utilisateur.</summary>
+        public static void ForgetLearned()
+        {
+            lock (_facts) { _facts.Clear(); _learnedLoaded = true; }
+            try { if (File.Exists(LearnedPath)) File.Delete(LearnedPath); } catch { }
+        }
+
+        /// <summary>Mémorise DURABLEMENT un fait vérifié sur le web (clé = entité). Accumule d'une
+        /// session à l'autre ; le plus récent gagne ; ignore les « je n'ai pas trouvé ».</summary>
         public static void RememberFact(string question, string answer)
         {
             if (string.IsNullOrEmpty(answer)) return;
@@ -639,23 +686,29 @@ namespace BTOptimizer
             if (string.IsNullOrEmpty(key)) return;
             string stmt = answer.Replace("\r", " ").Replace("\n", " ").Trim();
             if (stmt.Length > 180) stmt = stmt.Substring(0, 180).TrimEnd() + "…";
+            string stamp = DateTime.Now.ToString("MM/yyyy");
             lock (_facts)
             {
+                EnsureLearned();
                 for (int i = _facts.Count - 1; i >= 0; i--)
                     if (_facts[i][0] == key) _facts.RemoveAt(i);   // le plus récent gagne
-                _facts.Add(new[] { key, stmt });
+                _facts.Add(new[] { key, stmt, stamp });
                 while (_facts.Count > MaxFacts) _facts.RemoveAt(0);
+                SaveLearned();
             }
         }
 
-        /// <summary>Bloc « faits déjà vérifiés » à injecter dans le contexte système, ou "" si aucun.</summary>
+        /// <summary>Bloc « faits appris » (persistant) à injecter dans le contexte, ou "" si aucun.</summary>
         public static string VerifiedFactsBlock()
         {
             lock (_facts)
             {
+                EnsureLearned();
                 if (_facts.Count == 0) return "";
-                var sb = new StringBuilder("FAITS DÉJÀ VÉRIFIÉS cette session (garde la MÊME réponse, ne te contredis pas) :\n");
-                foreach (var f in _facts) sb.Append("• ").Append(f[0]).Append(" : ").Append(f[1]).Append('\n');
+                var sb = new StringBuilder("FAITS DÉJÀ APPRIS/VÉRIFIÉS (garde la MÊME réponse, ne te contredis pas) :\n");
+                foreach (var f in _facts)
+                    sb.Append("• ").Append(f[0]).Append(" : ").Append(f[1])
+                      .Append(f.Length > 2 && f[2].Length > 0 ? " (appris " + f[2] + ")" : "").Append('\n');
                 return sb.ToString();
             }
         }

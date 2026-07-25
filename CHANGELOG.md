@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.88 — Mémoire qui s'accumule (méthode Karpathy, version locale & gouvernée)
+- Idée de Karpathy (LLM knowledge base) : la connaissance doit **s'accumuler**, pas se ré-inventer
+  à chaque fois. Adaptée ici SANS le pipeline entreprise (n8n + API Claude **payante** + Obsidian),
+  qui contredirait le « 100 % local et gratuit ».
+- Les **faits vérifiés sur le web** ne meurent plus à la fin de la session : ils sont **mémorisés
+  durablement** dans un fichier **lisible et auditable** (`bt-appris.md`), daté, et **réinjectés**
+  à chaque fois → le Copilote devient plus précis **d'une session à l'autre**, pas seulement dans
+  la conversation en cours.
+- **Gouverné** (le point faible de l'auto-compilation naïve, qui accumulerait les erreurs) :
+  fichier modifiable à la main, effaçable (« oublie ce que tu as appris »), **écrasé par tes
+  corrections** (v14.85), borné à 30 entrées, et chaque fait porte sa **date**.
+- « nouveau sujet » n'efface plus la connaissance apprise (seulement la conversation) — la mémoire
+  s'accumule vraiment.
+- Vérifié : **71/71** sur le vrai code (mémorisation, réinjection, survie à « nouveau sujet »,
+  effacement). Même mécanisme de persistance que le reste de l'app (dossier de l'exe).
+
 ## v14.87 — Meilleure structuration de la base : chunking sémantique + archivage + dédup
 - **Chunking sémantique** : la découpe des documents coupait bêtement **tous les 600 caractères**,
   en plein milieu d'un mot ou d'une phrase → embeddings dégradés. Désormais on regroupe des
