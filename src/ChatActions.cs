@@ -1188,6 +1188,51 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Distance à vol d'oiseau entre 2 villes (géocodage Open-Meteo + calcul local). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction DistanceAction(string a, string b, BadgeCatalog.Stats st)
+        {
+            var act = new DocAssistant.ChatAction();
+            act.Label = "Distance"; act.AutoRun = true; act.IsChange = false;
+            act.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Distance entre 2 villes…", 0);
+                string r = null;
+                try { r = LiveData.Distance(a, b); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu calculer la distance (une des deux villes est introuvable, ou hors-ligne)." : r);
+            };
+            return act;
+        }
+
+        /// <summary>Derniers séismes (magnitude ≥ 4) via USGS (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction QuakesAction(BadgeCatalog.Stats st)
+        {
+            var act = new DocAssistant.ChatAction();
+            act.Label = "Séismes récents"; act.AutoRun = true; act.IsChange = false;
+            act.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Séismes récents (USGS)…", 0);
+                string r = null;
+                try { r = LiveData.Quakes(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer les séismes récents (hors-ligne ?)." : r);
+            };
+            return act;
+        }
+
+        /// <summary>Position de la Station spatiale internationale via wheretheiss.at (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction IssAction(BadgeCatalog.Stats st)
+        {
+            var act = new DocAssistant.ChatAction();
+            act.Label = "Position ISS"; act.AutoRun = true; act.IsChange = false;
+            act.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Position de l'ISS…", 0);
+                string r = null;
+                try { r = LiveData.Iss(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer la position de l'ISS (hors-ligne ?)." : r);
+            };
+            return act;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

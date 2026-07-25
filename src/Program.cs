@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.08.0.0")]
-[assembly: AssemblyFileVersion("15.08.0.0")]
+[assembly: AssemblyVersion("15.09.0.0")]
+[assembly: AssemblyFileVersion("15.09.0.0")]
 
 namespace BTOptimizer
 {
@@ -552,9 +552,17 @@ namespace BTOptimizer
                 bool ex1 = UtilityTools.IsAir("quelle est la qualite de l'air") && UtilityTools.IsAir("pollution a lyon"); if (ex1) ok26++; Console.WriteLine((ex1 ? "OK  " : "FAIL") + "  air : 'qualite de l'air' et 'pollution'");
                 bool ex2 = !UtilityTools.IsAir("quel temps fait il") && !UtilityTools.IsAir("bonjour"); if (ex2) ok26++; Console.WriteLine((ex2 ? "OK  " : "FAIL") + "  air : pas de faux positif (meteo / bonjour)");
 
+                // Outils v15.09 : distance villes + lune (local) + seismes (USGS) + ISS.
+                int ok27 = 0;
+                var pr = UtilityTools.DistanceQuery("distance entre paris et lyon");
+                bool qx1 = pr != null && pr.A.ToLowerInvariant().Contains("paris") && pr.B.ToLowerInvariant().Contains("lyon"); if (qx1) ok27++; Console.WriteLine((qx1 ? "OK  " : "FAIL") + "  distance : extrait paris / lyon");
+                bool qx2 = UtilityTools.IsMoon("phase de la lune") && !UtilityTools.IsMoon("mes lunettes"); if (qx2) ok27++; Console.WriteLine((qx2 ? "OK  " : "FAIL") + "  lune : detecte, 'lunettes' exclu");
+                bool qx3 = UtilityTools.IsQuake("les derniers seismes") && !UtilityTools.IsQuake("bonjour"); if (qx3) ok27++; Console.WriteLine((qx3 ? "OK  " : "FAIL") + "  seismes : detecte, pas un bonjour");
+                bool qx4 = UtilityTools.IsIss("ou est l'iss") && !UtilityTools.IsIss("la suisse"); if (qx4) ok27++; Console.WriteLine((qx4 ? "OK  " : "FAIL") + "  ISS : detecte, 'suisse' exclu");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

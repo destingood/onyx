@@ -257,6 +257,43 @@ namespace BTOptimizer
                 || (n.Contains("air") && n.Contains("respire"));
         }
 
+        // ---- DISTANCE ENTRE 2 VILLES ----
+        internal sealed class Pair { public string A; public string B; }
+        /// <summary>« distance entre Paris et Lyon », « combien de km de X à Y » → couple de villes, sinon null.</summary>
+        internal static Pair DistanceQuery(string q)
+        {
+            if (string.IsNullOrEmpty(q)) return null;
+            string n = Deacc(q.ToLowerInvariant());
+            bool trig = n.Contains("distance") || (n.Contains("km") && n.Contains("entre")) || (n.Contains("combien de km"));
+            if (!trig) return null;
+            var m = Regex.Match(q, "(?i)(?:entre|de)\\s+(.+?)\\s+(?:et|a|à|->|jusqu'?a|jusqu'?à)\\s+(.+?)\\s*[?.!]*$");
+            if (!m.Success) return null;
+            string a = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.');
+            string b = m.Groups[2].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.');
+            if (a.Length < 2 || b.Length < 2) return null;
+            return new Pair { A = a, B = b };
+        }
+
+        // ---- LUNE / SÉISMES / ISS ----
+        /// <summary>« phase de la lune », « pleine lune » → vrai (pas « mes lunettes »).</summary>
+        internal static bool IsMoon(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("phase de la lune") || n.Contains("pleine lune") || Regex.IsMatch(n, "\\blune\\b");
+        }
+        /// <summary>« derniers séismes », « tremblement de terre » → vrai.</summary>
+        internal static bool IsQuake(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("seisme") || n.Contains("tremblement de terre") || n.Contains("sismique") || n.Contains("secousse");
+        }
+        /// <summary>« où est l'ISS », « station spatiale » → vrai (pas « la suisse »).</summary>
+        internal static bool IsIss(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return Regex.IsMatch(n, "\\biss\\b") || n.Contains("station spatiale");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

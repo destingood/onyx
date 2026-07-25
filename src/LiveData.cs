@@ -542,6 +542,121 @@ namespace BTOptimizer
             return "extrêmement mauvais";
         }
 
+        // ---- DISTANCE ENTRE 2 VILLES (géocodage Open-Meteo + calcul LOCAL) ----
+        /// <summary>Distance à vol d'oiseau entre deux villes. null si une ville est introuvable.</summary>
+        public static string Distance(string a, string b)
+        {
+            try
+            {
+                double la, lo, lb, ob; string na, nb;
+                if (!Geocode(a, out la, out lo, out na)) return null;
+                if (!Geocode(b, out lb, out ob, out nb)) return null;
+                double km = Haversine(la, lo, lb, ob);
+                return "📏 Distance à vol d'oiseau entre " + na + " et " + nb + " : " + FrNum(km, 0) + " km."
+                     + "\n(distance géodésique, calcul local ; par la route c'est un peu plus long.)";
+            }
+            catch { }
+            return null;
+        }
+        private static double Haversine(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double R = 6371.0;
+            double dLat = Rad(lat2 - lat1), dLon = Rad(lon2 - lon1);
+            double h = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                     + Math.Cos(Rad(lat1)) * Math.Cos(Rad(lat2)) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            return 2 * R * Math.Asin(Math.Min(1.0, Math.Sqrt(h)));
+        }
+        private static double Rad(double deg) { return deg * Math.PI / 180.0; }
+
+        // ---- PHASE DE LA LUNE (calcul LOCAL, hors-ligne, déterministe) ----
+        /// <summary>Phase lunaire du moment, calculée localement (mois synodique). Toujours disponible.</summary>
+        public static string MoonPhase()
+        {
+            DateTime knownNew = new DateTime(2000, 1, 6, 18, 14, 0, DateTimeKind.Utc);  // nouvelle lune de référence
+            const double syn = 29.530588853;                                            // mois synodique (jours)
+            double frac = (DateTime.UtcNow - knownNew).TotalDays / syn;
+            frac -= Math.Floor(frac);
+            if (frac < 0) frac += 1;
+            double age = frac * syn;
+            int illum = (int)Math.Round((1 - Math.Cos(2 * Math.PI * frac)) / 2 * 100);
+            return "🌙 Lune : " + MoonName(frac) + " — âge ≈ " + FrNum(age, 1) + " jour(s), éclairée à ≈ " + illum + " %."
+                 + "\n(calcul local, hors-ligne.)";
+        }
+        private static string MoonName(double f)
+        {
+            if (f < 0.03 || f >= 0.97) return "nouvelle lune";
+            if (f < 0.22) return "premier croissant";
+            if (f < 0.28) return "premier quartier";
+            if (f < 0.47) return "gibbeuse croissante";
+            if (f < 0.53) return "pleine lune";
+            if (f < 0.72) return "gibbeuse décroissante";
+            if (f < 0.78) return "dernier quartier";
+            return "dernier croissant";
+        }
+
+        // ---- SÉISMES RÉCENTS (USGS, gratuit sans clé) ----
+        /// <summary>5 derniers séismes de magnitude ≥ 4 dans le monde. null si échec.</summary>
+        public static string Quakes()
+        {
+            try
+            {
+                string json = Get("https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&limit=5&orderby=time&minmagnitude=4");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (!d.RootElement.TryGetProperty("features", out var fs) || fs.ValueKind != JsonValueKind.Array || fs.GetArrayLength() == 0) return null;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🌍 Derniers séismes (magnitude ≥ 4) dans le monde :\n");
+                    int n = 0;
+                    foreach (var f in fs.EnumerateArray())
+                    {
+                        if (n++ >= 5) break;
+                        if (!f.TryGetProperty("properties", out var p)) continue;
+                        double mag = Num(p, "mag") ?? 0;
+                        string place = p.TryGetProperty("place", out var pl) && pl.ValueKind == JsonValueKind.String ? pl.GetString() : "";
+                        string when = "";
+                        if (p.TryGetProperty("time", out var t) && t.ValueKind == JsonValueKind.Number)
+                        {
+                            var dto = DateTimeOffset.FromUnixTimeMilliseconds(t.GetInt64()).ToLocalTime();
+                            when = " (" + dto.ToString("dd/MM") + " " + dto.ToString("HH") + "h" + dto.ToString("mm") + ")";
+                        }
+                        sb.Append("• M ").Append(G(mag)).Append(" — ").Append(place).Append(when).Append('\n');
+                    }
+                    sb.Append("— source : USGS (gratuit). Lieux en anglais.");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // ---- POSITION DE L'ISS (wheretheiss.at, gratuit sans clé) ----
+        /// <summary>Position actuelle de la Station spatiale internationale. null si échec.</summary>
+        public static string Iss()
+        {
+            try
+            {
+                string json = Get("https://api.wheretheiss.at/v1/satellites/25544");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    double? lat = Num(r, "latitude"), lon = Num(r, "longitude"), alt = Num(r, "altitude"), vel = Num(r, "velocity");
+                    if (lat == null || lon == null) return null;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🛰️ La Station spatiale internationale (ISS) survole ")
+                      .Append(FrNum(Math.Abs(lat.Value), 1)).Append("° ").Append(lat.Value >= 0 ? "N" : "S").Append(", ")
+                      .Append(FrNum(Math.Abs(lon.Value), 1)).Append("° ").Append(lon.Value >= 0 ? "E" : "O").Append('.');
+                    if (alt != null) sb.Append("\nAltitude ≈ ").Append(FrNum(alt.Value, 0)).Append(" km");
+                    if (vel != null) sb.Append(alt != null ? " · vitesse ≈ " : "\nVitesse ≈ ").Append(FrNum(vel.Value, 0)).Append(" km/h");
+                    sb.Append(".\n— source : wheretheiss.at (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         internal static string FrDate(string iso)
         {
             try

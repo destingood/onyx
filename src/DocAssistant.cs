@@ -233,6 +233,27 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour la qualité de l'air j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je regarde la qualité de l'air…", Action = ChatActions.AirAction(q, st), Dynamic = true };
             }
+            // 14) PHASE DE LA LUNE : calcul LOCAL, hors-ligne (comme l'heure) — réponse immédiate.
+            if (UtilityTools.IsMoon(s)) return new Reply { Text = LiveData.MoonPhase(), ShowStarters = true };
+            // 15) DISTANCE entre 2 villes, 16) SÉISMES (USGS), 17) POSITION ISS — réseau, sans clé.
+            {
+                UtilityTools.Pair pr = UtilityTools.DistanceQuery(q);
+                if (pr != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la distance entre 2 villes j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je calcule la distance…", Action = ChatActions.DistanceAction(pr.A, pr.B, st), Dynamic = true };
+                }
+            }
+            if (UtilityTools.IsQuake(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les séismes récents j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde les séismes récents…", Action = ChatActions.QuakesAction(st), Dynamic = true };
+            }
+            if (UtilityTools.IsIss(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la position de l'ISS j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je localise l'ISS…", Action = ChatActions.IssAction(st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.09 — 4 outils « culture générale » gratuits sans clé
+- **📏 Distance entre 2 villes** : « distance entre Paris et Lyon », « combien de km de X à Y » → distance à vol
+  d'oiseau. Géocodage Open-Meteo (sans clé) + **calcul local** (Haversine). Vérifié : Paris–Lyon = 393 km.
+- **🌙 Phase de la lune** : « phase de la lune », « pleine lune » → phase, âge et % éclairé, **calculés en LOCAL**
+  (hors-ligne, zéro hallucination, comme l'heure). Garde-fou : « mes lunettes » ne déclenche rien.
+- **🌍 Séismes récents** (USGS, sans clé) : « derniers séismes », « tremblement de terre » → les 5 derniers
+  (magnitude ≥ 4) dans le monde avec heure locale. (Noms de lieux en anglais, précisé dans la réponse.)
+- **🛰️ Position de l'ISS** (wheretheiss.at, sans clé) : « où est l'ISS » → latitude/longitude, altitude, vitesse.
+  Garde-fou : « la Suisse » ne déclenche pas l'ISS.
+- Vérifié EN DIRECT ; build 0 erreur ; harnais 127/127.
+
 ## v15.08 — Qualité de l'air (Open-Meteo, gratuit sans clé)
 - **🌬️ Qualité de l'air** : « qualité de l'air », « pollution à Lyon », « particules fines » → indice européen
   EAQI (très bon → extrêmement mauvais) + PM2.5 et PM10 en µg/m³. Sans ville, estime par l'IP (et le dit).
