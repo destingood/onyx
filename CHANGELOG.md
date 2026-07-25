@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v14.97 — Base de connaissances intégrée : 157 → 194 fiches
+- Quatrième lot, orienté **références utiles et diagnostic du quotidien** (pas de la niche) :
+  - **Références** : plages de températures NORMALES (CPU/GPU idle & charge, hotspot/mémoire),
+    distinguer **FPS bas vs stuttering vs input lag**, déchirement (tearing).
+  - **Erreurs de jeu courantes** : « out of video memory », « D3D device removed », « a cessé de
+    fonctionner » (+ remèdes).
+  - **Launchers** : téléchargement Steam lent (région), « disk write error ».
+  - **Windows perf** : disque à 100 % (SysMain/index/HDD), RAM/standby, Defender gourmand,
+    démarrage lent, réveils de veille intempestifs, écran noir au réveil (Win+Ctrl+Maj+B).
+  - **Périphériques** : audio/sortie, USB non détecté, écho Discord, manette (Steam Input/DS4Windows).
+  - **Réseau** : ipconfig /flushdns /release /renew, winsock reset, Wi-Fi qui décroche, débit vs ping.
+  - **Upgrade** : quoi améliorer (GPU vs CPU-bound), RAM 8→16 Go, SSD ; réglages coûteux vs visibles.
+  - **Sécurité** : arnaques « boost FPS », faux support Microsoft.
+- La base intégrée compte désormais **194 passages** (vérifié). **× 8,4** depuis v14.93 (23 fiches).
+- Vérifié : build 0 erreur ; harnais 96/96.
+
 ## v14.96 — Base de connaissances intégrée : 115 → 157 fiches
 - Troisième lot de savoir **baké dans l'exe**, factuel et sûr (pas de conseil dangereux) :
   - **Overclocking/undervolt** : GPU (Afterburner, par paliers), CPU (PBO/Curve Optimizer), RAM
