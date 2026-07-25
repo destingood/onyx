@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.06 — Article code-garage (13 APIs) : les 2 dernières VRAIMENT gratuites câblées
+- J'ai lu l'article en entier (dans le navigateur — mon fetch texte se faisait renvoyer un faux 404). Sur les
+  13 APIs de 2021, **2 seulement sont encore gratuites sans clé aujourd'hui** en plus d'Open Food Facts (déjà
+  intégrée en v15.05) :
+- **✈️ Avions en vol autour de toi** (OpenSky Network, gratuit sans clé) : « combien d'avions au-dessus de
+  moi », « avions dans le ciel » → nombre + indicatifs, pays et altitude, dans une zone estimée par ton IP.
+  Garde-fou : « mode avion » (réglage Windows) ne déclenche PAS le trafic aérien.
+- **🔭 Photo astro du jour** (NASA APOD, clé de démo publique) : « photo du jour de la NASA », « image de
+  l'espace » → titre, date et lien de l'image du jour. (« C'est quoi la NASA » reste une question, pas la photo.)
+- Vérifié EN DIRECT : APOD « Tranquility and Serenity » (25/07/2026) ; OpenSky → 11 avions autour de
+  Fleury-sur-Orne (France, Espagne, UK, Canada, Suisse…). Build 0 erreur ; harnais 118/118.
+- **Le reste de l'article a été volontairement écarté** car devenu payant / à clé depuis 2021 (Trefle,
+  OpenWeather, SerpAPI, TheMovieDB, Giphy, Pappers, le-systeme-solaire) ou déprécié/mort (RestCountries v3.1,
+  CountryFlags.io) ou hors-sujet (data.gouv = portail, RandomUser = faux profils de test). Les câbler aurait
+  créé des boutons morts — je ne le fais pas.
+
 ## v15.05 — Deux outils de plus (article code-garage) : nutrition et code postal
 - **Produit / nutrition** (Open Food Facts, gratuit sans clé) : « nutriscore du nutella », « composition du
   coca », « calories du X » → Nutri-Score, groupe NOVA (transformation) et valeurs pour 100 g (kcal, sucres,

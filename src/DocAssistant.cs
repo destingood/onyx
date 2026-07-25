@@ -210,6 +210,17 @@ namespace BTOptimizer
                     return new Reply { Text = "Je regarde le code postal…", Action = ChatActions.PostalAction(cp, st), Dynamic = true };
                 }
             }
+            // 10) AVIONS EN VOL (OpenSky), 11) PHOTO ASTRO DU JOUR (NASA APOD) — réseau, sans clé.
+            if (UtilityTools.IsFlights(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les avions en vol j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde le ciel…", Action = ChatActions.FlightsAction(st), Dynamic = true };
+            }
+            if (UtilityTools.IsApod(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la photo astro du jour j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la photo du jour de la NASA…", Action = ChatActions.ApodAction(st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

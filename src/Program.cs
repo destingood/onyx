@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.05.0.0")]
-[assembly: AssemblyFileVersion("15.05.0.0")]
+[assembly: AssemblyVersion("15.06.0.0")]
+[assembly: AssemblyFileVersion("15.06.0.0")]
 
 namespace BTOptimizer
 {
@@ -534,9 +534,16 @@ namespace BTOptimizer
                 bool wx3 = UtilityTools.PostalQuery("code postal 75001") == "75001" && UtilityTools.PostalQuery("75001") == "75001"; if (wx3) ok23++; Console.WriteLine((wx3 ? "OK  " : "FAIL") + "  code postal : 75001 detecte (avec contexte et seul)");
                 bool wx4 = UtilityTools.PostalQuery("merci beaucoup") == null; if (wx4) ok23++; Console.WriteLine((wx4 ? "OK  " : "FAIL") + "  code postal : pas de faux positif");
 
+                // Outils v15.06 : photo astro NASA (APOD) + avions en vol (OpenSky).
+                int ok24 = 0;
+                bool ax1 = UtilityTools.IsApod("photo du jour de la nasa") && !UtilityTools.IsApod("c'est quoi la nasa"); if (ax1) ok24++; Console.WriteLine((ax1 ? "OK  " : "FAIL") + "  APOD : photo nasa oui, 'c'est quoi la nasa' non");
+                bool ax2 = UtilityTools.IsApod("image de l'espace") && !UtilityTools.IsApod("libere de l'espace disque"); if (ax2) ok24++; Console.WriteLine((ax2 ? "OK  " : "FAIL") + "  APOD : image espace oui, 'espace disque' non");
+                bool ax3 = UtilityTools.IsFlights("combien d'avions au dessus de moi") && !UtilityTools.IsFlights("mode avion"); if (ax3) ok24++; Console.WriteLine((ax3 ? "OK  " : "FAIL") + "  avions : detecte, 'mode avion' exclu");
+                bool ax4 = UtilityTools.IsFlights("des avions dans le ciel") && !UtilityTools.IsFlights("bonjour"); if (ax4) ok24++; Console.WriteLine((ax4 ? "OK  " : "FAIL") + "  avions : detecte, pas un bonjour");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

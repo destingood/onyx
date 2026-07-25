@@ -1128,6 +1128,36 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Photo astronomique du jour (NASA APOD, clé de démo). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction ApodAction(BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Photo astro (NASA)"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Photo du jour (NASA APOD)…", 0);
+                string r = null;
+                try { r = LiveData.Apod(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer la photo astro du jour (hors-ligne ou quota NASA atteint)." : r);
+            };
+            return a;
+        }
+
+        /// <summary>Avions en vol autour de toi via OpenSky (gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction FlightsAction(BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Avions en vol"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Avions en vol (OpenSky)…", 0);
+                string r = null;
+                try { r = LiveData.FlightsNearby(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer le trafic aérien (hors-ligne, position inconnue, ou OpenSky saturé)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

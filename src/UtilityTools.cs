@@ -215,6 +215,27 @@ namespace BTOptimizer
             return ctx ? m.Groups[1].Value : null;
         }
 
+        // ---- PHOTO ASTRO DU JOUR (NASA APOD) ----
+        /// <summary>« photo du jour de la nasa », « image astro », « apod » → vrai (mais pas « c'est quoi la nasa »).</summary>
+        internal static bool IsApod(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool wantPhoto = n.Contains("photo") || n.Contains("image") || n.Contains("cliche");
+            return n.Contains("apod")
+                || (n.Contains("nasa") && (wantPhoto || n.Contains("du jour")))
+                || (wantPhoto && (n.Contains("astro") || n.Contains("espace") || n.Contains("cosmos")));
+        }
+
+        // ---- AVIONS EN VOL (OpenSky) ----
+        /// <summary>« combien d'avions au-dessus de moi », « avions dans le ciel » → vrai (pas « mode avion »).</summary>
+        internal static bool IsFlights(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("mode avion")) return false;   // réglage Windows, pas le trafic aérien
+            return n.Contains("avion") || n.Contains("trafic aerien") || n.Contains("aerien")
+                || (n.Contains("vol") && n.Contains("ciel"));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

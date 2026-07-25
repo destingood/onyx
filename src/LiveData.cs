@@ -377,6 +377,78 @@ namespace BTOptimizer
             return Math.Round(v, 1).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
         }
 
+        // ---- PHOTO ASTRO DU JOUR (NASA APOD, clé de démo publique) ----
+        /// <summary>Photo/vidéo astronomique du jour de la NASA. null si échec.</summary>
+        public static string Apod()
+        {
+            try
+            {
+                string json = Get("https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    string title = r.TryGetProperty("title", out var t) ? t.GetString() : null;
+                    if (string.IsNullOrEmpty(title)) return null;
+                    string date = r.TryGetProperty("date", out var dt) ? dt.GetString() : "";
+                    string media = r.TryGetProperty("media_type", out var m) ? m.GetString() : "image";
+                    string link = r.TryGetProperty("url", out var u) ? u.GetString() : "";
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append(media == "video" ? "🎬 Vidéo astro du jour (NASA)" : "🔭 Photo astro du jour (NASA)");
+                    if (!string.IsNullOrEmpty(date)) sb.Append(" — ").Append(FrDate(date));
+                    sb.Append('\n').Append(title);
+                    if (!string.IsNullOrEmpty(link)) sb.Append('\n').Append(link);
+                    sb.Append("\n(APOD, clé de démo NASA ; description détaillée en anglais sur le lien.)");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // ---- AVIONS EN VOL AUTOUR DE TOI (OpenSky, gratuit sans clé) ----
+        /// <summary>Avions actuellement en vol dans une zone autour de ta position (estimée par IP). null si échec.</summary>
+        public static string FlightsNearby()
+        {
+            try
+            {
+                double lat, lon; string city;
+                if (!GeoByIp(out lat, out lon, out city)) return null;
+                if (string.IsNullOrEmpty(city)) city = "ta position";
+                const double box = 0.6;   // ~ ±60 km
+                string url = "https://opensky-network.org/api/states/all?lamin=" + Inv(lat - box) + "&lomin=" + Inv(lon - box)
+                           + "&lamax=" + Inv(lat + box) + "&lomax=" + Inv(lon + box);
+                string json = Get(url);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var doc = JsonDocument.Parse(json))
+                {
+                    JsonElement st;
+                    bool has = doc.RootElement.TryGetProperty("states", out st) && st.ValueKind == JsonValueKind.Array;
+                    int total = has ? st.GetArrayLength() : 0;
+                    if (total == 0) return "✈️ Aucun avion détecté juste au-dessus de toi (≈ " + city + ") à l'instant.\n— source : OpenSky Network (gratuit).";
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("✈️ ").Append(total).Append(total > 1 ? " avions en vol" : " avion en vol").Append(" autour de toi (≈ ").Append(city).Append(") :\n");
+                    int n = 0;
+                    foreach (var a in st.EnumerateArray())
+                    {
+                        if (n++ >= 6) break;
+                        string call = a.GetArrayLength() > 1 && a[1].ValueKind == JsonValueKind.String ? a[1].GetString().Trim() : "";
+                        string ctry = a.GetArrayLength() > 2 && a[2].ValueKind == JsonValueKind.String ? a[2].GetString() : "";
+                        string alt = a.GetArrayLength() > 7 && a[7].ValueKind == JsonValueKind.Number ? " à " + (int)Math.Round(a[7].GetDouble()) + " m" : "";
+                        sb.Append("• ").Append(string.IsNullOrEmpty(call) ? "(sans indicatif)" : call);
+                        if (!string.IsNullOrEmpty(ctry)) sb.Append(" — ").Append(ctry);
+                        sb.Append(alt).Append('\n');
+                    }
+                    if (total > 6) sb.Append("…et ").Append(total - 6).Append(" autre(s).\n");
+                    sb.Append("— source : OpenSky Network (gratuit).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+        private static string Inv(double v) { return v.ToString(System.Globalization.CultureInfo.InvariantCulture); }
+
         // « 2026-08-15 » → « 15 août 2026 »
         internal static string FrDate(string iso)
         {
