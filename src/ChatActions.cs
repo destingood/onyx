@@ -1158,6 +1158,21 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Dette publique de la France en direct (dettedelafrance.fr, gratuit, sans clé). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction DebtAction(BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Dette de la France"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Dette publique (dettedelafrance.fr)…", 0);
+                string r = null;
+                try { r = LiveData.Debt(); } catch { }
+                return Say(string.IsNullOrEmpty(r) ? "Je n'ai pas pu récupérer la dette de la France en direct (hors-ligne ?)." : r);
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

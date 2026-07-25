@@ -449,6 +449,47 @@ namespace BTOptimizer
         }
         private static string Inv(double v) { return v.ToString(System.Globalization.CultureInfo.InvariantCulture); }
 
+        // ---- DETTE PUBLIQUE DE LA FRANCE EN DIRECT (dettedelafrance.fr, gratuit sans clé) ----
+        /// <summary>Dette publique française en temps réel (montant, ratio PIB, par habitant, cadence). null si échec.</summary>
+        public static string Debt()
+        {
+            try
+            {
+                string json = Get("https://dettedelafrance.fr/api/v1/debt");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    if (r.TryGetProperty("ok", out var ok) && ok.ValueKind == JsonValueKind.False) return null;
+                    double? billions = Num(r, "debt_eur_billions");
+                    if (billions == null) return null;
+                    double? ratio = Num(r, "debt_to_gdp_ratio_pct");
+                    double? perCap = Num(r, "debt_per_capita_eur");
+                    double? perSec = Num(r, "rate_eur_per_second");
+
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("🇫🇷 Dette publique de la France : ").Append(FrNum(billions.Value, 2)).Append(" milliards d'euros");
+                    if (ratio != null) sb.Append(" (").Append(FrNum(ratio.Value, 1)).Append(" % du PIB)");
+                    sb.Append(".\n");
+                    bool any = false;
+                    if (perCap != null) { sb.Append("Soit ≈ ").Append(FrNum(perCap.Value, 0)).Append(" € par habitant"); any = true; }
+                    if (perSec != null) { sb.Append(any ? " · elle grimpe d'environ " : "Elle grimpe d'environ ").Append(FrNum(perSec.Value, 0)).Append(" €/seconde"); any = true; }
+                    if (any) sb.Append(".\n");
+                    sb.Append("— source : dettedelafrance.fr (données INSEE/AFT/Banque de France, CC BY 4.0).");
+                    return sb.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+        // 3546.28 → « 3 546,28 » (milliers = espace insécable, décimale = virgule ; sans dépendance ICU).
+        private static string FrNum(double v, int dec)
+        {
+            string fmt = dec > 0 ? "#,##0." + new string('#', dec) : "#,##0";
+            string s = v.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture);
+            return s.Replace(",", " ").Replace(".", ",");
+        }
+
         // « 2026-08-15 » → « 15 août 2026 »
         internal static string FrDate(string iso)
         {

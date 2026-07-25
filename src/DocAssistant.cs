@@ -221,6 +221,12 @@ namespace BTOptimizer
                 if (LocalBrain.WebOff()) return new Reply { Text = "Pour la photo astro du jour j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 return new Reply { Text = "Je regarde la photo du jour de la NASA…", Action = ChatActions.ApodAction(st), Dynamic = true };
             }
+            // 12) DETTE PUBLIQUE DE LA FRANCE en direct (dettedelafrance.fr) — réseau, sans clé.
+            if (UtilityTools.IsDebt(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la dette de la France en direct j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la dette en direct…", Action = ChatActions.DebtAction(st), Dynamic = true };
+            }
 
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.

@@ -236,6 +236,16 @@ namespace BTOptimizer
                 || (n.Contains("vol") && n.Contains("ciel"));
         }
 
+        // ---- DETTE PUBLIQUE DE LA FRANCE ----
+        /// <summary>« quelle est la dette de la France », « dette publique » → vrai (pas « j'ai des dettes »).</summary>
+        internal static bool IsDebt(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (!n.Contains("dette")) return false;
+            return n.Contains("france") || n.Contains("francaise") || n.Contains("publique")
+                || n.Contains("nationale") || n.Contains("pays") || n.Contains("etat") || n.Contains("pib");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

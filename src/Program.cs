@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.06.0.0")]
-[assembly: AssemblyFileVersion("15.06.0.0")]
+[assembly: AssemblyVersion("15.07.0.0")]
+[assembly: AssemblyFileVersion("15.07.0.0")]
 
 namespace BTOptimizer
 {
@@ -541,9 +541,15 @@ namespace BTOptimizer
                 bool ax3 = UtilityTools.IsFlights("combien d'avions au dessus de moi") && !UtilityTools.IsFlights("mode avion"); if (ax3) ok24++; Console.WriteLine((ax3 ? "OK  " : "FAIL") + "  avions : detecte, 'mode avion' exclu");
                 bool ax4 = UtilityTools.IsFlights("des avions dans le ciel") && !UtilityTools.IsFlights("bonjour"); if (ax4) ok24++; Console.WriteLine((ax4 ? "OK  " : "FAIL") + "  avions : detecte, pas un bonjour");
 
+                // Outil v15.07 : dette publique de la France en direct (dettedelafrance.fr).
+                int ok25 = 0;
+                bool dx1 = UtilityTools.IsDebt("quelle est la dette de la france") && UtilityTools.IsDebt("dette publique"); if (dx1) ok25++; Console.WriteLine((dx1 ? "OK  " : "FAIL") + "  dette : 'dette de la france' et 'dette publique'");
+                bool dx2 = UtilityTools.IsDebt("la dette de l'etat") && !UtilityTools.IsDebt("j'ai des dettes"); if (dx2) ok25++; Console.WriteLine((dx2 ? "OK  " : "FAIL") + "  dette : 'dette de l'etat' oui, 'j'ai des dettes' non");
+                bool dx3 = !UtilityTools.IsDebt("comment ca va"); if (dx3) ok25++; Console.WriteLine((dx3 ? "OK  " : "FAIL") + "  dette : pas de faux positif");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

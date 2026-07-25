@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.07 — La dette de la France EN DIRECT (dettedelafrance.fr, gratuit sans clé)
+- **🇫🇷 Dette publique en temps réel** : « quelle est la dette de la France », « dette publique », « dette de
+  l'État » → montant en milliards, ratio dette/PIB, dette par habitant et **cadence d'augmentation par seconde**.
+- Données officielles agrégées (INSEE au sens de Maastricht, AFT, Banque de France). API libre, sans clé,
+  licence CC BY 4.0 (source citée dans la réponse).
+- Garde-fou : « j'ai des dettes » (perso) ne déclenche PAS la dette publique ; il faut un contexte
+  France/publique/État/PIB.
+- Vérifié EN DIRECT : 3 546,28 milliards € (117,9 % du PIB), ≈ 51 483 €/habitant, +4 833 €/seconde.
+  Build 0 erreur ; harnais 121/121.
+
 ## v15.06 — Article code-garage (13 APIs) : les 2 dernières VRAIMENT gratuites câblées
 - J'ai lu l'article en entier (dans le navigateur — mon fetch texte se faisait renvoyer un faux 404). Sur les
   13 APIs de 2021, **2 seulement sont encore gratuites sans clé aujourd'hui** en plus d'Open Food Facts (déjà
