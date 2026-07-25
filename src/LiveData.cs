@@ -135,6 +135,73 @@ namespace BTOptimizer
             }
         }
 
+        // ---- DEVISES (Frankfurter / BCE, gratuit sans clé) ----
+        /// <summary>Convertit un montant de 'from' vers 'to' (codes ISO). null si échec.</summary>
+        public static double? Currency(double amount, string from, string to)
+        {
+            try
+            {
+                string json = Get("https://api.frankfurter.dev/v1/latest?base=" + Uri.EscapeDataString(from) + "&symbols=" + Uri.EscapeDataString(to));
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                    if (d.RootElement.TryGetProperty("rates", out var rates) && rates.TryGetProperty(to, out var rr))
+                        return amount * rr.GetDouble();
+            }
+            catch { }
+            return null;
+        }
+
+        // ---- JOURS FÉRIÉS (Nager.Date, gratuit) ----
+        public static string NextHolidays()
+        {
+            try
+            {
+                string json = Get("https://date.nager.at/api/v3/NextPublicHolidays/FR");
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var sb = new System.Text.StringBuilder();
+                    int n = 0;
+                    foreach (var h in d.RootElement.EnumerateArray())
+                    {
+                        if (n++ >= 5) break;
+                        string iso = h.GetProperty("date").GetString();
+                        string name = h.TryGetProperty("localName", out var ln) ? ln.GetString() : h.GetProperty("name").GetString();
+                        sb.Append("• ").Append(FrDate(iso)).Append(" — ").Append(name).Append('\n');
+                    }
+                    return sb.ToString().TrimEnd();
+                }
+            }
+            catch { return null; }
+        }
+
+        // ---- CRYPTO (CoinGecko, gratuit) ----
+        public static double? Crypto(string id, string vs)
+        {
+            try
+            {
+                string json = Get("https://api.coingecko.com/api/v3/simple/price?ids=" + id + "&vs_currencies=" + vs);
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                    if (d.RootElement.TryGetProperty(id, out var c) && c.TryGetProperty(vs, out var v))
+                        return v.GetDouble();
+            }
+            catch { }
+            return null;
+        }
+
+        // « 2026-08-15 » → « 15 août 2026 »
+        internal static string FrDate(string iso)
+        {
+            try
+            {
+                var parts = iso.Split('-');
+                int y = int.Parse(parts[0]), mo = int.Parse(parts[1]), day = int.Parse(parts[2]);
+                return day + " " + Mois[mo] + " " + y;
+            }
+            catch { return iso; }
+        }
+
         private static string Get(string url)
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))

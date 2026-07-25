@@ -147,6 +147,35 @@ namespace BTOptimizer
                 return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
             }
 
+            // --- UTILITAIRES « pour plein de choses » (public-apis) ---
+            // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
+            {
+                string u = UtilityTools.LocalUnit(q);
+                if (u != null) return new Reply { Text = u, ShowStarters = true };
+            }
+            // 2) DEVISES (Frankfurter/BCE), 3) CRYPTO (CoinGecko), 4) JOURS FÉRIÉS (Nager.Date) — réseau.
+            {
+                UtilityTools.Triple cur = UtilityTools.Currency(q);
+                if (cur != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le taux de change j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le taux…", Action = ChatActions.CurrencyAction(cur.Amount, cur.A, cur.B, st), Dynamic = true };
+                }
+            }
+            {
+                string coin = UtilityTools.CryptoId(s);
+                if (coin != null)
+                {
+                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le cours j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le cours…", Action = ChatActions.CryptoAction(coin, st), Dynamic = true };
+                }
+            }
+            if (UtilityTools.IsHoliday(s))
+            {
+                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les jours fériés j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysAction(st), Dynamic = true };
+            }
+
             // --- Boucle de FEEDBACK (auto-amélioration « essais-erreurs », sans ré-entraînement) :
             //     l'utilisateur corrige → on RETIENT la correction durablement → plus juste ensuite.
             //     C'est l'équivalent local et gratuit de l'adaptation au domaine du fine-tuning. ---

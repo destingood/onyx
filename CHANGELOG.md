@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.03 — Boîte à outils « plein de choses » (idées de public-apis/public-apis)
+- **Conversions d'unités — en LOCAL, exactes, hors-ligne** (zéro hallucination) : « 100 km en miles »,
+  « 20°C en fahrenheit », « 5 kg en livres », « 60 mph en km/h », « 2 litres en gallons »… (longueur,
+  masse, température, vitesse, volume).
+- **Devises** (Frankfurter / BCE, gratuit sans clé) : « combien fait 100 dollars en euros » → taux du
+  jour. Indicatif, hors frais.
+- **Cryptomonnaies** (CoinGecko, gratuit) : « prix du bitcoin » → cours en euros. Info seulement, pas
+  de conseil d'investissement.
+- **Jours fériés** (Nager.Date, gratuit) : « prochain jour férié » → les 5 prochains en France.
+- Tout est routé proprement : unités en local (instantané) ; devises/crypto/fériés nécessitent
+  internet (désactivable). Nouveaux `src/UtilityTools.cs` + méthodes réseau dans `LiveData.cs`.
+- Vérifié EN DIRECT : 100 km = 62,14 miles ; 20°C = 68°F ; 100 USD = 87,9 € ; bitcoin ≈ 56 238 € ;
+  fériés (Assomption, Toussaint…). Build 0 erreur ; harnais 106/106.
+- Les APIs sont issues de la liste `public-apis/public-apis` (référence citée), pas clonée.
+
 ## v15.02 — Petits utilitaires du quotidien : l'HEURE (hors-ligne) et la MÉTÉO (Open-Meteo)
 - Pour « des choses simples comme l'heure, le temps dehors… », pas besoin de dépôt : c'est du local
   + une API gratuite. (Le repo de référence pour ce genre d'APIs libres : `public-apis/public-apis`.)

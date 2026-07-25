@@ -998,6 +998,56 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Conversion de devises via Frankfurter (BCE, gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction CurrencyAction(double amount, string from, string to, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Change de devise"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Taux de change (Frankfurter / BCE)…", 0);
+                double? r = null;
+                try { r = LiveData.Currency(amount, from, to); } catch { }
+                if (r == null) return Say("Je n'ai pas réussi à récupérer le taux de change (devise inconnue ou hors-ligne).");
+                return Say("💱 " + UtilityTools.Fmt(amount) + " " + from + " = " + UtilityTools.Fmt(r.Value) + " " + to
+                         + ".\n— taux BCE du jour (Frankfurter, gratuit). Indicatif, hors frais bancaires.");
+            };
+            return a;
+        }
+
+        /// <summary>Prochains jours fériés en France via Nager.Date (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction HolidaysAction(BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Jours fériés"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Jours fériés (Nager.Date)…", 0);
+                string list = null;
+                try { list = LiveData.NextHolidays(); } catch { }
+                if (string.IsNullOrEmpty(list)) return Say("Je n'ai pas réussi à récupérer les jours fériés (hors-ligne ?).");
+                return Say("📅 Prochains jours fériés en France :\n" + list + "\n— source : Nager.Date (gratuit).");
+            };
+            return a;
+        }
+
+        /// <summary>Prix d'une cryptomonnaie (en euros) via CoinGecko (gratuit). Action asynchrone.</summary>
+        public static DocAssistant.ChatAction CryptoAction(string coinId, BadgeCatalog.Stats st)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Prix crypto"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Cours (CoinGecko)…", 0);
+                double? p = null;
+                try { p = LiveData.Crypto(coinId, "eur"); } catch { }
+                if (p == null) return Say("Je n'ai pas réussi à récupérer le cours (hors-ligne ?).");
+                return Say("🪙 " + coinId + " ≈ " + UtilityTools.Fmt(p.Value) + " € (cours du moment, CoinGecko).\n"
+                         + "Info seulement — je ne donne pas de conseil d'investissement.");
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

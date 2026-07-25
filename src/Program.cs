@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.02.0.0")]
-[assembly: AssemblyFileVersion("15.02.0.0")]
+[assembly: AssemblyVersion("15.03.0.0")]
+[assembly: AssemblyFileVersion("15.03.0.0")]
 
 namespace BTOptimizer
 {
@@ -507,9 +507,20 @@ namespace BTOptimizer
                 bool tf = now.Contains("Il est") && now.Contains("h") && now.Contains("20");   // format + annee
                 if (tf) ok20++; Console.WriteLine((tf ? "OK  " : "FAIL") + "  TimeNow format local : " + now);
 
+                // Utilitaires (public-apis) : conversions locales + detection devise/crypto/ferie.
+                int ok21 = 0;
+                string uKm = UtilityTools.LocalUnit("100 km en miles");
+                bool ux1 = uKm != null && uKm.Contains("62"); if (ux1) ok21++; Console.WriteLine((ux1 ? "OK  " : "FAIL") + "  unite : 100 km -> ~62 miles");
+                bool ux2 = UtilityTools.LocalUnit("20 celsius en fahrenheit") != null && UtilityTools.LocalUnit("20 celsius en fahrenheit").Contains("68"); if (ux2) ok21++; Console.WriteLine((ux2 ? "OK  " : "FAIL") + "  unite : 20C -> 68F");
+                bool ux3 = UtilityTools.LocalUnit("bonjour ca va") == null; if (ux3) ok21++; Console.WriteLine((ux3 ? "OK  " : "FAIL") + "  unite : phrase normale -> non applicable");
+                var uc = UtilityTools.Currency("combien fait 100 dollars en euros");
+                bool ux4 = uc != null && uc.A == "USD" && uc.B == "EUR" && uc.Amount == 100; if (ux4) ok21++; Console.WriteLine((ux4 ? "OK  " : "FAIL") + "  devise : 100 dollars->euros = 100 USD->EUR");
+                bool ux5 = UtilityTools.CryptoId("prix du bitcoin") == "bitcoin" && UtilityTools.CryptoId("comment optimiser") == null; if (ux5) ok21++; Console.WriteLine((ux5 ? "OK  " : "FAIL") + "  crypto : detecte bitcoin, pas une question PC");
+                bool ux6 = UtilityTools.IsHoliday("prochain jour ferie") && !UtilityTools.IsHoliday("comment ca va"); if (ux6) ok21++; Console.WriteLine((ux6 ? "OK  " : "FAIL") + "  ferie : detecte, pas un bonjour");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
