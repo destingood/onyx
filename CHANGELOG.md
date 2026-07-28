@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.22b — Aussi dans cette version : bilan MàJ niveau 3 (boucle fermée + enquête)
+- **🔁 Boucle fermée** : après « Mettre à jour mes applications » (winget), le Copilote ne dit plus juste
+  « c'est fait » — il **relance le bilan tout seul** et re-mesure. La preuve remplace la promesse.
+- **🕵️ L'enquête propose aussi** (« mon PC rame ») : pilote GPU > 18 mois → bouton « page pilotes
+  NVIDIA/AMD/Intel » (constructeur détecté via WMI, site officiel) ; ≥ 5 applis obsolètes (winget, 20 s max)
+  → carte avec bouton « Mettre à jour mes applications (N) ».
+- **🧷 Invariants de sécurité TESTÉS au harnais** : bilan = mesure auto en lecture seule ; installer = clic +
+  avertissement ; ouvrir une page = clic. Si un futur changement casse une règle, le harnais échoue.
+- Harnais **165/165**.
+
 ## v15.22 — « D'où vient le lag ? » : le panneau 4G/5G rend son verdict
 - **Ping vers la BOX vs vers Internet** : la mesure qui tranche en 10 secondes le débat
   « c'est mon câble ou c'est la 5G ? ». La box répond en ~1 ms sur un lien local sain —
