@@ -168,6 +168,41 @@ namespace BTOptimizer
         }
 
         /// <summary>true = CTCP actif (template Internet) ; false = autre fournisseur ; null = illisible.</summary>
+        /// <summary>Algorithme de congestion TCP courant du profil Internet (« ctcp », « cubic »,
+        /// « bbr2 »…). Les VALEURS restent en anglais même sur un Windows français : le test par
+        /// jeton reste donc indépendant de la langue.</summary>
+        public static bool? CongestionProviderIs(string wanted)
+        {
+            NativeResult r = Run(Sys32("netsh.exe"), "interface tcp show supplemental template=internet");
+            if (r.ExitCode != 0) return null;
+            foreach (string raw in r.Output.Split(new[] { ' ', '\t', '\r', '\n', ':' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string tok = raw.ToLowerInvariant();
+                if (tok == "ctcp" || tok == "cubic" || tok == "newreno" || tok == "dctcp" || tok == "bbr2" || tok == "none")
+                    return tok == wanted;
+            }
+            return null;
+        }
+
+        /// <summary>État de Teredo (tunnel IPv6 utilisé par le NAT Xbox derrière une IPv4 partagée).</summary>
+        public static void SetTeredo(string state)
+        {
+            RunThrow(Sys32("netsh.exe"), "interface teredo set state type=" + state, "Réglage de Teredo (" + state + ")");
+        }
+
+        public static bool? TeredoTypeIs(string wanted)
+        {
+            NativeResult r = Run(Sys32("netsh.exe"), "interface teredo show state");
+            if (r.ExitCode != 0) return null;
+            foreach (string raw in r.Output.Split(new[] { ' ', '\t', '\r', '\n', ':' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string tok = raw.ToLowerInvariant();
+                if (tok == "disabled" || tok == "client" || tok == "enterpriseclient" || tok == "default" || tok == "server")
+                    return tok == wanted;
+            }
+            return null;
+        }
+
         public static bool? CongestionCtcp()
         {
             NativeResult r = Run(Sys32("netsh.exe"), "interface tcp show supplemental template=internet");

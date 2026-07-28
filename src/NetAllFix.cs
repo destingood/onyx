@@ -60,26 +60,39 @@ namespace BTOptimizer
             if (ChatActions.PingSample(6, 900, out avg, out jit, out loss))
             { o.PingBefore = avg; o.JitterBefore = jit; o.LossBefore = loss; }
 
-            // Le contexte décide de ce qu'on s'interdit (IPv6 sur lien partagé).
+            // Le contexte décide de ce qu'on applique ET de ce qu'on s'interdit : on identifie
+            // donc le lien AVANT de toucher à quoi que ce soit (MTU mesurée = l'indice le plus sûr).
+            L("③ Reconnaissance du lien (CGNAT, MTU, type d'accès)…", 0);
             var rep = new MobileNet.Report();
             MobileNet.FillInterface(rep);
             try { MobileNet.DetectCgnat(rep); } catch { }
             rep.PingIdle = o.PingBefore;
+            rep.MtuOptimal = MobileNet.DiscoverMtu(L);
+            rep.Kind = MobileNet.Classify(rep);
             bool sharedIp = rep.Cgnat || rep.CgnatProbable;
+            bool mobile = rep.Kind == MobileNet.Access.Mobile;
+            L("   Lien : " + MobileNet.AccessLabel(rep.Kind) + (sharedIp ? " · IPv4 partagée (CGNAT)" : ""), 0);
 
-            L("③ Optimisations réseau du catalogue (sauvegarde .reg automatique)…", 0);
+            L("④ Optimisations réseau du catalogue (sauvegarde .reg automatique)…", 0);
             ApplyCatalog(o, sharedIp, L);
 
-            L("④ Réglages TCP/IP (netsh, réversibles)…", 0);
+            if (mobile || sharedIp)
+            {
+                L("⑤ Réglages spécifiques 4G/5G…", 0);
+                ApplyMobileExtras(o, mobile, sharedIp, L);
+            }
+            else o.Skipped.Add("Réglages spéciaux 4G/5G : non appliqués — ton lien n'en est pas un (c'est très bien).");
+
+            L("⑥ Réglages TCP/IP (netsh, réversibles)…", 0);
             ApplyTcp(o, L);
 
-            L("⑤ MTU du lien…", 0);
+            L("⑦ MTU du lien…", 0);
             ApplyMtu(o, rep, L);
 
-            L("⑥ DNS : on garde le plus rapide (vérifié)…", 0);
+            L("⑧ DNS : on garde le plus rapide (vérifié)…", 0);
             ApplyDns(o, L);
 
-            L("⑦ Mesure APRÈS…", 0);
+            L("⑨ Mesure APRÈS…", 0);
             if (ChatActions.PingSample(6, 900, out avg, out jit, out loss))
             { o.PingAfter = avg; o.JitterAfter = jit; o.LossAfter = loss; }
 
@@ -117,6 +130,35 @@ namespace BTOptimizer
             catch (Exception ex) { L("   Catalogue réseau : " + ex.Message, 3); }
         }
 
+        /// <summary>Les réglages qui n'ont de sens QUE sur un accès mobile ou en IPv4 partagée :
+        /// BBR2 (lien radio), IPv6 complète et Teredo (sortie du CGNAT). Hors presets par
+        /// nature — c'est ici, une fois le lien reconnu, qu'ils prennent tout leur sens.</summary>
+        private static void ApplyMobileExtras(Outcome o, bool mobile, bool sharedIp, Action<string, int> L)
+        {
+            var ids = new List<string>();
+            if (mobile) ids.Add("tcp_bbr2");                 // congestion adaptée au radio
+            if (sharedIp) { ids.Add("ipv6_restore"); ids.Add("teredo_client"); }
+
+            foreach (string id in ids)
+            {
+                Tweak t = null;
+                try { foreach (Tweak x in Catalog.All()) if (x.Id == id) { t = x; break; } }
+                catch { }
+                if (t == null) continue;
+                bool? already = null;
+                try { if (t.Check != null) already = t.Check(); } catch { }
+                if (already == true) continue;
+                try
+                {
+                    Engine.Run(new List<Tweak> { t }, true, true, false, L);
+                    if (t.Reboot) o.RebootNeeded = true;
+                    o.Done.Add(t.Name);
+                }
+                catch (Exception ex) { o.Skipped.Add(t.Name + " — refusé : " + ex.Message); }
+            }
+            if (ids.Count == 0) o.Skipped.Add("Réglages 4G/5G : aucun ne s'applique à ce lien.");
+        }
+
         private static void ApplyTcp(Outcome o, Action<string, int> L)
         {
             int ok = 0;
@@ -137,8 +179,7 @@ namespace BTOptimizer
         {
             try
             {
-                int mtu = MobileNet.DiscoverMtu(L);
-                rep.MtuOptimal = mtu;
+                int mtu = rep.MtuOptimal;   // déjà mesurée à l'étape de reconnaissance du lien
                 if (mtu < 996) { o.Skipped.Add("MTU : non mesurable sur ce lien (ICMP filtré) — rien touché."); return; }
                 if (mtu >= rep.MtuCurrent)
                 {

@@ -12,6 +12,8 @@ namespace BTOptimizer
         private const string TcpipKey = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters";
         private const string GfxDriversKey = @"SYSTEM\CurrentControlSet\Control\GraphicsDrivers";
         private const string DiagtrackAutologger = @"SYSTEM\CurrentControlSet\Control\WMI\Autologger\AutoLogger-Diagtrack-Listener";
+        private const string Tcpip6Key = @"SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters";
+        private const string DoPolicyKey = @"SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization";
         private const string GamesKey = MMKey + @"\Tasks\Games";
         private const string AudioKey = MMKey + @"\Tasks\Audio";
         private const string ProAudioKey = MMKey + @"\Tasks\Pro Audio";
@@ -2566,6 +2568,52 @@ namespace BTOptimizer
                 Apply  = () => Sys.SetMachine(GfxDriversKey, "TdrDelay", 10, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(GfxDriversKey, "TdrDelay"),
                 Check  = () => Sys.IntEquals(Sys.GetMachine(GfxDriversKey, "TdrDelay"), 10)
+            });
+
+            // ---- v15.30 : spécial liens 4G/5G (box mobile, partage de connexion) ----
+            // Ces réglages ne sont PAS dans les presets : ils n'ont de sens que sur un accès
+            // mobile (ou en IPv4 partagée). Sur fibre/ADSL, ils n'apportent rien.
+            list.Add(new Tweak
+            {
+                Id = "tcp_bbr2", Category = Cat.Reseau,
+                Name = "5G/4G : contrôle de congestion BBR2 (au lieu de CUBIC)",
+                Desc = "CUBIC, l'algorithme par défaut de Windows, interprète toute perte de paquet comme un embouteillage et casse son débit — or sur un lien RADIO, des paquets se perdent sans qu'il y ait le moindre embouteillage. BBR2 raisonne en débit et en temps de trajet plutôt qu'en pertes : sur une box 4G/5G, il tient un débit bien plus stable et remplit moins les files d'attente (donc moins de bufferbloat). Inutile sur fibre/ADSL, où CUBIC fait très bien l'affaire. Demande Windows 11 22H2 ou plus récent ; si ta version ne connaît pas BBR2, l'application échouera proprement sans rien casser. Remplace le réglage « CTCP » (même paramètre). « Rétablir » remet CUBIC.",
+                Apply  = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=bbr2", "Activation de BBR2"),
+                Revert = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=cubic", "Retour à CUBIC"),
+                Check  = () => Sys.CongestionProviderIs("bbr2")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "ipv6_restore", Category = Cat.Reseau, Reboot = true,
+                Name = "IPv4 partagée (CGNAT) : rendre l'IPv6 complète au système",
+                Desc = "Sur une box 4G/5G, ton adresse IPv4 est PARTAGÉE avec d'autres abonnés (CGNAT) : aucune redirection de port ne fonctionne et le NAT reste « strict » dans les jeux. L'IPv6, elle, te donne une adresse à toi — c'est la seule sortie propre. Or beaucoup d'« optimiseurs » (et l'optimisation « tunnels IPv6 » de cette app, pensée pour la fibre) écrivent DisabledComponents et bride l'IPv6. Ceci l'efface et rend l'IPv6 entière. À cocher si tu es sur box mobile ; sur fibre, laisse plutôt l'autre réglage. Les deux touchent la MÊME valeur : activer l'un désactive l'autre, c'est normal.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" },
+                Apply  = () => Sys.DelMachine(Tcpip6Key, "DisabledComponents"),
+                Revert = () => Sys.SetMachine(Tcpip6Key, "DisabledComponents", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.GetMachine(Tcpip6Key, "DisabledComponents") == null
+                            || Sys.IntEquals(Sys.GetMachine(Tcpip6Key, "DisabledComponents"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "teredo_client", Category = Cat.Reseau,
+                Name = "CGNAT : activer Teredo (NAT Xbox / multijoueur derrière IPv4 partagée)",
+                Desc = "Les jeux Xbox / PC Game Pass et le multijoueur Microsoft passent par Teredo pour se connecter quand l'adresse IPv4 est partagée. Derrière le CGNAT d'une box 4G/5G, sans Teredo le NAT est annoncé « strict » ou « Teredo impossible » et les parties en groupe échouent. Ceci le remet en mode client. Ne sert à rien sur fibre avec une IPv4 à toi. Inverse exact de l'optimisation « tunnels IPv6 coupés » : les deux ne peuvent pas être actives ensemble. « Rétablir » remet Teredo à l'état par défaut de Windows.",
+                Apply  = () => Sys.SetTeredo("client"),
+                Revert = () => Sys.SetTeredo("default"),
+                Check  = () => Sys.TeredoTypeIs("client")
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "do_bg_bandwidth", Category = Cat.Reseau, Recommended = true,
+                Name = "Brider les téléchargements Windows en arrière-plan (10 % du débit)",
+                Desc = "Windows Update et le Store téléchargent en arrière-plan à pleine vitesse : sur une box 4G/5G — dont la file d'attente sature très vite — cela suffit à faire exploser le ping de toute la maison en pleine partie. Cette stratégie officielle (Delivery Optimization) leur laisse 10 % du débit en arrière-plan : les mises à jour se font quand même, sans écraser le jeu. Utile aussi en ADSL et sur toute connexion partagée à plusieurs. « Rétablir » retire la limite.",
+                BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" },
+                Apply  = () => Sys.SetMachine(DoPolicyKey, "DOPercentageMaxBackgroundBandwidth", 10, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(DoPolicyKey, "DOPercentageMaxBackgroundBandwidth"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(DoPolicyKey, "DOPercentageMaxBackgroundBandwidth"), 10)
             });
 
             return list;

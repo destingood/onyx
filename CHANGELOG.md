@@ -4,6 +4,30 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.30 — 4 optimisations SPÉCIAL 4G/5G (193 → 197) + « TOUT optimiser » devient contextuel
+- **BBR2 au lieu de CUBIC** (hors presets) — CUBIC prend toute perte de paquet pour un
+  embouteillage et casse son débit ; or sur un lien RADIO, des paquets se perdent sans
+  embouteillage. BBR2 raisonne en débit et en temps de trajet : débit bien plus stable et
+  files d'attente moins remplies (donc moins de bufferbloat). Demande Windows 11 22H2+ ;
+  si la version ne le connaît pas, l'application échoue proprement sans rien casser.
+- **IPv6 rendue complète en CGNAT** (hors presets) — sur box mobile l'IPv4 est partagée :
+  l'IPv6 est la seule sortie propre (NAT strict, redirections impossibles sans elle). Ce
+  réglage efface `DisabledComponents` qu'écrivent beaucoup d'« optimiseurs » — et que pose
+  aussi l'optimisation « tunnels IPv6 » de cette app, pensée pour la fibre. Les deux touchent
+  la MÊME valeur : l'app le dit au lieu de laisser l'utilisateur se contredire tout seul.
+- **Teredo en mode client** (hors presets) — les jeux Xbox / PC Game Pass en ont besoin pour
+  se connecter derrière une IPv4 partagée (sinon NAT « strict » et parties en groupe qui
+  échouent). Inverse exact du réglage « tunnels IPv6 coupés ».
+- **Téléchargements Windows bridés à 10 % en arrière-plan** (recommandé) — stratégie
+  officielle Delivery Optimization : les mises à jour continuent sans écraser le jeu. Utile
+  aussi en ADSL et sur toute connexion partagée à plusieurs.
+- **« ⚡ TOUT optimiser le réseau » reconnaît maintenant le lien AVANT d'agir** : il mesure la
+  MTU et le CGNAT d'abord, en déduit le type d'accès, puis applique les réglages 4G/5G
+  **uniquement** si c'en est un — et le dit quand il ne les applique pas (« ton lien n'en est
+  pas un, c'est très bien »).
+- Vérifié : 197 optimisations chargées, 0 erreur au harnais complet ; cohérence croisée
+  contrôlée (« tunnels IPv6 coupés » et « IPv6 complète » ne peuvent pas être actifs ensemble).
+
 ## v15.29 — 5 optimisations de plus (188 → 193), toutes réversibles
 - **Fenêtre TCP : fin des « heuristiques »** (Réseau, recommandé) — Windows rétrécit parfois
   tout seul la fenêtre de réception TCP quand il croit détecter un équipement capricieux :
