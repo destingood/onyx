@@ -1454,6 +1454,34 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Nombre de MàJ Windows DISPONIBLES (API COM officielle Windows Update, recherche
+        /// HORS-LIGNE sur le cache du dernier scan — rapide, zéro réseau). −1 si indisponible/trop lent.</summary>
+        private static int WindowsUpdatesAvailable(int timeoutMs)
+        {
+            int result = -1;
+            var th = new System.Threading.Thread(delegate ()
+            {
+                try
+                {
+                    Type t = Type.GetTypeFromProgID("Microsoft.Update.Session");
+                    if (t == null) return;
+                    object session = Activator.CreateInstance(t);
+                    object searcher = t.InvokeMember("CreateUpdateSearcher", System.Reflection.BindingFlags.InvokeMethod, null, session, null);
+                    Type ct = searcher.GetType();
+                    ct.InvokeMember("Online", System.Reflection.BindingFlags.SetProperty, null, searcher, new object[] { false });
+                    object res = ct.InvokeMember("Search", System.Reflection.BindingFlags.InvokeMethod, null, searcher,
+                        new object[] { "IsInstalled=0 AND IsHidden=0 AND Type='Software'" });
+                    object updates = res.GetType().InvokeMember("Updates", System.Reflection.BindingFlags.GetProperty, null, res, null);
+                    object cnt = updates.GetType().InvokeMember("Count", System.Reflection.BindingFlags.GetProperty, null, updates, null);
+                    result = Convert.ToInt32(cnt);
+                }
+                catch { }
+            });
+            th.IsBackground = true; th.Start();
+            if (!th.Join(timeoutMs)) return -1;
+            return result;
+        }
+
         // Windows attend-il un redémarrage pour finir des mises à jour ? (2 clés registre standard)
         private static bool RebootPending()
         {
@@ -1552,6 +1580,22 @@ namespace BTOptimizer
                         }
                         else sb.Append("• ✅ Dernière MàJ Windows : il y a ").Append(days).Append(" jour(s).\n");
                     }
+                }
+                catch { }
+
+                // 3ter) MàJ Windows DISPONIBLES (API officielle, cache du dernier scan — honnête et rapide).
+                try
+                {
+                    if (log != null) log("Windows Update (API)…", 0);
+                    int wu = WindowsUpdatesAvailable(20000);
+                    if (wu > 0)
+                    {
+                        sb.Append("• ⚠️ Windows Update : ").Append(wu).Append(" mise(s) à jour en ATTENTE d'installation (d'après le dernier scan).\n");
+                        if (propose == null) propose = OpenUrlAction("Ouvrir Windows Update", "ms-settings:windowsupdate",
+                            "Ouvre les réglages Windows Update. Rien n'est installé sans toi.");
+                    }
+                    else if (wu == 0) sb.Append("• ✅ Windows Update : rien en attente (d'après le dernier scan).\n");
+                    // −1 : API indisponible/lente → on ne dit rien plutôt que d'inventer.
                 }
                 catch { }
 

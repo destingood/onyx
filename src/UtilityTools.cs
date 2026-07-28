@@ -578,6 +578,25 @@ namespace BTOptimizer
             return null;
         }
 
+        // ---- BATTERIE / UPTIME (fonctions locales instantanées) ----
+        /// <summary>« il me reste combien de batterie », « niveau de batterie » → vrai.</summary>
+        internal static bool IsBattery(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("batterie") || n.Contains("sur secteur");
+        }
+
+        /// <summary>« depuis quand mon PC tourne », « uptime » → vrai (pas « depuis quand tu existes »).</summary>
+        internal static bool IsUptime(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (Regex.IsMatch(n, "\\buptime\\b")) return true;
+            bool ask = n.Contains("depuis quand") || n.Contains("depuis combien de temps") || n.Contains("ca fait combien de temps");
+            bool subj = n.Contains("tourne") || n.Contains("allume") || n.Contains("demarre") || n.Contains("redemarre")
+                || Regex.IsMatch(n, "\\b(pc|ordi|ordinateur|machine)\\b");
+            return ask && subj;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

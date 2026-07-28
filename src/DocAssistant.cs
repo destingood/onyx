@@ -170,6 +170,40 @@ namespace BTOptimizer
                 return new Reply { Text = "Je fais le bilan des mises à jour (pilote GPU, Windows, disque)…",
                     Action = ChatActions.UpdatesCheckAction(), Dynamic = true };
 
+            // --- BATTERIE (mesure locale instantanée ; conseil jeu : jouer sur batterie = perfs bridées) ---
+            if (UtilityTools.IsBattery(s))
+            {
+                try
+                {
+                    var ps = System.Windows.Forms.SystemInformation.PowerStatus;
+                    if ((ps.BatteryChargeStatus & System.Windows.Forms.BatteryChargeStatus.NoSystemBattery) != 0)
+                        return new Reply { Text = "🔌 Pas de batterie détectée : tu es sur un PC FIXE (secteur). "
+                            + "C'est la meilleure configuration pour jouer — aucune perf bridée par l'économie d'énergie.", ShowStarters = true };
+                    int pct = (int)Math.Round(ps.BatteryLifePercent * 100);
+                    bool ac = ps.PowerLineStatus == System.Windows.Forms.PowerLineStatus.Online;
+                    string t = "🔋 Batterie : " + pct + " %" + (ac ? " — branché sur secteur." : " — sur batterie.");
+                    if (!ac) t += "\n⚠️ Pour JOUER, branche le secteur : sur batterie, Windows et le GPU se brident "
+                        + "(FPS en baisse et stutter garantis). C'est mesurable, pas une superstition.";
+                    else if (pct < 20) t += "\nLa charge est basse mais tu es branché : rien à faire.";
+                    return new Reply { Text = t, ShowStarters = true };
+                }
+                catch { }
+            }
+
+            // --- UPTIME : depuis quand le PC tourne (local, instantané) ---
+            if (UtilityTools.IsUptime(s))
+            {
+                var up = TimeSpan.FromMilliseconds(Environment.TickCount64);
+                string dur = (up.Days > 0 ? up.Days + " jour(s) " : "") + up.Hours + " h " + up.Minutes.ToString("00");
+                string t2 = "⏱️ Ton PC tourne depuis " + dur + " sans redémarrage complet.";
+                if (up.Days >= 7)
+                    t2 += "\n⚠️ Plus de 7 jours : redémarre quand tu peux — ça purge les fuites mémoire, applique les "
+                        + "mises à jour en attente et re-stabilise les pilotes. (Attention : « Arrêter » avec le "
+                        + "démarrage rapide de Windows ne compte PAS comme un vrai redémarrage.)";
+                else t2 += "\n✅ C'est raisonnable — rien à faire.";
+                return new Reply { Text = t2, ShowStarters = true };
+            }
+
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
             {

@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.23 — MàJ Windows RÉELLEMENT en attente + fonctions batterie et uptime
+- **🪟 Windows Update pour de vrai** : le bilan interroge maintenant l'**API COM officielle Windows Update**
+  (recherche hors-ligne sur le cache du dernier scan — rapide, zéro réseau, plafond 20 s) et donne le nombre
+  exact de MàJ **en attente d'installation**. Plus fort que l'historique seul. Vérifié en réel : 3 MàJ en
+  attente détectées sur cette machine. Si l'API est indisponible : silence honnête, pas d'invention.
+- **🔋 Batterie** : « il me reste combien de batterie » → % + secteur/batterie (mesure locale instantanée).
+  Conseil jeu inclus : sur batterie, Windows et le GPU se brident → branche le secteur pour jouer.
+  Sur PC fixe : il le dit (« pas de batterie, meilleure config pour jouer »).
+- **⏱️ Uptime** : « depuis quand mon PC tourne » → durée exacte depuis le dernier démarrage. > 7 jours →
+  conseil de redémarrer (et rappel : « Arrêter » + démarrage rapide ≠ vrai redémarrage).
+- Garde-fous : « depuis quand tu existes » ne déclenche pas l'uptime. Harnais **167/167**.
+
 ## v15.22b — Aussi dans cette version : bilan MàJ niveau 3 (boucle fermée + enquête)
 - **🔁 Boucle fermée** : après « Mettre à jour mes applications » (winget), le Copilote ne dit plus juste
   « c'est fait » — il **relance le bilan tout seul** et re-mesure. La preuve remplace la promesse.
