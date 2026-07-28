@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.29 — 5 optimisations de plus (188 → 193), toutes réversibles
+- **Fenêtre TCP : fin des « heuristiques »** (Réseau, recommandé) — Windows rétrécit parfois
+  tout seul la fenêtre de réception TCP quand il croit détecter un équipement capricieux :
+  des téléchargements qui plafonnent sans raison. Écrit en registre (EnableWsd), donc
+  indépendant de la langue de Windows, contrairement à la commande netsh équivalente.
+- **NetBIOS sur TCP/IP désactivé** (Réseau, eSport) — supprime des diffusions parasites sur
+  le réseau local et un service exposé de moins. Prévenu honnêtement : à laisser actif pour
+  les partages très anciens (NAS/imprimante d'avant Windows 7).
+- **Compression mémoire désactivable** (Système, hors presets) — utile à partir de 16 Go de
+  RAM (moins de pics CPU au chargement) ; l'app dit clairement de NE PAS l'activer en dessous,
+  sinon Windows ira écrire sur le disque, bien plus lent.
+- **Session ETW de télémétrie coupée** (Confidentialité, eSport) — l'AutoLogger
+  « Diagtrack-Listener » écrit en continu sur le disque même quand le service de télémétrie
+  est arrêté ; le couper épargne le SSD et le temps CPU de fond.
+- **Délai avant « le pilote ne répond plus » porté à 10 s** (GPU, hors presets) — évite les
+  réinitialisations abusives sur scènes lourdes et compilation de shaders. Dit franchement :
+  **ça ne répare rien**, si les crashs viennent d'un overclock instable, d'une surchauffe ou
+  d'un pilote abîmé, il faut traiter la cause.
+- Vérifié : 193 optimisations chargées, 0 erreur au harnais complet (la compression mémoire
+  s'affiche « n/a » sans droits administrateur — l'app, elle, tourne toujours élevée).
+
 ## v15.28 — « ⚡ TOUT optimiser le réseau » : toutes les optimisations, en un clic
 - **Un bouton, la séquence complète** (dans « Ma connexion & ma box ») : point de restauration
   → mesure AVANT → optimisations réseau du catalogue (sauvegarde .reg automatique, seules

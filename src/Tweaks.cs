@@ -9,6 +9,9 @@ namespace BTOptimizer
     internal static class Catalog
     {
         private const string MMKey    = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+        private const string TcpipKey = @"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters";
+        private const string GfxDriversKey = @"SYSTEM\CurrentControlSet\Control\GraphicsDrivers";
+        private const string DiagtrackAutologger = @"SYSTEM\CurrentControlSet\Control\WMI\Autologger\AutoLogger-Diagtrack-Listener";
         private const string GamesKey = MMKey + @"\Tasks\Games";
         private const string AudioKey = MMKey + @"\Tasks\Audio";
         private const string ProAudioKey = MMKey + @"\Tasks\Pro Audio";
@@ -2509,6 +2512,60 @@ namespace BTOptimizer
                     if (v == null || v.Length <= 8) return null;   // valeur absente = indéterminé
                     return v[8] == 0xC0;                           // 0xC0 = courbe 1:1 MarkC ; 0x15 = défaut Windows
                 }
+            });
+
+            // ---- v15.29 : réglages qui manquaient encore (tous réversibles, hors presets sauf mention) ----
+            list.Add(new Tweak
+            {
+                Id = "tcp_wsd_off", Category = Cat.Reseau, Esport = true, Recommended = true,
+                Name = "Fenêtre TCP : arrêter les « heuristiques » qui brident le débit",
+                Desc = "Windows peut réduire tout seul la fenêtre de réception TCP quand il croit détecter un équipement capricieux — résultat : des téléchargements qui plafonnent sans raison. Ce réglage (EnableWsd) coupe cette devinette et laisse le réglage automatique normal faire son travail. Équivalent registre de « netsh int tcp set heuristics disabled », donc indépendant de la langue de Windows. « Rétablir » remet le comportement d'origine.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" },
+                Apply  = () => Sys.SetMachine(TcpipKey, "EnableWsd", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(TcpipKey, "EnableWsd", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(TcpipKey, "EnableWsd"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "netbios_off", Category = Cat.Reseau, Esport = true, Reboot = true,
+                Name = "Désactiver NetBIOS sur TCP/IP (diffusions parasites en moins)",
+                Desc = "NetBIOS est un mécanisme de nommage des années 90 que Windows garde actif : il envoie régulièrement des diffusions sur le réseau local et expose un service de plus. Le couper allège le trafic local et réduit la surface d'attaque. À laisser actif si tu utilises des partages de fichiers très anciens (NAS ou imprimante d'avant Windows 7) qui refusent de s'afficher sans lui. « Rétablir » remet le réglage par défaut (décidé par le DHCP).",
+                Apply  = () => Sys.SetNetbios(true),
+                Revert = () => Sys.SetNetbios(false),
+                Check  = () => Sys.NetbiosDisabled()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "mem_compression_off", Category = Cat.Systeme, Reboot = true,
+                Name = "Désactiver la compression mémoire (PC avec beaucoup de RAM)",
+                Desc = "Windows compresse les pages mémoire inactives pour éviter d'écrire sur le disque : c'est un excellent compromis… quand la RAM manque. Avec 16 Go ou plus, cette compression coûte du CPU (pics pendant les chargements) pour un bénéfice quasi nul. À ÉVITER en dessous de 16 Go : sans elle, Windows ira écrire sur le disque, ce qui est bien plus lent. Hors presets : à cocher en connaissance de cause. « Rétablir » réactive la compression.",
+                Apply  = () => Sys.SetMemoryCompression(false),
+                Revert = () => Sys.SetMemoryCompression(true),
+                Check  = () => Sys.MemoryCompressionDisabled()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "etw_diagtrack_off", Category = Cat.Privacy, Esport = true,
+                Name = "Couper la session d'enregistrement permanente de télémétrie (ETW)",
+                Desc = "Windows démarre au boot une session de traçage (AutoLogger « Diagtrack-Listener ») qui écrit en continu l'activité du système sur le disque, même quand le service de télémétrie est arrêté. La couper supprime ces écritures de fond — utile pendant le jeu et pour la durée de vie d'un SSD. Aucun impact sur les mises à jour ni sur le fonctionnement de Windows. « Rétablir » relance la session.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\AutoLogger-Diagtrack-Listener" },
+                Apply  = () => Sys.SetMachine(DiagtrackAutologger, "Start", 0, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(DiagtrackAutologger, "Start", 1, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(DiagtrackAutologger, "Start"), 0)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "tdr_delay", Category = Cat.Gpu, Reboot = true,
+                Name = "Laisser plus de temps au GPU avant « le pilote ne répond plus »",
+                Desc = "Quand le GPU met plus de 2 secondes à répondre, Windows réinitialise le pilote : c'est l'écran noir suivi de « dispositif de rendu perdu » qui tue la partie. Ce réglage porte le délai à 10 secondes, ce qui évite les réinitialisations abusives sur les scènes très lourdes ou pendant la compilation des shaders. HONNÊTEMENT : ça ne RÉPARE rien — si les crashs viennent d'un overclock instable, d'une surchauffe ou d'un pilote abîmé, il faut traiter la cause (panneaux Températures et Bibliothèques). Hors presets. « Rétablir » remet le délai standard.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" },
+                Apply  = () => Sys.SetMachine(GfxDriversKey, "TdrDelay", 10, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(GfxDriversKey, "TdrDelay"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(GfxDriversKey, "TdrDelay"), 10)
             });
 
             return list;

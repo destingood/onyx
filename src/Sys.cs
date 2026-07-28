@@ -252,6 +252,79 @@ namespace BTOptimizer
             return ok;
         }
 
+        // ------------------------------------------------------------------
+        //  NetBIOS sur TCP/IP (par interface) et compression mémoire (MMAgent)
+        // ------------------------------------------------------------------
+        private const string NetBtIf = @"SYSTEM\CurrentControlSet\services\NetBT\Parameters\Interfaces";
+
+        /// <summary>NetbiosOptions sur TOUTES les interfaces : 2 = désactivé, 0 = par défaut (DHCP).</summary>
+        public static void SetNetbios(bool disable)
+        {
+            using (RegistryKey root = Registry.LocalMachine.OpenSubKey(NetBtIf, true))
+            {
+                if (root == null) return;
+                foreach (string sub in root.GetSubKeyNames())
+                {
+                    if (!sub.StartsWith("Tcpip_", StringComparison.OrdinalIgnoreCase)) continue;
+                    try
+                    {
+                        using (RegistryKey k = root.OpenSubKey(sub, true))
+                            if (k != null) k.SetValue("NetbiosOptions", disable ? 2 : 0, RegistryValueKind.DWord);
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        /// <summary>Vrai si NetBIOS est désactivé sur TOUTES les interfaces (null si aucune trouvée).</summary>
+        public static bool? NetbiosDisabled()
+        {
+            try
+            {
+                using (RegistryKey root = Registry.LocalMachine.OpenSubKey(NetBtIf))
+                {
+                    if (root == null) return null;
+                    int seen = 0;
+                    foreach (string sub in root.GetSubKeyNames())
+                    {
+                        if (!sub.StartsWith("Tcpip_", StringComparison.OrdinalIgnoreCase)) continue;
+                        using (RegistryKey k = root.OpenSubKey(sub))
+                        {
+                            if (k == null) continue;
+                            seen++;
+                            if (!IntEquals(k.GetValue("NetbiosOptions"), 2)) return false;
+                        }
+                    }
+                    return seen == 0 ? (bool?)null : true;
+                }
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Compression mémoire de Windows (MMAgent). L'API n'existe qu'en PowerShell.</summary>
+        public static void SetMemoryCompression(bool enable)
+        {
+            RunThrow(PowerShellExe,
+                "-NoProfile -ExecutionPolicy Bypass -Command \"" + (enable ? "Enable-MMAgent" : "Disable-MMAgent") + " -MemoryCompression\"",
+                enable ? "Activation de la compression mémoire" : "Désactivation de la compression mémoire");
+        }
+
+        /// <summary>Vrai si la compression mémoire est DÉSACTIVÉE (le nom de propriété reste anglais).</summary>
+        public static bool? MemoryCompressionDisabled()
+        {
+            try
+            {
+                NativeResult r = Run(PowerShellExe,
+                    "-NoProfile -ExecutionPolicy Bypass -Command \"(Get-MMAgent).MemoryCompression\"", 20000);
+                if (r == null || r.Output == null) return null;
+                string o = r.Output.Trim();
+                if (o.IndexOf("False", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                if (o.IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+                return null;
+            }
+            catch { return null; }
+        }
+
         /// <summary>Best-effort : réenregistre les paquets Windows encore présents et ouvre le Store.</summary>
         public static void ReprovisionDefaultApps(Action<string, int> log)
         {
