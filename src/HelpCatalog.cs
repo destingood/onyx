@@ -43,6 +43,7 @@ namespace BTOptimizer
                 new Entry("Réseau & ping", "Réduire la latence de ma carte réseau", "Carte réseau", () => new NetAdapterForm(L)),
                 new Entry("Réseau & ping", "Changer / tester mon DNS", "DNS rapide", () => new DnsForm(L)),
                 new Entry("Réseau & ping", "Ça lag : box, câble ou opérateur ? (fibre, ADSL, 4G/5G)", "Ma connexion & ma box", () => new MobileNetForm(L)),
+                new Entry("Réseau & ping", "Mon opérateur dit que ça vient de mon PC (monter un dossier)", "Assistant opérateur", () => new OperatorHelpForm(L)),
 
                 new Entry("Jeux & lancement", "Un jeu refuse de démarrer (dll manquante)", "Bibliothèques de jeu", () => new LibsForm(L)),
                 new Entry("Jeux & lancement", "Boutique en jeu vide / qui tourne à l'infini", "Boutiques / crashs", () => new ShopFixForm(L)),

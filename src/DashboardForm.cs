@@ -194,6 +194,7 @@ namespace BTOptimizer
             net.DropDownItems.Add("Réglages TCP/IP", null, (s, e) => OpenDialog(new NetTuneForm(Log)));
             net.DropDownItems.Add("Trajet réseau", null, (s, e) => OpenDialog(new NetRouteForm(Log)));
             net.DropDownItems.Add("📶 Ma connexion & ma box (fibre, ADSL, 4G/5G : mesures + branchement)", null, (s, e) => OpenDialog(new MobileNetForm(Log)));
+            net.DropDownItems.Add("📄 Assistant opérateur (journal, dossier support, réglages box)", null, (s, e) => OpenDialog(new OperatorHelpForm(Log)));
             sys.DropDownItems.Add(net);
             sys.DropDownItems.Add(new ToolStripSeparator());
             sys.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));

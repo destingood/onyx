@@ -311,6 +311,156 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  Opérateur, journal de mesures et dossier à remettre au support
+        // ------------------------------------------------------------------
+        private static string LogPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-netlog.txt"); } }
+
+        /// <summary>Devine l'opérateur par le nom DNS INVERSE des premiers sauts (bouyguestelecom.fr,
+        /// orange.fr, sfr.net, proxad/free…). Aucun service tiers : une simple résolution inverse.
+        /// 'trace' reçoit les noms trouvés (pour le dossier). null si rien de reconnaissable.</summary>
+        public static string DetectOperator(out string trace)
+        {
+            var sb = new System.Text.StringBuilder();
+            string found = null;
+            for (int ttl = 1; ttl <= 5; ttl++)
+            {
+                IPAddress hop = HopAt(ttl);
+                if (hop == null) { sb.AppendLine("  saut " + ttl + " : pas de réponse"); continue; }
+                string name = ReverseDns(hop);
+                sb.AppendLine("  saut " + ttl + " : " + hop + (string.IsNullOrEmpty(name) ? "" : "  (" + name + ")"));
+                if (found != null || string.IsNullOrEmpty(name)) continue;
+                string n = name.ToLowerInvariant();
+                if (n.Contains("bouygues") || n.Contains("bbox")) found = "Bouygues Telecom";
+                else if (n.Contains("orange") || n.Contains("wanadoo")) found = "Orange";
+                else if (n.Contains("sfr") || n.Contains("neuf.fr") || n.Contains("numericable")) found = "SFR";
+                else if (n.Contains("free.fr") || n.Contains("proxad")) found = "Free";
+            }
+            trace = sb.ToString();
+            return found;
+        }
+
+        /// <summary>Résolution inverse bornée : GetHostEntry peut bloquer plusieurs secondes.</summary>
+        private static string ReverseDns(IPAddress ip)
+        {
+            try
+            {
+                var t = System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { return Dns.GetHostEntry(ip).HostName; } catch { return null; }
+                });
+                return t.Wait(1500) ? t.Result : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Ajoute la mesure au journal local (bt-netlog.txt) — c'est l'historique qui
+        /// PROUVE une saturation aux heures de pointe. Une ligne par mesure, jamais envoyé nulle part.</summary>
+        public static void AppendLog(Report r)
+        {
+            if (r == null) return;
+            try
+            {
+                string line = string.Join(" | ", new[]
+                {
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+                    AccessLabel(r.Kind),
+                    "ping " + Fmt(r.PingIdle) + " ms",
+                    "gigue " + Fmt(r.JitterIdle) + " ms",
+                    "perte " + (r.LossIdle < 0 ? "?" : r.LossIdle + " %"),
+                    "charge↓ " + Fmt(r.PingLoaded) + " ms",
+                    "charge↑ " + Fmt(r.PingUpLoaded) + " ms",
+                    "box " + Fmt(r.GwPing) + " ms",
+                    "MTU " + (r.MtuOptimal > 0 ? r.MtuOptimal.ToString() : "?"),
+                    "CGNAT " + (r.Cgnat ? "oui" : r.CgnatProbable ? "probable" : "non"),
+                    "IPv6 " + (r.Ipv6 ? "oui" : "non")
+                });
+                File.AppendAllText(LogPath, line + Environment.NewLine, new System.Text.UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        private static string Fmt(double v) { return v < 0 ? "?" : v.ToString("0"); }
+
+        /// <summary>Les N dernières mesures du journal (la plus récente en premier).</summary>
+        public static string[] ReadLog(int max)
+        {
+            try
+            {
+                if (!File.Exists(LogPath)) return new string[0];
+                string[] all = File.ReadAllLines(LogPath);
+                var take = new System.Collections.Generic.List<string>();
+                for (int i = all.Length - 1; i >= 0 && take.Count < max; i--)
+                    if (!string.IsNullOrEmpty(all[i].Trim())) take.Add(all[i]);
+                return take.ToArray();
+            }
+            catch { return new string[0]; }
+        }
+
+        /// <summary>Écrit sur le Bureau le DOSSIER à remettre au support : ce qui a été écarté côté
+        /// client, les mesures horodatées, l'historique, et les questions précises à poser. C'est ce
+        /// document qui empêche le « c'est votre PC ».</summary>
+        public static string BuildOperatorReport(Report r, string op, string trace)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("DOSSIER CONNEXION — établi par ONYX le " + DateTime.Now.ToString("dd/MM/yyyy à HH:mm"));
+                sb.AppendLine(new string('=', 62));
+                sb.AppendLine();
+                sb.AppendLine("OPÉRATEUR DÉTECTÉ : " + (op ?? "non identifié (voir trajet ci-dessous)"));
+                sb.AppendLine("TYPE DE LIEN ESTIMÉ : " + AccessLabel(r != null ? r.Kind : Access.Unknown));
+                if (r != null)
+                {
+                    sb.AppendLine("INTERFACE : " + (r.IfName ?? "?")
+                                + (r.LinkMbps > 0 ? "  ·  lien local négocié à " + r.LinkMbps + " Mb/s" : ""));
+                    sb.AppendLine();
+                    sb.AppendLine("MESURES DU JOUR");
+                    sb.AppendLine("  Ping vers la box (réseau local)  : " + Fmt(r.GwPing) + " ms");
+                    sb.AppendLine("  Ping vers Internet (au repos)    : " + Fmt(r.PingIdle) + " ms"
+                                + "   gigue " + Fmt(r.JitterIdle) + " ms   perte " + (r.LossIdle < 0 ? "?" : r.LossIdle + " %"));
+                    sb.AppendLine("  Ping pendant un téléchargement   : " + Fmt(r.PingLoaded) + " ms");
+                    sb.AppendLine("  Ping pendant un téléversement    : " + Fmt(r.PingUpLoaded) + " ms");
+                    sb.AppendLine("  MTU réelle du lien               : " + (r.MtuOptimal > 0 ? r.MtuOptimal + " octets" : "non mesurable"));
+                    sb.AppendLine("  Adresse partagée (CGNAT)         : " + (r.Cgnat ? "OUI" : r.CgnatProbable ? "probable" : "non"));
+                    sb.AppendLine("  IPv6                             : " + (r.Ipv6 ? "opérationnelle" : "ABSENTE"));
+                    sb.AppendLine();
+                    sb.AppendLine("CE QUI EST DÉJÀ ÉCARTÉ CÔTÉ CLIENT");
+                    sb.AppendLine("  • Poste relié en Ethernet" + (r.LinkMbps >= 1000 ? " négocié à " + r.LinkMbps + " Mb/s (câble et port sains)." : "."));
+                    sb.AppendLine("  • Réseau local sain : la box répond en " + Fmt(r.GwPing) + " ms.");
+                    sb.AppendLine("  • Mesures faites au repos, sans téléchargement en cours sur le foyer.");
+                }
+                sb.AppendLine();
+                sb.AppendLine("TRAJET RÉSEAU (premiers sauts)");
+                sb.Append(string.IsNullOrEmpty(trace) ? "  (non relevé)\r\n" : trace);
+                string[] hist = ReadLog(40);
+                if (hist.Length > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("HISTORIQUE DES MESURES (la plus récente en premier)");
+                    foreach (string h in hist) sb.AppendLine("  " + h);
+                    sb.AppendLine();
+                    sb.AppendLine("  → Comparer les mesures de journée et celles de 20 h-23 h : un écart marqué");
+                    sb.AppendLine("    indique une saturation aux heures de pointe, côté réseau.");
+                }
+                sb.AppendLine();
+                sb.AppendLine("QUESTIONS À POSER AU SUPPORT");
+                sb.AppendLine("  1. Quelle cellule/antenne dessert cette adresse, et est-elle saturée aux heures de pointe ?");
+                sb.AppendLine("  2. Une intervention ou une saturation connue est-elle en cours sur ce secteur ?");
+                sb.AppendLine("  3. L'IPv6 est-elle bien activée sur cette ligne (adresse IPv4 partagée constatée) ?");
+                sb.AppendLine("  4. Le débit et la latence constatés correspondent-ils à l'offre souscrite ?");
+                sb.AppendLine("  5. Un changement de box, une antenne externe ou un autre bande/réseau sont-ils possibles ?");
+                sb.AppendLine();
+                sb.AppendLine("Mesures réalisées localement par ONYX (pings ICMP et transferts de test).");
+
+                string path = Path.Combine(Sys.BackupDesktop,
+                    "ONYX-dossier-connexion-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".txt");
+                File.WriteAllText(path, sb.ToString(), new System.Text.UTF8Encoding(false));
+                return path;
+            }
+            catch { return null; }
+        }
+
+        // ------------------------------------------------------------------
         //  Correction MTU (la seule écriture) — sauvegardée, rétablissable
         // ------------------------------------------------------------------
         /// <summary>Vrai s'il existe une sauvegarde à rétablir.</summary>

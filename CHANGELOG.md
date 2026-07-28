@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.27 — Assistant opérateur : régler ce qui est réglable, PROUVER le reste
+- **Nouveau panneau « Assistant opérateur »** (menu ⋯ → Système → Réseau, « J'ai un
+  problème… », ou en disant « opérateur », « support », « dossier » au Copilote) — pour le
+  moment où le PC est hors de cause et où le support répond « ça vient de chez vous ».
+- **Opérateur détecté sans service tiers** : résolution DNS inverse des premiers sauts
+  (bouyguestelecom.fr, orange.fr, sfr.net, proxad…) — aucune donnée envoyée à un site externe.
+- **Journal de mesures horodatées** (`bt-netlog.txt`, local) : chaque mesure s'ajoute à
+  l'historique. C'est l'écart entre une mesure de journée et une de 20 h-23 h qui prouve une
+  saturation côté réseau — un argument que le support ne peut pas renvoyer au client.
+- **Dossier exportable (.txt sur le Bureau)** : type de lien, mesures du jour, ce qui est déjà
+  écarté côté client (câble négocié à 1 Gb/s, box qui répond en 1 ms), trajet réseau,
+  historique complet, et les 5 questions précises à poser au support.
+- **Réglages par opérateur**, dont **Box 5G Bouygues** en détail : port rouge 2,5 Gb/s, IPv6
+  obligatoire à cause du CGNAT (sans elle, NAT strict et redirections impossibles — ce n'est
+  pas un réglage PC), UPnP, choix 5G n78 / 4G 700 MHz selon la stabilité, relevé RSRP/SINR et
+  déplacement de box mesuré, redémarrage qui force le changement de cellule, puis 1064,
+  réclamation écrite et médiateur des communications électroniques.
+- **Dit honnêtement ce qu'une app ne peut pas faire** : une cellule saturée à 20 h ne se règle
+  pas depuis Windows ; si la fibre est éligible à l'adresse, c'est la vraie solution.
+
 ## v15.26 — Toutes les box : le panneau devient « Ma connexion & ma box »
 - **Plus seulement la 4G/5G** : le panneau mesure et juge TOUS les accès — fibre, ADSL/VDSL,
   4G/5G. Nouvelle ligne « type de lien estimé » (indices : MTU 1400-1471 = mobile, 1492 =
