@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.24 — Le branchement de la box, dessiné — et le câble jugé sans rien envoyer
+- **« Bien brancher la box (4G/5G) »** : schéma VECTORIEL de l'arrière d'une box mobile
+  (USB, LAN1-4 jaunes, LAN/WAN rouge 2,5 Gb/s, FXS téléphone) avec le bon câblage tracé —
+  box 5G seule → port ROUGE ; sinon LAN jaune ; la fibre prend le rouge ; FXS jamais le PC.
+  Plus net qu'une photo, thémé ONYX, et accompagné de la checklist complète CÔTÉ BOX
+  (signal RSRP/SINR, IPv6, UPnP, Wi-Fi coupé si inutile, QoS, redémarrage hebdo, heures
+  pleines) — les optimisations qu'aucun réglage Windows ne remplace, dites franchement.
+- **Débit négocié du câble** lu dans le panneau Connexion 4G/5G (aucun trafic nécessaire) :
+  un Cat 5e abîmé retombe à **100 Mb/s** — verdict immédiat « câble ou port en cause »
+  avant même de mesurer quoi que ce soit. 1 / 2,5 Gb/s = émeraude, Wi-Fi = « branche un
+  câble pour juger ».
+- Bouton « 📷 Schéma de branchement » intégré au panneau Connexion 4G/5G.
+
 ## v15.23 — MàJ Windows RÉELLEMENT en attente + fonctions batterie et uptime
 - **🪟 Windows Update pour de vrai** : le bilan interroge maintenant l'**API COM officielle Windows Update**
   (recherche hors-ligne sur le cache du dernier scan — rapide, zéro réseau, plafond 20 s) et donne le nombre

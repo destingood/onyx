@@ -15,7 +15,7 @@ namespace BTOptimizer
     internal class MobileNetForm : Form
     {
         private readonly Action<string, int> _log;
-        private Label _vIface, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
+        private Label _vIface, _vLink, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
         private Button _measure, _applyMtu, _revertMtu;
         private RichTextBox _journal;   // comme les autres journaux de l'app : se thème (le TextBox restait blanc)
         private MobileNet.Report _rep = new MobileNet.Report();
@@ -25,7 +25,7 @@ namespace BTOptimizer
         {
             _log = log ?? delegate { };
             Text = "ONYX — Connexion 4G/5G (box mobile)";
-            ClientSize = new Size(660, 712);
+            ClientSize = new Size(660, 742);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -54,6 +54,7 @@ namespace BTOptimizer
 
             int y = 76;
             _vIface = Row("Interface active", ref y);
+            _vLink = Row("Câble : débit négocié (1 Gb/s attendu)", ref y);
             _vGw = Row("Ping vers la BOX (juge ton câble/LAN)", ref y);
             _vIdle = Row("Ping vers Internet (radio + opérateur)", ref y);
             _vLoaded = Row("Sous charge RÉCEPTION (bufferbloat)", ref y);
@@ -118,10 +119,15 @@ namespace BTOptimizer
             });
             y += 120;
 
-            var dns = LinkBtn("DNS rapide", 20, y, () => Host(new DnsForm(_log)));
-            var tcp = LinkBtn("Réglages TCP/IP", 20 + 150, y, () => Host(new NetTuneForm(_log)));
-            var net = LinkBtn("Qualité réseau", 20 + 300, y, () => Host(new NetworkForm(_log)));
-            var close = new Button { Text = "Fermer", Location = new Point(540, y), Size = new Size(100, 30), FlatStyle = FlatStyle.Flat };
+            var wiring = LinkBtn("📷 Schéma de branchement", 20, y, () => Host(new BoxWiringForm()));
+            wiring.Width = 190;
+            var dns = LinkBtn("DNS rapide", 220, y, () => Host(new DnsForm(_log)));
+            dns.Width = 110;
+            var tcp = LinkBtn("Réglages TCP/IP", 340, y, () => Host(new NetTuneForm(_log)));
+            tcp.Width = 130;
+            var net = LinkBtn("Qualité réseau", 480, y, () => Host(new NetworkForm(_log)));
+            net.Width = 120;
+            var close = new Button { Text = "Fermer", Location = new Point(20, y + 38), Size = new Size(100, 30), FlatStyle = FlatStyle.Flat };
             close.Click += (s, e) => Close();
             Controls.Add(close);
         }
@@ -262,6 +268,14 @@ namespace BTOptimizer
             _vIface.Text = _rep.IfName != null ? _rep.IfName + "  (MTU " + _rep.MtuCurrent + ")" : "aucune connexion détectée";
             _vIface.ForeColor = _rep.IfName != null ? Theme.InkColor : errC;
 
+            // Débit négocié : la santé PHYSIQUE du câble, lue sans rien envoyer.
+            if (_rep.IsWireless) { _vLink.Text = "Wi-Fi — branche un câble pour juger le lien"; _vLink.ForeColor = warnC; }
+            else if (_rep.LinkMbps >= 2000) { _vLink.Text = (_rep.LinkMbps / 1000.0).ToString("0.#") + " Gb/s ✓"; _vLink.ForeColor = okC; }
+            else if (_rep.LinkMbps >= 1000) { _vLink.Text = "1 Gb/s ✓"; _vLink.ForeColor = okC; }
+            else if (_rep.LinkMbps == 100) { _vLink.Text = "100 Mb/s — câble ou port en cause !"; _vLink.ForeColor = errC; }
+            else if (_rep.LinkMbps > 0) { _vLink.Text = _rep.LinkMbps + " Mb/s"; _vLink.ForeColor = warnC; }
+            else { _vLink.Text = "—"; _vLink.ForeColor = Theme.InkDimColor; }
+
             if (_rep.GwPing >= 0)
             {
                 _vGw.Text = _rep.GwPing.ToString("0") + " ms · gigue " + _rep.GwJitter.ToString("0") + " ms";
@@ -327,6 +341,15 @@ namespace BTOptimizer
         /// <summary>La phrase qui LOCALISE le lag — box/LAN, radio-opérateur ou bufferbloat.</summary>
         private void RefreshVerdict(Color okC, Color warnC, Color errC)
         {
+            // Un câble qui négocie à 100 Mb/s se voit AVANT toute mesure : paire coupée dans le
+            // Cat 5e (sertissage) ou port fatigué — aucun logiciel ne rattrape du cuivre cassé.
+            if (!_rep.IsWireless && _rep.LinkMbps == 100)
+            {
+                _verdict.ForeColor = errC;
+                _verdict.Text = "→ Le câble négocie à 100 Mb/s au lieu de 1 Gb/s : une paire du Cat 5e est morte (connecteur) "
+                              + "ou le port est en cause. Change de câble/port — voir le schéma de branchement (bouton en bas).";
+                return;
+            }
             if (_rep.PingIdle < 0 && _rep.GwPing < 0) { _verdict.Text = ""; return; }
 
             if (_rep.GwPing >= 10)
