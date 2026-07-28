@@ -204,6 +204,22 @@ namespace BTOptimizer
                 return new Reply { Text = t2, ShowStarters = true };
             }
 
+            // --- LIBÉRER DE LA PLACE : hibernation (réversible) et nettoyage profond (DISM officiel) ---
+            if (UtilityTools.IsHibernateOff(s))
+            {
+                double hgb = ChatActions.HibernationSizeGb();
+                if (hgb < 0) return new Reply { Text = "L'hibernation semble déjà désactivée (pas de hiberfil.sys) — rien à récupérer ici. "
+                    + "Dis « libère de la place » pour le grand bilan stockage.", ShowStarters = true };
+                return new Reply { Text = "hiberfil.sys occupe ~" + hgb.ToString("0.0") + " Go. Le bouton le récupère en 5 secondes "
+                    + "(et c'est réversible : « réactive l'hibernation »).", Action = ChatActions.HibernateOffAction(hgb) };
+            }
+            if (UtilityTools.IsHibernateOn(s))
+                return new Reply { Text = "Je peux réactiver l'hibernation (et le démarrage rapide) — clic ci-dessous.",
+                    Action = ChatActions.HibernateOnAction() };
+            if (UtilityTools.IsDeepClean(s))
+                return new Reply { Text = "Nettoyage OFFICIEL du magasin de composants Windows (DISM) : souvent 2 à 8 Go récupérés, "
+                    + "5 à 20 minutes, aucun risque pour tes fichiers.", Action = ChatActions.ComponentCleanupAction() };
+
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
             {
@@ -425,7 +441,8 @@ namespace BTOptimizer
             bool iHeat   = Has(s, "chauffe", "temperature", "chaud", "throttl", "bride", "capteur", "charge cpu",
                                   "charge gpu", "surchauff", "brulant", "fournaise", "cuit", "ventilo", "ventilateur",
                                   "souffle", "bruyant", "degre");
-            bool iClean  = Has(s, "espace", "disque plein", "nettoy", "liberer", "place disque", "temporaire", "saturé", "sature");
+            bool iClean  = Has(s, "espace", "disque plein", "nettoy", "liberer", "libere", "place disque", "temporaire",
+                                  "saturé", "sature", "de la place", "gros fichiers", "gros dossiers", "prend de la place");
             bool iLibs   = Has(s, "dll", "manquante", "demarre pas", "refuse de demarrer", "visual c", "directx", "redist", "bibliotheque");
             bool iDns    = Has(s, "dns", "resolution de nom");
             bool iBoot   = Has(s, "demarrage", "boot", "startup", "allumage", "lent a demarrer", "long a demarrer", "s'allume");
@@ -646,7 +663,7 @@ namespace BTOptimizer
                         "Je prends une mesure en direct…", ChatActions.MeasureSensors());
                 if (iClean)
                     return WithAction(entries, "Nettoyage disque",
-                        "J'analyse ton disque système…", ChatActions.MeasureDisk());
+                        "Je fais le grand bilan stockage…", ChatActions.StorageAuditAction());
                 if (iLibs)
                     return WithAction(entries, "Bibliothèques de jeu",
                         "Je vérifie les bibliothèques essentielles…", ChatActions.MeasureLibs());

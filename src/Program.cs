@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.24.0.0")]
-[assembly: AssemblyFileVersion("15.24.0.0")]
+[assembly: AssemblyVersion("15.25.0.0")]
+[assembly: AssemblyFileVersion("15.25.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,16 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_DISK=1 : exécute le GRAND BILAN STOCKAGE en console (vraies mesures) et sort.
+            if (Environment.GetEnvironmentVariable("BT_DISK") == "1")
+            {
+                var actD = ChatActions.StorageAuditAction();
+                var resD = actD.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
+                Console.WriteLine(resD != null ? resD.Text : "(aucune réponse)");
+                Console.WriteLine("BOUTON PROPOSÉ : " + (resD != null && resD.Action != null ? resD.Action.Label : "(aucun)"));
                 Environment.Exit(0);
             }
 
@@ -663,9 +673,19 @@ namespace BTOptimizer
                 bool fb2 = UtilityTools.IsUptime("depuis quand mon pc tourne") && UtilityTools.IsUptime("uptime")
                     && !UtilityTools.IsUptime("depuis quand tu existes") && !UtilityTools.IsUptime("quelle heure est-il"); if (fb2) ok38++; Console.WriteLine((fb2 ? "OK  " : "FAIL") + "  uptime : detecte, 'depuis quand tu existes' exclu");
 
+                // v15.24 : LIBERER DE LA PLACE niveau max (hibernation / DISM / parseur).
+                int ok39 = 0;
+                bool dk1 = UtilityTools.IsHibernateOff("desactive l'hibernation") && UtilityTools.IsHibernateOff("supprime la veille prolongee")
+                    && !UtilityTools.IsHibernateOff("c'est quoi l'hibernation") && !UtilityTools.IsHibernateOff("bonjour"); if (dk1) ok39++; Console.WriteLine((dk1 ? "OK  " : "FAIL") + "  hibernation OFF : detecte, question simple exclue");
+                bool dk2 = UtilityTools.IsHibernateOn("reactive l'hibernation") && !UtilityTools.IsHibernateOn("desactive l'hibernation")
+                    && UtilityTools.IsDeepClean("nettoyage profond") && !UtilityTools.IsDeepClean("nettoie mon pc"); if (dk2) ok39++; Console.WriteLine((dk2 ? "OK  " : "FAIL") + "  hibernation ON / nettoyage profond : sans collision");
+                bool dk3 = UtilityTools.DismRecommended("Nettoyage du magasin de composants recommandé : Oui")
+                    && UtilityTools.DismRecommended("Component Store Cleanup Recommended : Yes")
+                    && !UtilityTools.DismRecommended("recommandé : Non") && !UtilityTools.DismRecommended(null); if (dk3) ok39++; Console.WriteLine((dk3 ? "OK  " : "FAIL") + "  DISM : parseur FR/EN, Non/null=false");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

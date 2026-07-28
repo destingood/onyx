@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.25 — Libérer de la place : NIVEAU MAX (hibernation, DISM, Windows.old, gros dossiers)
+- **💽 « Libère de la place » → GRAND BILAN STOCKAGE** : le Copilote mesure TOUT et propose le bouton le
+  plus rentable — rien n'est supprimé sans clic :
+  - temporaires + caches (l'outil existant, toujours en premier : le plus sûr) ;
+  - **veille prolongée (hiberfil.sys)** : taille RÉELLE mesurée — sur cette machine : **25,6 Go** ! Bouton
+    « Désactiver l'hibernation » = `powercfg /h off`, espace récupéré en 5 s, **100 % réversible**
+    (« réactive l'hibernation » — le retour arrière est un outil à part entière) ;
+  - **nettoyage profond WinSxS** : le Copilote demande à Windows lui-même (DISM AnalyzeComponentStore) si
+    le nettoyage OFFICIEL est recommandé — si oui, bouton DISM StartComponentCleanup (2-8 Go, 5-20 min,
+    gain mesuré avant/après) ;
+  - **Windows.old** : taille mesurée + explication honnête (auto-supprimé ~10 jours après une grosse MàJ) ;
+  - **tes dossiers les plus lourds** (Téléchargements, Vidéos, Bureau, Documents) : mesurés pour info —
+    JAMAIS touchés, et un dossier redirigé vers un autre disque est signalé (« ne compte pas pour C: »).
+- Nouvelles commandes : « désactive l'hibernation », « réactive l'hibernation », « nettoyage profond »,
+  « gros fichiers ». Sonde console `BT_DISK=1` pour re-vérifier le bilan réel.
+- Testé EN RÉEL : C: 10 Go libres / 237 Go (4 %) → bouton proposé « Désactiver l'hibernation
+  (récupère ~25,6 Go) » — le meilleur choix possible, et réversible. Harnais **170/170**.
+
 ## v15.24 — Le branchement de la box, dessiné — et le câble jugé sans rien envoyer
 - **« Bien brancher la box (4G/5G) »** : schéma VECTORIEL de l'arrière d'une box mobile
   (USB, LAN1-4 jaunes, LAN/WAN rouge 2,5 Gb/s, FXS téléphone) avec le bon câblage tracé —

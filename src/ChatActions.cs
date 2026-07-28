@@ -199,6 +199,204 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
+        //  LIBÉRER DE LA PLACE — NIVEAU MAX
+        //  (hibernation réversible, WinSxS officiel, Windows.old, gros dossiers)
+        // ------------------------------------------------------------------
+        /// <summary>Taille du fichier d'hibernation (hiberfil.sys) en Go, ou −1 si absent/illisible.</summary>
+        internal static double HibernationSizeGb()
+        {
+            try
+            {
+                string p = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "hiberfil.sys");
+                var fi = new FileInfo(p);
+                if (fi.Exists) return fi.Length / 1073741824.0;
+            }
+            catch { }
+            return -1;
+        }
+
+        private static double SysFreeGb()
+        {
+            try { return new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)).AvailableFreeSpace / 1073741824.0; }
+            catch { return -1; }
+        }
+
+        // Taille d'un dossier en Mo, PLAFONNÉE dans le temps (gros disques) — partielle si le cap est atteint.
+        private static long DirSizeCappedMb(string path, int capMs)
+        {
+            long bytes = 0;
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return -1;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var stack = new System.Collections.Generic.Stack<string>();
+                stack.Push(path);
+                while (stack.Count > 0 && sw.ElapsedMilliseconds < capMs)
+                {
+                    string d = stack.Pop();
+                    try
+                    {
+                        foreach (var f in Directory.EnumerateFiles(d)) { try { bytes += new FileInfo(f).Length; } catch { } }
+                        foreach (var sub in Directory.EnumerateDirectories(d)) stack.Push(sub);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            return bytes / 1048576;
+        }
+
+        /// <summary>Désactive l'hibernation (powercfg /h off) : hiberfil.sys disparaît, l'espace revient
+        /// tout de suite. RÉVERSIBLE (« réactive l'hibernation »). Clic explicite obligatoire.</summary>
+        public static DocAssistant.ChatAction HibernateOffAction(double gb)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Désactiver l'hibernation" + (gb > 0 ? " (récupère ~" + gb.ToString("0.0") + " Go)" : "");
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Exécute « powercfg /h off » : supprime hiberfil.sys (l'espace revient immédiatement) et "
+                      + "désactive la veille prolongée ET le démarrage rapide de Windows. 100 % RÉVERSIBLE : "
+                      + "dis « réactive l'hibernation » pour tout remettre.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("powercfg /h off…", 0);
+                RunProc("powercfg", "/h off", 15000, log);
+                if (HibernationSizeGb() < 0)
+                    return Say("✅ Hibernation désactivée — " + (gb > 0 ? "~" + gb.ToString("0.0") + " Go récupérés immédiatement." : "espace récupéré.")
+                             + "\n(Le démarrage rapide est coupé aussi. Retour arrière : « réactive l'hibernation ».)");
+                return Say("hiberfil.sys est toujours là — Windows a refusé (rare). Réessaie après un redémarrage.");
+            };
+            return a;
+        }
+
+        /// <summary>Réactive l'hibernation + démarrage rapide (powercfg /h on).</summary>
+        public static DocAssistant.ChatAction HibernateOnAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Réactiver l'hibernation"; a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Exécute « powercfg /h on » : recrée hiberfil.sys (reprend quelques Go sur le disque) et "
+                      + "réactive la veille prolongée + le démarrage rapide.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("powercfg /h on…", 0);
+                RunProc("powercfg", "/h on", 15000, log);
+                double gb = HibernationSizeGb();
+                return Say(gb > 0 ? "✅ Hibernation réactivée (hiberfil.sys : ~" + gb.ToString("0.0") + " Go)."
+                                  : "✅ Commande envoyée — hiberfil.sys sera recréé au prochain besoin.");
+            };
+            return a;
+        }
+
+        /// <summary>Nettoyage OFFICIEL du magasin de composants Windows (DISM StartComponentCleanup).
+        /// Sans danger pour les fichiers/jeux ; libère souvent 2 à 8 Go ; 5 à 20 minutes.</summary>
+        public static DocAssistant.ChatAction ComponentCleanupAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Nettoyage profond Windows (DISM, officiel)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Lance l'outil OFFICIEL de Windows « Dism /Online /Cleanup-Image /StartComponentCleanup » : "
+                      + "purge les anciennes versions des composants système (WinSxS). AUCUN risque pour tes fichiers, "
+                      + "jeux ou applis ; seul effet : les très anciennes mises à jour ne pourront plus être désinstallées. "
+                      + "Durée : 5 à 20 minutes — laisse tourner.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                double before = SysFreeGb();
+                if (log != null) log("DISM StartComponentCleanup — 5 à 20 min, patience…", 0);
+                string outp = RunProc("Dism.exe", "/Online /Cleanup-Image /StartComponentCleanup", 1800000, log);
+                if (outp == null) return Say("DISM n'a pas fini dans les 30 minutes (ou a été bloqué). Réessaie plus tard — c'est sans danger.");
+                double after = SysFreeGb();
+                double gained = (before >= 0 && after >= 0) ? after - before : -1;
+                return Say("✅ Nettoyage profond terminé" + (gained >= 0.1 ? " — " + gained.ToString("0.0") + " Go récupérés (mesuré avant/après)." : " — espace consolidé (le gain exact apparaît parfois après redémarrage)."));
+            };
+            return a;
+        }
+
+        /// <summary>GRAND BILAN STOCKAGE : mesure TOUT (temporaires/caches, hibernation, Windows.old,
+        /// WinSxS via DISM, gros dossiers persos), puis propose LE bouton le plus rentable.
+        /// Les fichiers personnels ne sont JAMAIS touchés — au mieux ils sont listés pour info.</summary>
+        public static DocAssistant.ChatAction StorageAuditAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Grand bilan stockage"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse du disque…", 0);
+                var sb = new StringBuilder();
+                sb.Append("💽 GRAND BILAN STOCKAGE — tout est mesuré, rien n'est supprimé sans ton clic :\n");
+                sb.Append(DiskText()).Append('\n');
+                DocAssistant.ChatAction btn = FixDisk();   // temporaires + caches : le plus sûr, en premier
+
+                double hib = HibernationSizeGb();
+                if (hib > 0.5)
+                {
+                    sb.Append("• Veille prolongée (hiberfil.sys) : ").Append(hib.ToString("0.0"))
+                      .Append(" Go — récupérables en 5 secondes, RÉVERSIBLE (« désactive l'hibernation »).\n");
+                    if (btn == null) btn = HibernateOffAction(hib);
+                }
+
+                try
+                {
+                    string wold = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "Windows.old");
+                    if (Directory.Exists(wold))
+                    {
+                        if (log != null) log("Windows.old…", 0);
+                        long mb = DirSizeCappedMb(wold, 6000);
+                        if (mb > 200)
+                            sb.Append("• Windows.old (ancienne installation) : ~").Append(Human(mb))
+                              .Append(" — Windows le supprime SEUL ~10 jours après la grosse MàJ ; sinon l'outil « Nettoyage de disque » de Windows le propose.\n");
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    if (log != null) log("Magasin de composants (DISM)…", 0);
+                    string an = RunProc("Dism.exe", "/Online /Cleanup-Image /AnalyzeComponentStore", 60000, null);
+                    if (UtilityTools.DismRecommended(an))
+                    {
+                        sb.Append("• Magasin de composants Windows (WinSxS) : nettoyage OFFICIEL recommandé par Windows lui-même — souvent 2 à 8 Go (« nettoyage profond »).\n");
+                        if (btn == null) btn = ComponentCleanupAction();
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    if (log != null) log("Tes dossiers les plus lourds…", 0);
+                    var dirs = new[]
+                    {
+                        new[] { "Téléchargements", Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? "", "Downloads") },
+                        new[] { "Vidéos", Environment.GetFolderPath(Environment.SpecialFolder.MyVideos) },
+                        new[] { "Bureau", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) },
+                        new[] { "Documents", Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) },
+                    };
+                    var parts = new List<string>();
+                    string sysRoot = Path.GetPathRoot(Environment.SystemDirectory);
+                    foreach (var d in dirs)
+                    {
+                        long mb = DirSizeCappedMb(d[1], 4000);
+                        if (mb < 1024) continue;
+                        bool other = false;
+                        try { other = !string.Equals(Path.GetPathRoot(d[1]), sysRoot, StringComparison.OrdinalIgnoreCase); } catch { }
+                        // Un dossier redirigé vers un AUTRE disque ne libérera rien sur C: — on le dit.
+                        parts.Add(d[0] + " ~" + Human(mb) + (other ? " (sur un autre disque, ne compte pas pour C:)" : ""));
+                    }
+                    if (parts.Count > 0)
+                        sb.Append("• Tes dossiers les plus lourds : ").Append(string.Join(" · ", parts.ToArray()))
+                          .Append(" — à trier À LA MAIN si tu veux : je ne touche JAMAIS à tes fichiers persos.\n");
+                }
+                catch { }
+
+                if (btn == null)
+                    btn = OpenUrlAction("Ouvrir le nettoyage de stockage Windows", "ms-settings:storagesense",
+                        "Ouvre les réglages Stockage de Windows. Rien n'est supprimé automatiquement.");
+                sb.Append("\n👉 Le bouton ci-dessous fait la récupération la plus rentable MAINTENANT. "
+                        + "Autres commandes : « désactive l'hibernation », « nettoyage profond ».");
+                return new DocAssistant.Reply { Text = sb.ToString(), Action = btn };
+            };
+            return a;
+        }
+
+        // ------------------------------------------------------------------
         //  Bibliothèques de jeu manquantes
         // ------------------------------------------------------------------
         public static DocAssistant.ChatAction MeasureLibs()

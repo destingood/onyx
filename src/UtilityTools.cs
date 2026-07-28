@@ -597,6 +597,43 @@ namespace BTOptimizer
             return ask && subj;
         }
 
+        // ---- LIBÉRER DE LA PLACE (hibernation / nettoyage profond DISM) ----
+        /// <summary>« désactive l'hibernation », « supprime la veille prolongée » → vrai.</summary>
+        internal static bool IsHibernateOff(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool subj = n.Contains("hibernation") || n.Contains("veille prolongee") || n.Contains("hiberfil");
+            if (!subj) return false;
+            return n.Contains("desactive") || n.Contains("coupe") || n.Contains("enleve") || n.Contains("supprime")
+                || n.Contains("vire") || n.Contains("libere") || Regex.IsMatch(n, "\\boff\\b");
+        }
+
+        /// <summary>« réactive l'hibernation », « remets la veille prolongée » → vrai (pas « désactive »).</summary>
+        internal static bool IsHibernateOn(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool subj = n.Contains("hibernation") || n.Contains("veille prolongee") || n.Contains("hiberfil");
+            if (!subj || IsHibernateOff(s)) return false;   // « désactive » contient « active » → tester Off d'abord
+            return n.Contains("reactive") || n.Contains("remet") || n.Contains("retablis") || n.Contains("active")
+                || Regex.IsMatch(n, "\\bon\\b");
+        }
+
+        /// <summary>« nettoyage profond », « winsxs », « dism » → vrai (pas « nettoie mon pc » = nettoyage normal).</summary>
+        internal static bool IsDeepClean(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("nettoyage profond") || n.Contains("winsxs") || Regex.IsMatch(n, "\\bdism\\b")
+                || (n.Contains("composants") && n.Contains("windows"));
+        }
+
+        /// <summary>La sortie de « Dism /AnalyzeComponentStore » recommande-t-elle un nettoyage ? (FR/EN)</summary>
+        internal static bool DismRecommended(string output)
+        {
+            if (string.IsNullOrEmpty(output)) return false;
+            string n = Deacc(output.ToLowerInvariant());
+            return Regex.IsMatch(n, "(recommande|recommended)\\s*:\\s*(oui|yes)");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {
