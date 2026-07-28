@@ -15,7 +15,7 @@ namespace BTOptimizer
     internal class MobileNetForm : Form
     {
         private readonly Action<string, int> _log;
-        private Label _vIface, _vLink, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
+        private Label _vIface, _vKind, _vLink, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
         private Button _measure, _applyMtu, _revertMtu;
         private RichTextBox _journal;   // comme les autres journaux de l'app : se thème (le TextBox restait blanc)
         private MobileNet.Report _rep = new MobileNet.Report();
@@ -24,8 +24,8 @@ namespace BTOptimizer
         public MobileNetForm(Action<string, int> log)
         {
             _log = log ?? delegate { };
-            Text = "ONYX — Connexion 4G/5G (box mobile)";
-            ClientSize = new Size(660, 742);
+            Text = "ONYX — Ma connexion & ma box (fibre, ADSL, 4G/5G)";
+            ClientSize = new Size(660, 718);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -47,18 +47,19 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 60, BackColor = Color.FromArgb(12, 14, 13) };
             banner.Controls.Add(new Label
             {
-                Text = "  Connexion 4G/5G — box mobile & partage de connexion", Dock = DockStyle.Fill,
+                Text = "  Ma connexion — mesures réelles & branchement, pour TOUTES les box", Dock = DockStyle.Fill,
                 ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 13f), TextAlign = ContentAlignment.MiddleLeft
             });
             Controls.Add(banner);
 
             int y = 76;
             _vIface = Row("Interface active", ref y);
+            _vKind = Row("Type de lien estimé", ref y);
             _vLink = Row("Câble : débit négocié (1 Gb/s attendu)", ref y);
             _vGw = Row("Ping vers la BOX (juge ton câble/LAN)", ref y);
-            _vIdle = Row("Ping vers Internet (radio + opérateur)", ref y);
+            _vIdle = Row("Ping vers Internet (accès + opérateur)", ref y);
             _vLoaded = Row("Sous charge RÉCEPTION (bufferbloat)", ref y);
-            _vUpLoaded = Row("Sous charge ENVOI (talon d'Achille 5G)", ref y);
+            _vUpLoaded = Row("Sous charge ENVOI (upload saturé)", ref y);
             _vMtu = Row("MTU (actuelle → mesurée)", ref y);
             _vCgnat = Row("CGNAT (adresse partagée opérateur)", ref y);
             _vIpv6 = Row("IPv6 (le chemin sans CGNAT)", ref y);
@@ -109,17 +110,15 @@ namespace BTOptimizer
 
             Controls.Add(new Label
             {
-                Location = new Point(20, y), Size = new Size(620, 112), ForeColor = Theme.InkDimColor,
-                Text = "Ce que Windows ne peut PAS faire à ta place (mais qui change tout sur une box 4G/5G) :\n"
-                     + "• Regarde le SIGNAL dans l'interface de la box : RSRP > −100 dBm et SINR > 10 dB, sinon déplace-la\n"
-                     + "  (près d'une fenêtre, côté antenne — un site de couverture indique la direction) ;\n"
-                     + "• Redémarre la box : elle raccroche parfois une cellule lointaine et n'en repart plus ;\n"
-                     + "• Active l'IPv6 dans la box si la ligne ci-dessus dit « absente » ;\n"
-                     + "• Les soirées 20 h-23 h chargent l'antenne : un ping qui double à ces heures vient de là, pas du PC."
+                Location = new Point(20, y), Size = new Size(620, 64), ForeColor = Theme.InkDimColor,
+                Text = "Chaque box a ses gestes (fibre pliée, filtre ADSL manquant, signal 5G, port 2,5 G inutilisé…) :\n"
+                     + "ouvre « Schéma & checklist par box » ci-dessous — le bon branchement dessiné et la checklist\n"
+                     + "complète, par type. Et souviens-toi : en soirée (20 h-23 h), un ping qui double vient de\n"
+                     + "l'opérateur, pas du PC."
             });
-            y += 120;
+            y += 72;
 
-            var wiring = LinkBtn("📷 Schéma de branchement", 20, y, () => Host(new BoxWiringForm()));
+            var wiring = LinkBtn("📷 Schéma & checklist par box", 20, y, () => Host(new BoxWiringForm(_rep != null ? _rep.Kind : MobileNet.Access.Unknown)));
             wiring.Width = 190;
             var dns = LinkBtn("DNS rapide", 220, y, () => Host(new DnsForm(_log)));
             dns.Width = 110;
@@ -226,6 +225,9 @@ namespace BTOptimizer
                           + Math.Max(0, r.PingUpLoaded - r.PingIdle).ToString("0") + " ms).",
                           r.PingUpLoaded - r.PingIdle > 80 ? 2 : 0);
 
+                r.Kind = MobileNet.Classify(r);
+                Journal("Type de lien estimé : " + MobileNet.AccessLabel(r.Kind) + ".", 0);
+
                 try
                 {
                     BeginInvoke((Action)(() =>
@@ -267,6 +269,10 @@ namespace BTOptimizer
 
             _vIface.Text = _rep.IfName != null ? _rep.IfName + "  (MTU " + _rep.MtuCurrent + ")" : "aucune connexion détectée";
             _vIface.ForeColor = _rep.IfName != null ? Theme.InkColor : errC;
+
+            if (_rep.Kind != MobileNet.Access.Unknown)
+            { _vKind.Text = MobileNet.AccessLabel(_rep.Kind); _vKind.ForeColor = Theme.InkColor; }
+            else { _vKind.Text = "— (mesure à lancer)"; _vKind.ForeColor = Theme.InkDimColor; }
 
             // Débit négocié : la santé PHYSIQUE du câble, lue sans rien envoyer.
             if (_rep.IsWireless) { _vLink.Text = "Wi-Fi — branche un câble pour juger le lien"; _vLink.ForeColor = warnC; }
@@ -369,18 +375,37 @@ namespace BTOptimizer
                               + "Pendant le jeu : couper les synchronisations, et limiter le débit dans les applis qui envoient.";
                 return;
             }
-            if (_rep.PingIdle >= 60)
+            // Seuil « ping de base anormal » selon le type : une fibre à 40 ms est malade,
+            // une ligne cuivre à 40 ms est normale, une 5G à 40 ms est correcte.
+            double highIdle = _rep.Kind == MobileNet.Access.Fiber ? 15
+                            : _rep.Kind == MobileNet.Access.Dsl ? 55 : 60;
+            if (_rep.PingIdle >= highIdle)
             {
                 _verdict.ForeColor = warnC;
-                _verdict.Text = "→ Ton câble est hors de cause (box en " + (_rep.GwPing >= 0 ? _rep.GwPing.ToString("0") : "~1")
-                              + " ms) : le lag naît sur le segment RADIO/opérateur. Voir le signal dans l'interface de la box "
-                              + "(RSRP/SINR), sa position, et les conseils ci-dessous.";
+                string gwTxt = _rep.GwPing >= 0 ? _rep.GwPing.ToString("0") : "~1";
+                switch (_rep.Kind)
+                {
+                    case MobileNet.Access.Fiber:
+                        _verdict.Text = "→ Câble et box innocentés (box en " + gwTxt + " ms) : cette fibre répond trop lentement "
+                                      + "(attendu : 2-10 ms). Redémarre la box, reteste à une autre heure — si ça persiste, appelle "
+                                      + "le FAI avec ces chiffres.";
+                        break;
+                    case MobileNet.Access.Dsl:
+                        _verdict.Text = "→ Ligne cuivre : la base est naturellement haute (15-40 ms). Au-delà : filtre ADSL sur "
+                                      + "CHAQUE prise, câble DSL court, et demande le profil « fastpath » à ton FAI (voir checklist).";
+                        break;
+                    default:
+                        _verdict.Text = "→ Ton câble est hors de cause (box en " + gwTxt + " ms) : le lag naît sur le segment "
+                                      + "RADIO/opérateur. Voir le signal dans l'interface de la box (RSRP/SINR), sa position, "
+                                      + "et la checklist 4G/5G.";
+                        break;
+                }
                 return;
             }
             if (_rep.PingIdle >= 0)
             {
                 _verdict.ForeColor = okC;
-                _verdict.Text = "→ Lien sain au moment de la mesure. Si ça se dégrade en soirée, c'est l'antenne qui sature "
+                _verdict.Text = "→ Lien sain au moment de la mesure. Si ça se dégrade en soirée, c'est le réseau qui sature "
                               + "(refais la mesure à ce moment-là pour le prouver).";
             }
         }

@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.26 — Toutes les box : le panneau devient « Ma connexion & ma box »
+- **Plus seulement la 4G/5G** : le panneau mesure et juge TOUS les accès — fibre, ADSL/VDSL,
+  4G/5G. Nouvelle ligne « type de lien estimé » (indices : MTU 1400-1471 = mobile, 1492 =
+  PPPoE cuivre, CGNAT + ping haut = mobile, ping < 12 ms = fibre) — estimé, jamais affirmé.
+- **Verdicts calibrés par type** : une fibre à 40 ms est malade (attendu 2-10 ms), une ligne
+  cuivre à 40 ms est normale (interleaving), une 5G à 40 ms est correcte. Le même chiffre ne
+  reçoit plus le même verdict — chacun sa phrase et ses gestes (FAI/fastpath/signal).
+- **Schéma de branchement × 3** : l'écran « Bien brancher la box » gagne trois onglets —
+  Fibre (PTO, fibre jamais pliée, port 2,5 G des box récentes), ADSL/VDSL (le FILTRE sur
+  chaque prise, câble DSL court, prise principale), 4G/5G (port rouge, FXS). Chaque type a
+  sa checklist complète côté box ; l'onglet s'ouvre sur le type détecté par la mesure.
+- Le Copilote comprend désormais « fibre », « adsl », « livebox », « freebox », « bbox »…
+  et route vers le panneau ; entrée du menu et de « J'ai un problème… » renommées.
+
 ## v15.25 — Libérer de la place : NIVEAU MAX (hibernation, DISM, Windows.old, gros dossiers)
 - **💽 « Libère de la place » → GRAND BILAN STOCKAGE** : le Copilote mesure TOUT et propose le bouton le
   plus rentable — rien n'est supprimé sans clic :

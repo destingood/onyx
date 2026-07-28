@@ -25,6 +25,9 @@ namespace BTOptimizer
     /// </summary>
     internal static class MobileNet
     {
+        /// <summary>Type de lien ESTIMÉ depuis les mesures (jamais affirmé : « estimé »).</summary>
+        public enum Access { Unknown, Fiber, Dsl, Mobile }
+
         public class Report
         {
             public string IfName;            // interface active (celle de la passerelle)
@@ -42,6 +45,33 @@ namespace BTOptimizer
             public bool Cgnat;               // 100.64.0.0/10 vu sur le trajet = certain
             public bool CgnatProbable;       // privé (10/8…) APRÈS la box = probable
             public bool Ipv6;                // un ping IPv6 public répond
+            public Access Kind = Access.Unknown;   // rempli par Classify() en fin de mesure
+        }
+
+        /// <summary>Estime le type de lien à partir des mesures. Indices, par force décroissante :
+        /// MTU 1400-1471 = encapsulation mobile ; MTU 1492 = PPPoE (ADSL/VDSL, parfois fibre) ;
+        /// CGNAT avec ping élevé = mobile (Free/SFR partagent aussi l'IPv4 en fibre → ping bas) ;
+        /// ping de base &lt; 12 ms = fibre/câble ; ≥ 45 ms sans autre indice = cuivre ou mobile.</summary>
+        public static Access Classify(Report r)
+        {
+            if (r == null) return Access.Unknown;
+            if (r.MtuOptimal >= 1400 && r.MtuOptimal <= 1471) return Access.Mobile;
+            if (r.Cgnat && r.PingIdle >= 12) return Access.Mobile;
+            if (r.MtuOptimal == 1492) return r.PingIdle >= 0 && r.PingIdle < 12 ? Access.Fiber : Access.Dsl;
+            if (r.PingIdle >= 0 && r.PingIdle < 12) return Access.Fiber;
+            if (r.PingIdle >= 45) return Access.Dsl;
+            return Access.Unknown;
+        }
+
+        public static string AccessLabel(Access a)
+        {
+            switch (a)
+            {
+                case Access.Fiber: return "fibre / câble";
+                case Access.Dsl: return "ADSL / VDSL (cuivre)";
+                case Access.Mobile: return "4G / 5G (box mobile)";
+                default: return "indéterminé";
+            }
         }
 
         private const string ProbeV4 = "1.1.1.1";
