@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.16 — Smart App Control : le panneau qui explique (et le .reg intégré)
+- **Nouveau panneau « Smart App Control »** (menu ⋯ → Système, et « J'ai un problème… » →
+  Entretien & sécurité) : c'est LUI qui refuse au lancement les applications non signées ou
+  « sans réputation » (« stratégie de contrôle d'application », 0x800711C7) — typiquement une
+  app fraîchement compilée.
+- **L'état réel, en clair** : ACTIVÉ (émeraude) / ÉVALUATION (orange) / DÉSACTIVÉ (rouge) /
+  non disponible, avec ce que ça change concrètement au lancement des programmes.
+- **Les trois bascules intégrées** (ce que faisaient les .reg qui circulent) : Évaluation,
+  Désactiver, Réactiver — chacune derrière une confirmation qui annonce les conséquences,
+  avec **sauvegarde .reg de l'état d'origine déposée sur le Bureau** avant toute écriture.
+- **Honnêteté, pas de bouton menteur** : d'après Microsoft, une fois Smart App Control coupé,
+  il ne se rallume qu'en réinitialisant/réinstallant Windows. Quand c'est le cas, les deux
+  retours en arrière sont **grisés** et le panneau explique pourquoi, au lieu de proposer un
+  clic sans effet. Tout changement demande un redémarrage — c'est dit.
+- **La vraie solution pour un développeur** est rappelée dans le panneau : signer l'exécutable
+  (`Sign.bat`) et le diffuser en un seul fichier — couper le filtre ne règle le problème que
+  sur SON PC, pas chez les clients.
+
 ## v15.15 — Consolidation (suite) : collisions avec le vocabulaire PC d'ONYX
 - **Séismes** : « mon écran a des **secousses** » ne part plus vers la liste des séismes (« secousse » seul
   était ambigu → on exige « séisme / tremblement de terre / sismique / secousse tellurique »).

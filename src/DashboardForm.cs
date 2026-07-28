@@ -203,6 +203,7 @@ namespace BTOptimizer
             sys.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
             sys.DropDownItems.Add("🪪 État de la licence Windows (activation, clé OEM)", null, (s, e) => OpenDialog(new WindowsLicenseForm()));
+            sys.DropDownItems.Add("🛡 Smart App Control (applications bloquées au lancement)", null, (s, e) => OpenDialog(new SmartAppControlForm(Log)));
             sys.DropDownItems.Add(new ToolStripSeparator());
             var autostart = new ToolStripMenuItem("Démarrer ONYX avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
