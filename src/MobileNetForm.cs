@@ -16,7 +16,7 @@ namespace BTOptimizer
     {
         private readonly Action<string, int> _log;
         private Label _vIface, _vKind, _vLink, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
-        private Button _measure, _applyMtu, _revertMtu;
+        private Button _measure, _applyMtu, _revertMtu, _allFix;
         private RichTextBox _journal;   // comme les autres journaux de l'app : se thème (le TextBox restait blanc)
         private MobileNet.Report _rep = new MobileNet.Report();
         private volatile bool _busy;
@@ -25,7 +25,7 @@ namespace BTOptimizer
         {
             _log = log ?? delegate { };
             Text = "ONYX — Ma connexion & ma box (fibre, ADSL, 4G/5G)";
-            ClientSize = new Size(660, 718);
+            ClientSize = new Size(660, 762);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -90,6 +90,15 @@ namespace BTOptimizer
             _applyMtu.Click += (s, e) => ApplyMtu();
             Controls.Add(_applyMtu);
 
+            _allFix = new Button
+            {
+                Text = "⚡  TOUT optimiser le réseau", Location = new Point(20, y + 44), Size = new Size(280, 34),
+                FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.FromArgb(16, 13, 9)
+            };
+            _allFix.FlatAppearance.BorderSize = 0;
+            _allFix.Click += (s, e) => RunAllFix();
+            Controls.Add(_allFix);
+
             _revertMtu = new Button
             {
                 Text = "↩  Rétablir la MTU d'origine", Location = new Point(450, y + 6), Size = new Size(190, 34),
@@ -97,7 +106,7 @@ namespace BTOptimizer
             };
             _revertMtu.Click += (s, e) => { if (MobileNet.RevertMtu(Journal)) { MobileNet.FillInterface(_rep); RefreshRows(); } };
             Controls.Add(_revertMtu);
-            y += 50;
+            y += 94;   // rangée mesure/MTU + rangée « TOUT optimiser »
 
             _journal = new RichTextBox
             {
@@ -110,15 +119,15 @@ namespace BTOptimizer
 
             Controls.Add(new Label
             {
-                Location = new Point(20, y), Size = new Size(620, 64), ForeColor = Theme.InkDimColor,
-                Text = "Chaque box a ses gestes (fibre pliée, filtre ADSL manquant, signal 5G, port 2,5 G inutilisé…) :\n"
-                     + "ouvre « Schéma & checklist par box » ci-dessous — le bon branchement dessiné et la checklist\n"
-                     + "complète, par type. Et souviens-toi : en soirée (20 h-23 h), un ping qui double vient de\n"
-                     + "l'opérateur, pas du PC."
+                Location = new Point(20, y), Size = new Size(620, 56), ForeColor = Theme.InkDimColor,
+                UseMnemonic = false,   // « & » littéral (sinon WinForms le lit comme un raccourci)
+                Text = "Chaque box a ses gestes : fibre pliée, filtre ADSL manquant, signal 5G, port 2,5 G inutilisé…\n"
+                     + "Ouvre « Schéma / checklist par box » : le branchement dessiné et la checklist, par type.\n"
+                     + "En soirée (20 h-23 h), un ping qui double vient de l'opérateur — pas du PC."
             });
-            y += 72;
+            y += 64;
 
-            var wiring = LinkBtn("📷 Schéma & checklist par box", 20, y, () => Host(new BoxWiringForm(_rep != null ? _rep.Kind : MobileNet.Access.Unknown)));
+            var wiring = LinkBtn("📷 Schéma / checklist par box", 20, y, () => Host(new BoxWiringForm(_rep != null ? _rep.Kind : MobileNet.Access.Unknown)));
             wiring.Width = 190;
             var dns = LinkBtn("DNS rapide", 220, y, () => Host(new DnsForm(_log)));
             dns.Width = 110;
@@ -237,6 +246,48 @@ namespace BTOptimizer
                         _measure.Enabled = true; _measure.Text = "📏  Mesurer ce lien (~30 s)";
                         _busy = false;
                         Journal("Mesure terminée.", 0);
+                    }));
+                }
+                catch { _busy = false; }
+            });
+        }
+
+        /// <summary>« TOUT optimiser » : la passe complète, derrière une confirmation qui annonce
+        /// exactement ce qui va être touché — et rappelle que tout est réversible.</summary>
+        private void RunAllFix()
+        {
+            if (_busy) return;
+            if (MessageBox.Show(this,
+                    "Appliquer TOUTES les optimisations réseau de Windows ?\n\n"
+                    + "Dans l'ordre : point de restauration → mesure avant → optimisations du catalogue réseau "
+                    + "(sauvegarde .reg) → réglages TCP/IP → MTU si le lien est mobile → DNS le plus rapide "
+                    + "(vérifié, retour arrière automatique s'il ne répond pas) → mesure après.\n\n"
+                    + "Tout est réversible, et le compte-rendu dira le gain réel — même s'il est nul.\n\n"
+                    + "Continuer ?",
+                    "Réseau — TOUT optimiser", MessageBoxButtons.OKCancel, MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2) != DialogResult.OK) return;
+
+            _busy = true;
+            _allFix.Enabled = false; _allFix.Text = "optimisation en cours…";
+            _measure.Enabled = false;
+            _journal.Clear();
+            Task.Run(() =>
+            {
+                NetAllFix.Outcome res = null;
+                try { res = NetAllFix.RunAll(Journal); }
+                catch (Exception ex) { Journal("Échec : " + ex.Message, 3); }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _allFix.Enabled = true; _allFix.Text = "⚡  TOUT optimiser le réseau";
+                        _measure.Enabled = true;
+                        _busy = false;
+                        MobileNet.FillInterface(_rep);
+                        RefreshRows();
+                        if (res != null)
+                            MessageBox.Show(this, NetAllFix.Summary(res), "Réseau — TOUT optimiser",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }
                 catch { _busy = false; }

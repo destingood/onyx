@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.28 — « ⚡ TOUT optimiser le réseau » : toutes les optimisations, en un clic
+- **Un bouton, la séquence complète** (dans « Ma connexion & ma box ») : point de restauration
+  → mesure AVANT → optimisations réseau du catalogue (sauvegarde .reg automatique, seules
+  celles qui ne sont pas déjà actives) → réglages TCP/IP netsh → MTU si le lien est mobile
+  → DNS le plus rapide → mesure APRÈS.
+- **Deux garde-fous d'honnêteté** :
+  • sur un lien en **CGNAT** (box 4G/5G notamment), la coupure des tunnels IPv6 est
+    **volontairement écartée** — l'IPv6 est justement la sortie du NAT partagé ; l'app le dit
+    au lieu de l'appliquer aveuglément ;
+  • un **DNS** n'est adopté que s'il est au moins 30 % plus rapide que celui du FAI **et**
+    qu'il répond encore après la bascule — sinon retour arrière automatique.
+- **Le compte-rendu dit la vérité, gain nul compris** : ping et gigue avant/après, et quand
+  rien ne bouge, il l'écrit — « ces réglages retirent surtout des à-coups que six pings ne
+  montrent pas ; le vrai juge, c'est une partie ».
+- **Tout reste réversible** : optimiseur (annuler), Réglages TCP/IP, DNS rapide, « Rétablir la
+  MTU ». Le compte-rendu rappelle où annuler chaque étape, et signale si un redémarrage est
+  nécessaire.
+
 ## v15.27 — Assistant opérateur : régler ce qui est réglable, PROUVER le reste
 - **Nouveau panneau « Assistant opérateur »** (menu ⋯ → Système → Réseau, « J'ai un
   problème… », ou en disant « opérateur », « support », « dossier » au Copilote) — pour le
