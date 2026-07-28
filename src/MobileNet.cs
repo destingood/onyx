@@ -31,9 +31,12 @@ namespace BTOptimizer
             public int IfIndex = -1;
             public int MtuCurrent = -1;
             public int MtuOptimal = -1;      // -1 = mesure impossible (ICMP DF bloqué)
+            public double GwPing = -1, GwJitter = -1;   // vers la BOX : juge le câble/LAN, pas la radio
+            public int GwLoss = -1;
             public double PingIdle = -1, JitterIdle = -1;
             public int LossIdle = -1;
-            public double PingLoaded = -1;   // latence pendant un téléchargement réel
+            public double PingLoaded = -1;   // latence pendant un téléchargement réel (réception)
+            public double PingUpLoaded = -1; // latence pendant un ENVOI réel — le tueur des box 5G
             public bool Cgnat;               // 100.64.0.0/10 vu sur le trajet = certain
             public bool CgnatProbable;       // privé (10/8…) APRÈS la box = probable
             public bool Ipv6;                // un ping IPv6 public répond
@@ -42,6 +45,7 @@ namespace BTOptimizer
         private const string ProbeV4 = "1.1.1.1";
         private const string ProbeV6 = "2606:4700:4700::1111";
         private const string LoadUrl = "https://speed.cloudflare.com/__down?bytes=80000000";
+        private const string UpUrl = "https://speed.cloudflare.com/__up";
         private static string MtuStore { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-mtu.txt"); } }
 
         // ------------------------------------------------------------------
@@ -81,6 +85,52 @@ namespace BTOptimizer
                 r.MtuCurrent = v4.Mtu;
             }
             catch { }
+        }
+
+        /// <summary>La passerelle IPv4 de l'interface active (l'adresse LAN de la box), ou null.</summary>
+        public static IPAddress GatewayAddress()
+        {
+            try
+            {
+                NetworkInterface ni = ActiveInterface();
+                if (ni == null) return null;
+                foreach (GatewayIPAddressInformation gw in ni.GetIPProperties().GatewayAddresses)
+                    if (gw.Address != null && gw.Address.AddressFamily == AddressFamily.InterNetwork)
+                        return gw.Address;
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>Échantillon de pings vers un hôte ARBITRAIRE (la box, un serveur…) —
+        /// même calcul que ChatActions.PingSample, cible libre.</summary>
+        public static bool SampleTo(string host, int count, int timeoutMs, out double avg, out double jitter, out int lossPct)
+        {
+            avg = 0; jitter = 0; lossPct = 100;
+            var times = new List<long>();
+            int sent = 0;
+            try
+            {
+                using (var p = new Ping())
+                    for (int i = 0; i < count; i++)
+                    {
+                        sent++;
+                        try
+                        {
+                            PingReply rep = p.Send(host, timeoutMs);
+                            if (rep != null && rep.Status == IPStatus.Success) times.Add(rep.RoundtripTime);
+                        }
+                        catch { }
+                    }
+            }
+            catch { return false; }
+            if (times.Count == 0) return false;
+            long sum = 0; foreach (long t in times) sum += t;
+            avg = (double)sum / times.Count;
+            double dev = 0; foreach (long t in times) dev += Math.Abs(t - avg);
+            jitter = dev / times.Count;
+            lossPct = (int)Math.Round(100.0 * (sent - times.Count) / sent);
+            return true;
         }
 
         // ------------------------------------------------------------------
@@ -174,33 +224,54 @@ namespace BTOptimizer
             catch { return false; }
         }
 
-        /// <summary>Latence SOUS CHARGE : pings pendant un téléchargement réel (~8 s).
+        /// <summary>Latence SOUS CHARGE en RÉCEPTION : pings pendant un téléchargement réel (~8 s).
         /// L'écart repos → charge, c'est le bufferbloat de la box.</summary>
         public static double LoadedPing(Action<string, int> log)
         {
-            Action<string, int> L = log ?? delegate { };
-            var cts = new System.Threading.CancellationTokenSource();
-            var dl = System.Threading.Tasks.Task.Run(() =>
+            return PingWhile(log, cts =>
             {
-                try
+                using (var http = new System.Net.Http.HttpClient())
                 {
-                    using (var http = new System.Net.Http.HttpClient())
+                    http.Timeout = TimeSpan.FromSeconds(12);
+                    using (var s = http.GetStreamAsync(LoadUrl).GetAwaiter().GetResult())
                     {
-                        http.Timeout = TimeSpan.FromSeconds(12);
-                        using (var s = http.GetStreamAsync(LoadUrl).GetAwaiter().GetResult())
-                        {
-                            byte[] buf = new byte[81920];
-                            while (!cts.Token.IsCancellationRequested && s.Read(buf, 0, buf.Length) > 0) { }
-                        }
+                        byte[] buf = new byte[81920];
+                        while (!cts.IsCancellationRequested && s.Read(buf, 0, buf.Length) > 0) { }
                     }
                 }
-                catch { }   // hors-ligne / bloqué : les pings diront ce qu'il y a à dire
             });
+        }
+
+        /// <summary>Latence SOUS CHARGE en ENVOI : pings pendant un téléversement réel.
+        /// C'est LE talon d'Achille des box 4G/5G (montée étroite : un cloud qui synchronise
+        /// suffit à faire exploser le ping de toute la maison).</summary>
+        public static double UploadLoadedPing(Action<string, int> log)
+        {
+            return PingWhile(log, cts =>
+            {
+                byte[] chunk = new byte[4 * 1024 * 1024];
+                new Random(7).NextBytes(chunk);   // incompressible : charge réellement la montée
+                using (var http = new System.Net.Http.HttpClient())
+                {
+                    http.Timeout = TimeSpan.FromSeconds(12);
+                    while (!cts.IsCancellationRequested)
+                        using (var content = new System.Net.Http.ByteArrayContent(chunk))
+                            http.PostAsync(UpUrl, content, cts).GetAwaiter().GetResult();
+                }
+            });
+        }
+
+        /// <summary>Fabrique commune : lance la charge en fond, ping pendant ~7 s, coupe.</summary>
+        private static double PingWhile(Action<string, int> log, Action<System.Threading.CancellationToken> load)
+        {
+            Action<string, int> L = log ?? delegate { };
+            var cts = new System.Threading.CancellationTokenSource();
+            var task = System.Threading.Tasks.Task.Run(() => { try { load(cts.Token); } catch { } });
             System.Threading.Thread.Sleep(700);   // laisse le débit s'établir
             double avg, jit; int loss;
             bool ok = ChatActions.PingSample(8, 900, out avg, out jit, out loss);
             cts.Cancel();
-            try { dl.Wait(2000); } catch { }
+            try { task.Wait(2000); } catch { }
             if (!ok) { L("Latence sous charge : mesure impossible (hors-ligne ?).", 2); return -1; }
             return avg;
         }
