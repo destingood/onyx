@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.18.0.0")]
-[assembly: AssemblyFileVersion("15.18.0.0")]
+[assembly: AssemblyVersion("15.19.0.0")]
+[assembly: AssemblyFileVersion("15.19.0.0")]
 
 namespace BTOptimizer
 {
@@ -1378,6 +1378,7 @@ namespace BTOptimizer
                 case "ServicesForm": return new ServicesForm(log);
                 case "RestoreForm": return new RestoreForm(log);
                 case "SmartAppControlForm": return new SmartAppControlForm(log);
+                case "MobileNetForm": return new MobileNetForm(log);
                 case "HelpNavForm": return new HelpNavForm(log);
                 case "AboutForm": return new AboutForm();
                 case "LicenseKeyForm": return new LicenseKeyForm("");
@@ -1572,6 +1573,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ServicesForm", () => new ServicesForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("RestoreForm", () => new RestoreForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SmartAppControlForm", () => new SmartAppControlForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MobileNetForm", () => new MobileNetForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
