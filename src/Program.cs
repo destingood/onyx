@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.16.0.0")]
-[assembly: AssemblyFileVersion("15.16.0.0")]
+[assembly: AssemblyVersion("15.17.0.0")]
+[assembly: AssemblyFileVersion("15.17.0.0")]
 
 namespace BTOptimizer
 {
@@ -1368,6 +1368,7 @@ namespace BTOptimizer
                 case "StartupForm": return new StartupForm(log);
                 case "ServicesForm": return new ServicesForm(log);
                 case "RestoreForm": return new RestoreForm(log);
+                case "SmartAppControlForm": return new SmartAppControlForm(log);
                 case "HelpNavForm": return new HelpNavForm(log);
                 case "AboutForm": return new AboutForm();
                 case "LicenseKeyForm": return new LicenseKeyForm("");
@@ -1561,6 +1562,7 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StartupForm", () => new StartupForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ServicesForm", () => new ServicesForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("RestoreForm", () => new RestoreForm(log), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SmartAppControlForm", () => new SmartAppControlForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
