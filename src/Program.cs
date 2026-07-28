@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.15.0.0")]
-[assembly: AssemblyFileVersion("15.15.0.0")]
+[assembly: AssemblyVersion("15.16.0.0")]
+[assembly: AssemblyFileVersion("15.16.0.0")]
 
 namespace BTOptimizer
 {
@@ -600,9 +600,25 @@ namespace BTOptimizer
                 bool cc3 = !UtilityTools.IsQuake("mon ecran a des secousses") && UtilityTools.IsQuake("un seisme au japon"); if (cc3) ok33++; Console.WriteLine((cc3 ? "OK  " : "FAIL") + "  seisme : 'secousses ecran' exclu, vrai seisme OK");
                 bool cc4 = UtilityTools.FoodQuery("composition du nutella") == "nutella" && UtilityTools.FoodQuery("la composition de mon pc") == null; if (cc4) ok33++; Console.WriteLine((cc4 ? "OK  " : "FAIL") + "  food : 'composition nutella' OK, 'composition de mon pc' exclu");
 
+                // v15.16 : corrections issues de la REVUE INDEPENDANTE (fuite PII + 5 detournements).
+                int ok34 = 0;
+                bool rv1 = DocAssistant.PiiBlock("traduis mon IBAN FR7630006000011234567890189 en anglais") != null
+                    && DocAssistant.PiiBlock("traduis bonjour le monde en anglais") == null; if (rv1) ok34++; Console.WriteLine((rv1 ? "OK  " : "FAIL") + "  VIE PRIVEE : IBAN bloque avant envoi tiers, texte normal passe");
+                bool rv2 = UtilityTools.Calc("ma ram tourne a 90% de 16 go c'est normal") == null
+                    && UtilityTools.Calc("15% de 240").Contains("36"); if (rv2) ok34++; Console.WriteLine((rv2 ? "OK  " : "FAIL") + "  calc : 'RAM a 90% de 16 go' n'est PAS un calcul");
+                bool rv3 = UtilityTools.NewsQuery("quoi de neuf mon pc rame enormement") == null
+                    && UtilityTools.NewsQuery("les actualites") == ""; if (rv3) ok34++; Console.WriteLine((rv3 ? "OK  " : "FAIL") + "  news : plainte technique -> diagnostic, pas les actus");
+                bool rv4 = !UtilityTools.IsApod("mon disque est plein d'images comment liberer de l'espace")
+                    && UtilityTools.IsApod("photo du jour de la nasa"); if (rv4) ok34++; Console.WriteLine((rv4 ? "OK  " : "FAIL") + "  APOD : 'espace disque' exclu, photo NASA OK");
+                bool rv5 = UtilityTools.ShowQuery("ma carte graphique de la serie rtx chauffe trop") == null
+                    && UtilityTools.ShowQuery("serie breaking bad") == "breaking bad"; if (rv5) ok34++; Console.WriteLine((rv5 ? "OK  " : "FAIL") + "  serie : gamme materiel (RTX) exclue, vrai titre OK");
+                bool rv6 = UtilityTools.DistanceQuery("la distance entre moi et le serveur explique mon ping eleve") == null
+                    && UtilityTools.DistanceQuery("distance entre paris et lyon") != null; if (rv6) ok34++; Console.WriteLine((rv6 ? "OK  " : "FAIL") + "  distance : phrase reseau exclue, vraies villes OK");
+                bool rv7 = UtilityTools.FoodQuery("c'est quoi la composition de mon disque dur") == null; if (rv7) ok34++; Console.WriteLine((rv7 ? "OK  " : "FAIL") + "  food : 'disque dur' exclu (liste materiel elargie)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

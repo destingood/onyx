@@ -188,8 +188,9 @@ namespace BTOptimizer
                 || n.Contains("composition") || n.Contains("nutritionnel") || n.Contains("calorie")
                 || n.Contains("ingredient") || Regex.IsMatch(n, "\\bnova\\b");
             if (!food) return null;
-            // « composition / ingrédients de mon PC » = matériel, pas alimentaire.
-            if (Regex.IsMatch(n, "\\b(pc|cpu|gpu|ram|ordi|ordinateur|config|systeme|processeur)\\b") || n.Contains("carte graphique")) return null;
+            // « composition / ingrédients de mon PC / disque / carte mère… » = matériel, pas alimentaire.
+            if (Regex.IsMatch(n, "\\b(pc|cpu|gpu|ram|ssd|hdd|ordi|ordinateur|config|systeme|processeur|disque|ecran|ventilateur|alimentation|boitier|clavier|souris)\\b")
+                || n.Contains("carte graphique") || n.Contains("carte mere") || n.Contains("carte son") || n.Contains("carte reseau")) return null;
             // Produit = ce qui suit une préposition, en fin de phrase.
             var m = Regex.Match(q, "(?i)(?:de\\s+la\\s+|de\\s+l['’]|du\\s+|des\\s+|de\\s+|d['’]|dans\\s+(?:le|la|les|l['’])\\s*|sur\\s+|pour\\s+|produit\\s+)([\\p{L}0-9][\\p{L}0-9 '’&.\\-]{1,40})\\s*[?.!]*$");
             if (!m.Success) return null;
@@ -222,6 +223,9 @@ namespace BTOptimizer
         internal static bool IsApod(string s)
         {
             string n = Deacc((s ?? "").ToLowerInvariant());
+            // Dans ce domaine, « espace » = espace DISQUE : on écarte tout contexte stockage.
+            if (n.Contains("disque") || n.Contains("libere") || n.Contains("liberer") || n.Contains("stockage")
+                || n.Contains("plein") || n.Contains("ssd") || n.Contains("hdd") || Regex.IsMatch(n, "\\b(go|mo|to)\\b")) return false;
             bool wantPhoto = n.Contains("photo") || n.Contains("image") || n.Contains("cliche");
             return n.Contains("apod")
                 || (n.Contains("nasa") && (wantPhoto || n.Contains("du jour")))
@@ -272,7 +276,10 @@ namespace BTOptimizer
             if (!m.Success) return null;
             string a = m.Groups[1].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.');
             string b = m.Groups[2].Value.Trim().Trim('«', '»', '"', '\'', ' ', '.');
-            if (a.Length < 2 || b.Length < 2) return null;
+            if (a.Length < 2 || b.Length < 2 || a.Length > 30 || b.Length > 30) return null;   // une ville n'est pas une phrase
+            string ad = Deacc(a.ToLowerInvariant()), bd = Deacc(b.ToLowerInvariant());
+            const string bad = "\\b(ping|lag|rame|wifi|reseau|serveur|latence|fps|internet|connexion|debit)\\b";
+            if (Regex.IsMatch(ad, bad) || Regex.IsMatch(bd, bad)) return null;   // « distance entre moi et le serveur… »
             return new Pair { A = a, B = b };
         }
 
@@ -331,13 +338,15 @@ namespace BTOptimizer
         {
             if (string.IsNullOrEmpty(q)) return null;
             string n = Deacc(q.ToLowerInvariant()).Trim();
-            var mp = Regex.Match(n, "(\\d+(?:[.,]\\d+)?)\\s*(?:%|pour ?cent)\\s+de\\s+(\\d+(?:[.,]\\d+)?)");
+            // Retire une éventuelle amorce (« calcule », « combien font »…) PUIS n'accepte que si le reste
+            // est TOUT le calcul (ancré ^…$). Sinon « ma RAM tourne à 90% de 16 Go » serait pris pour un calcul.
+            string body = Regex.Replace(n, "^(?:calcule(?:r)?|combien\\s+(?:font|fait)|ca\\s+fait\\s+combien|ca\\s+fait|quelle?\\s+est|c'?est\\s+quoi|resultat\\s+de|resultat|=)\\s*", "").Trim();
+            var mp = Regex.Match(body, "^(\\d+(?:[.,]\\d+)?)\\s*(?:%|pour ?cent)\\s+de\\s+(\\d+(?:[.,]\\d+)?)\\s*[?.!]*$");
             if (mp.Success) { double x = D(mp.Groups[1].Value), y = D(mp.Groups[2].Value); return "🧮 " + FmtN(y * x / 100) + "  (" + FmtN(x) + " % de " + FmtN(y) + ")"; }
-            var mr = Regex.Match(n, "racine(?:\\s+carree)?\\s+de\\s+(\\d+(?:[.,]\\d+)?)");
+            var mr = Regex.Match(body, "^racine(?:\\s+carree)?\\s+de\\s+(\\d+(?:[.,]\\d+)?)\\s*[?.!]*$");
             if (mr.Success) { double x = D(mr.Groups[1].Value); return x < 0 ? "🧮 racine d'un nombre négatif : indéfini dans les réels." : "🧮 racine de " + FmtN(x) + " = " + FmtN(Math.Sqrt(x)); }
-            var mw = Regex.Match(n, "(\\d+(?:[.,]\\d+)?)\\s*(?:\\^|puissance)\\s*(\\d+(?:[.,]\\d+)?)");
+            var mw = Regex.Match(body, "^(\\d+(?:[.,]\\d+)?)\\s*(?:\\^|puissance)\\s*(\\d+(?:[.,]\\d+)?)\\s*[?.!]*$");
             if (mw.Success) { double a = D(mw.Groups[1].Value), b = D(mw.Groups[2].Value); return "🧮 " + FmtN(a) + " puissance " + FmtN(b) + " = " + FmtN(Math.Pow(a, b)); }
-            string body = Regex.Replace(n, "^(?:calcule(?:r)?|combien\\s+(?:font|fait)|ca\\s+fait\\s+combien|resultat\\s+de|resultat|=)\\s*", "");
             string expr = body.Replace(" ", "").Replace(",", ".");
             if (Regex.IsMatch(expr, "^[0-9+\\-*/().]+$") && Regex.IsMatch(expr, "[+\\-*/]"))
             {
@@ -400,6 +409,9 @@ namespace BTOptimizer
                 || n.Contains("quoi de neuf") || n.Contains("dernieres nouvelles") || n.Contains("derniere nouvelle")
                 || n.Contains("infos du jour") || n.Contains("info du jour") || n.Contains("les nouvelles");
             if (!isNews) return null;
+            // « quoi de neuf, mon PC rame » : ne pas détourner une plainte technique vers les actus.
+            if (n.Contains("rame") || n.Contains("lag") || n.Contains("plante") || n.Contains("crash") || n.Contains("freeze")
+                || n.Contains("bug") || n.Contains("saccade") || Regex.IsMatch(n, "\\b(pc|wifi|ping|pilote|driver|disque|ecran|cpu|gpu|ram|fps|latence)\\b")) return null;
             var m = Regex.Match(q, "(?i)(?:actualit[eé]s?|actu|news|nouvelles?|infos?)\\s+(?:sur\\s+|de\\s+|du\\s+|des\\s+|d['’]|concernant\\s+|a\\s+propos\\s+de\\s+)?(.+?)\\s*[?.!]*$");
             if (m.Success)
             {
@@ -485,6 +497,9 @@ namespace BTOptimizer
             if (n.Contains("numero de serie") || n.Contains("cle de serie") || n.Contains("clef de serie")
                 || n.Contains("serial") || n.Contains("port serie") || n.Contains("numero serie")
                 || n.Contains("mise en serie") || n.Contains("en serie")) return null;
+            // « série » = gamme/génération de matériel (carte série RTX, processeur série Ryzen…) → pas une série TV.
+            if (n.Contains("carte graphique") || n.Contains("carte mere")
+                || Regex.IsMatch(n, "\\b(rtx|gtx|radeon|ryzen|geforce|nvidia|amd|intel|ssd|processeur|gpu|cpu)\\b")) return null;
             // \b devant « série » (évite d'attraper l'intérieur d'un mot) ; « de/des/du/d' » retirés du préfixe.
             var m = Regex.Match(q, "(?i)\\b(?:s[eé]rie(?:\\s+t[eé]l[eé])?|tv\\s*show)\\s+(?:sur\\s+|intitul[eé]e?\\s+)?(.+?)\\s*[?.!]*$");
             if (!m.Success) return null;
@@ -492,6 +507,8 @@ namespace BTOptimizer
             string wd = Deacc(w.ToLowerInvariant());
             // « série de problèmes / soucis / bugs » n'est pas un titre de série.
             if (wd.StartsWith("de ") || wd.StartsWith("des ") || wd.StartsWith("du ") || wd.StartsWith("d'") || wd.StartsWith("d’") || wd == "tv") return null;
+            // capture porteuse d'un symptôme technique → ce n'est pas un titre de série.
+            if (Regex.IsMatch(wd, "\\b(chauffe|plante|rame|lag|crash|freeze|bug|saccade|bloque|marche pas)\\b")) return null;
             return w.Length >= 2 ? w : null;
         }
 

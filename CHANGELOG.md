@@ -4,6 +4,28 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.16 — Revue de code indépendante : FUITE VIE PRIVÉE colmatée + 6 détournements
+- **🔒 CRITIQUE — vie privée** : les nouveaux outils (traduction, actus, produit, livre, série, Pokémon,
+  distance, définition) envoyaient le texte à une API tierce **sans passer par le PrivacyGuard** qui, lui,
+  protégeait déjà la recherche web. Concrètement « traduis mon IBAN FR76… en anglais » envoyait l'IBAN à
+  MyMemory. Désormais un garde-fou commun (`DocAssistant.PiiBlock`) bloque l'envoi et le dit clairement
+  (IBAN, carte bancaire, téléphone, e-mail, n° de sécu).
+- **Détournements corrigés** (une question technique partait vers un outil sans rapport) :
+  - « ma RAM tourne à **90 % de 16 Go**, c'est normal ? » → était calculé comme « 14,4 ». La calculatrice
+    exige maintenant que TOUT le message soit le calcul (ancrage), pas un bout de phrase.
+  - « **quoi de neuf**, mon PC rame » → affichait les actualités. Les plaintes techniques sont exclues.
+  - « mon disque est plein d'**images**, libérer de l'**espace** » → sortait la photo NASA. « espace » en
+    contexte disque/stockage est exclu.
+  - « ma carte graphique de la **série RTX** chauffe » → cherchait une série TV. Les gammes matériel
+    (RTX/GTX/Ryzen/Radeon…) et les symptômes (chauffe/plante/rame…) sont exclus.
+  - « la **distance** entre moi et le serveur explique mon ping » → géocodait « le serveur ». Vocabulaire
+    réseau exclu + longueur bornée (une ville n'est pas une phrase).
+  - « composition de mon **disque dur** » → interrogeait Open Food Facts. Liste matériel élargie (disque,
+    SSD, écran, carte mère, ventilateur, alimentation, clavier…).
+- **Robustesse** : lever/coucher du soleil ne plante plus sur un jour/nuit polaire (tableau vide) ;
+  prix Nobel vérifie le type JSON avant lecture.
+- Harnais **157/157** (exécuté pour de vrai cette fois, plus par réflexion). Build 0 erreur.
+
 ## v15.15 — Consolidation (suite) : collisions avec le vocabulaire PC d'ONYX
 - **Séismes** : « mon écran a des **secousses** » ne part plus vers la liste des séismes (« secousse » seul
   était ambigu → on exige « séisme / tremblement de terre / sismique / secousse tellurique »).

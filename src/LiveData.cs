@@ -248,9 +248,10 @@ namespace BTOptimizer
                 using (var d = JsonDocument.Parse(json))
                 {
                     if (!d.RootElement.TryGetProperty("daily", out var dd)) return null;
-                    string rise = dd.GetProperty("sunrise")[0].GetString();
-                    string set = dd.GetProperty("sunset")[0].GetString();
-                    return new Sun { City = nm, Rise = Hm(rise), Set = Hm(set), FromIp = fromIp };
+                    if (!dd.TryGetProperty("sunrise", out var sr) || sr.ValueKind != JsonValueKind.Array || sr.GetArrayLength() == 0) return null;
+                    if (!dd.TryGetProperty("sunset", out var ss) || ss.ValueKind != JsonValueKind.Array || ss.GetArrayLength() == 0) return null;
+                    if (sr[0].ValueKind != JsonValueKind.String || ss[0].ValueKind != JsonValueKind.String) return null;   // jour/nuit polaire : pas d'horaire
+                    return new Sun { City = nm, Rise = Hm(sr[0].GetString()), Set = Hm(ss[0].GetString()), FromIp = fromIp };
                 }
             }
             catch { return null; }
@@ -885,7 +886,7 @@ namespace BTOptimizer
                 {
                     if (!d.RootElement.TryGetProperty("nobelPrizes", out var arr) || arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() == 0) return null;
                     var p = arr[0];
-                    string yr = p.TryGetProperty("awardYear", out var yv) ? yv.GetString() : year;
+                    string yr = p.TryGetProperty("awardYear", out var yv) && yv.ValueKind == JsonValueKind.String ? yv.GetString() : year;
                     var laur = new System.Collections.Generic.List<string>();
                     if (p.TryGetProperty("laureates", out var ls) && ls.ValueKind == JsonValueKind.Array)
                         foreach (var l in ls.EnumerateArray())

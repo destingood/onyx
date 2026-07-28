@@ -70,6 +70,23 @@ namespace BTOptimizer
             };
         }
 
+        /// <summary>Garde-fou VIE PRIVÉE partagé : si le texte destiné à une API TIERCE (traduction, actus,
+        /// livre, série, distance, définition…) contient une info perso (IBAN, tél, e-mail, carte, n° sécu),
+        /// on REFUSE de l'envoyer et on le dit. Même logique que ChatActions.WebAnswer, appliquée aux
+        /// connecteurs directs qui, eux, ne passaient pas par ce filtre.</summary>
+        internal static Reply PiiBlock(string text)
+        {
+            try
+            {
+                var pii = PrivacyGuard.Detect(text);
+                if (pii != null && pii.Count > 0)
+                    return new Reply { Text = "⚠️ Ta demande contient une info personnelle (" + string.Join(", ", pii.ToArray())
+                        + "). Je ne l'envoie PAS à un service externe (vie privée). Retire l'info sensible et redemande.", ShowStarters = true };
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>'last' = dernière réponse du Copilote qui portait quelque chose d'actionnable
         /// (outil / correction / plan) : un « oui » ou un « non » de l'utilisateur s'y rapporte.</summary>
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
@@ -188,7 +205,10 @@ namespace BTOptimizer
             {
                 UtilityTools.TransJob tj = UtilityTools.TranslateJob(q);
                 if (tj != null)
+                {
+                    Reply pb = PiiBlock(tj.Text); if (pb != null) return pb;
                     return new Reply { Text = "Je traduis…", Action = ChatActions.TranslateAction(tj.Text, tj.From, tj.To, st), Dynamic = true };
+                }
             }
             // 6) MON IP publique (ipwho.is), 7) LEVER/COUCHER DU SOLEIL (Open-Meteo) — réseau.
             if (UtilityTools.IsMyIp(s))
@@ -207,6 +227,7 @@ namespace BTOptimizer
                 if (prod != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour les infos produit j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je cherche le produit…", Action = ChatActions.FoodAction(prod, st), Dynamic = true };
                 }
             }
@@ -249,6 +270,7 @@ namespace BTOptimizer
                 if (pr != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour la distance entre 2 villes j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je calcule la distance…", Action = ChatActions.DistanceAction(pr.A, pr.B, st), Dynamic = true };
                 }
             }
@@ -268,6 +290,7 @@ namespace BTOptimizer
                 if (news != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour les actualités j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je regarde les actualités…", Action = ChatActions.NewsAction(news, st), Dynamic = true };
                 }
             }
@@ -286,6 +309,7 @@ namespace BTOptimizer
                 if (book != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour chercher un livre j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je cherche le livre…", Action = ChatActions.BookAction(book, st), Dynamic = true };
                 }
             }
@@ -295,6 +319,7 @@ namespace BTOptimizer
                 if (poke != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche Pokémon j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je regarde le Pokédex…", Action = ChatActions.PokemonAction(poke, st), Dynamic = true };
                 }
             }
@@ -303,6 +328,7 @@ namespace BTOptimizer
                 if (show != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche série j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je cherche la série…", Action = ChatActions.ShowAction(show, st), Dynamic = true };
                 }
             }
@@ -345,6 +371,7 @@ namespace BTOptimizer
                 if (def != null)
                 {
                     if (LocalBrain.WebOff()) return new Reply { Text = "Pour une définition j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    Reply pb = PiiBlock(q); if (pb != null) return pb;
                     return new Reply { Text = "Je cherche la définition…", Action = ChatActions.DefineAction(def, st), Dynamic = true };
                 }
             }
