@@ -42,6 +42,7 @@ namespace BTOptimizer
                 new Entry("Réseau & ping", "Téléchargements lents / Steam charge à l'infini", "Réglages TCP/IP", () => new NetTuneForm(L)),
                 new Entry("Réseau & ping", "Réduire la latence de ma carte réseau", "Carte réseau", () => new NetAdapterForm(L)),
                 new Entry("Réseau & ping", "Changer / tester mon DNS", "DNS rapide", () => new DnsForm(L)),
+                new Entry("Réseau & ping", "Je suis en 4G/5G (box mobile) et ça lag / ça décroche", "Connexion 4G/5G", () => new MobileNetForm(L)),
 
                 new Entry("Jeux & lancement", "Un jeu refuse de démarrer (dll manquante)", "Bibliothèques de jeu", () => new LibsForm(L)),
                 new Entry("Jeux & lancement", "Boutique en jeu vide / qui tourne à l'infini", "Boutiques / crashs", () => new ShopFixForm(L)),

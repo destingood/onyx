@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.18 — Connexion 4G/5G : la box mobile enfin traitée comme un vrai lien
+- **Nouveau panneau « Connexion 4G/5G »** (menu ⋯ → Système → Réseau, « J'ai un problème… » →
+  Réseau & ping, et le Copilote comprend « 5g », « box mobile », « cgnat », « mtu »…) — pensé
+  pour les box 5G (Bouygues/Orange/SFR/Free) et le partage de connexion.
+- **Il MESURE le lien réel** (rien n'est inventé, rien n'est écrit pendant la mesure) :
+  ping/gigue/perte au repos ; **latence SOUS CHARGE** (téléchargement réel pendant les pings
+  → le bufferbloat, le mal n°1 des box mobiles) ; **MTU réelle** au ping « ne pas fragmenter »
+  par dichotomie (le transport mobile mange 40-80 octets que Windows ignore → fragmentation,
+  micro-freezes) ; **CGNAT** (saut en 100.64.0.0/10 = adresse partagée opérateur, NAT strict) ;
+  **IPv6** (le chemin direct, sans CGNAT, souvent meilleur en 4G/5G).
+- **UNE correction Windows, la bonne** : appliquer la MTU mesurée sur l'interface active
+  (IPv4+IPv6, persistant), valeur d'origine sauvegardée et **« Rétablir » en un clic**. Sur
+  une fibre/ADSL la mesure dit 1500 et le bouton reste gris — pas de tweak placebo.
+- **Le reste est dit honnêtement** : placement de la box côté antenne, câble plutôt que Wi-Fi,
+  IPv6 à activer dans la box, heures pleines 20 h-23 h — Windows n'y peut rien, le panneau
+  ne prétend pas le contraire.
+
 ## v15.17 — Smart App Control : le panneau qui explique (et le .reg intégré)
 - **Nouveau panneau « Smart App Control »** (menu ⋯ → Système, et « J'ai un problème… » →
   Entretien & sécurité) : c'est LUI qui refuse au lancement les applications non signées ou

@@ -193,6 +193,7 @@ namespace BTOptimizer
             net.DropDownItems.Add("DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
             net.DropDownItems.Add("Réglages TCP/IP", null, (s, e) => OpenDialog(new NetTuneForm(Log)));
             net.DropDownItems.Add("Trajet réseau", null, (s, e) => OpenDialog(new NetRouteForm(Log)));
+            net.DropDownItems.Add("📶 Connexion 4G/5G (box mobile : MTU, CGNAT, bufferbloat)", null, (s, e) => OpenDialog(new MobileNetForm(Log)));
             sys.DropDownItems.Add(net);
             sys.DropDownItems.Add(new ToolStripSeparator());
             sys.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));
