@@ -1359,6 +1359,139 @@ namespace BTOptimizer
             return a;
         }
 
+        // ------------------------------------------------------------------
+        //  BILAN MISES À JOUR — il MESURE d'abord, puis propose (ou pas).
+        //  Jamais d'installation automatique : le bouton ouvre la page OFFICIELLE.
+        // ------------------------------------------------------------------
+        /// <summary>Ouvre une page web officielle ou un réglage Windows. Clic explicite obligatoire.</summary>
+        public static DocAssistant.ChatAction OpenUrlAction(string label, string url, string warning)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = label; a.AutoRun = false; a.IsChange = true; a.Warning = warning;
+            a.Run = delegate (Action<string, int> log)
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+                    return Say("Ouvert. Je n'installe RIEN moi-même : tu vois la page officielle et c'est toi qui décides.");
+                }
+                catch (Exception ex) { return Say("Impossible d'ouvrir : " + ex.Message); }
+            };
+            return a;
+        }
+
+        private static string VendorUrl(string v)
+        {
+            switch (v)
+            {
+                case "nvidia": return "https://www.nvidia.com/fr-fr/drivers/";
+                case "amd": return "https://www.amd.com/fr/support/download/drivers.html";
+                case "intel": return "https://www.intel.fr/content/www/fr/fr/download-center/home.html";
+                default: return null;
+            }
+        }
+
+        // Windows attend-il un redémarrage pour finir des mises à jour ? (2 clés registre standard)
+        private static bool RebootPending()
+        {
+            try { using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending")) if (k != null) return true; } catch { }
+            try { using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired")) if (k != null) return true; } catch { }
+            return false;
+        }
+
+        /// <summary>Bilan mises à jour : pilote GPU (WMI), redémarrage en attente (registre), Windows,
+        /// espace disque. 100 % LOCAL (zéro réseau, zéro envoi). Puis il PROPOSE — ou dit qu'il n'y a rien
+        /// à faire. Le bouton éventuel ouvre la page officielle : l'installation reste TA décision.</summary>
+        public static DocAssistant.ChatAction UpdatesCheckAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Bilan mises à jour"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Bilan mises à jour (mesures locales)…", 0);
+                var sb = new StringBuilder();
+                sb.Append("🔎 Bilan mises à jour — mesuré sur TA machine, rien n'est installé sans toi :\n");
+                DocAssistant.ChatAction propose = null;
+
+                // 1) Pilote GPU (WMI : nom, version, âge réel)
+                Diagnostics.GpuDrv drv = null;
+                try { drv = Diagnostics.GpuDriver(); } catch { }
+                if (drv != null && drv.AgeDays >= 0)
+                {
+                    int mois = drv.AgeDays / 30;
+                    string vend = UtilityTools.GpuVendor(drv.Name);
+                    if (drv.AgeDays > 540)
+                    {
+                        sb.Append("• ❌ Pilote GPU (").Append(drv.Name).Append(", v").Append(drv.Version).Append(") : ~").Append(mois)
+                          .Append(" mois. TRÈS vieux — crashs corrigés et FPS gagnés dans les versions récentes.\n");
+                        if (vend != null) propose = OpenUrlAction("Ouvrir la page pilotes " + vend.ToUpperInvariant(), VendorUrl(vend),
+                            "Ouvre le site OFFICIEL " + vend.ToUpperInvariant() + " dans ton navigateur. Rien n'est téléchargé ni installé automatiquement.");
+                    }
+                    else if (drv.AgeDays > 180)
+                    {
+                        sb.Append("• ⚠️ Pilote GPU (").Append(drv.Name).Append(") : ~").Append(mois)
+                          .Append(" mois. Pas urgent — à mettre à jour si un jeu récent pose problème.\n");
+                        if (vend != null) propose = OpenUrlAction("Ouvrir la page pilotes " + vend.ToUpperInvariant(), VendorUrl(vend),
+                            "Ouvre le site OFFICIEL " + vend.ToUpperInvariant() + ". Rien n'est installé automatiquement.");
+                    }
+                    else sb.Append("• ✅ Pilote GPU (").Append(drv.Name).Append(") : ~").Append(mois <= 0 ? "<1" : mois.ToString())
+                           .Append(" mois — récent, rien à faire.\n");
+                }
+                else sb.Append("• Pilote GPU : illisible via WMI (pas grave — vérifiable dans GeForce/Adrenalin).\n");
+
+                // 2) Redémarrage en attente (des MàJ Windows déjà installées attendent un reboot)
+                bool reboot = false;
+                try { reboot = RebootPending(); } catch { }
+                if (reboot)
+                {
+                    sb.Append("• ⚠️ Windows attend un REDÉMARRAGE pour finaliser des mises à jour déjà téléchargées. "
+                            + "Redémarre quand tu peux (pas en pleine partie).\n");
+                    if (propose == null) propose = OpenUrlAction("Ouvrir Windows Update", "ms-settings:windowsupdate",
+                        "Ouvre les réglages Windows Update pour voir/valider. Aucun redémarrage forcé par le Copilote.");
+                }
+                else sb.Append("• ✅ Pas de redémarrage en attente côté Windows Update.\n");
+
+                // 3) Version de Windows (info factuelle)
+                try
+                {
+                    using (var k = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion"))
+                    {
+                        if (k != null)
+                        {
+                            string dv = Convert.ToString(k.GetValue("DisplayVersion", ""));
+                            string bd = Convert.ToString(k.GetValue("CurrentBuildNumber", ""));
+                            if (!string.IsNullOrEmpty(dv)) sb.Append("• ℹ️ Windows ").Append(dv).Append(" (build ").Append(bd).Append(").\n");
+                        }
+                    }
+                }
+                catch { }
+
+                // 4) Espace disque système (une MàJ a besoin de place)
+                bool diskLow = false;
+                try
+                {
+                    var di = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory));
+                    double freeGb = di.AvailableFreeSpace / 1073741824.0;
+                    if (freeGb < 15) { diskLow = true; sb.Append("• ⚠️ Disque système : ").Append(freeGb.ToString("0")).Append(" Go libres — juste pour installer une grosse MàJ.\n"); }
+                    else sb.Append("• ✅ Disque système : ").Append(freeGb.ToString("0")).Append(" Go libres.\n");
+                }
+                catch { }
+                if (diskLow && propose == null)
+                    propose = OpenUrlAction("Ouvrir le nettoyage de stockage", "ms-settings:storagesense",
+                        "Ouvre les réglages Stockage de Windows. Rien n'est supprimé automatiquement.");
+
+                // Verdict : PROPOSER… ou NON. Pas de MàJ pour faire joli.
+                if (propose == null)
+                    sb.Append("\n✅ Verdict : rien d'utile à installer aujourd'hui — je ne te propose donc RIEN. "
+                            + "(Mettre à jour sans raison, c'est du risque sans gain.)");
+                else
+                    sb.Append("\n👉 Verdict : UNE action utile, bouton ci-dessous. J'ouvre la page officielle, "
+                            + "c'est toi qui installes (ou pas).");
+                return new DocAssistant.Reply { Text = sb.ToString(), Action = propose };
+            };
+            return a;
+        }
+
         /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)

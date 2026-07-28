@@ -164,6 +164,12 @@ namespace BTOptimizer
                 return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
             }
 
+            // --- BILAN MISES À JOUR : il MESURE (100 % local), puis propose — OU NON — d'installer.
+            //     Jamais d'installation automatique : le bouton ouvre la page officielle, l'utilisateur décide. ---
+            if (UtilityTools.IsUpdateCheck(s))
+                return new Reply { Text = "Je fais le bilan des mises à jour (pilote GPU, Windows, disque)…",
+                    Action = ChatActions.UpdatesCheckAction(), Dynamic = true };
+
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
             {

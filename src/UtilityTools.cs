@@ -531,6 +531,28 @@ namespace BTOptimizer
             return new NobelHit { Cat = cat, CatFr = catFr, Year = my.Success ? my.Value : null };
         }
 
+        // ---- BILAN MISES À JOUR (diagnostic local, puis proposition — ou non) ----
+        /// <summary>« mes pilotes sont à jour ? », « installe les mises à jour », « bilan maj » → vrai.</summary>
+        internal static bool IsUpdateCheck(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            // MàJ de la mémoire/base du Copilote = autre sujet.
+            if (n.Contains("memoire") || n.Contains("connaissance")) return false;
+            if (n.Contains("mise a jour") || n.Contains("mises a jour") || n.Contains("mettre a jour")
+                || n.Contains("mets a jour") || Regex.IsMatch(n, "\\bmaj\\b") || Regex.IsMatch(n, "\\bupdates?\\b")) return true;
+            return n.Contains("a jour") && Regex.IsMatch(n, "\\b(pilote|pilotes|driver|drivers|windows|gpu)\\b");
+        }
+
+        /// <summary>Marque du GPU d'après son nom WMI → « nvidia » / « amd » / « intel » / null.</summary>
+        internal static string GpuVendor(string name)
+        {
+            string n = Deacc((name ?? "").ToLowerInvariant());
+            if (n.Contains("nvidia") || n.Contains("geforce") || Regex.IsMatch(n, "\\b(rtx|gtx|quadro)\\b")) return "nvidia";
+            if (n.Contains("amd") || n.Contains("radeon")) return "amd";
+            if (n.Contains("intel") || Regex.IsMatch(n, "\\b(arc|iris|uhd)\\b")) return "intel";
+            return null;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

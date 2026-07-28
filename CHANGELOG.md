@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.18 — Bilan MISES À JOUR : le Copilote mesure, puis propose — OU NON — d'installer
+- Demande « carte blanche » : l'IA fait du diagnostic et décide si une installation vaut le coup.
+- **🔎 « mes pilotes sont à jour ? », « installe les mises à jour », « bilan maj »** → le Copilote MESURE
+  en local (zéro réseau, zéro envoi) :
+  - **pilote GPU** : nom, version, âge réel (WMI). > 18 mois = ❌ propose ; 6-18 mois = ⚠️ pas urgent ;
+    récent = ✅ « rien à faire » ;
+  - **redémarrage en attente** de Windows Update (2 clés registre standard) ;
+  - **version de Windows** (24H2/25H2 + build) ;
+  - **espace disque système** (< 15 Go = pas assez pour une grosse MàJ).
+- **Puis il décide** : au plus UN bouton, le plus utile (page pilotes OFFICIELLE NVIDIA/AMD/Intel,
+  Windows Update, ou nettoyage stockage). S'il n'y a rien d'utile : « je ne te propose RIEN — mettre à
+  jour sans raison, c'est du risque sans gain. »
+- **Jamais d'installation automatique** : le bouton ouvre la page officielle dans le navigateur ;
+  télécharger et installer restent la décision de l'utilisateur (et c'est écrit dans la réponse).
+- Testé EN RÉEL sur cette machine : Windows 25H2 (build 26200) détecté, pas de reboot en attente, et il
+  a repéré un vrai souci — **3 Go libres seulement** → bouton « Ouvrir le nettoyage de stockage » proposé.
+- Garde-fou : « mets à jour ta mémoire » (Copilote) ne déclenche pas le bilan. Harnais **160/160**.
+
 ## v15.17 — Smart App Control : le panneau qui explique (et le .reg intégré)
 - **Nouveau panneau « Smart App Control »** (menu ⋯ → Système, et « J'ai un problème… » →
   Entretien & sécurité) : c'est LUI qui refuse au lancement les applications non signées ou

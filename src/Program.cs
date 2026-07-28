@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.17.0.0")]
-[assembly: AssemblyFileVersion("15.17.0.0")]
+[assembly: AssemblyVersion("15.18.0.0")]
+[assembly: AssemblyFileVersion("15.18.0.0")]
 
 namespace BTOptimizer
 {
@@ -616,9 +616,18 @@ namespace BTOptimizer
                     && UtilityTools.DistanceQuery("distance entre paris et lyon") != null; if (rv6) ok34++; Console.WriteLine((rv6 ? "OK  " : "FAIL") + "  distance : phrase reseau exclue, vraies villes OK");
                 bool rv7 = UtilityTools.FoodQuery("c'est quoi la composition de mon disque dur") == null; if (rv7) ok34++; Console.WriteLine((rv7 ? "OK  " : "FAIL") + "  food : 'disque dur' exclu (liste materiel elargie)");
 
+                // v15.17 : BILAN MISES A JOUR (detection + marque GPU + garde memoire/connaissance).
+                int ok35 = 0;
+                bool up1 = UtilityTools.IsUpdateCheck("mes pilotes sont a jour") && UtilityTools.IsUpdateCheck("installe les mises a jour")
+                    && UtilityTools.IsUpdateCheck("bilan maj"); if (up1) ok35++; Console.WriteLine((up1 ? "OK  " : "FAIL") + "  maj : pilotes/installe/bilan detectes");
+                bool up2 = !UtilityTools.IsUpdateCheck("bonjour") && !UtilityTools.IsUpdateCheck("quel temps fait il")
+                    && !UtilityTools.IsUpdateCheck("mets a jour ta memoire"); if (up2) ok35++; Console.WriteLine((up2 ? "OK  " : "FAIL") + "  maj : pas de faux positif (bonjour/meteo/memoire)");
+                bool up3 = UtilityTools.GpuVendor("NVIDIA GeForce RTX 3070") == "nvidia" && UtilityTools.GpuVendor("AMD Radeon RX 6700 XT") == "amd"
+                    && UtilityTools.GpuVendor("Intel(R) Arc(TM) A750 Graphics") == "intel" && UtilityTools.GpuVendor("Carte Inconnue 3000") == null; if (up3) ok35++; Console.WriteLine((up3 ? "OK  " : "FAIL") + "  GPU : marque NVIDIA/AMD/Intel reconnue, inconnue -> null");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

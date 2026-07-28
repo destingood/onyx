@@ -135,6 +135,40 @@ namespace BTOptimizer
             return f;
         }
 
+        public sealed class GpuDrv { public string Name; public string Version; public int AgeDays; }
+
+        /// <summary>Pilote GPU principal : nom, version, âge en jours (WMI). null si illisible.
+        /// Sert au « bilan mises à jour » du Copilote : il MESURE avant de proposer quoi que ce soit.</summary>
+        public static GpuDrv GpuDriver()
+        {
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name,DriverVersion,DriverDate FROM Win32_VideoController"))
+                {
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["Name"]) ?? "";
+                        string low = name.ToLowerInvariant();
+                        if (low.Contains("microsoft") || low.Contains("basic") || low.Contains("parsec") || low.Contains("virtual")) continue;
+                        int age = -1;
+                        string dd = Convert.ToString(mo["DriverDate"]);
+                        if (dd != null && dd.Length >= 8)
+                        {
+                            try
+                            {
+                                var date = new DateTime(int.Parse(dd.Substring(0, 4)), int.Parse(dd.Substring(4, 2)), int.Parse(dd.Substring(6, 2)));
+                                age = (int)(DateTime.Now - date).TotalDays;
+                            }
+                            catch { }
+                        }
+                        return new GpuDrv { Name = name, Version = Convert.ToString(mo["DriverVersion"]) ?? "", AgeDays = age };
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>Âge du pilote GPU en jours (WMI DriverDate), −1 si illisible. Public :
         /// le Copilote s'en sert aussi (pilote très vieux = FPS et correctifs manqués).</summary>
         public static int GpuDriverAgeDays()
