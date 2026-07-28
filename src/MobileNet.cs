@@ -29,6 +29,8 @@ namespace BTOptimizer
         {
             public string IfName;            // interface active (celle de la passerelle)
             public int IfIndex = -1;
+            public long LinkMbps = -1;       // débit NÉGOCIÉ du lien local (un Cat 5e abîmé retombe à 100)
+            public bool IsWireless;          // Wi-Fi : la gigue radio s'ajoute à celle de la 5G
             public int MtuCurrent = -1;
             public int MtuOptimal = -1;      // -1 = mesure impossible (ICMP DF bloqué)
             public double GwPing = -1, GwJitter = -1;   // vers la BOX : juge le câble/LAN, pas la radio
@@ -78,6 +80,8 @@ namespace BTOptimizer
             NetworkInterface ni = ActiveInterface();
             if (ni == null) return;
             r.IfName = ni.Name;
+            try { r.LinkMbps = ni.Speed / 1000000; } catch { }
+            r.IsWireless = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
             try
             {
                 IPv4InterfaceProperties v4 = ni.GetIPProperties().GetIPv4Properties();
