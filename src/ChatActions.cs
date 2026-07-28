@@ -1391,6 +1391,57 @@ namespace BTOptimizer
             }
         }
 
+        // Lance un exécutable, capture sa sortie texte. null si absent/échec/délai dépassé.
+        private static string RunProc(string file, string args, int timeoutMs, Action<string, int> log)
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo(file, args)
+                {
+                    UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8
+                };
+                using (var p = System.Diagnostics.Process.Start(psi))
+                {
+                    var sb = new StringBuilder();
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    while (!p.StandardOutput.EndOfStream)
+                    {
+                        if (sw.ElapsedMilliseconds > timeoutMs) { try { p.Kill(); } catch { } return null; }
+                        string line = p.StandardOutput.ReadLine();
+                        if (line == null) break;
+                        sb.Append(line).Append('\n');
+                        string t = line.Trim();
+                        if (log != null && t.Length > 3) log(t.Length > 70 ? t.Substring(0, 70) : t, 0);
+                    }
+                    if (!p.WaitForExit(5000)) { try { p.Kill(); } catch { } }
+                    return sb.ToString();
+                }
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Met à jour les APPLICATIONS via winget (sources officielles). JAMAIS automatique :
+        /// clic explicite + avertissement. Peut durer plusieurs minutes ; chaque étape est journalisée.</summary>
+        public static DocAssistant.ChatAction WingetUpgradeAction(int count)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Mettre à jour mes applications (" + count + ", winget)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Lance « winget upgrade --all » : Windows télécharge et installe les nouvelles versions de tes "
+                      + "applications depuis les sources OFFICIELLES (winget/Store). Peut prendre plusieurs minutes. "
+                      + "Certaines applis ouvertes devront être fermées. Chaque appli reste gérable/désinstallable normalement.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Mise à jour des applications (winget)…", 0);
+                string outp = RunProc("winget", "upgrade --all --silent --accept-package-agreements --accept-source-agreements --disable-interactivity", 900000, log);
+                if (outp == null) return Say("winget n'a pas répondu (absent, ou délai de 15 min dépassé). Tu peux relancer, ou mettre à jour via le Microsoft Store.");
+                return Say("✅ Mises à jour d'applications terminées (winget, sources officielles).\n"
+                         + "Redemande « bilan maj » pour vérifier qu'il ne reste rien.");
+            };
+            return a;
+        }
+
         // Windows attend-il un redémarrage pour finir des mises à jour ? (2 clés registre standard)
         private static bool RebootPending()
         {
@@ -1466,7 +1517,49 @@ namespace BTOptimizer
                 }
                 catch { }
 
-                // 4) Espace disque système (une MàJ a besoin de place)
+                // 3bis) Dernière MàJ Windows réellement installée (WMI QuickFixEngineering)
+                try
+                {
+                    DateTime lastQfe = DateTime.MinValue;
+                    using (var s = new System.Management.ManagementObjectSearcher("SELECT InstalledOn FROM Win32_QuickFixEngineering"))
+                        foreach (System.Management.ManagementObject mo in s.Get())
+                        {
+                            DateTime d2;
+                            string raw = Convert.ToString(mo["InstalledOn"]);
+                            if (DateTime.TryParse(raw, System.Globalization.CultureInfo.GetCultureInfo("en-US"),
+                                System.Globalization.DateTimeStyles.None, out d2) && d2 > lastQfe) lastQfe = d2;
+                        }
+                    if (lastQfe > DateTime.MinValue)
+                    {
+                        int days = (int)(DateTime.Now - lastQfe).TotalDays;
+                        if (days > 60)
+                        {
+                            sb.Append("• ⚠️ Dernière MàJ Windows installée : il y a ~").Append(days).Append(" jours — vérifie Windows Update.\n");
+                            if (propose == null) propose = OpenUrlAction("Ouvrir Windows Update", "ms-settings:windowsupdate",
+                                "Ouvre les réglages Windows Update. Rien n'est installé sans toi.");
+                        }
+                        else sb.Append("• ✅ Dernière MàJ Windows : il y a ").Append(days).Append(" jour(s).\n");
+                    }
+                }
+                catch { }
+
+                // 4) Applications obsolètes (winget, sources officielles) — mesure en lecture seule.
+                try
+                {
+                    if (log != null) log("Applications (winget)…", 0);
+                    string wout = RunProc("winget", "upgrade --include-unknown --disable-interactivity", 45000, null);
+                    int wc = wout == null ? -1 : UtilityTools.WingetCount(wout);
+                    if (wc > 0)
+                    {
+                        sb.Append("• ⚠️ Applications : ").Append(wc).Append(" mise(s) à jour disponible(s) (winget).\n");
+                        if (propose == null) propose = WingetUpgradeAction(wc);
+                    }
+                    else if (wc == 0) sb.Append("• ✅ Applications : tout est à jour (winget).\n");
+                    // wc == -1 : winget absent/illisible → on ne dit rien plutôt que d'inventer.
+                }
+                catch { }
+
+                // 5) Espace disque système (une MàJ a besoin de place)
                 bool diskLow = false;
                 try
                 {
@@ -1479,6 +1572,24 @@ namespace BTOptimizer
                 if (diskLow && propose == null)
                     propose = OpenUrlAction("Ouvrir le nettoyage de stockage", "ms-settings:storagesense",
                         "Ouvre les réglages Stockage de Windows. Rien n'est supprimé automatiquement.");
+
+                // 6) BIOS : information SEULEMENT — je ne pousse JAMAIS une MàJ BIOS (risque réel de brique).
+                try
+                {
+                    using (var s = new System.Management.ManagementObjectSearcher("SELECT ReleaseDate FROM Win32_BIOS"))
+                        foreach (System.Management.ManagementObject mo in s.Get())
+                        {
+                            string rd = Convert.ToString(mo["ReleaseDate"]);
+                            if (rd != null && rd.Length >= 8)
+                            {
+                                int by = int.Parse(rd.Substring(0, 4));
+                                int age = DateTime.Now.Year - by;
+                                sb.Append("• ℹ️ BIOS de ").Append(by).Append(age >= 3 ? " — je ne propose PAS de MàJ BIOS (risqué) ; seulement si un problème précis l'exige, via le site de ta carte mère.\n" : " — rien à signaler.\n");
+                            }
+                            break;
+                        }
+                }
+                catch { }
 
                 // Verdict : PROPOSER… ou NON. Pas de MàJ pour faire joli.
                 if (propose == null)

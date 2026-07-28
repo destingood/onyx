@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.20 — Bilan MàJ niveau 2 : applications (winget), retard Windows Update, BIOS
+- **📦 Applications obsolètes** : le bilan compte tes applis à mettre à jour via **winget** (le gestionnaire
+  officiel de Microsoft, sources officielles). S'il y en a → bouton « Mettre à jour mes applications (N) » :
+  UN clic, avertissement clair, journal en direct, 15 min max. Jamais lancé automatiquement.
+- **🕒 Retard Windows Update** : date de la DERNIÈRE MàJ Windows réellement installée (WMI). > 60 jours →
+  propose d'ouvrir Windows Update.
+- **🧿 BIOS** : année affichée à titre d'info, mais **je ne propose JAMAIS de MàJ BIOS** (risque réel de
+  brique) — c'est écrit tel quel dans la réponse. Proposer serait facile ; ne pas proposer est honnête.
+- Parseur winget robuste FR/EN (pied « N mises à niveau disponibles » ou comptage du tableau), testé sur
+  la vraie sortie de la machine. Sonde console `BT_MAJ=1` pour vérifier le bilan réel sans lancer l'UI.
+- Testé EN RÉEL : RTX 4080 SUPER (pilote ~2 mois) → « récent, rien à faire » (il ne propose PAS) ;
+  dernière MàJ Windows ~71 jours → bouton Windows Update ; 24 applis à mettre à jour ; 3 Go libres.
+  Harnais **162/162**.
+
 ## v15.19 — Connexion 4G/5G : la box mobile enfin traitée comme un vrai lien
 - **Nouveau panneau « Connexion 4G/5G »** (menu ⋯ → Système → Réseau, « J'ai un problème… » →
   Réseau & ping, et le Copilote comprend « 5g », « box mobile », « cgnat », « mtu »…) — pensé

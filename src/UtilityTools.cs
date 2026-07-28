@@ -543,6 +543,31 @@ namespace BTOptimizer
             return n.Contains("a jour") && Regex.IsMatch(n, "\\b(pilote|pilotes|driver|drivers|windows|gpu)\\b");
         }
 
+        /// <summary>Nombre d'applications à mettre à jour d'après la sortie de « winget upgrade ».
+        /// Robuste FR/EN : pied « N mises à niveau disponibles » / « N upgrades available », sinon
+        /// comptage des lignes du tableau après le séparateur « --- ». −1 si sortie illisible.</summary>
+        internal static int WingetCount(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output)) return -1;
+            string flat = Deacc(output.ToLowerInvariant());
+            var mf = Regex.Match(flat, "(\\d+)\\s+(?:mises?\\s+a\\s+niveau\\s+disponibles?|upgrades?\\s+available)");
+            if (mf.Success) { int c; if (int.TryParse(mf.Groups[1].Value, out c)) return c; }
+            var lines = output.Replace("\r", "").Split('\n');
+            int sep = -1;
+            for (int i = 0; i < lines.Length; i++)
+                if (Regex.IsMatch(lines[i], "^-{20,}\\s*$")) { sep = i; break; }
+            if (sep < 0) return -1;
+            int n = 0;
+            for (int i = sep + 1; i < lines.Length; i++)
+            {
+                string l = lines[i].TrimEnd();
+                if (l.Length == 0) break;                                   // fin du tableau
+                if (Regex.IsMatch(Deacc(l.ToLowerInvariant()), "disponibles?|available")) break;   // pied
+                if (Regex.IsMatch(l, "\\S+\\s{2,}\\S+")) n++;               // au moins 2 colonnes
+            }
+            return n;
+        }
+
         /// <summary>Marque du GPU d'après son nom WMI → « nvidia » / « amd » / « intel » / null.</summary>
         internal static string GpuVendor(string name)
         {

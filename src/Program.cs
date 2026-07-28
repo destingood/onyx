@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.19.0.0")]
-[assembly: AssemblyFileVersion("15.19.0.0")]
+[assembly: AssemblyVersion("15.20.0.0")]
+[assembly: AssemblyFileVersion("15.20.0.0")]
 
 namespace BTOptimizer
 {
@@ -168,6 +168,17 @@ namespace BTOptimizer
                 Console.WriteLine("Base :\n" + KnowledgeBase.Describe());
                 Console.WriteLine("\nQuestion : " + kbQ);
                 Console.WriteLine("Extraits retrouvés :\n" + KnowledgeBase.Search(kbQ, 4));
+                Environment.Exit(0);
+            }
+
+            // BT_MAJ=1 : exécute le BILAN MISES À JOUR en console (vraies mesures machine) et sort.
+            // Sert à vérifier le comportement réel (winget, WMI, registre) sans lancer l'interface.
+            if (Environment.GetEnvironmentVariable("BT_MAJ") == "1")
+            {
+                var act = ChatActions.UpdatesCheckAction();
+                var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
+                Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
+                Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
                 Environment.Exit(0);
             }
 
@@ -625,9 +636,20 @@ namespace BTOptimizer
                 bool up3 = UtilityTools.GpuVendor("NVIDIA GeForce RTX 3070") == "nvidia" && UtilityTools.GpuVendor("AMD Radeon RX 6700 XT") == "amd"
                     && UtilityTools.GpuVendor("Intel(R) Arc(TM) A750 Graphics") == "intel" && UtilityTools.GpuVendor("Carte Inconnue 3000") == null; if (up3) ok35++; Console.WriteLine((up3 ? "OK  " : "FAIL") + "  GPU : marque NVIDIA/AMD/Intel reconnue, inconnue -> null");
 
+                // v15.19 : parseur winget (applications a mettre a jour), FR + EN + illisible.
+                int ok36 = 0;
+                string wgFr = "Nom   ID   Version   Disponible   Source\n" + new string('-', 60) + "\n"
+                            + "Git   Git.Git   2.54.0   2.55.0   winget\nNode.js   OpenJS.NodeJS   24.16   24.18   winget\n\n2 mises à niveau disponibles.\n";
+                string wgEn = "Name   Id   Version   Available   Source\n" + new string('-', 60) + "\n"
+                            + "Git   Git.Git   2.54.0   2.55.0   winget\n\n1 upgrades available.\n";
+                bool wg1 = UtilityTools.WingetCount(wgFr) == 2 && UtilityTools.WingetCount(wgEn) == 1; if (wg1) ok36++; Console.WriteLine((wg1 ? "OK  " : "FAIL") + "  winget : pied FR=2 / EN=1");
+                string wgNoFoot = "Nom   ID   Version   Disponible   Source\n" + new string('-', 60) + "\n"
+                            + "Git   Git.Git   2.54.0   2.55.0   winget\nNode   OpenJS   24   25   winget\nOllama   Ollama.Ollama   0.30   0.32   winget\n";
+                bool wg2 = UtilityTools.WingetCount(wgNoFoot) == 3 && UtilityTools.WingetCount("n'importe quoi") == -1 && UtilityTools.WingetCount(null) == -1; if (wg2) ok36++; Console.WriteLine((wg2 ? "OK  " : "FAIL") + "  winget : sans pied=3 lignes, illisible=-1");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
