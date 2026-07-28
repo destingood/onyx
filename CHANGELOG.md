@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.22 — « D'où vient le lag ? » : le panneau 4G/5G rend son verdict
+- **Ping vers la BOX vs vers Internet** : la mesure qui tranche en 10 secondes le débat
+  « c'est mon câble ou c'est la 5G ? ». La box répond en ~1 ms sur un lien local sain —
+  si le ping explose seulement vers Internet, le câble est innocenté, c'est le segment
+  radio/opérateur (cas classique : ping très élevé alors qu'on est en Ethernet).
+- **Bufferbloat en ENVOI** mesuré aussi (téléversement réel incompressible pendant les
+  pings) : la montée étroite des box 4G/5G est LE déclencheur silencieux — un cloud qui
+  synchronise et tout le foyer lag. La réception était déjà testée ; l'envoi manquait.
+- **Verdict en une phrase** sous les mesures : « le problème commence AVANT la box » /
+  « bufferbloat en envoi/réception » / « le lag naît sur le segment radio/opérateur » /
+  « lien sain — refais la mesure en soirée pour confondre l'antenne ».
+- Conseils enrichis (seuils de signal RSRP/SINR à lire dans la box, redémarrage de box
+  qui raccroche une cellule lointaine) ; journal de mesure au thème sombre (fini le
+  pavé blanc).
+
 ## v15.20 — Bilan MàJ niveau 2 : applications (winget), retard Windows Update, BIOS
 - **📦 Applications obsolètes** : le bilan compte tes applis à mettre à jour via **winget** (le gestionnaire
   officiel de Microsoft, sources officielles). S'il y en a → bouton « Mettre à jour mes applications (N) » :

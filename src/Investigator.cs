@@ -344,18 +344,44 @@ namespace BTOptimizer
             // --- Pilote GPU très âgé (correctifs et FPS manqués) ---
             try
             {
-                int age = Diagnostics.GpuDriverAgeDays();
+                var drv = Diagnostics.GpuDriver();
+                int age = drv != null ? drv.AgeDays : -1;
                 if (age > 540)
+                {
+                    // Bouton : la page pilotes OFFICIELLE du bon constructeur (détecté depuis le nom WMI).
+                    string vend = UtilityTools.GpuVendor(drv.Name);
+                    DocAssistant.ChatAction fix = null;
+                    if (vend == "nvidia") fix = ChatActions.OpenUrlAction("Ouvrir la page pilotes NVIDIA", "https://www.nvidia.com/fr-fr/drivers/", "Ouvre le site OFFICIEL NVIDIA. Rien n'est téléchargé ni installé automatiquement.");
+                    else if (vend == "amd") fix = ChatActions.OpenUrlAction("Ouvrir la page pilotes AMD", "https://www.amd.com/fr/support/download/drivers.html", "Ouvre le site OFFICIEL AMD. Rien n'est téléchargé ni installé automatiquement.");
+                    else if (vend == "intel") fix = ChatActions.OpenUrlAction("Ouvrir la page pilotes Intel", "https://www.intel.fr/content/www/fr/fr/download-center/home.html", "Ouvre le site OFFICIEL Intel. Rien n'est téléchargé ni installé automatiquement.");
                     found.Add(new Finding
                     {
-                        Impact = 62, Key = "gpupilote",
+                        Impact = 62, Key = "gpupilote", Fix = fix,
                         Text = "Ton pilote graphique date d'environ " + (age / 30) + " mois. Les pilotes récents corrigent "
                              + "des crashs et gagnent des FPS — mise à jour GRATUITE (NVIDIA/AMD/Intel), et DDU (gratuit, "
                              + "1 clic depuis Bibliothèques) si tu veux repartir propre.",
                         Why = "Pilote GPU — constaté (WMI DriverDate) : " + age + " jours ; seuil : ~18 mois. Les jeux "
                             + "récents sont optimisés contre les pilotes récents ; la mise à jour est gratuite chez le constructeur."
                     });
+                }
                 else if (age >= 0) ok.Add("pilote GPU récent");
+            }
+            catch { }
+
+            // --- Applications obsolètes (winget, lecture seule, 20 s max pour ne pas ralentir l'enquête) ---
+            try
+            {
+                int wc = ChatActions.WingetOutdatedCount(20000);
+                if (wc >= 5)
+                    found.Add(new Finding
+                    {
+                        Impact = 40, Key = "appsmaj", Fix = ChatActions.WingetUpgradeAction(wc),
+                        Text = "" + wc + " applications ont une mise à jour disponible (mesuré via winget, le gestionnaire "
+                             + "officiel de Microsoft). Les vieilles versions traînent des bugs et des failles corrigées depuis.",
+                        Why = "Applications — constaté : " + wc + " mises à jour listées par « winget upgrade » ; seuil : 5. "
+                            + "Le bouton lance la mise à jour OFFICIELLE (winget) — jamais sans ton clic."
+                    });
+                else if (wc >= 0) ok.Add("applications à jour (winget)");
             }
             catch { }
 

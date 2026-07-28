@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.20.0.0")]
-[assembly: AssemblyFileVersion("15.20.0.0")]
+[assembly: AssemblyVersion("15.22.0.0")]
+[assembly: AssemblyFileVersion("15.22.0.0")]
 
 namespace BTOptimizer
 {
@@ -647,9 +647,18 @@ namespace BTOptimizer
                             + "Git   Git.Git   2.54.0   2.55.0   winget\nNode   OpenJS   24   25   winget\nOllama   Ollama.Ollama   0.30   0.32   winget\n";
                 bool wg2 = UtilityTools.WingetCount(wgNoFoot) == 3 && UtilityTools.WingetCount("n'importe quoi") == -1 && UtilityTools.WingetCount(null) == -1; if (wg2) ok36++; Console.WriteLine((wg2 ? "OK  " : "FAIL") + "  winget : sans pied=3 lignes, illisible=-1");
 
+                // v15.21 : INVARIANTS DE SECURITE du bilan MaJ (mesure = auto, installation = clic).
+                int ok37 = 0;
+                var bilanA = ChatActions.UpdatesCheckAction();
+                bool sv1 = bilanA.AutoRun && !bilanA.IsChange; if (sv1) ok37++; Console.WriteLine((sv1 ? "OK  " : "FAIL") + "  invariant : bilan = mesure auto, lecture seule");
+                var wgA = ChatActions.WingetUpgradeAction(3);
+                bool sv2 = !wgA.AutoRun && wgA.IsChange && wgA.Label.Contains("3") && !string.IsNullOrEmpty(wgA.Warning); if (sv2) ok37++; Console.WriteLine((sv2 ? "OK  " : "FAIL") + "  invariant : installer applis = clic + avertissement");
+                var urlA = ChatActions.OpenUrlAction("Test", "https://example.org", "test");
+                bool sv3 = !urlA.AutoRun && urlA.IsChange; if (sv3) ok37++; Console.WriteLine((sv3 ? "OK  " : "FAIL") + "  invariant : ouvrir une page = clic explicite");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

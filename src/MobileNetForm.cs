@@ -15,9 +15,9 @@ namespace BTOptimizer
     internal class MobileNetForm : Form
     {
         private readonly Action<string, int> _log;
-        private Label _vIface, _vIdle, _vLoaded, _vMtu, _vCgnat, _vIpv6;
+        private Label _vIface, _vGw, _vIdle, _vLoaded, _vUpLoaded, _vMtu, _vCgnat, _vIpv6, _verdict;
         private Button _measure, _applyMtu, _revertMtu;
-        private TextBox _journal;
+        private RichTextBox _journal;   // comme les autres journaux de l'app : se thème (le TextBox restait blanc)
         private MobileNet.Report _rep = new MobileNet.Report();
         private volatile bool _busy;
 
@@ -25,7 +25,7 @@ namespace BTOptimizer
         {
             _log = log ?? delegate { };
             Text = "ONYX — Connexion 4G/5G (box mobile)";
-            ClientSize = new Size(660, 596);
+            ClientSize = new Size(660, 712);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -54,15 +54,26 @@ namespace BTOptimizer
 
             int y = 76;
             _vIface = Row("Interface active", ref y);
-            _vIdle = Row("Ping au repos (moy · gigue · perte)", ref y);
-            _vLoaded = Row("Ping SOUS CHARGE (bufferbloat)", ref y);
+            _vGw = Row("Ping vers la BOX (juge ton câble/LAN)", ref y);
+            _vIdle = Row("Ping vers Internet (radio + opérateur)", ref y);
+            _vLoaded = Row("Sous charge RÉCEPTION (bufferbloat)", ref y);
+            _vUpLoaded = Row("Sous charge ENVOI (talon d'Achille 5G)", ref y);
             _vMtu = Row("MTU (actuelle → mesurée)", ref y);
             _vCgnat = Row("CGNAT (adresse partagée opérateur)", ref y);
             _vIpv6 = Row("IPv6 (le chemin sans CGNAT)", ref y);
 
+            // Le verdict : UNE phrase qui dit OÙ naît le lag — c'est elle qu'on est venu chercher.
+            _verdict = new Label
+            {
+                Location = new Point(20, y + 2), Size = new Size(620, 40), Text = "",
+                Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold), ForeColor = Theme.InkDimColor
+            };
+            Controls.Add(_verdict);
+            y += 46;
+
             _measure = new Button
             {
-                Text = "📏  Mesurer ce lien (~30 s)", Location = new Point(20, y + 6), Size = new Size(210, 34),
+                Text = "📏  Mesurer ce lien (~45 s)", Location = new Point(20, y + 6), Size = new Size(210, 34),
                 FlatStyle = FlatStyle.Flat, BackColor = Theme.AccentColor, ForeColor = Color.FromArgb(16, 13, 9)
             };
             _measure.FlatAppearance.BorderSize = 0;
@@ -86,24 +97,26 @@ namespace BTOptimizer
             Controls.Add(_revertMtu);
             y += 50;
 
-            _journal = new TextBox
+            _journal = new RichTextBox
             {
-                Location = new Point(20, y), Size = new Size(620, 86), Multiline = true, ReadOnly = true,
-                ScrollBars = ScrollBars.Vertical, Text = "Prêt. « Mesurer ce lien » n'écrit RIEN : uniquement des pings et un court téléchargement de test."
+                Location = new Point(20, y), Size = new Size(620, 86), ReadOnly = true,
+                ScrollBars = RichTextBoxScrollBars.Vertical, BorderStyle = BorderStyle.FixedSingle,
+                Text = "Prêt. « Mesurer ce lien » n'écrit RIEN : uniquement des pings et un court téléchargement de test."
             };
             Controls.Add(_journal);
             y += 96;
 
             Controls.Add(new Label
             {
-                Location = new Point(20, y), Size = new Size(620, 92), ForeColor = Theme.InkDimColor,
+                Location = new Point(20, y), Size = new Size(620, 112), ForeColor = Theme.InkDimColor,
                 Text = "Ce que Windows ne peut PAS faire à ta place (mais qui change tout sur une box 4G/5G) :\n"
-                     + "• Place la box près d'une fenêtre, côté antenne-relais (l'app « Bouygues » / un site de couverture l'indique) ;\n"
-                     + "• Branche le PC en CÂBLE Ethernet sur la box (le Wi-Fi ajoute sa propre gigue par-dessus la radio 5G) ;\n"
-                     + "• Active l'IPv6 dans l'interface de la box si la ligne ci-dessus dit « absente » ;\n"
-                     + "• Les soirées 20 h-23 h sont chargées sur l'antenne : un ping qui double à ces heures vient de là, pas du PC."
+                     + "• Regarde le SIGNAL dans l'interface de la box : RSRP > −100 dBm et SINR > 10 dB, sinon déplace-la\n"
+                     + "  (près d'une fenêtre, côté antenne — un site de couverture indique la direction) ;\n"
+                     + "• Redémarre la box : elle raccroche parfois une cellule lointaine et n'en repart plus ;\n"
+                     + "• Active l'IPv6 dans la box si la ligne ci-dessus dit « absente » ;\n"
+                     + "• Les soirées 20 h-23 h chargent l'antenne : un ping qui double à ces heures vient de là, pas du PC."
             });
-            y += 100;
+            y += 120;
 
             var dns = LinkBtn("DNS rapide", 20, y, () => Host(new DnsForm(_log)));
             var tcp = LinkBtn("Réglages TCP/IP", 20 + 150, y, () => Host(new NetTuneForm(_log)));
@@ -169,12 +182,20 @@ namespace BTOptimizer
                 var r = new MobileNet.Report();
                 MobileNet.FillInterface(r);
 
+                // 1) La BOX d'abord : si ce ping-là est déjà haut, inutile d'accuser la 5G.
+                var gw = MobileNet.GatewayAddress();
                 double avg, jit; int loss;
+                if (gw != null && MobileNet.SampleTo(gw.ToString(), 6, 600, out avg, out jit, out loss))
+                { r.GwPing = avg; r.GwJitter = jit; r.GwLoss = loss; }
+                Journal(r.GwPing >= 0
+                    ? "Vers la box (" + gw + ") : " + r.GwPing.ToString("0") + " ms · gigue " + r.GwJitter.ToString("0") + " ms"
+                    : "Vers la box : pas de réponse (certaines box ignorent le ping).", 0);
+
                 if (ChatActions.PingSample(6, 900, out avg, out jit, out loss))
                 { r.PingIdle = avg; r.JitterIdle = jit; r.LossIdle = loss; }
                 Journal(r.PingIdle >= 0
-                    ? "Au repos : " + r.PingIdle.ToString("0") + " ms · gigue " + r.JitterIdle.ToString("0") + " ms · perte " + r.LossIdle + " %"
-                    : "Au repos : hors-ligne ?", 0);
+                    ? "Vers Internet : " + r.PingIdle.ToString("0") + " ms · gigue " + r.JitterIdle.ToString("0") + " ms · perte " + r.LossIdle + " %"
+                    : "Vers Internet : hors-ligne ?", 0);
 
                 r.MtuOptimal = MobileNet.DiscoverMtu(Journal);
                 MobileNet.DetectCgnat(r);
@@ -185,12 +206,19 @@ namespace BTOptimizer
                 Journal(r.Ipv6 ? "IPv6 opérationnelle — le chemin direct est disponible."
                                : "IPv6 absente — à activer dans la box si possible.", r.Ipv6 ? 1 : 2);
 
-                Journal("Latence sous charge (téléchargement de test ~8 s)…", 0);
+                Journal("Latence sous charge RÉCEPTION (téléchargement de test ~8 s)…", 0);
                 r.PingLoaded = MobileNet.LoadedPing(Journal);
                 if (r.PingLoaded >= 0 && r.PingIdle >= 0)
-                    Journal("Sous charge : " + r.PingLoaded.ToString("0") + " ms (repos "
-                          + r.PingIdle.ToString("0") + " ms → +" + Math.Max(0, r.PingLoaded - r.PingIdle).ToString("0") + " ms de bufferbloat).",
+                    Journal("Réception chargée : " + r.PingLoaded.ToString("0") + " ms (+"
+                          + Math.Max(0, r.PingLoaded - r.PingIdle).ToString("0") + " ms).",
                           r.PingLoaded - r.PingIdle > 80 ? 2 : 0);
+
+                Journal("Latence sous charge ENVOI (téléversement de test ~8 s)…", 0);
+                r.PingUpLoaded = MobileNet.UploadLoadedPing(Journal);
+                if (r.PingUpLoaded >= 0 && r.PingIdle >= 0)
+                    Journal("Envoi chargé : " + r.PingUpLoaded.ToString("0") + " ms (+"
+                          + Math.Max(0, r.PingUpLoaded - r.PingIdle).ToString("0") + " ms).",
+                          r.PingUpLoaded - r.PingIdle > 80 ? 2 : 0);
 
                 try
                 {
@@ -234,6 +262,13 @@ namespace BTOptimizer
             _vIface.Text = _rep.IfName != null ? _rep.IfName + "  (MTU " + _rep.MtuCurrent + ")" : "aucune connexion détectée";
             _vIface.ForeColor = _rep.IfName != null ? Theme.InkColor : errC;
 
+            if (_rep.GwPing >= 0)
+            {
+                _vGw.Text = _rep.GwPing.ToString("0") + " ms · gigue " + _rep.GwJitter.ToString("0") + " ms";
+                _vGw.ForeColor = _rep.GwPing < 3 ? okC : _rep.GwPing < 10 ? warnC : errC;
+            }
+            else { _vGw.Text = "— (mesure à lancer)"; _vGw.ForeColor = Theme.InkDimColor; }
+
             if (_rep.PingIdle >= 0)
             {
                 _vIdle.Text = _rep.PingIdle.ToString("0") + " ms · " + _rep.JitterIdle.ToString("0") + " ms · " + _rep.LossIdle + " %";
@@ -248,6 +283,14 @@ namespace BTOptimizer
                 _vLoaded.ForeColor = bloat < 30 ? okC : bloat < 80 ? warnC : errC;
             }
             else { _vLoaded.Text = "—"; _vLoaded.ForeColor = Theme.InkDimColor; }
+
+            if (_rep.PingUpLoaded >= 0 && _rep.PingIdle >= 0)
+            {
+                double bloat = Math.Max(0, _rep.PingUpLoaded - _rep.PingIdle);
+                _vUpLoaded.Text = _rep.PingUpLoaded.ToString("0") + " ms  (+" + bloat.ToString("0") + " ms)";
+                _vUpLoaded.ForeColor = bloat < 30 ? okC : bloat < 80 ? warnC : errC;
+            }
+            else { _vUpLoaded.Text = "—"; _vUpLoaded.ForeColor = Theme.InkDimColor; }
 
             if (_rep.MtuOptimal > 0)
             {
@@ -277,6 +320,46 @@ namespace BTOptimizer
             _applyMtu.Enabled = _rep.MtuOptimal >= 996 && _rep.MtuOptimal < _rep.MtuCurrent;
             _applyMtu.Text = _applyMtu.Enabled ? "Optimiser la MTU (→ " + _rep.MtuOptimal + ")" : "Optimiser la MTU";
             _revertMtu.Enabled = MobileNet.HasBackup;
+
+            RefreshVerdict(okC, warnC, errC);
+        }
+
+        /// <summary>La phrase qui LOCALISE le lag — box/LAN, radio-opérateur ou bufferbloat.</summary>
+        private void RefreshVerdict(Color okC, Color warnC, Color errC)
+        {
+            if (_rep.PingIdle < 0 && _rep.GwPing < 0) { _verdict.Text = ""; return; }
+
+            if (_rep.GwPing >= 10)
+            {
+                _verdict.ForeColor = errC;
+                _verdict.Text = "→ Le problème commence AVANT la box : un lien local sain répond en ~1 ms. "
+                              + "Vérifie le câble (croqué/mal clipsé), le port de la box, la carte réseau (panneau Carte réseau).";
+                return;
+            }
+            double dBloat = _rep.PingLoaded >= 0 && _rep.PingIdle >= 0 ? Math.Max(0, _rep.PingLoaded - _rep.PingIdle) : 0;
+            double uBloat = _rep.PingUpLoaded >= 0 && _rep.PingIdle >= 0 ? Math.Max(0, _rep.PingUpLoaded - _rep.PingIdle) : 0;
+            if (dBloat > 80 || uBloat > 80)
+            {
+                _verdict.ForeColor = warnC;
+                _verdict.Text = "→ Bufferbloat " + (uBloat >= dBloat ? "en ENVOI" : "en réception") + " : dès que quelque chose "
+                              + (uBloat >= dBloat ? "téléverse (cloud, sauvegarde, stream)" : "télécharge") + ", la box stocke et le ping explose. "
+                              + "Pendant le jeu : couper les synchronisations, et limiter le débit dans les applis qui envoient.";
+                return;
+            }
+            if (_rep.PingIdle >= 60)
+            {
+                _verdict.ForeColor = warnC;
+                _verdict.Text = "→ Ton câble est hors de cause (box en " + (_rep.GwPing >= 0 ? _rep.GwPing.ToString("0") : "~1")
+                              + " ms) : le lag naît sur le segment RADIO/opérateur. Voir le signal dans l'interface de la box "
+                              + "(RSRP/SINR), sa position, et les conseils ci-dessous.";
+                return;
+            }
+            if (_rep.PingIdle >= 0)
+            {
+                _verdict.ForeColor = okC;
+                _verdict.Text = "→ Lien sain au moment de la mesure. Si ça se dégrade en soirée, c'est l'antenne qui sature "
+                              + "(refais la mesure à ce moment-là pour le prouver).";
+            }
         }
     }
 }

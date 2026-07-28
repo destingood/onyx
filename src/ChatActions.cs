@@ -1421,6 +1421,14 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        /// <summary>Nombre d'applications à mettre à jour (winget, lecture seule). −1 si winget absent/lent.
+        /// Partagé entre le bilan MàJ et l'enquête.</summary>
+        internal static int WingetOutdatedCount(int timeoutMs)
+        {
+            string wout = RunProc("winget", "upgrade --include-unknown --disable-interactivity", timeoutMs, null);
+            return wout == null ? -1 : UtilityTools.WingetCount(wout);
+        }
+
         /// <summary>Met à jour les APPLICATIONS via winget (sources officielles). JAMAIS automatique :
         /// clic explicite + avertissement. Peut durer plusieurs minutes ; chaque étape est journalisée.</summary>
         public static DocAssistant.ChatAction WingetUpgradeAction(int count)
@@ -1436,8 +1444,12 @@ namespace BTOptimizer
                 if (log != null) log("Mise à jour des applications (winget)…", 0);
                 string outp = RunProc("winget", "upgrade --all --silent --accept-package-agreements --accept-source-agreements --disable-interactivity", 900000, log);
                 if (outp == null) return Say("winget n'a pas répondu (absent, ou délai de 15 min dépassé). Tu peux relancer, ou mettre à jour via le Microsoft Store.");
-                return Say("✅ Mises à jour d'applications terminées (winget, sources officielles).\n"
-                         + "Redemande « bilan maj » pour vérifier qu'il ne reste rien.");
+                // BOUCLE FERMÉE : on ne dit pas « c'est fait », on RE-MESURE aussitôt (le bilan s'enchaîne seul).
+                return new DocAssistant.Reply
+                {
+                    Text = "✅ Mises à jour d'applications terminées (winget, sources officielles).\nJe re-vérifie tout de suite…",
+                    Action = UpdatesCheckAction()
+                };
             };
             return a;
         }
@@ -1547,8 +1559,7 @@ namespace BTOptimizer
                 try
                 {
                     if (log != null) log("Applications (winget)…", 0);
-                    string wout = RunProc("winget", "upgrade --include-unknown --disable-interactivity", 45000, null);
-                    int wc = wout == null ? -1 : UtilityTools.WingetCount(wout);
+                    int wc = WingetOutdatedCount(45000);
                     if (wc > 0)
                     {
                         sb.Append("• ⚠️ Applications : ").Append(wc).Append(" mise(s) à jour disponible(s) (winget).\n");
