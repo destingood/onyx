@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.33 — Tous les outils du Copilote TRIÉS en 4 familles
+- L'accueil du Copilote n'est plus un vrac de 20 pastilles : elles sont **rangées sous 4 en-têtes dorés**,
+  dans l'ordre de la vraie vie :
+  - **🎮 Problèmes en jeu** : ça rame, FPS bas, ping/lag, crash/écran bleu, jeu qui ne démarre pas, 60 Hz ;
+  - **🖥️ PC & Windows** : fenêtres qui saccadent, chauffe, boot lent, CPU bouffé, son, internet, réparer Windows ;
+  - **🧰 Entretien & espace** : bilan complet, bilan mises à jour, libérer de l'espace, hibernation, gratuit ;
+  - **🎁 Bonus** : jeux gratuits PC, actus gaming.
+- Aucune logique nouvelle : uniquement du rangement (chaque pastille envoie une phrase déjà testée).
+  Les pastilles sous les réponses restent la liste à plat. Harnais 170/170 ; UITEST 45/45 formes, 0 erreur.
+- Au passage, victoire utilisateur mesurée : disque C: passé de **1,1 → 28,6 Go libres** grâce au bouton
+  « Désactiver l'hibernation » de v15.25. La boucle mesurer → proposer → prouver fonctionne en vrai.
+
 ## v15.32 — Les nouvelles fonctions ENFIN visibles : 5 pastilles de plus dans le chat
 - Retour utilisateur : « elles sont où les nouvelles fonctions ? » — elles n'étaient accessibles qu'en
   tapant la bonne phrase. Maintenant elles s'affichent en pastilles dès l'ouverture du Copilote :

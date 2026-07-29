@@ -151,11 +151,26 @@ namespace BTOptimizer
                 FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
                 AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent
             };
-            foreach (var st in Starters)
+            // Rendu TRIÉ : un en-tête doré par famille, chaque famille sur ses propres lignes.
+            foreach (var grp in StarterGroups)
             {
-                var c = Chip(st.Item1); string sendText = st.Item2;
-                c.Click += (s, e) => Send(sendText);
-                _heroChips.Controls.Add(c);
+                var head = new Label
+                {
+                    Text = grp.Title, AutoSize = true, Font = FpsUi.Small,
+                    ForeColor = FpsUi.Gold, BackColor = Color.Transparent,
+                    Margin = new Padding(0, 8, 0, 4)
+                };
+                _heroChips.Controls.Add(head);
+                _heroChips.SetFlowBreak(head, true);            // les pastilles commencent sous l'en-tête
+                Control last = null;
+                foreach (var st in grp.Items)
+                {
+                    var c = Chip(st.Item1); string sendText = st.Item2;
+                    c.Click += (s, e) => Send(sendText);
+                    _heroChips.Controls.Add(c);
+                    last = c;
+                }
+                if (last != null) _heroChips.SetFlowBreak(last, true);   // le groupe suivant repart à la ligne
             }
             _hero.Controls.Add(_heroChips);
         }
@@ -608,31 +623,53 @@ namespace BTOptimizer
             return avatar;
         }
 
-        // Suggestions de démarrage (label affiché → texte envoyé au Copilote).
-        private static readonly (string, string)[] Starters =
+        // Outils TRIÉS par familles — l'ordre suit la vraie vie : le problème en jeu d'abord,
+        // la santé du PC ensuite, l'entretien, puis les bonus. Chaque pastille envoie une
+        // phrase déjà couverte par le harnais (aucune logique nouvelle ici, que du rangement).
+        private static readonly (string Title, (string, string)[] Items)[] StarterGroups =
         {
-            ("Ça rame en jeu", "ça rame et ça saccade en jeu"),
-            ("FPS bas", "mes fps sont bas"),
-            ("Ping / lag en ligne", "ça lag en ligne, ping élevé"),
-            ("Un jeu ne démarre pas", "un jeu refuse de démarrer, dll manquante"),
-            ("Écran bloqué à 60 Hz", "mon écran semble bloqué à 60 hz"),
-            ("Bilan complet du PC", "fais un bilan complet de mon pc"),
-            ("Le PC chauffe", "le pc ou le gpu chauffe et bride"),
-            ("Réparer Windows", "répare windows, fichiers système corrompus"),
-            ("Plus de son", "je n'ai plus de son"),
-            ("Plus d'internet", "je n'ai plus d'internet, pas de connexion"),
-            ("Qui bouffe mon CPU ?", "quel programme consomme mon cpu en fond"),
-            ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
-            ("PC lent à s'allumer", "mon pc est long a demarrer, trop de programmes au boot"),
-            ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
-            ("Libérer de l'espace", "libérer de l'espace disque"),
-            // Nouvelles fonctions v15.18+ : visibles dès l'ouverture, plus besoin de deviner la phrase.
-            ("Bilan mises à jour", "fais le bilan des mises à jour"),
-            ("Hibernation : récupérer des Go", "désactive l'hibernation"),
-            ("Fenêtres qui saccadent", "mes fenetres windows saccadent"),
-            ("Jeux gratuits PC", "jeux gratuits"),
-            ("Actus gaming", "actu jeux vidéo"),
+            ("🎮 Problèmes en jeu", new[]
+            {
+                ("Ça rame en jeu", "ça rame et ça saccade en jeu"),
+                ("FPS bas", "mes fps sont bas"),
+                ("Ping / lag en ligne", "ça lag en ligne, ping élevé"),
+                ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
+                ("Un jeu ne démarre pas", "un jeu refuse de démarrer, dll manquante"),
+                ("Écran bloqué à 60 Hz", "mon écran semble bloqué à 60 hz"),
+            }),
+            ("🖥️ PC & Windows", new[]
+            {
+                ("Fenêtres qui saccadent", "mes fenetres windows saccadent"),
+                ("Le PC chauffe", "le pc ou le gpu chauffe et bride"),
+                ("PC lent à s'allumer", "mon pc est long a demarrer, trop de programmes au boot"),
+                ("Qui bouffe mon CPU ?", "quel programme consomme mon cpu en fond"),
+                ("Plus de son", "je n'ai plus de son"),
+                ("Plus d'internet", "je n'ai plus d'internet, pas de connexion"),
+                ("Réparer Windows", "répare windows, fichiers système corrompus"),
+            }),
+            ("🧰 Entretien & espace", new[]
+            {
+                ("Bilan complet du PC", "fais un bilan complet de mon pc"),
+                ("Bilan mises à jour", "fais le bilan des mises à jour"),
+                ("Libérer de l'espace", "libérer de l'espace disque"),
+                ("Hibernation : récupérer des Go", "désactive l'hibernation"),
+                ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
+            }),
+            ("🎁 Bonus", new[]
+            {
+                ("Jeux gratuits PC", "jeux gratuits"),
+                ("Actus gaming", "actu jeux vidéo"),
+            }),
         };
+
+        // Liste à plat (pastilles affichées SOUS une réponse) : même contenu, sans les en-têtes.
+        private static readonly (string, string)[] Starters = Flatten(StarterGroups);
+        private static (string, string)[] Flatten((string Title, (string, string)[] Items)[] groups)
+        {
+            var all = new System.Collections.Generic.List<(string, string)>();
+            foreach (var g in groups) all.AddRange(g.Items);
+            return all.ToArray();
+        }
 
         private const int AV = 36, GAP = 10;
         private const int ColumnW = 860;                                   // largeur maxi de la conversation
