@@ -626,6 +626,12 @@ namespace BTOptimizer
             ("PC lent à s'allumer", "mon pc est long a demarrer, trop de programmes au boot"),
             ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
             ("Libérer de l'espace", "libérer de l'espace disque"),
+            // Nouvelles fonctions v15.18+ : visibles dès l'ouverture, plus besoin de deviner la phrase.
+            ("Bilan mises à jour", "fais le bilan des mises à jour"),
+            ("Hibernation : récupérer des Go", "désactive l'hibernation"),
+            ("Fenêtres qui saccadent", "mes fenetres windows saccadent"),
+            ("Jeux gratuits PC", "jeux gratuits"),
+            ("Actus gaming", "actu jeux vidéo"),
         };
 
         private const int AV = 36, GAP = 10;

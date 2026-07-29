@@ -4,6 +4,14 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.32 — Les nouvelles fonctions ENFIN visibles : 5 pastilles de plus dans le chat
+- Retour utilisateur : « elles sont où les nouvelles fonctions ? » — elles n'étaient accessibles qu'en
+  tapant la bonne phrase. Maintenant elles s'affichent en pastilles dès l'ouverture du Copilote :
+  **« Bilan mises à jour »**, **« Hibernation : récupérer des Go »**, **« Fenêtres qui saccadent »**,
+  **« Jeux gratuits PC »**, **« Actus gaming »**.
+- Chaque pastille envoie une phrase déjà testée au harnais (aucune nouvelle logique) ; « Libérer de
+  l'espace » pointe déjà vers le grand bilan stockage depuis v15.25. Harnais 170/170, inchangé.
+
 ## v15.31 — « Fenêtres qui saccadent » : le panneau qui accuse la bonne cause
 - **Nouveau panneau** (menu ⋯ → Laboratoire, « J'ai un problème… » → Écran, ou en disant
   « les fenêtres saccadent » au Copilote) pour LE symptôme le plus mal diagnostiqué du bureau
