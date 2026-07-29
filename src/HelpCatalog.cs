@@ -51,6 +51,7 @@ namespace BTOptimizer
                 new Entry("Jeux & lancement", "Moins de saccades (analyse antivirus des jeux)", "Exclusions antivirus", () => new DefenderForm(L)),
 
                 new Entry("Écran & périphériques", "Mon écran semble bloqué à 60 Hz", "Réglages d'écran", () => new DisplayForm(L)),
+                new Entry("Écran & périphériques", "Les fenêtres saccadent quand je les déplace", "Fenêtres qui saccadent", () => new WindowLagForm(L)),
                 new Entry("Écran & périphériques", "Ma souris est-elle vraiment à 1000 Hz ?", "Fréquence de la souris", () => new MouseForm(L)),
 
                 new Entry("Entretien & sécurité", "PC lent à démarrer (trop de programmes au boot)", "Programmes au démarrage", () => new StartupForm(L)),

@@ -4,6 +4,25 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.31 — « Fenêtres qui saccadent » : le panneau qui accuse la bonne cause
+- **Nouveau panneau** (menu ⋯ → Laboratoire, « J'ai un problème… » → Écran, ou en disant
+  « les fenêtres saccadent » au Copilote) pour LE symptôme le plus mal diagnostiqué du bureau
+  Windows — qu'on met presque toujours sur le dos de la carte graphique, à tort.
+- **Il regarde ce que voit le compositeur (DWM)** et classe les causes par impact :
+  1. **écrans à fréquences MIXTES** (un 500 Hz à côté d'un 180 Hz : DWM doit servir les deux
+     en une seule passe) — la cause n°1, avec la liste des écrans et leur fréquence ;
+  2. **écran VIRTUEL fantôme** (Parsec, spacedesk, DisplayLink, OBS…) que Windows compose en
+     plus des vrais ;
+  3. **MPO**, 4. **HAGS**, 5. **transparence**, 6. **pilote graphique de plus d'un an**.
+  Ce qui est déjà réglé n'est pas affiché : pas de faux constat pour faire du volume.
+- **Une correction à la fois, réversible** : l'alignement des fréquences se fait par l'API
+  d'affichage de Windows avec un bouton « ↩ remettre les fréquences d'origine », et chaque
+  application rappelle de **tester avant d'en appliquer une autre** — sinon on ne sait pas
+  laquelle a agi.
+- **Honnête sur le compromis** : aligner un 500 Hz sur 180 Hz fait perdre des images, l'app le
+  dit au lieu de le passer sous silence. Et quand rien n'est trouvé côté affichage, elle
+  renvoie vers la **latence DPC** (un pilote qui monopolise le CPU fait saccader tout le bureau).
+
 ## v15.30 — 4 optimisations SPÉCIAL 4G/5G (193 → 197) + « TOUT optimiser » devient contextuel
 - **BBR2 au lieu de CUBIC** (hors presets) — CUBIC prend toute perte de paquet pour un
   embouteillage et casse son débit ; or sur un lien RADIO, des paquets se perdent sans

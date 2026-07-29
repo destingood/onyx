@@ -181,6 +181,7 @@ namespace BTOptimizer
             labo.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
             labo.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
             labo.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
+            labo.DropDownItems.Add("🪟 Fenêtres qui saccadent (bureau, DWM)", null, (s, e) => OpenDialog(new WindowLagForm(Log)));
             labo.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
             labo.DropDownItems.Add("🧩 BIOS & manips manuelles (XMP, ReBAR…)", null, (s, e) => OpenDialog(new BiosGuideForm(Log)));
             labo.DropDownItems.Add(new ToolStripSeparator());
