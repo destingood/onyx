@@ -71,6 +71,9 @@ namespace BTOptimizer
             if (TrayStartEnabled && Environment.GetEnvironmentVariable("BT_UISHOT") == null
                 && Environment.GetEnvironmentVariable("BT_UITEST") != "1")
                 Shown += (s, e) => { try { Hide(); _tray.Visible = true; } catch { } };
+            // « Quoi de neuf » : une fois après une mise à jour (jamais au 1er lancement, jamais en mode tray).
+            if (!TrayStartEnabled)
+                Shown += (s, e) => { try { BeginInvoke((Action)(() => WhatsNew.ShowIfUpdated(this))); } catch { } };
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
@@ -337,6 +340,7 @@ namespace BTOptimizer
                                 _tray.BalloonTipText = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
                             }
                             _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
+                            TrayAlertBadge(sos != null ? 1 : al.Count);   // la pastille reste après la bulle
                             _tray.ShowBalloonTip(10000);
                         }
                         catch { }
@@ -413,7 +417,34 @@ namespace BTOptimizer
             _tray.ContextMenuStrip = m;
         }
 
-        private void RestoreFromTray() { Show(); WindowState = FormWindowState.Normal; Activate(); _tray.Visible = false; }
+        private void RestoreFromTray()
+        {
+            Show(); WindowState = FormWindowState.Normal; Activate(); _tray.Visible = false;
+            try { _tray.Icon = Icon; _tray.Text = "ONYX"; } catch { }   // efface la pastille d'alerte
+        }
+
+        // Pastille ROUGE sur l'icône de zone de notification quand le Gardien a des alertes —
+        // indispensable en mode « démarrage minimisé » : l'icône raconte l'état sans bulle.
+        private Icon _badgeIcon;
+        private void TrayAlertBadge(int count)
+        {
+            try
+            {
+                if (_badgeIcon == null)
+                {
+                    var bmp = Icon.ToBitmap();
+                    using (var g = Graphics.FromImage(bmp))
+                    {
+                        int d = Math.Max(6, bmp.Width * 7 / 16);
+                        g.FillEllipse(Brushes.Red, bmp.Width - d, bmp.Height - d, d, d);
+                    }
+                    _badgeIcon = Icon.FromHandle(bmp.GetHicon());
+                }
+                _tray.Icon = _badgeIcon;
+                _tray.Text = "ONYX — " + count + " alerte(s) du Gardien";
+            }
+            catch { }
+        }
 
         private void ToggleBoost()
         {

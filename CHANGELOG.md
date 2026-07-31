@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.42 — « Quoi de neuf » après mise à jour + pastille rouge sur l'icône
+- **📰 ÉCRAN « QUOI DE NEUF »** : au premier lancement d'une NOUVELLE version, ONYX présente les
+  nouveautés — lues dans le **CHANGELOG embarqué dans l'exe** (zéro maintenance : le journal existe
+  déjà, il est désormais une ressource compilée). Une seule fois par version (bt-lastver.txt).
+  Jamais à la première installation (pas de leçon d'histoire à un nouveau venu), jamais en mode
+  « démarrage minimisé », jamais pendant les tests UI. Ça faisait des dizaines de versions livrées
+  que personne ne pouvait découvrir.
+- **🔴 PASTILLE D'ALERTE sur l'icône de zone de notification** : quand le Gardien signale quelque
+  chose (ou un SOS post-crash), l'icône porte un point rouge et l'info-bulle indique
+  « ONYX — N alerte(s) du Gardien ». La pastille disparaît dès l'ouverture de l'app. Indispensable
+  en mode démarrage minimisé : l'icône raconte l'état même quand la bulle a disparu.
+- Parseur du CHANGELOG PUR et testé (2 sections extraites, intro ignorée, entrée vide = vide).
+  Harnais **185/185** ; UITEST 45/45 formes.
+
 ## v15.41 — Hors Copilote : « ONYX toujours là, jamais dans les pattes »
 - **⌨️ Ctrl+Alt+O (raccourci GLOBAL)** : fait apparaître ONYX au premier plan depuis n'importe où —
   ou le range dans la zone de notification s'il est déjà visible. Même mécanique fiable que le

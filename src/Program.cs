@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.41.0.0")]
-[assembly: AssemblyFileVersion("15.41.0.0")]
+[assembly: AssemblyVersion("15.42.0.0")]
+[assembly: AssemblyFileVersion("15.42.0.0")]
 
 namespace BTOptimizer
 {
@@ -738,9 +738,16 @@ namespace BTOptimizer
                 bool sd4 = UtilityTools.IsWhatChanged("ca marchait hier") && UtilityTools.IsWhatChanged("qu'est ce qui a change sur mon pc")
                     && !UtilityTools.IsWhatChanged("qu'est ce que tu as change") && !UtilityTools.IsWhatChanged("bonjour"); if (sd4) ok43++; Console.WriteLine((sd4 ? "OK  " : "FAIL") + "  phrases : 'marchait hier' oui, journal (tu as) non");
 
+                // v15.42 : « quoi de neuf » — parseur du CHANGELOG embarque (pur, testable).
+                int ok44 = 0;
+                string clSample = string.Join("\n", new[] { "# Titre", "", "intro", "", "## v2 - B", "- ligne b", "", "## v1 - A", "- ligne a", "", "## v0 - Z", "- ligne z" });
+                string top2 = WhatsNew.TopSections(clSample, 2);
+                bool wn1 = top2.Contains("v2") && top2.Contains("v1") && !top2.Contains("v0") && !top2.Contains("intro"); if (wn1) ok44++; Console.WriteLine((wn1 ? "OK  " : "FAIL") + "  quoi de neuf : 2 sections, sans intro ni la 3e");
+                bool wn2 = WhatsNew.TopSections(null, 2) == "" && WhatsNew.TopSections("pas de section", 2) == ""; if (wn2) ok44++; Console.WriteLine((wn2 ? "OK  " : "FAIL") + "  quoi de neuf : entree vide/illisible -> chaine vide");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

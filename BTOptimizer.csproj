@@ -43,6 +43,10 @@
     <EmbeddedResource Include="src\assets\fonts\*.ttf;src\assets\fonts\*.otf">
       <LogicalName>%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <!-- CHANGELOG embarque : l'ecran « Quoi de neuf » le lit apres une mise a jour. -->
+    <EmbeddedResource Include="CHANGELOG.md">
+      <LogicalName>CHANGELOG.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
