@@ -268,6 +268,8 @@ namespace BTOptimizer
                         if (!Guardian.DueToday()) return;
                         // la mesure santé du jour part en fond (historique = tendance dans le chat)
                         try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
+                        // photo quotidienne de l'état du système (« qu'est-ce qui a changé sur mon PC ? »)
+                        try { StateDiff.SaveToday(); } catch { }
                         al = Guardian.Alerts();
                         if (al.Count == 0) return;
                     }

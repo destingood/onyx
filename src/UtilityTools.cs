@@ -686,6 +686,19 @@ namespace BTOptimizer
                 || n.Contains("historique de sante") || n.Contains("historique sante");
         }
 
+        // ---- « ÇA MARCHAIT HIER » (diff d'état système) ----
+        /// <summary>« qu'est-ce qui a changé sur mon PC », « ça marchait hier » → vrai
+        /// (PAS « qu'est-ce que TU as changé » = journal des actions d'ONYX).</summary>
+        internal static bool IsWhatChanged(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("tu as") || n.Contains("t'as change") || n.Contains("t as change")) return false;   // → journal
+            if (n.Contains("marchait hier") || n.Contains("marchait avant") || n.Contains("fonctionnait hier")
+                || n.Contains("fonctionnait avant") || n.Contains("marchait tres bien")) return true;
+            return (n.Contains("qui a change") || n.Contains("quoi a change") || n.Contains("qu'est ce qui a change")
+                || n.Contains("qu est ce qui a change")) && Regex.IsMatch(n, "\\b(pc|ordi|ordinateur|systeme|windows)\\b");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

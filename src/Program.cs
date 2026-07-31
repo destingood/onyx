@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.39.0.0")]
-[assembly: AssemblyFileVersion("15.39.0.0")]
+[assembly: AssemblyVersion("15.40.0.0")]
+[assembly: AssemblyFileVersion("15.40.0.0")]
 
 namespace BTOptimizer
 {
@@ -723,9 +723,24 @@ namespace BTOptimizer
                 bool ht2 = UtilityTools.IsHealthTrend("score de sante") && UtilityTools.IsHealthTrend("tendance")
                     && !UtilityTools.IsHealthTrend("bonjour"); if (ht2) ok42++; Console.WriteLine((ht2 ? "OK  " : "FAIL") + "  tendance : detection, pas un bonjour");
 
+                // v15.40 : « ca marchait hier » — diff d'etat systeme (pur, testable).
+                int ok43 = 0;
+                var oldSt = new System.Collections.Generic.Dictionary<string, string> {
+                    { "pilote_gpu", "RTX 4080 v551.23" }, { "windows", "25H2 build 26200" },
+                    { "demarrage", "Steam|Discord" }, { "disque_libre_go", "28" } };
+                var newSt = new System.Collections.Generic.Dictionary<string, string> {
+                    { "pilote_gpu", "RTX 4080 v560.70" }, { "windows", "25H2 build 26200" },
+                    { "demarrage", "Steam|Discord|Wallpaper Engine" }, { "disque_libre_go", "12" } };
+                var df = StateDiff.Diff(oldSt, newSt);
+                bool sd1 = df.Count == 3; if (sd1) ok43++; Console.WriteLine((sd1 ? "OK  " : "FAIL") + "  diff : pilote+demarrage+disque = 3 changements detectes (" + df.Count + ")");
+                bool sd2 = df[0].Contains("551.23") && df[0].Contains("560.70") && df[1].Contains("Wallpaper Engine"); if (sd2) ok43++; Console.WriteLine((sd2 ? "OK  " : "FAIL") + "  diff : versions pilote citees + nouveau demarrage nomme");
+                bool sd3 = StateDiff.Diff(oldSt, oldSt).Count == 0; if (sd3) ok43++; Console.WriteLine((sd3 ? "OK  " : "FAIL") + "  diff : identique -> zero changement");
+                bool sd4 = UtilityTools.IsWhatChanged("ca marchait hier") && UtilityTools.IsWhatChanged("qu'est ce qui a change sur mon pc")
+                    && !UtilityTools.IsWhatChanged("qu'est ce que tu as change") && !UtilityTools.IsWhatChanged("bonjour"); if (sd4) ok43++; Console.WriteLine((sd4 ? "OK  " : "FAIL") + "  phrases : 'marchait hier' oui, journal (tu as) non");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

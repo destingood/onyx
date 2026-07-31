@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.40 — « ÇA MARCHAIT HIER ! » : ONYX sait ce qui a changé sur ton PC
+- LA phrase classique du joueur a enfin une vraie réponse. Le Gardien prend chaque jour une **photo de
+  l'état du système** (bt-etat\, 30 jours gardés) : version du pilote GPU, version/build de Windows,
+  programmes au démarrage, Go libres.
+- **« ça marchait hier »**, « qu'est-ce qui a changé sur mon PC ? » → comparaison photo d'avant ↔
+  maintenant, en FAITS :
+  - 🎞 « Pilote GPU CHANGÉ : v551.23 → v560.70 » (le suspect n°1 d'un comportement qui change) ;
+  - 🚀 « NOUVEAU au démarrage : Wallpaper Engine » (nommé, pas deviné) ;
+  - 🪟 build Windows, 💽 delta disque (seuil 5 Go).
+  Rien de notable ? Il le dit, et propose l'enquête classique.
+- Distinction nette : « qu'est-ce que **TU** as changé » → journal des actions d'ONYX ;
+  « qu'est-ce **qui** a changé » → ce que le SYSTÈME a fait dans ton dos.
+- Moteur de diff PUR et testé au harnais (pilote cité, ajout au démarrage nommé, identique = zéro).
+  Harnais **183/183**.
+
 ## v15.39 — Tendance santé : le score du cockpit gagne une MÉMOIRE
 - **📈 « score de santé » / « tendance »** : le cockpit affichait « SANTÉ 56 % » puis l'oubliait.
   Désormais le Gardien enregistre UNE mesure par jour (bt-sante.csv, ~13 mois d'historique) et le

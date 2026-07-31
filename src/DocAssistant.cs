@@ -240,6 +240,10 @@ namespace BTOptimizer
             if (UtilityTools.IsHealthTrend(s))
                 return new Reply { Text = HealthTrend.TrendText(), ShowStarters = true };
 
+            // --- « ÇA MARCHAIT HIER ! » : diff entre la photo quotidienne du système et maintenant ---
+            if (UtilityTools.IsWhatChanged(s))
+                return new Reply { Text = StateDiff.DiffText(), ShowStarters = true };
+
             // --- LE GARDIEN : le résumé des alertes du jour (disque, SMART, reboot, uptime) ---
             if (UtilityTools.IsGuardian(s))
             {
