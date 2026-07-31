@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.43 — ONYX se diagnostique LUI-MÊME + infos de support en 1 clic
+- **🩹 « Vérifier mon installation »** (menu ⋯ → À propos) : ONYX contrôle SA PROPRE installation en
+  7 points et dit ce qui le limite — AVANT que tu te demandes pourquoi une fonction ne répond pas :
+  droits administrateur · dossier de données accessible en écriture (le piège « Program Files ») ·
+  WMI (matériel, SMART, pilote GPU) · journal d'événements (crashs, Gardien) · connexion internet ·
+  IA locale Ollama (optionnelle, et il le dit) · espace disque. Chaque point en échec explique quoi faire.
+- **📋 « Copier les infos de support »** : un clic → presse-papiers avec version ONYX, Windows, GPU +
+  âge du pilote, disque, uptime, crashs 14 j, résultat de l'auto-diagnostic. **Aucune donnée
+  personnelle** : ni nom d'utilisateur, ni adresse IP, ni chemin privé (vérifié au harnais).
+- Sonde console `BT_SELF=1`. Harnais **188/188** ; UITEST 45/45 formes.
+
 ## v15.42 — « Quoi de neuf » après mise à jour + pastille rouge sur l'icône
 - **📰 ÉCRAN « QUOI DE NEUF »** : au premier lancement d'une NOUVELLE version, ONYX présente les
   nouveautés — lues dans le **CHANGELOG embarqué dans l'exe** (zéro maintenance : le journal existe

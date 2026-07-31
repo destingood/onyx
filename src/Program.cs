@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.42.0.0")]
-[assembly: AssemblyFileVersion("15.42.0.0")]
+[assembly: AssemblyVersion("15.43.0.0")]
+[assembly: AssemblyFileVersion("15.43.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,15 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_SELF=1 : auto-diagnostic d'ONYX + infos de support, en console, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_SELF") == "1")
+            {
+                Console.WriteLine(SelfCheck.Text());
+                Console.WriteLine();
+                Console.WriteLine(SelfCheck.SupportInfo());
                 Environment.Exit(0);
             }
 
@@ -745,9 +754,19 @@ namespace BTOptimizer
                 bool wn1 = top2.Contains("v2") && top2.Contains("v1") && !top2.Contains("v0") && !top2.Contains("intro"); if (wn1) ok44++; Console.WriteLine((wn1 ? "OK  " : "FAIL") + "  quoi de neuf : 2 sections, sans intro ni la 3e");
                 bool wn2 = WhatsNew.TopSections(null, 2) == "" && WhatsNew.TopSections("pas de section", 2) == ""; if (wn2) ok44++; Console.WriteLine((wn2 ? "OK  " : "FAIL") + "  quoi de neuf : entree vide/illisible -> chaine vide");
 
+                // v15.43 : auto-diagnostic d'ONYX + infos de support (sans donnee perso).
+                int ok45 = 0;
+                var scLines = SelfCheck.Run();
+                bool sc1 = scLines.Count >= 6; if (sc1) ok45++; Console.WriteLine((sc1 ? "OK  " : "FAIL") + "  autodiag : " + scLines.Count + " verifications");
+                string scTxt = SelfCheck.Text();
+                bool sc2 = scTxt.Contains("Droits administrateur") && scTxt.Contains("WMI"); if (sc2) ok45++; Console.WriteLine((sc2 ? "OK  " : "FAIL") + "  autodiag : droits + WMI presents dans le texte");
+                string sup = SelfCheck.SupportInfo();
+                string userName = Environment.UserName;
+                bool sc3 = sup.Contains("ONYX") && sup.Contains("Windows") && (userName.Length < 3 || !sup.Contains(userName)); if (sc3) ok45++; Console.WriteLine((sc3 ? "OK  " : "FAIL") + "  support : infos utiles, AUCUN nom d'utilisateur");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

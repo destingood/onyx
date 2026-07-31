@@ -56,18 +56,52 @@ namespace BTOptimizer
             };
             Controls.Add(body);
 
-            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 300), AutoSize = true };
+            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 336), AutoSize = true };
             eula.LinkClicked += (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); };
             Controls.Add(eula);
 
+            // Auto-diagnostic d'ONYX : l'app vérifie sa propre installation (droits, WMI, données…)
+            var diag = new Button
+            {
+                Text = "🩹 Vérifier mon installation", Width = 190, Location = new Point(20, 296), Height = 26,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.White
+            };
+            diag.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            diag.Click += (s, e) =>
+            {
+                string txt;
+                try { txt = SelfCheck.Text(); } catch (Exception ex) { txt = "Le diagnostic a échoué : " + ex.Message; }
+                MessageBox.Show(this, txt, "ONYX — auto-diagnostic", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            Controls.Add(diag);
+
+            // Infos de support : tout pour dépanner, dans le presse-papiers, sans donnée perso.
+            var supp = new Button
+            {
+                Text = "📋 Copier les infos de support", Width = 200, Location = new Point(218, 296), Height = 26,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.White
+            };
+            supp.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            supp.Click += (s, e) =>
+            {
+                try
+                {
+                    Clipboard.SetText(SelfCheck.SupportInfo());
+                    supp.Text = "✓ Copié !";
+                }
+                catch { supp.Text = "Échec de la copie"; }
+            };
+            Controls.Add(supp);
+
             var close = new Button
             {
-                Text = "Fermer", Width = 100, Location = new Point(360, 296),
+                Text = "Fermer", Width = 100, Location = new Point(360, 328),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.White, DialogResult = DialogResult.OK
             };
             close.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             Controls.Add(close);
             AcceptButton = close;
+            ClientSize = new Size(480, 368);   // place pour les deux nouveaux boutons
             Theme.Apply(this);
         }
     }
