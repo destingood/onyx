@@ -634,6 +634,33 @@ namespace BTOptimizer
             return Regex.IsMatch(n, "(recommande|recommended)\\s*:\\s*(oui|yes)");
         }
 
+        // ---- SANTÉ DISQUES / JOURNAL / GARDIEN ----
+        /// <summary>« état de mes disques », « mon ssd est en bonne santé ? », « smart » → vrai.</summary>
+        internal static bool IsDiskHealth(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool disk = Regex.IsMatch(n, "\\b(ssd|disque|disques|hdd|nvme)\\b");
+            bool health = n.Contains("sante") || n.Contains("etat") || Regex.IsMatch(n, "\\bsmart\\b")
+                || n.Contains("va mourir") || n.Contains("mort") || n.Contains("fatigue") || n.Contains("usure");
+            return (disk && health) || n.Contains("smart de mes disques") || n.Contains("sante disque");
+        }
+
+        /// <summary>« qu'est-ce que tu as changé ? », « journal de bord », « historique des actions » → vrai.</summary>
+        internal static bool IsJournal(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("journal") || n.Contains("historique des actions") || n.Contains("historique des changements")
+                || (n.Contains("qu'est ce que tu as change") || n.Contains("qu est ce que tu as change")
+                    || n.Contains("qu'as tu change") || n.Contains("qu as tu change") || n.Contains("tu as change quoi"));
+        }
+
+        /// <summary>« gardien », « alertes », « tout va bien ? » → vrai.</summary>
+        internal static bool IsGuardian(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("gardien") || Regex.IsMatch(n, "\\balertes?\\b") || n.Contains("tout va bien");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

@@ -135,6 +135,47 @@ namespace BTOptimizer
             return f;
         }
 
+        public sealed class DiskHp { public string Name; public int Status; public int SizeGb; public bool IsSsd; }
+
+        /// <summary>Santé SMART des disques physiques (WMI Storage : HealthStatus 0=sain, 1=avertissement,
+        /// 2=défaillant). Windows la connaît mais ne la montre jamais — ONYX prévient AVANT la panne.</summary>
+        public static System.Collections.Generic.List<DiskHp> DiskHealth()
+        {
+            var list = new System.Collections.Generic.List<DiskHp>();
+            try
+            {
+                var scope = new ManagementScope(@"\\.\root\microsoft\windows\storage");
+                scope.Connect();
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT FriendlyName, MediaType, HealthStatus, Size FROM MSFT_PhysicalDisk")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["FriendlyName"]) ?? "";
+                        if (name.Length == 0) continue;
+                        int st = 0, mt = 0; long size = 0;
+                        try { st = Convert.ToInt32(mo["HealthStatus"]); } catch { }
+                        try { mt = Convert.ToInt32(mo["MediaType"]); } catch { }
+                        try { size = Convert.ToInt64(mo["Size"]); } catch { }
+                        int gb = (int)(size / 1073741824);
+                        if (gb < 32 && st == 0) continue;   // clés USB & lecteurs de cartes : hors-sujet si sains
+                        list.Add(new DiskHp { Name = name, Status = st, SizeGb = gb, IsSsd = mt == 4 });
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        /// <summary>0 → « sain », 1 → « avertissement », 2 → « DÉFAILLANT ». Français, sans jargon.</summary>
+        public static string DiskHealthLabel(int status)
+        {
+            switch (status)
+            {
+                case 0: return "sain";
+                case 1: return "avertissement (pré-panne possible)";
+                case 2: return "DÉFAILLANT — panne imminente";
+                default: return "état inconnu (" + status + ")";
+            }
+        }
+
         public sealed class GpuDrv { public string Name; public string Version; public int AgeDays; }
 
         /// <summary>Pilote GPU principal : nom, version, âge en jours (WMI). null si illisible.

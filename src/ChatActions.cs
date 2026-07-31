@@ -1680,6 +1680,30 @@ namespace BTOptimizer
             return result;
         }
 
+        /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
+        internal static bool RebootPendingPublic() { return RebootPending(); }
+
+        /// <summary>Santé SMART des disques, en texte prêt pour le chat. 100 % local, lecture seule.</summary>
+        public static string DiskHealthText()
+        {
+            var disks = Diagnostics.DiskHealth();
+            if (disks.Count == 0) return "Je n'ai pas pu lire la santé des disques (WMI Storage indisponible).";
+            var sb = new StringBuilder();
+            sb.Append("💾 Santé de tes disques (SMART, lu en local) :\n");
+            bool bad = false;
+            foreach (var d in disks)
+            {
+                sb.Append(d.Status == 0 ? "• ✅ " : "• 🚨 ").Append(d.Name);
+                if (d.SizeGb > 0) sb.Append(" (").Append(d.SizeGb >= 1000 ? (d.SizeGb / 1000.0).ToString("0.#") + " To" : d.SizeGb + " Go").Append(d.IsSsd ? ", SSD" : "").Append(')');
+                sb.Append(" : ").Append(Diagnostics.DiskHealthLabel(d.Status)).Append('\n');
+                if (d.Status != 0) bad = true;
+            }
+            sb.Append(bad
+                ? "🚨 Un disque annonce des problèmes : SAUVEGARDE tes données importantes MAINTENANT (l'avertissement SMART précède souvent la panne de peu)."
+                : "Tout est sain. Windows connaît cet état mais ne l'affiche jamais — ONYX te préviendra AVANT une panne (le Gardien vérifie à chaque ouverture).");
+            return sb.ToString();
+        }
+
         // Windows attend-il un redémarrage pour finir des mises à jour ? (2 clés registre standard)
         private static bool RebootPending()
         {

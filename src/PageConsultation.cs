@@ -492,6 +492,7 @@ namespace BTOptimizer
                         }
                         if (res != null) AddBubble(true, res.Text, res);
                         if (a.IsChange) RefreshTiles();   // le cockpit suit la réalité après une correction
+                        if (a.IsChange && !failed) { try { Journal.Add(a.Label); } catch { } }   // journal de bord
                         // Enchaînement automatique d'une MESURE portée par le résultat
                         // (ex. vérification complète après « TOUT réparer »).
                         if (res != null && res.Action != null && res.Action.AutoRun) RunAction(res.Action);

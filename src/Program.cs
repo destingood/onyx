@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.35.0.0")]
-[assembly: AssemblyFileVersion("15.35.0.0")]
+[assembly: AssemblyVersion("15.36.0.0")]
+[assembly: AssemblyFileVersion("15.36.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,16 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_GARDIEN=1 : sante SMART + alertes du Gardien en console (vraies mesures) et sort.
+            if (Environment.GetEnvironmentVariable("BT_GARDIEN") == "1")
+            {
+                Console.WriteLine(ChatActions.DiskHealthText());
+                var alz = Guardian.Alerts();
+                Console.WriteLine("GARDIEN : " + alz.Count + " alerte(s)");
+                foreach (var x in alz) Console.WriteLine(" • " + x);
                 Environment.Exit(0);
             }
 
@@ -683,9 +693,20 @@ namespace BTOptimizer
                     && UtilityTools.DismRecommended("Component Store Cleanup Recommended : Yes")
                     && !UtilityTools.DismRecommended("recommandé : Non") && !UtilityTools.DismRecommended(null); if (dk3) ok39++; Console.WriteLine((dk3 ? "OK  " : "FAIL") + "  DISM : parseur FR/EN, Non/null=false");
 
+                // v15.36 : Gardien + sante SMART des disques + journal de bord.
+                int ok40 = 0;
+                bool gd1 = UtilityTools.IsDiskHealth("etat de mes disques") && UtilityTools.IsDiskHealth("mon ssd est en bonne sante")
+                    && !UtilityTools.IsDiskHealth("bonjour") && !UtilityTools.IsDiskHealth("libere de la place sur le disque"); if (gd1) ok40++; Console.WriteLine((gd1 ? "OK  " : "FAIL") + "  sante disques : detecte, nettoyage exclu");
+                bool gd2 = UtilityTools.IsJournal("qu'est ce que tu as change") && UtilityTools.IsJournal("journal de bord")
+                    && !UtilityTools.IsJournal("bonjour"); if (gd2) ok40++; Console.WriteLine((gd2 ? "OK  " : "FAIL") + "  journal : detecte, pas un bonjour");
+                bool gd3 = UtilityTools.IsGuardian("gardien") && UtilityTools.IsGuardian("des alertes ?")
+                    && !UtilityTools.IsGuardian("comment ca va"); if (gd3) ok40++; Console.WriteLine((gd3 ? "OK  " : "FAIL") + "  gardien : detecte, 'comment ca va' exclu");
+                Journal.Add("Test harnais");
+                bool gd4 = Journal.TailText(3).Contains("Test harnais"); if (gd4) ok40++; Console.WriteLine((gd4 ? "OK  " : "FAIL") + "  journal : ecriture + relecture datee");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

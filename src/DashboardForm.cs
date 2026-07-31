@@ -65,6 +65,7 @@ namespace BTOptimizer
             _rail.BringToFront();   // la barre superposée doit rester au-dessus du contenu
 
             BuildTray();
+            StartGuardian();   // contrôle silencieux des signaux vitaux (1×/jour ; muet si tout va bien)
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
@@ -242,6 +243,38 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>LE GARDIEN : au lancement, vérifie en arrière-plan disque / santé SMART /
+        /// redémarrage en attente / uptime — 1 fois par jour. UNE notification discrète s'il y a
+        /// des alertes ; silence TOTAL sinon. Un gardien, pas une alarme de voiture.</summary>
+        private void StartGuardian()
+        {
+            if (Environment.GetEnvironmentVariable("BT_UISHOT") != null
+                || Environment.GetEnvironmentVariable("BT_UITEST") == "1") return;   // pas pendant les tests UI
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    System.Threading.Thread.Sleep(4000);          // laisse l'app finir de démarrer
+                    if (!Guardian.DueToday()) return;
+                    var al = Guardian.Alerts();
+                    if (al.Count == 0) return;
+                    BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            _tray.Visible = true;
+                            _tray.BalloonTipTitle = "🛡 Gardien ONYX — " + al.Count + " alerte(s)";
+                            _tray.BalloonTipText = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
+                            _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
+                            _tray.ShowBalloonTip(10000);
+                        }
+                        catch { }
+                    }));
+                }
+                catch { }
+            });
         }
 
         // En-tête de section dans un menu déroulant : item grisé, non cliquable — juste un titre.

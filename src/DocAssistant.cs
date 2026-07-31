@@ -220,6 +220,29 @@ namespace BTOptimizer
                 return new Reply { Text = "Nettoyage OFFICIEL du magasin de composants Windows (DISM) : souvent 2 à 8 Go récupérés, "
                     + "5 à 20 minutes, aucun risque pour tes fichiers.", Action = ChatActions.ComponentCleanupAction() };
 
+            // --- SANTÉ SMART des disques (local, lecture seule) : prévenir AVANT la panne ---
+            if (UtilityTools.IsDiskHealth(s))
+                return new Reply { Text = ChatActions.DiskHealthText(), ShowStarters = true };
+
+            // --- JOURNAL DE BORD : tout ce qu'ONYX a changé, daté — transparence totale ---
+            if (UtilityTools.IsJournal(s))
+                return new Reply { Text = Journal.TailText(15), ShowStarters = true };
+
+            // --- LE GARDIEN : le résumé des alertes du jour (disque, SMART, reboot, uptime) ---
+            if (UtilityTools.IsGuardian(s))
+            {
+                var al = Guardian.Alerts();
+                if (al.Count == 0)
+                    return new Reply { Text = "🛡 Gardien : RIEN à signaler aujourd'hui — disque OK, disques sains (SMART), pas de "
+                        + "redémarrage en attente, uptime raisonnable. Je re-vérifie à chaque ouverture d'ONYX.", ShowStarters = true };
+                var gsb = new System.Text.StringBuilder();
+                gsb.Append("🛡 Gardien — ").Append(al.Count).Append(" alerte(s) :\n");
+                foreach (var x in al) gsb.Append("• ").Append(x).Append('\n');
+                bool disk = false; foreach (var x in al) if (x.Contains("Disque système")) disk = true;
+                return new Reply { Text = gsb.ToString().TrimEnd(),
+                    Action = disk ? ChatActions.StorageAuditAction() : null, Dynamic = false };
+            }
+
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
             {

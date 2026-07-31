@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.36 — Carte blanche : le Gardien, la santé SMART des disques, le journal de bord
+Trois fonctions auxquelles on ne pense jamais… jusqu'au jour où on en a besoin :
+- **🛡 LE GARDIEN** : à chaque ouverture d'ONYX (1 fois par jour max), vérification SILENCIEUSE des
+  signaux vitaux — disque presque plein, santé SMART, redémarrage Windows en attente, uptime > 14 j.
+  S'il y a des alertes : UNE notification discrète (cliquable → Copilote). Si tout va bien : silence
+  total. Un gardien, pas une alarme de voiture. Commande « gardien » pour le résumé à la demande.
+- **💾 SANTÉ SMART DES DISQUES** : « état de mes disques » → chaque disque avec son verdict (sain /
+  avertissement pré-panne / DÉFAILLANT). Windows connaît cet état mais ne l'affiche jamais ; ONYX
+  prévient AVANT la panne et dit quand SAUVEGARDER. Vérifié en réel : 5 disques listés, tous sains.
+- **📓 JOURNAL DE BORD** : chaque bouton « changement » cliqué est tracé (date, heure, action) dans
+  bt-journal.txt. « Qu'est-ce que tu as changé ? » → l'historique daté. La confiance par la
+  transparence — et les mesures, elles, ne sont jamais journalisées (elles ne changent rien).
+- Sonde console `BT_GARDIEN=1`. Harnais **174/174** (détections + écriture/relecture du journal).
+
 ## v15.35 — Présence Discord ACTIVABLE (App ID sans recompiler) + activités qui tournent
 - Constat honnête : la « Présence Discord » était **inerte depuis le début** — l'Application ID était un
   placeholder de zéros compilé en dur, donc rien ne pouvait s'afficher.
