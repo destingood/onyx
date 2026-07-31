@@ -181,6 +181,7 @@ namespace BTOptimizer
             check.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
             check.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
             check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
+            check.DropDownItems.Add("🎯 Mon pilote GPU est-il instable ?", null, (s, e) => ShowGpuStability());
             check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
             check.DropDownItems.Add(new ToolStripSeparator());
             check.DropDownItems.Add(MenuHead("📋 Inventaire & entretien"));
@@ -254,6 +255,15 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>Verdict « pilote GPU instable ? » : croise erreurs, âge du pilote et crashs,
+        /// et donne la marche à suivre dans l'ordre. Lecture seule.</summary>
+        private void ShowGpuStability()
+        {
+            string txt;
+            try { txt = GpuStability.Text(); } catch (Exception ex) { txt = "Analyse impossible : " + ex.Message; }
+            MessageBox.Show(this, txt, "ONYX — stabilité du pilote GPU", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>Item du tray : vérification du Gardien À LA DEMANDE — répond TOUJOURS,

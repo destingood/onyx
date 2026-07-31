@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.44 — « Mon pilote GPU est-il instable ? » : le verdict, et la marche à suivre
+- **🎯 Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : croise le NOMBRE d'erreurs pilote du
+  journal d'événements, l'ÂGE du pilote et les crashs d'applications, puis **conclut** — sain / à
+  surveiller / instable / très instable — et donne les étapes **dans l'ordre**, toutes gratuites :
+  - pilote RÉCENT qui plante → revenir à la version PRÉCÉDENTE (un pilote neuf n'est pas toujours
+    meilleur — personne ne dit jamais ça aux joueurs) ;
+  - réinstallation PROPRE avec DDU (cause n°1 des instabilités qui traînent) ;
+  - couper tout overclock GPU ; vérifier l'alimentation (12VHPWR sur les RTX 40) et les températures ;
+  - beaucoup de crashs d'applis en plus → « Réparer Windows » (les deux vont souvent ensemble).
+- **📄 « Exporter le diagnostic complet »** (⋯ → À propos) : UN fichier texte sur le Bureau avec tout
+  le contexte — infos de support, auto-diagnostic, stabilité GPU, santé SMART, ce qui a changé,
+  tendance santé, journal des actions. À joindre à un forum ou un SAV ; aucune donnée personnelle.
+- Verdict PUR et testé au harnais (200 erreurs → très instable + DDU ; pilote récent → retour arrière ;
+  0 erreur → aucune manip proposée). Sonde `BT_GPU=1`. Harnais **192/192**.
+
 ## v15.43 — ONYX se diagnostique LUI-MÊME + infos de support en 1 clic
 - **🩹 « Vérifier mon installation »** (menu ⋯ → À propos) : ONYX contrôle SA PROPRE installation en
   7 points et dit ce qui le limite — AVANT que tu te demandes pourquoi une fonction ne répond pas :

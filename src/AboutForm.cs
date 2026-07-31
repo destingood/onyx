@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -56,7 +57,7 @@ namespace BTOptimizer
             };
             Controls.Add(body);
 
-            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 336), AutoSize = true };
+            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 368), AutoSize = true };
             eula.LinkClicked += (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); };
             Controls.Add(eula);
 
@@ -93,15 +94,31 @@ namespace BTOptimizer
             };
             Controls.Add(supp);
 
+            // Export du diagnostic COMPLET : un fichier texte à joindre à un forum / SAV.
+            var expo = new Button
+            {
+                Text = "📄 Exporter le diagnostic complet (Bureau)", Width = 398, Location = new Point(20, 326), Height = 26,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.White
+            };
+            expo.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            expo.Click += (s, e) =>
+            {
+                string p = null;
+                try { p = DiagExport.Save(); } catch { }
+                expo.Text = p != null ? "✓ " + Path.GetFileName(p) + " (Bureau)" : "Échec de l'export";
+                if (p != null) { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(p) { UseShellExecute = true }); } catch { } }
+            };
+            Controls.Add(expo);
+
             var close = new Button
             {
-                Text = "Fermer", Width = 100, Location = new Point(360, 328),
+                Text = "Fermer", Width = 100, Location = new Point(360, 360),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.White, DialogResult = DialogResult.OK
             };
             close.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             Controls.Add(close);
             AcceptButton = close;
-            ClientSize = new Size(480, 368);   // place pour les deux nouveaux boutons
+            ClientSize = new Size(480, 400);   // place pour les boutons diagnostic / support / export
             Theme.Apply(this);
         }
     }

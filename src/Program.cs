@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.43.0.0")]
-[assembly: AssemblyFileVersion("15.43.0.0")]
+[assembly: AssemblyVersion("15.44.0.0")]
+[assembly: AssemblyFileVersion("15.44.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,15 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_GPU=1 : verdict « pilote GPU instable ? » + export du diagnostic complet, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_GPU") == "1")
+            {
+                Console.WriteLine(GpuStability.Text());
+                string pth = DiagExport.Save();
+                Console.WriteLine("Export diagnostic : " + (pth ?? "(echec)"));
                 Environment.Exit(0);
             }
 
@@ -764,9 +773,20 @@ namespace BTOptimizer
                 string userName = Environment.UserName;
                 bool sc3 = sup.Contains("ONYX") && sup.Contains("Windows") && (userName.Length < 3 || !sup.Contains(userName)); if (sc3) ok45++; Console.WriteLine((sc3 ? "OK  " : "FAIL") + "  support : infos utiles, AUCUN nom d'utilisateur");
 
+                // v15.44 : verdict pilote GPU (pur) + export diagnostic complet.
+                int ok46 = 0;
+                var vHigh = GpuStability.Verdict(200, 8, 87);
+                bool gs1 = vHigh.Level == 3 && vHigh.Title.Contains("200") && vHigh.Advice.Contains("DDU"); if (gs1) ok46++; Console.WriteLine((gs1 ? "OK  " : "FAIL") + "  GPU : 200 erreurs -> tres instable + DDU conseille");
+                var vFresh = GpuStability.Verdict(120, 2, 10);
+                bool gs2 = vFresh.Advice.Contains("PRECEDENTE") || vFresh.Advice.Contains("PRÉCÉDENTE"); if (gs2) ok46++; Console.WriteLine((gs2 ? "OK  " : "FAIL") + "  GPU : pilote recent qui plante -> revenir en arriere");
+                var vOk = GpuStability.Verdict(0, 0, 60);
+                bool gs3 = vOk.Level == 0 && !vOk.Advice.Contains("DDU"); if (gs3) ok46++; Console.WriteLine((gs3 ? "OK  " : "FAIL") + "  GPU : 0 erreur -> sain, aucune manip proposee");
+                string dexp = DiagExport.Build();
+                bool gs4 = dexp.Contains("DIAGNOSTIC COMPLET") && dexp.Contains("STABILITE") == false && dexp.Contains("PILOTE GPU"); if (gs4) ok46++; Console.WriteLine((gs4 ? "OK  " : "FAIL") + "  export : rapport complet assemble");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
