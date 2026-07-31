@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.35 — Présence Discord ACTIVABLE (App ID sans recompiler) + activités qui tournent
+- Constat honnête : la « Présence Discord » était **inerte depuis le début** — l'Application ID était un
+  placeholder de zéros compilé en dur, donc rien ne pouvait s'afficher.
+- **Activable sans recompiler** : menu ⋯ → Système → ⭐ ONYX → « Activer la présence Discord (coller
+  l'App ID)… » — colle l'ID (18-19 chiffres), c'est persisté (`bt-discord-appid.txt`) et la présence
+  démarre aussitôt (si Discord tourne).
+- **Activités VIVANTES** : le statut tourne toutes les 60 s — « Optimise son PC », « Traque les FPS
+  perdus », « 197 optimisations sous la main », « Consulte son Copilote IA » — avec la version d'ONYX
+  et le temps écoulé. Fini la phrase figée.
+- Vie privée inchangée : la présence parle au Discord installé sur CE PC (canal local nommé), rien ne
+  part sur internet depuis ONYX.
+- **Reste à faire côté Discord (2 min, seul le propriétaire du compte peut le faire)** :
+  discord.com/developers/applications → « New Application » nommée ONYX → copier l'APPLICATION ID →
+  le coller dans la boîte. Optionnel : Art Assets → logo nommé « logo ».
+- UITEST 45/45 formes ; harnais 170/170.
+
 ## v15.34 — Le menu ⋯ trié aussi : sous-catégories avec en-têtes de section
 - Suite du tri : les 3 sous-menus les plus chargés du menu ⋯ sont rangés en sections (titres grisés) :
   - **🩺 Check Up+** : « 🔎 Diagnostic » (santé, qui ralentit, réglages néfastes) → « 🌡 Mesures & stress »

@@ -18,16 +18,18 @@ namespace BTOptimizer
     /// </summary>
     internal static class DiscordPresence
     {
-        // ⚠️ REMPLACE ces zéros par l'Application ID de ton app Discud « ONYX » (18-19 chiffres).
-        private const string AppId = "0000000000000000000";
-
         private static NamedPipeClientStream _pipe;
         private static Thread _thread;
         private static volatile bool _running;
+        private static string _appId;
 
         private static string ConfigPath
         {
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-discord.txt"); }
+        }
+        private static string AppIdPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-discord-appid.txt"); }
         }
 
         /// <summary>Activée par défaut ; « 0 » dans le fichier = désactivée.</summary>
@@ -37,8 +39,35 @@ namespace BTOptimizer
             set { try { File.WriteAllText(ConfigPath, value ? "1" : "0"); } catch { } }
         }
 
+        /// <summary>Application ID Discord : collé par l'utilisateur (menu ⋯ → Système → ⭐ ONYX),
+        /// persisté dans bt-discord-appid.txt — plus besoin de recompiler pour l'activer.</summary>
+        public static string AppId
+        {
+            get
+            {
+                if (_appId != null) return _appId;
+                try
+                {
+                    if (File.Exists(AppIdPath))
+                    {
+                        string s = File.ReadAllText(AppIdPath).Trim();
+                        ulong _u;
+                        if (s.Length >= 17 && s.Length <= 20 && ulong.TryParse(s, out _u)) { _appId = s; return _appId; }
+                    }
+                }
+                catch { }
+                _appId = "";
+                return _appId;
+            }
+            set
+            {
+                _appId = null;   // relire depuis le fichier au prochain accès
+                try { File.WriteAllText(AppIdPath, (value ?? "").Trim()); } catch { }
+            }
+        }
+
         /// <summary>true si un App ID réel est configuré (sinon la présence reste inerte).</summary>
-        public static bool Configured { get { return AppId != "0000000000000000000" && AppId.Length >= 17; } }
+        public static bool Configured { get { return AppId.Length >= 17; } }
 
         public static void StartIfEnabled()
         {
@@ -66,11 +95,13 @@ namespace BTOptimizer
                 if (!Connect()) { _running = false; return; }
                 Write(0, "{\"v\":1,\"client_id\":\"" + AppId + "\"}");   // handshake
                 ReadFrame();                                            // READY (ignoré)
-                SendActivity();
-                // Garde le pipe vivant (Discord conserve l'activité tant que la connexion tient).
+                int tick = 0, secs = 0;
+                SendActivity(tick++);
+                // Garde le pipe vivant, et fait TOURNER l'activité toutes les 60 s (statut vivant).
                 while (_running && _pipe != null && _pipe.IsConnected)
                 {
                     Thread.Sleep(1000);
+                    if (_running && ++secs % 60 == 0) SendActivity(tick++);
                 }
             }
             catch { }
@@ -125,16 +156,34 @@ namespace BTOptimizer
             try { _pipe.ReadExactly(buf, 0, len); } catch { }
         }
 
-        private static void SendActivity()
+        private static readonly long StartTs = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        private static int _tweakCount = -1;   // compté une fois, en tâche de fond
+
+        // Lignes d'activité qui TOURNENT (60 s) : un statut vivant plutôt qu'une phrase figée.
+        private static string DetailsLine(int tick)
         {
-            long start = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (_tweakCount < 0) { try { _tweakCount = Catalog.All().Count; } catch { _tweakCount = 0; } }
+            string[] lines =
+            {
+                "Optimise son PC",
+                "Traque les FPS perdus",
+                _tweakCount > 0 ? _tweakCount + " optimisations sous la main" : "Optimise son PC",
+                "Consulte son Copilote IA",
+            };
+            return lines[((tick % lines.Length) + lines.Length) % lines.Length];
+        }
+
+        private static void SendActivity(int tick)
+        {
             int pid; try { pid = System.Diagnostics.Process.GetCurrentProcess().Id; } catch { pid = 0; }
+            string ver = "";
+            try { var v = typeof(DiscordPresence).Assembly.GetName().Version; ver = " v" + v.Major + "." + v.Minor.ToString("00"); } catch { }
             string nonce = Guid.NewGuid().ToString();
             string json =
                 "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":\"" + nonce + "\",\"args\":{\"pid\":" + pid + ",\"activity\":{" +
-                "\"details\":\"Optimise son PC\",\"state\":\"avec ONYX\"," +
+                "\"details\":\"" + DetailsLine(tick) + "\",\"state\":\"avec ONYX" + ver + "\"," +
                 "\"assets\":{\"large_image\":\"logo\",\"large_text\":\"ONYX — l'optimiseur gaming\"}," +
-                "\"timestamps\":{\"start\":" + start + "}}}}";
+                "\"timestamps\":{\"start\":" + StartTs + "}}}}";
             try { Write(1, json); ReadFrame(); } catch { }
         }
     }

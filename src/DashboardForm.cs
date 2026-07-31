@@ -232,6 +232,7 @@ namespace BTOptimizer
             var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec ONYX »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
+            sys.DropDownItems.Add("Activer la présence Discord (coller l'App ID)…", null, (s, e) => ConfigureDiscordAppId());
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
@@ -247,6 +248,50 @@ namespace BTOptimizer
         private static ToolStripMenuItem MenuHead(string text)
         {
             return new ToolStripMenuItem(text) { Enabled = false };
+        }
+
+        /// <summary>Colle l'Application ID Discord (créé sur discord.com/developers) et démarre la
+        /// présence. Sans App ID, la présence Discord ne PEUT pas s'afficher — honnêteté oblige.</summary>
+        private void ConfigureDiscordAppId()
+        {
+            using (var f = new Form
+            {
+                Text = "Présence Discord — Application ID", Width = 560, Height = 210,
+                FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false, MinimizeBox = false, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim
+            })
+            {
+                var lab = new Label
+                {
+                    Left = 16, Top = 14, Width = 515, Height = 66, ForeColor = FpsUi.Dim,
+                    Text = "1) Va sur discord.com/developers/applications → « New Application » → nomme-la ONYX.\n"
+                         + "2) Copie l'APPLICATION ID (18-19 chiffres) et colle-le ci-dessous.\n"
+                         + "3) (Optionnel) Rich Presence → Art Assets : uploade un logo nommé exactement « logo »."
+                };
+                var tb = new TextBox { Left = 16, Top = 88, Width = 400, Text = DiscordPresence.AppId };
+                var ok = new Button
+                {
+                    Text = "Enregistrer", Left = 428, Top = 86, Width = 104, DialogResult = DialogResult.OK,
+                    FlatStyle = FlatStyle.Flat, ForeColor = FpsUi.Gold
+                };
+                var hint = new Label
+                {
+                    Left = 16, Top = 122, Width = 515, Height = 40, ForeColor = FpsUi.Dim2,
+                    Text = "La présence n'envoie RIEN sur internet : elle parle au Discord installé sur CE PC (canal local)."
+                };
+                f.Controls.Add(lab); f.Controls.Add(tb); f.Controls.Add(ok); f.Controls.Add(hint);
+                f.AcceptButton = ok;
+                if (f.ShowDialog(this) != DialogResult.OK) return;
+                DiscordPresence.AppId = tb.Text;
+                DiscordPresence.Stop();
+                if (DiscordPresence.Configured)
+                {
+                    DiscordPresence.Enabled = true;
+                    DiscordPresence.Start();
+                    Log("Présence Discord configurée et démarrée (visible si Discord tourne).", 0);
+                }
+                else Log("App ID invalide (attendu : 18-19 chiffres) — présence toujours inactive.", 1);
+            }
         }
 
         private void BuildTray()
