@@ -630,7 +630,18 @@ namespace BTOptimizer
             }
 
             if (Has(s, "aide", "help", "comment", "que fais", "que peux", "sais tu faire", "tu fais quoi"))
-                return new Reply { Text = "Je diagnostique et je corrige : je mesure ton PC en direct (écrans, ping, capteurs, processus en fond, disque…), je classe les causes par impact et chaque correction attend TON clic. Tout est gratuit. Dis-moi ce qui cloche.", ShowStarters = true };
+                return new Reply
+                {
+                    Text = "🧭 Voilà TOUT ce que je sais faire — pose ta question, ou tape la commande :\n"
+                         + "🎮 Jeu & perfs : « ça rame en jeu » · « fps bas » · « ça crash » · « écran bloqué à 60 » · « prépare ma partie »\n"
+                         + "🖥 PC & Windows : « mes fenêtres saccadent » · « le pc chauffe » · « qui bouffe mon cpu » · « répare windows » · « plus de son / d'internet »\n"
+                         + "🧰 Entretien : « bilan complet » · « bilan maj » · « libère de la place » · « désactive l'hibernation » · « nettoyage profond » · « état de mes disques » · « gardien » · « journal »\n"
+                         + "📦 Profil : « exporte mon profil » · « importe mon profil » (réinstalle Windows sans rien perdre)\n"
+                         + "🔧 Infos locales (hors-ligne) : heure · batterie · uptime · calculs (« 15% de 240 ») · unités (« 100 km en miles ») · phase de la lune\n"
+                         + "🌍 Monde (gratuit, sans clé) : météo · qualité de l'air · actus · jeux gratuits PC · « c'est quoi X » (Wikipédia) · « définition de X » · distance entre 2 villes · devises · crypto · fériés · pokémon · série TV · prix Nobel · ISS · séismes · dette de la France · photo NASA · « traduis X en anglais » · mon IP · soleil · livres · code postal · avions au-dessus de moi\n"
+                         + "Chaque mesure part toute seule ; chaque CHANGEMENT attend ton clic (et se journalise). Et quand je ne sais pas : je le DIS.",
+                    ShowStarters = true
+                };
 
             // --- « gratuit » : la règle de la maison, puis la preuve par la mesure ---
             if (Has(s, "gratuit", "gratos", "sans payer", "payant", "payer", "argent", "free"))

@@ -86,6 +86,26 @@ namespace BTOptimizer
             catch { return false; }
         }
 
+        /// <summary>SOS post-crash : une application a planté il y a MOINS de 30 minutes ?
+        /// (l'utilisateur relance souvent ONYX juste après un crash de jeu — on le remarque POUR lui).
+        /// Renvoie « bo6.exe a crashé il y a 4 min », ou null si rien de frais.</summary>
+        public static string FreshCrash()
+        {
+            try
+            {
+                foreach (var c in CrashScan.RecentDetailed(1))
+                {
+                    if (string.IsNullOrEmpty(c.Exe)) continue;
+                    if (c.Exe.ToLowerInvariant().Contains("btoptimizer")) continue;   // pas nous-mêmes
+                    double min = (DateTime.Now - c.Time).TotalMinutes;
+                    if (min >= 0 && min <= 30)
+                        return c.Exe + " a crashé il y a " + Math.Max(1, (int)min) + " min";
+                }
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>Les alertes du moment (liste vide = tout va bien, le Gardien se tait).</summary>
         public static List<string> Alerts()
         {

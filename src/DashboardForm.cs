@@ -257,16 +257,33 @@ namespace BTOptimizer
                 try
                 {
                     System.Threading.Thread.Sleep(4000);          // laisse l'app finir de démarrer
-                    if (!Guardian.DueToday()) return;
-                    var al = Guardian.Alerts();
-                    if (al.Count == 0) return;
+                    // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
+                    //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
+                    string sos = null;
+                    try { sos = Guardian.FreshCrash(); } catch { }
+                    // 2) Contrôle quotidien classique (silencieux si tout va bien).
+                    var al = new System.Collections.Generic.List<string>();
+                    if (sos == null)
+                    {
+                        if (!Guardian.DueToday()) return;
+                        al = Guardian.Alerts();
+                        if (al.Count == 0) return;
+                    }
                     BeginInvoke((Action)(() =>
                     {
                         try
                         {
                             _tray.Visible = true;
-                            _tray.BalloonTipTitle = "🛡 Gardien ONYX — " + al.Count + " alerte(s)";
-                            _tray.BalloonTipText = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
+                            if (sos != null)
+                            {
+                                _tray.BalloonTipTitle = "🆘 ONYX a remarqué un crash";
+                                _tray.BalloonTipText = sos + " — clique : je te dis POURQUOI (enquête sur la cause exacte).";
+                            }
+                            else
+                            {
+                                _tray.BalloonTipTitle = "🛡 Gardien ONYX — " + al.Count + " alerte(s)";
+                                _tray.BalloonTipText = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
+                            }
                             _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
                             _tray.ShowBalloonTip(10000);
                         }

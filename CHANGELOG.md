@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.38 — Carte blanche (suite) : SOS post-crash + le Copilote sait se présenter
+- **🆘 SOS POST-CRASH** : tu relances ONYX juste après qu'un jeu a planté ? Il le REMARQUE tout seul —
+  à chaque lancement, il regarde si une application a crashé il y a moins de 30 minutes (journal
+  d'événements) et t'accueille avec « bo6.exe a crashé il y a 4 min — clique : je te dis POURQUOI »
+  (notification cliquable → enquête sur la cause exacte). C'est souvent exactement pour ça qu'on
+  ouvre l'app ; maintenant elle le comprend sans qu'on lui dise. (ONYX s'ignore lui-même, évidemment.)
+- **🧭 « Que sais-tu faire ? »** : la réponse « aide » n'était qu'une phrase générique — c'est
+  maintenant le CATALOGUE complet, groupé comme l'accueil (jeu & perfs, PC & Windows, entretien,
+  profil, infos locales hors-ligne, outils monde gratuits), avec les commandes exactes à taper.
+  Avec 30+ outils, un assistant qui ne sait pas se présenter fait perdre ses fonctions.
+- Harnais **177/177** ; UITEST 45/45 formes.
+
 ## v15.37 — Profil ONYX (réinstaller Windows sans rien perdre) + le Gardien voit les crashs
 - **📦 PROFIL ONYX** : « exporte mon profil » → UN zip sur le Bureau avec tout ce qui fait « ton » ONYX
   (mémoire du Copilote, faits appris, journal de bord, réglages Discord/Gardien, documents bt-savoir).
