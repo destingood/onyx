@@ -161,53 +161,71 @@ namespace BTOptimizer
             });
             m.Add(jeux);
 
+            // Sous-menus TRIÉS par sections (en-têtes grisés) : diagnostic → mesures → inventaire.
             var check = new ToolStripMenuItem("🩺  Check Up+");
+            check.DropDownItems.Add(MenuHead("🔎 Diagnostic"));
             check.DropDownItems.Add("Santé de mon PC", null, (s, e) => OpenDialog(new HealthForm(Log)));
             check.DropDownItems.Add("Qui ralentit mon PC ?", null, (s, e) => OpenDialog(new BloatForm(Log)));
             check.DropDownItems.Add("Réglages néfastes", null, (s, e) => OpenDialog(new CheckupForm(Log)));
-            check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
-            check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
+            check.DropDownItems.Add(new ToolStripSeparator());
+            check.DropDownItems.Add(MenuHead("🌡 Mesures & stress"));
             check.DropDownItems.Add("Températures & throttling", null, (s, e) => OpenDialog(new ThermalForm(Log)));
             check.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
+            check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
+            check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
+            check.DropDownItems.Add(new ToolStripSeparator());
+            check.DropDownItems.Add(MenuHead("📋 Inventaire & entretien"));
             check.DropDownItems.Add("Composants & diagnostic", null, (s, e) => OpenDialog(new SystemInfoForm(Log)));
             check.DropDownItems.Add("Rapport de santé (HTML, à partager)", null, (s, e) => GenerateHealthReport());
-            check.DropDownItems.Add(new ToolStripSeparator());
             check.DropDownItems.Add("🧰 Entretien du PC (nettoyage, TRIM, caches, DNS — 6 routines)", null, (s, e) => OpenDialog(new MaintenanceForm(Log)));
             m.Add(check);
 
             var labo = new ToolStripMenuItem("🧪  Laboratoire");
+            labo.DropDownItems.Add(MenuHead("🎯 FPS"));
             labo.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
             labo.DropDownItems.Add("FPS en direct", null, (s, e) => OpenDialog(new FpsMonForm(Log)));
             labo.DropDownItems.Add("Benchmark FPS (avant/après)", null, (s, e) => OpenDialog(new BenchmarkFpsForm(Log)));
             labo.DropDownItems.Add("Benchmark rapide (CPU/GPU)", null, (s, e) => OpenDialog(new BenchForm(Log)));
+            labo.DropDownItems.Add(new ToolStripSeparator());
+            labo.DropDownItems.Add(MenuHead("🖥 Écran & bureau"));
             labo.DropDownItems.Add("Réglages d'écran", null, (s, e) => OpenDialog(new DisplayForm(Log)));
             labo.DropDownItems.Add("🪟 Fenêtres qui saccadent (bureau, DWM)", null, (s, e) => OpenDialog(new WindowLagForm(Log)));
-            labo.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
-            labo.DropDownItems.Add("🧩 BIOS & manips manuelles (XMP, ReBAR…)", null, (s, e) => OpenDialog(new BiosGuideForm(Log)));
             labo.DropDownItems.Add(new ToolStripSeparator());
+            labo.DropDownItems.Add(MenuHead("⏱ Latence"));
             labo.DropDownItems.Add("⏱ Latence en direct (DPC/ISR)", null, (s, e) => OpenDialog(new LiveMonForm(Log)));
             labo.DropDownItems.Add("⏱ Guide latence & input lag", null, (s, e) => OpenDialog(new LatencyGuideForm(Log)));
+            labo.DropDownItems.Add(new ToolStripSeparator());
+            labo.DropDownItems.Add(MenuHead("📚 Guides"));
+            labo.DropDownItems.Add("🎥 Streamer sans lag (RTSS/OBS/NVIDIA)", null, (s, e) => OpenDialog(new StreamGuideForm(Log)));
+            labo.DropDownItems.Add("🧩 BIOS & manips manuelles (XMP, ReBAR…)", null, (s, e) => OpenDialog(new BiosGuideForm(Log)));
             m.Add(labo);
 
             var sys = new ToolStripMenuItem("⚙  Système");
             var net = new ToolStripMenuItem("🌐  Réseau");
+            net.DropDownItems.Add("📶 Ma connexion & ma box (fibre, ADSL, 4G/5G : mesures + branchement)", null, (s, e) => OpenDialog(new MobileNetForm(Log)));
             net.DropDownItems.Add("DNS rapide", null, (s, e) => OpenDialog(new DnsForm(Log)));
             net.DropDownItems.Add("Réglages TCP/IP", null, (s, e) => OpenDialog(new NetTuneForm(Log)));
             net.DropDownItems.Add("Trajet réseau", null, (s, e) => OpenDialog(new NetRouteForm(Log)));
-            net.DropDownItems.Add("📶 Ma connexion & ma box (fibre, ADSL, 4G/5G : mesures + branchement)", null, (s, e) => OpenDialog(new MobileNetForm(Log)));
             net.DropDownItems.Add("📄 Assistant opérateur (journal, dossier support, réglages box)", null, (s, e) => OpenDialog(new OperatorHelpForm(Log)));
             sys.DropDownItems.Add(net);
             sys.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add(MenuHead("🖱 Périphériques"));
             sys.DropDownItems.Add("Fréquence de la souris", null, (s, e) => OpenDialog(new MouseForm(Log)));
             sys.DropDownItems.Add("Audio & enceintes", null, (s, e) => OpenDialog(new AudioForm(Log)));
-            sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
             sys.DropDownItems.Add("Périphériques (erreurs)", null, (s, e) => OpenDialog(new DeviceManagerForm(Log)));
+            sys.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add(MenuHead("🚀 Démarrage & fond"));
             sys.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
             sys.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
+            sys.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add(MenuHead("🪟 Windows"));
             sys.DropDownItems.Add("🪪 État de la licence Windows (activation, clé OEM)", null, (s, e) => OpenDialog(new WindowsLicenseForm()));
             sys.DropDownItems.Add("🛡 Smart App Control (applications bloquées au lancement)", null, (s, e) => OpenDialog(new SmartAppControlForm(Log)));
+            sys.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             sys.DropDownItems.Add(new ToolStripSeparator());
+            sys.DropDownItems.Add(MenuHead("⭐ ONYX"));
             var autostart = new ToolStripMenuItem("Démarrer ONYX avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
             sys.DropDownItems.Add(autostart);
@@ -217,13 +235,18 @@ namespace BTOptimizer
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
-            sys.DropDownItems.Add("Redémarrer l'explorateur Windows", null, (s, e) => RestartExplorerConfirm());
             m.Add(sys);
 
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        // En-tête de section dans un menu déroulant : item grisé, non cliquable — juste un titre.
+        private static ToolStripMenuItem MenuHead(string text)
+        {
+            return new ToolStripMenuItem(text) { Enabled = false };
         }
 
         private void BuildTray()

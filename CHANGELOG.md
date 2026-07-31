@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.34 — Le menu ⋯ trié aussi : sous-catégories avec en-têtes de section
+- Suite du tri : les 3 sous-menus les plus chargés du menu ⋯ sont rangés en sections (titres grisés) :
+  - **🩺 Check Up+** : « 🔎 Diagnostic » (santé, qui ralentit, réglages néfastes) → « 🌡 Mesures & stress »
+    (températures, moniteur, stabilité, stress CPU) → « 📋 Inventaire & entretien » (composants, rapport,
+    entretien 6 routines) ;
+  - **🧪 Laboratoire** : « 🎯 FPS » → « 🖥 Écran & bureau » → « ⏱ Latence » → « 📚 Guides » ;
+  - **⚙ Système** : « 🌐 Réseau » (Ma connexion & box en premier) → « 🖱 Périphériques » →
+    « 🚀 Démarrage & fond » → « 🪟 Windows » (licence, Smart App Control, redémarrer l'explorateur) →
+    « ⭐ ONYX » (démarrage auto, présence Discord, animations).
+- Zéro handler modifié : uniquement l'ordre + les en-têtes. UITEST 45/45 formes, harnais 170/170.
+
 ## v15.33 — Tous les outils du Copilote TRIÉS en 4 familles
 - L'accueil du Copilote n'est plus un vrac de 20 pastilles : elles sont **rangées sous 4 en-têtes dorés**,
   dans l'ordre de la vraie vie :
