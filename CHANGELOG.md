@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.41 — Hors Copilote : « ONYX toujours là, jamais dans les pattes »
+- **⌨️ Ctrl+Alt+O (raccourci GLOBAL)** : fait apparaître ONYX au premier plan depuis n'importe où —
+  ou le range dans la zone de notification s'il est déjà visible. Même mécanique fiable que le
+  Ctrl+Alt+G du Mode Jeu.
+- **🔕 « Démarrer minimisé (zone de notification) »** (menu ⋯ → Système → ⭐ ONYX) : combiné à
+  « Démarrer ONYX avec Windows », l'app naît SANS fenêtre — et le Gardien surveille alors VRAIMENT
+  chaque jour (disque, SMART, crashs, photo d'état, tendance santé), sans jamais s'imposer.
+  Ctrl+Alt+O ou double-clic sur l'icône pour l'ouvrir.
+- **🛡 « Gardien : vérifier maintenant »** (clic droit sur l'icône de zone de notification) :
+  contrôle à la demande qui répond TOUJOURS — y compris « tout va bien » (le contrôle quotidien,
+  lui, reste muet quand tout est sain).
+- L'icône du tray affiche désormais le raccourci (« Ouvrir ONYX (Ctrl+Alt+O) »).
+- Harnais 183/183 ; UITEST 45/45 formes.
+
 ## v15.40 — « ÇA MARCHAIT HIER ! » : ONYX sait ce qui a changé sur ton PC
 - LA phrase classique du joueur a enfin une vraie réponse. Le Gardien prend chaque jour une **photo de
   l'état du système** (bt-etat\, 30 jours gardés) : version du pilote GPU, version/build de Windows,

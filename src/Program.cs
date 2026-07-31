@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.40.0.0")]
-[assembly: AssemblyFileVersion("15.40.0.0")]
+[assembly: AssemblyVersion("15.41.0.0")]
+[assembly: AssemblyFileVersion("15.41.0.0")]
 
 namespace BTOptimizer
 {

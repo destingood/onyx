@@ -20,7 +20,7 @@ namespace BTOptimizer
 
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
         [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
-        private const int HotkeyId = 0xB71, WM_HOTKEY = 0x0312;
+        private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
         private NotifyIcon _tray;
         private ContextMenuStrip _toolsMenu;
@@ -66,6 +66,11 @@ namespace BTOptimizer
 
             BuildTray();
             StartGuardian();   // contrôle silencieux des signaux vitaux (1×/jour ; muet si tout va bien)
+            // Démarrage minimisé (optionnel) : ONYX naît dans la zone de notification — le Gardien
+            // surveille chaque jour, aucune fenêtre ne s'impose. Ctrl+Alt+O le fait apparaître.
+            if (TrayStartEnabled && Environment.GetEnvironmentVariable("BT_UISHOT") == null
+                && Environment.GetEnvironmentVariable("BT_UITEST") != "1")
+                Shown += (s, e) => { try { Hide(); _tray.Visible = true; } catch { } };
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
@@ -230,6 +235,9 @@ namespace BTOptimizer
             var autostart = new ToolStripMenuItem("Démarrer ONYX avec Windows") { Checked = AppAutostart.IsEnabled() };
             autostart.Click += (s, e) => { bool now = !AppAutostart.IsEnabled(); if (AppAutostart.SetEnabled(now)) autostart.Checked = now; };
             sys.DropDownItems.Add(autostart);
+            var trayStart = new ToolStripMenuItem("Démarrer minimisé (zone de notification)") { Checked = TrayStartEnabled };
+            trayStart.Click += (s, e) => { bool now = !TrayStartEnabled; TrayStartEnabled = now; trayStart.Checked = now; };
+            sys.DropDownItems.Add(trayStart);
             var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec ONYX »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
@@ -243,6 +251,46 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>Item du tray : vérification du Gardien À LA DEMANDE — répond TOUJOURS,
+        /// même quand tout va bien (contrairement au contrôle quotidien, muet si sain).</summary>
+        private void GuardianCheckNow()
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                System.Collections.Generic.List<string> al = null;
+                try { al = Guardian.Alerts(); } catch { }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            _tray.Visible = true;
+                            bool bad = al != null && al.Count > 0;
+                            _tray.BalloonTipTitle = bad ? "🛡 Gardien — " + al.Count + " alerte(s)" : "🛡 Gardien — tout va bien";
+                            _tray.BalloonTipText = bad
+                                ? al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "")
+                                : "Disque, santé SMART, redémarrage, uptime, crashs : rien à signaler.";
+                            _tray.ShowBalloonTip(8000);
+                        }
+                        catch { }
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        // Démarrage minimisé (optionnel) : ONYX naît directement dans la zone de notification.
+        private static string TrayStartPath
+        {
+            get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-traystart.txt"); }
+        }
+        private static bool TrayStartEnabled
+        {
+            get { try { return System.IO.File.Exists(TrayStartPath) && System.IO.File.ReadAllText(TrayStartPath).Trim() == "1"; } catch { return false; } }
+            set { try { System.IO.File.WriteAllText(TrayStartPath, value ? "1" : "0"); } catch { } }
         }
 
         /// <summary>LE GARDIEN : au lancement, vérifie en arrière-plan disque / santé SMART /
@@ -355,9 +403,10 @@ namespace BTOptimizer
             _tray.Text = "ONYX"; _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
             var m = new ContextMenuStrip();
-            m.Items.Add("Ouvrir ONYX", null, (s, e) => RestoreFromTray());
+            m.Items.Add("Ouvrir ONYX  (Ctrl+Alt+O)", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
             m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
+            m.Items.Add("🛡 Gardien : vérifier maintenant", null, (s, e) => GuardianCheckNow());
             m.Items.Add("Rapport de santé (HTML)", null, (s, e) => GenerateHealthReport());
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });
@@ -426,18 +475,33 @@ namespace BTOptimizer
         {
             base.OnHandleCreated(e);
             try { RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'); } catch { }
+            try { RegisterHotKey(Handle, HotkeyIdShow, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'O'); } catch { }
         }
 
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) ToggleBoost();
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdShow) ToggleShell();
             base.WndProc(ref m);
+        }
+
+        /// <summary>Ctrl+Alt+O — global : ramène ONYX au premier plan, ou le range dans la zone de
+        /// notification s'il est déjà visible. Utilisable même pendant un jeu en fenêtré.</summary>
+        private void ToggleShell()
+        {
+            try
+            {
+                if (Visible && WindowState != FormWindowState.Minimized) { Hide(); _tray.Visible = true; }
+                else RestoreFromTray();
+            }
+            catch { }
         }
 
         private void Cleanup()
         {
             try { BadgeStore.OnNewBadge -= OnNewBadge; } catch { }
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
+            try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
             try { Native.SetTimer1ms(false); } catch { }
             try { Crosshair.Hide(); } catch { }
