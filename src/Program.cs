@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.38.0.0")]
-[assembly: AssemblyFileVersion("15.38.0.0")]
+[assembly: AssemblyVersion("15.39.0.0")]
+[assembly: AssemblyFileVersion("15.39.0.0")]
 
 namespace BTOptimizer
 {
@@ -714,9 +714,18 @@ namespace BTOptimizer
                 bool pf3 = pzip != null && System.IO.File.Exists(pzip) && new System.IO.FileInfo(pzip).Length > 0; if (pf3) ok41++; Console.WriteLine((pf3 ? "OK  " : "FAIL") + "  profil : export zip reel");
                 try { if (pzip != null) System.IO.File.Delete(pzip); } catch { }
 
+                // v15.39 : tendance sante (historique + deltas + mini-graphe).
+                int ok42 = 0;
+                HealthTrend.RecordAt(DateTime.Now.Date.AddDays(-8), 50);
+                HealthTrend.RecordAt(DateTime.Now.Date, 62);
+                string trend = HealthTrend.TrendText();
+                bool ht1 = trend.Contains("62 %") && trend.Contains("+12"); if (ht1) ok42++; Console.WriteLine((ht1 ? "OK  " : "FAIL") + "  tendance : 62% aujourd'hui, delta 7j = +12");
+                bool ht2 = UtilityTools.IsHealthTrend("score de sante") && UtilityTools.IsHealthTrend("tendance")
+                    && !UtilityTools.IsHealthTrend("bonjour"); if (ht2) ok42++; Console.WriteLine((ht2 ? "OK  " : "FAIL") + "  tendance : detection, pas un bonjour");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

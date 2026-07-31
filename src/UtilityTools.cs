@@ -677,6 +677,15 @@ namespace BTOptimizer
             return (n.Contains("importe") || n.Contains("import") || n.Contains("restaure")) && n.Contains("profil");
         }
 
+        // ---- TENDANCE SANTÉ ----
+        /// <summary>« score de santé », « tendance », « évolution de mon pc » → vrai.</summary>
+        internal static bool IsHealthTrend(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("score de sante") || n.Contains("tendance") || n.Contains("evolution de mon pc")
+                || n.Contains("historique de sante") || n.Contains("historique sante");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

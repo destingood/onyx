@@ -61,6 +61,103 @@ namespace BTOptimizer
     }
 
     /// <summary>
+    /// TENDANCE SANTÉ : le score du cockpit (% d'optimisations actives), historisé à raison d'UNE
+    /// mesure par jour (enregistrée par le Gardien à l'ouverture) dans bt-sante.csv. Le Copilote
+    /// peut alors montrer l'ÉVOLUTION (« ↗ +6 pts en 7 jours », mini-graphe) — la preuve dans le
+    /// temps, pas juste un chiffre du moment.
+    /// </summary>
+    internal static class HealthTrend
+    {
+        private static string PathFile
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-sante.csv"); }
+        }
+
+        /// <summary>Enregistre le score du jour (1 ligne max par jour ; re-mesure = remplace).</summary>
+        public static void RecordToday(int score) { RecordAt(DateTime.Now.Date, score); }
+
+        /// <summary>Testable : enregistre à une date donnée (déduplique par date, garde ~13 mois).</summary>
+        public static void RecordAt(DateTime day, int score)
+        {
+            try
+            {
+                var lines = new List<string>();
+                string key = day.ToString("yyyy-MM-dd");
+                if (File.Exists(PathFile))
+                    foreach (var l in File.ReadAllLines(PathFile))
+                        if (!l.StartsWith(key) && l.Contains(";")) lines.Add(l);
+                lines.Add(key + ";" + score);
+                lines.Sort(StringComparer.Ordinal);
+                if (lines.Count > 400) lines.RemoveRange(0, lines.Count - 400);
+                File.WriteAllLines(PathFile, lines);
+            }
+            catch { }
+        }
+
+        private static List<(DateTime Day, int Score)> All()
+        {
+            var o = new List<(DateTime, int)>();
+            try
+            {
+                if (!File.Exists(PathFile)) return o;
+                foreach (var l in File.ReadAllLines(PathFile))
+                {
+                    var p = l.Split(';');
+                    DateTime d; int sc;
+                    if (p.Length == 2 && DateTime.TryParseExact(p[0], "yyyy-MM-dd",
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None, out d) && int.TryParse(p[1], out sc))
+                        o.Add((d, sc));
+                }
+                o.Sort((x, y) => x.Item1.CompareTo(y.Item1));
+            }
+            catch { }
+            return o;
+        }
+
+        private static readonly char[] Bars = { '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█' };
+
+        /// <summary>Texte pour le chat : score du jour, deltas 7/30 jours, mini-graphe (14 points).</summary>
+        public static string TrendText()
+        {
+            var all = All();
+            if (all.Count == 0)
+                return "📈 Pas encore d'historique de santé — le Gardien enregistre UNE mesure par jour à "
+                     + "l'ouverture d'ONYX. Reviens dans quelques jours pour voir ta tendance.";
+            var last = all[all.Count - 1];
+            var sb = new System.Text.StringBuilder();
+            sb.Append("📈 Santé du PC : ").Append(last.Item2).Append(" %");
+            int? d7 = DeltaSince(all, 7), d30 = DeltaSince(all, 30);
+            if (d7 != null) sb.Append("  ·  sur 7 j : ").Append(FmtDelta(d7.Value));
+            if (d30 != null) sb.Append("  ·  sur 30 j : ").Append(FmtDelta(d30.Value));
+            sb.Append('\n');
+            int from = Math.Max(0, all.Count - 14);
+            int min = int.MaxValue, max = int.MinValue;
+            for (int i = from; i < all.Count; i++) { min = Math.Min(min, all[i].Item2); max = Math.Max(max, all[i].Item2); }
+            sb.Append("Tendance : ");
+            for (int i = from; i < all.Count; i++)
+            {
+                int idx = max == min ? 3 : (int)Math.Round((double)(all[i].Item2 - min) / (max - min) * 7);
+                sb.Append(Bars[Math.Max(0, Math.Min(7, idx))]);
+            }
+            sb.Append("  (").Append(all.Count - from).Append(" jour(s), échelle ").Append(min).Append('-').Append(max).Append(" %)\n");
+            sb.Append(d7 != null && d7.Value < 0
+                ? "En baisse : dis « bilan complet » et je trouve ce qui a changé."
+                : "Le score = % des optimisations ONYX actives. « TOUT optimiser » le monte d'un coup.");
+            return sb.ToString();
+        }
+        private static string FmtDelta(int d) { return d > 0 ? "↗ +" + d + " pt(s)" : d < 0 ? "↘ " + d + " pt(s)" : "→ stable"; }
+        private static int? DeltaSince(List<(DateTime Day, int Score)> all, int days)
+        {
+            var last = all[all.Count - 1];
+            int? baseline = null;
+            foreach (var e in all) if (e.Item1 <= last.Item1.AddDays(-days)) baseline = e.Item2;   // le plus récent ≤ J-N
+            if (baseline == null) return null;
+            return last.Item2 - baseline.Value;
+        }
+    }
+
+    /// <summary>
     /// LE GARDIEN : au lancement d'ONYX (1 fois par jour max), vérifie EN SILENCE les signaux
     /// vitaux — disque presque plein, santé SMART des disques, redémarrage Windows en attente,
     /// uptime excessif — et ne se manifeste QUE s'il y a une alerte (notification discrète).

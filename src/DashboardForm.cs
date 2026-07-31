@@ -266,6 +266,8 @@ namespace BTOptimizer
                     if (sos == null)
                     {
                         if (!Guardian.DueToday()) return;
+                        // la mesure santé du jour part en fond (historique = tendance dans le chat)
+                        try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
                         al = Guardian.Alerts();
                         if (al.Count == 0) return;
                     }

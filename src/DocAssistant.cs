@@ -236,6 +236,10 @@ namespace BTOptimizer
             if (UtilityTools.IsJournal(s))
                 return new Reply { Text = Journal.TailText(15), ShowStarters = true };
 
+            // --- TENDANCE SANTÉ : le score du cockpit, historisé (1 mesure/jour par le Gardien) ---
+            if (UtilityTools.IsHealthTrend(s))
+                return new Reply { Text = HealthTrend.TrendText(), ShowStarters = true };
+
             // --- LE GARDIEN : le résumé des alertes du jour (disque, SMART, reboot, uptime) ---
             if (UtilityTools.IsGuardian(s))
             {

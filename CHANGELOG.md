@@ -4,6 +4,16 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.39 — Tendance santé : le score du cockpit gagne une MÉMOIRE
+- **📈 « score de santé » / « tendance »** : le cockpit affichait « SANTÉ 56 % » puis l'oubliait.
+  Désormais le Gardien enregistre UNE mesure par jour (bt-sante.csv, ~13 mois d'historique) et le
+  Copilote montre l'ÉVOLUTION : score du jour, delta sur 7 j et 30 j (« ↗ +12 pt(s) »), et un
+  mini-graphe en barres (▁▃▅▇) des 14 derniers jours.
+- En baisse ? Il propose le bilan complet pour trouver ce qui a changé. En hausse ? La preuve
+  chiffrée qu'ONYX améliore la machine dans le temps — pas juste un chiffre du moment.
+- Dédupliqué par jour (re-mesure = remplace), trié, borné à 400 entrées. Le calcul des deltas est
+  vérifié au harnais (50 → 62 en 8 jours = « +12 » sur 7 j). Harnais **179/179**.
+
 ## v15.38 — Carte blanche (suite) : SOS post-crash + le Copilote sait se présenter
 - **🆘 SOS POST-CRASH** : tu relances ONYX juste après qu'un jeu a planté ? Il le REMARQUE tout seul —
   à chaque lancement, il regarde si une application a crashé il y a moins de 30 minutes (journal
