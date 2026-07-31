@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.44.0.0")]
-[assembly: AssemblyFileVersion("15.44.0.0")]
+[assembly: AssemblyVersion("15.45.0.0")]
+[assembly: AssemblyFileVersion("15.45.0.0")]
 
 namespace BTOptimizer
 {
@@ -784,9 +784,21 @@ namespace BTOptimizer
                 string dexp = DiagExport.Build();
                 bool gs4 = dexp.Contains("DIAGNOSTIC COMPLET") && dexp.Contains("STABILITE") == false && dexp.Contains("PILOTE GPU"); if (gs4) ok46++; Console.WriteLine((gs4 ? "OK  " : "FAIL") + "  export : rapport complet assemble");
 
+                // v15.45 : suivi hebdo de la stabilite GPU + plan d'action coche.
+                int ok47 = 0;
+                bool tr1 = GpuStability.TrendLine(20, 100).Contains("AMELIORE") || GpuStability.TrendLine(20, 100).Contains("AMÉLIORE"); if (tr1) ok47++; Console.WriteLine((tr1 ? "OK  " : "FAIL") + "  suivi : 100 -> 20 = amelioration");
+                bool tr2 = GpuStability.TrendLine(100, 20).Contains("EMPIRE"); if (tr2) ok47++; Console.WriteLine((tr2 ? "OK  " : "FAIL") + "  suivi : 20 -> 100 = degradation");
+                bool tr3 = GpuStability.TrendLine(0, 0).Contains("stable"); if (tr3) ok47++; Console.WriteLine((tr3 ? "OK  " : "FAIL") + "  suivi : 0/0 = stable");
+                string stepT = GpuStability.Steps[0];
+                GpuStability.SetDone(stepT, true);
+                bool pl1 = GpuStability.DoneDate(stepT) != null;
+                GpuStability.SetDone(stepT, false);
+                bool pl2 = GpuStability.DoneDate(stepT) == null;
+                bool tr4 = pl1 && pl2; if (tr4) ok47++; Console.WriteLine((tr4 ? "OK  " : "FAIL") + "  plan : cocher puis decocher une etape");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

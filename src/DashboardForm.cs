@@ -263,7 +263,64 @@ namespace BTOptimizer
         {
             string txt;
             try { txt = GpuStability.Text(); } catch (Exception ex) { txt = "Analyse impossible : " + ex.Message; }
-            MessageBox.Show(this, txt, "ONYX — stabilité du pilote GPU", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var f = new Form
+            {
+                Text = "ONYX — stabilité du pilote GPU", Width = 760, Height = 620,
+                StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false, MinimizeBox = false, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim
+            })
+            {
+                var box = new TextBox
+                {
+                    Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill,
+                    BorderStyle = BorderStyle.None, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim,
+                    Font = FpsUi.Small, Text = txt
+                };
+                var top = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14, 10, 14, 6), BackColor = FpsUi.BgMain };
+                top.Controls.Add(box);
+
+                // Plan d'action COCHÉ : ce qui est fait est daté et ressort au prochain passage.
+                var plan = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Bottom, Height = 152, FlowDirection = FlowDirection.TopDown,
+                    WrapContents = false, AutoScroll = true, BackColor = FpsUi.BgMain, Padding = new Padding(14, 4, 14, 4)
+                };
+                plan.Controls.Add(new Label
+                {
+                    Text = "Coche ce que tu as DÉJÀ fait (daté, et rappelé au prochain passage) :",
+                    AutoSize = true, ForeColor = FpsUi.Gold, Font = FpsUi.Small, Margin = new Padding(0, 0, 0, 6)
+                });
+                foreach (var stepName in GpuStability.Steps)
+                {
+                    string st = stepName;
+                    string dt = null;
+                    try { dt = GpuStability.DoneDate(st); } catch { }
+                    var cb = new CheckBox
+                    {
+                        Text = st + (dt != null ? "   (fait le " + dt + ")" : ""), AutoSize = true,
+                        Checked = dt != null, ForeColor = FpsUi.Dim, Font = FpsUi.Small, Margin = new Padding(0, 2, 0, 2)
+                    };
+                    cb.CheckedChanged += (s, e) =>
+                    {
+                        try
+                        {
+                            GpuStability.SetDone(st, cb.Checked);
+                            string nd = GpuStability.DoneDate(st);
+                            cb.Text = st + (nd != null ? "   (fait le " + nd + ")" : "");
+                        }
+                        catch { }
+                    };
+                    plan.Controls.Add(cb);
+                }
+                var close = new Button
+                {
+                    Text = "Fermer", Dock = DockStyle.Bottom, Height = 34, FlatStyle = FlatStyle.Flat,
+                    ForeColor = FpsUi.Gold, DialogResult = DialogResult.OK
+                };
+                f.Controls.Add(top); f.Controls.Add(plan); f.Controls.Add(close);
+                f.AcceptButton = close;
+                f.ShowDialog(this);
+            }
         }
 
         /// <summary>Item du tray : vérification du Gardien À LA DEMANDE — répond TOUJOURS,

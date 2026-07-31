@@ -4,6 +4,17 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.45 — Le verdict GPU se SUIT dans le temps + plan d'action coché
+- **📉 SUIVI HEBDOMADAIRE** : le panneau compare la semaine écoulée à la précédente et le dit en clair —
+  « ✅ 199 → 1 erreur(s) (−99 %) : ça S'AMÉLIORE, tes manips ont payé », « 🚨 ça EMPIRE », ou « ➡️ stable,
+  pas d'amélioration nette ». Un diagnostic qui ne vérifie pas son propre traitement n'est qu'une opinion.
+- **🩺 PLAN D'ACTION COCHÉ** : les étapes (DDU, overclock coupé, alimentation/températures, réparation
+  Windows, retour à un pilote antérieur) deviennent des cases à cocher **datées et persistantes**
+  (bt-gpu-plan.txt). Au prochain passage, « Déjà fait : ✔ DDU (01/08) » — on ne refait pas deux fois la
+  même manip, et on sait où on en est. Chaque case cochée part aussi au journal de bord.
+- Calculs PURS et testés (100→20 = amélioration, 20→100 = dégradation, 0/0 = stable, cocher/décocher).
+  Harnais **196/196** ; UITEST 45/45.
+
 ## v15.44 — « Mon pilote GPU est-il instable ? » : le verdict, et la marche à suivre
 - **🎯 Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : croise le NOMBRE d'erreurs pilote du
   journal d'événements, l'ÂGE du pilote et les crashs d'applications, puis **conclut** — sain / à

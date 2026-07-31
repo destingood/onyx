@@ -58,6 +58,83 @@ namespace BTOptimizer
             return r;
         }
 
+        /// <summary>Tendance PURE : compare la semaine écoulée à la précédente. Testable.</summary>
+        public static string TrendLine(int last7, int prev7)
+        {
+            if (last7 == 0 && prev7 == 0) return "📉 Suivi : aucune erreur ni cette semaine ni la précédente — stable.";
+            if (prev7 == 0) return "📈 Suivi : " + last7 + " erreur(s) cette semaine (0 la semaine d'avant) — dégradation NOUVELLE.";
+            int delta = last7 - prev7;
+            int pct = (int)Math.Round(100.0 * delta / prev7);
+            if (delta <= -Math.Max(1, prev7 / 10))
+                return "✅ Suivi : " + prev7 + " → " + last7 + " erreur(s) (" + pct + " %) — ça S'AMÉLIORE, tes manips ont payé.";
+            if (delta >= Math.Max(1, prev7 / 10))
+                return "🚨 Suivi : " + prev7 + " → " + last7 + " erreur(s) (+" + pct + " %) — ça EMPIRE, ne tarde pas.";
+            return "➡️ Suivi : " + prev7 + " → " + last7 + " erreur(s) — stable, pas d'amélioration nette.";
+        }
+
+        /// <summary>Suivi réel (2 semaines glissantes lues dans le journal d'événements).</summary>
+        public static string Trend()
+        {
+            try
+            {
+                int d14 = CrashScan.GpuDriverErrors(14);
+                int d7 = CrashScan.GpuDriverErrors(7);
+                return TrendLine(d7, Math.Max(0, d14 - d7));
+            }
+            catch { return null; }
+        }
+
+        // --- PLAN D'ACTION COCHÉ : ce qui a déjà été fait, daté (bt-gpu-plan.txt) ---
+        private static string PlanPath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpu-plan.txt"); }
+        }
+
+        /// <summary>Les étapes proposées, avec leur date si déjà cochées.</summary>
+        public static readonly string[] Steps =
+        {
+            "Réinstallation propre du pilote (DDU)",
+            "Overclock GPU coupé / remis à zéro",
+            "Câbles d'alimentation et températures vérifiés",
+            "Windows réparé (fichiers système)",
+            "Retour à un pilote antérieur essayé",
+        };
+
+        public static string DoneDate(string step)
+        {
+            try
+            {
+                if (!File.Exists(PlanPath)) return null;
+                foreach (var l in File.ReadAllLines(PlanPath))
+                {
+                    int i = l.IndexOf('|');
+                    if (i > 0 && string.Equals(l.Substring(0, i), step, StringComparison.Ordinal)) return l.Substring(i + 1);
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>Coche (ou décoche) une étape. Journalisé pour la transparence.</summary>
+        public static void SetDone(string step, bool done)
+        {
+            try
+            {
+                var keep = new System.Collections.Generic.List<string>();
+                if (File.Exists(PlanPath))
+                    foreach (var l in File.ReadAllLines(PlanPath))
+                    {
+                        int i = l.IndexOf('|');
+                        if (i > 0 && string.Equals(l.Substring(0, i), step, StringComparison.Ordinal)) continue;
+                        if (l.Trim().Length > 0) keep.Add(l);
+                    }
+                if (done) keep.Add(step + "|" + DateTime.Now.ToString("dd/MM/yyyy"));
+                File.WriteAllLines(PlanPath, keep);
+                if (done) { try { Journal.Add("Plan GPU : « " + step + " » marqué comme fait"); } catch { } }
+            }
+            catch { }
+        }
+
         /// <summary>Verdict à partir de la MACHINE (journal d'événements + WMI).</summary>
         public static Result Current()
         {
@@ -81,7 +158,17 @@ namespace BTOptimizer
                                  .Append(d.AgeDays >= 0 ? " (installé il y a " + d.AgeDays + " jours)" : "").Append("\r\n\r\n");
             }
             catch { }
+            string tr = Trend();
+            if (!string.IsNullOrEmpty(tr)) sb.Append(tr).Append("\r\n\r\n");
             sb.Append(v.Advice.Replace("\n", "\r\n"));
+            // Ce qui a DÉJÀ été fait (plan coché) : on ne refait pas deux fois la même manip.
+            var done = new System.Collections.Generic.List<string>();
+            foreach (var st in Steps) { string dt = DoneDate(st); if (dt != null) done.Add("✔ " + st + " (" + dt + ")"); }
+            if (done.Count > 0)
+            {
+                sb.Append("\r\n\r\nDéjà fait :\r\n");
+                foreach (var x in done) sb.Append(x).Append("\r\n");
+            }
             return sb.ToString();
         }
     }
