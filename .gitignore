@@ -7,6 +7,9 @@ bin/
 obj/
 dist/
 dist-sandbox/
+# Trop lourds pour GitHub (limite 100 Mo) - retires de l'historique le 2026-07-31
+dist_new/
+dist-onyx/
 
 # Archives et outils tiers decompresses
 *.zip
