@@ -220,6 +220,14 @@ namespace BTOptimizer
                 return new Reply { Text = "Nettoyage OFFICIEL du magasin de composants Windows (DISM) : souvent 2 à 8 Go récupérés, "
                     + "5 à 20 minutes, aucun risque pour tes fichiers.", Action = ChatActions.ComponentCleanupAction() };
 
+            // --- PROFIL ONYX : export / restauration (réinstaller Windows sans rien perdre) ---
+            if (UtilityTools.IsExportProfile(s))
+                return new Reply { Text = "J'emballe ta mémoire, tes réglages et tes documents dans UN zip sur le Bureau — clic ci-dessous.",
+                    Action = ChatActions.ExportProfileAction() };
+            if (UtilityTools.IsImportProfile(s))
+                return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
+                    Action = ChatActions.ImportProfileAction() };
+
             // --- SANTÉ SMART des disques (local, lecture seule) : prévenir AVANT la panne ---
             if (UtilityTools.IsDiskHealth(s))
                 return new Reply { Text = ChatActions.DiskHealthText(), ShowStarters = true };

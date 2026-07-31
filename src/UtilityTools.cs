@@ -661,6 +661,22 @@ namespace BTOptimizer
             return n.Contains("gardien") || Regex.IsMatch(n, "\\balertes?\\b") || n.Contains("tout va bien");
         }
 
+        // ---- PROFIL ONYX (export / restauration) ----
+        /// <summary>« exporte mon profil », « sauvegarde mes réglages ONYX » → vrai.</summary>
+        internal static bool IsExportProfile(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("exporte") || n.Contains("export") || n.Contains("sauvegarde"))
+                && (n.Contains("profil") || n.Contains("reglages onyx") || n.Contains("mes reglages"));
+        }
+
+        /// <summary>« importe mon profil », « restaure mon profil » → vrai (pas « point de restauration »).</summary>
+        internal static bool IsImportProfile(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("importe") || n.Contains("import") || n.Contains("restaure")) && n.Contains("profil");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

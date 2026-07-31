@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.36.0.0")]
-[assembly: AssemblyFileVersion("15.36.0.0")]
+[assembly: AssemblyVersion("15.37.0.0")]
+[assembly: AssemblyFileVersion("15.37.0.0")]
 
 namespace BTOptimizer
 {
@@ -704,9 +704,19 @@ namespace BTOptimizer
                 Journal.Add("Test harnais");
                 bool gd4 = Journal.TailText(3).Contains("Test harnais"); if (gd4) ok40++; Console.WriteLine((gd4 ? "OK  " : "FAIL") + "  journal : ecriture + relecture datee");
 
+                // v15.37 : profil ONYX (export/restauration) + Gardien crashs.
+                int ok41 = 0;
+                bool pf1 = UtilityTools.IsExportProfile("exporte mon profil") && UtilityTools.IsExportProfile("sauvegarde mon profil onyx")
+                    && !UtilityTools.IsExportProfile("bonjour"); if (pf1) ok41++; Console.WriteLine((pf1 ? "OK  " : "FAIL") + "  profil : export detecte");
+                bool pf2 = UtilityTools.IsImportProfile("importe mon profil") && UtilityTools.IsImportProfile("restaure mon profil")
+                    && !UtilityTools.IsImportProfile("cree un point de restauration"); if (pf2) ok41++; Console.WriteLine((pf2 ? "OK  " : "FAIL") + "  profil : import detecte, point de restauration exclu");
+                string pzip = Profile.Export(System.IO.Path.GetTempPath());
+                bool pf3 = pzip != null && System.IO.File.Exists(pzip) && new System.IO.FileInfo(pzip).Length > 0; if (pf3) ok41++; Console.WriteLine((pf3 ? "OK  " : "FAIL") + "  profil : export zip reel");
+                try { if (pzip != null) System.IO.File.Delete(pzip); } catch { }
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

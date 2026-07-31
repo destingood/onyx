@@ -112,6 +112,18 @@ namespace BTOptimizer
                 if (up.Days >= 14) a.Add("PC allumé depuis " + up.Days + " jours sans vrai redémarrage — redémarre à l'occasion.");
             }
             catch { }
+            try
+            {
+                int gerr = CrashScan.GpuDriverErrors(7);
+                if (gerr >= 50) a.Add("Pilote GPU : " + gerr + " erreurs signalées en 7 jours — instable. Dis « ça crash » au Copilote (réinstallation propre DDU conseillée).");
+            }
+            catch { }
+            try
+            {
+                var cr = CrashScan.RecentDetailed(2);
+                if (cr != null && cr.Count >= 2) a.Add(cr.Count + " crashs d'applications ces 48 h — dis « ça crash » au Copilote pour la cause exacte.");
+            }
+            catch { }
             return a;
         }
     }

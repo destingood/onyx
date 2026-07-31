@@ -4,6 +4,18 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.37 — Profil ONYX (réinstaller Windows sans rien perdre) + le Gardien voit les crashs
+- **📦 PROFIL ONYX** : « exporte mon profil » → UN zip sur le Bureau avec tout ce qui fait « ton » ONYX
+  (mémoire du Copilote, faits appris, journal de bord, réglages Discord/Gardien, documents bt-savoir).
+  Après une réinstallation de Windows : « importe mon profil » → tout revient. Filet : l'état actuel est
+  toujours sauvegardé dans bt-avant-import-<date> avant restauration ; protection anti zip-slip incluse.
+  Honnêteté : les optimisations SYSTÈME vivent dans Windows, elles — un clic « TOUT optimiser » les remet.
+- **🛡 Le Gardien voit maintenant les CRASHS** : pilote GPU instable (≥ 50 erreurs signalées en 7 jours)
+  et ≥ 2 crashs d'applications en 48 h déclenchent son alerte discrète, avec le chemin vers l'enquête.
+  Il t'aurait prévenu des ~200 erreurs GPU de la semaine dernière avant même que tu ouvres BO6.
+- Vérifié en réel : export zip OK ; Gardien 0 alerte aujourd'hui (les erreurs GPU datent de + de 7 jours —
+  il n'alerte que sur du récent, pas sur de l'histoire ancienne). Harnais **177/177**.
+
 ## v15.36 — Carte blanche : le Gardien, la santé SMART des disques, le journal de bord
 Trois fonctions auxquelles on ne pense jamais… jusqu'au jour où on en a besoin :
 - **🛡 LE GARDIEN** : à chaque ouverture d'ONYX (1 fois par jour max), vérification SILENCIEUSE des

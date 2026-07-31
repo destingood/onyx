@@ -1683,6 +1683,44 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>Exporte le profil ONYX (mémoire, réglages, documents) en UN zip sur le Bureau.</summary>
+        public static DocAssistant.ChatAction ExportProfileAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Exporter mon profil ONYX (zip sur le Bureau)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Écrit UN fichier zip sur le Bureau : mémoire du Copilote, faits appris, journal de bord, "
+                      + "réglages, documents bt-savoir. Ne modifie RIEN au système.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string zip = Profile.Export();
+                if (zip == null) return Say("L'export a échoué (Bureau inaccessible ?).");
+                return Say("✅ Profil exporté : " + Path.GetFileName(zip) + " (sur le Bureau).\n"
+                         + "Garde-le précieusement : après une réinstallation de Windows, « importe mon profil » restaure tout. "
+                         + "Les optimisations système, elles, se réappliquent en 1 clic (« TOUT optimiser »).");
+            };
+            return a;
+        }
+
+        /// <summary>Restaure le dernier export ONYX-profil-*.zip posé sur le Bureau (avec filet).</summary>
+        public static DocAssistant.ChatAction ImportProfileAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Restaurer le profil (zip le plus récent du Bureau)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Cherche le ONYX-profil-*.zip le plus récent sur le Bureau et restaure mémoire/réglages/documents. "
+                      + "L'état ACTUEL est d'abord sauvegardé dans bt-avant-import-<date> (retour arrière possible). "
+                      + "Redémarre ONYX ensuite pour recharger la mémoire.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string name = Profile.ImportNewest();
+                if (name == null) return Say("Aucun ONYX-profil-*.zip trouvé sur le Bureau. Pose ton fichier d'export sur le Bureau puis reclique.");
+                return Say("✅ Profil restauré depuis « " + name + " ». L'ancien état est dans bt-avant-import-<date>.\n"
+                         + "Redémarre ONYX pour que le Copilote recharge sa mémoire.");
+            };
+            return a;
+        }
+
         /// <summary>Santé SMART des disques, en texte prêt pour le chat. 100 % local, lecture seule.</summary>
         public static string DiskHealthText()
         {
