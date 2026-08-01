@@ -723,6 +723,16 @@ namespace BTOptimizer
                 || n.Contains("desinstaller") || n.Contains("inutiles") || (n.Contains("place") && n.Contains("libere"));
         }
 
+        // ---- OÙ SONT PASSÉS MES GO ----
+        /// <summary>« où sont passés mes go », « quel dossier prend de la place » → vrai.</summary>
+        internal static bool IsBigFolders(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("ou sont passes") || n.Contains("ou est passe") || n.Contains("ou sont mes go")) return true;
+            bool folder = n.Contains("dossier") || n.Contains("repertoire") || n.Contains("gros fichiers");
+            return folder && (n.Contains("place") || n.Contains("lourd") || n.Contains("gros") || n.Contains("prend"));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.51.0.0")]
-[assembly: AssemblyFileVersion("15.51.0.0")]
+[assembly: AssemblyVersion("15.52.0.0")]
+[assembly: AssemblyFileVersion("15.52.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,14 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_BIG=1 : classement des plus gros dossiers (tous disques), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_BIG") == "1")
+            {
+                var bf = BigFolders.Scan(30000, delegate (string m, int l) { });
+                Console.WriteLine(BigFolders.Format(bf, 12));
                 Environment.Exit(0);
             }
 
@@ -893,9 +901,22 @@ namespace BTOptimizer
                 bool dg4 = UtilityTools.IsDormantGames("quels jeux prennent de la place") && UtilityTools.IsDormantGames("les jeux que je ne joue plus")
                     && !UtilityTools.IsDormantGames("mon jeu rame"); if (dg4) ok53++; Console.WriteLine((dg4 ? "OK  " : "FAIL") + "  jeux qui dorment : detection, 'mon jeu rame' exclu");
 
+                // v15.52 : « ou sont passes mes Go » (mise en forme pure du classement).
+                int ok54 = 0;
+                long go = 1073741824L;
+                var bfl = new System.Collections.Generic.List<BigFolders.Folder>();
+                bfl.Add(new BigFolders.Folder { Path = "D:" + System.IO.Path.DirectorySeparatorChar + "Call of Duty BO6", Name = "Call of Duty BO6", Bytes = 134L * go });
+                bfl.Add(new BigFolders.Folder { Path = "D:" + System.IO.Path.DirectorySeparatorChar + "SteamLibrary", Name = "SteamLibrary", Bytes = 900L * go, Partial = true });
+                string bftxt = BigFolders.Format(bfl, 10);
+                bool bf1 = bftxt.Contains("Call of Duty BO6") && bftxt.Contains("Go"); if (bf1) ok54++; Console.WriteLine((bf1 ? "OK  " : "FAIL") + "  gros dossiers : classement affiche avec tailles");
+                bool bf2 = bftxt.Contains("partielle"); if (bf2) ok54++; Console.WriteLine((bf2 ? "OK  " : "FAIL") + "  gros dossiers : mesure partielle signalee honnetement");
+                bool bf3 = BigFolders.Format(null, 10).Contains("Aucun dossier"); if (bf3) ok54++; Console.WriteLine((bf3 ? "OK  " : "FAIL") + "  gros dossiers : liste vide -> message honnete");
+                bool bf4 = UtilityTools.IsBigFolders("ou sont passes mes go") && UtilityTools.IsBigFolders("quel dossier prend de la place")
+                    && !UtilityTools.IsBigFolders("bonjour"); if (bf4) ok54++; Console.WriteLine((bf4 ? "OK  " : "FAIL") + "  gros dossiers : detection de la question");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

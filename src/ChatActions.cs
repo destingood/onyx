@@ -1692,6 +1692,23 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>« Où sont passés mes Go ? » : classement des plus gros dossiers, tous disques.
+        /// Lecture seule, budget de temps strict, résultat annoncé partiel si le temps manque.</summary>
+        public static DocAssistant.ChatAction BigFoldersAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Où sont passés mes Go ?"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse des disques (30 s max)…", 0);
+                List<BigFolders.Folder> f;
+                try { f = BigFolders.Scan(30000, log); }
+                catch (Exception ex) { return Say("L'analyse a échoué : " + ex.Message); }
+                return Say(BigFolders.Format(f, 10));
+            };
+            return a;
+        }
+
         /// <summary>« CPU ou GPU qui me limite ? » : 20 s de mesure pendant que le jeu tourne,
         /// puis verdict. Lecture seule, aucun réglage touché.</summary>
         public static DocAssistant.ChatAction BottleneckAction()

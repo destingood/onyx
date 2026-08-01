@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.52 — « Où sont passés mes Go ? » : le classement des plus gros dossiers
+- **Nouvelle mesure** (« où sont passés mes go », « quel dossier prend de la place ») : ONYX parcourt
+  TOUS les disques fixes et classe les dossiers de premier niveau de plus de 5 Go. Contrairement au scan
+  Steam, il voit **tout** : jeux Battle.net / EA / Epic, installations manuelles à la racine d'un disque,
+  données Docker, dossiers de travail…
+- **Budget de temps STRICT et RÉPARTI par disque** : la première version consommait tout son temps sur
+  C: et n'atteignait jamais les autres disques — exactement là où sont les jeux. Corrigé : chaque disque
+  reçoit sa part, puis chaque dossier la sienne.
+- **Honnêteté sur l'incertitude** : un dossier non terminé dans le temps imparti est marqué
+  « (mesure partielle) » avec la mention « le vrai poids est PLUS élevé » — jamais un chiffre incomplet
+  présenté comme sûr. Les dossiers système sont exclus (hors-sujet et dangereux à suggérer).
+- ONYX ne supprime RIEN : il montre où sont les Go, la décision reste à l'utilisateur.
+- Mise en forme PURE et testée (classement, mention partielle, liste vide). Sonde `BT_BIG=1`.
+  Vérifié en réel : **1,5 To cartographié sur 4 disques** en 30 s. Harnais **222/222**.
+
 ## v15.51 — « Les jeux qui dorment » : le vrai levier d'espace disque d'un joueur
 - Les manifestes Steam contiennent la date de dernière partie : ONYX s'en sert pour répondre à la
   question qui vaut des centaines de Go — **« quels gros jeux ne joues-tu plus ? »**

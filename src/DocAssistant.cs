@@ -228,6 +228,11 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- OÙ SONT PASSÉS MES GO : classement des plus gros dossiers (voit aussi les jeux hors Steam) ---
+            if (UtilityTools.IsBigFolders(s))
+                return new Reply { Text = "J'analyse tes disques et je classe les plus gros dossiers (30 secondes max)…",
+                    Action = ChatActions.BigFoldersAction(), Dynamic = true };
+
             // --- JEUX QUI DORMENT : le plus gros levier d'espace disque chez un joueur ---
             if (UtilityTools.IsDormantGames(s))
             {
