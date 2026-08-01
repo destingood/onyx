@@ -634,6 +634,7 @@ namespace BTOptimizer
                 ("Ça rame en jeu", "ça rame et ça saccade en jeu"),
                 ("FPS bas", "mes fps sont bas"),
                 ("Ping / lag en ligne", "ça lag en ligne, ping élevé"),
+                ("CPU ou GPU : qui me limite ?", "c'est mon cpu ou mon gpu qui me limite ?"),
                 ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
                 ("Un jeu ne démarre pas", "un jeu refuse de démarrer, dll manquante"),
                 ("Écran bloqué à 60 Hz", "mon écran semble bloqué à 60 hz"),

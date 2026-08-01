@@ -699,6 +699,18 @@ namespace BTOptimizer
                 || n.Contains("qu est ce qui a change")) && Regex.IsMatch(n, "\\b(pc|ordi|ordinateur|systeme|windows)\\b");
         }
 
+        // ---- GOULOT D'ÉTRANGLEMENT CPU / GPU ----
+        /// <summary>« c'est mon cpu ou mon gpu qui limite », « bottleneck », « goulot » → vrai.</summary>
+        internal static bool IsBottleneck(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("bottleneck") || n.Contains("goulot")) return true;
+            bool both = Regex.IsMatch(n, "\\bcpu\\b") && Regex.IsMatch(n, "\\bgpu\\b");
+            bool limit = n.Contains("limite") || n.Contains("bride") || n.Contains("brid")
+                || n.Contains("qui bloque") || n.Contains("le plus faible") || n.Contains("maillon");
+            return both && limit;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

@@ -228,6 +228,12 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- GOULOT D'ÉTRANGLEMENT : CPU ou GPU ? (20 s de mesure, jeu lancé de préférence) ---
+            if (UtilityTools.IsBottleneck(s))
+                return new Reply { Text = "Je mesure la charge CPU et l'utilisation GPU pendant 20 secondes. "
+                    + "Idéalement, laisse ton JEU tourner en pleine action pendant la mesure — au bureau, les chiffres ne "
+                    + "veulent rien dire (je te le dirai si c'est le cas).", Action = ChatActions.BottleneckAction(), Dynamic = true };
+
             // --- SANTÉ SMART des disques (local, lecture seule) : prévenir AVANT la panne ---
             if (UtilityTools.IsDiskHealth(s))
                 return new Reply { Text = ChatActions.DiskHealthText(), ShowStarters = true };

@@ -1683,6 +1683,23 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>« CPU ou GPU qui me limite ? » : 20 s de mesure pendant que le jeu tourne,
+        /// puis verdict. Lecture seule, aucun réglage touché.</summary>
+        public static DocAssistant.ChatAction BottleneckAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Qui me limite : CPU ou GPU ?"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Mesure CPU/GPU pendant 20 s — laisse ton jeu tourner…", 0);
+                Bottleneck.Result r;
+                try { r = Bottleneck.Measure(20, log); }
+                catch (Exception ex) { return Say("La mesure a échoué : " + ex.Message); }
+                return Say(Bottleneck.Text(r));
+            };
+            return a;
+        }
+
         /// <summary>Exporte le profil ONYX (mémoire, réglages, documents) en UN zip sur le Bureau.</summary>
         public static DocAssistant.ChatAction ExportProfileAction()
         {

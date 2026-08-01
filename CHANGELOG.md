@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.49 — « CPU ou GPU : qui me limite ? » — LA question de tout joueur, enfin tranchée
+- **Nouvelle mesure** (pastille du Copilote « CPU ou GPU : qui me limite ? », ou la question en toutes
+  lettres) : 20 secondes d'échantillonnage de la charge CPU et de l'utilisation GPU **pendant que le jeu
+  tourne**, puis un verdict clair et la marche à suivre :
+  - **GPU ≥ 93 %** → « ✅ c'est ton GPU qui travaille à fond, situation NORMALE » : baisser les réglages
+    coûteux pour gagner des FPS, et **changer de processeur n'apporterait presque rien** (l'erreur d'achat
+    la plus fréquente chez les joueurs) ;
+  - **CPU ≥ 70 % et GPU < 85 %** → « ⚠️ ton processeur bride ta carte graphique » : fermer le fond,
+    activer XMP/EXPO (le gain gratuit décisif dans ce cas), **monter** la résolution/les réglages pour
+    redonner le travail au GPU, baisser distance d'affichage / foule / ray tracing — le CPU en dernier ;
+  - **les deux bas** → ce n'est ni l'un ni l'autre : limite d'images / V-Sync (cause n°1), moteur du jeu,
+    disque, ou bridage thermique ;
+  - **au bureau** → il REFUSE de conclure : « lance ton jeu, sinon ces chiffres ne veulent rien dire ».
+- Détection du jeu par plein écran **ou** GPU réellement sollicité (les jeux en fenêtré sans bordure
+  échappaient au test plein écran).
+- Verdict PUR et testé (4 scénarios) ; sonde `BT_BOTTLE=1`. Vérifié en réel : au bureau, refus honnête
+  (CPU 35 %, GPU 18 %). Harnais **210/210** ; UITEST 45/45.
+
 ## v15.48 — L'enquête dit enfin CE QUI A CHANGÉ (la cause n°1 d'un « ça marchait avant »)
 - **Nouvelle carte « Ce qui a changé »** dans l'enquête : elle compare la photo quotidienne du système
   (pilote GPU, version de Windows, programmes au démarrage, espace disque) à l'état actuel et liste les

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.48.0.0")]
-[assembly: AssemblyFileVersion("15.48.0.0")]
+[assembly: AssemblyVersion("15.49.0.0")]
+[assembly: AssemblyFileVersion("15.49.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,14 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_BOTTLE=1 : mesure CPU/GPU (20 s) et verdict du goulot d'etranglement, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_BOTTLE") == "1")
+            {
+                var rb = Bottleneck.Measure(20, delegate (string m, int l) { Console.WriteLine("... " + m); });
+                Console.WriteLine(Bottleneck.Text(rb));
                 Environment.Exit(0);
             }
 
@@ -827,9 +835,21 @@ namespace BTOptimizer
                 bool rc2 = capNow.ContainsKey("demarrage") || capNow.ContainsKey("windows"); if (rc2) ok50++; Console.WriteLine((rc2 ? "OK  " : "FAIL") + "  photo systeme : cles presentes (" + capNow.Count + ")");
                 bool rc3 = StateDiff.Diff(capNow, capNow).Count == 0; if (rc3) ok50++; Console.WriteLine((rc3 ? "OK  " : "FAIL") + "  photo systeme : identique a elle-meme = 0 changement");
 
+                // v15.49 : goulot d'etranglement CPU/GPU (verdict pur).
+                int ok51 = 0;
+                var bGpu = Bottleneck.Verdict(45, 98, 20, true);
+                bool bn1 = bGpu.Title.Contains("GPU") && bGpu.Advice.Contains("processeur"); if (bn1) ok51++; Console.WriteLine((bn1 ? "OK  " : "FAIL") + "  goulot : GPU a 98% -> normal, changer de CPU inutile");
+                var bCpu = Bottleneck.Verdict(92, 55, 20, true);
+                bool bn2 = bCpu.Title.Contains("PROCESSEUR") && bCpu.Advice.Contains("XMP"); if (bn2) ok51++; Console.WriteLine((bn2 ? "OK  " : "FAIL") + "  goulot : CPU 92% / GPU 55% -> CPU bride, XMP conseille");
+                var bNone = Bottleneck.Verdict(30, 40, 20, true);
+                bool bn3 = bNone.Advice.Contains("V-Sync") || bNone.Advice.Contains("LIMITE"); if (bn3) ok51++; Console.WriteLine((bn3 ? "OK  " : "FAIL") + "  goulot : les deux bas -> limite FPS/V-Sync suspectee");
+                var bIdle = Bottleneck.Verdict(10, 5, 20, false);
+                bool bn4 = bIdle.Title.Contains("Aucun jeu") && UtilityTools.IsBottleneck("c'est mon cpu ou mon gpu qui me limite")
+                    && !UtilityTools.IsBottleneck("bonjour"); if (bn4) ok51++; Console.WriteLine((bn4 ? "OK  " : "FAIL") + "  goulot : sans jeu -> refus honnete + detection de la question");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
