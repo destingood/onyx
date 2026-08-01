@@ -386,6 +386,15 @@ namespace BTOptimizer
                 }
                 catch { }
 
+                // Le plus gros levier chez un JOUEUR : les gros jeux qu'on ne lance plus.
+                try
+                {
+                    if (log != null) log("Jeux installés (Steam)…", 0);
+                    string dorm = SteamGames.DormantText(120);
+                    if (!string.IsNullOrEmpty(dorm)) sb.Append(dorm).Append('\n');
+                }
+                catch { }
+
                 if (btn == null)
                     btn = OpenUrlAction("Ouvrir le nettoyage de stockage Windows", "ms-settings:storagesense",
                         "Ouvre les réglages Stockage de Windows. Rien n'est supprimé automatiquement.");

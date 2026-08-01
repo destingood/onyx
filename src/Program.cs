@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.50.0.0")]
-[assembly: AssemblyFileVersion("15.50.0.0")]
+[assembly: AssemblyVersion("15.51.0.0")]
+[assembly: AssemblyFileVersion("15.51.0.0")]
 
 namespace BTOptimizer
 {
@@ -190,6 +190,8 @@ namespace BTOptimizer
                 Console.WriteLine(gl.Count + " jeu(x) installe(s) :");
                 int shown = 0;
                 foreach (var g in gl) { if (shown++ >= 12) break; Console.WriteLine("  - " + g.Name + "  (" + SteamGames.Human(g.SizeBytes) + ", appid " + g.AppId + ")"); }
+                Console.WriteLine();
+                Console.WriteLine(SteamGames.DormantText(120) ?? "(pas de bibliotheque Steam)");
                 Environment.Exit(0);
             }
 
@@ -876,9 +878,24 @@ namespace BTOptimizer
                 bool sg3 = libs.Count >= 2 && sg3b; if (sg3) ok52++; Console.WriteLine((sg3 ? "OK  " : "FAIL") + "  steam : bibliotheques multi-disques detectees (" + libs.Count + ")");
                 bool sg4 = SteamGames.Human(75000000000L).Contains("Go") && SteamGames.Human(5242880L).Contains("Mo"); if (sg4) ok52++; Console.WriteLine((sg4 ? "OK  " : "FAIL") + "  steam : tailles lisibles (Go / Mo)");
 
+                // v15.51 : « jeux qui dorment » (tri pur : jamais lance / inactif / trop petit).
+                int ok53 = 0;
+                long gig = 1073741824L;
+                var lot = new System.Collections.Generic.List<SteamGames.Game>();
+                lot.Add(new SteamGames.Game { AppId = "1", Name = "Gros jamais lance", SizeBytes = 100L * gig, LastPlayedUnix = 0 });
+                lot.Add(new SteamGames.Game { AppId = "2", Name = "Gros joue hier", SizeBytes = 80L * gig, LastPlayedUnix = DateTimeOffset.Now.AddDays(-1).ToUnixTimeSeconds() });
+                lot.Add(new SteamGames.Game { AppId = "3", Name = "Gros endormi", SizeBytes = 60L * gig, LastPlayedUnix = DateTimeOffset.Now.AddDays(-300).ToUnixTimeSeconds() });
+                lot.Add(new SteamGames.Game { AppId = "4", Name = "Petit endormi", SizeBytes = 1L * gig, LastPlayedUnix = 0 });
+                var dorm = SteamGames.Dormant(lot, 120, 5L * gig);
+                bool dg1 = dorm.Count == 2; if (dg1) ok53++; Console.WriteLine((dg1 ? "OK  " : "FAIL") + "  jeux qui dorment : 2 retenus sur 4 (" + dorm.Count + ")");
+                bool dg2 = dorm.Count == 2 && dorm[0].Name == "Gros jamais lance" && dorm[1].Name == "Gros endormi"; if (dg2) ok53++; Console.WriteLine((dg2 ? "OK  " : "FAIL") + "  jeux qui dorment : tries par taille, le jeu recent exclu");
+                bool dg3 = SteamGames.TotalBytes(dorm) == 160L * gig; if (dg3) ok53++; Console.WriteLine((dg3 ? "OK  " : "FAIL") + "  jeux qui dorment : total recuperable = 160 Go");
+                bool dg4 = UtilityTools.IsDormantGames("quels jeux prennent de la place") && UtilityTools.IsDormantGames("les jeux que je ne joue plus")
+                    && !UtilityTools.IsDormantGames("mon jeu rame"); if (dg4) ok53++; Console.WriteLine((dg4 ? "OK  " : "FAIL") + "  jeux qui dorment : detection, 'mon jeu rame' exclu");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

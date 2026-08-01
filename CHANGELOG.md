@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.51 — « Les jeux qui dorment » : le vrai levier d'espace disque d'un joueur
+- Les manifestes Steam contiennent la date de dernière partie : ONYX s'en sert pour répondre à la
+  question qui vaut des centaines de Go — **« quels gros jeux ne joues-tu plus ? »**
+- **« quels jeux prennent de la place »**, « les jeux que je ne joue plus » → liste des jeux ≥ 5 Go
+  **jamais lancés ou inactifs depuis 4 mois**, triés du plus gros au plus petit, avec le TOTAL
+  récupérable et, pour chacun, « JAMAIS lancé » ou « dernière partie il y a N mois ».
+- Intégré au **grand bilan stockage** (« libère de la place ») : après les temporaires, l'hibernation
+  et WinSxS, c'est de loin le plus gros gisement chez un joueur.
+- Honnêteté : ONYX **ne désinstalle rien** et rappelle que la progression n'est pas perdue (sauvegardes
+  dans le cloud Steam) et que le jeu se réinstalle quand on veut. Les jeux < 5 Go sont ignorés (ça ne
+  vaut pas le clic), les jeux joués récemment aussi.
+- Tri PUR et testé (jamais lancé / inactif / joué hier / trop petit, total exact). Vérifié en réel sur
+  cette machine : **847 Go dormants** — Borderlands 3 (139 Go) et 4 (127 Go) jamais lancés, NARAKA
+  (89 Go) jamais lancé, Spider-Man (67 Go) inactif depuis 8 mois… Harnais **218/218**.
+
 ## v15.50 — Vérifier les fichiers d'un jeu (Steam) : la vraie réparation, en 1 clic
 - **Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : ONYX liste **tes jeux Steam installés** —
   toutes bibliothèques comprises, y compris celles posées sur d'autres disques — triés du plus gros au

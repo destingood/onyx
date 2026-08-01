@@ -711,6 +711,18 @@ namespace BTOptimizer
             return both && limit;
         }
 
+        // ---- JEUX QUI DORMENT (espace disque) ----
+        /// <summary>« quels jeux prennent de la place », « jeux que je ne joue plus » → vrai.</summary>
+        internal static bool IsDormantGames(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool games = Regex.IsMatch(n, "\\b(jeux|jeu)\\b");
+            if (!games) return false;
+            return n.Contains("prennent de la place") || n.Contains("prend de la place") || n.Contains("plus gros jeux")
+                || n.Contains("je ne joue plus") || n.Contains("joue plus") || n.Contains("dorment")
+                || n.Contains("desinstaller") || n.Contains("inutiles") || (n.Contains("place") && n.Contains("libere"));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

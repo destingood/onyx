@@ -228,6 +228,16 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- JEUX QUI DORMENT : le plus gros levier d'espace disque chez un joueur ---
+            if (UtilityTools.IsDormantGames(s))
+            {
+                string dorm = null;
+                try { dorm = SteamGames.DormantText(120); } catch { }
+                if (dorm != null) return new Reply { Text = dorm, ShowStarters = true };
+                return new Reply { Text = "Je n'ai pas trouvé de bibliothèque Steam sur ce PC (ou elle est vide). "
+                    + "Pour le reste, dis « libère de la place » : je fais le grand bilan stockage.", ShowStarters = true };
+            }
+
             // --- GOULOT D'ÉTRANGLEMENT : CPU ou GPU ? (20 s de mesure, jeu lancé de préférence) ---
             if (UtilityTools.IsBottleneck(s))
                 return new Reply { Text = "Je mesure la charge CPU et l'utilisation GPU pendant 20 secondes. "
