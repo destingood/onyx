@@ -228,6 +228,16 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- MES JEUX SONT-ILS SUR SSD ? (le support décide des temps de chargement) ---
+            if (UtilityTools.IsGameStorage(s))
+            {
+                string st2 = null;
+                try { st2 = SteamGames.StorageText(); } catch { }
+                if (st2 != null) return new Reply { Text = st2, ShowStarters = true };
+                return new Reply { Text = "Je n'ai pas trouvé de jeux Steam installés sur ce PC. "
+                    + "Pour le reste, « où sont passés mes go » liste les plus gros dossiers de tous tes disques.", ShowStarters = true };
+            }
+
             // --- OÙ SONT PASSÉS MES GO : classement des plus gros dossiers (voit aussi les jeux hors Steam) ---
             if (UtilityTools.IsBigFolders(s))
                 return new Reply { Text = "J'analyse tes disques et je classe les plus gros dossiers (30 secondes max)…",

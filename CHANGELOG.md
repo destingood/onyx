@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.53 — « Mes jeux sont-ils sur SSD ? » : le support décide des temps de chargement
+- **Nouvelle mesure** (« mes jeux sont sur ssd ? », « jeux sur hdd ») : ONYX relie chaque bibliothèque de
+  jeu à son **disque physique réel** (partition → disque → type) et classe : 🐌 **mécanique (HDD)**,
+  ✅ **SSD SATA**, ⚡ **SSD NVMe**, avec le modèle exact du disque et le nombre de jeux/Go par lecteur.
+- **Jeux sur disque mécanique** → il les liste (du plus gros au plus petit) et donne la solution
+  GRATUITE, sans re-téléchargement : Steam → clic droit → Propriétés → Fichiers installés →
+  « Déplacer le dossier d'installation ». Chargements 3 à 5× plus longs et micro-freezes d'ouverture de
+  zone : c'est LE réglage matériel que personne ne vérifie.
+- **Tout sur SSD ?** Il le dit franchement (« rien à faire ») et ajoute la nuance utile : un jeu sur SSD
+  SATA charge ~2× moins vite que sur NVMe — de quoi choisir où mettre SON jeu principal.
+- Regroupement PUR et testé (HDD signalé, solution proposée, tout-SSD = rien à faire, nettoyage exclu).
+  Vérifié en réel : **52 jeux sur 3 disques** — D: 974 Go (SATA), F: 765 Go (NVMe), E: 281 Go (SATA),
+  aucun sur mécanique. Harnais **226/226**.
+
 ## v15.52 — « Où sont passés mes Go ? » : le classement des plus gros dossiers
 - **Nouvelle mesure** (« où sont passés mes go », « quel dossier prend de la place ») : ONYX parcourt
   TOUS les disques fixes et classe les dossiers de premier niveau de plus de 5 Go. Contrairement au scan

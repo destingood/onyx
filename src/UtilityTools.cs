@@ -733,6 +733,19 @@ namespace BTOptimizer
             return folder && (n.Contains("place") || n.Contains("lourd") || n.Contains("gros") || n.Contains("prend"));
         }
 
+        // ---- MES JEUX SONT-ILS SUR SSD ? ----
+        /// <summary>« mes jeux sont sur ssd ? », « jeux sur hdd », « quel disque pour mes jeux » → vrai.</summary>
+        internal static bool IsGameStorage(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool games = Regex.IsMatch(n, "\\b(jeux|jeu)\\b");
+            bool storage = Regex.IsMatch(n, "\\b(ssd|hdd|nvme|disque|disques)\\b");
+            if (!games || !storage) return false;
+            // « mon jeu rame » + « disque plein » = autre sujet (nettoyage), pas l'emplacement.
+            if (n.Contains("plein") || n.Contains("libere") || n.Contains("place")) return false;
+            return true;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

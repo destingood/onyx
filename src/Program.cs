@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.52.0.0")]
-[assembly: AssemblyFileVersion("15.52.0.0")]
+[assembly: AssemblyVersion("15.53.0.0")]
+[assembly: AssemblyFileVersion("15.53.0.0")]
 
 namespace BTOptimizer
 {
@@ -200,6 +200,8 @@ namespace BTOptimizer
                 foreach (var g in gl) { if (shown++ >= 12) break; Console.WriteLine("  - " + g.Name + "  (" + SteamGames.Human(g.SizeBytes) + ", appid " + g.AppId + ")"); }
                 Console.WriteLine();
                 Console.WriteLine(SteamGames.DormantText(120) ?? "(pas de bibliotheque Steam)");
+                Console.WriteLine();
+                Console.WriteLine(SteamGames.StorageText() ?? "(emplacement des jeux indisponible)");
                 Environment.Exit(0);
             }
 
@@ -914,9 +916,29 @@ namespace BTOptimizer
                 bool bf4 = UtilityTools.IsBigFolders("ou sont passes mes go") && UtilityTools.IsBigFolders("quel dossier prend de la place")
                     && !UtilityTools.IsBigFolders("bonjour"); if (bf4) ok54++; Console.WriteLine((bf4 ? "OK  " : "FAIL") + "  gros dossiers : detection de la question");
 
+                // v15.53 : « mes jeux sont-ils sur SSD ? » (regroupement pur par disque).
+                int ok55 = 0;
+                long go2 = 1073741824L;
+                var gl2 = new System.Collections.Generic.List<SteamGames.Game>();
+                gl2.Add(new SteamGames.Game { AppId = "1", Name = "Jeu sur HDD", SizeBytes = 90L * go2, Dir = "H:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                gl2.Add(new SteamGames.Game { AppId = "2", Name = "Jeu sur NVMe", SizeBytes = 50L * go2, Dir = "C:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                var kinds = new System.Collections.Generic.Dictionary<char, Diagnostics.DriveKind>();
+                kinds['H'] = new Diagnostics.DriveKind { Name = "Seagate", MediaType = 3, BusType = 11 };
+                kinds['C'] = new Diagnostics.DriveKind { Name = "Samsung 990", MediaType = 4, BusType = 17 };
+                string stx = SteamGames.StorageText(gl2, kinds);
+                bool ss1 = stx.Contains("MÉCANIQUE") && stx.Contains("Jeu sur HDD"); if (ss1) ok55++; Console.WriteLine((ss1 ? "OK  " : "FAIL") + "  stockage jeux : jeu sur HDD signale");
+                bool ss2 = stx.Contains("Déplacer le dossier"); if (ss2) ok55++; Console.WriteLine((ss2 ? "OK  " : "FAIL") + "  stockage jeux : solution gratuite (deplacer) proposee");
+                var kindsOk = new System.Collections.Generic.Dictionary<char, Diagnostics.DriveKind>();
+                kindsOk['C'] = new Diagnostics.DriveKind { Name = "Samsung 990", MediaType = 4, BusType = 17 };
+                var gl3 = new System.Collections.Generic.List<SteamGames.Game>();
+                gl3.Add(new SteamGames.Game { AppId = "2", Name = "Jeu sur NVMe", SizeBytes = 50L * go2, Dir = "C:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                string stx2 = SteamGames.StorageText(gl3, kindsOk);
+                bool ss3 = stx2.Contains("Aucun jeu sur disque mécanique"); if (ss3) ok55++; Console.WriteLine((ss3 ? "OK  " : "FAIL") + "  stockage jeux : tout sur SSD -> rien a faire");
+                bool ss4 = UtilityTools.IsGameStorage("mes jeux sont sur ssd ?") && !UtilityTools.IsGameStorage("mon disque est plein libere de la place"); if (ss4) ok55++; Console.WriteLine((ss4 ? "OK  " : "FAIL") + "  stockage jeux : detection, nettoyage exclu");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

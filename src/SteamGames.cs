@@ -192,6 +192,72 @@ namespace BTOptimizer
             return sb.ToString();
         }
 
+        /// <summary>« Mes jeux sont-ils sur SSD ? » — regroupe les jeux par disque et signale ceux
+        /// installés sur un support LENT (chargements 3-5× plus longs sur mécanique). PUR sur les
+        /// entrées fournies → testable sans matériel.</summary>
+        public static string StorageText(List<Game> games, System.Collections.Generic.Dictionary<char, Diagnostics.DriveKind> kinds)
+        {
+            if (games == null || games.Count == 0) return null;
+            var byDrive = new System.Collections.Generic.Dictionary<char, List<Game>>();
+            foreach (var g in games)
+            {
+                if (g == null || string.IsNullOrEmpty(g.Dir) || g.Dir.Length < 2 || g.Dir[1] != ':') continue;
+                char dl = char.ToUpperInvariant(g.Dir[0]);
+                if (!byDrive.ContainsKey(dl)) byDrive[dl] = new List<Game>();
+                byDrive[dl].Add(g);
+            }
+            if (byDrive.Count == 0) return null;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("💽 Où sont installés tes jeux (le support change TOUT sur les temps de chargement) :\n");
+            var slow = new List<Game>();
+            long slowBytes = 0;
+            foreach (var kv in byDrive)
+            {
+                Diagnostics.DriveKind k = null;
+                kinds.TryGetValue(kv.Key, out k);
+                long size = TotalBytes(kv.Value);
+                string label = k != null ? k.Label : "type inconnu";
+                string icon = k == null ? "• " : (k.MediaType == 3 ? "🐌 " : k.IsNvme ? "⚡ " : "✅ ");
+                sb.Append(icon).Append(kv.Key).Append(": — ").Append(kv.Value.Count).Append(" jeu(x), ")
+                  .Append(Human(size)).Append("  (").Append(label);
+                if (k != null && !string.IsNullOrEmpty(k.Name)) sb.Append(", ").Append(k.Name);
+                sb.Append(")\n");
+                if (k != null && k.MediaType == 3) { slow.AddRange(kv.Value); slowBytes += size; }
+            }
+
+            if (slow.Count > 0)
+            {
+                slow.Sort((a, b) => b.SizeBytes.CompareTo(a.SizeBytes));
+                sb.Append("\n🐌 ").Append(slow.Count).Append(" jeu(x) sur disque MÉCANIQUE (").Append(Human(slowBytes))
+                  .Append(") — chargements 3 à 5× plus longs, et des micro-freezes à l'ouverture des zones :\n");
+                int n = 0;
+                foreach (var g in slow) { if (n++ >= 5) break; sb.Append("   • ").Append(g.Name).Append("  (").Append(Human(g.SizeBytes)).Append(")\n"); }
+                sb.Append("À faire (GRATUIT, sans re-télécharger) : dans Steam, clic droit sur le jeu → Propriétés → "
+                        + "« Fichiers installés » → « Déplacer le dossier d'installation » → choisis ton SSD.");
+            }
+            else
+            {
+                sb.Append("\n✅ Aucun jeu sur disque mécanique : tes chargements sont déjà au mieux de ce que ta config permet.");
+                bool anySata = false;
+                foreach (var kv in byDrive)
+                {
+                    Diagnostics.DriveKind k;
+                    if (kinds.TryGetValue(kv.Key, out k) && k != null && k.IsSsd && !k.IsNvme) anySata = true;
+                }
+                if (anySata) sb.Append("\n(Nuance : les jeux sur SSD SATA chargent ~2× moins vite que sur NVMe — utile à savoir "
+                                     + "si tu veux placer TON jeu principal sur le disque le plus rapide.)");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Version machine : lit les jeux installés et les types de disques.</summary>
+        public static string StorageText()
+        {
+            try { return StorageText(Installed(), Diagnostics.DriveTypes()); }
+            catch { return null; }
+        }
+
         /// <summary>Ouvre la désinstallation Steam du jeu (Steam demande confirmation lui-même).</summary>
         public static bool Uninstall(string appId)
         {

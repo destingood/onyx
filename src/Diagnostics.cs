@@ -135,6 +135,58 @@ namespace BTOptimizer
             return f;
         }
 
+        public sealed class DriveKind
+        {
+            public string Name;          // modèle du disque physique
+            public int MediaType;        // 3 = HDD, 4 = SSD
+            public int BusType;          // 17 = NVMe, 11 = SATA, 7 = USB…
+            public bool IsSsd { get { return MediaType == 4; } }
+            public bool IsNvme { get { return BusType == 17; } }
+            /// <summary>Étiquette lisible : ce qui change VRAIMENT les temps de chargement.</summary>
+            public string Label
+            {
+                get
+                {
+                    if (MediaType == 3) return "disque MÉCANIQUE (HDD)";
+                    if (MediaType == 4) return BusType == 17 ? "SSD NVMe (le plus rapide)" : "SSD SATA";
+                    return BusType == 7 ? "disque externe/USB" : "type inconnu";
+                }
+            }
+        }
+
+        /// <summary>Type de disque PAR LETTRE de lecteur (C:, D:…) — via partition → disque physique.
+        /// Sert à dire si un jeu est installé sur un support lent.</summary>
+        public static System.Collections.Generic.Dictionary<char, DriveKind> DriveTypes()
+        {
+            var map = new System.Collections.Generic.Dictionary<char, DriveKind>();
+            try
+            {
+                var scope = new ManagementScope(@"\\.\root\microsoft\windows\storage");
+                scope.Connect();
+                var byDisk = new System.Collections.Generic.Dictionary<int, DriveKind>();
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DeviceId, MediaType, BusType, FriendlyName FROM MSFT_PhysicalDisk")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        int id; if (!int.TryParse(Convert.ToString(mo["DeviceId"]), out id)) continue;
+                        int mt = 0, bt = 0;
+                        try { mt = Convert.ToInt32(mo["MediaType"]); } catch { }
+                        try { bt = Convert.ToInt32(mo["BusType"]); } catch { }
+                        byDisk[id] = new DriveKind { Name = Convert.ToString(mo["FriendlyName"]) ?? "", MediaType = mt, BusType = bt };
+                    }
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DriveLetter, DiskNumber FROM MSFT_Partition")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string dl = Convert.ToString(mo["DriveLetter"]);
+                        if (string.IsNullOrEmpty(dl) || dl == "\0") continue;
+                        int dn; if (!int.TryParse(Convert.ToString(mo["DiskNumber"]), out dn)) continue;
+                        DriveKind k;
+                        if (byDisk.TryGetValue(dn, out k)) map[char.ToUpperInvariant(dl[0])] = k;
+                    }
+            }
+            catch { }
+            return map;
+        }
+
         public sealed class DiskHp { public string Name; public int Status; public int SizeGb; public bool IsSsd; }
 
         /// <summary>Santé SMART des disques physiques (WMI Storage : HealthStatus 0=sain, 1=avertissement,
