@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.45.0.0")]
-[assembly: AssemblyFileVersion("15.45.0.0")]
+[assembly: AssemblyVersion("15.46.0.0")]
+[assembly: AssemblyFileVersion("15.46.0.0")]
 
 namespace BTOptimizer
 {
@@ -796,9 +796,20 @@ namespace BTOptimizer
                 bool pl2 = GpuStability.DoneDate(stepT) == null;
                 bool tr4 = pl1 && pl2; if (tr4) ok47++; Console.WriteLine((tr4 ? "OK  " : "FAIL") + "  plan : cocher puis decocher une etape");
 
+                // v15.46 : le verdict tient compte de la SEMAINE ECOULEE (crise passee != probleme actuel).
+                int ok48 = 0;
+                var vHeal = GpuStability.Verdict(200, 8, 88, 1);
+                bool hl1 = vHeal.Level == 0 && !vHeal.Advice.Contains("Réinstallation PROPRE") && vHeal.Advice.Contains("Ne touche à RIEN"); if (hl1) ok48++; Console.WriteLine((hl1 ? "OK  " : "FAIL") + "  verdict : 200 dont 1 cette semaine -> crise passee, aucune manip poussee");
+                var vStill = GpuStability.Verdict(200, 8, 88, 120);
+                bool hl2 = vStill.Level == 3 && vStill.Advice.Contains("DDU"); if (hl2) ok48++; Console.WriteLine((hl2 ? "OK  " : "FAIL") + "  verdict : 200 dont 120 cette semaine -> toujours tres instable");
+                var vUnknown = GpuStability.Verdict(200, 8, 88);
+                bool hl3 = vUnknown.Level == 3; if (hl3) ok48++; Console.WriteLine((hl3 ? "OK  " : "FAIL") + "  verdict : sans info hebdo -> comportement d'origine (14 j)");
+                var vSmall = GpuStability.Verdict(6, 0, 88, 2);
+                bool hl4 = vSmall.Level == 1; if (hl4) ok48++; Console.WriteLine((hl4 ? "OK  " : "FAIL") + "  verdict : petits chiffres -> pas de fausse 'guerison'");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

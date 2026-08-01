@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.46 — Une crise PASSÉE n'est pas un problème actuel (correction de fond)
+- **Le bug que la machine de test a révélé** : le verdict criait « TRÈS INSTABLE — 200 erreurs en
+  14 jours » alors que le suivi disait « 199 → 1 cette semaine, −99 % ». L'app envoyait donc faire un
+  DDU **devenu inutile**. Un diagnostic qui ignore sa propre tendance est dangereux.
+- **Le verdict tient maintenant compte de la SEMAINE ÉCOULÉE** : si la semaine est calme (≤ 4 erreurs)
+  alors que la précédente était chargée (≥ 20), il conclut « ✅ la crise est PASSÉE » et dit
+  explicitement : **ne touche à rien**, refaire un DDU serait inutile et risqué — surveille, et on
+  n'agit que si le compteur hebdomadaire repasse au-dessus de 20.
+- **Le Gardien apprend la même leçon** : son alerte pilote GPU ne regarde plus 7 jours (où une crise
+  d'il y a une semaine sonnait encore l'alarme) mais **les 2 derniers jours** — « instable EN CE
+  MOMENT », sinon silence.
+- Compatibilité : sans information hebdomadaire, le verdict garde son comportement d'origine.
+  4 nouveaux cas au harnais (crise passée / toujours instable / info absente / petits chiffres).
+  Harnais **200/200** ; UITEST 45/45.
+
 ## v15.45 — Le verdict GPU se SUIT dans le temps + plan d'action coché
 - **📉 SUIVI HEBDOMADAIRE** : le panneau compare la semaine écoulée à la précédente et le dit en clair —
   « ✅ 199 → 1 erreur(s) (−99 %) : ça S'AMÉLIORE, tes manips ont payé », « 🚨 ça EMPIRE », ou « ➡️ stable,

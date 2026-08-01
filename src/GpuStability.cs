@@ -18,12 +18,35 @@ namespace BTOptimizer
             public string Advice;        // marche à suivre, dans l'ordre
         }
 
-        /// <summary>Verdict PUR à partir des chiffres (testable sans machine).</summary>
+        /// <summary>Verdict PUR à partir des chiffres (testable sans machine). Compat : sans détail
+        /// hebdomadaire, on juge sur les 14 jours (comportement d'origine).</summary>
         public static Result Verdict(int gpuErrors14d, int appCrashes14d, int driverAgeDays)
+        {
+            return Verdict(gpuErrors14d, appCrashes14d, driverAgeDays, -1);
+        }
+
+        /// <summary>Verdict PUR qui tient compte de la SEMAINE ÉCOULÉE (last7 &lt; 0 = inconnue).
+        /// Leçon du terrain : 200 erreurs sur 14 j dont 199 la semaine d'AVANT = problème RÉSOLU —
+        /// il ne faut surtout pas envoyer l'utilisateur refaire un DDU inutile.</summary>
+        public static Result Verdict(int gpuErrors14d, int appCrashes14d, int driverAgeDays, int last7)
         {
             var r = new Result();
             bool fresh = driverAgeDays >= 0 && driverAgeDays <= 30;
             bool old = driverAgeDays > 540;
+
+            // Le PRÉSENT prime sur le total : si la semaine écoulée est calme, c'est en voie de guérison.
+            bool healing = last7 >= 0 && last7 <= 4 && gpuErrors14d - last7 >= 20;
+            if (healing)
+            {
+                r.Level = 0;
+                r.Title = "Pilote GPU : la crise est PASSÉE (" + last7 + " erreur(s) cette semaine, "
+                        + (gpuErrors14d - last7) + " la semaine d'avant)";
+                r.Advice = "Ne touche à RIEN pour l'instant : le problème s'est résorbé tout seul (souvent après un "
+                         + "redémarrage, de l'espace disque libéré ou une mise à jour). Refaire un DDU maintenant serait "
+                         + "inutile et risqué.\nSurveille simplement cette page quelques jours : si le compteur "
+                         + "hebdomadaire remonte au-dessus de 20, alors seulement on repart sur la réinstallation propre.";
+                return r;
+            }
 
             if (gpuErrors14d >= 100) { r.Level = 3; r.Title = "Pilote GPU TRÈS INSTABLE — " + gpuErrors14d + " erreurs en 14 jours"; }
             else if (gpuErrors14d >= 30) { r.Level = 2; r.Title = "Pilote GPU instable — " + gpuErrors14d + " erreurs en 14 jours"; }
@@ -138,11 +161,12 @@ namespace BTOptimizer
         /// <summary>Verdict à partir de la MACHINE (journal d'événements + WMI).</summary>
         public static Result Current()
         {
-            int gerr = 0, crashes = 0, age = -1;
+            int gerr = 0, crashes = 0, age = -1, last7 = -1;
             try { gerr = CrashScan.GpuDriverErrors(14); } catch { }
+            try { last7 = CrashScan.GpuDriverErrors(7); } catch { }
             try { var l = CrashScan.RecentDetailed(14); if (l != null) crashes = l.Count; } catch { }
             try { var d = Diagnostics.GpuDriver(); if (d != null) age = d.AgeDays; } catch { }
-            return Verdict(gerr, crashes, age);
+            return Verdict(gerr, crashes, age, last7);
         }
 
         /// <summary>Texte complet (verdict + contexte matériel), prêt pour une fenêtre ou la console.</summary>

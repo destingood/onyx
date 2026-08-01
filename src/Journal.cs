@@ -231,8 +231,11 @@ namespace BTOptimizer
             catch { }
             try
             {
-                int gerr = CrashScan.GpuDriverErrors(7);
-                if (gerr >= 50) a.Add("Pilote GPU : " + gerr + " erreurs signalées en 7 jours — instable. Dis « ça crash » au Copilote (réinstallation propre DDU conseillée).");
+                // On alerte sur les 2 DERNIERS JOURS : une crise passée (chiffres d'il y a une semaine)
+                // ne doit pas déclencher une alarme ni pousser à des manips devenues inutiles.
+                int g2 = CrashScan.GpuDriverErrors(2);
+                if (g2 >= 15) a.Add("Pilote GPU : " + g2 + " erreurs sur les 2 derniers jours — instable EN CE MOMENT. "
+                    + "Ouvre Check Up+ → « Mon pilote GPU est-il instable ? ».");
             }
             catch { }
             try
