@@ -765,6 +765,18 @@ namespace BTOptimizer
                 && n.Contains("exclusion");
         }
 
+        // ---- MÉDECIN DES JOURNAUX WINDOWS ----
+        /// <summary>« analyse les logs », « journal d'événements », « diagnostique tout » → vrai.</summary>
+        internal static bool IsLogDoctor(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("journal de bord")) return false;                    // → journal des actions d'ONYX
+            if (Regex.IsMatch(n, "\\blogs?\\b") || n.Contains("observateur d'evenement") || n.Contains("observateur devenement")
+                || n.Contains("journal d'evenement") || n.Contains("journal devenement") || n.Contains("journaux windows")
+                || n.Contains("evenements windows")) return true;
+            return (n.Contains("diagnostique") || n.Contains("diagnostic")) && (n.Contains("tout") || n.Contains("complet") || n.Contains("windows"));
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

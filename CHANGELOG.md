@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.55 — LE MÉDECIN DES JOURNAUX WINDOWS : tout diagnostiquer à partir des logs
+- **Nouveau panneau** (⋯ → Check Up+ → Diagnostic des journaux Windows) et **commande chat** (« analyse
+  les logs », « diagnostique tout ») : ONYX lit les événements CRITIQUES et ERREURS des journaux
+  **Système + Application** (14 jours), les regroupe, et les **TRADUIT** — cause probable, gravité, et
+  quoi faire. Windows enregistre tout ; l'Observateur d'événements est illisible pour un joueur.
+- **Base de connaissances des événements Windows** qui comptent vraiment : arrêt brutal (Kernel-Power 41),
+  écran bleu, **erreurs matérielles WHEA** (corrigée / FATALE — l'un des signaux les plus sérieux et les
+  moins connus), secteurs défectueux et erreurs disque, corruption NTFS, **pilote GPU réinitialisé**
+  (Display 4101), pilote non chargé, crashs d'applications et .NET, services, DNS, TCP, Bluetooth,
+  échec de mise à jour…
+- **Le tri est classé en trois blocs — dont deux que personne ne fait** :
+  - 😌 **le BRUIT CONNU, sans conséquence** (DCOM 10010, CAPI2 513, traçage, synchro d'heure…) : le dire
+    évite la panique en ouvrant l'Observateur d'événements, et l'app déconseille explicitement les
+    « correctifs registre » des forums ;
+  - ❔ **les événements INCONNUS**, présentés comme tels : « je ne les interprète pas » plutôt qu'une
+    explication inventée.
+- Parseur XML, classement et mise en forme **PURS et testés** (regroupement, WHEA fatale en tête, bruit
+  relégué, bilan vide). Sonde `BT_LOGDOC=1`. Vérifié en réel sur cette machine, et la base a été
+  **enrichie à partir des vrais journaux** (DCOM 10010 ×253, .NET Runtime ×69, Bluetooth ×32…).
+  Harnais **235/235**.
+
 ## v15.54 — Defender & tes jeux : supprimer les micro-freezes de l'antivirus (réversible)
 - **Nouvelle mesure** (« l'antivirus ralentit mes jeux », « exclusions Defender ») : la protection temps
   réel analyse CHAQUE fichier lu — sur un jeu qui streame des Go de textures et de shaders, c'est une

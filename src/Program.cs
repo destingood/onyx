@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.54.0.0")]
-[assembly: AssemblyFileVersion("15.54.0.0")]
+[assembly: AssemblyVersion("15.55.0.0")]
+[assembly: AssemblyFileVersion("15.55.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,13 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_LOGDOC=1 : diagnostic des journaux Windows en console, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_LOGDOC") == "1")
+            {
+                Console.WriteLine(LogDoctor.Run(14, delegate (string m, int l) { Console.WriteLine("... " + m); }));
                 Environment.Exit(0);
             }
 
@@ -968,9 +975,33 @@ namespace BTOptimizer
                     && UtilityTools.IsGameShield("l'antivirus ralentit mes jeux") && UtilityTools.IsShieldUndo("annule les exclusions")
                     && !UtilityTools.IsGameShield("bonjour"); if (gsh4) ok56++; Console.WriteLine((gsh4 ? "OK  " : "FAIL") + "  defender : exclusions illisibles = tout manquant, detection OK");
 
+                // v15.55 : medecin des journaux Windows (parseur + classement + formatage PURS).
+                int ok57 = 0;
+                string qm = "'";
+                string evXml =
+                    "<Events>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-WHEA-Logger" + qm + "/><EventID>18</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T10:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-DistributedCOM" + qm + "/><EventID>10016</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T11:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-DistributedCOM" + qm + "/><EventID>10016</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T12:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "TrucInconnu" + qm + "/><EventID>4242</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T13:00:00.000Z" + qm + "/></System></Event>"
+                  + "</Events>";
+                var grp = LogDoctor.Parse(evXml, "System");
+                bool ld1 = grp.Count == 3; if (ld1) ok57++; Console.WriteLine((ld1 ? "OK  " : "FAIL") + "  journaux : 4 evenements -> 3 groupes (" + grp.Count + ")");
+                var ldDiag = LogDoctor.Diagnose(grp);
+                bool ld2 = ldDiag.Count == 3 && ldDiag[0].Severity == 4 && ldDiag[0].Title.Contains("FATALE"); if (ld2) ok57++; Console.WriteLine((ld2 ? "OK  " : "FAIL") + "  journaux : WHEA fatale classee en tete");
+                bool ld3 = ldDiag[ldDiag.Count - 1].Severity == 0; if (ld3) ok57++; Console.WriteLine((ld3 ? "OK  " : "FAIL") + "  journaux : bruit connu (DCOM 10016) relegue en dernier");
+                string ldTxt = LogDoctor.Format(ldDiag, 14);
+                bool ld4 = ldTxt.Contains("Bruit connu") && ldTxt.Contains("je ne connais pas") && ldTxt.Contains("WHEA"); if (ld4) ok57++; Console.WriteLine((ld4 ? "OK  " : "FAIL") + "  journaux : bilan separe graves / bruit / inconnus");
+                bool ld5 = LogDoctor.Format(new System.Collections.Generic.List<LogDoctor.Finding>(), 14).Contains("AUCUNE erreur")
+                    && UtilityTools.IsLogDoctor("analyse les logs windows") && !UtilityTools.IsLogDoctor("journal de bord"); if (ld5) ok57++; Console.WriteLine((ld5 ? "OK  " : "FAIL") + "  journaux : rien a signaler + detection sans collision");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

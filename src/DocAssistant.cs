@@ -228,6 +228,11 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- MÉDECIN DES JOURNAUX WINDOWS : tout ce que Windows a noté, traduit en diagnostic ---
+            if (UtilityTools.IsLogDoctor(s))
+                return new Reply { Text = "Je lis les journaux Windows (Système + Application) des 14 derniers jours et "
+                    + "je traduis ce qu'ils disent…", Action = ChatActions.LogDoctorAction(14), Dynamic = true };
+
             // --- DEFENDER & JEUX : exclure les dossiers de jeux de l'analyse temps réel (réversible) ---
             if (UtilityTools.IsShieldUndo(s))
             {

@@ -1692,6 +1692,23 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>Médecin des journaux Windows : lit les erreurs/critiques et les traduit en
+        /// diagnostic. Lecture seule.</summary>
+        public static DocAssistant.ChatAction LogDoctorAction(int days)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Diagnostic des journaux Windows"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse des journaux Windows…", 0);
+                string t;
+                try { t = LogDoctor.Run(days, log); }
+                catch (Exception ex) { return Say("L'analyse des journaux a échoué : " + ex.Message); }
+                return Say(t);
+            };
+            return a;
+        }
+
         /// <summary>Exclut les dossiers de jeux de l'analyse temps réel de Defender. Defender reste
         /// ACTIF ; clic explicite obligatoire ; retour arrière fourni dans la réponse.</summary>
         public static DocAssistant.ChatAction ShieldExcludeAction(List<string> paths)

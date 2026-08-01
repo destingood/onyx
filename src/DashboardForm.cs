@@ -183,6 +183,7 @@ namespace BTOptimizer
             check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
             check.DropDownItems.Add("🎯 Mon pilote GPU est-il instable ?", null, (s, e) => ShowGpuStability());
             check.DropDownItems.Add("🎮 Vérifier les fichiers d'un jeu (Steam)", null, (s, e) => ShowSteamValidate());
+            check.DropDownItems.Add("🩺 Diagnostic des journaux Windows", null, (s, e) => ShowLogDoctor());
             check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
             check.DropDownItems.Add(new ToolStripSeparator());
             check.DropDownItems.Add(MenuHead("📋 Inventaire & entretien"));
@@ -256,6 +257,43 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>Médecin des journaux Windows : traduit les erreurs enregistrées par Windows en
+        /// diagnostic lisible (avec le bruit connu clairement identifié comme tel).</summary>
+        private void ShowLogDoctor()
+        {
+            using (var f = new Form
+            {
+                Text = "ONYX — diagnostic des journaux Windows", Width = 820, Height = 620,
+                StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.Sizable,
+                MinimizeBox = false, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim
+            })
+            {
+                var box = new TextBox
+                {
+                    Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill,
+                    BorderStyle = BorderStyle.None, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim,
+                    Font = FpsUi.Small, Text = "Analyse des journaux Windows en cours…"
+                };
+                var pad = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14, 12, 14, 6), BackColor = FpsUi.BgMain };
+                pad.Controls.Add(box);
+                var close = new Button
+                {
+                    Text = "Fermer", Dock = DockStyle.Bottom, Height = 34, FlatStyle = FlatStyle.Flat,
+                    ForeColor = FpsUi.Gold, DialogResult = DialogResult.OK
+                };
+                f.Controls.Add(pad); f.Controls.Add(close);
+                f.AcceptButton = close;
+                f.Shown += (s, e) => System.Threading.Tasks.Task.Run(() =>
+                {
+                    string t;
+                    try { t = LogDoctor.Run(14, Log); }
+                    catch (Exception ex) { t = "L'analyse a échoué : " + ex.Message; }
+                    try { f.BeginInvoke((Action)(() => { box.Text = t; box.SelectionStart = 0; box.SelectionLength = 0; })); } catch { }
+                });
+                f.ShowDialog(this);
+            }
         }
 
         /// <summary>Liste les jeux Steam installés (toutes bibliothèques) et lance la vérification
