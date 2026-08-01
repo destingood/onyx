@@ -109,6 +109,44 @@ namespace BTOptimizer
             return outp;
         }
 
+        /// <summary>Pour chaque JOUR où le PC a changé : le résumé de ce qui a bougé. Sert à corréler
+        /// « les erreurs ont commencé le X » avec « ce jour-là, le pilote a changé ».</summary>
+        public static Dictionary<DateTime, string> ChangeDays()
+        {
+            var outp = new Dictionary<DateTime, string>();
+            try
+            {
+                if (!Directory.Exists(Dir)) return outp;
+                var files = new List<string>(Directory.GetFiles(Dir, "????????.txt"));
+                files.Sort(StringComparer.Ordinal);
+                for (int i = 1; i < files.Count; i++)
+                {
+                    var diffs = Diff(Load(files[i - 1]), Load(files[i]));
+                    if (diffs.Count == 0) continue;
+                    string stamp = Path.GetFileNameWithoutExtension(files[i]);
+                    DateTime day;
+                    if (!DateTime.TryParseExact(stamp, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.None, out day)) continue;
+                    // résumé court (le détail complet reste dans « qu'est-ce qui a changé »)
+                    var sb = new System.Text.StringBuilder();
+                    int n = 0;
+                    foreach (var d in diffs)
+                    {
+                        if (n++ >= 2) { sb.Append(" (+").Append(diffs.Count - 2).Append(" autre(s))"); break; }
+                        if (n > 1) sb.Append(" · ");
+                        string s = d;
+                        int cut = s.IndexOf(" — ", StringComparison.Ordinal);
+                        if (cut > 0) s = s.Substring(0, cut);
+                        if (s.Length > 90) s = s.Substring(0, 90) + "…";
+                        sb.Append(s);
+                    }
+                    outp[day.Date] = sb.ToString();
+                }
+            }
+            catch { }
+            return outp;
+        }
+
         /// <summary>Les changements récents (photo la plus proche d'avant aujourd'hui ↔ maintenant),
         /// sous forme de liste. Vide si aucun historique ou rien de notable. Utilisé par l'enquête.</summary>
         public static List<string> RecentChanges()

@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.56 — La CHRONOLOGIE : quand ça a commencé, et ce qui a changé ce jour-là
+- Le médecin des journaux ne dit plus seulement CE QUI ne va pas, mais **QUAND ça a commencé** :
+  mini-graphe jour par jour des erreurs sérieuses (le bruit connu est exclu du compte), pic quotidien,
+  et détection du **jour de démarrage** de la crise.
+- **La corrélation qui donne la cause racine** : ONYX croise ce jour avec ses **photos quotidiennes du
+  système** (pilote GPU, Windows, démarrage, disque). Si quelque chose a changé ce jour-là ou la veille :
+  « 🔗 Or CE JOUR-LÀ, ton pilote GPU est passé de v551 à v560 — c'est le suspect n°1 : une panne qui
+  commence le jour d'un changement vient presque toujours de ce changement. »
+- Et quand rien n'avait changé, il le dit aussi — pas de fausse piste inventée pour faire savant.
+- Chronologie, détection du démarrage et corrélation **PURES et testées** (bruit exclu du compte, jour
+  de démarrage, corrélation présente/absente, cas vide). Vérifié en réel : 104 erreurs sérieuses
+  cartographiées du 20/07 au 01/08, pic à 38/jour. Harnais **239/239**.
+
 ## v15.55 — LE MÉDECIN DES JOURNAUX WINDOWS : tout diagnostiquer à partir des logs
 - **Nouveau panneau** (⋯ → Check Up+ → Diagnostic des journaux Windows) et **commande chat** (« analyse
   les logs », « diagnostique tout ») : ONYX lit les événements CRITIQUES et ERREURS des journaux

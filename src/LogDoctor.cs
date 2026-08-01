@@ -174,6 +174,97 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        public sealed class RawEvent { public string Provider; public int EventId; public DateTime When; }
+
+        /// <summary>Événements INDIVIDUELS (pour la chronologie). PUR → testable.</summary>
+        public static List<RawEvent> ParseEvents(string xml)
+        {
+            var outp = new List<RawEvent>();
+            if (string.IsNullOrEmpty(xml)) return outp;
+            foreach (Match m in Regex.Matches(xml, "<Event[ >].*?</Event>", RegexOptions.Singleline))
+            {
+                string ev = m.Value;
+                var pm = Regex.Match(ev, "<Provider[^>]*Name='([^']*)'");
+                if (!pm.Success) pm = Regex.Match(ev, "<Provider[^>]*Name=\"([^\"]*)\"");
+                var im = Regex.Match(ev, "<EventID[^>]*>(\\d+)</EventID>");
+                if (!pm.Success || !im.Success) continue;
+                int id; if (!int.TryParse(im.Groups[1].Value, out id)) continue;
+                DateTime when = DateTime.MinValue;
+                var tm = Regex.Match(ev, "SystemTime='([^']*)'");
+                if (!tm.Success) tm = Regex.Match(ev, "SystemTime=\"([^\"]*)\"");
+                if (tm.Success) DateTime.TryParse(tm.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AdjustToUniversal, out when);
+                outp.Add(new RawEvent { Provider = pm.Groups[1].Value, EventId = id, When = when });
+            }
+            return outp;
+        }
+
+        /// <summary>Gravité d'un événement (0 si inconnu du catalogue → compté comme « à surveiller »).</summary>
+        public static int SeverityOf(string provider, int id)
+        {
+            Known k;
+            return Kb.TryGetValue(Key(provider, id), out k) ? k.Sev : 1;
+        }
+
+        /// <summary>Nombre d'erreurs SÉRIEUSES (gravité ≥ 2) par jour. PUR → testable.</summary>
+        public static SortedDictionary<DateTime, int> Timeline(List<RawEvent> events)
+        {
+            var d = new SortedDictionary<DateTime, int>();
+            if (events == null) return d;
+            foreach (var e in events)
+            {
+                if (e.When == DateTime.MinValue) continue;
+                if (SeverityOf(e.Provider, e.EventId) < 2) continue;   // bruit et bénin exclus
+                DateTime day = e.When.ToLocalTime().Date;
+                int c; d[day] = d.TryGetValue(day, out c) ? c + 1 : 1;
+            }
+            return d;
+        }
+
+        private static readonly char[] Bars = { '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█' };
+
+        /// <summary>Chronologie en texte + détection du JOUR OÙ ÇA A COMMENCÉ. PUR → testable.
+        /// 'changes' = ce qui a changé sur le PC ce jour-là (photo quotidienne), s'il y en a.</summary>
+        public static string FormatTimeline(SortedDictionary<DateTime, int> byDay, Dictionary<DateTime, string> changes)
+        {
+            if (byDay == null || byDay.Count == 0) return null;
+            int max = 0, total = 0;
+            foreach (var kv in byDay) { if (kv.Value > max) max = kv.Value; total += kv.Value; }
+            if (total == 0) return null;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("\n📅 Chronologie des erreurs sérieuses (").Append(total).Append(" au total) :\n");
+            var days = new List<DateTime>(byDay.Keys);
+            sb.Append("   ");
+            foreach (var day in days)
+            {
+                int v = byDay[day];
+                int idx = max <= 1 ? 3 : (int)Math.Round((double)(v - 1) / (max - 1) * 7);
+                sb.Append(Bars[Math.Max(0, Math.Min(7, idx))]);
+            }
+            sb.Append("   du ").Append(days[0].ToString("dd/MM")).Append(" au ").Append(days[days.Count - 1].ToString("dd/MM"))
+              .Append("  (pic : ").Append(max).Append("/jour)\n");
+
+            // Le jour où ça a commencé : premier jour au-dessus de la moitié du pic.
+            DateTime onset = days[0];
+            foreach (var day in days) { if (byDay[day] >= Math.Max(2, max / 2)) { onset = day; break; } }
+            sb.Append("   Ça a démarré le ").Append(onset.ToString("dd/MM")).Append(".");
+
+            // Corrélation : quelque chose a-t-il changé sur le PC ce jour-là (ou la veille) ?
+            if (changes != null)
+            {
+                string ch = null; DateTime chDay = DateTime.MinValue;
+                foreach (var kv in changes)
+                    if (kv.Key.Date == onset || kv.Key.Date == onset.AddDays(-1)) { ch = kv.Value; chDay = kv.Key.Date; break; }
+                if (!string.IsNullOrEmpty(ch))
+                    sb.Append("\n   🔗 Or CE JOUR-LÀ (").Append(chDay.ToString("dd/MM")).Append("), ton PC a changé : ").Append(ch)
+                      .Append("\n   C'est le suspect n°1 : une panne qui commence le jour d'un changement vient presque toujours de ce changement.");
+                else
+                    sb.Append(" Rien n'avait changé sur le PC ce jour-là (d'après mes photos quotidiennes).");
+            }
+            return sb.ToString();
+        }
+
         /// <summary>Regroupe les événements d'un XML wevtutil par (fournisseur, id). PUR → testable.</summary>
         public static List<EventGroup> Parse(string xml, string logName)
         {
@@ -282,18 +373,36 @@ namespace BTOptimizer
             return sb.ToString().TrimEnd();
         }
 
-        /// <summary>Analyse réelle des journaux Système + Application.</summary>
+        /// <summary>Analyse réelle des journaux Système + Application, avec chronologie et corrélation
+        /// aux changements du PC (photos quotidiennes).</summary>
         public static string Run(int days, Action<string, int> log)
         {
-            var all = new List<EventGroup>();
             if (log != null) log("Lecture du journal Système…", 0);
-            all.AddRange(Parse(Query("System", days, 300), "System"));
+            string sysXml = Query("System", days, 300);
             if (log != null) log("Lecture du journal Application…", 0);
-            all.AddRange(Parse(Query("Application", days, 300), "Application"));
+            string appXml = Query("Application", days, 300);
+
+            var all = new List<EventGroup>();
+            all.AddRange(Parse(sysXml, "System"));
+            all.AddRange(Parse(appXml, "Application"));
             if (all.Count == 0)
                 return "🩺 Je n'ai pas pu lire les journaux Windows (droits administrateur nécessaires, ou service "
                      + "« Journal des événements » arrêté).";
-            return Format(Diagnose(all), days);
+
+            string text = Format(Diagnose(all), days);
+
+            try
+            {
+                var raw = new List<RawEvent>();
+                raw.AddRange(ParseEvents(sysXml));
+                raw.AddRange(ParseEvents(appXml));
+                Dictionary<DateTime, string> changes = null;
+                try { changes = StateDiff.ChangeDays(); } catch { }
+                string tl = FormatTimeline(Timeline(raw), changes);
+                if (!string.IsNullOrEmpty(tl)) text += "\n" + tl;
+            }
+            catch { }
+            return text;
         }
     }
 }

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.55.0.0")]
-[assembly: AssemblyFileVersion("15.55.0.0")]
+[assembly: AssemblyVersion("15.56.0.0")]
+[assembly: AssemblyFileVersion("15.56.0.0")]
 
 namespace BTOptimizer
 {
@@ -999,9 +999,28 @@ namespace BTOptimizer
                 bool ld5 = LogDoctor.Format(new System.Collections.Generic.List<LogDoctor.Finding>(), 14).Contains("AUCUNE erreur")
                     && UtilityTools.IsLogDoctor("analyse les logs windows") && !UtilityTools.IsLogDoctor("journal de bord"); if (ld5) ok57++; Console.WriteLine((ld5 ? "OK  " : "FAIL") + "  journaux : rien a signaler + detection sans collision");
 
+                // v15.56 : chronologie des erreurs + correlation avec les changements du PC (PUR).
+                int ok58 = 0;
+                var evs = new System.Collections.Generic.List<LogDoctor.RawEvent>();
+                DateTime dJ = new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Local);
+                // 1 erreur serieuse le 28, 6 le 30 (le pic), + du bruit ignore
+                evs.Add(new LogDoctor.RawEvent { Provider = "disk", EventId = 7, When = dJ });
+                for (int z = 0; z < 6; z++) evs.Add(new LogDoctor.RawEvent { Provider = "disk", EventId = 7, When = dJ.AddDays(2) });
+                for (int z = 0; z < 9; z++) evs.Add(new LogDoctor.RawEvent { Provider = "DCOM", EventId = 10010, When = dJ.AddDays(2) });
+                var tl = LogDoctor.Timeline(evs);
+                bool tm1 = tl.Count == 2 && tl[dJ.Date] == 1 && tl[dJ.AddDays(2).Date] == 6; if (tm1) ok58++; Console.WriteLine((tm1 ? "OK  " : "FAIL") + "  chronologie : bruit exclu, 1 puis 6 erreurs serieuses");
+                var chg = new System.Collections.Generic.Dictionary<DateTime, string>();
+                chg[dJ.AddDays(2).Date] = "Pilote GPU CHANGE : v551 -> v560";
+                string tlTxt = LogDoctor.FormatTimeline(tl, chg);
+                bool tm2 = tlTxt.Contains("30/07") && tlTxt.Contains("suspect"); if (tm2) ok58++; Console.WriteLine((tm2 ? "OK  " : "FAIL") + "  chronologie : jour de demarrage + correlation au changement");
+                string tlTxt2 = LogDoctor.FormatTimeline(tl, new System.Collections.Generic.Dictionary<DateTime, string>());
+                bool tm3 = tlTxt2.Contains("Rien n'avait"); if (tm3) ok58++; Console.WriteLine((tm3 ? "OK  " : "FAIL") + "  chronologie : sans changement -> le dit honnetement");
+                bool tm4 = LogDoctor.FormatTimeline(new System.Collections.Generic.SortedDictionary<DateTime, int>(), null) == null
+                    && LogDoctor.SeverityOf("DCOM", 10010) == 0 && LogDoctor.SeverityOf("Inconnu", 999) == 1; if (tm4) ok58++; Console.WriteLine((tm4 ? "OK  " : "FAIL") + "  chronologie : vide -> null, gravites correctes");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
