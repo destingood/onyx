@@ -170,7 +170,42 @@ namespace BTOptimizer
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gardien.txt"); }
         }
 
-        /// <summary>true si le contrôle quotidien n'a pas encore tourné aujourd'hui.</summary>
+        private static string SnoozePath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gardien-veille.txt"); }
+        }
+
+        /// <summary>Met le Gardien en veille N jours (il continue d'enregistrer photo d'état et
+        /// tendance santé — il ne PRÉVIENT simplement plus). Zéro harcèlement.</summary>
+        public static void Snooze(int days)
+        {
+            try { File.WriteAllText(SnoozePath, DateTime.Now.Date.AddDays(days).ToString("yyyyMMdd")); } catch { }
+            try { Journal.Add("Gardien mis en veille " + days + " jour(s)"); } catch { }
+        }
+
+        /// <summary>Date de fin de veille (null si actif). Testable.</summary>
+        public static DateTime? SnoozedUntil()
+        {
+            try
+            {
+                if (!File.Exists(SnoozePath)) return null;
+                DateTime d;
+                if (!DateTime.TryParseExact(File.ReadAllText(SnoozePath).Trim(), "yyyyMMdd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out d)) return null;
+                return d.Date >= DateTime.Now.Date ? (DateTime?)d : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Réveille le Gardien immédiatement.</summary>
+        public static void Wake() { try { if (File.Exists(SnoozePath)) File.Delete(SnoozePath); } catch { } }
+
+        /// <summary>true si les ALERTES sont coupées (veille). Les mesures, elles, continuent.</summary>
+        public static bool AlertsMuted() { return SnoozedUntil() != null; }
+
+        /// <summary>true si le passage quotidien n'a pas encore eu lieu aujourd'hui (indépendant de
+        /// la veille : les mesures — photo d'état, tendance santé — doivent continuer).</summary>
         public static bool DueToday()
         {
             try

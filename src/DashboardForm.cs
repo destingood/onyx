@@ -388,6 +388,8 @@ namespace BTOptimizer
                         try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
                         // photo quotidienne de l'état du système (« qu'est-ce qui a changé sur mon PC ? »)
                         try { StateDiff.SaveToday(); } catch { }
+                        // Mesures faites : en VEILLE, on s'arrête là — on mesure, on ne dérange pas.
+                        if (Guardian.AlertsMuted()) return;
                         al = Guardian.Alerts();
                         if (al.Count == 0) return;
                     }
@@ -478,6 +480,27 @@ namespace BTOptimizer
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
             m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
             m.Items.Add("🛡 Gardien : vérifier maintenant", null, (s, e) => GuardianCheckNow());
+            var snooze = new ToolStripMenuItem("🔕 Gardien : ne plus me prévenir 7 jours");
+            snooze.Click += (s, e) =>
+            {
+                try
+                {
+                    if (Guardian.AlertsMuted()) { Guardian.Wake(); Log("Gardien réveillé — alertes réactivées.", 0); }
+                    else { Guardian.Snooze(7); Log("Gardien en veille 7 jours (il continue de mesurer, sans prévenir).", 0); }
+                    var until = Guardian.SnoozedUntil();
+                    snooze.Text = until != null
+                        ? "🔔 Gardien en veille jusqu'au " + until.Value.ToString("dd/MM") + " — réveiller"
+                        : "🔕 Gardien : ne plus me prévenir 7 jours";
+                }
+                catch { }
+            };
+            try
+            {
+                var until0 = Guardian.SnoozedUntil();
+                if (until0 != null) snooze.Text = "🔔 Gardien en veille jusqu'au " + until0.Value.ToString("dd/MM") + " — réveiller";
+            }
+            catch { }
+            m.Items.Add(snooze);
             m.Items.Add("Rapport de santé (HTML)", null, (s, e) => GenerateHealthReport());
             m.Items.Add(new ToolStripSeparator());
             m.Items.Add("Quitter", null, (s, e) => { _tray.Visible = false; Close(); });

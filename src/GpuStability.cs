@@ -81,6 +81,17 @@ namespace BTOptimizer
             return r;
         }
 
+        /// <summary>Impact de la carte « crashs GPU » dans l'ENQUÊTE, d'après le PRÉSENT (2 derniers
+        /// jours) et non le cumul : 90 = instable maintenant · 45 = à surveiller · 15 = crise passée
+        /// (informatif, aucune manip) · 0 = rien à signaler. PUR, donc testable.</summary>
+        public static int CardImpact(int err14, int err2)
+        {
+            if (err2 >= 3) return 90;
+            if (err2 >= 1) return 45;
+            if (err14 >= 20) return 15;      // beaucoup avant, plus rien maintenant : c'est passé
+            return 0;
+        }
+
         /// <summary>Tendance PURE : compare la semaine écoulée à la précédente. Testable.</summary>
         public static string TrendLine(int last7, int prev7)
         {

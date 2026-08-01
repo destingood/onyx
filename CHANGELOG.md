@@ -4,6 +4,21 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.47 — L'ENQUÊTE apprend aussi à ne pas crier au loup + Gardien en veille
+- **La même correction, propagée là où elle se voit le plus** : la carte « crashs GPU » de l'enquête
+  affichait « IMPACT 90 · CRITIQUE — 200 erreurs ces 14 derniers jours » et poussait un DDU, alors que
+  ces erreurs pouvaient dater d'une semaine. Elle juge maintenant sur les **2 DERNIERS JOURS** :
+  - ≥ 3 erreurs récentes → impact 90, DDU proposé (instable MAINTENANT) ;
+  - 1-2 erreurs → impact 45, surveiller ;
+  - beaucoup avant mais **plus rien depuis 2 jours** → impact 15, carte purement informative :
+    « la crise est passée, ne touche à rien » — **et aucun bouton de manipulation** ;
+  - rien → ligne verte « aucun crash récent du pilote GPU ».
+- **🔕 « Gardien : ne plus me prévenir 7 jours »** (clic droit sur l'icône) : la contrepartie honnête
+  d'un système d'alertes — il **continue de mesurer** (photo d'état, tendance santé) mais ne dérange
+  plus. Le menu affiche la date de fin et permet de le réveiller d'un clic. Mise en veille journalisée.
+- Règle d'impact PURE et testée (crise passée = 15, active = 90, 1 erreur = 45, résiduel ancien = 0),
+  veille/réveil testés. Harnais **203/203** ; UITEST 45/45.
+
 ## v15.46 — Une crise PASSÉE n'est pas un problème actuel (correction de fond)
 - **Le bug que la machine de test a révélé** : le verdict criait « TRÈS INSTABLE — 200 erreurs en
   14 jours » alors que le suivi disait « 199 → 1 cette semaine, −99 % ». L'app envoyait donc faire un

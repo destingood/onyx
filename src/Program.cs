@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.46.0.0")]
-[assembly: AssemblyFileVersion("15.46.0.0")]
+[assembly: AssemblyVersion("15.47.0.0")]
+[assembly: AssemblyFileVersion("15.47.0.0")]
 
 namespace BTOptimizer
 {
@@ -807,9 +807,21 @@ namespace BTOptimizer
                 var vSmall = GpuStability.Verdict(6, 0, 88, 2);
                 bool hl4 = vSmall.Level == 1; if (hl4) ok48++; Console.WriteLine((hl4 ? "OK  " : "FAIL") + "  verdict : petits chiffres -> pas de fausse 'guerison'");
 
+                // v15.47 : enquete anti-fausse-alerte + mise en veille du Gardien.
+                int ok49 = 0;
+                bool ca1 = GpuStability.CardImpact(200, 0) == 15 && GpuStability.CardImpact(200, 40) == 90; if (ca1) ok49++; Console.WriteLine((ca1 ? "OK  " : "FAIL") + "  enquete : crise passee=15 (info), active=90 (critique)");
+                bool ca2 = GpuStability.CardImpact(2, 1) == 45 && GpuStability.CardImpact(0, 0) == 0 && GpuStability.CardImpact(5, 0) == 0; if (ca2) ok49++; Console.WriteLine((ca2 ? "OK  " : "FAIL") + "  enquete : 1 erreur=45, rien=0, residuel ancien=0");
+                Guardian.Wake();
+                bool sn0 = !Guardian.AlertsMuted() && Guardian.DueToday();
+                Guardian.Snooze(7);
+                bool sn1 = Guardian.AlertsMuted() && Guardian.SnoozedUntil() != null;
+                Guardian.Wake();
+                bool sn2 = !Guardian.AlertsMuted() && Guardian.SnoozedUntil() == null;
+                bool ca3 = sn0 && sn1 && sn2; if (ca3) ok49++; Console.WriteLine((ca3 ? "OK  " : "FAIL") + "  gardien : veille 7 j puis reveil");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
