@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.54 — Defender & tes jeux : supprimer les micro-freezes de l'antivirus (réversible)
+- **Nouvelle mesure** (« l'antivirus ralentit mes jeux », « exclusions Defender ») : la protection temps
+  réel analyse CHAQUE fichier lu — sur un jeu qui streame des Go de textures et de shaders, c'est une
+  cause connue de micro-saccades. ONYX compare les dossiers de jeux Steam aux exclusions actuelles et
+  liste ce qui manque, avec un bouton pour les exclure.
+- **Honnêteté sur le compromis, écrite noir sur blanc** : Defender reste **ACTIVÉ** partout ailleurs
+  (ONYX ne désactive JAMAIS un antivirus) ; seuls les dossiers de jeux issus d'une boutique officielle
+  sortent de l'analyse temps réel ; à n'accepter que si on n'y met pas de fichiers douteux.
+- **Retour arrière fourni d'office** : la réponse de confirmation porte elle-même le bouton « Annuler :
+  remettre ces dossiers sous analyse », et « annule les exclusions » marche à tout moment.
+- **Garde-fous** : si la protection temps réel est déjà désactivée → rien à faire (et aucun conseil de
+  désactivation) ; si les exclusions sont illisibles faute de droits → il le DIT au lieu de conclure à
+  tort ; un dossier déjà couvert par un parent exclu est reconnu comme protégé.
+- Comparaison des chemins PURE et testée (casse, barre finale, parent couvrant, droits manquants).
+  Sonde `BT_SHIELD=1`. Harnais **230/230**.
+
 ## v15.53 — « Mes jeux sont-ils sur SSD ? » : le support décide des temps de chargement
 - **Nouvelle mesure** (« mes jeux sont sur ssd ? », « jeux sur hdd ») : ONYX relie chaque bibliothèque de
   jeu à son **disque physique réel** (partition → disque → type) et classe : 🐌 **mécanique (HDD)**,

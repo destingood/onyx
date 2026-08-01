@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.53.0.0")]
-[assembly: AssemblyFileVersion("15.53.0.0")]
+[assembly: AssemblyVersion("15.54.0.0")]
+[assembly: AssemblyFileVersion("15.54.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,15 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_SHIELD=1 : Defender et les dossiers de jeux (lecture seule), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_SHIELD") == "1")
+            {
+                System.Collections.Generic.List<string> miss;
+                Console.WriteLine(GameShield.Text(out miss));
+                Console.WriteLine("Manquants : " + (miss == null ? 0 : miss.Count));
                 Environment.Exit(0);
             }
 
@@ -936,9 +945,32 @@ namespace BTOptimizer
                 bool ss3 = stx2.Contains("Aucun jeu sur disque mécanique"); if (ss3) ok55++; Console.WriteLine((ss3 ? "OK  " : "FAIL") + "  stockage jeux : tout sur SSD -> rien a faire");
                 bool ss4 = UtilityTools.IsGameStorage("mes jeux sont sur ssd ?") && !UtilityTools.IsGameStorage("mon disque est plein libere de la place"); if (ss4) ok55++; Console.WriteLine((ss4 ? "OK  " : "FAIL") + "  stockage jeux : detection, nettoyage exclu");
 
+                // v15.54 : Defender & jeux (comparaison PURE des exclusions).
+                int ok56 = 0;
+                char sepc = System.IO.Path.DirectorySeparatorChar;
+                var cur1 = new System.Collections.Generic.List<string>();
+                cur1.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                var sug1 = new System.Collections.Generic.List<string>();
+                sug1.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                sug1.Add("E:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                var miss1 = GameShield.Missing(cur1, sug1);
+                bool gsh1 = miss1.Count == 1 && miss1[0].StartsWith("E:"); if (gsh1) ok56++; Console.WriteLine((gsh1 ? "OK  " : "FAIL") + "  defender : 1 seul dossier manquant detecte");
+                var cur2 = new System.Collections.Generic.List<string>();
+                cur2.Add("D:" + sepc + "SteamLibrary");                       // parent : couvre le sous-dossier
+                var miss2 = GameShield.Missing(cur2, sug1);
+                bool gsh2 = miss2.Count == 1; if (gsh2) ok56++; Console.WriteLine((gsh2 ? "OK  " : "FAIL") + "  defender : dossier couvert par un parent = deja protege");
+                var cur3 = new System.Collections.Generic.List<string>();
+                cur3.Add("d:" + sepc + "steamlibrary" + sepc + "steamapps" + sepc + "common" + sepc);
+                var sug3 = new System.Collections.Generic.List<string>();
+                sug3.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                bool gsh3 = GameShield.Missing(cur3, sug3).Count == 0; if (gsh3) ok56++; Console.WriteLine((gsh3 ? "OK  " : "FAIL") + "  defender : casse et barre finale ignorees");
+                bool gsh4 = GameShield.Missing(null, sug1).Count == 2
+                    && UtilityTools.IsGameShield("l'antivirus ralentit mes jeux") && UtilityTools.IsShieldUndo("annule les exclusions")
+                    && !UtilityTools.IsGameShield("bonjour"); if (gsh4) ok56++; Console.WriteLine((gsh4 ? "OK  " : "FAIL") + "  defender : exclusions illisibles = tout manquant, detection OK");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

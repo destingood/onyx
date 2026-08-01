@@ -746,6 +746,25 @@ namespace BTOptimizer
             return true;
         }
 
+        // ---- DEFENDER & JEUX ----
+        /// <summary>« antivirus ralentit mes jeux », « exclusions defender » → vrai.</summary>
+        internal static bool IsGameShield(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool av = n.Contains("defender") || n.Contains("antivirus") || n.Contains("anti virus") || n.Contains("exclusion");
+            if (!av) return false;
+            return Regex.IsMatch(n, "\\b(jeu|jeux|fps|ralentit|ralenti|saccade|freeze|performance|performances)\\b")
+                || n.Contains("exclusion");
+        }
+
+        /// <summary>« annule les exclusions de jeux » → vrai (retour arrière).</summary>
+        internal static bool IsShieldUndo(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("annule") || n.Contains("retire") || n.Contains("remets") || n.Contains("supprime"))
+                && n.Contains("exclusion");
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

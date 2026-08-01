@@ -1692,6 +1692,49 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>Exclut les dossiers de jeux de l'analyse temps réel de Defender. Defender reste
+        /// ACTIF ; clic explicite obligatoire ; retour arrière fourni dans la réponse.</summary>
+        public static DocAssistant.ChatAction ShieldExcludeAction(List<string> paths)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Exclure mes dossiers de jeux de l'analyse (" + paths.Count + ")";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Ajoute ces dossiers de JEUX aux exclusions de Windows Defender. L'antivirus reste ACTIVÉ "
+                      + "partout ailleurs — seuls ces dossiers ne sont plus analysés à chaque lecture de fichier. "
+                      + "N'accepte que si tu n'y mets pas de fichiers téléchargés au hasard. Réversible.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Ajout des exclusions Defender…", 0);
+                bool ok = false;
+                try { ok = GameShield.SetExclusions(paths, true); } catch { }
+                if (!ok) return Say("Windows a refusé la modification (ONYX doit être lancé en administrateur, ou une "
+                                  + "stratégie d'entreprise bloque les exclusions).");
+                var r = Say("✅ " + paths.Count + " dossier(s) de jeux exclus de l'analyse temps réel. Defender reste actif "
+                          + "partout ailleurs.\nSi tu changes d'avis : dis « annule les exclusions de jeux ».");
+                r.Action = ShieldRestoreAction(paths);
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Retire les exclusions ajoutées (retour arrière complet).</summary>
+        public static DocAssistant.ChatAction ShieldRestoreAction(List<string> paths)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Annuler : remettre ces dossiers sous analyse";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Retire ces dossiers des exclusions : Defender les analysera de nouveau (retour à l'état d'origine).";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Retrait des exclusions Defender…", 0);
+                bool ok = false;
+                try { ok = GameShield.SetExclusions(paths, false); } catch { }
+                return Say(ok ? "✅ Exclusions retirées : Defender analyse de nouveau ces dossiers."
+                              : "Le retrait a échoué (droits administrateur ?).");
+            };
+            return a;
+        }
+
         /// <summary>« Où sont passés mes Go ? » : classement des plus gros dossiers, tous disques.
         /// Lecture seule, budget de temps strict, résultat annoncé partiel si le temps manque.</summary>
         public static DocAssistant.ChatAction BigFoldersAction()

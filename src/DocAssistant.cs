@@ -228,6 +228,28 @@ namespace BTOptimizer
                 return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
                     Action = ChatActions.ImportProfileAction() };
 
+            // --- DEFENDER & JEUX : exclure les dossiers de jeux de l'analyse temps réel (réversible) ---
+            if (UtilityTools.IsShieldUndo(s))
+            {
+                var undo = GameShield.SuggestedPaths();
+                if (undo.Count == 0) return new Reply { Text = "Je n'ai pas trouvé de dossiers de jeux Steam à remettre sous analyse.", ShowStarters = true };
+                return new Reply { Text = "Je peux remettre tes dossiers de jeux sous l'analyse de Defender (retour à l'état d'origine).",
+                    Action = ChatActions.ShieldRestoreAction(undo) };
+            }
+            if (UtilityTools.IsGameShield(s))
+            {
+                System.Collections.Generic.List<string> miss;
+                string shieldTxt;
+                try { shieldTxt = GameShield.Text(out miss); }
+                catch (Exception ex) { shieldTxt = "Analyse impossible : " + ex.Message; miss = new System.Collections.Generic.List<string>(); }
+                return new Reply
+                {
+                    Text = shieldTxt,
+                    Action = (miss != null && miss.Count > 0) ? ChatActions.ShieldExcludeAction(miss) : null,
+                    ShowStarters = miss == null || miss.Count == 0
+                };
+            }
+
             // --- MES JEUX SONT-ILS SUR SSD ? (le support décide des temps de chargement) ---
             if (UtilityTools.IsGameStorage(s))
             {
