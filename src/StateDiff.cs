@@ -109,6 +109,25 @@ namespace BTOptimizer
             return outp;
         }
 
+        /// <summary>Les changements récents (photo la plus proche d'avant aujourd'hui ↔ maintenant),
+        /// sous forme de liste. Vide si aucun historique ou rien de notable. Utilisé par l'enquête.</summary>
+        public static List<string> RecentChanges()
+        {
+            try
+            {
+                if (!Directory.Exists(Dir)) return new List<string>();
+                var files = new List<string>(Directory.GetFiles(Dir, "????????.txt"));
+                files.Sort(StringComparer.Ordinal);
+                string today = DateTime.Now.ToString("yyyyMMdd");
+                string baseline = null;
+                foreach (var f in files)
+                    if (string.CompareOrdinal(Path.GetFileNameWithoutExtension(f), today) < 0) baseline = f;
+                if (baseline == null) return new List<string>();
+                return Diff(Load(baseline), Capture());
+            }
+            catch { return new List<string>(); }
+        }
+
         /// <summary>Texte pour le chat : compare l'instant présent à la photo la plus ancienne
         /// d'il y a au moins 1 jour (jusqu'à 30 j). Honnête si l'historique manque encore.</summary>
         public static string DiffText()

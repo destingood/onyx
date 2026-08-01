@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.48 — L'enquête dit enfin CE QUI A CHANGÉ (la cause n°1 d'un « ça marchait avant »)
+- **Nouvelle carte « Ce qui a changé »** dans l'enquête : elle compare la photo quotidienne du système
+  (pilote GPU, version de Windows, programmes au démarrage, espace disque) à l'état actuel et liste les
+  différences — « 🎞 pilote GPU changé : v551 → v560 », « 🚀 nouveau au démarrage : Wallpaper Engine »,
+  « 💽 espace disque : 28 → 12 Go ».
+- Volontairement **informative, sans aucun bouton** (impact 50) : ce n'est pas un défaut, c'est le
+  CONTEXTE qui explique le plus souvent qu'un PC se comporte autrement du jour au lendemain. Jusqu'ici
+  l'enquête listait des défauts sans jamais dire ce qui avait bougé.
+- **Audit de fond mené sur toutes les cartes de l'enquête** après la leçon des v15.46-47 : seule la
+  carte « crashs GPU » jugeait sur un cumul (corrigé) — écrans, disque, bibliothèques, réglages, uptime,
+  RAM, pilote, applications et démarrage mesurent bien l'état PRÉSENT. Rien d'autre à corriger.
+- Harnais **206/206** ; UITEST 45/45.
+
 ## v15.47 — L'ENQUÊTE apprend aussi à ne pas crier au loup + Gardien en veille
 - **La même correction, propagée là où elle se voit le plus** : la carte « crashs GPU » de l'enquête
   affichait « IMPACT 90 · CRITIQUE — 200 erreurs ces 14 derniers jours » et poussait un DDU, alors que

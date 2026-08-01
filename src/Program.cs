@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.47.0.0")]
-[assembly: AssemblyFileVersion("15.47.0.0")]
+[assembly: AssemblyVersion("15.48.0.0")]
+[assembly: AssemblyFileVersion("15.48.0.0")]
 
 namespace BTOptimizer
 {
@@ -819,9 +819,17 @@ namespace BTOptimizer
                 bool sn2 = !Guardian.AlertsMuted() && Guardian.SnoozedUntil() == null;
                 bool ca3 = sn0 && sn1 && sn2; if (ca3) ok49++; Console.WriteLine((ca3 ? "OK  " : "FAIL") + "  gardien : veille 7 j puis reveil");
 
+                // v15.48 : carte « ce qui a change » dans l'enquete.
+                int ok50 = 0;
+                var rc = StateDiff.RecentChanges();
+                bool rc1 = rc != null; if (rc1) ok50++; Console.WriteLine((rc1 ? "OK  " : "FAIL") + "  changements : lecture sans exception (" + (rc == null ? "null" : rc.Count + " item(s)") + ")");
+                var capNow = StateDiff.Capture();
+                bool rc2 = capNow.ContainsKey("demarrage") || capNow.ContainsKey("windows"); if (rc2) ok50++; Console.WriteLine((rc2 ? "OK  " : "FAIL") + "  photo systeme : cles presentes (" + capNow.Count + ")");
+                bool rc3 = StateDiff.Diff(capNow, capNow).Count == 0; if (rc3) ok50++; Console.WriteLine((rc3 ? "OK  " : "FAIL") + "  photo systeme : identique a elle-meme = 0 changement");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

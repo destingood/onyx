@@ -156,6 +156,29 @@ namespace BTOptimizer
             }
             catch { }
 
+            // --- 1ter. CE QUI A CHANGÉ depuis la dernière photo : la cause n°1 d'un « ça marchait
+            //     avant ». Purement informatif (aucun bouton) : c'est un CONTEXTE, pas un défaut. ---
+            try
+            {
+                var changes = StateDiff.RecentChanges();
+                if (changes.Count > 0)
+                {
+                    var cs = new System.Text.StringBuilder();
+                    cs.Append("Depuis ma dernière photo de ton PC, ").Append(changes.Count == 1 ? "1 chose a changé" : changes.Count + " choses ont changé").Append(" :\n");
+                    foreach (var c in changes) cs.Append("• ").Append(c).Append('\n');
+                    cs.Append("Si un souci est apparu récemment, la cause est très probablement là-dedans.");
+                    found.Add(new Finding
+                    {
+                        Impact = 50, Key = "changements",
+                        Text = cs.ToString().TrimEnd(),
+                        Why = "Changements — comparaison entre la photo quotidienne de l'état du système (pilote GPU, "
+                            + "version de Windows, programmes au démarrage, espace disque) et l'état actuel. Ce n'est pas "
+                            + "un défaut : c'est le contexte qui explique le plus souvent un comportement qui change du jour au lendemain."
+                    });
+                }
+            }
+            catch { }
+
             // --- 2. Température GPU (cause n°1 des chutes de FPS soudaines) ---
             try
             {
