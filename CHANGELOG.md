@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.50 — Vérifier les fichiers d'un jeu (Steam) : la vraie réparation, en 1 clic
+- **Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : ONYX liste **tes jeux Steam installés** —
+  toutes bibliothèques comprises, y compris celles posées sur d'autres disques — triés du plus gros au
+  plus petit, puis lance la **vérification OFFICIELLE des fichiers** du jeu choisi (`steam://validate`).
+- C'est LA solution quand un jeu plante au lancement, crashe en boucle, ou a subi un disque plein / une
+  coupure de courant — et personne ne sait où ça se trouve. Rien n'est supprimé : Steam re-télécharge
+  uniquement les fichiers abîmés, les sauvegardes ne sont pas touchées. Confirmation avant lancement,
+  et action journalisée.
+- Steam absent ? Il le dit et donne l'équivalent ailleurs (Epic → « Vérifier » ; Battle.net →
+  « Analyser et réparer »). Les composants techniques (redistributables, Proton…) sont exclus de la liste.
+- Parseurs `.acf` / `libraryfolders.vdf` PURS et testés. Sonde `BT_STEAM=1`. Vérifié en réel sur cette
+  machine : **52 jeux détectés sur 2 disques** (Call of Duty 175 Go, Black Ops 6 134 Go, Cyberpunk 91 Go…).
+  Harnais **214/214**.
+
 ## v15.49 — « CPU ou GPU : qui me limite ? » — LA question de tout joueur, enfin tranchée
 - **Nouvelle mesure** (pastille du Copilote « CPU ou GPU : qui me limite ? », ou la question en toutes
   lettres) : 20 secondes d'échantillonnage de la charge CPU et de l'utilisation GPU **pendant que le jeu

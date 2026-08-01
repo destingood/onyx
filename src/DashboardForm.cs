@@ -182,6 +182,7 @@ namespace BTOptimizer
             check.DropDownItems.Add("Moniteur matériel", null, (s, e) => OpenDialog(new MonitorForm()));
             check.DropDownItems.Add("Stabilité du PC", null, (s, e) => OpenDialog(new StabilityForm(Log)));
             check.DropDownItems.Add("🎯 Mon pilote GPU est-il instable ?", null, (s, e) => ShowGpuStability());
+            check.DropDownItems.Add("🎮 Vérifier les fichiers d'un jeu (Steam)", null, (s, e) => ShowSteamValidate());
             check.DropDownItems.Add("Test de stress CPU", null, (s, e) => OpenDialog(new StressForm(Log)));
             check.DropDownItems.Add(new ToolStripSeparator());
             check.DropDownItems.Add(MenuHead("📋 Inventaire & entretien"));
@@ -255,6 +256,77 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>Liste les jeux Steam installés (toutes bibliothèques) et lance la vérification
+        /// OFFICIELLE des fichiers du jeu choisi. Rien n'est supprimé : Steam re-télécharge.</summary>
+        private void ShowSteamValidate()
+        {
+            System.Collections.Generic.List<SteamGames.Game> games = null;
+            try { games = SteamGames.Installed(); } catch { }
+            if (SteamGames.SteamPath() == null)
+            {
+                MessageBox.Show(this, "Steam n'est pas installé sur ce PC.\n\nPour les autres plateformes : Epic → « Vérifier » "
+                    + "dans le menu ⋯ du jeu ; Battle.net → Options → « Analyser et réparer ».",
+                    "Vérifier les fichiers d'un jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (games == null || games.Count == 0)
+            {
+                MessageBox.Show(this, "Steam est bien installé, mais je n'ai trouvé aucun jeu (bibliothèque vide ou déplacée).",
+                    "Vérifier les fichiers d'un jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (var f = new Form
+            {
+                Text = "ONYX — vérifier les fichiers d'un jeu (Steam)", Width = 620, Height = 520,
+                StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false, MinimizeBox = false, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim
+            })
+            {
+                var info = new Label
+                {
+                    Dock = DockStyle.Top, Height = 62, ForeColor = FpsUi.Dim, Font = FpsUi.Small, Padding = new Padding(14, 10, 14, 0),
+                    Text = "Un jeu qui plante, refuse de démarrer ou a subi un disque plein / une coupure : la vérification "
+                         + "OFFICIELLE de Steam répare les fichiers abîmés.\nRien n'est supprimé — Steam re-télécharge "
+                         + "uniquement ce qui manque. Tes sauvegardes ne sont pas touchées."
+                };
+                var list = new ListBox
+                {
+                    Dock = DockStyle.Fill, BackColor = FpsUi.BgMain, ForeColor = FpsUi.Dim,
+                    Font = FpsUi.Small, BorderStyle = BorderStyle.None, IntegralHeight = false
+                };
+                foreach (var g in games) list.Items.Add(g.Name + "   (" + SteamGames.Human(g.SizeBytes) + ")");
+                var go = new Button
+                {
+                    Text = "▶  Vérifier les fichiers du jeu sélectionné", Dock = DockStyle.Bottom, Height = 38,
+                    FlatStyle = FlatStyle.Flat, ForeColor = FpsUi.Gold
+                };
+                go.Click += (s, e) =>
+                {
+                    int i = list.SelectedIndex;
+                    if (i < 0 || i >= games.Count) { go.Text = "Choisis d'abord un jeu dans la liste"; return; }
+                    var g = games[i];
+                    if (MessageBox.Show(this, "Lancer la vérification des fichiers de « " + g.Name + " » ?\n\n"
+                        + "Steam va ouvrir et contrôler l'intégralité des fichiers du jeu (quelques minutes selon la taille). "
+                        + "Rien n'est supprimé ; seuls les fichiers abîmés sont re-téléchargés.",
+                        "Vérifier " + g.Name, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                    if (SteamGames.Validate(g.AppId))
+                    {
+                        try { Journal.Add("Vérification des fichiers Steam lancée : " + g.Name); } catch { }
+                        Log("Vérification Steam lancée pour « " + g.Name + " ».", 0);
+                        go.Text = "✓ Vérification lancée dans Steam";
+                    }
+                    else go.Text = "Steam n'a pas répondu — lance-le puis réessaie";
+                };
+                var close = new Button
+                {
+                    Text = "Fermer", Dock = DockStyle.Bottom, Height = 32, FlatStyle = FlatStyle.Flat,
+                    ForeColor = FpsUi.Dim, DialogResult = DialogResult.Cancel
+                };
+                f.Controls.Add(list); f.Controls.Add(info); f.Controls.Add(go); f.Controls.Add(close);
+                f.ShowDialog(this);
+            }
         }
 
         /// <summary>Verdict « pilote GPU instable ? » : croise erreurs, âge du pilote et crashs,

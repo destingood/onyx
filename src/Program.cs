@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.49.0.0")]
-[assembly: AssemblyFileVersion("15.49.0.0")]
+[assembly: AssemblyVersion("15.50.0.0")]
+[assembly: AssemblyFileVersion("15.50.0.0")]
 
 namespace BTOptimizer
 {
@@ -179,6 +179,17 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_STEAM=1 : liste les jeux Steam installes (toutes bibliotheques), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_STEAM") == "1")
+            {
+                Console.WriteLine("Steam : " + (SteamGames.SteamPath() ?? "(absent)"));
+                var gl = SteamGames.Installed();
+                Console.WriteLine(gl.Count + " jeu(x) installe(s) :");
+                int shown = 0;
+                foreach (var g in gl) { if (shown++ >= 12) break; Console.WriteLine("  - " + g.Name + "  (" + SteamGames.Human(g.SizeBytes) + ", appid " + g.AppId + ")"); }
                 Environment.Exit(0);
             }
 
@@ -847,9 +858,27 @@ namespace BTOptimizer
                 bool bn4 = bIdle.Title.Contains("Aucun jeu") && UtilityTools.IsBottleneck("c'est mon cpu ou mon gpu qui me limite")
                     && !UtilityTools.IsBottleneck("bonjour"); if (bn4) ok51++; Console.WriteLine((bn4 ? "OK  " : "FAIL") + "  goulot : sans jeu -> refus honnete + detection de la question");
 
+                // v15.50 : lecture de la bibliotheque Steam (parseurs purs).
+                int ok52 = 0;
+                char qt = '"';
+                string acf = "{ " + qt + "appid" + qt + " " + qt + "1091500" + qt
+                           + " " + qt + "name" + qt + " " + qt + "Cyberpunk 2077" + qt
+                           + " " + qt + "SizeOnDisk" + qt + " " + qt + "75000000000" + qt + " }";
+                var pg = SteamGames.ParseManifest(acf);
+                bool sg1 = pg != null && pg.AppId == "1091500" && pg.Name == "Cyberpunk 2077" && pg.SizeBytes == 75000000000L; if (sg1) ok52++; Console.WriteLine((sg1 ? "OK  " : "FAIL") + "  steam : manifeste lu (id, nom, taille)");
+                bool sg2 = SteamGames.ParseManifest("nimporte quoi") == null && SteamGames.ParseManifest(null) == null; if (sg2) ok52++; Console.WriteLine((sg2 ? "OK  " : "FAIL") + "  steam : manifeste illisible -> null");
+                string sep = new string(System.IO.Path.DirectorySeparatorChar, 1);
+                string libC = "C:" + sep + "Steam";
+                string libD = "D:" + sep + "SteamLibrary";
+                string vdf = "{ " + qt + "path" + qt + " " + qt + libD + qt + " }";
+                var libs = SteamGames.ParseLibraryPaths(vdf, libC);
+                bool sg3b = false; foreach (var l in libs) if (l.StartsWith("D:")) sg3b = true;
+                bool sg3 = libs.Count >= 2 && sg3b; if (sg3) ok52++; Console.WriteLine((sg3 ? "OK  " : "FAIL") + "  steam : bibliotheques multi-disques detectees (" + libs.Count + ")");
+                bool sg4 = SteamGames.Human(75000000000L).Contains("Go") && SteamGames.Human(5242880L).Contains("Mo"); if (sg4) ok52++; Console.WriteLine((sg4 ? "OK  " : "FAIL") + "  steam : tailles lisibles (Go / Mo)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
