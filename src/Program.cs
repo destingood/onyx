@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.58.0.0")]
-[assembly: AssemblyFileVersion("15.58.0.0")]
+[assembly: AssemblyVersion("15.59.0.0")]
+[assembly: AssemblyFileVersion("15.59.0.0")]
 
 namespace BTOptimizer
 {
@@ -182,6 +182,16 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_UPDATE=1 : verifie s'il existe une nouvelle version d'ONYX, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_UPDATE") == "1")
+            {
+                string ust;
+                var urel = Updater.Check(out ust);
+                Console.WriteLine("Depot : " + Updater.Repo);
+                Console.WriteLine(Updater.Describe(Updater.CurrentVersion(), urel, ust));
                 Environment.Exit(0);
             }
 
@@ -1061,9 +1071,28 @@ namespace BTOptimizer
                 string clean = DiagExport.Sanitize(dirty);
                 bool dp5 = clean.Contains("%USERPROFILE%") && !clean.Contains(Environment.UserName); if (dp5) ok60++; Console.WriteLine((dp5 ? "OK  " : "FAIL") + "  export : chemin utilisateur anonymise (promesse tenue)");
 
+                // v15.59 : mise a jour de l'app (analyse PURE de la reponse GitHub).
+                int ok61 = 0;
+                bool up1b = Updater.ParseTag("v15.60").ToString().StartsWith("15.60")
+                    && Updater.ParseTag("ONYX 16.2").Major == 16 && Updater.ParseTag("pas de version") == null; if (up1b) ok61++; Console.WriteLine((up1b ? "OK  " : "FAIL") + "  update : lecture de l'etiquette de version");
+                bool up2b = Updater.IsNewer(new Version(15, 58, 0, 0), new Version(15, 60, 0, 0))
+                    && !Updater.IsNewer(new Version(15, 60, 0, 0), new Version(15, 60, 0, 0))
+                    && !Updater.IsNewer(new Version(15, 60, 0, 0), new Version(15, 58, 0, 0)); if (up2b) ok61++; Console.WriteLine((up2b ? "OK  " : "FAIL") + "  update : comparaison de versions correcte");
+                bool up3b = Updater.IsTrustedUrl("https://github.com/x/y/releases/download/v1/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("https://exemple-pirate.fr/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("http://github.com/x.exe") && !Updater.IsTrustedUrl(null); if (up3b) ok61++; Console.WriteLine((up3b ? "OK  " : "FAIL") + "  update : SEUL github.com est accepte (anti-detournement)");
+                string relJson = "{ \"tag_name\": \"v15.60\", \"body\": \"Corrections\", \"assets\": [ { \"name\": \"notes.txt\", \"browser_download_url\": \"https://github.com/a/b/notes.txt\", \"size\": 10 }, { \"name\": \"ONYX-Setup-15.60.exe\", \"browser_download_url\": \"https://github.com/a/b/ONYX-Setup-15.60.exe\", \"size\": 12345678 } ] }";
+                var prel = Updater.ParseRelease(relJson);
+                bool up4b = prel != null && prel.Ver.Minor == 60 && prel.AssetName.Contains("Setup") && prel.Size == 12345678; if (up4b) ok61++; Console.WriteLine((up4b ? "OK  " : "FAIL") + "  update : installateur choisi parmi les fichiers publies");
+                string desc = Updater.Describe(new Version(15, 58, 0, 0), prel, "");
+                bool up5b = desc.Contains("15.60") && desc.Contains("CONSERV"); if (up5b) ok61++; Console.WriteLine((up5b ? "OK  " : "FAIL") + "  update : annonce claire + donnees conservees");
+                bool up6b = Updater.Describe(new Version(99, 0, 0, 0), prel, "").Contains("à jour")
+                    && Updater.Describe(new Version(15, 58, 0, 0), null, "Aucune version publiee").Contains("Aucune version")
+                    && UtilityTools.IsAppUpdate("mets a jour onyx") && !UtilityTools.IsAppUpdate("bilan des mises a jour windows"); if (up6b) ok61++; Console.WriteLine((up6b ? "OK  " : "FAIL") + "  update : deja a jour / rien publie / pas de collision avec Windows");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

@@ -4,6 +4,24 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.59 — MISE À JOUR INTÉGRÉE : fini le retéléchargement manuel à chaque version
+- **Menu ⋯ → « 🔄 Vérifier les mises à jour d'ONYX »**, ou dans le chat : « mets à jour ONYX »,
+  « nouvelle version ? ». ONYX interroge les **Releases GitHub** du projet, compare les versions,
+  affiche les nouveautés, puis — sur clic — télécharge l'installateur officiel et le lance.
+  Tes réglages, ta mémoire et ton journal sont **conservés** (ils vivent à côté de l'app).
+- **Vérification quotidienne discrète** : une fois par jour au lancement, en tâche de fond, le Gardien
+  signale l'existence d'une nouvelle version dans sa notification — sans jamais rien télécharger seul.
+- **Sécurité de la chaîne de mise à jour** :
+  - le fichier ne peut venir **QUE de github.com** (HTTPS) — une réponse détournée vers un autre
+    domaine est refusée et le dit ;
+  - la taille reçue doit correspondre à celle annoncée, sinon le fichier est jeté ;
+  - **rien n'est téléchargé ni installé sans clic explicite**, et l'action est journalisée.
+- **Honnêteté quand il n'y a rien** : dépôt privé ou aucune Release publiée → « aucune version n'est
+  publiée pour l'instant, rien à faire de ton côté » au lieu d'une erreur technique. Le dépôt visé est
+  `destingood/onyx` et reste modifiable via `bt-update-repo.txt`.
+- Lecture d'étiquette, comparaison de versions, choix de l'installateur parmi les fichiers publiés et
+  filtrage des URL : **PURS et testés** (6 cas). Sonde `BT_UPDATE=1`. Harnais **254/254** ; UITEST 45/45.
+
 ## v15.58 — DURABILITÉ DES DONNÉES : ta mémoire ne peut plus disparaître en silence
 - **Le risque trouvé en auditant l'installateur** : ONYX s'installe dans « Program Files » et écrivait
   TOUT à côté de son exécutable — mémoire du Copilote, journal de bord, tendance santé, photos du

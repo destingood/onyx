@@ -777,6 +777,17 @@ namespace BTOptimizer
             return (n.Contains("diagnostique") || n.Contains("diagnostic")) && (n.Contains("tout") || n.Contains("complet") || n.Contains("windows"));
         }
 
+        // ---- MISE À JOUR D'ONYX ----
+        /// <summary>« mets à jour onyx », « nouvelle version ? » → vrai (pas les MàJ Windows/pilotes).</summary>
+        internal static bool IsAppUpdate(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool app = n.Contains("onyx") || n.Contains("l'appli") || n.Contains("l appli") || n.Contains("application") || n.Contains("le logiciel");
+            bool upd = n.Contains("mise a jour") || n.Contains("mets a jour") || n.Contains("mettre a jour")
+                || n.Contains("nouvelle version") || n.Contains("derniere version") || Regex.IsMatch(n, "\\bmaj\\b");
+            return app && upd;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

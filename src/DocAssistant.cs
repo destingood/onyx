@@ -188,6 +188,11 @@ namespace BTOptimizer
                 return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
             }
 
+            // --- MISE À JOUR D'ONYX LUI-MÊME (avant le bilan Windows : « mets à jour ONYX » est plus précis) ---
+            if (UtilityTools.IsAppUpdate(s))
+                return new Reply { Text = "Je regarde s'il existe une version plus récente d'ONYX…",
+                    Action = ChatActions.UpdateCheckAction(), Dynamic = true };
+
             // --- BILAN MISES À JOUR : il MESURE (100 % local), puis propose — OU NON — d'installer.
             //     Jamais d'installation automatique : le bouton ouvre la page officielle, l'utilisateur décide. ---
             if (UtilityTools.IsUpdateCheck(s))

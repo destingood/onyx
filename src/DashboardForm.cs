@@ -255,8 +255,55 @@ namespace BTOptimizer
 
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
+            m.Add("🔄  Vérifier les mises à jour d'ONYX", null, (s, e) => ShowUpdateCheck());
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
             m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
+        }
+
+        /// <summary>Vérification des mises à jour d'ONYX, à la demande. Si une version plus récente
+        /// existe, propose de télécharger l'installateur officiel — jamais sans clic.</summary>
+        private void ShowUpdateCheck()
+        {
+            string status = "";
+            Updater.Release rel = null;
+            try { rel = Updater.Check(out status); } catch (Exception ex) { status = "Échec : " + ex.Message; }
+            var cur = Updater.CurrentVersion();
+            string txt = Updater.Describe(cur, rel, status);
+            bool canInstall = rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl);
+            if (!canInstall)
+            {
+                MessageBox.Show(this, txt, "ONYX — mises à jour", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (MessageBox.Show(this, txt + "\n\nTélécharger et installer maintenant ?", "ONYX — nouvelle version",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string file = null;
+                try { file = Updater.Download(rel, Log); } catch { }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        if (file == null)
+                        {
+                            MessageBox.Show(this, "Le téléchargement a échoué — rien n'a été installé, ta version actuelle est intacte.",
+                                "ONYX — mise à jour", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                        try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true }); }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(this, "Téléchargé, mais impossible de lancer l'installateur (" + ex.Message + ") :\n" + file,
+                                "ONYX — mise à jour", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                        Close();   // l'installateur prend le relais
+                    }));
+                }
+                catch { }
+            });
         }
 
         /// <summary>Médecin des journaux Windows : traduit les erreurs enregistrées par Windows en
@@ -498,6 +545,19 @@ namespace BTOptimizer
                         try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
                         // photo quotidienne de l'état du système (« qu'est-ce qui a changé sur mon PC ? »)
                         try { StateDiff.SaveToday(); } catch { }
+                        // Nouvelle version d'ONYX ? Vérification silencieuse, 1×/jour, jamais bloquante.
+                        try
+                        {
+                            if (Updater.DueToday())
+                            {
+                                string st;
+                                var nu = Updater.Check(out st);
+                                if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
+                                    al.Add("Nouvelle version d'ONYX disponible : " + nu.Ver.Major + "." + nu.Ver.Minor.ToString("00")
+                                         + " (menu ⋯ → « Vérifier les mises à jour »).");
+                            }
+                        }
+                        catch { }
                         // Mesures faites : en VEILLE, on s'arrête là — on mesure, on ne dérange pas.
                         if (Guardian.AlertsMuted()) return;
                         al = Guardian.Alerts();

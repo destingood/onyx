@@ -1692,6 +1692,59 @@ namespace BTOptimizer
         /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
         internal static bool RebootPendingPublic() { return RebootPending(); }
 
+        /// <summary>Vérifie s'il existe une version plus récente d'ONYX (lecture seule).</summary>
+        public static DocAssistant.ChatAction UpdateCheckAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Vérifier les mises à jour d'ONYX"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Recherche d'une nouvelle version…", 0);
+                string status;
+                Updater.Release rel;
+                try { rel = Updater.Check(out status); }
+                catch (Exception ex) { return Say("La vérification a échoué : " + ex.Message); }
+                var cur = Updater.CurrentVersion();
+                var r = Say(Updater.Describe(cur, rel, status));
+                if (rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl))
+                    r.Action = UpdateInstallAction(rel);
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Télécharge l'installateur officiel et le lance. Clic explicite obligatoire.</summary>
+        public static DocAssistant.ChatAction UpdateInstallAction(Updater.Release rel)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Télécharger et installer la version " + rel.Ver.Major + "." + rel.Ver.Minor.ToString("00");
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Télécharge l'installateur OFFICIEL depuis GitHub (" + SteamGames.Human(rel.Size) + "), puis le lance. "
+                      + "ONYX se fermera pour laisser l'installation se faire. Tes réglages, ta mémoire et ton journal "
+                      + "sont conservés (ils vivent à côté de l'application).";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string file = null;
+                try { file = Updater.Download(rel, log); } catch { }
+                if (file == null)
+                    return Say("Le téléchargement a échoué (connexion coupée, ou fichier différent de ce qui était annoncé). "
+                             + "Rien n'a été installé — ta version actuelle est intacte.");
+                try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true });
+                    return Say("✅ Installateur lancé — suis les étapes à l'écran. ONYX va se fermer.\n"
+                             + "(Si rien ne s'ouvre, le fichier est dans ton dossier temporaire : " + file + ")");
+                }
+                catch (Exception ex)
+                {
+                    return Say("Le fichier est téléchargé mais n'a pas pu être lancé (" + ex.Message + ").\n"
+                             + "Ouvre-le à la main : " + file);
+                }
+            };
+            return a;
+        }
+
         /// <summary>Médecin des journaux Windows : lit les erreurs/critiques et les traduit en
         /// diagnostic. Lecture seule.</summary>
         public static DocAssistant.ChatAction LogDoctorAction(int days)
