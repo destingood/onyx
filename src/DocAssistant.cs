@@ -87,6 +87,30 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>Version PROTÉGÉE de Answer : un bug dans un outil ne doit jamais faire tomber
+        /// l'application — le Copilote s'excuse, note l'incident, et la conversation continue.
+        /// C'est cette version que l'interface appelle.</summary>
+        public static Reply SafeAnswer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
+        {
+            try
+            {
+                var r = Answer(q, st, log, last);
+                if (r != null) return r;
+                return new Reply { Text = "Je n'ai pas su quoi répondre à ça — reformule et je réessaie.", ShowStarters = true };
+            }
+            catch (Exception ex)
+            {
+                try { SafetyNet.Record("copilote", ex); } catch { }
+                return new Reply
+                {
+                    Text = "Aïe — j'ai buggé en traitant ta demande (" + ex.GetType().Name + "). Ce n'est pas ta faute et "
+                         + "ton PC n'a rien subi : l'incident est noté dans « bt-erreurs.txt ». Reformule autrement, ou "
+                         + "demande-moi autre chose — je continue de fonctionner.",
+                    ShowStarters = true
+                };
+            }
+        }
+
         /// <summary>'last' = dernière réponse du Copilote qui portait quelque chose d'actionnable
         /// (outil / correction / plan) : un « oui » ou un « non » de l'utilisateur s'y rapporte.</summary>
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)

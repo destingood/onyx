@@ -408,7 +408,7 @@ namespace BTOptimizer
         private void Send(string q)
         {
             AddBubble(false, q, null);
-            var reply = DocAssistant.Answer(q, _stats, Host.Log, _last);
+            var reply = DocAssistant.SafeAnswer(q, _stats, Host.Log, _last);
             // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Copilote écrit… ».
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
             {

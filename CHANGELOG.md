@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.57 — ROBUSTESSE : ONYX ne peut plus disparaître sans explication
+- **Le dernier point faible signalé par la revue de code indépendante est corrigé.** Le Copilote
+  appelait le routage **sans aucun filet** : un bug dans n'importe lequel des ~40 outils aurait fermé
+  toute l'application, sans un mot.
+- **Filet de sécurité GLOBAL** : toute erreur non gérée (interface ou tâche de fond) est désormais
+  écrite dans **bt-erreurs.txt** (daté, avec version et pile d'appels ; fichier auto-limité à 200 Ko)
+  et expliquée honnêtement à l'écran : ce qui s'est passé, **que le PC n'a subi aucune modification**,
+  et où c'est noté. Une erreur d'interface rattrapable **ne ferme plus l'application**.
+- **Copilote blindé** (`SafeAnswer`) : si un outil plante, il répond « j'ai buggé, ce n'est pas ta
+  faute, ton PC n'a rien subi, l'incident est noté — reformule » au lieu d'emporter l'app.
+- **Test de résistance ajouté au harnais** : 23 entrées hostiles envoyées au Copilote (texte vide, null,
+  20 000 caractères, octets nuls, balises `<script>`, injection SQL, traversée de chemin `..\\..\\`,
+  `%s%n`, caractères de contrôle, emoji, commandes tronquées « traduis en anglais », « distance entre
+  et », division par zéro, racine de −1…) → **0 plantage, 0 réponse vide**.
+- Harnais **243/243** ; UITEST 45/45.
+
 ## v15.56 — La CHRONOLOGIE : quand ça a commencé, et ce qui a changé ce jour-là
 - Le médecin des journaux ne dit plus seulement CE QUI ne va pas, mais **QUAND ça a commencé** :
   mini-graphe jour par jour des erreurs sérieuses (le bruit connu est exclu du compte), pic quotidien,

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.56.0.0")]
-[assembly: AssemblyFileVersion("15.56.0.0")]
+[assembly: AssemblyVersion("15.57.0.0")]
+[assembly: AssemblyFileVersion("15.57.0.0")]
 
 namespace BTOptimizer
 {
@@ -23,6 +23,9 @@ namespace BTOptimizer
 #if BTTEST
             TestHarness.Run();
 #else
+            // Filet de sécurité : une erreur imprévue est notée et expliquée, jamais une fermeture muette.
+            SafetyNet.Install();
+
             // Mode ligne de commande (gardien de démarrage / automatisation).
             if (args.Length > 0 && args[0].StartsWith("-"))
             {
@@ -1018,9 +1021,36 @@ namespace BTOptimizer
                 bool tm4 = LogDoctor.FormatTimeline(new System.Collections.Generic.SortedDictionary<DateTime, int>(), null) == null
                     && LogDoctor.SeverityOf("DCOM", 10010) == 0 && LogDoctor.SeverityOf("Inconnu", 999) == 1; if (tm4) ok58++; Console.WriteLine((tm4 ? "OK  " : "FAIL") + "  chronologie : vide -> null, gravites correctes");
 
+                // v15.57 : ROBUSTESSE — le Copilote ne doit JAMAIS tomber, quoi qu'on lui envoie.
+                int ok59 = 0;
+                var hostile = new string[]
+                {
+                    null, "", "   ", new string('a', 20000), "\0\0\0", "<script>alert(1)</script>",
+                    "'; DROP TABLE users; --", "..\\..\\..\\windows\\system32", "%s%s%s%n%n", "\u0001\u0002\u0003",
+                    "traduis  en anglais", "distance entre  et ", "100000000000000000000 km en miles",
+                    "pokemon ", "livre ", "code postal 00000", "15% de 0", "racine de -1", "1/0", "prix du ",
+                    "😀🎮🔥", "MAJUSCULES PARTOUT !!!", "\t\t\n\n"
+                };
+                int crashes = 0, nulls = 0;
+                foreach (var h in hostile)
+                {
+                    try
+                    {
+                        var rr = DocAssistant.SafeAnswer(h, null, null, null);
+                        if (rr == null || string.IsNullOrEmpty(rr.Text)) nulls++;
+                    }
+                    catch { crashes++; }
+                }
+                bool rb1 = crashes == 0; if (rb1) ok59++; Console.WriteLine((rb1 ? "OK  " : "FAIL") + "  robustesse : " + hostile.Length + " entrees hostiles, " + crashes + " plantage(s)");
+                bool rb2 = nulls == 0; if (rb2) ok59++; Console.WriteLine((rb2 ? "OK  " : "FAIL") + "  robustesse : toujours une reponse utile (" + nulls + " vide(s))");
+                string um = SafetyNet.UserMessage(new InvalidOperationException("test"), false);
+                bool rb3 = um.Contains("AUCUNE modification") && um.Contains("bt-erreurs.txt") && um.Contains("continue"); if (rb3) ok59++; Console.WriteLine((rb3 ? "OK  " : "FAIL") + "  filet : message honnete (rien modifie, ou c'est note, ca continue)");
+                string umf = SafetyNet.UserMessage(null, true);
+                bool rb4 = umf.Contains("Relance ONYX"); if (rb4) ok59++; Console.WriteLine((rb4 ? "OK  " : "FAIL") + "  filet : cas fatal -> consigne claire");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }
