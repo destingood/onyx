@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.61b — Installateur réparé : compilation fiable et livraison au fichier près
+- **Panne corrigée** : la compilation de l'installateur échouait en cours de route
+  (« Le fichier spécifié est introuvable », après `Mono.Posix.NETStandard.dll`). Cause : `[Files]`
+  embarquait `..\dist\*`, donc **tout ce qui traînait** dans le dossier de publication — y compris
+  les restes d'une publication précédente, qui disparaissaient pendant la compression.
+- **Liste de fichiers EXPLICITE en mode fichier unique** : l'installateur ne prend plus « tout le
+  dossier » mais **exactement** `BTOptimizer.exe` + les composants natifs que .NET ne peut pas
+  embarquer (`Microsoft.Windows.SDK.NET.dll`, `amd64\`, `fr\`). Ce qui n'est pas nommé n'est pas
+  livré : plus aucun fichier fantôme, plus aucune fuite possible par oubli d'exclusion.
+- **Détection « autonome » réparée** : elle cherchait `coreclr.dll`, absent d'une publication en
+  FICHIER UNIQUE — l'installateur croyait donc être en mode « dépendant du runtime » et **réclamait
+  .NET au client alors que tout était déjà embarqué**. Détection ajoutée par la taille du binaire.
+- Les symboles de débogage de l'outil tiers NVIDIA ne sont plus livrés non plus.
+- Vérifié : compilation réussie, et le setup ne contient QUE l'exe, le composant natif requis et les
+  outils optionnels — `ONYX-Setup-15.61.0.0.exe` (61 Mo).
+
 ## v15.61 — ANTI-FUITE : l'utilisateur ne reçoit QUE l'exécutable
 - **🚨 Fuite réelle trouvée et colmatée** : l'installateur excluait `bt-*.txt`, `bt-*.csv` et `*.pdb`…
   mais **pas les `.md`**. Or `dist\bt-appris.md` contient les **conversations apprises par le Copilote**

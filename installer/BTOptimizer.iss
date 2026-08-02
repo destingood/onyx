@@ -26,10 +26,19 @@
 ; landing hébergée dès qu'elle existe.
 #define AppURL "https://fluide.gumroad.com"
 
-; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained) : coreclr.dll n'est
-; présent que dans ce mode. Si oui, le runtime .NET est embarqué -> on n'exige rien du client.
+; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained), DEUX formes possibles :
+;  · éclatée      : coreclr.dll est posé à côté de l'exe ;
+;  · FICHIER UNIQUE : tout est DANS l'exe (aucun coreclr.dll sur le disque) -> on le reconnaît
+;    à la taille du binaire (> 40 Mo). Sans ce test, une publication single-file était prise
+;    pour du « dépendant du runtime » et l'installateur réclamait .NET à tort au client.
 #ifexist "..\dist\coreclr.dll"
   #define SelfContained
+#endif
+#ifexist "..\dist\BTOptimizer.exe"
+  #if !defined(SelfContained) && FileSize("..\dist\BTOptimizer.exe") > 40000000
+    #define SelfContained
+    #define SingleFile
+  #endif
 #endif
 
 [Setup]
@@ -81,16 +90,37 @@ Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfile
 ; developpeur (memoire du Copilote, faits appris, journal, jeton de mise a jour), symboles de
 ; debogage et sources. « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez
 ; TOUS les utilisateurs. Le probe BT_RELEASE verifie ce dossier avant chaque publication.
+#ifdef SingleFile
+; ---- FICHIER UNIQUE : on livre EXACTEMENT l'exécutable, et rien d'autre. -----------------
+; Liste EXPLICITE (et non « dist\* ») : le dossier de publication contient aussi les données
+; de test du développeur et parfois des restes d'une publication précédente. Avec « dist\* »,
+; Inno embarquait ces fichiers — et échouait même en cours de compression si l'un d'eux
+; disparaissait entre-temps (« Le fichier spécifié est introuvable »). Ici, rien de tout ça
+; n'est possible : ce qui n'est pas nommé n'est pas livré.
+Source: "..\dist\BTOptimizer.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: app
+; Composants natifs/satellites que .NET ne peut PAS embarquer dans le fichier unique.
+Source: "..\dist\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
+Source: "..\dist\WinRT.Runtime.dll";             DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
+Source: "..\dist\amd64\*";                       DestDir: "{app}\amd64"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: app
+Source: "..\dist\fr\*";                          DestDir: "{app}\fr";    Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: app
+#else
+; ---- Publication ÉCLATÉE (dépendante du runtime, ou autonome non compressée) --------------
+; ANTI-FUITE : tout ce qui n'est pas binaire est exclu — données du développeur (mémoire du
+; Copilote, faits appris, journal, jeton de mise à jour), symboles de débogage et sources.
+; « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez TOUS les
+; utilisateurs. Le contrôle BT_RELEASE vérifie ce dossier avant chaque publication.
 Source: "..\dist\*"; DestDir: "{app}"; \
   Excludes: "bt-*.txt,bt-*.csv,bt-*.md,bt-*.nip,bt-*.json,bt-etat\*,bt-savoir\*,bt-gamecache\*,*.pdb,*.etl,*.cs,*.log"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
+#endif
 
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
 Source: "..\tools\dpc-trace.wprp"; DestDir: "{app}\tools"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
 
 ; Composant NVIDIA optionnel. nvidiaProfileInspector est un outil tiers :
 ; vérifiez ses droits de redistribution avant toute diffusion commerciale.
-Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; \
+; (les symboles de débogage de l'outil tiers ne servent à personne : on ne les livre pas)
+Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; Excludes: "*.pdb"; \
   Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: nvidia
 
 [Icons]
