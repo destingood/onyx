@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.61c — Installateur : la vraie cause de la panne, et un setup complet
+- **La panne revenait**, mais à un endroit **différent** à chaque compilation
+  (`Mono.Posix.NETStandard.dll`, puis `Microsoft.DiaSymReader.Native.amd64.dll`). Or ces deux
+  fichiers étaient bien présents sur le disque. Ce n'était donc pas un fichier fautif : quelque
+  chose modifiait `dist\` **pendant** la compression — et `dist\` est justement le dossier où l'app
+  est **exécutée** pendant le développement (elle y écrit son état, l'antivirus y intervient, une
+  seconde compilation lancée en parallèle commence par le vider). Inno liste les fichiers au début
+  et les compresse ~40 s plus tard : il suffit qu'un seul disparaisse entre les deux.
+- **On ne compile plus depuis `dist\`** : les scripts figent d'abord une copie de livraison
+  (`build\stage`) qui ne contient QUE ce qui doit partir et que rien d'autre ne touche. La panne
+  devient impossible au lieu d'être seulement improbable.
+- **Défaut de la v15.61b corrigé** : la « liste de fichiers explicite » avait oublié
+  `Microsoft.Diagnostics.Tracing.TraceEvent.dll`, que .NET ne peut pas embarquer. Le setup annoncé
+  comme bon était donc **amputé** de cette DLL : la mesure de latence DPC/ISR aurait planté chez
+  l'utilisateur. Retour à un joker filtré, qui lui ne peut pas oublier un binaire.
+- **Anti-fuite renforcé** : l'exclusion se fait désormais par **préfixe** (`bt-*`, fichiers ET
+  dossiers) au lieu d'être énumérée extension par extension. C'est ce trou qui avait laissé passer
+  `bt-appris.md` : un nouveau fichier d'état avec une extension imprévue ne peut plus fuiter.
+- Vérifié : compilation réussie, 259 fichiers, **aucun `bt-*`** embarqué, `TraceEvent.dll` bien
+  présent — `ONYX-Setup-15.61.0.0.exe` (45,5 Mo, autonome, sans prérequis .NET).
+
 ## v15.61b — Installateur réparé : compilation fiable et livraison au fichier près
 - **Panne corrigée** : la compilation de l'installateur échouait en cours de route
   (« Le fichier spécifié est introuvable », après `Mono.Posix.NETStandard.dll`). Cause : `[Files]`

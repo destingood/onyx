@@ -6,7 +6,8 @@
 ;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
 ;  Résultat :  installer\Output\BTOptimizer-Setup-<version>.exe
 ;
-;  Deux modes de diffusion, détectés AUTOMATIQUEMENT selon le contenu de ..\dist :
+;  Source compilée : ..\build\stage (préparé par les scripts de build), sinon ..\dist.
+;  Deux modes de diffusion, détectés AUTOMATIQUEMENT selon le contenu de ce dossier :
 ;   • Dépendant du runtime (Build-Installer.bat) : ~16 Mo, exige .NET Desktop 10 (x64)
 ;     côté client -> le script le vérifie et propose la page de téléchargement s'il manque.
 ;   • AUTONOME / self-contained (Build-Standalone.bat) : ~120 Mo, runtime embarqué,
@@ -15,9 +16,25 @@
 
 #define AppName "ONYX"
 #define AppExe "BTOptimizer.exe"
+; DOSSIER SOURCE DE LA LIVRAISON.
+; On ne compile PLUS depuis « dist\ » : c'est le dossier où le développeur EXÉCUTE l'app.
+; Il bouge donc pendant la compilation (l'app y écrit son état, l'antivirus y intervient,
+; une seconde compilation lancée en parallèle commence par le vider). Inno liste les
+; fichiers au début, puis les compresse ~40 s plus tard : si l'un d'eux disparaît entre
+; temps, la compilation s'arrête sur « Le fichier spécifié est introuvable » — à un endroit
+; DIFFÉRENT à chaque fois, ce qui rendait la panne incompréhensible.
+; « build\stage » est créé par les scripts de build juste avant l'appel à ISCC, ne contient
+; QUE ce qui doit être livré, et rien d'autre ne l'utilise.
+#ifexist "..\build\stage\BTOptimizer.exe"
+  #define Src "..\build\stage"
+#else
+  ; Repli : compilation manuelle après un simple « dotnet publish -o dist ».
+  #define Src "..\dist"
+#endif
+
 ; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
-#ifexist "..\dist\BTOptimizer.exe"
-  #define AppVersion GetVersionNumbersString("..\dist\BTOptimizer.exe")
+#ifexist Src + "\BTOptimizer.exe"
+  #define AppVersion GetVersionNumbersString(Src + "\BTOptimizer.exe")
 #else
   #define AppVersion "7.9.0.0"
 #endif
@@ -31,13 +48,12 @@
 ;  · FICHIER UNIQUE : tout est DANS l'exe (aucun coreclr.dll sur le disque) -> on le reconnaît
 ;    à la taille du binaire (> 40 Mo). Sans ce test, une publication single-file était prise
 ;    pour du « dépendant du runtime » et l'installateur réclamait .NET à tort au client.
-#ifexist "..\dist\coreclr.dll"
+#ifexist Src + "\coreclr.dll"
   #define SelfContained
 #endif
-#ifexist "..\dist\BTOptimizer.exe"
-  #if !defined(SelfContained) && FileSize("..\dist\BTOptimizer.exe") > 40000000
+#ifexist Src + "\BTOptimizer.exe"
+  #if !defined(SelfContained) && FileSize(Src + "\BTOptimizer.exe") > 40000000
     #define SelfContained
-    #define SingleFile
   #endif
 #endif
 
@@ -90,29 +106,22 @@ Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfile
 ; developpeur (memoire du Copilote, faits appris, journal, jeton de mise a jour), symboles de
 ; debogage et sources. « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez
 ; TOUS les utilisateurs. Le probe BT_RELEASE verifie ce dossier avant chaque publication.
-#ifdef SingleFile
-; ---- FICHIER UNIQUE : on livre EXACTEMENT l'exécutable, et rien d'autre. -----------------
-; Liste EXPLICITE (et non « dist\* ») : le dossier de publication contient aussi les données
-; de test du développeur et parfois des restes d'une publication précédente. Avec « dist\* »,
-; Inno embarquait ces fichiers — et échouait même en cours de compression si l'un d'eux
-; disparaissait entre-temps (« Le fichier spécifié est introuvable »). Ici, rien de tout ça
-; n'est possible : ce qui n'est pas nommé n'est pas livré.
-Source: "..\dist\BTOptimizer.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: app
-; Composants natifs/satellites que .NET ne peut PAS embarquer dans le fichier unique.
-Source: "..\dist\Microsoft.Windows.SDK.NET.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
-Source: "..\dist\WinRT.Runtime.dll";             DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
-Source: "..\dist\amd64\*";                       DestDir: "{app}\amd64"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: app
-Source: "..\dist\fr\*";                          DestDir: "{app}\fr";    Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: app
-#else
-; ---- Publication ÉCLATÉE (dépendante du runtime, ou autonome non compressée) --------------
-; ANTI-FUITE : tout ce qui n'est pas binaire est exclu — données du développeur (mémoire du
-; Copilote, faits appris, journal, jeton de mise à jour), symboles de débogage et sources.
-; « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez TOUS les
-; utilisateurs. Le contrôle BT_RELEASE vérifie ce dossier avant chaque publication.
-Source: "..\dist\*"; DestDir: "{app}"; \
-  Excludes: "bt-*.txt,bt-*.csv,bt-*.md,bt-*.nip,bt-*.json,bt-etat\*,bt-savoir\*,bt-gamecache\*,*.pdb,*.etl,*.cs,*.log"; \
+; ANTI-FUITE — exclusion par PRÉFIXE, et non par extension.
+; Le dossier de publication est aussi celui où le développeur SE SERT de l'app : s'y
+; accumulent la mémoire du Copilote, les faits appris, le journal, la licence, le jeton de
+; mise à jour. L'ancienne liste énumérait des extensions (« bt-*.txt, bt-*.csv, bt-*.md… ») :
+; il suffisait qu'un nouveau fichier d'état apparaisse avec une extension non prévue pour
+; qu'il parte chez TOUS les utilisateurs — c'est précisément ce qui était arrivé à
+; bt-appris.md, qui contenait de vraies conversations. « bt-* » couvre les fichiers ET les
+; dossiers, actuels comme futurs.
+;
+; Une liste explicite (nom par nom) a aussi été essayée : elle a produit un setup AMPUTÉ de
+; Microsoft.Diagnostics.Tracing.TraceEvent.dll, que .NET ne peut pas embarquer — la mesure
+; de latence DPC/ISR aurait planté chez le client. Un joker filtré ne peut pas, lui,
+; oublier un binaire.
+Source: "{#Src}\*"; DestDir: "{app}"; \
+  Excludes: "bt-*,*.pdb,*.cs,*.csproj,*.sln,*.etl,*.log,*.pfx,*.tmp"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
-#endif
 
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
 Source: "..\tools\dpc-trace.wprp"; DestDir: "{app}\tools"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
