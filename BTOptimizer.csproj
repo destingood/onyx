@@ -30,6 +30,20 @@
     <NoWarn>CA1416</NoWarn>
   </PropertyGroup>
 
+  <!-- ANTI-FUITE (publication) : on ne livre QUE l'executable.
+       · DebugType=none : aucun .pdb produit -> pas de symboles ni de noms internes distribues ;
+       · PathMap : les chemins sources compiles dans le binaire (et donc visibles dans les piles
+         d'appels) deviennent « .\ » au lieu de « C:\Users\<nom>\... » — sinon le nom de compte
+         Windows du developpeur fuite dans chaque message d'erreur affiche a l'utilisateur ;
+       · DebuggerSupport/Metadata : moins de surface d'inspection dans le binaire publie. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <DebuggerSupport>false</DebuggerSupport>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="src\**\*.cs" />
   </ItemGroup>

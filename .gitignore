@@ -71,3 +71,9 @@ testbin/
 shots-*/
 uitest-*.log
 icon*.log
+
+# ANTI-FUITE : secrets et donnees locales, jamais commites
+bt-update-token.txt
+bt-*.pfx
+*.pfx
+installer/Output/

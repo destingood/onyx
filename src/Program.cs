@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.60.0.0")]
-[assembly: AssemblyFileVersion("15.60.0.0")]
+[assembly: AssemblyVersion("15.61.0.0")]
+[assembly: AssemblyFileVersion("15.61.0.0")]
 
 namespace BTOptimizer
 {
@@ -183,6 +183,15 @@ namespace BTOptimizer
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
                 Environment.Exit(0);
+            }
+
+            // BT_RELEASE=<dossier> : verifie qu'on ne livre QUE l'executable (anti-fuite), puis sort.
+            string relDir = Environment.GetEnvironmentVariable("BT_RELEASE");
+            if (!string.IsNullOrEmpty(relDir))
+            {
+                int graveCount;
+                Console.WriteLine(ReleaseGuard.Check(relDir, out graveCount));
+                Environment.Exit(graveCount > 0 ? 1 : 0);
             }
 
             // BT_UPDATE=1 : verifie s'il existe une nouvelle version d'ONYX, puis sort.
@@ -1102,9 +1111,24 @@ namespace BTOptimizer
                     && !Updater.IsTrustedUrl("https://mon-site.example/x.exe"); if (pv4) ok62++; Console.WriteLine((pv4 ? "OK  " : "FAIL") + "  prive : GitHub Pages accepte, hote inconnu refuse sans manifeste");
                 bool pv5 = SelfCheck.SupportInfo().Contains("destingood"); if (pv5) ok62++; Console.WriteLine((pv5 ? "OK  " : "FAIL") + "  credit : destingood present dans les infos de support");
 
+                // v15.61 : garde-fou de publication (on ne livre QUE l'executable).
+                int ok63 = 0;
+                bool rg1 = ReleaseGuard.Inspect("BTOptimizer.exe") == null && ReleaseGuard.Inspect("System.Text.Json.dll") == null; if (rg1) ok63++; Console.WriteLine((rg1 ? "OK  " : "FAIL") + "  publication : l'executable et ses composants sont legitimes");
+                var lk1 = ReleaseGuard.Inspect("bt-appris.md");
+                bool rg2 = lk1 != null && lk1.Level == 2; if (rg2) ok63++; Console.WriteLine((rg2 ? "OK  " : "FAIL") + "  publication : bt-appris.md (conversations) = fuite GRAVE");
+                var lk2 = ReleaseGuard.Inspect("bt-update-token.txt");
+                bool rg3 = lk2 != null && lk2.Level == 2; if (rg3) ok63++; Console.WriteLine((rg3 ? "OK  " : "FAIL") + "  publication : jeton de mise a jour = fuite GRAVE");
+                var lk3 = ReleaseGuard.Inspect("BTOptimizer.pdb");
+                bool rg4 = lk3 != null && lk3.Level == 1 && ReleaseGuard.Inspect("Program.cs").Level == 2; if (rg4) ok63++; Console.WriteLine((rg4 ? "OK  " : "FAIL") + "  publication : symboles a retirer, code source = grave");
+                int gr, mi;
+                string relClean = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe" }, out gr, out mi);
+                bool rg5 = gr == 0 && mi == 0 && relClean.Contains("PROPRE"); if (rg5) ok63++; Console.WriteLine((rg5 ? "OK  " : "FAIL") + "  publication : dossier ne contenant que l'exe = PROPRE");
+                string dirty2 = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe", "bt-memoire.txt", "BTOptimizer.pdb" }, out gr, out mi);
+                bool rg6 = gr == 1 && mi == 1 && dirty2.Contains("bt-memoire.txt"); if (rg6) ok63++; Console.WriteLine((rg6 ? "OK  " : "FAIL") + "  publication : melange -> 1 grave + 1 mineur, nommes");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

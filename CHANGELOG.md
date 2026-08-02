@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.61 — ANTI-FUITE : l'utilisateur ne reçoit QUE l'exécutable
+- **🚨 Fuite réelle trouvée et colmatée** : l'installateur excluait `bt-*.txt`, `bt-*.csv` et `*.pdb`…
+  mais **pas les `.md`**. Or `dist\bt-appris.md` contient les **conversations apprises par le Copilote**
+  sur la machine de développement — il partait donc chez **tous les utilisateurs**. Exclusion élargie :
+  `bt-*.md`, `bt-*.json`, `bt-etat\`, `bt-savoir\`, `bt-gamecache\`, `*.cs`, `*.log`.
+- **Plus aucun symbole de débogage distribué** : `DebugType=none` en Release — le `.pdb` (structure
+  interne du programme) n'est même plus produit. Vérifié : le dossier de publication n'en contient plus.
+- **Chemins sources anonymisés dans le binaire** (`PathMap`) : sans ça, chaque pile d'appels affichée à
+  un utilisateur révélait `C:\Users\<nom-du-développeur>\...` — le nom de compte Windows fuitait dans
+  le moindre message d'erreur.
+- **🛡 Garde-fou de publication** (`BT_RELEASE=<dossier>`) : contrôle automatique du dossier livré, qui
+  classe chaque fichier — **grave** (secrets, jetons, mémoire, journal, licence, code source) ou
+  **à retirer** (symboles, états, traces) — et sort en échec s'il trouve du grave. Testé en réel sur le
+  vrai dossier : **24 fichiers détectés**, dont `bt-appris.md` en rouge.
+- **Secrets protégés côté dépôt** : `bt-update-token.txt`, `*.pfx` et `installer/Output/` ajoutés au
+  `.gitignore` — un jeton de mise à jour ou un certificat de signature ne peut plus être commité par
+  accident.
+- Les mises à jour continuent de fonctionner : l'updater n'a besoin **que de l'exécutable**.
+- 6 nouveaux cas au harnais (exe légitime, `bt-appris.md` grave, jeton grave, `.pdb` mineur / source
+  grave, dossier propre, mélange nommé). Harnais **265/265**.
+
 ## v15.60 — Mise à jour même avec un dépôt PRIVÉ + crédit destingood
 - **Le code peut rester privé, les mises à jour fonctionnent quand même.** Deux voies, essayées
   automatiquement dans l'ordre :

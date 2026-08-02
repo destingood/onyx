@@ -77,8 +77,12 @@ Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfile
 [Files]
 ; Binaires .NET 10 (produits par « dotnet publish -o dist »).
 ; On exclut les fichiers d'état générés à l'exécution et les symboles de débogage.
+; ANTI-FUITE : tout ce qui n'est pas le binaire est exclu explicitement — donnees de l'utilisateur
+; developpeur (memoire du Copilote, faits appris, journal, jeton de mise a jour), symboles de
+; debogage et sources. « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez
+; TOUS les utilisateurs. Le probe BT_RELEASE verifie ce dossier avant chaque publication.
 Source: "..\dist\*"; DestDir: "{app}"; \
-  Excludes: "bt-*.txt,bt-*.csv,bt-*.nip,*.pdb,*.etl"; \
+  Excludes: "bt-*.txt,bt-*.csv,bt-*.md,bt-*.nip,bt-*.json,bt-etat\*,bt-savoir\*,bt-gamecache\*,*.pdb,*.etl,*.cs,*.log"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
 
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
