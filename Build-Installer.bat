@@ -101,8 +101,15 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
-rem Signature de l'installateur genere (sans effet si aucun certificat configure).
-for %%F in ("installer\Output\*.exe") do call "%~dp0Sign.bat" "%%~fF"
+rem Signature du SEUL installateur qui vient d'etre genere (le plus recent).
+rem Avant : "for %%F in (installer\Output\*.exe)" repassait sur TOUS les setups archives
+rem depuis la v7.7 -- 22 tentatives de signature et autant d'avertissements a chaque
+rem compilation, en retouchant des artefacts d'anciennes versions.
+for /f "delims=" %%F in ('dir /b /o-d "installer\Output\*.exe" 2^^>nul') do (
+    call "%~dp0Sign.bat" "installer\Output\%%F"
+    goto :signe
+)
+:signe
 
 echo.
 echo [OK] Installateur cree dans  installer\Output\
