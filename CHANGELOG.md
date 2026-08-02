@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.60 — Mise à jour même avec un dépôt PRIVÉ + crédit destingood
+- **Le code peut rester privé, les mises à jour fonctionnent quand même.** Deux voies, essayées
+  automatiquement dans l'ordre :
+  1. **Manifeste personnel** (`bt-update-url.txt`) : une URL HTTPS vers un petit JSON hébergé où tu veux
+     (GitHub Pages, ton site, un stockage objet) — `{ "version", "notes", "url", "size" }`. Ton dépôt de
+     code reste totalement privé ; seule la version publiée est publique.
+  2. **Dépôt de distribution séparé** : par défaut `destingood/onyx-releases` (public) puis
+     `destingood/onyx`. Tu publies l'installateur dans le dépôt public, le code reste dans le privé.
+- **Jeton GitHub facultatif et LOCAL** (`bt-update-token.txt`) pour lire un dépôt privé **depuis tes
+  propres machines**. Il n'est **jamais embarqué dans l'application** — décision assumée : un jeton
+  livré aux utilisateurs serait extractible du binaire en quelques secondes et donnerait à n'importe
+  qui l'accès au dépôt privé. Ça, je ne le ferai pas.
+- **Confiance étendue mais toujours bornée** : le téléchargement est accepté depuis GitHub, GitHub Pages,
+  ou **l'hôte exact de TON manifeste** — jamais un domaine tiers, même si la réponse en indique un.
+- **Message d'aide au lieu d'une erreur** : dépôt privé ou aucune Release → l'app explique les deux
+  solutions ci-dessus, en français, dans la fenêtre de mise à jour.
+- **Crédit destingood** : dans « À propos » (sous-titre + « Créé et maintenu par destingood —
+  github.com/destingood/onyx ») et dans le bloc « infos de support » copiable.
+- 5 nouveaux cas au harnais (manifeste lu, manifeste invalide refusé, hôte du manifeste seul accepté,
+  GitHub Pages accepté, crédit présent). Harnais **259/259**.
+
 ## v15.59 — MISE À JOUR INTÉGRÉE : fini le retéléchargement manuel à chaque version
 - **Menu ⋯ → « 🔄 Vérifier les mises à jour d'ONYX »**, ou dans le chat : « mets à jour ONYX »,
   « nouvelle version ? ». ONYX interroge les **Releases GitHub** du projet, compare les versions,

@@ -88,6 +88,7 @@ namespace BTOptimizer
         {
             var sb = new System.Text.StringBuilder();
             sb.Append("--- ONYX : infos de support ---\r\n");
+            sb.Append("Projet    : ONYX par destingood (github.com/destingood/onyx)\r\n");
             try { sb.Append("ONYX      : v").Append(typeof(SelfCheck).Assembly.GetName().Version).Append("\r\n"); } catch { }
             try { sb.Append("Windows   : ").Append(Sys.OsDescription()).Append("\r\n"); } catch { }
             try

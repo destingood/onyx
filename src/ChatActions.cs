@@ -1706,7 +1706,7 @@ namespace BTOptimizer
                 catch (Exception ex) { return Say("La vérification a échoué : " + ex.Message); }
                 var cur = Updater.CurrentVersion();
                 var r = Say(Updater.Describe(cur, rel, status));
-                if (rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl))
+                if (rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl, Updater.ManifestUrl))
                     r.Action = UpdateInstallAction(rel);
                 return r;
             };

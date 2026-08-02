@@ -19,10 +19,12 @@ namespace BTOptimizer
     /// </summary>
     internal static class Updater
     {
-        /// <summary>Dépôt par défaut ; remplaçable dans bt-update-repo.txt (« proprio/depot »).</summary>
-        private const string DefaultRepo = "destingood/onyx";
+        /// <summary>Dépôts essayés dans l'ordre : d'abord le dépôt PUBLIC de distribution (le code peut
+        /// rester privé — seules les versions publiées y sont), puis le dépôt principal.</summary>
+        private static readonly string[] DefaultRepos = { "destingood/onyx-releases", "destingood/onyx" };
 
-        public static string Repo
+        /// <summary>Dépôt forcé par l'utilisateur (bt-update-repo.txt), ou null.</summary>
+        public static string RepoOverride
         {
             get
             {
@@ -36,7 +38,52 @@ namespace BTOptimizer
                     }
                 }
                 catch { }
-                return DefaultRepo;
+                return null;
+            }
+        }
+
+        public static string Repo { get { return RepoOverride ?? DefaultRepos[0]; } }
+
+        /// <summary>MANIFESTE PERSONNEL : une URL HTTPS vers un petit JSON hébergé où tu veux
+        /// (GitHub Pages, ton site, un stockage objet…). C'est LA solution quand le dépôt de code
+        /// doit rester privé : le code reste secret, seule la version publiée est publique.
+        /// Format attendu : { "version": "15.60", "notes": "…", "url": "https://…/ONYX-Setup.exe", "size": 123 }</summary>
+        public static string ManifestUrl
+        {
+            get
+            {
+                try
+                {
+                    string f = AppPaths.File("bt-update-url.txt");
+                    if (File.Exists(f))
+                    {
+                        string s = File.ReadAllText(f).Trim();
+                        if (s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return s;
+                    }
+                }
+                catch { }
+                return null;
+            }
+        }
+
+        /// <summary>Jeton GitHub LOCAL et facultatif (bt-update-token.txt) : permet de lire un dépôt
+        /// PRIVÉ depuis TES machines. Il n'est JAMAIS embarqué dans l'application ni distribué —
+        /// un jeton livré aux utilisateurs serait extractible du binaire en quelques secondes.</summary>
+        public static string LocalToken
+        {
+            get
+            {
+                try
+                {
+                    string f = AppPaths.File("bt-update-token.txt");
+                    if (File.Exists(f))
+                    {
+                        string s = File.ReadAllText(f).Trim();
+                        if (s.Length >= 20) return s;
+                    }
+                }
+                catch { }
+                return null;
             }
         }
 
@@ -75,15 +122,55 @@ namespace BTOptimizer
             return remote.Minor > current.Minor;
         }
 
-        /// <summary>Le lien de téléchargement est-il acceptable ? (github.com uniquement) PUR.</summary>
-        public static bool IsTrustedUrl(string url)
+        /// <summary>Le lien de téléchargement est-il acceptable ? GitHub, ou l'hôte du manifeste que
+        /// TU as toi-même configuré (on ne fait confiance qu'à ce qui a été choisi explicitement). PUR.</summary>
+        public static bool IsTrustedUrl(string url, string manifestUrl = null)
         {
             if (string.IsNullOrEmpty(url)) return false;
             Uri u;
             if (!Uri.TryCreate(url, UriKind.Absolute, out u)) return false;
             if (u.Scheme != Uri.UriSchemeHttps) return false;
             string h = u.Host.ToLowerInvariant();
-            return h == "github.com" || h.EndsWith(".github.com") || h == "objects.githubusercontent.com";
+            if (h == "github.com" || h.EndsWith(".github.com") || h == "objects.githubusercontent.com"
+                || h == "github.io" || h.EndsWith(".github.io")) return true;
+            if (!string.IsNullOrEmpty(manifestUrl))
+            {
+                Uri m;
+                if (Uri.TryCreate(manifestUrl, UriKind.Absolute, out m) && m.Scheme == Uri.UriSchemeHttps
+                    && string.Equals(m.Host, u.Host, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Lit un MANIFESTE personnel (JSON simple, hébergé où tu veux). PUR → testable.</summary>
+        public static Release ParseManifest(string json)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    var r = d.RootElement;
+                    if (r.ValueKind != JsonValueKind.Object) return null;
+                    JsonElement v;
+                    if (!r.TryGetProperty("version", out v) || v.ValueKind != JsonValueKind.String) return null;
+                    var rel = new Release { Tag = v.GetString() };
+                    rel.Ver = ParseTag(rel.Tag);
+                    if (rel.Ver == null) return null;
+                    JsonElement n;
+                    if (r.TryGetProperty("notes", out n) && n.ValueKind == JsonValueKind.String) rel.Notes = n.GetString();
+                    JsonElement u2;
+                    if (r.TryGetProperty("url", out u2) && u2.ValueKind == JsonValueKind.String)
+                    {
+                        rel.AssetUrl = u2.GetString();
+                        try { rel.AssetName = Path.GetFileName(new Uri(rel.AssetUrl).LocalPath); } catch { rel.AssetName = "ONYX-Setup.exe"; }
+                    }
+                    JsonElement sz;
+                    if (r.TryGetProperty("size", out sz) && sz.ValueKind == JsonValueKind.Number) rel.Size = sz.GetInt64();
+                    return rel;
+                }
+            }
+            catch { return null; }
         }
 
         /// <summary>Lit la réponse JSON d'une Release GitHub. PUR → testable hors ligne.</summary>
@@ -129,6 +216,13 @@ namespace BTOptimizer
             var h = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
             h.DefaultRequestHeaders.Add("User-Agent", "ONYX-Updater");
             h.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
+            // Jeton LOCAL uniquement (jamais embarqué dans l'app distribuée) : lecture d'un dépôt privé.
+            try
+            {
+                string t = LocalToken;
+                if (!string.IsNullOrEmpty(t)) h.DefaultRequestHeaders.Add("Authorization", "Bearer " + t);
+            }
+            catch { }
             return h;
         }
 
@@ -138,42 +232,77 @@ namespace BTOptimizer
             catch { return null; }
         }
 
-        /// <summary>Interroge GitHub. 'status' explique toujours ce qui s'est passé.</summary>
+        /// <summary>Cherche une nouvelle version. Ordre : 1) ton MANIFESTE personnel s'il est
+        /// configuré (marche même avec un dépôt de code privé) ; 2) le dépôt public de distribution ;
+        /// 3) le dépôt principal. 'status' explique toujours ce qui s'est passé.</summary>
         public static Release Check(out string status)
         {
             status = "";
-            try
+
+            // 1) Manifeste personnel : la voie recommandée quand le code reste privé.
+            string manifest = ManifestUrl;
+            if (!string.IsNullOrEmpty(manifest))
             {
-                using (var h = Http())
-                using (var resp = h.GetAsync("https://api.github.com/repos/" + Repo + "/releases/latest").Result)
+                try
                 {
-                    if ((int)resp.StatusCode == 404)
+                    using (var h = Http())
+                    using (var resp = h.GetAsync(manifest).Result)
                     {
-                        status = "Aucune version n'est publiée pour l'instant (ou le dépôt est privé). "
-                               + "ONYX vérifiera de nouveau plus tard — rien à faire de ton côté.";
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            var rel = ParseManifest(resp.Content.ReadAsStringAsync().Result);
+                            if (rel != null) return rel;
+                            status = "Ton manifeste de mise à jour est illisible (JSON attendu : version, notes, url, size).";
+                            return null;
+                        }
+                        status = "Ton manifeste de mise à jour a répondu « " + (int)resp.StatusCode + " » (" + manifest + ").";
                         return null;
                     }
-                    if ((int)resp.StatusCode == 403)
-                    {
-                        status = "GitHub limite temporairement les requêtes (trop de vérifications). Réessaie dans une heure.";
-                        return null;
-                    }
-                    if (!resp.IsSuccessStatusCode)
-                    {
-                        status = "Le serveur des mises à jour a répondu « " + (int)resp.StatusCode + " ». Réessaie plus tard.";
-                        return null;
-                    }
-                    var rel = ParseRelease(resp.Content.ReadAsStringAsync().Result);
-                    if (rel == null || rel.Ver == null) { status = "Réponse du serveur illisible — rien n'a été téléchargé."; return null; }
-                    return rel;
+                }
+                catch (Exception ex)
+                {
+                    status = "Manifeste de mise à jour injoignable (" + ex.GetType().Name + ").";
+                    return null;
                 }
             }
-            catch (Exception ex)
+
+            // 2-3) Releases GitHub : dépôt forcé, sinon distribution publique puis dépôt principal.
+            string[] repos = RepoOverride != null ? new[] { RepoOverride } : DefaultRepos;
+            bool sawPrivate = false, sawRate = false;
+            foreach (var repo in repos)
             {
-                status = "Impossible de joindre le serveur des mises à jour (" + ex.GetType().Name + "). "
-                       + "Vérifie ta connexion — ONYX continue de fonctionner normalement.";
-                return null;
+                try
+                {
+                    using (var h = Http())
+                    using (var resp = h.GetAsync("https://api.github.com/repos/" + repo + "/releases/latest").Result)
+                    {
+                        int code = (int)resp.StatusCode;
+                        if (code == 404) { sawPrivate = true; continue; }        // privé, inexistant, ou sans release
+                        if (code == 401) { sawPrivate = true; continue; }        // jeton invalide/expiré
+                        if (code == 403) { sawRate = true; continue; }
+                        if (!resp.IsSuccessStatusCode) continue;
+                        var rel = ParseRelease(resp.Content.ReadAsStringAsync().Result);
+                        if (rel != null && rel.Ver != null) return rel;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    status = "Impossible de joindre le serveur des mises à jour (" + ex.GetType().Name + "). "
+                           + "Vérifie ta connexion — ONYX continue de fonctionner normalement.";
+                    return null;
+                }
             }
+
+            if (sawRate) status = "GitHub limite temporairement les requêtes (trop de vérifications). Réessaie dans une heure.";
+            else if (sawPrivate)
+                status = "Aucune version publiée n'est visible : le dépôt est privé, ou aucune Release n'existe encore.\n"
+                       + "Deux façons de faire marcher la mise à jour SANS ouvrir ton code :\n"
+                       + "  • publier les versions dans un dépôt public séparé (par défaut : « "
+                       + DefaultRepos[0] + " ») — le code reste privé, seule l'installation est publique ;\n"
+                       + "  • ou héberger un petit manifeste JSON où tu veux et mettre son adresse dans "
+                       + "« bt-update-url.txt » (version, notes, url, size).";
+            else status = "Aucune information de mise à jour n'a pu être obtenue.";
+            return null;
         }
 
         /// <summary>Texte affiché à l'utilisateur. PUR → testable.</summary>
@@ -194,7 +323,7 @@ namespace BTOptimizer
             }
             if (rel.AssetUrl == null)
                 sb.Append("\n⚠️ Cette version n'a pas de programme d'installation attaché : télécharge-la depuis GitHub.");
-            else if (!IsTrustedUrl(rel.AssetUrl))
+            else if (!IsTrustedUrl(rel.AssetUrl, ManifestUrl))
                 sb.Append("\n⚠️ Le lien de téléchargement ne vient pas de GitHub : je REFUSE de le lancer.");
             else
                 sb.Append("\nLe bouton télécharge l'installateur officiel (").Append(SteamGames.Human(rel.Size))
@@ -205,7 +334,7 @@ namespace BTOptimizer
         /// <summary>Télécharge l'installateur dans le dossier temporaire. Chemin, ou null.</summary>
         public static string Download(Release rel, Action<string, int> log)
         {
-            if (rel == null || !IsTrustedUrl(rel.AssetUrl)) return null;
+            if (rel == null || !IsTrustedUrl(rel.AssetUrl, ManifestUrl)) return null;
             try
             {
                 string dest = Path.Combine(Path.GetTempPath(), rel.AssetName ?? "ONYX-Setup.exe");

@@ -32,7 +32,7 @@ namespace BTOptimizer
             };
             var tag = new Label
             {
-                Text = "Optimiseur & diagnostic gaming pour Windows 10/11",
+                Text = "Optimiseur & diagnostic gaming pour Windows 10/11  ·  par destingood",
                 Location = new Point(20, 48), Size = new Size(440, 18),
                 ForeColor = Color.FromArgb(170, 175, 185), BackColor = Color.Transparent, Font = new Font("Segoe UI", 8.5f)
             };
@@ -52,6 +52,7 @@ namespace BTOptimizer
                     "mesure FPS et latence DPC/ISR, benchmark, bibliothèques de jeu, points de restauration.\r\n\r\n" +
                     "Aucune injection (compatible anticheat). Tout est réversible et sauvegardé ; les options " +
                     "de sécurité ne sont jamais appliquées automatiquement.\r\n\r\n" +
+                    "Créé et maintenu par destingood — github.com/destingood/onyx\r\n\r\n" +
                     "Logiciel fourni « en l'état », sans garantie. Non affilié à Microsoft, NVIDIA, " +
                     "AMD ou Intel ; les marques appartiennent à leurs propriétaires."
             };

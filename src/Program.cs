@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.59.0.0")]
-[assembly: AssemblyFileVersion("15.59.0.0")]
+[assembly: AssemblyVersion("15.60.0.0")]
+[assembly: AssemblyFileVersion("15.60.0.0")]
 
 namespace BTOptimizer
 {
@@ -1090,9 +1090,21 @@ namespace BTOptimizer
                     && Updater.Describe(new Version(15, 58, 0, 0), null, "Aucune version publiee").Contains("Aucune version")
                     && UtilityTools.IsAppUpdate("mets a jour onyx") && !UtilityTools.IsAppUpdate("bilan des mises a jour windows"); if (up6b) ok61++; Console.WriteLine((up6b ? "OK  " : "FAIL") + "  update : deja a jour / rien publie / pas de collision avec Windows");
 
+                // v15.60 : depot PRIVE — manifeste personnel + confiance limitee a l'hote configure.
+                int ok62 = 0;
+                string manif = "{ \"version\": \"15.61\", \"notes\": \"Nouveautes\", \"url\": \"https://mon-site.example/ONYX-Setup-15.61.exe\", \"size\": 999 }";
+                var mrel = Updater.ParseManifest(manif);
+                bool pv1 = mrel != null && mrel.Ver.Minor == 61 && mrel.AssetName.Contains("Setup") && mrel.Size == 999; if (pv1) ok62++; Console.WriteLine((pv1 ? "OK  " : "FAIL") + "  prive : manifeste personnel lu (version, fichier, taille)");
+                bool pv2 = Updater.ParseManifest("{ \"rien\": 1 }") == null && Updater.ParseManifest("pas du json") == null; if (pv2) ok62++; Console.WriteLine((pv2 ? "OK  " : "FAIL") + "  prive : manifeste invalide -> refuse");
+                bool pv3 = Updater.IsTrustedUrl("https://mon-site.example/ONYX-Setup.exe", "https://mon-site.example/maj.json")
+                    && !Updater.IsTrustedUrl("https://autre-site.example/ONYX-Setup.exe", "https://mon-site.example/maj.json"); if (pv3) ok62++; Console.WriteLine((pv3 ? "OK  " : "FAIL") + "  prive : seul l'hote de TON manifeste est accepte");
+                bool pv4 = Updater.IsTrustedUrl("https://destingood.github.io/onyx/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("https://mon-site.example/x.exe"); if (pv4) ok62++; Console.WriteLine((pv4 ? "OK  " : "FAIL") + "  prive : GitHub Pages accepte, hote inconnu refuse sans manifeste");
+                bool pv5 = SelfCheck.SupportInfo().Contains("destingood"); if (pv5) ok62++; Console.WriteLine((pv5 ? "OK  " : "FAIL") + "  credit : destingood present dans les infos de support");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

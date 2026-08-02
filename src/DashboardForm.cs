@@ -269,7 +269,7 @@ namespace BTOptimizer
             try { rel = Updater.Check(out status); } catch (Exception ex) { status = "Échec : " + ex.Message; }
             var cur = Updater.CurrentVersion();
             string txt = Updater.Describe(cur, rel, status);
-            bool canInstall = rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl);
+            bool canInstall = rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl, Updater.ManifestUrl);
             if (!canInstall)
             {
                 MessageBox.Show(this, txt, "ONYX — mises à jour", MessageBoxButtons.OK, MessageBoxIcon.Information);
