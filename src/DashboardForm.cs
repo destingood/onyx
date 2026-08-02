@@ -465,7 +465,7 @@ namespace BTOptimizer
         // Démarrage minimisé (optionnel) : ONYX naît directement dans la zone de notification.
         private static string TrayStartPath
         {
-            get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-traystart.txt"); }
+            get { return AppPaths.File("bt-traystart.txt"); }
         }
         private static bool TrayStartEnabled
         {

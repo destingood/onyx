@@ -121,7 +121,7 @@ namespace BTOptimizer
         // --- PLAN D'ACTION COCHÉ : ce qui a déjà été fait, daté (bt-gpu-plan.txt) ---
         private static string PlanPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpu-plan.txt"); }
+            get { return AppPaths.File("bt-gpu-plan.txt"); }
         }
 
         /// <summary>Les étapes proposées, avec leur date si déjà cochées.</summary>
@@ -228,7 +228,32 @@ namespace BTOptimizer
             Section(sb, "TENDANCE SANTÉ", SafeCall(() => HealthTrend.TrendText()));
             Section(sb, "JOURNAL DES ACTIONS D'ONYX", SafeCall(() => Journal.TailText(20)));
             sb.Append("Aucune donnée personnelle n'est incluse (ni nom d'utilisateur, ni IP, ni chemin privé).\r\n");
-            return sb.ToString();
+            return Sanitize(sb.ToString());
+        }
+
+        /// <summary>Remplace ce qui identifie l'utilisateur (nom de compte, chemin de profil) par des
+        /// variables, pour que la promesse « aucune donnée personnelle » soit VRAIE. PUR → testable.</summary>
+        public static string Sanitize(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            string s = text;
+            try
+            {
+                // Jeton neutre : sinon le remplacement du nom d'utilisateur (« User ») viendrait
+                // corrompre le marqueur « %USERPROFILE% » qui contient lui-même « USER ».
+                const string token = "PROFIL";
+                string prof = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(prof))
+                    s = System.Text.RegularExpressions.Regex.Replace(s, System.Text.RegularExpressions.Regex.Escape(prof),
+                        token, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                string user = Environment.UserName;
+                if (!string.IsNullOrEmpty(user) && user.Length >= 3)
+                    s = System.Text.RegularExpressions.Regex.Replace(s, System.Text.RegularExpressions.Regex.Escape(user),
+                        "%USER%", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                s = s.Replace(token, "%USERPROFILE%");
+            }
+            catch { }
+            return s;
         }
 
         private static string SafeCall(Func<string> f)

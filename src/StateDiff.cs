@@ -16,7 +16,7 @@ namespace BTOptimizer
     {
         private static string Dir
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-etat"); }
+            get { return AppPaths.File("bt-etat"); }
         }
 
         /// <summary>La photo de l'instant : clé=valeur, tout mesuré en local.</summary>

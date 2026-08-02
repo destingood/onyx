@@ -15,7 +15,7 @@ namespace BTOptimizer
         private static readonly object Gate = new object();
         private static string PathFile
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-journal.txt"); }
+            get { return AppPaths.File("bt-journal.txt"); }
         }
 
         /// <summary>Trace une action effectuée (appelé après un clic « changement » réussi).</summary>
@@ -70,7 +70,7 @@ namespace BTOptimizer
     {
         private static string PathFile
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-sante.csv"); }
+            get { return AppPaths.File("bt-sante.csv"); }
         }
 
         /// <summary>Enregistre le score du jour (1 ligne max par jour ; re-mesure = remplace).</summary>
@@ -167,12 +167,12 @@ namespace BTOptimizer
     {
         private static string StampPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gardien.txt"); }
+            get { return AppPaths.File("bt-gardien.txt"); }
         }
 
         private static string SnoozePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gardien-veille.txt"); }
+            get { return AppPaths.File("bt-gardien-veille.txt"); }
         }
 
         /// <summary>Met le Gardien en veille N jours (il continue d'enregistrer photo d'état et

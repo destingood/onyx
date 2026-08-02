@@ -25,11 +25,11 @@ namespace BTOptimizer
 
         private static string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-discord.txt"); }
+            get { return AppPaths.File("bt-discord.txt"); }
         }
         private static string AppIdPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-discord-appid.txt"); }
+            get { return AppPaths.File("bt-discord-appid.txt"); }
         }
 
         /// <summary>Activée par défaut ; « 0 » dans le fichier = désactivée.</summary>

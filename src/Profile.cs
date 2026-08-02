@@ -13,7 +13,7 @@ namespace BTOptimizer
     /// </summary>
     internal static class Profile
     {
-        private static string BaseDir { get { return AppDomain.CurrentDomain.BaseDirectory; } }
+        private static string BaseDir { get { return AppPaths.DataDir; } }
 
         // Ce qui constitue le profil : les fichiers bt-*.txt / bt-*.md à côté de l'exe.
         private static IEnumerable<string> ProfileFiles()

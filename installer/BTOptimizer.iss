@@ -106,11 +106,16 @@ Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app
 Type: files;      Name: "{app}\bt-*.txt"
 Type: files;      Name: "{app}\bt-*.csv"
 Type: files;      Name: "{app}\bt-*.nip"
+Type: files;      Name: "{app}\bt-*.md"
 Type: files;      Name: "{app}\tools\trace-*.etl"
 Type: files;      Name: "{app}\tools\dpcisr-*.txt"
+; Photos quotidiennes de l'etat du systeme (« ca marchait hier ») : dossier cree par l'app.
+Type: filesandordirs; Name: "{app}\bt-etat"
 Type: dirifempty; Name: "{app}\tools\npi"
 Type: dirifempty; Name: "{app}\tools"
 Type: dirifempty; Name: "{app}"
+; Dossier de repli utilise quand « Program Files » n'est pas accessible en ecriture.
+Type: filesandordirs; Name: "{localappdata}\ONYX"
 
 [Code]
 // La vérification du runtime .NET ne sert QUE pour une publication dépendante du runtime.

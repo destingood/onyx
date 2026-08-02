@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.57.0.0")]
-[assembly: AssemblyFileVersion("15.57.0.0")]
+[assembly: AssemblyVersion("15.58.0.0")]
+[assembly: AssemblyFileVersion("15.58.0.0")]
 
 namespace BTOptimizer
 {
@@ -1048,9 +1048,22 @@ namespace BTOptimizer
                 string umf = SafetyNet.UserMessage(null, true);
                 bool rb4 = umf.Contains("Relance ONYX"); if (rb4) ok59++; Console.WriteLine((rb4 ? "OK  " : "FAIL") + "  filet : cas fatal -> consigne claire");
 
+                // v15.58 : durabilite des donnees (dossier inscriptible, repli, migration).
+                int ok60 = 0;
+                string dd = AppPaths.DataDir;
+                bool dp1 = !string.IsNullOrEmpty(dd) && AppPaths.IsWritable(dd); if (dp1) ok60++; Console.WriteLine((dp1 ? "OK  " : "FAIL") + "  donnees : dossier reellement inscriptible (" + dd + ")");
+                bool dp2 = !AppPaths.IsWritable("Z:" + System.IO.Path.DirectorySeparatorChar + "dossier-qui-nexiste-pas")
+                        && !AppPaths.IsWritable(null) && !AppPaths.IsWritable(""); if (dp2) ok60++; Console.WriteLine((dp2 ? "OK  " : "FAIL") + "  donnees : test d'ecriture honnete (faux si inaccessible)");
+                string ddFile = AppPaths.File("bt-test-harnais.txt");
+                bool dp3 = ddFile.StartsWith(dd) && ddFile.EndsWith("bt-test-harnais.txt"); if (dp3) ok60++; Console.WriteLine((dp3 ? "OK  " : "FAIL") + "  donnees : chemin construit dans le bon dossier");
+                bool dp4 = AppPaths.Explain().Contains(dd); if (dp4) ok60++; Console.WriteLine((dp4 ? "OK  " : "FAIL") + "  donnees : l'auto-diagnostic dit OU sont les donnees");
+                string dirty = "chemin " + Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + System.IO.Path.DirectorySeparatorChar + "Desktop";
+                string clean = DiagExport.Sanitize(dirty);
+                bool dp5 = clean.Contains("%USERPROFILE%") && !clean.Contains(Environment.UserName); if (dp5) ok60++; Console.WriteLine((dp5 ? "OK  " : "FAIL") + "  export : chemin utilisateur anonymise (promesse tenue)");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

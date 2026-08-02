@@ -20,7 +20,7 @@ namespace BTOptimizer
 
         private static string LogPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-erreurs.txt"); }
+            get { return AppPaths.File("bt-erreurs.txt"); }
         }
 
         /// <summary>Écrit l'incident dans bt-erreurs.txt (le fichier reste petit : 200 derniers Ko).</summary>

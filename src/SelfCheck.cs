@@ -30,15 +30,11 @@ namespace BTOptimizer
                 Detail = admin ? "accordés — toutes les optimisations sont applicables"
                                : "MANQUANTS : relance ONYX en tant qu'administrateur, sinon la moitié des corrections échouera" });
 
-            bool write = false; string dataDir = AppDomain.CurrentDomain.BaseDirectory;
-            try
-            {
-                string probe = Path.Combine(dataDir, "bt-selfcheck.tmp");
-                File.WriteAllText(probe, "ok"); File.Delete(probe); write = true;
-            }
-            catch { }
+            bool write = false;
+            try { write = AppPaths.IsWritable(AppPaths.DataDir); } catch { }
             l.Add(new Line { Ok = write, What = "Dossier de données (mémoire, journal, profil)",
-                Detail = write ? "accessible en écriture" : "ÉCRITURE IMPOSSIBLE — déplace ONYX hors de « Program Files » (ex. sur le Bureau)" });
+                Detail = write ? "accessible en écriture — " + AppPaths.Explain()
+                               : "ÉCRITURE IMPOSSIBLE, même dans le dossier de repli : vérifie les droits de ton profil Windows" });
 
             bool wmi = false;
             try { wmi = Diagnostics.DiskHealth().Count > 0 || Diagnostics.GpuDriver() != null; } catch { }

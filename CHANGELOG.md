@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.58 — DURABILITÉ DES DONNÉES : ta mémoire ne peut plus disparaître en silence
+- **Le risque trouvé en auditant l'installateur** : ONYX s'installe dans « Program Files » et écrivait
+  TOUT à côté de son exécutable — mémoire du Copilote, journal de bord, tendance santé, photos du
+  système, plan GPU. Ça ne fonctionne que grâce à l'élévation administrateur : lancé sans droits (ou
+  copié dans un dossier protégé), **tout aurait été perdu silencieusement**, le pire des cas.
+- **Nouveau socle `AppPaths`** : le dossier de l'exe est conservé tant qu'il est réellement inscriptible
+  (test d'écriture réel, pas une supposition) ; sinon bascule automatique vers `%LOCALAPPDATA%\ONYX`
+  **avec recopie des données existantes** (jamais d'écrasement). L'auto-diagnostic dit désormais OÙ
+  vivent les données et pourquoi.
+- **Installateur corrigé** : le dossier `bt-etat\` (photos quotidiennes), les fichiers `bt-*.md` et le
+  dossier de repli `%LOCALAPPDATA%\ONYX` sont nettoyés à la désinstallation — plus de résidus.
+- **Bug d'honnêteté attrapé par un test** : l'export de diagnostic affichait le chemin des données
+  (donc le nom de compte Windows) tout en promettant « aucune donnée personnelle ». Les chemins sont
+  maintenant anonymisés (`%USERPROFILE%`, `%USER%`) — et le remplacement a lui-même été corrigé, car
+  masquer « User » corrompait le marqueur `%USERPROFILE%`. La promesse est désormais VRAIE.
+- Harnais **248/248** ; UITEST 45/45.
+
 ## v15.57 — ROBUSTESSE : ONYX ne peut plus disparaître sans explication
 - **Le dernier point faible signalé par la revue de code indépendante est corrigé.** Le Copilote
   appelait le routage **sans aucun filet** : un bug dans n'importe lequel des ~40 outils aurait fermé

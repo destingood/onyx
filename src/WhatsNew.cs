@@ -15,7 +15,7 @@ namespace BTOptimizer
     {
         private static string StampPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-lastver.txt"); }
+            get { return AppPaths.File("bt-lastver.txt"); }
         }
 
         private static string CurrentVersion()
