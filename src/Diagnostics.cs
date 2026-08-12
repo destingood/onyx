@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -174,6 +174,34 @@ namespace BTOptimizer
                         drift.Count + " réglage(s) ONYX ont été ANNULÉS par Windows" + quand
                         + " — souvent après une mise à jour ou une réinstallation de pilote.",
                         FixKind.ReapplyTweaks, "Ré-appliquer"));
+                }
+            }
+            catch { }
+
+            // Profil pilote NVIDIA « Ultra faible latence » posé par ONYX alors que la machine est
+            // limitée par le PROCESSEUR. Ultra + 1 image pré-rendue suppriment la file d'attente de
+            // rendu — or c'est ce tampon qui absorbe les à-coups du CPU. Sur une machine limitée par
+            // le processeur, l'app faisait donc PERDRE des images en croyant gagner de la latence :
+            // GPU qui traîne à 40 % pendant que le CPU sature, et des chutes brutales à chaque pic.
+            try
+            {
+                NvProfile.Kind pose; DateTime posele;
+                if (NvProfile.Applique(out pose, out posele) && pose == NvProfile.Kind.Ultra)
+                {
+                    double cpuAvg, gpuAvg; DateTime quand;
+                    bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand);
+                    string le = posele == DateTime.MinValue ? "" : " (appliqué le " + posele.ToString("dd/MM/yyyy") + ")";
+                    if (mesure && NvProfile.UltraNocif(cpuAvg, gpuAvg))
+                        f.Add(new Finding(2,
+                            "Profil NVIDIA « Ultra faible latence »" + le + " alors que ta machine est limitée par le PROCESSEUR "
+                            + "(CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " % en jeu) — il supprime la file de rendu "
+                            + "qui amortit les à-coups du CPU : tu perds des images et tu prends des chutes brutales.",
+                            FixKind.NvLatencySafe, "Profil sûr"));
+                    else if (!mesure)
+                        f.Add(new Finding(1,
+                            "Profil NVIDIA « Ultra faible latence »" + le + " : bénéfique seulement si ta carte graphique travaille à fond. "
+                            + "Si c'est ton processeur qui limite, il te COÛTE des images. Lance la mesure « qui me limite ? » en jeu pour trancher.",
+                            FixKind.NvLatencySafe, "Profil sûr"));
                 }
             }
             catch { }

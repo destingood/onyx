@@ -1,0 +1,200 @@
+using System;
+using System.Globalization;
+using System.IO;
+
+namespace BTOptimizer
+{
+    /// <summary>
+    /// PROFIL PILOTE NVIDIA — et le piège qu'il faut cesser de tendre à l'utilisateur.
+    ///
+    /// « Ultra Low Latency » + « 1 image pré-rendue » suppriment la file d'attente de rendu. Ce
+    /// tampon de 2-3 images est précisément ce qui ABSORBE les à-coups du processeur : sans lui,
+    /// chaque hoquet du CPU devient immédiatement une image perdue. NVIDIA le dit lui-même — le
+    /// mode Ultra est bénéfique quand on est limité par le GPU, et il FAIT PERDRE DES IMAGES quand
+    /// on est limité par le processeur.
+    ///
+    /// Cas réel qui a motivé ce module : 9900K à 90 % d'occupation, RTX 4080 SUPER à 40 % et 110 W
+    /// sur 400 — la carte attendait des images livrées « juste à temps ». Résultat : moins de FPS
+    /// qu'avant « optimisation », et des chutes brutales à chaque pic CPU.
+    ///
+    /// D'où trois règles ici :
+    ///  • le profil SÛR (latence basse SANS assécher la file) est le défaut ;
+    ///  • le profil ULTRA reste disponible, mais annoncé pour ce qu'il est : un échange
+    ///    images-contre-latence, mauvais sur une machine limitée par le processeur ;
+    ///  • tout ce qui est appliqué peut être RETIRÉ par l'app (avant, il fallait aller le défaire
+    ///    à la main dans le panneau NVIDIA).
+    /// </summary>
+    internal static class NvProfile
+    {
+        public enum Kind
+        {
+            /// <summary>Réglages d'usine du pilote : plus aucune contrainte imposée.</summary>
+            Defaut,
+            /// <summary>Latence réduite sans assécher la file de rendu — recommandé partout.</summary>
+            Sur,
+            /// <summary>Latence minimale absolue. Ne vaut QUE sur une machine limitée par le GPU.</summary>
+            Ultra
+        }
+
+        // Identifiants NVAPI (les mêmes que ceux qu'utilise nvidiaProfileInspector).
+        private const int IdCplState = 390467;      // 0 = Off, 1 = On, 2 = Ultra
+        private const int IdPreRendered = 8102046;  // 0 = laisser l'application décider
+        private const int IdPowerMode = 274197361;  // 1 = privilégier les performances maximales
+        private const int IdUllEnabled = 277041152; // 0/1
+
+        /// <summary>Contenu .nip d'un profil. PUR → testable sans pilote ni matériel.</summary>
+        public static string Nip(Kind kind)
+        {
+            int cpl, pre, ull;
+            switch (kind)
+            {
+                case Kind.Ultra: cpl = 2; pre = 1; ull = 1; break;
+                // « On » plutôt qu'« Ultra », et surtout la file de rendu RENDUE au jeu (0 =
+                // l'application décide) : c'est elle qui amortit les à-coups du processeur.
+                case Kind.Sur: cpl = 1; pre = 0; ull = 1; break;
+                default: cpl = 0; pre = 0; ull = 0; break;
+            }
+            var sb = new System.Text.StringBuilder();
+            sb.Append("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfProfile>\r\n  <Profile>\r\n");
+            sb.Append("    <ProfileName>Base Profile</ProfileName>\r\n    <Executeables />\r\n    <Settings>\r\n");
+            sb.Append(Setting("Ultra Low Latency - CPL State", IdCplState, cpl));
+            sb.Append(Setting("Maximum pre-rendered frames", IdPreRendered, pre));
+            sb.Append(Setting("Ultra Low Latency - Enabled", IdUllEnabled, ull));
+            // Le mode « performances maximales » ne coûte aucune image : on le garde sauf retour
+            // complet aux réglages d'usine.
+            if (kind != Kind.Defaut) sb.Append(Setting("Power management mode", IdPowerMode, 1));
+            sb.Append("    </Settings>\r\n    <ExecutableFindFiles />\r\n  </Profile>\r\n</ArrayOfProfile>");
+            return sb.ToString();
+        }
+
+        private static string Setting(string name, int id, int value)
+        {
+            return "      <ProfileSetting><SettingNameInfo>" + name + "</SettingNameInfo><SettingID>"
+                 + id.ToString(CultureInfo.InvariantCulture) + "</SettingID><SettingValue>"
+                 + value.ToString(CultureInfo.InvariantCulture)
+                 + "</SettingValue><ValueType>Dword</ValueType></ProfileSetting>\r\n";
+        }
+
+        /// <summary>
+        /// Décision PURE : quel profil proposer, connaissant la charge CPU et l'utilisation GPU
+        /// relevées EN JEU (−1 = mesure absente). Sans mesure, on ne prend pas de risque : SÛR.
+        /// </summary>
+        public static Kind Recommande(double cpuAvg, double gpuAvg)
+        {
+            if (cpuAvg < 0 || gpuAvg < 0) return Kind.Sur;
+            // Limité par le GPU (la carte travaille à fond) : la file de rendu ne sert plus à
+            // absorber quoi que ce soit, Ultra devient réellement gagnant sur la latence.
+            if (gpuAvg >= 93 && cpuAvg < 85) return Kind.Ultra;
+            return Kind.Sur;
+        }
+
+        /// <summary>Le profil Ultra est-il nocif dans cet état mesuré ? (GPU qui traîne pendant que
+        /// le CPU sature = chaque à-coup processeur devient une image perdue.)</summary>
+        public static bool UltraNocif(double cpuAvg, double gpuAvg)
+        {
+            if (cpuAvg < 0 || gpuAvg < 0) return false;   // sans mesure, aucune accusation
+            return cpuAvg >= 70 && gpuAvg < 85;
+        }
+
+        public static string Libelle(Kind k)
+        {
+            switch (k)
+            {
+                case Kind.Ultra: return "Ultra (latence minimale, coûte des images si le CPU limite)";
+                case Kind.Sur: return "Sûr (latence réduite, file de rendu préservée)";
+                default: return "Réglages d'usine du pilote";
+            }
+        }
+
+        // ---------- Mémoire de ce qui a été appliqué ----------
+
+        private static string StatePath { get { return AppPaths.File("bt-nvprofile.txt"); } }
+
+        /// <summary>Lecture PURE de l'état mémorisé : « Ultra|2026-07-14 ».</summary>
+        public static bool Parse(string content, out Kind kind, out DateTime when)
+        {
+            kind = Kind.Defaut; when = DateTime.MinValue;
+            if (string.IsNullOrEmpty(content)) return false;
+            string line = content.Replace("\r", "").Split('\n')[0].Trim();
+            if (line.Length == 0) return false;
+            string name = line, date = null;
+            int bar = line.IndexOf('|');
+            if (bar > 0) { name = line.Substring(0, bar).Trim(); date = line.Substring(bar + 1).Trim(); }
+            if (string.Equals(name, "Ultra", StringComparison.OrdinalIgnoreCase)) kind = Kind.Ultra;
+            else if (string.Equals(name, "Sur", StringComparison.OrdinalIgnoreCase)) kind = Kind.Sur;
+            else if (string.Equals(name, "Defaut", StringComparison.OrdinalIgnoreCase)) kind = Kind.Defaut;
+            else return false;
+            if (date != null)
+                DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out when);
+            return true;
+        }
+
+        public static string Render(Kind kind, DateTime when)
+        {
+            return kind.ToString() + "|" + (when == DateTime.MinValue ? "" : when.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)) + "\n";
+        }
+
+        /// <summary>Dernier profil appliqué PAR L'APP. false si elle n'a jamais rien appliqué.</summary>
+        public static bool Applique(out Kind kind, out DateTime when)
+        {
+            kind = Kind.Defaut; when = DateTime.MinValue;
+            try
+            {
+                if (!File.Exists(StatePath)) return false;
+                return Parse(File.ReadAllText(StatePath), out kind, out when);
+            }
+            catch { return false; }
+        }
+
+        private static void Memorise(Kind kind)
+        {
+            try { File.WriteAllText(StatePath, Render(kind, DateTime.Now.Date)); }
+            catch { }
+        }
+
+        // ---------- Application ----------
+
+        /// <summary>Écrit le .nip puis le fait importer par nvidiaProfileInspector. true si le
+        /// pilote l'a accepté.</summary>
+        public static bool Applique(Kind kind, Action<string, int> log)
+        {
+            string exe = Sys.FindNvpi();
+            if (exe == null)
+            {
+                if (log != null) log("nvidiaProfileInspector.exe introuvable (attendu dans tools\\npi\\) : profil NVIDIA non modifié.", 3);
+                return false;
+            }
+            string nip;
+            try
+            {
+                nip = AppPaths.File("bt-nvidia-" + kind.ToString().ToLowerInvariant() + ".nip");
+                File.WriteAllText(nip, Nip(kind), new System.Text.UnicodeEncoding(false, true));
+            }
+            catch (Exception ex)
+            {
+                if (log != null) log("Profil NVIDIA : écriture impossible (" + ex.Message + ").", 3);
+                return false;
+            }
+            try
+            {
+                NativeResult r = Sys.Run(exe, "-silentImport \"" + nip + "\"");
+                if (r.ExitCode != 0)
+                {
+                    if (log != null) log("nvidiaProfileInspector a retourné le code " + r.ExitCode + ".", 2);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (log != null) log("Profil NVIDIA : échec (" + ex.Message + ").", 3);
+                return false;
+            }
+            Memorise(kind);
+            if (log != null) log("Profil pilote NVIDIA appliqué — " + Libelle(kind) + ".", 1);
+            return true;
+        }
+
+        /// <summary>Retire tout ce que l'app a imposé au pilote (retour aux réglages d'usine).</summary>
+        public static bool Retire(Action<string, int> log) { return Applique(Kind.Defaut, log); }
+    }
+}
