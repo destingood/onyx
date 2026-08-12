@@ -532,6 +532,11 @@ namespace BTOptimizer
                 try
                 {
                     System.Threading.Thread.Sleep(4000);          // laisse l'app finir de démarrer
+                    // 0) MÉNAGE : les installateurs des versions précédentes ne resservent plus une
+                    //    fois la mise à jour posée (~45 Mo chacun). À CHAQUE lancement, pas une fois
+                    //    par jour : juste après une mise à jour, l'installateur est périmé tout de
+                    //    suite. Silencieux, jamais bloquant.
+                    try { OldVersions.Sweep(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;
