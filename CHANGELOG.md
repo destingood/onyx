@@ -4,6 +4,54 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.62 — Ce qui étrangle un PC sans qu'on le voie : disques pleins, réglages annulés, poids mort
+- **ONYX faisait PERDRE des images à certaines machines, et c'est corrigé.** Le profil pilote NVIDIA
+  « faible latence » imposait `Ultra Low Latency` + `1 image pré-rendue` à **tout le monde**. Ces deux
+  réglages suppriment la file d'attente de rendu — or c'est précisément ce tampon de 2-3 images qui
+  **absorbe les à-coups du processeur**. Sur une machine limitée par le CPU, chaque pic devient donc
+  immédiatement une image perdue : moins de FPS qu'avant « optimisation », et des chutes brutales.
+  NVIDIA le documente : le mode Ultra ne vaut que si l'on est limité par le GPU. Cas mesuré qui a
+  révélé le défaut : i9-9900K à 90 % d'occupation, RTX 4080 SUPER à **40 % et 110 W sur 400** — la
+  carte attendait des images livrées « juste à temps ». Désormais : profil **SÛR par défaut** (latence
+  réduite, file de rendu rendue au jeu), `Ultra` uniquement quand la mesure en jeu montre une carte
+  réellement à fond, et **jamais `Ultra` à l'aveugle** faute de mesure. L'app sait en plus le
+  **retirer** toute seule — avant, le code renvoyait l'utilisateur le défaire à la main dans le
+  panneau NVIDIA. Le diagnostic signale un `Ultra` posé sur une machine limitée par le processeur et
+  propose le retour au profil sûr en un clic.
+- **Le diagnostic ne regardait qu'un seul disque.** Il vérifiait l'espace libre de `C:` et s'arrêtait
+  là — alors que les jeux vivent sur `D:`, `E:`, `F:`, et que c'est précisément là que le manque de
+  place fait mal : sous **10 % de libre**, un SSD voit son cache d'écriture fondre, son ramasse-miettes
+  tourne en boucle, et le débit s'effondre à quelques Mo/s. Résultat vécu : un disque affiché « à
+  100 % » dans le Gestionnaire des tâches alors qu'il n'écrit que 12 Mo/s, des chargements
+  interminables, et ONYX qui annonçait « espace disque système correct ». Désormais **tous les
+  disques fixes** sont examinés (alerte sous 10 %, avertissement sous 15 %).
+- **Le poids mort, ce que personne ne regarde jamais.** Nouveau balayage : journaux d'application
+  partis en boucle (**un seul fichier peut dépasser 70 Go**) et restes de téléchargements Steam
+  abandonnés depuis des mois. Un journal encore alimenté ou un téléchargement en cours ne sont
+  **jamais** proposés, et rien n'est supprimé sans que la liste exacte ait été lue et confirmée.
+- **Tes réglages ont-ils tenu ?** ONYX applique 197 optimisations mais n'en gardait aucune mémoire :
+  quand Windows les annule (mise à jour de fonctionnalité, réinstallation du pilote graphique, autre
+  « optimiseur » passé derrière), rien ne le signalait. Tu crois ton PC réglé, il est retombé par
+  défaut, et tu cherches la perte d'images ailleurs. L'app tient maintenant un **journal de ce
+  qu'elle a appliqué**, relit l'état réel, et propose de **ré-appliquer en un clic** ce qui a sauté —
+  sauvegarde du registre comprise. Un rétablissement que TU as décidé n'est jamais compté comme une
+  dérive.
+- **Profil mémoire XMP/EXPO** : le constat était un cul-de-sac (simple « attention », aucune action).
+  Il passe en **problème** dès que la perte dépasse 20 %, affiche le pourcentage perdu, et ouvre le
+  guide BIOS pas-à-pas. Cas réel : de la DDR4-3200 tournant à 2133 MT/s, soit **−33 %** de bande
+  passante mémoire — sur un PC bridé par le processeur, c'est le gain gratuit le plus important.
+- **Écrans virtuels** (Parsec, spacedesk, Sunshine, IDD) : ces cartes graphiques factices restent
+  actives longtemps après qu'on a cessé de s'en servir. Un jeu lancé dessus est **recomposé** au lieu
+  d'aller droit à l'écran, et elles provoquent des erreurs de pilote à répétition (572 relevées en
+  30 jours sur une machine de test). Signalées quand elles sont en service.
+- **ONYX ne laisse plus ses vieilles peaux derrière lui.** La mise à jour intégrée téléchargeait
+  l'installateur (~45 Mo) et ne le supprimait jamais : au bout d'un an, un demi-giga de déchets chez
+  l'utilisateur — le comble pour un outil qui traque le poids mort ailleurs. Purge automatique à
+  chaque lancement, silencieuse. Une version **supérieure** à celle qui tourne est en revanche
+  conservée : c'est une mise à jour téléchargée mais pas encore posée.
+- Vérifié : compilation sans avertissement, **47 tests unitaires** sur les fonctions pures (journal
+  des réglages, comparaison d'état, décision de purge), détections confirmées sur une machine réelle.
+
 ## v15.61c — Installateur : la vraie cause de la panne, et un setup complet
 - **La panne revenait**, mais à un endroit **différent** à chaque compilation
   (`Mono.Posix.NETStandard.dll`, puis `Microsoft.DiaSymReader.Native.amd64.dll`). Or ces deux

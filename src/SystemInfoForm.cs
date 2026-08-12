@@ -288,6 +288,10 @@ namespace BTOptimizer
                     case FixKind.DeviceManager:
                         StartShell("devmgmt.msc", null);
                         break;
+
+                    case FixKind.NvLatencySafe:
+                        NvLatencySafe();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -325,6 +329,47 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Repasse le pilote NVIDIA sur le profil SÛR : latence toujours réduite, mais la file de
+        /// rendu est rendue au jeu — c'est elle qui amortit les à-coups du processeur.
+        /// </summary>
+        private void NvLatencySafe()
+        {
+            double cpuAvg, gpuAvg; DateTime quand;
+            bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand);
+            string constat = mesure
+                ? "Ta dernière mesure en jeu : CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " %.\n\n"
+                : "";
+            if (MessageBox.Show(this,
+                    constat
+                    + "Remettre le pilote NVIDIA sur le profil SÛR ?\n\n"
+                    + "• Mode faible latence : « Activé » au lieu d'« Ultra ».\n"
+                    + "• Images pré-rendues : rendues au jeu (c'est ce tampon qui absorbe les à-coups du processeur).\n"
+                    + "• Performances maximales : conservé, il ne coûte aucune image.\n\n"
+                    + "Tu perds quelques millisecondes de latence de souris, tu récupères des images et surtout de la "
+                    + "STABILITÉ. Réversible : le bouton « Ultra » reste disponible dans Overclock & pilote.",
+                    "Profil pilote NVIDIA", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                bool ok = false;
+                try { ok = NvProfile.Applique(NvProfile.Kind.Sur, _log); }
+                catch (Exception ex) { if (_log != null) _log("Profil NVIDIA : échec (" + ex.Message + ").", 3); }
+                bool done = ok;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, done
+                        ? "Profil sûr appliqué. Relance ton jeu : l'effet est visible dès le prochain lancement."
+                        : "Le profil n'a pas pu être appliqué (nvidiaProfileInspector introuvable ou refusé) — voir le journal.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         /// <summary>

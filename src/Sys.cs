@@ -1814,21 +1814,21 @@ namespace BTOptimizer
 
         public static bool NvpiAvailable() { return FindNvpi() != null; }
 
-        /// <summary>Applique le profil NVIDIA faible latence (Ultra Low Latency, 1 frame pré-rendue, perf max).</summary>
+        /// <summary>
+        /// Applique le profil NVIDIA faible latence ADAPTÉ à la machine.
+        ///
+        /// Avant, cette méthode imposait « Ultra Low Latency + 1 image pré-rendue » à TOUT LE MONDE.
+        /// Ces deux réglages suppriment la file d'attente de rendu, or c'est elle qui absorbe les
+        /// à-coups du processeur : sur une machine limitée par le CPU, l'app faisait donc PERDRE des
+        /// images en croyant en gagner (GPU à 40 % pendant que le CPU sature, chutes brutales à
+        /// chaque pic). On applique désormais le profil sûr par défaut, et Ultra uniquement quand la
+        /// mesure en jeu montre une carte graphique réellement à fond.
+        /// </summary>
         public static void ApplyNvidiaLowLatency(Action<string, int> log)
         {
-            string exe = FindNvpi();
-            if (exe == null)
-            {
-                log("nvidiaProfileInspector.exe introuvable (attendu dans tools\\npi\\). Impossible d'appliquer le profil NVIDIA.", 3);
-                return;
-            }
-            string nip = EnsureLowLatencyNip();
-            NativeResult r = Run(exe, "-silentImport \"" + nip + "\"");
-            if (r.ExitCode == 0)
-                log("Profil NVIDIA faible latence appliqué : Ultra Low Latency (Ultra), 1 frame pré-rendue, mode perf. max.", 1);
-            else
-                log("nvidiaProfileInspector a retourné le code " + r.ExitCode + ".", 2);
+            double cpuAvg, gpuAvg; DateTime quand;
+            if (!Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand)) { cpuAvg = -1; gpuAvg = -1; }
+            NvProfile.Applique(NvProfile.Recommande(cpuAvg, gpuAvg), log);
         }
 
         // ------------------------------------------------------------------

@@ -117,7 +117,56 @@ namespace BTOptimizer
                 }
             }
             catch { }
-            return Verdict(cpuN > 0 ? cpuSum / cpuN : -1, gpuN > 0 ? gpuSum / gpuN : -1, n, game);
+            double cpuAvg = cpuN > 0 ? cpuSum / cpuN : -1;
+            double gpuAvg = gpuN > 0 ? gpuSum / gpuN : -1;
+            // On GARDE la mesure : elle sert ensuite à décider si le profil pilote « Ultra faible
+            // latence » est bénéfique ou nocif sur CETTE machine. Sans mémoire, chaque partie de
+            // l'app redemanderait à l'utilisateur de relancer un jeu pour trancher.
+            if (game) Remember(cpuAvg, gpuAvg);
+            return Verdict(cpuAvg, gpuAvg, n, game);
+        }
+
+        private static string MemPath { get { return AppPaths.File("bt-goulot.txt"); } }
+
+        /// <summary>Sérialisation PURE : « cpu;gpu;date ».</summary>
+        public static string Render(double cpuAvg, double gpuAvg, DateTime when)
+        {
+            return cpuAvg.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + ";"
+                 + gpuAvg.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + ";"
+                 + when.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + "\n";
+        }
+
+        /// <summary>Lecture PURE. false si le contenu n'est pas exploitable.</summary>
+        public static bool Parse(string content, out double cpuAvg, out double gpuAvg, out DateTime when)
+        {
+            cpuAvg = -1; gpuAvg = -1; when = DateTime.MinValue;
+            if (string.IsNullOrEmpty(content)) return false;
+            string[] p = content.Replace("\r", "").Split('\n')[0].Split(';');
+            if (p.Length < 2) return false;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            if (!double.TryParse(p[0], System.Globalization.NumberStyles.Float, inv, out cpuAvg)) return false;
+            if (!double.TryParse(p[1], System.Globalization.NumberStyles.Float, inv, out gpuAvg)) return false;
+            if (p.Length >= 3)
+                DateTime.TryParseExact(p[2], "yyyy-MM-dd", inv, System.Globalization.DateTimeStyles.None, out when);
+            return true;
+        }
+
+        private static void Remember(double cpuAvg, double gpuAvg)
+        {
+            try { System.IO.File.WriteAllText(MemPath, Render(cpuAvg, gpuAvg, DateTime.Now.Date)); }
+            catch { }
+        }
+
+        /// <summary>Dernière mesure faite EN JEU, ou false si l'utilisateur n'en a jamais lancé.</summary>
+        public static bool LastMeasure(out double cpuAvg, out double gpuAvg, out DateTime when)
+        {
+            cpuAvg = -1; gpuAvg = -1; when = DateTime.MinValue;
+            try
+            {
+                if (!System.IO.File.Exists(MemPath)) return false;
+                return Parse(System.IO.File.ReadAllText(MemPath), out cpuAvg, out gpuAvg, out when);
+            }
+            catch { return false; }
         }
 
         /// <summary>Texte complet prêt pour une fenêtre ou la console.</summary>

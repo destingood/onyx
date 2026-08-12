@@ -481,10 +481,26 @@ namespace BTOptimizer
 
         private void OnApplyNvidia(object sender, EventArgs e)
         {
+            // Le profil est choisi d'après la DERNIÈRE MESURE en jeu, pas appliqué à l'aveugle :
+            // « Ultra » n'est bénéfique que si la carte graphique travaille déjà à fond.
+            double cpuAvg, gpuAvg; DateTime quandMes;
+            bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quandMes);
+            if (!mesure) { cpuAvg = -1; gpuAvg = -1; }
+            NvProfile.Kind choix = NvProfile.Recommande(cpuAvg, gpuAvg);
+            string diag = mesure
+                ? "Ta dernière mesure en jeu : CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " %.\n"
+                  + (NvProfile.UltraNocif(cpuAvg, gpuAvg)
+                        ? "→ Ton PROCESSEUR limite : le mode « Ultra » te ferait PERDRE des images.\n\n"
+                        : "→ Profil retenu : " + NvProfile.Libelle(choix) + ".\n\n")
+                : "Aucune mesure en jeu n'a encore été faite : on applique le profil SÛR, jamais « Ultra » à l'aveugle.\n\n";
             if (MessageBox.Show(this,
-                    "Appliquer le profil pilote NVIDIA « faible latence » ?\n\n"
-                    + "• Ultra Low Latency = Ultra\n• Frames pré-rendues max = 1\n• Mode de gestion = Performances maximales\n\n"
-                    + "Via nvidiaProfileInspector (ton propre outil). Réversible dans le panneau NVIDIA ou en remettant les réglages par défaut du pilote.",
+                    diag
+                    + "Appliquer « " + NvProfile.Libelle(choix) + " » ?\n\n"
+                    + "• Le mode « Ultra » supprime la file d'attente de rendu (1 image pré-rendue). Ce tampon est ce qui "
+                    + "amortit les à-coups du processeur : sans lui, chaque pic CPU devient une image perdue. Il ne vaut "
+                    + "que sur une machine limitée par le GPU.\n"
+                    + "• Le profil sûr garde une latence réduite ET la stabilité.\n"
+                    + "• Via nvidiaProfileInspector. Retirable depuis ONYX (le diagnostic propose le retour au profil sûr).",
                     "Profil NVIDIA faible latence", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
             var btn = sender as Button;
