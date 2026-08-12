@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -25,17 +25,41 @@ namespace BTOptimizer
         {
             var f = new List<Finding>();
 
-            // Espace disque système
+            // Espace disque — TOUS les disques fixes, pas seulement le disque système. Les jeux vivent
+            // sur D:/E:/F: et c'est justement là que le manque de place fait le plus mal : sous ~10 %
+            // de libre, un SSD voit son cache d'écriture fondre, le ramasse-miettes tourne en boucle
+            // et le débit s'effondre à quelques Mo/s — chargements interminables et disque « à 100 % »
+            // dans le Gestionnaire des tâches alors que rien de lourd ne tourne. Ne regarder que C:
+            // laissait passer exactement ce cas-là.
             try
             {
-                string root = Path.GetPathRoot(Environment.SystemDirectory);
-                var d = new DriveInfo(root);
-                long freeGB = d.AvailableFreeSpace / 1000000000;
-                double pct = d.TotalSize > 0 ? 100.0 * d.AvailableFreeSpace / d.TotalSize : 100;
-                if (pct < 10 || freeGB < 20)
-                    f.Add(new Finding(2, "Disque système presque plein (" + freeGB + " Go libres) — libère de l'espace.", FixKind.CleanDisk, "Nettoyer"));
-                else
-                    f.Add(new Finding(0, "Espace disque système correct (" + freeGB + " Go libres)."));
+                string sysRoot = (Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\").ToUpperInvariant();
+                foreach (DriveInfo d in DriveInfo.GetDrives())
+                {
+                    try
+                    {
+                        if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
+                        string root = d.RootDirectory.FullName;
+                        bool isSystem = string.Equals(root.ToUpperInvariant(), sysRoot, StringComparison.Ordinal);
+                        long freeGB = d.AvailableFreeSpace / 1000000000;
+                        double pct = d.TotalSize > 0 ? 100.0 * d.AvailableFreeSpace / d.TotalSize : 100;
+                        string who = isSystem ? "Disque système (" + root.TrimEnd('\\') + ")" : "Disque " + root.TrimEnd('\\');
+                        string etat = freeGB + " Go libres, " + Math.Round(pct) + " %";
+
+                        // Le disque système a besoin d'un matelas en valeur absolue (mises à jour,
+                        // fichier d'échange, points de restauration) ; les disques de données, eux,
+                        // ne souffrent que du pourcentage.
+                        if (pct < 10 || (isSystem && freeGB < 20))
+                            f.Add(new Finding(2, who + " presque plein (" + etat + ") — sous 10 % de libre, un SSD s'effondre : chargements lents et disque bloqué à 100 %.",
+                                isSystem ? FixKind.CleanDisk : FixKind.CleanJunk, isSystem ? "Nettoyer" : "Trouver le poids mort"));
+                        else if (pct < 15)
+                            f.Add(new Finding(1, who + " se remplit (" + etat + ") — vise 15 % de libre pour garder ses performances.",
+                                isSystem ? FixKind.CleanDisk : FixKind.CleanJunk, isSystem ? "Nettoyer" : "Trouver le poids mort"));
+                        else
+                            f.Add(new Finding(0, who + " : espace correct (" + etat + ")."));
+                    }
+                    catch { }
+                }
             }
             catch { }
 
@@ -49,7 +73,17 @@ namespace BTOptimizer
             // Vitesse RAM (XMP/EXPO)
             Sys.RamInfo ram = Sys.QueryRam();
             if (ram.SpeedRated > 0 && ram.SpeedRunning > 0 && ram.SpeedRunning < ram.SpeedRated - 50)
-                f.Add(new Finding(1, "RAM à " + ram.SpeedRunning + " MT/s au lieu de " + ram.SpeedRated + " — active le profil XMP/EXPO dans le BIOS."));
+            {
+                // Constat de niveau 2 quand la perte dépasse 20 % : sur un PC bridé par le processeur,
+                // c'est LE gain gratuit le plus important (jusqu'à 10-20 % de FPS déjà payés). Le
+                // profil se règle dans le firmware, donc aucune correction automatique n'est possible :
+                // le bouton ouvre le guide BIOS pas-à-pas au lieu de laisser l'utilisateur sans issue.
+                int perte = (int)Math.Round(100.0 * (ram.SpeedRated - ram.SpeedRunning) / ram.SpeedRated);
+                f.Add(new Finding(perte >= 20 ? 2 : 1,
+                    "RAM à " + ram.SpeedRunning + " MT/s au lieu des " + ram.SpeedRated + " MT/s de tes barrettes (−" + perte
+                    + " %) — le profil XMP/EXPO n'est pas activé dans le BIOS : ce sont des FPS gratuits que tu as déjà payés.",
+                    FixKind.BiosGuide, "Guide BIOS"));
+            }
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 

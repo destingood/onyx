@@ -270,6 +270,16 @@ namespace BTOptimizer
                         if (!StartShell("ms-settings:display-advanced", null))
                             StartShell("ms-settings:display", null);
                         break;
+
+                    case FixKind.BiosGuide:
+                        // XMP/EXPO se règle dans le firmware : rien à corriger depuis Windows,
+                        // mais on ne laisse pas l'utilisateur devant un constat sans issue.
+                        using (var bg = new BiosGuideForm(_log)) bg.ShowDialog(this);
+                        break;
+
+                    case FixKind.CleanJunk:
+                        FindJunk();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -307,6 +317,76 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Disque de données presque plein : avant de conseiller « désinstalle des jeux », on cherche
+        /// le poids mort — journaux partis en boucle, restes de téléchargements Steam abandonnés. Le
+        /// balayage est BORNÉ (8 s) et déporté hors du thread interface. Rien n'est supprimé sans que
+        /// l'utilisateur ait lu la liste exacte de ce qui va partir.
+        /// </summary>
+        private void FindJunk()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                List<JunkScan.Item> items;
+                try { items = JunkScan.Scan(JunkScan.DefaultMinBytes, 8000, _log); }
+                catch (Exception ex)
+                {
+                    if (_log != null) _log("Recherche du poids mort : échec (" + ex.Message + ").", 3);
+                    items = new List<JunkScan.Item>();
+                }
+                try { BeginInvoke((Action)(() => ShowJunk(items))); } catch { }
+            });
+        }
+
+        private void ShowJunk(List<JunkScan.Item> items)
+        {
+            SetBusy(false);
+            if (items == null || items.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "Aucun poids mort trouvé : pas de journal obèse (≥ 1 Go) ni de téléchargement Steam abandonné.\n\n"
+                    + "L'espace est donc occupé par de vraies données. Le classement « Où sont passés mes Go ? » "
+                    + "te dira quels dossiers pèsent le plus.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show(this,
+                    JunkScan.Format(items, 12) + "\n"
+                    + "Supprimer définitivement ces éléments ?\n\n"
+                    + "• Journaux : de simples fichiers de trace, sans valeur une fois l'incident passé. Seuls ceux qui ne sont plus écrits depuis "
+                    + JunkScan.LogIdleDays + " jours sont listés (une appli vivante n'est jamais touchée).\n"
+                    + "• Restes Steam : morceaux d'un téléchargement figé depuis plus de " + JunkScan.DownloadIdleDays
+                    + " jours. Steam les retéléchargera tout seul si tu relances ce jeu.\n"
+                    + "• IRRÉVERSIBLE : ces éléments ne passent pas par la corbeille.\n"
+                    + "• Ferme Steam avant de valider si des restes Steam sont listés.",
+                    "Libérer " + SteamGames.Human(JunkScan.Total(items)),
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                long freed = 0;
+                List<string> failed = new List<string>();
+                try { freed = JunkScan.Delete(items, out failed, _log); }
+                catch (Exception ex) { if (_log != null) _log("Suppression : échec (" + ex.Message + ").", 3); }
+                long f2 = freed;
+                List<string> ko = failed;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    string msg = SteamGames.Human(f2) + " libérés.";
+                    if (ko != null && ko.Count > 0)
+                        msg += "\n\n" + ko.Count + " élément(s) n'ont pas pu être supprimés (fichier en cours d'utilisation "
+                             + "— ferme l'application concernée, ou Steam, puis relance) :\n• " + string.Join("\n• ", ko.ToArray());
+                    MessageBox.Show(this, msg, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         private void DisableCoreSync()
