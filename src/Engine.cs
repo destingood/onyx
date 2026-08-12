@@ -57,6 +57,11 @@ namespace BTOptimizer
             var ordered = new List<Tweak>(selection);
             if (!apply) ordered.Reverse();
 
+            // Journal des réglages RÉELLEMENT passés : sans lui, impossible de dire plus tard si
+            // Windows les a annulés dans notre dos (mise à jour de fonctionnalité, réinstallation
+            // de pilote…). Seules les réussites sont consignées.
+            var done = new List<string>();
+
             foreach (Tweak t in ordered)
             {
                 try
@@ -64,6 +69,7 @@ namespace BTOptimizer
                     if (apply) t.Apply();
                     else t.Revert();
                     result.Ok++;
+                    if (!string.IsNullOrEmpty(t.Id)) done.Add(t.Id);
                     if (t.Reboot) result.RebootNeeded = true;
                     log(verb + " : " + t.Name, 1);
                 }
@@ -73,6 +79,15 @@ namespace BTOptimizer
                     log("ÉCHEC : " + t.Name + " -> " + ex.Message, 3);
                 }
             }
+
+            // Un rétablissement volontaire sort du journal : c'est un choix de l'utilisateur,
+            // pas une dérive à lui resignaler ensuite.
+            try
+            {
+                if (apply) TweakDrift.Record(done);
+                else TweakDrift.Forget(done);
+            }
+            catch { }   // le suivi de dérive ne doit jamais faire échouer une application
 
             log("Terminé : " + result.Ok + " réussite(s), " + result.Ko + " échec(s).", 0);
             if (result.RebootNeeded)

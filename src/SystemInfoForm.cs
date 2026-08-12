@@ -280,6 +280,14 @@ namespace BTOptimizer
                     case FixKind.CleanJunk:
                         FindJunk();
                         break;
+
+                    case FixKind.ReapplyTweaks:
+                        ReapplyDrifted();
+                        break;
+
+                    case FixKind.DeviceManager:
+                        StartShell("devmgmt.msc", null);
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -317,6 +325,71 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Ré-applique les réglages que Windows a annulés. On repasse par le moteur habituel
+        /// (sauvegarde du registre comprise) : aucune écriture « à la main » qui contournerait le
+        /// filet de sécurité. La liste exacte est montrée avant d'agir.
+        /// </summary>
+        private void ReapplyDrifted()
+        {
+            List<TweakDrift.Drifted> drift;
+            try { drift = TweakDrift.Detect(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (drift.Count == 0)
+            {
+                MessageBox.Show(this, "Plus aucune dérive : tous les réglages appliqués sont en place.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Reload();
+                return;
+            }
+
+            bool reboot = false;
+            foreach (var d in drift) if (d.Reboot) reboot = true;
+            if (MessageBox.Show(this,
+                    TweakDrift.Format(drift, 15) + "\n"
+                    + "Les ré-appliquer maintenant ?\n\n"
+                    + "• Ce sont des réglages que TU avais déjà appliqués : Windows les a remis par défaut de son côté.\n"
+                    + "• Une sauvegarde du registre est créée avant toute écriture, comme pour une application normale.\n"
+                    + (reboot ? "• Certains ne prendront effet qu'après un redémarrage.\n" : ""),
+                    "Réglages annulés par Windows",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            var ids = new HashSet<string>(TweakDrift.Ids(drift), StringComparer.Ordinal);
+            var selection = new List<Tweak>();
+            try { foreach (var t in Catalog.All()) if (t != null && ids.Contains(t.Id)) selection.Add(t); }
+            catch { }
+            if (selection.Count == 0)
+            {
+                MessageBox.Show(this, "Aucun de ces réglages n'a été retrouvé dans le catalogue.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                EngineResult res = null;
+                try { res = Engine.Run(selection, true, true, false, _log ?? delegate { }); }
+                catch (Exception ex) { if (_log != null) _log("Ré-application : échec (" + ex.Message + ").", 3); }
+                EngineResult r = res;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    string msg = r == null
+                        ? "La ré-application a échoué — voir le journal."
+                        : r.Ok + " réglage(s) ré-appliqué(s)" + (r.Ko > 0 ? ", " + r.Ko + " échec(s)" : "") + "."
+                          + (r.RebootNeeded ? "\n\nUn redémarrage est nécessaire pour que tout prenne effet." : "");
+                    MessageBox.Show(this, msg, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         /// <summary>

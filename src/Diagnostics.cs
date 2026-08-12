@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -157,6 +157,40 @@ namespace BTOptimizer
             }
             catch { }
 
+            // Réglages ONYX annulés par Windows. Une mise à jour de fonctionnalité, une
+            // réinstallation de pilote graphique ou un autre « optimiseur » remettent
+            // silencieusement des valeurs par défaut : l'utilisateur croit son PC réglé alors que
+            // la moitié des optimisations est retombée, et il cherche la perte d'images ailleurs.
+            try
+            {
+                List<TweakDrift.Drifted> drift = TweakDrift.Detect();
+                if (drift.Count > 0)
+                {
+                    string quand = "";
+                    DateTime plus = DateTime.MinValue;
+                    foreach (var d in drift) if (d.When > plus) plus = d.When;
+                    if (plus != DateTime.MinValue) quand = ", appliqué(s) le " + plus.ToString("dd/MM/yyyy");
+                    f.Add(new Finding(drift.Count >= 5 ? 2 : 1,
+                        drift.Count + " réglage(s) ONYX ont été ANNULÉS par Windows" + quand
+                        + " — souvent après une mise à jour ou une réinstallation de pilote.",
+                        FixKind.ReapplyTweaks, "Ré-appliquer"));
+                }
+            }
+            catch { }
+
+            // Écran virtuel actif (Parsec, spacedesk, Sunshine…). Ces cartes graphiques factices
+            // restent branchées longtemps après qu'on a cessé de s'en servir : le jeu peut se
+            // retrouver rendu dessus (donc recomposé au lieu d'aller droit à l'écran), et elles
+            // sont une cause connue d'erreurs de pilote à répétition et de saccades.
+            try
+            {
+                foreach (string v in VirtualDisplays())
+                    f.Add(new Finding(1, "Écran virtuel actif : « " + v + " » — un jeu lancé dessus perd des images, "
+                        + "et ces cartes factices provoquent des erreurs de pilote à répétition. Désactive-la si tu ne joues pas à distance.",
+                        FixKind.DeviceManager, "Gestionnaire"));
+            }
+            catch { }
+
             // Restauration système
             try
             {
@@ -167,6 +201,40 @@ namespace BTOptimizer
             catch { }
 
             return f;
+        }
+
+        // Cartes graphiques factices créées par les logiciels de jeu à distance / d'écran
+        // déporté. « Basic Display Adapter » n'est PAS dans la liste : c'est un pilote manquant,
+        // un autre sujet, traité ailleurs.
+        private static readonly string[] VirtualGpuMarks =
+        {
+            "parsec", "spacedesk", "sunshine", "virtual display", "idd driver",
+            "usb display", "duet display", "amyuni", "mirage driver"
+        };
+
+        /// <summary>Noms des adaptateurs d'affichage virtuels ACTIFS (code d'erreur 0 = en service).</summary>
+        public static List<string> VirtualDisplays()
+        {
+            var list = new List<string>();
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name,ConfigManagerErrorCode FROM Win32_VideoController"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["Name"]) ?? "";
+                        if (name.Length == 0) continue;
+                        string low = name.ToLowerInvariant();
+                        bool virtuel = false;
+                        foreach (var m in VirtualGpuMarks) if (low.Contains(m)) { virtuel = true; break; }
+                        if (!virtuel) continue;
+                        int err = -1;
+                        try { err = Convert.ToInt32(mo["ConfigManagerErrorCode"]); } catch { }
+                        if (err != 0) continue;      // déjà désactivé : rien à signaler
+                        list.Add(name);
+                    }
+            }
+            catch { }
+            return list;
         }
 
         public sealed class DriveKind
