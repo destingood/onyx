@@ -282,6 +282,9 @@ namespace BTOptimizer
             m.Add(sys);
 
             m.Add(new ToolStripSeparator());
+            m.Add("🎛  Réglages carte graphique (puissance, température, fréquences)…", null,
+                (s, e) => OpenDialog(new GpuTuningForm(Log)));
+            m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("🔄  Vérifier les mises à jour d'ONYX", null, (s, e) => ShowUpdateCheck());
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
