@@ -158,6 +158,7 @@ namespace BTOptimizer
             opti.DropDownItems.Add("💾 Importer un profil…", null, (s, e) => ImportProfile());
             opti.DropDownItems.Add("🔁 Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
             opti.DropDownItems.Add("📝 Problèmes rencontrés (registre local)", null, (s, e) => OpenDialog(new ProblemForm(Log)));
+            opti.DropDownItems.Add("⏱ Latence DPC/ISR par pilote (mesure en direct)", null, (s, e) => MesurerDpc());
             m.Add(opti);
 
             var jeux = new ToolStripMenuItem("🎮  Jeux");
@@ -642,6 +643,50 @@ namespace BTOptimizer
                     }));
                 }
                 catch { }
+            });
+        }
+
+        /// <summary>
+        /// Mesure la latence DPC/ISR par pilote, en direct. Le chiffre qui compte n'est pas la
+        /// moyenne mais le PIRE temps d'exécution : pendant qu'un DPC tourne, son cœur ne fait rien
+        /// d'autre — c'est lui qui fait la saccade.
+        /// </summary>
+        private void MesurerDpc()
+        {
+            if (MessageBox.Show(this,
+                    "Mesurer la latence DPC/ISR pendant 20 secondes ?\n\n"
+                    + "• Un DPC est un travail que différent les pilotes. Tant qu'il s'exécute, il monopolise son cœur.\n"
+                    + "• Pour un résultat utile, LANCE TON JEU et joue pendant la mesure : c'est en charge que les "
+                    + "pilotes fautifs se révèlent.\n"
+                    + "• Lecture seule : rien n'est modifié sur ton système.",
+                    "Latence DPC / ISR", MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK)
+                return;
+
+            Log("Mesure de latence DPC/ISR démarrée (20 s)…", 0);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string texte;
+                var d = new DpcLive();
+                try
+                {
+                    if (!d.Demarre())
+                        texte = "La session noyau a été refusée : " + (d.DerniereErreur ?? "raison inconnue")
+                              + ".\n\nRelance ONYX en administrateur.";
+                    else
+                    {
+                        System.Threading.Thread.Sleep(20000);
+                        texte = DpcLive.Texte(d.Instantane(), 12, 20);
+                    }
+                }
+                catch (Exception ex) { texte = "Mesure impossible : " + ex.Message; }
+                finally { try { d.Dispose(); } catch { } }
+
+                string t = texte;
+                try { BeginInvoke((Action)(() =>
+                {
+                    Log("Mesure de latence DPC/ISR terminée.", 1);
+                    MessageBox.Show(this, t, "Latence DPC / ISR par pilote", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); } catch { }
             });
         }
 
