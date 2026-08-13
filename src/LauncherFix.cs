@@ -59,7 +59,10 @@ namespace BTOptimizer
                 Fix = delegate(Action<string, int> log)
                 {
                     long mb = 0;
-                    foreach (Sys.CleanTarget t in Sys.CleanTargets()) mb += Sys.CleanTargetNow(t, log);
+                    // Faire de la place pour un launcher ne justifie pas d'effacer l'historique
+                    // Copilot/Recall (genre "ia") : ça se coche à la main dans Nettoyage disque.
+                    foreach (Sys.CleanTarget t in Sys.CleanTargets())
+                        if (t.Kind != "ia") mb += Sys.CleanTargetNow(t, log);
                     double after = FreeGB(Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows)));
                     log("Nettoyage : ~" + Math.Max(0, mb) + " Mo récupérés — désormais "
                         + after.ToString("0.0") + " Go libres.", 1);

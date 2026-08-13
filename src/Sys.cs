@@ -1029,7 +1029,7 @@ namespace BTOptimizer
             public string Path;
             public bool IsRecycleBin;
             public long SizeMB;
-            public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine)
+            public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine) | diag | ia (jamais automatique)
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -1064,6 +1064,7 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
             AddBrowserCaches(list, local);
+            AddAiCaches(list, local);
             list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin" });
             foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
             return list;
@@ -1116,6 +1117,41 @@ namespace BTOptimizer
             }
             catch { }
             return dirs;
+        }
+
+        // Caches des fonctions IA de Windows 11 (Copilot, Recall). Rangés à part sous le
+        // genre "ia" parce qu'ils ne contiennent PAS des fichiers temporaires : c'est
+        // l'historique de ce que tu as fait sur la machine. Conséquences du genre "ia" :
+        // jamais balayé par l'entretien automatique ni par « libérer l'espace », jamais
+        // coché d'avance dans la fenêtre de nettoyage. Il faut le demander à la main.
+        private static void AddAiCaches(System.Collections.Generic.List<CleanTarget> list, string local)
+        {
+            try
+            {
+                // Journaux et modèles temporaires de Copilot : ça, ça se régénère tout seul.
+                string copilot = Path.Combine(local, @"Microsoft\WindowsCopilot");
+                if (Directory.Exists(copilot))
+                    list.Add(new CleanTarget { Name = "Cache local de Copilot (journaux, modèles temporaires)", Kind = "ia", Path = copilot });
+
+                // Recall : on ne propose de purger les captures QUE si la capture est déjà
+                // coupée (tweak « recall_off », stratégie DisableAIDataAnalysis). Purger un
+                // Recall actif, c'est supprimer des fichiers pendant qu'il écrit dedans : les
+                // fichiers verrouillés survivraient et sa base resterait à moitié pleine.
+                // Ordre imposé, donc : on désactive d'abord, on purge ensuite.
+                if (!IntEquals(GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis"), 1)) return;
+
+                var recall = new[]
+                {
+                    // Emplacement réel sur les PC Copilot+ : base ukg.db + dossier ImageStore.
+                    new[] { "Captures et base de Windows Recall", Path.Combine(local, @"CoreAIPlatform.00\UKP") },
+                    // Emplacement cité par certains tutoriels : absent sur la plupart des PC.
+                    new[] { "Résidus de Windows Recall",          Path.Combine(local, @"Microsoft\Recall") },
+                };
+                foreach (string[] r in recall)
+                    if (Directory.Exists(r[1]))
+                        list.Add(new CleanTarget { Name = r[0] + " — Recall est bien désactivé", Kind = "ia", Path = r[1] });
+            }
+            catch { }
         }
 
         private static long MeasureTarget(CleanTarget t)
