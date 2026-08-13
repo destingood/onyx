@@ -191,9 +191,16 @@ namespace BTOptimizer
         }
 
         /// <summary>
-        /// Croisement PUR : parmi les modules chargés au moment du plantage, lesquels appartiennent
-        /// à un service actuellement DÉSACTIVÉ ? <paramref name="estDesactive"/> est injecté pour
-        /// rester testable sans registre.
+        /// ATTENTION — heuristique FAIBLE, conservée seulement comme indice secondaire.
+        ///
+        /// Elle cherche, parmi les DLL chargées au moment du plantage, celles qui appartiennent à
+        /// un service désactivé. Le défaut est structurel : RPC est INTER-PROCESSUS. Quand le
+        /// service visé est mort, sa DLL n'est justement PAS chargée dans le processus qui plante —
+        /// donc le vrai coupable échappe presque toujours à ce filtre, et ce qu'il remonte est
+        /// souvent une coïncidence (une DLL de service chargée comme simple bibliothèque cliente).
+        ///
+        /// Vérifié sur un cas réel : cette méthode a désigné « wisvc », qui n'était pas en cause.
+        /// La méthode fiable est <see cref="Coupables"/> — voir son commentaire.
         /// </summary>
         public static List<Suspect> Suspects(Rapport r, Dictionary<string, string> parDll,
                                              Func<string, bool> estDesactive)
@@ -255,6 +262,150 @@ namespace BTOptimizer
                 }
             }
             return n;
+        }
+
+        // ------------------------------------------------------------------
+        //  MÉTHODE FIABLE : laisser Windows désigner lui-même le coupable
+        // ------------------------------------------------------------------
+        //
+        // Principe, validé par bissection sur une machine réelle : un service DÉSACTIVÉ ne peut pas
+        // démarrer, donc son endpoint RPC n'existe pas et la page meurt. Le même service en MANUEL
+        // ne tourne pas non plus au repos — mais Windows le démarre à la demande dès qu'une page en
+        // a besoin.
+        //
+        // D'où le protocole : on repasse temporairement en Manuel tous les services désactivés,
+        // l'utilisateur ouvre la page fautive, et on regarde LESQUELS Windows vient de démarrer.
+        // Ce sont exactement ceux dont la page avait besoin — aucune supposition, c'est le système
+        // qui répond. On rend ensuite leur état d'origine à tous les autres.
+        //
+        // Sur le cas réel : 37 services désactivés, 3 démarrés par la page, coupable confirmé
+        // parmi eux (SensorService, interrogé par le réglage « Économiseur d'énergie »).
+
+        private static string EtatPath { get { return AppPaths.File("bt-enquete-services.txt"); } }
+
+        /// <summary>Sérialisation PURE de la liste sauvegardée.</summary>
+        public static string RenderEtat(List<string> services)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("# ONYX — services désactivés avant l'enquête. Restaurés à la fin.\n");
+            if (services != null) foreach (var s in services) if (!string.IsNullOrEmpty(s)) sb.Append(s).Append('\n');
+            return sb.ToString();
+        }
+
+        /// <summary>Lecture PURE.</summary>
+        public static List<string> ParseEtat(string contenu)
+        {
+            var l = new List<string>();
+            if (string.IsNullOrEmpty(contenu)) return l;
+            foreach (var raw in contenu.Replace("\r\n", "\n").Split('\n'))
+            {
+                string s = (raw ?? "").Trim();
+                if (s.Length == 0 || s[0] == '#') continue;
+                l.Add(s);
+            }
+            return l;
+        }
+
+        /// <summary>Services actuellement désactivés (types 16/32 = vrais services, pas pilotes).</summary>
+        public static List<string> ServicesDesactives()
+        {
+            var l = new List<string>();
+            try
+            {
+                using (RegistryKey r = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services", false))
+                {
+                    if (r == null) return l;
+                    foreach (string n in r.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using (RegistryKey k = r.OpenSubKey(n, false))
+                            {
+                                if (k == null) continue;
+                                object st = k.GetValue("Start"), ty = k.GetValue("Type");
+                                if (st == null || ty == null) continue;
+                                int t = Convert.ToInt32(ty);
+                                if (Convert.ToInt32(st) == 4 && (t == 16 || t == 32)) l.Add(n);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+            return l;
+        }
+
+        /// <summary>ÉTAPE 1 — sauvegarde la liste et repasse tout en Manuel. Renvoie le nombre traité.</summary>
+        public static int Ouvrir(Action<string, int> log)
+        {
+            List<string> off = ServicesDesactives();
+            try { File.WriteAllText(EtatPath, RenderEtat(off)); }
+            catch { if (log != null) log("Enquête impossible : la liste des services n'a pas pu être sauvegardée.", 3); return 0; }
+            int n = 0;
+            foreach (string s in off)
+            {
+                try { Sys.ConfigureService(s, "demand", false, false); n++; }
+                catch { }
+            }
+            if (log != null)
+                log("Enquête ouverte : " + n + " service(s) désactivé(s) repassés en Manuel. Ouvre la page qui plante, "
+                  + "puis reviens ici — ONYX regardera lesquels Windows a démarré.", 1);
+            return n;
+        }
+
+        /// <summary>Enquête en cours ?</summary>
+        public static bool Ouverte() { try { return File.Exists(EtatPath); } catch { return false; } }
+
+        /// <summary>ÉTAPE 2 — parmi les services de l'enquête, ceux que Windows a DÉMARRÉS : ce
+        /// sont eux dont la page avait besoin.</summary>
+        public static List<string> Coupables()
+        {
+            var l = new List<string>();
+            try
+            {
+                // Une seule requête WMI pour tous les services démarrés, puis intersection :
+                // interroger service par service coûterait une requête par nom.
+                var actifs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var s = new System.Management.ManagementObjectSearcher(
+                           "SELECT Name FROM Win32_Service WHERE State = 'Running'"))
+                    foreach (System.Management.ManagementObject mo in s.Get())
+                    {
+                        string n = Convert.ToString(mo["Name"]);
+                        if (!string.IsNullOrEmpty(n)) actifs.Add(n);
+                    }
+                foreach (string svc in ParseEtat(File.ReadAllText(EtatPath)))
+                    if (actifs.Contains(svc)) l.Add(svc);
+            }
+            catch { }
+            return l;
+        }
+
+        /// <summary>ÉTAPE 3 — referme : tout redevient désactivé SAUF les coupables, laissés en
+        /// Manuel. L'utilisateur retrouve ses optimisations, moins le strict nécessaire.</summary>
+        public static int Fermer(List<string> garderEnManuel, Action<string, int> log)
+        {
+            int remis = 0;
+            var garder = new HashSet<string>(garderEnManuel ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (string s in ParseEtat(File.ReadAllText(EtatPath)))
+                {
+                    if (garder.Contains(s)) continue;
+                    try { Sys.ConfigureService(s, "disabled", false, false); remis++; }
+                    catch { }
+                }
+            }
+            catch { }
+            try { File.Delete(EtatPath); } catch { }
+            if (log != null)
+            {
+                log("Enquête close : " + remis + " service(s) remis en désactivé.", 1);
+                foreach (string g in garder)
+                    log("Service « " + g + " » laissé en MANUEL — c'est lui que la page réclamait. Il ne tourne "
+                      + "pas au repos, Windows ne le démarre qu'à la demande.", 2);
+            }
+            return remis;
         }
 
         // ---- Armement du diagnostic : sans vidage, on ne peut rien conclure ----
