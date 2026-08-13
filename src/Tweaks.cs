@@ -75,6 +75,54 @@ namespace BTOptimizer
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSpeed"), "0")
             });
 
+            // Vitesse du pointeur au 6ᵉ cran. À ne pas confondre avec l'accélération ci-dessus :
+            // c'est le CURSEUR de vitesse. Seule la valeur 10 donne un rapport 1:1 — aux autres
+            // crans Windows multiplie le déplacement et se met à sauter ou dupliquer des pixels,
+            // donc la souris perd en précision même accélération coupée.
+            list.Add(new Tweak
+            {
+                Id = "mouse_pointer_speed", Category = Cat.Souris, Recommended = true, Esport = true,
+                Name = "Vitesse du pointeur au 6ᵉ cran (rapport 1:1, sans perte de pixels)",
+                Desc = "Met le curseur de vitesse de la souris exactement au milieu (valeur 10). C'est le seul cran où "
+                     + "Windows ne multiplie pas ton déplacement : au-dessus il saute des pixels, en dessous il en duplique. "
+                     + "Règle ta sensibilité dans le jeu et via le DPI de la souris, pas ici. Effet immédiat. "
+                     + "« Rétablir » remet la valeur par défaut de Windows (qui est déjà 10).",
+                BackupKeys = new[] { @"HKCU\Control Panel\Mouse" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "MouseSensitivity", "10", RegistryValueKind.String);
+                    if (Sys.SameUser) Native.SetMouseSpeed(10);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "MouseSensitivity", "10", RegistryValueKind.String);
+                    if (Sys.SameUser) Native.SetMouseSpeed(10);
+                },
+                Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSensitivity"), "10")
+            });
+
+            // Veille USB au niveau du PÉRIPHÉRIQUE — l'étage que le plan d'alimentation ne couvre
+            // pas. Chaque concentrateur porte sa propre case « Autoriser l'ordinateur à éteindre ce
+            // périphérique » : tant qu'elle est cochée, le réveil d'un hub inactif coûte quelques
+            // millisecondes au premier mouvement, pile quand on tenait une visée immobile.
+            list.Add(new Tweak
+            {
+                Id = "usb_device_power", Category = Cat.Souris, Recommended = true, Esport = true,
+                Name = "Interdire la mise en veille des concentrateurs USB (par périphérique)",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur CHAQUE concentrateur USB — "
+                     + "ce que le réglage du plan d'alimentation ne fait pas, et qui survit au changement de plan. "
+                     + "Certaines clés appartiennent au système et peuvent refuser l'écriture : le journal indique alors "
+                     + "combien de concentrateurs ont réellement été traités. « Rétablir » réautorise la veille.",
+                Apply = () =>
+                {
+                    UsbPower.Result r = UsbPower.Applique(0, null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun concentrateur n'a accepté l'écriture (clés protégées par le système).");
+                },
+                Revert = () => UsbPower.Applique(1, null),
+                Check = () => UsbPower.Etat()
+            });
+
             list.Add(new Tweak
             {
                 Id = "input_queues", Category = Cat.Souris, Esport = true, Reboot = true,
