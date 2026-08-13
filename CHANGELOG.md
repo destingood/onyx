@@ -4,6 +4,25 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.67 — L'avis de mise à jour ne se manque plus
+- **La notification Windows était noyée.** L'avis partait dans le lot du Gardien, sous le titre
+  « Gardien ONYX — N alerte(s) » : au milieu d'alertes de santé, avec un titre qui ne parle même pas
+  de mise à jour. Pire, elle **ne partait pas du tout** s'il n'y avait aucune autre alerte à
+  signaler — c'est-à-dire la plupart du temps, puisque le Gardien se tait quand tout va bien. Elle a
+  désormais son propre envoi et son propre titre.
+- **Une annonce franche au lancement, une seule fois par version.** Le rappel se limitait au titre de
+  la fenêtre : invisible pour qui ne le regarde pas. ONYX pose maintenant la question au démarrage.
+  Mais la reposer à chaque lancement transformerait l'information en harcèlement, et on finirait par
+  cliquer sans lire : une fois l'annonce faite, on n'y revient plus. Une **nouvelle** version, elle,
+  remet le compteur à zéro.
+- **Un bandeau dans la fenêtre, tant que la mise à jour n'est pas posée.** C'est le seul rappel qui
+  *dure* — les deux autres sont par nature ponctuels. Il porte le bouton qui lance la mise à jour :
+  plus besoin de savoir qu'elle se cache derrière le menu « ⋯ ». « Plus tard » le referme, parce
+  qu'un rappel ne doit pas devenir un mur, mais il revient au lancement suivant : reporter est un
+  choix légitime, oublier n'en est pas un.
+- Le bandeau apparaît aussi quand le Gardien découvre la version alors que la fenêtre est déjà
+  ouverte, sans attendre le prochain démarrage.
+
 ## v15.66 — Quel pilote fait saccader ton PC ? La réponse, en direct
 - **Latence DPC/ISR par pilote, mesurée en direct.** Un DPC est un travail que les pilotes diffèrent.
   Tant qu'il s'exécute, il **monopolise son cœur** : rien d'autre ne passe. Un pilote qui tient un
