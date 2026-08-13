@@ -4,6 +4,35 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.64 — Un réglage d'ONYX cassait une page de Windows, et les notifications n'arrivaient jamais
+- **Une page des Paramètres Windows plantait à cause d'ONYX.** Système → Marche/Arrêt s'ouvrait sur
+  un rectangle vide. Cause trouvée : le réglage qui désactive le **service de capteurs**. La page
+  interroge les capteurs pour l'Économiseur d'énergie (luminosité ambiante) ; service désactivé, la
+  demande n'aboutit nulle part et la page meurt. Le réglage le met désormais en **démarrage manuel**
+  au lieu de le désactiver : sur un PC fixe sans capteur il ne démarre jamais de lui-même, donc **le
+  gain est identique** — mais Windows peut le lancer quand une page en a besoin.
+- **Ta machine est réparée même si le mal est déjà fait.** Corriger le réglage n'aurait rien changé
+  pour ceux qui l'avaient déjà appliqué. ONYX vérifie maintenant à **chaque lancement** et **après
+  chaque application de réglages**, quel que soit le mode utilisé, qu'aucun service indispensable à
+  une page de Windows n'est resté désactivé — et le remet en manuel tout seul.
+- **Enquête automatique sur les pages de Paramètres qui plantent.** Windows n'affiche qu'un code
+  d'erreur opaque ; la vraie raison est enfouie dans le rapport de plantage. ONYX sait le lire, en
+  extraire le **réglage exact** qui a échoué et le motif, puis — quand un service est en cause —
+  le retrouver en laissant Windows le désigner lui-même, plutôt qu'en devinant.
+- **Les notifications n'étaient pas de vraies notifications.** ONYX affichait une bulle qui
+  disparaissait sans laisser de trace : rien dans le centre de notifications, et l'application
+  n'apparaissait même pas dans Système → Notifications. Ce sont désormais de vraies notifications
+  Windows, retrouvables et configurables.
+- **L'avis de mise à jour n'arrivait jamais.** Un défaut dans le code écrasait le message juste
+  après l'avoir préparé : **aucun utilisateur ne l'a jamais reçu**. Corrigé, et doublé d'un rappel
+  dans la fenêtre d'ONYX tant que la mise à jour n'est pas installée — une notification peut se
+  manquer, pas un titre qu'on a sous les yeux.
+- **Registre des problèmes rencontrés.** Note ce qui cloche au moment où ça arrive : la date et ta
+  version sont enregistrées avec. Dans trois semaines, personne ne saura plus quand ça a commencé.
+  Fichier **local**, rien n'est envoyé nulle part.
+- **Caches des fonctions IA de Windows** (Copilot, Recall) proposés au nettoyage — mais jamais
+  effacés automatiquement : c'est de l'historique, pas du temporaire, et ça ne se régénère pas.
+
 ## v15.63 — Souris au pixel près, veille USB, latence audio et la vraie raison des échecs de SFC
 - **Vitesse du pointeur au 6ᵉ cran.** ONYX traitait l'*accélération* de la souris mais jamais le
   *curseur de vitesse*. Or seule la valeur du milieu donne un rapport **1:1** : au-dessus Windows
