@@ -88,12 +88,23 @@ namespace BTOptimizer
             return Kind.Sur;
         }
 
-        /// <summary>Le profil Ultra est-il nocif dans cet état mesuré ? (GPU qui traîne pendant que
-        /// le CPU sature = chaque à-coup processeur devient une image perdue.)</summary>
+        /// <summary>
+        /// Le profil Ultra est-il nocif dans cet état mesuré ?
+        ///
+        /// Le critère tient en une ligne : Ultra n'est bénéfique QUE si la carte graphique travaille
+        /// déjà à fond. Dès qu'elle a de la marge, supprimer la file de rendu ne fait que sérialiser
+        /// le travail — et ça se paie en images.
+        ///
+        /// La première version exigeait en plus un CPU au-dessus de 70 %. C'était trop étroit, et
+        /// une mesure réelle l'a montré : Destiny 2 tournait à CPU 45 % / GPU 42 %, les DEUX à
+        /// moitié occupés. C'est justement la signature du mal — sans tampon, le processeur prépare
+        /// une image puis attend la carte, qui rend puis attend le processeur. Chacun passe la
+        /// moitié du temps à ne rien faire, et l'ancien critère ne voyait rien.
+        /// </summary>
         public static bool UltraNocif(double cpuAvg, double gpuAvg)
         {
             if (cpuAvg < 0 || gpuAvg < 0) return false;   // sans mesure, aucune accusation
-            return cpuAvg >= 70 && gpuAvg < 85;
+            return gpuAvg < 85;
         }
 
         public static string Libelle(Kind k)
