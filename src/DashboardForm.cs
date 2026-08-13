@@ -561,6 +561,11 @@ namespace BTOptimizer
                     //    coûte des images à chaque partie — et l'utilisateur ne soupçonne pas qu'il
                     //    existe. On le retire tout seul, en l'écrivant au journal.
                     try { NvProfile.SoigneSiNocif(Log); } catch { }
+                    // 0 ter) Services qu'on ne doit jamais laisser DÉSACTIVÉS : une page de Windows
+                    //    en meurt. Corriger le réglage ne suffisait pas — il faut réparer les
+                    //    machines déjà touchées, quel que soit le chemin par lequel le service a
+                    //    été coupé (preset, mode simple, config auto, fenêtre Services, autre outil).
+                    try { ServiceGuard.Soigne(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;

@@ -89,6 +89,13 @@ namespace BTOptimizer
             }
             catch { }   // le suivi de dérive ne doit jamais faire échouer une application
 
+            // FILET DE SÉCURITÉ, quel que soit le preset appliqué : si l'un des réglages vient de
+            // laisser DÉSACTIVÉ un service dont une page de Windows a besoin, on le remet en
+            // manuel tout de suite. Ici plutôt qu'au seul lancement : l'utilisateur qui applique
+            // « Recommandé » puis va dans les Paramètres ne doit pas tomber sur une page morte
+            // en attendant le prochain démarrage d'ONYX.
+            try { if (apply) ServiceGuard.Soigne(log); } catch { }
+
             log("Terminé : " + result.Ok + " réussite(s), " + result.Ko + " échec(s).", 0);
             if (result.RebootNeeded)
                 log("Un redémarrage est nécessaire pour certaines optimisations.", 2);
