@@ -74,11 +74,17 @@ namespace BTOptimizer
                 string maj = UpdateFlag.EnAttente();
                 if (maj != null)
                 {
+                    // Rappel PERMANENT et discret : tant que la mise à jour n'est pas posée, le
+                    // titre le dit. Une notification se manque, un titre reste sous les yeux.
                     Text = "ONYX — QG     •  mise à jour " + maj + " disponible";
                     Shown += (s, e) =>
                     {
                         try { Log("Une mise à jour d'ONYX est disponible : version " + maj
                                 + " (menu ⋯ → « Vérifier les mises à jour »).", 2); } catch { }
+                        // ANNONCE FRANCHE, mais UNE SEULE FOIS par version : reposer la question à
+                        // chaque lancement transformerait l'information en harcèlement, et
+                        // l'utilisateur finirait par cliquer sans lire.
+                        try { AnnonceMaj(maj); } catch { }
                     };
                 }
             }
@@ -590,12 +596,34 @@ namespace BTOptimizer
                                 if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
                                 {
                                     string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
-                                    al.Add("Nouvelle version d'ONYX disponible : " + dispo
-                                         + " (menu ⋯ → « Vérifier les mises à jour »).");
                                     // Mémorisée pour l'affichage DANS l'app : la notification Windows
                                     // peut être manquée (PC absent, notifications coupées), l'en-tête
                                     // de la fenêtre, lui, reste visible tant que la mise à jour est là.
                                     try { UpdateFlag.Set(dispo); } catch { }
+                                    // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » :
+                                    // une mise à jour n'est pas une alerte de santé, et un titre
+                                    // générique se referme sans être lu. Envoyée ici plutôt qu'avec
+                                    // le lot du Gardien, qui pourrait ne jamais partir s'il n'y a
+                                    // aucune autre alerte à signaler.
+                                    try
+                                    {
+                                        if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
+                                                "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
+                                        {
+                                            BeginInvoke((Action)(() =>
+                                            {
+                                                try
+                                                {
+                                                    _tray.Visible = true;
+                                                    _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
+                                                    _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
+                                                    _tray.ShowBalloonTip(10000);
+                                                }
+                                                catch { }
+                                            }));
+                                        }
+                                    }
+                                    catch { }
                                 }
                                 else { try { UpdateFlag.Clear(); } catch { } }
                             }
@@ -644,6 +672,27 @@ namespace BTOptimizer
                 }
                 catch { }
             });
+        }
+
+        /// <summary>
+        /// Annonce la mise à jour au lancement — une seule fois par version. Les fois suivantes,
+        /// seuls le titre de la fenêtre et le journal la rappellent : l'utilisateur a été informé,
+        /// il a le droit de reporter sans qu'on le relance à chaque démarrage.
+        /// </summary>
+        private void AnnonceMaj(string version)
+        {
+            if (UpdateFlag.AAnnoncer() == null) return;   // déjà montrée pour cette version
+            UpdateFlag.MarqueAnnonce();
+            if (MessageBox.Show(this,
+                    "Une nouvelle version d'ONYX est disponible : " + version + "\n\n"
+                    + "Tes réglages, ta mémoire du Copilote et ton journal sont CONSERVÉS par la mise à jour.\n\n"
+                    + "L'ouvrir maintenant ? (Sinon, le titre de la fenêtre te le rappellera tant qu'elle n'est "
+                    + "pas installée — cette question ne reviendra pas pour cette version.)",
+                    "ONYX — mise à jour disponible",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            {
+                try { ShowUpdateCheck(); } catch { }
+            }
         }
 
         /// <summary>
