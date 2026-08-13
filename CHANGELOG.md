@@ -4,6 +4,27 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.65 — Fréquences GPU verrouillées, hyperviseur démasqué, profil pilote mieux jugé
+- **Verrouiller les fréquences GPU au maximum, façon K-Boost.** La carte cesse de faire redescendre
+  sa fréquence entre deux scènes : plus de montées ni de descentes, donc des **creux d'images plus
+  réguliers**. Obtenu avec l'outil officiel du pilote, sans rien installer. Honnêtement : ce **n'est
+  pas** un gain de FPS moyen — une carte déjà à 100 % tourne déjà au maximum — et ça se paie en
+  consommation, chaleur et bruit, en permanence. C'est pour ça que ce réglage n'est dans aucun
+  préréglage : il se choisit.
+- **Windows tourne peut-être dans un hyperviseur sans que tu le saches.** Installer WSL2, Docker ou
+  le Bac à sable active la « Plateforme de machine virtuelle », qui démarre un hyperviseur à chaque
+  démarrage — Windows s'exécute alors au-dessus de lui, et chaque accès mémoire passe par une couche
+  de traduction en plus. Le constat précédent ne regardait que l'intégrité mémoire (HVCI) et **ratait
+  entièrement ce cas**, pourtant le plus répandu. ONYX le détecte maintenant, **nomme le logiciel
+  responsable**, et signale le pire cas : hyperviseur actif avec **aucun** service de sécurité en
+  cours — tu paies la virtualisation sans la protection. Il ne coupe rien tout seul : désactiver
+  l'hyperviseur casse WSL2 et Docker, l'arbitrage t'appartient.
+- **Le profil pilote « Ultra faible latence » est mieux jugé.** ONYX ne le considérait nocif que si
+  le processeur saturait. Une mesure réelle a montré l'angle mort : processeur à 45 %, carte à 42 %,
+  **les deux à moitié occupés** — c'est justement la signature du problème, puisque sans file de
+  rendu chacun attend l'autre. Le critère se résume désormais à l'essentiel : ce profil n'est
+  bénéfique que si la carte travaille déjà à fond.
+
 ## v15.64 — Un réglage d'ONYX cassait une page de Windows, et les notifications n'arrivaient jamais
 - **Une page des Paramètres Windows plantait à cause d'ONYX.** Système → Marche/Arrêt s'ouvrait sur
   un rectangle vide. Cause trouvée : le réglage qui désactive le **service de capteurs**. La page
