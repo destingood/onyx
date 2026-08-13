@@ -116,7 +116,10 @@ namespace BTOptimizer
         private void Tick()
         {
             if (!_running) return;
-            try { var ps = _etw.Snapshot(2000); _liveFps = ps.Count > 0 ? ps[0].Fps : double.NaN; } catch { }
+            // Le jeu mesure, c'est celui au premier plan : pendant un banc d'essai, un navigateur
+            // accelere presente plus vite qu'un jeu bride a 60 Hz et prendrait sa place.
+            try { var j = FpsEtw.ChoisirJeu(_etw.Snapshot(2000), FpsEtw.PidPremierPlan());
+                  _liveFps = j != null ? j.Fps : double.NaN; } catch { }
             if (_durSec > 0 && _sw.Elapsed.TotalSeconds >= _durSec) Finish();
             else _canvas.Invalidate();
         }
@@ -129,9 +132,10 @@ namespace BTOptimizer
             try
             {
                 var ps = _etw.Snapshot(Math.Max(1000, windowMs));
-                if (ps.Count > 0)
+                var choisi = FpsEtw.ChoisirJeu(ps, FpsEtw.PidPremierPlan());
+                if (choisi != null)
                 {
-                    var t = ps[0];
+                    var t = choisi;
                     _game = t.Name; _avg = t.Fps; _low1 = t.OnePctLowFps; _low01 = t.TenthPctLowFps; _worstMs = t.WorstMs; _frames = t.Total;
                 }
             }
