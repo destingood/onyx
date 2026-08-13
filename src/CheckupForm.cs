@@ -42,6 +42,7 @@ namespace BTOptimizer
                 ScheduledDefragOff(),
                 DefragServiceOff(),
                 FastStartupSansHibernation(),
+                ServicesInterdits(),
                 ClearPageFile(),
                 LargeSystemCache(),
                 UpdateBlocked(),
@@ -106,6 +107,28 @@ namespace BTOptimizer
                 {
                     Sys.SetScheduledTask(DefragTask, true);
                     log("Optimisation planifiée des lecteurs réactivée.", 1);
+                }
+            };
+        }
+
+        // Services qu'aucune liste de « debloat » ne devrait couper : une page de Windows en meurt.
+        // Le constat double le garde-fou automatique — celui-ci répare au lancement, celui-là rend
+        // la chose VISIBLE et explique laquelle des pages était cassée.
+        private static Item ServicesInterdits()
+        {
+            List<ServiceGuard.Regle> v = ServiceGuard.Violations();
+            bool bad = v.Count > 0;
+            return new Item
+            {
+                Name = "Service désactivé dont une page de Windows a besoin",
+                Problem = bad,
+                Status = bad ? ServiceGuard.Texte(v)
+                             : "aucun (les services critiques sont au moins en démarrage manuel)",
+                Fix = delegate(Action<string, int> log)
+                {
+                    int n = ServiceGuard.Soigne(log);
+                    log(n + " service(s) remis en démarrage manuel : ils ne tournent pas au repos, "
+                      + "mais Windows peut les lancer à la demande.", 1);
                 }
             };
         }
