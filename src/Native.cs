@@ -27,6 +27,21 @@ namespace BTOptimizer
                 SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
         }
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+        private const uint SPI_SETMOUSESPEED = 0x0071;
+
+        /// <summary>Applique la VITESSE du pointeur (curseur du panneau, 1 à 20) immédiatement.
+        /// À ne pas confondre avec l'accélération : seul le 6ᵉ cran (10) donne un rapport 1:1 —
+        /// aux autres valeurs Windows multiplie le déplacement et saute ou duplique des pixels.</summary>
+        public static void SetMouseSpeed(int speed)
+        {
+            if (speed < 1) speed = 1;
+            if (speed > 20) speed = 20;
+            SystemParametersInfo(SPI_SETMOUSESPEED, 0, new IntPtr(speed), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+        }
+
         [DllImport("ntdll.dll")]
         private static extern int NtQueryTimerResolution(out uint minimum, out uint maximum, out uint current);
 
