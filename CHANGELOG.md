@@ -4,6 +4,47 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.63 — Souris au pixel près, veille USB, latence audio et la vraie raison des échecs de SFC
+- **Vitesse du pointeur au 6ᵉ cran.** ONYX traitait l'*accélération* de la souris mais jamais le
+  *curseur de vitesse*. Or seule la valeur du milieu donne un rapport **1:1** : au-dessus Windows
+  saute des pixels, en dessous il en duplique. Ta souris perdait donc en précision même avec
+  l'accélération coupée. Effet immédiat, sans redémarrage.
+- **Veille USB coupée périphérique par périphérique.** Le réglage du plan d'alimentation est global
+  et saute dès qu'on change de plan. Chaque concentrateur USB porte en plus **sa propre case**
+  « Autoriser l'ordinateur à éteindre ce périphérique » : tant qu'elle est cochée, le réveil d'un
+  hub inactif coûte quelques millisecondes au premier mouvement — pile quand on tenait une visée
+  immobile. Certaines de ces clés appartiennent au système et peuvent refuser l'écriture : le
+  journal indique alors combien de concentrateurs ont **réellement** été traités, jamais un succès
+  supposé.
+- **Latence audio : deux réglages qui coûtent des millisecondes.** Le **mode exclusif refusé**
+  (l'application ne peut pas parler directement à la carte son, tout repasse par le mélangeur
+  système) et les **améliorations audio actives** (chaque effet est un calcul de plus avant la
+  sortie) sont désormais signalés. ONYX se contente de **lire** : ces valeurs sont protégées par le
+  système, et un format audio malformé rend un périphérique muet. Le bouton ouvre le panneau Son de
+  Windows.
+- **Plans d'alimentation en double.** Chaque script « boost » qui duplique le profil Performances
+  optimales en laisse un de plus, même nom, identifiant différent — **six empilés** sur la machine
+  de test. Sans gravité pour les performances, mais on ne sait plus lequel on règle. Le plan
+  **actif** et ceux de Windows ne sont jamais touchés.
+- **POURQUOI sfc /scannow échoue — enfin une réponse.** « Windows Resource Protection a trouvé des
+  fichiers endommagés mais n'a pas pu en réparer certains » : le message s'arrête là et on relance
+  SFC en boucle sans rien apprendre. La raison est écrite dans un journal de plusieurs dizaines de
+  mégaoctets, en anglais. ONYX le lit, reconnaît les causes connues (magasin de composants
+  endommagé, sources de réparation introuvables, fichiers non remplaçables) et **les traduit, en
+  citant les fichiers concernés**. Avec la marche à suivre : réparer l'IMAGE d'abord, SFC ensuite —
+  dans cet ordre uniquement, puisque SFC pioche ses fichiers de remplacement dans le magasin.
+- **Mesurer avant de réparer** : une analyse du magasin de composants précède la réparation. Quand
+  il est sain, les 10 à 20 minutes de réparation ne servent à rien — autant le dire que faire
+  patienter.
+- **Le journal de réparation n'est plus effacé automatiquement.** Il figurait parmi les fichiers
+  temporaires nettoyés par la routine d'entretien : ONYX jetait la preuve dont il a besoin pour
+  expliquer un échec. Il reste supprimable à la main (il grossit vite), mais plus jamais tout seul.
+- **Service « Optimiser les lecteurs » désactivé** détecté. Les listes de « services inutiles » le
+  citent régulièrement ; une fois coupé, ni le TRIM planifié ni l'outil d'optimisation ne démarrent,
+  et l'utilisateur ne reçoit qu'un message d'erreur sans rapport apparent.
+- Vérifié : compilation sans avertissement, **58 tests** sur les fonctions pures, et détections
+  confirmées sur une machine réelle.
+
 ## v15.62 — Ce qui étrangle un PC sans qu'on le voie : disques pleins, réglages annulés, poids mort
 - **ONYX faisait PERDRE des images à certaines machines, et c'est corrigé.** Le profil pilote NVIDIA
   « faible latence » imposait `Ultra Low Latency` + `1 image pré-rendue` à **tout le monde**. Ces deux
