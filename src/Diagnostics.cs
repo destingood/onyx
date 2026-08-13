@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport, SettingsCrash }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -216,6 +216,26 @@ namespace BTOptimizer
                     f.Add(new Finding(1, "Écran virtuel actif : « " + v + " » — un jeu lancé dessus perd des images, "
                         + "et ces cartes factices provoquent des erreurs de pilote à répétition. Désactive-la si tu ne joues pas à distance.",
                         FixKind.DeviceManager, "Gestionnaire"));
+            }
+            catch { }
+
+            // Une page des Paramètres Windows qui plante. Le journal d'événements ne donne qu'une
+            // enveloppe (0xc000027b) ; le motif réel est dans le vidage mémoire, et il désigne
+            // souvent un service désactivé par un « optimiseur » — le nôtre compris.
+            try
+            {
+                SettingsCrash.Rapport rc = SettingsCrash.DernierRapport();
+                if (rc != null)
+                {
+                    List<SettingsCrash.Suspect> sus = SettingsCrash.SuspectsMachine(rc);
+                    string quoi = "Une page des Paramètres Windows plante (" + rc.Page + ")";
+                    if (sus.Count > 0)
+                        f.Add(new Finding(2, quoi + " — un service désactivé est en cause. ONYX sait lequel et peut le "
+                            + "réparer sans annuler tes optimisations.", FixKind.SettingsCrash, "Enquêter"));
+                    else
+                        f.Add(new Finding(1, quoi + " — ONYX a lu la cause exacte dans le rapport de plantage.",
+                            FixKind.SettingsCrash, "Voir la cause"));
+                }
             }
             catch { }
 
