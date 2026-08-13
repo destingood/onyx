@@ -307,6 +307,10 @@ namespace BTOptimizer
                     case FixKind.CbsReport:
                         ShowCbsReport();
                         break;
+
+                    case FixKind.SettingsCrash:
+                        EnqueterPlantageParametres();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -344,6 +348,64 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Enquête sur une page des Paramètres qui plante : lit le vidage, nomme le réglage fautif,
+        /// et propose la réparation MINIMALE (service en Manuel, jamais en Automatique).
+        /// </summary>
+        private void EnqueterPlantageParametres()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                SettingsCrash.Rapport r = null;
+                List<SettingsCrash.Suspect> sus = new List<SettingsCrash.Suspect>();
+                try
+                {
+                    r = SettingsCrash.DernierRapport();
+                    if (r != null) sus = SettingsCrash.SuspectsMachine(r);
+                }
+                catch (Exception ex) { if (_log != null) _log("Enquête plantage : " + ex.Message, 3); }
+                SettingsCrash.Rapport rr = r; List<SettingsCrash.Suspect> ss = sus;
+                try { BeginInvoke((Action)(() => AfficherEnquete(rr, ss))); } catch { }
+            });
+        }
+
+        private void AfficherEnquete(SettingsCrash.Rapport r, List<SettingsCrash.Suspect> sus)
+        {
+            SetBusy(false);
+            string texte = SettingsCrash.Texte(r, sus);
+            if (r == null || sus == null || sus.Count == 0)
+            {
+                MessageBox.Show(this, texte, "Plantage des Paramètres Windows",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (MessageBox.Show(this,
+                    texte + "\n\nAppliquer cette réparation ?",
+                    "Plantage des Paramètres Windows",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = SettingsCrash.PasserEnManuel(sus, _log); }
+                catch (Exception ex) { if (_log != null) _log("Réparation : " + ex.Message, 3); }
+                int fait = n;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, fait + " service(s) repassé(s) en démarrage manuel.\n\n"
+                        + "Rouvre la page des Paramètres concernée pour vérifier. Si elle plante encore, "
+                        + "relance l'enquête après le prochain plantage : le rapport suivant désignera "
+                        + "un autre coupable.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         /// <summary>
