@@ -303,6 +303,10 @@ namespace BTOptimizer
                     case FixKind.CleanPowerPlans:
                         CleanPowerPlans();
                         break;
+
+                    case FixKind.CbsReport:
+                        ShowCbsReport();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -340,6 +344,35 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Traduit le journal CBS : POURQUOI SFC a échoué, et quels fichiers il n'a pas pu réparer.
+        /// Lecture seule — ce bouton ne répare rien, il explique.
+        /// </summary>
+        private void ShowCbsReport()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                string texte;
+                try
+                {
+                    string contenu = CbsLog.Fin(CbsLog.CheminDefaut, 2 * 1024 * 1024);
+                    texte = CbsLog.Texte(CbsLog.Analyse(contenu), CbsLog.FichiersNonReparables(contenu, 12));
+                }
+                catch (Exception ex) { texte = "Lecture du journal impossible : " + ex.Message; }
+                string t = texte;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this,
+                        t + "\n\nMarche à suivre : répare d'abord l'IMAGE (menu Système → « Réparer Windows », qui "
+                          + "lance DISM), puis relance SFC. Dans cet ordre uniquement : SFC pioche ses fichiers de "
+                          + "remplacement dans le magasin de composants, donc il échoue tant que ce magasin est abîmé.",
+                        "Journal de réparation Windows (CBS)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); } catch { }
+            });
         }
 
         /// <summary>
