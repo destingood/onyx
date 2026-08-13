@@ -191,6 +191,48 @@ namespace BTOptimizer
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode"), 2)
             });
 
+            // Profil pilote NVIDIA à faible latence, CHOISI d'après la machine. Le mode « Ultra »
+            // (+ 1 image pré-rendue) supprime la file d'attente de rendu, or c'est ce tampon qui
+            // absorbe les à-coups du processeur : sur un PC limité par le CPU, il fait PERDRE des
+            // images. On applique donc le profil sûr, et Ultra seulement quand la mesure en jeu
+            // montre une carte graphique réellement à fond.
+            list.Add(new Tweak
+            {
+                Id = "nv_latency_profile", Category = Cat.Gpu, Recommended = true, Esport = true,
+                Name = "Profil pilote NVIDIA à faible latence (adapté à ta machine)",
+                Desc = "Réduit la latence côté pilote sans assécher la file de rendu : « Mode faible latence = Activé » "
+                     + "et images pré-rendues laissées au jeu. Le mode « Ultra » n'est retenu QUE si la mesure « qui me "
+                     + "limite ? » montre ta carte graphique à fond — sur un PC limité par le processeur, Ultra coûte des "
+                     + "images et provoque des chutes brutales. Sans mesure : profil sûr, jamais Ultra à l'aveugle. "
+                     + "Sans effet si tu n'as pas de GPU NVIDIA. « Rétablir » remet les réglages d'usine du pilote.",
+                Apply = () =>
+                {
+                    if (!Sys.NvpiAvailable()) return;          // pas de GPU NVIDIA / outil absent : sans objet
+                    double c, g; DateTime q;
+                    if (!Bottleneck.LastMeasure(out c, out g, out q)) { c = -1; g = -1; }
+                    if (!NvProfile.Applique(NvProfile.Recommande(c, g), null))
+                        throw new InvalidOperationException("nvidiaProfileInspector a refusé le profil.");
+                },
+                Revert = () =>
+                {
+                    if (!Sys.NvpiAvailable()) return;
+                    if (!NvProfile.Retire(null))
+                        throw new InvalidOperationException("nvidiaProfileInspector a refusé le retour aux réglages d'usine.");
+                },
+                Check = () =>
+                {
+                    // « Indéterminé » quand on ne peut rien affirmer : pas d'outil, ou aucun profil
+                    // encore posé par ONYX. Un Check qui répond null n'est JAMAIS compté comme une
+                    // dérive — on ne crie pas au loup sans preuve.
+                    if (!Sys.NvpiAvailable()) return null;
+                    NvProfile.Kind pose; DateTime quand;
+                    if (!NvProfile.Applique(out pose, out quand)) return null;
+                    double c, g; DateTime q;
+                    if (!Bottleneck.LastMeasure(out c, out g, out q)) { c = -1; g = -1; }
+                    return pose == NvProfile.Recommande(c, g);
+                }
+            });
+
             list.Add(new Tweak
             {
                 Id = "fso_disable", Category = Cat.Gpu, Recommended = true, Esport = true,

@@ -196,5 +196,38 @@ namespace BTOptimizer
 
         /// <summary>Retire tout ce que l'app a imposé au pilote (retour aux réglages d'usine).</summary>
         public static bool Retire(Action<string, int> log) { return Applique(Kind.Defaut, log); }
+
+        /// <summary>
+        /// AUTO-RÉPARATION AU LANCEMENT — ONYX défait de lui-même le tort qu'il a causé.
+        ///
+        /// Attendre que l'utilisateur ouvre un panneau et clique n'est pas suffisant ici : le
+        /// réglage fautif a été posé PAR L'APP, il coûte des images à chaque partie, et la personne
+        /// concernée ne soupçonne même pas qu'il existe. On le retire donc tout seul.
+        ///
+        /// Quatre verrous, parce qu'on touche au pilote graphique sans rien demander :
+        ///  1. seulement si c'est ONYX qui a posé « Ultra » (jamais un réglage fait à la main) ;
+        ///  2. seulement s'il existe une VRAIE mesure faite en jeu — sans preuve, on ne touche à rien ;
+        ///  3. seulement si cette mesure montre un PC limité par le processeur ;
+        ///  4. et l'action est écrite au journal, jamais silencieuse.
+        /// </summary>
+        public static bool SoigneSiNocif(Action<string, int> log)
+        {
+            try
+            {
+                Kind pose; DateTime quand;
+                if (!Applique(out pose, out quand) || pose != Kind.Ultra) return false;   // (1)
+                double cpuAvg, gpuAvg; DateTime mesureLe;
+                if (!Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out mesureLe)) return false;   // (2)
+                if (!UltraNocif(cpuAvg, gpuAvg)) return false;   // (3)
+                if (Sys.FindNvpi() == null) return false;
+                if (!Applique(Kind.Sur, null)) return false;
+                if (log != null)   // (4)
+                    log("Profil NVIDIA « Ultra faible latence » retiré automatiquement : ta machine est limitée par le "
+                        + "processeur (CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " % en jeu), ce profil "
+                        + "supprimait la file de rendu et te faisait perdre des images. Profil sûr appliqué à la place.", 2);
+                return true;
+            }
+            catch { return false; }
+        }
     }
 }

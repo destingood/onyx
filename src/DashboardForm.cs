@@ -537,6 +537,11 @@ namespace BTOptimizer
                     //    par jour : juste après une mise à jour, l'installateur est périmé tout de
                     //    suite. Silencieux, jamais bloquant.
                     try { OldVersions.Sweep(Log); } catch { }
+                    // 0 bis) AUTO-RÉPARATION : si ONYX a posé « Ultra faible latence » sur une
+                    //    machine que la mesure montre limitée par le processeur, ce profil lui
+                    //    coûte des images à chaque partie — et l'utilisateur ne soupçonne pas qu'il
+                    //    existe. On le retire tout seul, en l'écrivant au journal.
+                    try { NvProfile.SoigneSiNocif(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;
