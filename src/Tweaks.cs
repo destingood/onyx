@@ -75,6 +75,50 @@ namespace BTOptimizer
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSpeed"), "0")
             });
 
+            // Interruptions audio empilées sur le cœur 0. Mesuré sur une machine réelle : cœur 0 à
+            // 15,8 % de DPC et 8 % d'interruptions, les quinze autres à zéro — et c'est le cœur où
+            // tourne le thread principal du jeu. Répartir ne change PAS le mécanisme d'interruption,
+            // donc aucun risque de perte de son : on demande seulement à Windows de ne pas tout
+            // poser au même endroit. C'est déjà ce que fait le stockage sur cette machine.
+            list.Add(new Tweak
+            {
+                Id = "audio_irq_spread", Category = Cat.Audio, Esport = true, Reboot = true,
+                Name = "Répartir les interruptions audio sur tous les cœurs",
+                Desc = "Les contrôleurs audio (carte mère et sortie HDMI de la carte graphique) empilent souvent "
+                     + "leurs interruptions sur le cœur 0 — celui-là même où tourne le thread principal du jeu. "
+                     + "Ce réglage demande à Windows de les étaler. Le mécanisme d'interruption n'est PAS modifié : "
+                     + "aucun risque pour le son. Effet au prochain redémarrage. « Rétablir » rend la main à Windows.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.Repartir(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun contrôleur audio n'a accepté l'écriture (clés protégées).");
+                },
+                Revert = () => IrqTuning.NePlusRepartir(null),
+                Check = () => IrqTuning.EtatRepartition()
+            });
+
+            // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
+            // pilotes audio démarrent sans son en MSI. Hors presets, avertissement explicite.
+            list.Add(new Tweak
+            {
+                Id = "audio_msi", Category = Cat.Audio, Reboot = true,
+                Name = "⚠ Interruptions audio par message (MSI) — RISQUE de perte de son",
+                Desc = "Fait passer les contrôleurs audio des interruptions par ligne (ancien mécanisme, qui se "
+                     + "concentre sur le cœur 0) aux interruptions par message. Gain de latence supérieur à la simple "
+                     + "répartition. MAIS : certains pilotes audio gèrent mal MSI et démarrent SANS SON. C'est "
+                     + "réversible en décochant puis en redémarrant — sauf qu'il faut le faire sans entendre le PC. "
+                     + "Ne prends ce réglage que si tu sais revenir en arrière à l'aveugle.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.ActiverMsi(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun contrôleur audio n'a accepté l'écriture (clés protégées).");
+                },
+                Revert = () => IrqTuning.DesactiverMsi(null),
+                Check = () => IrqTuning.EtatMsi()
+            });
+
             // Équivalent du « K-Boost » d'EVGA Precision X1 : la carte reste en fréquence maximale
             // au lieu de redescendre entre deux scènes. Volontairement HORS PRESETS — ça consomme,
             // ça chauffe et ça fait du bruit en permanence, et ça ne rapporte rien à qui joue déjà
