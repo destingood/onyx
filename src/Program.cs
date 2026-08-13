@@ -46,6 +46,9 @@ namespace BTOptimizer
                 try
                 {
                     Sys.Init();
+                    // Identité de l'application AVANT toute fenêtre : sans elle, Windows refuse
+                    // silencieusement les vraies notifications d'une application de bureau.
+                    try { WinToast.DeclareIdentite(); } catch { }
                     if (!LicenseForm.EnsureAccepted()) return;
                     Application.Run(new DashboardForm());
                 }
