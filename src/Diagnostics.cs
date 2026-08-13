@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -216,6 +216,38 @@ namespace BTOptimizer
                     f.Add(new Finding(1, "Écran virtuel actif : « " + v + " » — un jeu lancé dessus perd des images, "
                         + "et ces cartes factices provoquent des erreurs de pilote à répétition. Désactive-la si tu ne joues pas à distance.",
                         FixKind.DeviceManager, "Gestionnaire"));
+            }
+            catch { }
+
+            // Latence audio : deux réglages coûtent réellement des millisecondes. On ne signale que
+            // ce qui est EXPLICITEMENT mauvais dans le registre — une valeur absente signifie que
+            // Windows applique son défaut, ce qui ne prouve rien et ne mérite pas d'alerte.
+            try
+            {
+                List<AudioLatency.Sortie> sorties = AudioLatency.Sorties();
+                List<AudioLatency.Sortie> excl = AudioLatency.ExclusifRefuse(sorties);
+                if (excl.Count > 0)
+                    f.Add(new Finding(1, "Mode exclusif refusé sur " + AudioLatency.Noms(excl, 2)
+                        + " — une application (jeu, logiciel audio) ne peut pas parler directement à la carte son : "
+                        + "tout repasse par le mélangeur de Windows.", FixKind.AudioPanel, "Panneau Son"));
+                List<AudioLatency.Sortie> amel = AudioLatency.AmeliorationsActives(sorties);
+                if (amel.Count > 0)
+                    f.Add(new Finding(1, "Améliorations audio actives sur " + AudioLatency.Noms(amel, 2)
+                        + " — chaque effet (égalisation, spatialisation, réduction de bruit) est un calcul de plus "
+                        + "avant la sortie du son.", FixKind.AudioPanel, "Panneau Son"));
+            }
+            catch { }
+
+            // Plans d'alimentation en double : chaque script « boost » qui fait un
+            // powercfg -duplicatescheme en crée un de plus, même nom, GUID différent. Sans gravité
+            // pour les performances, mais on ne sait plus lequel on règle.
+            try
+            {
+                List<PowerPlans.Plan> doublons = PowerPlans.Doublons(PowerPlans.Lister());
+                if (doublons.Count > 0)
+                    f.Add(new Finding(1, doublons.Count + " plan(s) d'alimentation en double — laissés par des scripts "
+                        + "d'optimisation successifs. Le plan actif et ceux de Windows ne sont pas concernés.",
+                        FixKind.CleanPowerPlans, "Nettoyer"));
             }
             catch { }
 

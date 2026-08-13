@@ -292,6 +292,17 @@ namespace BTOptimizer
                     case FixKind.NvLatencySafe:
                         NvLatencySafe();
                         break;
+
+                    case FixKind.AudioPanel:
+                        // Ces réglages vivent dans des clés protégées par le système, et un format
+                        // audio malformé rend un périphérique muet : ONYX ouvre le panneau natif
+                        // plutôt que d'écrire à l'aveugle.
+                        StartShell("mmsys.cpl", null);
+                        break;
+
+                    case FixKind.CleanPowerPlans:
+                        CleanPowerPlans();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -329,6 +340,58 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Supprime les plans d'alimentation en double laissés par les scripts d'optimisation.
+        /// Le plan ACTIF et les plans intégrés de Windows ne sont jamais proposés.
+        /// </summary>
+        private void CleanPowerPlans()
+        {
+            List<PowerPlans.Plan> doublons;
+            try { doublons = PowerPlans.Doublons(PowerPlans.Lister()); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (doublons.Count == 0)
+            {
+                MessageBox.Show(this, "Aucun doublon : tes plans d'alimentation sont propres.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Reload();
+                return;
+            }
+
+            var liste = new System.Text.StringBuilder();
+            foreach (var p in doublons) liste.Append("• ").Append(p.Nom).Append("   (").Append(p.Guid).Append(")\n");
+            if (MessageBox.Show(this,
+                    "Supprimer ces " + doublons.Count + " plan(s) d'alimentation en double ?\n\n"
+                    + liste
+                    + "\n• Ce sont des copies laissées par des scripts « boost » : chaque exécution de "
+                    + "powercfg -duplicatescheme en crée une nouvelle, même nom, GUID différent.\n"
+                    + "• Ton plan ACTIF n'est pas dans la liste, ni les plans intégrés de Windows.\n"
+                    + "• Réversible : `powercfg -restoredefaultschemes` régénère les plans de Windows.",
+                    "Plans d'alimentation en double",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = PowerPlans.Supprimer(doublons, _log); }
+                catch (Exception ex) { if (_log != null) _log("Nettoyage des plans : échec (" + ex.Message + ").", 3); }
+                int fait = n;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, fait + " plan(s) supprimé(s)"
+                        + (fait < doublons.Count ? ", " + (doublons.Count - fait) + " ont résisté (voir le journal)." : "."),
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         /// <summary>
