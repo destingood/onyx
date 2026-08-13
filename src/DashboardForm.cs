@@ -608,19 +608,30 @@ namespace BTOptimizer
                         try
                         {
                             _tray.Visible = true;
+                            string titre, corps;
                             if (sos != null)
                             {
-                                _tray.BalloonTipTitle = "🆘 ONYX a remarqué un crash";
-                                _tray.BalloonTipText = sos + " — clique : je te dis POURQUOI (enquête sur la cause exacte).";
+                                titre = "🆘 ONYX a remarqué un crash";
+                                corps = sos + " — clique : je te dis POURQUOI (enquête sur la cause exacte).";
                             }
                             else
                             {
-                                _tray.BalloonTipTitle = "🛡 Gardien ONYX — " + al.Count + " alerte(s)";
-                                _tray.BalloonTipText = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
+                                titre = "🛡 Gardien ONYX — " + al.Count + " alerte(s)";
+                                corps = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
                             }
-                            _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
-                            TrayAlertBadge(sos != null ? 1 : al.Count);   // la pastille reste après la bulle
-                            _tray.ShowBalloonTip(10000);
+                            TrayAlertBadge(sos != null ? 1 : al.Count);   // la pastille reste après la notification
+
+                            // VRAIE notification Windows d'abord : elle s'enregistre dans le centre
+                            // de notifications, donc elle est retrouvable si l'utilisateur était
+                            // absent ou en jeu. La bulle de la zone de notification, elle, disparaît
+                            // sans laisser de trace — on ne s'en sert que si le toast échoue.
+                            if (!WinToast.Show(titre, corps))
+                            {
+                                _tray.BalloonTipTitle = titre;
+                                _tray.BalloonTipText = corps;
+                                _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
+                                _tray.ShowBalloonTip(10000);
+                            }
                         }
                         catch { }
                     }));
