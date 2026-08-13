@@ -163,7 +163,10 @@ namespace BTOptimizer
         public static long RecoverableMb()
         {
             long mb = 0;
-            try { foreach (var t in Sys.CleanTargets()) mb += t.SizeMB; } catch { }
+            // Le genre "ia" (Copilot, Recall) est exclu : c'est de l'historique, pas du
+            // temporaire. L'annoncer ici gonflerait le « récupérable SANS RISQUE » avec des
+            // Mo qu'on ne touchera jamais tout seul.
+            try { foreach (var t in Sys.CleanTargets()) if (t.Kind != "ia") mb += t.SizeMB; } catch { }
             return mb;
         }
 
@@ -186,10 +189,13 @@ namespace BTOptimizer
                 int n = 0;
                 try
                 {
+                    // "ia" écarté partout : l'utilisateur a cliqué « libérer l'espace », pas
+                    // « efface mon historique Copilot/Recall ». Ça, ça se coche à la main
+                    // dans la fenêtre Nettoyage disque.
                     List<Sys.CleanTarget> targets = Sys.CleanTargets();
-                    foreach (var t in targets) before += t.SizeMB;
-                    foreach (var t in targets) { try { n += Sys.CleanTargetNow(t, log); } catch { } }
-                    foreach (var t in Sys.CleanTargets()) after += t.SizeMB;
+                    foreach (var t in targets) { if (t.Kind != "ia") before += t.SizeMB; }
+                    foreach (var t in targets) { if (t.Kind == "ia") continue; try { n += Sys.CleanTargetNow(t, log); } catch { } }
+                    foreach (var t in Sys.CleanTargets()) { if (t.Kind != "ia") after += t.SizeMB; }
                 }
                 catch { return Say("Le nettoyage n'a pas pu aller au bout (fichiers verrouillés par Windows)."); }
                 long freed = Math.Max(0, before - after);
