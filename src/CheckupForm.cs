@@ -40,6 +40,7 @@ namespace BTOptimizer
                 PagefileDisabled(),
                 TrimDisabled(),
                 ScheduledDefragOff(),
+                DefragServiceOff(),
                 ClearPageFile(),
                 LargeSystemCache(),
                 UpdateBlocked(),
@@ -104,6 +105,28 @@ namespace BTOptimizer
                 {
                     Sys.SetScheduledTask(DefragTask, true);
                     log("Optimisation planifiée des lecteurs réactivée.", 1);
+                }
+            };
+        }
+
+        // Le SERVICE derrière l'optimisation, distinct de la tâche planifiée ci-dessus. Les listes
+        // de « services inutiles à désactiver » le citent régulièrement. Une fois coupé, ni
+        // l'optimisation planifiée, ni « defrag /O », ni dfrgui ne fonctionnent : le SSD n'est plus
+        // re-TRIMé, et l'utilisateur ne reçoit qu'un message d'erreur sans rapport apparent.
+        // « Manuel » suffit : Windows démarre le service quand il en a besoin.
+        private static Item DefragServiceOff()
+        {
+            bool off = Sys.ServiceDisabled("defragsvc");
+            return new Item
+            {
+                Name = "Service « Optimiser les lecteurs » (defragsvc) désactivé",
+                Problem = off,
+                Status = off ? "DÉSACTIVÉ — l'outil d'optimisation ne peut plus démarrer du tout (ni TRIM, ni défragmentation)"
+                             : "correct (démarrage manuel)",
+                Fix = delegate(Action<string, int> log)
+                {
+                    Sys.ConfigureService("defragsvc", "demand", false, false);
+                    log("Service « Optimiser les lecteurs » remis en démarrage manuel.", 1);
                 }
             };
         }
