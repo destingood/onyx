@@ -23,6 +23,7 @@ namespace BTOptimizer
         private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
         private NotifyIcon _tray;
+        private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
         private ContextMenuStrip _toolsMenu;
         private Timer _sysTimer;
         private bool _trayShown;
@@ -74,11 +75,18 @@ namespace BTOptimizer
                 string maj = UpdateFlag.EnAttente();
                 if (maj != null)
                 {
+                    // Rappel PERMANENT et discret : tant que la mise à jour n'est pas posée, le
+                    // titre le dit. Une notification se manque, un titre reste sous les yeux.
                     Text = "ONYX — QG     •  mise à jour " + maj + " disponible";
+                    MonteBandeauMaj(maj);   // et, DANS l'app, un bandeau qui ne dépend d'aucune notification
                     Shown += (s, e) =>
                     {
                         try { Log("Une mise à jour d'ONYX est disponible : version " + maj
                                 + " (menu ⋯ → « Vérifier les mises à jour »).", 2); } catch { }
+                        // ANNONCE FRANCHE, mais UNE SEULE FOIS par version : reposer la question à
+                        // chaque lancement transformerait l'information en harcèlement, et
+                        // l'utilisateur finirait par cliquer sans lire.
+                        try { AnnonceMaj(maj); } catch { }
                     };
                 }
             }
@@ -590,12 +598,50 @@ namespace BTOptimizer
                                 if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
                                 {
                                     string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
-                                    al.Add("Nouvelle version d'ONYX disponible : " + dispo
-                                         + " (menu ⋯ → « Vérifier les mises à jour »).");
                                     // Mémorisée pour l'affichage DANS l'app : la notification Windows
                                     // peut être manquée (PC absent, notifications coupées), l'en-tête
                                     // de la fenêtre, lui, reste visible tant que la mise à jour est là.
                                     try { UpdateFlag.Set(dispo); } catch { }
+                                    // La fenêtre est peut-être ouverte pendant que le Gardien
+                                    // découvre la version : le bandeau apparaît sans attendre le
+                                    // prochain lancement.
+                                    try
+                                    {
+                                        BeginInvoke((Action)(() =>
+                                        {
+                                            try
+                                            {
+                                                Text = "ONYX — QG     •  mise à jour " + dispo + " disponible";
+                                                MonteBandeauMaj(dispo);
+                                            }
+                                            catch { }
+                                        }));
+                                    }
+                                    catch { }
+                                    // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » :
+                                    // une mise à jour n'est pas une alerte de santé, et un titre
+                                    // générique se referme sans être lu. Envoyée ici plutôt qu'avec
+                                    // le lot du Gardien, qui pourrait ne jamais partir s'il n'y a
+                                    // aucune autre alerte à signaler.
+                                    try
+                                    {
+                                        if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
+                                                "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
+                                        {
+                                            BeginInvoke((Action)(() =>
+                                            {
+                                                try
+                                                {
+                                                    _tray.Visible = true;
+                                                    _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
+                                                    _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
+                                                    _tray.ShowBalloonTip(10000);
+                                                }
+                                                catch { }
+                                            }));
+                                        }
+                                    }
+                                    catch { }
                                 }
                                 else { try { UpdateFlag.Clear(); } catch { } }
                             }
@@ -644,6 +690,112 @@ namespace BTOptimizer
                 }
                 catch { }
             });
+        }
+
+        /// <summary>
+        /// Annonce la mise à jour au lancement — une seule fois par version. Les fois suivantes,
+        /// seuls le titre de la fenêtre et le journal la rappellent : l'utilisateur a été informé,
+        /// il a le droit de reporter sans qu'on le relance à chaque démarrage.
+        /// </summary>
+        private void AnnonceMaj(string version)
+        {
+            if (UpdateFlag.AAnnoncer() == null) return;   // déjà montrée pour cette version
+            UpdateFlag.MarqueAnnonce();
+            if (MessageBox.Show(this,
+                    "Une nouvelle version d'ONYX est disponible : " + version + "\n\n"
+                    + "Tes réglages, ta mémoire du Copilote et ton journal sont CONSERVÉS par la mise à jour.\n\n"
+                    + "L'ouvrir maintenant ? (Sinon, le bandeau en haut de la fenêtre te le rappellera "
+                    + "tant qu'elle n'est pas installée — cette question ne reviendra pas pour cette version.)",
+                    "ONYX — mise à jour disponible",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            {
+                try { ShowUpdateCheck(); } catch { }
+            }
+        }
+
+        /// <summary>
+        /// LE RAPPEL QUI RESTE — un bandeau en haut de la fenêtre, tant que la mise à jour n'est
+        /// pas posée.
+        ///
+        /// Les deux autres avis ne durent pas : la notification Windows passe (souvent pendant une
+        /// partie, ou pas du tout si les notifications sont coupées), et l'annonce au lancement ne
+        /// se montre qu'UNE fois par version — délibérément, pour ne pas harceler. Passé ces deux
+        /// instants, il ne restait que le titre de la fenêtre, que personne ne lit.
+        ///
+        /// Le bandeau, lui, reste sous les yeux et porte le bouton qui lance la mise à jour : plus
+        /// besoin de savoir qu'elle se cache dans le menu « ⋯ ».
+        ///
+        /// « Plus tard » le referme — un rappel ne doit pas devenir un mur — mais il REVIENT au
+        /// lancement suivant : reporter est un choix légitime, oublier n'en est pas un.
+        /// </summary>
+        private void MonteBandeauMaj(string version)
+        {
+            if (_bandeauMaj != null) return;   // déjà là (détection au lancement puis par le Gardien)
+
+            var bandeau = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 44,
+                BackColor = FpsUi.Card,
+                Padding = new Padding(18, 8, 12, 9)
+            };
+            bandeau.Paint += (s, e) =>
+            {
+                using (var pen = new Pen(FpsUi.GoldDim))
+                    e.Graphics.DrawLine(pen, 0, bandeau.Height - 1, bandeau.Width, bandeau.Height - 1);
+            };
+
+            // Ordre d'ajout = ordre d'ancrage inverse : le DERNIER ajouté se colle le plus au bord.
+            // Le contenu extensible (le texte) doit donc être ajouté EN PREMIER.
+            var texte = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Mise à jour " + version + " disponible — tes réglages et ton journal sont conservés.",
+                Font = FpsUi.Body,
+                ForeColor = FpsUi.Ink,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
+                UseMnemonic = false
+            };
+            bandeau.Controls.Add(texte);
+
+            // Le pictogramme a SA police : les polices de texte de l'app (Inter, Segoe UI) n'ont pas
+            // le glyphe et l'afficheraient en carré vide — vérifié au rendu.
+            bandeau.Controls.Add(new Label
+            {
+                Dock = DockStyle.Left,
+                Width = 30,
+                Text = "🔄",
+                Font = new Font("Segoe UI Emoji", 11f),
+                ForeColor = FpsUi.Gold,
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false
+            });
+
+            var installer = new PillButton("Mettre à jour maintenant") { Dock = DockStyle.Right };
+            installer.FitWidth();
+            installer.Click += (s, e) => { try { ShowUpdateCheck(); } catch { } };
+            bandeau.Controls.Add(installer);
+
+            bandeau.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 8, BackColor = FpsUi.Card });
+
+            var plusTard = new PillButton("Plus tard") { Dock = DockStyle.Right };
+            plusTard.FitWidth();
+            plusTard.Click += (s, e) =>
+            {
+                try
+                {
+                    bandeau.Visible = false;
+                    Log("Rappel de mise à jour masqué. Il reviendra au prochain lancement, "
+                        + "ou par le menu ⋯ → « Vérifier les mises à jour ».", 0);
+                }
+                catch { }
+            };
+            bandeau.Controls.Add(plusTard);
+
+            _bandeauMaj = bandeau;
+            Controls.Add(bandeau);
+            if (_rail != null) _rail.BringToFront();   // la barre latérale reste au-dessus quand elle s'ouvre
         }
 
         /// <summary>
