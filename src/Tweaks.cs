@@ -75,6 +75,28 @@ namespace BTOptimizer
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSpeed"), "0")
             });
 
+            // Équivalent du « K-Boost » d'EVGA Precision X1 : la carte reste en fréquence maximale
+            // au lieu de redescendre entre deux scènes. Volontairement HORS PRESETS — ça consomme,
+            // ça chauffe et ça fait du bruit en permanence, et ça ne rapporte rien à qui joue déjà
+            // avec une carte à 100 %. Ça se choisit.
+            list.Add(new Tweak
+            {
+                Id = "gpu_kboost", Category = Cat.Gpu,
+                Name = "⚡ Verrouiller les fréquences GPU au maximum (façon K-Boost)",
+                Desc = "Empêche la carte de faire redescendre sa fréquence entre deux scènes : plus de montées ni de "
+                     + "descentes, donc des creux d'images plus réguliers. Ce n'est PAS un gain de FPS moyen — une "
+                     + "carte déjà à 100 % tourne déjà au maximum. En échange : consommation, chaleur et bruit de "
+                     + "ventilateurs en hausse, en permanence. Cartes NVIDIA uniquement. « Rétablir » rend la main au pilote.",
+                Apply = () =>
+                {
+                    if (!KBoost.Disponible()) return;   // pas de GPU NVIDIA : sans objet, pas une erreur
+                    if (!KBoost.Activer(null))
+                        throw new InvalidOperationException("le pilote a refusé le verrouillage des fréquences.");
+                },
+                Revert = () => { if (KBoost.Disponible()) KBoost.Desactiver(null); },
+                Check = () => KBoost.Etat()
+            });
+
             // Vitesse du pointeur au 6ᵉ cran. À ne pas confondre avec l'accélération ci-dessus :
             // c'est le CURSEUR de vitesse. Seule la valeur 10 donne un rapport 1:1 — aux autres
             // crans Windows multiplie le déplacement et se met à sauter ou dupliquer des pixels,
