@@ -65,6 +65,24 @@ namespace BTOptimizer
             _rail.BringToFront();   // la barre superposée doit rester au-dessus du contenu
 
             BuildTray();
+            // Rappel VISIBLE d'une mise à jour en attente. La notification Windows est fugace (elle
+            // passe pendant une partie, ou n'apparaît pas du tout si les notifications sont
+            // coupées) : le titre de la fenêtre, lui, reste sous les yeux à chaque ouverture tant
+            // que la version n'est pas installée.
+            try
+            {
+                string maj = UpdateFlag.EnAttente();
+                if (maj != null)
+                {
+                    Text = "ONYX — QG     •  mise à jour " + maj + " disponible";
+                    Shown += (s, e) =>
+                    {
+                        try { Log("Une mise à jour d'ONYX est disponible : version " + maj
+                                + " (menu ⋯ → « Vérifier les mises à jour »).", 2); } catch { }
+                    };
+                }
+            }
+            catch { }
             StartGuardian();   // contrôle silencieux des signaux vitaux (1×/jour ; muet si tout va bien)
             // Démarrage minimisé (optionnel) : ONYX naît dans la zone de notification — le Gardien
             // surveille chaque jour, aucune fenêtre ne s'impose. Ctrl+Alt+O le fait apparaître.
@@ -139,6 +157,7 @@ namespace BTOptimizer
             opti.DropDownItems.Add("💾 Exporter mon profil…", null, (s, e) => ExportProfile());
             opti.DropDownItems.Add("💾 Importer un profil…", null, (s, e) => ImportProfile());
             opti.DropDownItems.Add("🔁 Restauration (points & sauvegardes)", null, (s, e) => OpenDialog(new RestoreForm(Log)));
+            opti.DropDownItems.Add("📝 Problèmes rencontrés (registre local)", null, (s, e) => OpenDialog(new ProblemForm(Log)));
             m.Add(opti);
 
             var jeux = new ToolStripMenuItem("🎮  Jeux");
@@ -563,14 +582,25 @@ namespace BTOptimizer
                                 string st;
                                 var nu = Updater.Check(out st);
                                 if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
-                                    al.Add("Nouvelle version d'ONYX disponible : " + nu.Ver.Major + "." + nu.Ver.Minor.ToString("00")
+                                {
+                                    string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
+                                    al.Add("Nouvelle version d'ONYX disponible : " + dispo
                                          + " (menu ⋯ → « Vérifier les mises à jour »).");
+                                    // Mémorisée pour l'affichage DANS l'app : la notification Windows
+                                    // peut être manquée (PC absent, notifications coupées), l'en-tête
+                                    // de la fenêtre, lui, reste visible tant que la mise à jour est là.
+                                    try { UpdateFlag.Set(dispo); } catch { }
+                                }
+                                else { try { UpdateFlag.Clear(); } catch { } }
                             }
                         }
                         catch { }
                         // Mesures faites : en VEILLE, on s'arrête là — on mesure, on ne dérange pas.
                         if (Guardian.AlertsMuted()) return;
-                        al = Guardian.Alerts();
+                        // AddRange, PAS d'affectation : « al = Guardian.Alerts() » ÉCRASAIT la liste
+                        // et jetait l'avis de mise à jour qu'on venait d'y mettre — la notification
+                        // n'apparaissait donc jamais, sauf par hasard s'il y avait une autre alerte.
+                        al.AddRange(Guardian.Alerts());
                         if (al.Count == 0) return;
                     }
                     BeginInvoke((Action)(() =>
