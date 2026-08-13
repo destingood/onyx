@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -216,6 +216,19 @@ namespace BTOptimizer
                     f.Add(new Finding(1, "Écran virtuel actif : « " + v + " » — un jeu lancé dessus perd des images, "
                         + "et ces cartes factices provoquent des erreurs de pilote à répétition. Désactive-la si tu ne joues pas à distance.",
                         FixKind.DeviceManager, "Gestionnaire"));
+            }
+            catch { }
+
+            // Réparations Windows restées en échec. « Windows Resource Protection a trouvé des
+            // fichiers endommagés mais n'a pas pu en réparer certains » : le message s'arrête là et
+            // l'utilisateur relance SFC en boucle. La raison est écrite dans CBS.log — on la lit.
+            try
+            {
+                List<CbsLog.Constat> cbs = CbsLog.AnalyseMachine();
+                if (CbsLog.Grave(cbs))
+                    f.Add(new Finding(2, "Le journal de réparation de Windows signale des fichiers système que SFC "
+                        + "n'a PAS pu réparer — relancer SFC seul n'y changera rien tant que l'image n'est pas restaurée.",
+                        FixKind.CbsReport, "Voir la cause"));
             }
             catch { }
 

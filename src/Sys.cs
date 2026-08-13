@@ -1055,7 +1055,11 @@ namespace BTOptimizer
                 // Cache de livraison des mises à jour (P2P) : se reconstitue tout seul.
                 new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
                 // Journaux d'installation de composants (souvent volumineux).
-                new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
+                // CBS.log est le SEUL endroit qui explique pourquoi un SFC a échoué. Le supprimer
+                // par réflexe, c'est jeter la preuve juste avant d'en avoir besoin. Il reste
+                // proposé (il grossit vite), mais classé "diag" : à ne cocher que si aucune
+                // réparation n'est en cours, et jamais par la routine d'entretien automatique.
+                new CleanTarget { Name = "Journaux de réparation Windows (CBS — utiles si SFC échoue)", Kind = "diag", Path = Path.Combine(win, @"Logs\CBS") },
                 new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
                 new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
@@ -2015,6 +2019,19 @@ namespace BTOptimizer
         /// </summary>
         public static void RepairWindows(Action<string, int> log)
         {
+            // MESURER AVANT DE RÉPARER. /ScanHealth ne modifie RIEN : il analyse le magasin de
+            // composants et dit s'il est sain. Quand il l'est, les 10 à 20 minutes de
+            // /RestoreHealth ne servent à rien — autant l'annoncer plutôt que de faire patienter.
+            log("Analyse du magasin de composants (DISM /ScanHealth) — quelques minutes, aucune modification...", 0);
+            NativeResult scan = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /ScanHealth", LongRunTimeoutMs);
+            string sc = (scan.Output ?? "").ToLowerInvariant();
+            bool sain = sc.Contains("no component store corruption detected")
+                     || sc.Contains("aucune corruption du magasin de composants");
+            if (sain) log("DISM : magasin de composants SAIN — la réparation ne trouvera probablement rien à faire.", 1);
+            else if (sc.Contains("repairable") || sc.Contains("réparable"))
+                log("DISM : magasin de composants abîmé mais RÉPARABLE — la réparation qui suit a de bonnes chances d'aboutir.", 2);
+            else log("DISM : analyse terminée (code " + scan.ExitCode + ").", 0);
+
             log("Réparation de l'image Windows (DISM /RestoreHealth) — patiente, cela peut prendre 10-20 min...", 0);
             NativeResult dism = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /RestoreHealth", LongRunTimeoutMs);
             string do_ = (dism.Output ?? "").ToLowerInvariant();
