@@ -865,9 +865,9 @@ namespace BTOptimizer
                 var lab = new Label
                 {
                     Left = 16, Top = 14, Width = 515, Height = 66, ForeColor = FpsUi.Dim,
-                    Text = "1) Va sur discord.com/developers/applications → « New Application » → nomme-la ONYX.\n"
-                         + "2) Copie l'APPLICATION ID (18-19 chiffres) et colle-le ci-dessous.\n"
-                         + "3) (Optionnel) Rich Presence → Art Assets : uploade un logo nommé exactement « logo »."
+                    Text = "La présence Discord marche déjà : ONYX a sa propre application, rien à faire.\n"
+                         + "Ce champ ne sert qu'à la REMPLACER par la tienne (18-20 chiffres) — pour tester,\n"
+                         + "ou pour afficher ton propre nom. Vide-le pour revenir à celle d'ONYX."
                 };
                 var tb = new TextBox { Left = 16, Top = 88, Width = 400, Text = DiscordPresence.AppId };
                 var ok = new Button
@@ -883,15 +883,21 @@ namespace BTOptimizer
                 f.Controls.Add(lab); f.Controls.Add(tb); f.Controls.Add(ok); f.Controls.Add(hint);
                 f.AcceptButton = ok;
                 if (f.ShowDialog(this) != DialogResult.OK) return;
-                DiscordPresence.AppId = tb.Text;
-                DiscordPresence.Stop();
-                if (DiscordPresence.Configured)
+                string saisi = (tb.Text ?? "").Trim();
+                // Un identifiant saisi mais invalide ne doit PAS écraser silencieusement celui qui
+                // marche : on refuse, on le dit, et la présence continue de tourner.
+                if (saisi.Length > 0 && !DiscordPresence.EstValide(saisi))
                 {
-                    DiscordPresence.Enabled = true;
-                    DiscordPresence.Start();
-                    Log("Présence Discord configurée et démarrée (visible si Discord tourne).", 0);
+                    Log("Application ID ignoré (attendu : 18 à 20 chiffres). ONYX garde le sien.", 1);
+                    return;
                 }
-                else Log("App ID invalide (attendu : 18-19 chiffres) — présence toujours inactive.", 1);
+                DiscordPresence.AppId = saisi;
+                DiscordPresence.Stop();
+                DiscordPresence.Enabled = true;
+                DiscordPresence.Start();
+                Log(DiscordPresence.UtiliseCeluiDOnyx
+                        ? "Présence Discord démarrée avec l'application ONYX (visible si Discord tourne)."
+                        : "Présence Discord démarrée avec ton application (" + DiscordPresence.AppId + ").", 0);
             }
         }
 

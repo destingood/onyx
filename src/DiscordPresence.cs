@@ -12,9 +12,16 @@ namespace BTOptimizer
     /// dépendance externe. Se tait proprement si Discord n'est pas lancé, ou si l'App ID n'est pas
     /// encore configuré. Activable/désactivable, choix persisté (bt-discord.txt).
     ///
-    /// ⚠️ POUR L'ACTIVER RÉELLEMENT : crée une application « ONYX » sur
-    ///    https://discord.com/developers/applications , copie son « APPLICATION ID » dans AppId
-    ///    ci-dessous, et dans Rich Presence → Art Assets, uploade un logo nommé exactement "logo".
+    /// L'application « ONYX » du portail développeur Discord est désormais celle par défaut : la
+    /// présence fonctionne sans rien coller. Un identifiant personnel reste possible via le menu
+    /// (⋯ → Système), et il a la priorité — utile pour tester une autre application.
+    ///
+    /// Un Application ID n'est PAS un secret : c'est un identifiant public, présent en clair dans
+    /// tout client qui utilise Rich Presence. Il n'ouvre aucun accès au compte, contrairement au
+    /// jeton du bot — qui, lui, n'a rien à faire ici et n'y est pas.
+    ///
+    /// Pour que le logo s'affiche à côté du statut, l'application doit porter une ressource nommée
+    /// exactement « logo » dans Rich Presence → Art Assets. Sans elle, le texte s'affiche seul.
     /// </summary>
     internal static class DiscordPresence
     {
@@ -39,8 +46,15 @@ namespace BTOptimizer
             set { try { File.WriteAllText(ConfigPath, value ? "1" : "0"); } catch { } }
         }
 
-        /// <summary>Application ID Discord : collé par l'utilisateur (menu ⋯ → Système → ⭐ ONYX),
-        /// persisté dans bt-discord-appid.txt — plus besoin de recompiler pour l'activer.</summary>
+        /// <summary>Application « ONYX » officielle du portail développeur Discord. Identifiant
+        /// PUBLIC (voir la note de la classe) : c'est ce qui permet à la présence de marcher dès
+        /// l'installation, sans manipulation.</summary>
+        public const string AppIdParDefaut = "1537266582785495120";
+
+        /// <summary>Application ID Discord. Celui collé par l'utilisateur (menu ⋯ → Système)
+        /// l'emporte ; sinon l'application ONYX officielle sert. Un fichier présent mais illisible
+        /// n'est PAS pris pour argent comptant : on retombe sur le défaut plutôt que d'envoyer un
+        /// identifiant invalide à Discord, qui refuserait la connexion en silence.</summary>
         public static string AppId
         {
             get
@@ -51,12 +65,11 @@ namespace BTOptimizer
                     if (File.Exists(AppIdPath))
                     {
                         string s = File.ReadAllText(AppIdPath).Trim();
-                        ulong _u;
-                        if (s.Length >= 17 && s.Length <= 20 && ulong.TryParse(s, out _u)) { _appId = s; return _appId; }
+                        if (EstValide(s)) { _appId = s; return _appId; }
                     }
                 }
                 catch { }
-                _appId = "";
+                _appId = AppIdParDefaut;
                 return _appId;
             }
             set
@@ -66,8 +79,22 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>PUR : cette chaîne est-elle un Application ID Discord plausible ? Un identifiant
+        /// Discord (« snowflake ») est un entier non signé de 17 à 20 chiffres.</summary>
+        public static bool EstValide(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            s = s.Trim();
+            if (s.Length < 17 || s.Length > 20) return false;
+            ulong u;
+            return ulong.TryParse(s, out u) && u > 0;
+        }
+
         /// <summary>true si un App ID réel est configuré (sinon la présence reste inerte).</summary>
-        public static bool Configured { get { return AppId.Length >= 17; } }
+        public static bool Configured { get { return EstValide(AppId); } }
+
+        /// <summary>true si l'identifiant utilisé est celui d'ONYX, et non un identifiant personnel.</summary>
+        public static bool UtiliseCeluiDOnyx { get { return AppId == AppIdParDefaut; } }
 
         public static void StartIfEnabled()
         {
