@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.33.0.0")]
-[assembly: AssemblyFileVersion("15.33.0.0")]
+[assembly: AssemblyVersion("15.34.0.0")]
+[assembly: AssemblyFileVersion("15.34.0.0")]
 
 namespace BTOptimizer
 {
@@ -189,6 +189,38 @@ namespace BTOptimizer
                 var resD = actD.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(resD != null ? resD.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (resD != null && resD.Action != null ? resD.Action.Label : "(aucun)"));
+                Environment.Exit(0);
+            }
+
+            // BT_STORAGE=1 : analyse RÉELLE du centre de stockage (module par module, vraies mesures)
+            // puis inventaire des applications les plus lourdes. Aucune suppression : lecture seule.
+            if (Environment.GetEnvironmentVariable("BT_STORAGE") == "1")
+            {
+                foreach (Storage.DriveView dv in Storage.Drives())
+                    Console.WriteLine("Disque " + dv.Letter + " : " + Storage.Human(dv.UsedMB) + " / " + Storage.Human(dv.TotalMB)
+                        + "  (" + dv.FreePct + " % libres, niveau " + dv.Level + ")" + (dv.IsSystem ? "  [systeme]" : ""));
+
+                var swS = System.Diagnostics.Stopwatch.StartNew();
+                System.Collections.Generic.List<Storage.Module> mods = Storage.ScanAll(StorageSettings.Load(),
+                    delegate (string lab, int done, int tot) { if (lab != null) Console.WriteLine("… " + lab + " (" + (done + 1) + "/" + tot + ")"); });
+                Console.WriteLine("\nMODULES (" + swS.ElapsedMilliseconds + " ms) :");
+                long recoverable = 0;
+                foreach (Storage.Module mo in mods)
+                {
+                    Console.WriteLine("  " + mo.Id.PadRight(9) + " " + Storage.Human(mo.SizeMB).PadLeft(10)
+                        + "  · " + mo.Items.Count + " element(s) · surete " + Storage.SafetyLabel(mo.Safety)
+                        + (mo.Browse ? " · presentation" : "") + (mo.HasActions ? " · nettoyable" : ""));
+                    foreach (Storage.StorageItem si in mo.Items)
+                        Console.WriteLine("        - " + si.Name + "  " + si.SizeText + (si.Free == null ? "  (informatif)" : ""));
+                    if (!mo.Browse) recoverable += mo.FreeableMB;
+                }
+                Console.WriteLine("\nRECUPERABLE (superflu seul) : " + Storage.Human(Storage.TotalRecoverableMB(Storage.SafeSuperflu)));
+                Console.WriteLine("RECUPERABLE (+ a verifier)   : " + Storage.Human(Storage.TotalRecoverableMB(Storage.SafeVerifier)));
+                Console.WriteLine("TOTAL MODULES NETTOYABLES    : " + Storage.Human(recoverable));
+
+                var actS = ChatActions.MeasureHeavyApps();
+                var resS = actS.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
+                Console.WriteLine("\n" + (resS != null ? resS.Text : "(aucune réponse)"));
                 Environment.Exit(0);
             }
 
@@ -682,9 +714,21 @@ namespace BTOptimizer
                 bool dk3 = UtilityTools.DismRecommended("Nettoyage du magasin de composants recommandé : Oui")
                     && UtilityTools.DismRecommended("Component Store Cleanup Recommended : Yes")
                     && !UtilityTools.DismRecommended("recommandé : Non") && !UtilityTools.DismRecommended(null); if (dk3) ok39++; Console.WriteLine((dk3 ? "OK  " : "FAIL") + "  DISM : parseur FR/EN, Non/null=false");
+                // v15.34 : centre de stockage — « quelles applis prennent de la place » ne doit pas
+                // manger « libérer de l'espace » (bilan global) ni « applications au démarrage ».
+                bool dk4 = UtilityTools.IsHeavyApps("quelles applications prennent le plus de place")
+                    && UtilityTools.IsHeavyApps("les logiciels les plus lourds") && UtilityTools.IsHeavyApps("quel programme pese le plus")
+                    && !UtilityTools.IsHeavyApps("libérer de l'espace disque") && !UtilityTools.IsHeavyApps("les applications au demarrage")
+                    && !UtilityTools.IsHeavyApps("bonjour"); if (dk4) ok39++; Console.WriteLine((dk4 ? "OK  " : "FAIL") + "  applis lourdes : detecte, bilan global et demarrage exclus");
+                // v15.34 : gros fichiers (videos/archives) — sans manger les applis lourdes ni le bilan.
+                bool dk5 = UtilityTools.IsBigFiles("quels sont mes plus gros fichiers")
+                    && UtilityTools.IsBigFiles("les grosses videos qui prennent de la place") && UtilityTools.IsBigFiles("mes fichiers zip volumineux")
+                    && !UtilityTools.IsBigFiles("quelles applications prennent le plus de place")
+                    && !UtilityTools.IsBigFiles("ouvre un fichier") && !UtilityTools.IsBigFiles("libérer de l'espace disque")
+                    && !UtilityTools.IsBigFiles("bonjour"); if (dk5) ok39++; Console.WriteLine((dk5 ? "OK  " : "FAIL") + "  gros fichiers : detecte, applis lourdes et bilan global exclus");
 
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 5;
                 int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
@@ -1410,6 +1454,9 @@ namespace BTOptimizer
                 case "GameProfileForm": return new GameProfileForm(log);
                 case "NetworkForm": return new NetworkForm(log);
                 case "DiskForm": return new DiskForm(log);
+                case "StorageAppsForm": return new StorageAppsForm(log);
+                case "StorageConfigForm": return new StorageConfigForm(StorageSettings.Load());
+                case "StorageFilesForm": return new StorageFilesForm(log, new System.Collections.Generic.List<Storage.StorageItem>());
                 case "ShopFixForm": return new ShopFixForm(log);
                 case "LibsForm": return new LibsForm(log);
                 case "DefenderForm": return new DefenderForm(log);
@@ -1486,7 +1533,7 @@ namespace BTOptimizer
         private static void CaptureShellShots(string dir)
         {
             try { System.IO.Directory.CreateDirectory(dir); } catch { }
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme" };
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme", "Stockage" };
             var sizes = new System.Drawing.Size[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
             foreach (var sz in sizes)
             {
@@ -1496,10 +1543,12 @@ namespace BTOptimizer
                 dash.Show();
                 dash.ClientSize = sz;
                 Pump(450);
-                for (int p = 0; p < 8; p++)
+                for (int p = 0; p < names.Length; p++)
                 {
                     dash.Goto(p);
-                    Pump(names[p] == "Jeux" ? 3000 : 350);   // Jeux : laisse charger les jaquettes (cache Steam local)
+                    // Jeux : laisse charger les jaquettes (cache Steam local).
+                    // Stockage : laisse l'analyse des modules aboutir (mesures réelles, mises en cache).
+                    Pump(names[p] == "Jeux" ? 3000 : (names[p] == "Stockage" ? 25000 : 350));
                     try
                     {
                         using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
@@ -1540,6 +1589,29 @@ namespace BTOptimizer
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("  shot Collection-scrolled : " + ex.Message); }
+                // Stockage DÉFILÉ : la section « qui prend la place » est sous la ligne de flottaison.
+                try
+                {
+                    dash.Goto(8);
+                    var ps = dash.PageAt(8) as PageStorage;
+                    if (ps != null)
+                    {
+                        ps.ScrollTo(420);
+                        Pump(350);
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p8-Stockage-scrolled-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("  shot Stockage-scrolled : " + ex.Message); }
                 try { dash.Hide(); dash.Dispose(); } catch { }
                 Pump(120);
             }
@@ -1552,8 +1624,8 @@ namespace BTOptimizer
         /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
         private static void TestShellUi(ref int errors)
         {
-            Console.WriteLine("Shell le concurrent (dashboard + 8 pages, rendu hors-écran)...");
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            Console.WriteLine("Shell le concurrent (dashboard + 9 pages, rendu hors-écran)...");
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage" };
             // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
             // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
             try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
@@ -1571,7 +1643,7 @@ namespace BTOptimizer
             foreach (var sz in sizes)
             {
                 dash.ClientSize = sz;
-                for (int p = 0; p < 8; p++)
+                for (int p = 0; p < names.Length; p++)
                 {
                     try
                     {
@@ -1589,7 +1661,7 @@ namespace BTOptimizer
                     }
                 }
             }
-            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail compris.");
+            if (errors == 0) Console.WriteLine("  " + names.Length + " pages OK à 3 tailles (min / défaut / large), rail compris.");
             try { dash.Dispose(); } catch { }
         }
 
@@ -1647,6 +1719,10 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameModeForm", () => new GameModeForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DiscordForm", () => new DiscordForm(log), true),
+                // Stockage : liste préchargée VIDE = construction pure, sans déclencher l'inventaire.
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageAppsForm", () => new StorageAppsForm(log, new System.Collections.Generic.List<Storage.AppEntry>()), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageConfigForm", () => new StorageConfigForm(StorageSettings.Load()), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageFilesForm", () => new StorageFilesForm(log, new System.Collections.Generic.List<Storage.StorageItem>()), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;

@@ -29,10 +29,11 @@ namespace BTOptimizer
         public const string Services = "🧹 Services & arrière-plan";
         public const string Privacy  = "🕵 Confidentialité";
         public const string Reseau   = "🌐 Réseau";
+        public const string Stockage = "💽 Stockage";
 
         public static readonly string[] Order = new string[]
         {
-            Souris, Alim, Gpu, Audio, Systeme, Rapidite, Services, Privacy, Reseau
+            Souris, Alim, Gpu, Audio, Systeme, Rapidite, Services, Privacy, Reseau, Stockage
         };
     }
 }

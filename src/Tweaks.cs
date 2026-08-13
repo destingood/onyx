@@ -161,7 +161,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "hibernate_off", Category = Cat.Alim,
+                Id = "hibernate_off", Category = Cat.Stockage,
                 Name = "Désactiver la veille prolongée (libère hiberfil.sys)",
                 Desc = "Supprime l'hibernation ET le démarrage rapide : libère plusieurs Go sur le disque, arrêts 100 % « propres ». Optionnel.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/hibernate off", "Désactivation de la veille prolongée"),
@@ -814,13 +814,48 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "storage_sense_off", Category = Cat.Rapidite,
+                Id = "storage_sense_off", Category = Cat.Stockage,
                 Name = "Désactiver l'Assistant Stockage (Storage Sense)",
                 Desc = "Empêche le nettoyage automatique en arrière-plan. Sans effet sur l'espace disque tant que tu ne nettoies pas toi-même.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\StorageSense" },
                 Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal"),
                 Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\StorageSense", "AllowStorageSenseGlobal"), 0)
+            });
+
+            // Stockage réservé : Windows met de côté ~7 Go en permanence pour ses mises à jour. Sur
+            // un SSD de 256 Go c'est énorme. Le désactiver est OFFICIEL (DISM) et réversible ; les
+            // mises à jour continuent, elles utilisent simplement l'espace libre du disque.
+            list.Add(new Tweak
+            {
+                Id = "reserved_storage_off", Category = Cat.Stockage,
+                Name = "Libérer le stockage réservé de Windows (~7 Go)",
+                Desc = "Windows garde en permanence plusieurs Go rien que pour ses mises à jour. Commande OFFICIELLE (DISM), réversible. Le gain apparaît après un redémarrage.",
+                Reboot = true,
+                Apply  = () => Sys.RunThrow(Sys.Sys32("Dism.exe"), "/Online /Set-ReservedStorageState /State:Disabled", "Désactivation du stockage réservé"),
+                Revert = () => Sys.RunThrow(Sys.Sys32("Dism.exe"), "/Online /Set-ReservedStorageState /State:Enabled", "Réactivation du stockage réservé"),
+                // PassedPolicy passe à 0 quand la réservation est levée ; valeur absente = on ne sait pas.
+                Check  = () =>
+                {
+                    object v = Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "PassedPolicy");
+                    if (v == null) return (bool?)null;
+                    try { return Convert.ToInt32(v) == 0; } catch { return (bool?)null; }
+                }
+            });
+
+            // Vidage mémoire : par défaut Windows peut écrire un dump « automatique » de la taille de
+            // la RAM à chaque écran bleu. Le minidump suffit largement — c'est d'ailleurs ce que lit
+            // l'analyseur de plantages de ONYX.
+            list.Add(new Tweak
+            {
+                Id = "crashdump_small", Category = Cat.Stockage,
+                Name = "Limiter les vidages mémoire aux minidumps",
+                Desc = "À chaque écran bleu, Windows peut écrire un fichier de la taille de ta RAM (16, 32 Go…). Le minidump fait quelques Mo et garde tout ce qu'il faut pour diagnostiquer.",
+                Reboot = true,
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled", 3, RegistryValueKind.DWord),
+                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled", 7, RegistryValueKind.DWord),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\CrashControl", "CrashDumpEnabled"), 3)
             });
 
             list.Add(new Tweak

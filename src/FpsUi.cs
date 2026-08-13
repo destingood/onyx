@@ -179,6 +179,10 @@ namespace BTOptimizer
             l.Text = t; l.Font = f; l.ForeColor = c;
             l.BackColor = Color.Transparent;
             l.AutoSize = true;
+            // Sans ça, WinForms lit « & » comme un raccourci clavier : « Fichiers temporaires &
+            // caches » s'affichait « Fichiers temporaires  caches ». Aucun de nos libellés n'est
+            // un accélérateur.
+            l.UseMnemonic = false;
             return l;
         }
     }

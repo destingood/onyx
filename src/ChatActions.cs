@@ -162,9 +162,14 @@ namespace BTOptimizer
 
         public static long RecoverableMb()
         {
-            long mb = 0;
-            try { foreach (var t in Sys.CleanTargets()) mb += t.SizeMB; } catch { }
-            return mb;
+            return Storage.TotalRecoverableMB(Storage.SafeVerifier);
+        }
+
+        /// <summary>Ce qu'on peut rendre SANS que l'utilisateur perde quoi que ce soit de visible :
+        /// temporaires, caches, shaders. Exclut la corbeille et l'historique.</summary>
+        public static long RecoverableSafeMb()
+        {
+            return Storage.TotalRecoverableMB(Storage.SafeSuperflu);
         }
 
         private static string Human(long mb)
@@ -179,7 +184,9 @@ namespace BTOptimizer
             var a = new DocAssistant.ChatAction();
             a.Label = "Libérer l'espace (~" + Human(mb) + ")";
             a.IsChange = true;
-            a.Warning = "Supprime des fichiers temporaires et des caches qui se régénèrent. Tes fichiers personnels, jeux et sauvegardes ne sont pas touchés.";
+            a.Warning = "Supprime les fichiers temporaires et les caches qui se régénèrent, vide la corbeille et l'historique "
+                      + "de l'Explorateur (fichiers récents, miniatures). Tes fichiers personnels, tes jeux et tes sauvegardes "
+                      + "ne sont pas touchés. Pour choisir module par module : page Stockage.";
             a.Run = delegate (Action<string, int> log)
             {
                 long before = 0, after = 0;
@@ -194,6 +201,97 @@ namespace BTOptimizer
                 catch { return Say("Le nettoyage n'a pas pu aller au bout (fichiers verrouillés par Windows)."); }
                 long freed = Math.Max(0, before - after);
                 return Say("✅ Nettoyage terminé — " + Human(freed) + " libérés (" + n + " élément(s)).");
+            };
+            return a;
+        }
+
+        /// <summary>« Quelles applis prennent le plus de place ? » — la question que tout le monde se
+        /// pose et à laquelle Windows répond mal (« Programmes et fonctionnalités » affiche la taille
+        /// DÉCLARÉE dans le registre, souvent absente ou fausse). Ici les dossiers d'installation
+        /// sont mesurés. Lecture seule : rien n'est désinstallé sans passer par la fenêtre dédiée.</summary>
+        public static DocAssistant.ChatAction MeasureHeavyApps()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Les applications les plus lourdes"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Mesure des dossiers d'installation…", 0);
+                List<Storage.AppEntry> apps;
+                try { apps = Storage.ScanApps(null); }
+                catch { return Say("Je n'ai pas réussi à inventorier les applications installées sur ce PC."); }
+                if (apps == null || apps.Count == 0)
+                    return Say("Je ne trouve aucune application mesurable — c'est inhabituel. Passe par la page Stockage pour voir le reste.");
+
+                long total = 0;
+                foreach (Storage.AppEntry e in apps) total += e.SizeMB;
+
+                var sb = new StringBuilder();
+                sb.Append("📦 LES APPLICATIONS QUI PRENNENT LE PLUS DE PLACE :\n");
+                int n = 0;
+                foreach (Storage.AppEntry e in apps)
+                {
+                    if (n >= 8) break;
+                    sb.Append(n + 1).Append(". ").Append(e.Name).Append("  —  ").Append(e.SizeText);
+                    if (e.Estimated) sb.Append(" (taille déclarée, non mesurée)");
+                    sb.Append('\n');
+                    n++;
+                }
+                sb.Append("\nTotal des ").Append(apps.Count).Append(" applications mesurées : ").Append(Human(total)).Append('.');
+                sb.Append("\n\nJe ne désinstalle rien tout seul. Va dans 💽 Stockage → « Voir les applications » : "
+                        + "le désinstalleur OFFICIEL de chaque application s'y lance en un clic.");
+                var r = Say(sb.ToString());
+                r.Footer = "Astuce : les jeux ne sont pas ici — dis « jeux dormants » pour ceux auxquels tu ne joues plus.";
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>« Quels sont mes plus gros fichiers ? » — vidéos, archives (zip/rar/iso) et tout
+        /// le reste au-dessus du seuil, hors système et hors dossiers d'applications/jeux. Lecture
+        /// seule : la gestion (corbeille récupérable) se fait dans la fenêtre dédiée.</summary>
+        public static DocAssistant.ChatAction MeasureBigFiles()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Tes plus gros fichiers"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Balayage des disques (vidéos, archives, gros fichiers)…", 0);
+                StorageSettings st = StorageSettings.Load();
+                bool partial;
+                List<Storage.FileEntry> files;
+                try { files = Storage.ScanBigFiles(st.MinFileMB, Storage.AppRoots(), out partial); }
+                catch { return Say("Je n'ai pas réussi à balayer tes disques à l'instant."); }
+                if (files == null || files.Count == 0)
+                    return Say("Rien au-dessus de " + st.MinFileMB + " Mo hors applications et jeux — ton espace part ailleurs. "
+                             + "Dis « libère de l'espace » pour le grand bilan.");
+
+                long vid = 0, arc = 0, oth = 0;
+                foreach (Storage.FileEntry f in files)
+                {
+                    if (f.Cat == "videos") vid += f.SizeMB;
+                    else if (f.Cat == "archives") arc += f.SizeMB;
+                    else oth += f.SizeMB;
+                }
+
+                var sb = new StringBuilder();
+                sb.Append("🧱 TES PLUS GROS FICHIERS (hors système, applis et jeux) :\n");
+                int n = 0;
+                foreach (Storage.FileEntry f in files)
+                {
+                    if (n >= 8) break;
+                    string cat = f.Cat == "videos" ? "vidéo" : f.Cat == "archives" ? "archive" : "fichier";
+                    sb.Append(n + 1).Append(". ").Append(f.Name).Append("  —  ").Append(f.SizeText)
+                      .Append("  (").Append(cat).Append(", ").Append(f.Dir).Append(")\n");
+                    n++;
+                }
+                sb.Append("\nPar domaine : 🎬 vidéos ").Append(Human(vid))
+                  .Append(" · 🗜 archives ").Append(Human(arc))
+                  .Append(" · 🧱 autres ").Append(Human(oth)).Append('.');
+                if (partial) sb.Append("\n(Balayage plafonné dans le temps : les plus gros sont là — relance pour creuser.)");
+                sb.Append("\n\nGestion en un clic dans 💽 Stockage : tout part à la CORBEILLE Windows, donc récupérable.");
+                var r = Say(sb.ToString());
+                r.Footer = "Le seuil (" + st.MinFileMB + " Mo) se règle dans Stockage → Configurer.";
+                return r;
             };
             return a;
         }
@@ -386,11 +484,41 @@ namespace BTOptimizer
                 }
                 catch { }
 
+                // Les applications les plus lourdes : c'est souvent LA réponse, et Windows ne la donne
+                // pas honnêtement. Mesuré (et mis en cache), jamais touché.
+                try
+                {
+                    if (log != null) log("Applications installées…", 0);
+                    List<Storage.AppEntry> apps = Storage.ScanApps(null);
+                    if (apps != null && apps.Count > 0)
+                    {
+                        var top = new List<string>();
+                        for (int i = 0; i < apps.Count && i < 3; i++) top.Add(apps[i].Name + " ~" + apps[i].SizeText);
+                        sb.Append("• Tes applications les plus lourdes : ").Append(string.Join(" · ", top.ToArray()))
+                          .Append(" — page 💽 Stockage pour les ").Append(apps.Count).Append(" et la désinstallation officielle.\n");
+                    }
+                }
+                catch { }
+
+                // Les jeux oubliés : le plus gros gisement sur un PC de joueur, et de loin.
+                try
+                {
+                    long dormant = 0; int nb = 0;
+                    foreach (DormantGames.Entry g in DormantGames.Scan(null))
+                        if (g.IsDormant) { dormant += g.SizeMB; nb++; }
+                    if (dormant > 5120)
+                        sb.Append("• Jeux dormants : ").Append(nb).Append(" jeu(x) non lancés depuis des mois pèsent ")
+                          .Append(Human(dormant)).Append(" — dis « jeux dormants » pour les trier.\n");
+                }
+                catch { }
+
                 if (btn == null)
                     btn = OpenUrlAction("Ouvrir le nettoyage de stockage Windows", "ms-settings:storagesense",
                         "Ouvre les réglages Stockage de Windows. Rien n'est supprimé automatiquement.");
                 sb.Append("\n👉 Le bouton ci-dessous fait la récupération la plus rentable MAINTENANT. "
-                        + "Autres commandes : « désactive l'hibernation », « nettoyage profond ».");
+                        + "Pour choisir module par module (et régler ce qui est superflu ou non chez toi) : page 💽 Stockage. "
+                        + "Autres commandes : « désactive l'hibernation », « nettoyage profond », « quelles applis prennent "
+                        + "le plus de place », « mes plus gros fichiers ».");
                 return new DocAssistant.Reply { Text = sb.ToString(), Action = btn };
             };
             return a;

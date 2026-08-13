@@ -1030,6 +1030,11 @@ namespace BTOptimizer
             public bool IsRecycleBin;
             public long SizeMB;
             public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine)
+
+            /// <summary>Niveau de sûreté, utilisé par le centre de stockage pour faire la part des
+            /// choses : 0 = superflu (aucune perte possible), 1 = à vérifier (régénérable mais
+            /// visible pour l'utilisateur : historique, corbeille). Voir <see cref="Storage"/>.</summary>
+            public int Safety;
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -1056,13 +1061,54 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
                 // Journaux d'installation de composants (souvent volumineux).
                 new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
-                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
-                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
+                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Safety = 1, Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
+                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Safety = 1, Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
+            AddGamingCaches(list, local);
             AddBrowserCaches(list, local);
-            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin" });
-            foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
+            // La corbeille contient des fichiers que l'utilisateur a VUS : niveau 1, jamais dans le
+            // « superflu » automatique.
+            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin", Safety = 1 });
+            foreach (CleanTarget t in list) t.SizeMB = MeasureCleanTarget(t);
             return list;
+        }
+
+        // Caches des plateformes de jeu et des applis de gaming : tous régénérés au prochain
+        // lancement. Les shaders Steam se recompilent (quelques saccades au premier lancement).
+        private static void AddGamingCaches(System.Collections.Generic.List<CleanTarget> list, string local)
+        {
+            try
+            {
+                string steam = GetUser(@"Software\Valve\Steam", "SteamPath") as string;
+                if (!string.IsNullOrEmpty(steam))
+                {
+                    string sc = Path.Combine(steam.Replace('/', '\\'), @"steamapps\shadercache");
+                    if (Directory.Exists(sc))
+                        list.Add(new CleanTarget { Name = "Shaders Steam (recompilés au prochain lancement)", Kind = "gpu", Path = sc });
+                }
+            }
+            catch { }
+            try
+            {
+                string epic = Path.Combine(local, @"EpicGamesLauncher\Saved\webcache");
+                if (Directory.Exists(epic))
+                    list.Add(new CleanTarget { Name = "Cache du launcher Epic Games", Path = epic });
+            }
+            catch { }
+            try
+            {
+                string disc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"discord\Cache");
+                if (Directory.Exists(disc))
+                    list.Add(new CleanTarget { Name = "Cache Discord", Path = disc });
+            }
+            catch { }
+            try
+            {
+                string inet = Path.Combine(local, @"Microsoft\Windows\INetCache");
+                if (Directory.Exists(inet))
+                    list.Add(new CleanTarget { Name = "Cache Internet Windows (INetCache)", Path = inet });
+            }
+            catch { }
         }
 
         // Caches des navigateurs (tous profils) : Chrome, Edge, Brave (dossier Cache) et Firefox (cache2).
@@ -1114,7 +1160,9 @@ namespace BTOptimizer
             return dirs;
         }
 
-        private static long MeasureTarget(CleanTarget t)
+        /// <summary>Mesure (ou re-mesure) une cible en Mo. Public : le centre de stockage s'en sert
+        /// pour calculer le gain RÉEL après nettoyage (taille avant − taille après).</summary>
+        public static long MeasureCleanTarget(CleanTarget t)
         {
             try
             {

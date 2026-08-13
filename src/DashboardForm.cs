@@ -15,7 +15,7 @@ namespace BTOptimizer
         private Panel _rail, _host;
         private FlowLayoutPanel _pageToolBar;
         private readonly System.Collections.Generic.List<NavCell> _nav = new System.Collections.Generic.List<NavCell>();
-        private readonly FpsPage[] _pages = new FpsPage[8];
+        private readonly FpsPage[] _pages = new FpsPage[9];
         private int _current = -1;
 
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
@@ -174,6 +174,19 @@ namespace BTOptimizer
             check.DropDownItems.Add(new ToolStripSeparator());
             check.DropDownItems.Add("🧰 Entretien du PC (nettoyage, TRIM, caches, DNS — 6 routines)", null, (s, e) => OpenDialog(new MaintenanceForm(Log)));
             m.Add(check);
+
+            var stock = new ToolStripMenuItem("💽  Stockage");
+            stock.DropDownItems.Add("💽 Centre de stockage (tout l'espace, module par module)", null, (s, e) => ShowPage(8));
+            stock.DropDownItems.Add("📦 Applications les plus lourdes", null, (s, e) => OpenDialog(new StorageAppsForm(Log)));
+            stock.DropDownItems.Add("🎬 Vidéos, archives & gros fichiers (corbeille en un clic)", null, (s, e) => OpenDialog(new StorageFilesForm(Log, null)));
+            stock.DropDownItems.Add("🕹 Jeux dormants (récupérer de l'espace)", null, (s, e) => OpenDialog(new DormantGamesForm(Log)));
+            stock.DropDownItems.Add(new ToolStripSeparator());
+            stock.DropDownItems.Add("🧹 Nettoyage disque (temporaires, caches…)", null, (s, e) => OpenDialog(new CleanupForm(Log)));
+            stock.DropDownItems.Add("🧩 Nettoyage par application (winapp2)", null, (s, e) => OpenDialog(new Winapp2Form(Log)));
+            stock.DropDownItems.Add("💽 Jeux & disques (SSD/HDD, santé, espace)", null, (s, e) => OpenDialog(new DiskForm(Log)));
+            stock.DropDownItems.Add(new ToolStripSeparator());
+            stock.DropDownItems.Add("⚙ Réglages du stockage…", null, (s, e) => OpenDialog(new StorageConfigForm(StorageSettings.Load())));
+            m.Add(stock);
 
             var labo = new ToolStripMenuItem("🧪  Laboratoire");
             labo.DropDownItems.Add("Objectif 500 FPS", null, (s, e) => OpenDialog(new Fps500Form(Log)));
@@ -401,8 +414,8 @@ namespace BTOptimizer
             var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Mon compte");
             _rail.Controls.Add(_railProfile);
 
-            string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙" };
-            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙", "💽" };
+            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage" };
             for (int i = 0; i < glyphs.Length; i++)
             {
                 var cell = new NavCell(glyphs[i], tips[i]);
@@ -653,6 +666,7 @@ namespace BTOptimizer
                 case 5: p = new PageCollection(this); break;
                 case 6: p = new PageConsultation(this); break;
                 case 7: p = new PageSystem(this); break;
+                case 8: p = new PageStorage(this); break;
                 default: p = new PageDashboard(this); break;
             }
             try { AttachPageTools(p, idx); } catch { }
@@ -692,6 +706,15 @@ namespace BTOptimizer
                         Tool("Températures", () => OpenDialog(new ThermalForm(Log))),
                         Tool("🧰 Entretien", () => OpenDialog(new MaintenanceForm(Log))),
                         Tool("Rapport HTML", () => GenerateHealthReport()));
+                    break;
+                case 8: // Stockage
+                    p.SetTools(
+                        Tool("🎬 Gros fichiers", () => OpenDialog(new StorageFilesForm(Log, null))),
+                        Tool("🧹 Nettoyage classique", () => OpenDialog(new CleanupForm(Log))),
+                        Tool("🧩 Nettoyage par appli (winapp2)", () => OpenDialog(new Winapp2Form(Log))),
+                        Tool("🕹 Jeux dormants", () => OpenDialog(new DormantGamesForm(Log))),
+                        Tool("💽 Jeux & disques (santé SSD)", () => OpenDialog(new DiskForm(Log))),
+                        Tool("🧰 Entretien du PC", () => OpenDialog(new MaintenanceForm(Log))));
                     break;
                 // Laboratoire : ses outils sont désormais INTÉGRÉS EN CARTES dans la page
                 // (PageLab.Build) — donc pas de barre en bas ici (sinon doublon).

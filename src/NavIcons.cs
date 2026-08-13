@@ -14,7 +14,8 @@ namespace BTOptimizer
     internal static class NavIcons
     {
         public const int Dashboard = 0, Optimisations = 1, Jeux = 2, CheckUp = 3,
-                         Laboratoire = 4, Collection = 5, Consultation = 6, Systeme = 7, Outils = 8;
+                         Laboratoire = 4, Collection = 5, Consultation = 6, Systeme = 7,
+                         Stockage = 8, Outils = 9;
 
         /// <summary>Dessine l'icône <paramref name="id"/> centrée dans <paramref name="box"/>.</summary>
         public static void Draw(Graphics g, int id, RectangleF box, Color color)
@@ -107,6 +108,14 @@ namespace BTOptimizer
                         float cs = (float)Math.Cos(a), sn = (float)Math.Sin(a);
                         g.DrawLine(p, 12 + cs * 7.6f, 12 + sn * 7.6f, 12 + cs * 10.6f, 12 + sn * 10.6f);
                     }
+                    break;
+
+                case Stockage:       // disque (cylindre à plateaux)
+                    g.DrawEllipse(p, 4f, 3.5f, 16f, 5f);
+                    g.DrawLine(p, 4f, 6f, 4f, 18f);
+                    g.DrawLine(p, 20f, 6f, 20f, 18f);
+                    g.DrawArc(p, 4f, 9f, 16f, 5f, 0, 180);
+                    g.DrawArc(p, 4f, 15.5f, 16f, 5f, 0, 180);
                     break;
 
                 case Outils:         // trois points

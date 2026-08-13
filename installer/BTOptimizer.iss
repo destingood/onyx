@@ -31,6 +31,20 @@
 #ifexist "..\dist\coreclr.dll"
   #define SelfContained
 #endif
+; Cas du MONO-FICHIER autonome (Build.bat : PublishSingleFile) : coreclr.dll est bundle
+; DANS l'exe, la detection ci-dessus le rate donc et le setup exigerait .NET a tort.
+; Signature de ce mode : pas de BTOptimizer.runtimeconfig.json sur le disque non plus
+; (bundle lui aussi). Une publication dependante du runtime, elle, l'a toujours.
+#ifnexist "..\dist\BTOptimizer.runtimeconfig.json"
+  #define SelfContained
+#endif
+
+; Rappel a la compilation : on sait ainsi tout de suite quel type de setup on fabrique.
+#ifdef SelfContained
+  #pragma message "Mode AUTONOME detecte -> aucun runtime .NET exige du client."
+#else
+  #pragma message "Mode DEPENDANT DU RUNTIME -> le setup verifiera .NET Desktop 10 x64."
+#endif
 
 [Setup]
 AppId={{2B539D2F-3B49-466B-B095-FEB9A1123E65}

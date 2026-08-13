@@ -4,6 +4,44 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.34 — 💽 CENTRE DE STOCKAGE : une 9e page qui fait la part des choses
+- **Nouvelle page « Stockage »** dans la barre latérale. Onyx savait déjà nettoyer, mesurer le disque et
+  repérer les jeux oubliés — mais en pièces détachées. Tout est désormais réuni en trois zones :
+  - **Tes disques** : une jauge par disque, verdict en couleur, et la **part récupérable dessinée en vert
+    à la fin de la barre** (on voit où l'espace va revenir) ;
+  - **Libérer de l'espace** : une carte par module, chacune avec son interrupteur et son poids réel ;
+  - **Qui prend la place ?** : applications, jeux dormants, dossiers persos — montrés, jamais touchés.
+- **Trois niveaux de sûreté**, et c'est toi qui choisis ton cran (⚙ Configurer) :
+  `superflu` (temporaires, caches, shaders : aucune perte possible) · `à vérifier` (historique, corbeille,
+  veille prolongée, WinSxS) · `données perso` (**jamais** dans un lot, garanti au niveau du code : ces
+  éléments n'ont même pas d'action de suppression).
+- **📦 « Quelles applis prennent le plus de place ? »** — la question que Windows répond mal.
+  « Programmes et fonctionnalités » affiche la taille *déclarée* dans le registre, souvent absente ou
+  fausse ; ici les dossiers d'installation sont **mesurés** (et mis en cache). Nouvelle fenêtre triable,
+  et la désinstallation passe toujours par le désinstalleur **officiel** de l'application — jamais par une
+  suppression de dossier, qui laisserait une installation morte.
+- **🎬 Tous les domaines, pas que les applis** : trois nouveaux modules balayent les disques
+  (hors système, hors dossiers d'applications et de jeux — leurs fichiers leur appartiennent) :
+  **Vidéos & films**, **Archives & images disque** (zip, rar, 7z, iso, vhd…) et **Autres gros
+  fichiers** (installeurs, exports…). Fenêtre de gestion dédiée : tri par colonne, sélection
+  multiple, et la SEULE suppression proposée est la **corbeille Windows** — récupérable tant
+  qu'elle n'est pas vidée ; le gain annoncé n'est compté que sur les fichiers réellement partis.
+  Les fichiers OneDrive « en ligne seulement » sont exclus (leur taille ne vit pas sur le disque).
+- **Tout est modulable** (`bt-stockage.txt`) : modules analysés, cran de sûreté, **seuil « gros
+  fichier » réglable** (50 Mo → 4 Go), liste « ne plus me proposer », seuil d'alerte automatique.
+- **Nouvelles cibles de nettoyage** : shaders Steam, cache du launcher Epic, cache Discord, INetCache.
+  Le gain affiché après coup est **remesuré**, jamais estimé.
+- **Nouvelle catégorie d'optimisations « 💽 Stockage »** (197 → 199) : *libérer le stockage réservé de
+  Windows (~7 Go)* et *limiter les vidages mémoire aux minidumps* (un écran bleu peut sinon écrire un
+  fichier de la taille de ta RAM), rejointes par l'hibernation et l'Assistant Stockage.
+- **Copilote** : « quelles applications prennent le plus de place » et « quels sont mes plus gros
+  fichiers » compris, deux nouvelles pastilles d'accueil, et le grand bilan stockage intègre applis
+  lourdes + jeux dormants. Le seuil d'alerte proactive suit désormais ton réglage.
+- Gratuit : la vue d'ensemble et tout le nettoyage superflu. Pro : Windows en profondeur et l'inventaire
+  complet des applications.
+- Harnais **172/172** ; UITEST **9 pages** à 3 tailles et **48/48** formes, 0 erreur. Nouveau hook
+  `BT_STORAGE=1` (analyse réelle en console, lecture seule).
+
 ## v15.33 — Tous les outils du Copilote TRIÉS en 4 familles
 - L'accueil du Copilote n'est plus un vrac de 20 pastilles : elles sont **rangées sous 4 en-têtes dorés**,
   dans l'ordre de la vraie vie :

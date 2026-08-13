@@ -219,6 +219,14 @@ namespace BTOptimizer
             if (UtilityTools.IsDeepClean(s))
                 return new Reply { Text = "Nettoyage OFFICIEL du magasin de composants Windows (DISM) : souvent 2 à 8 Go récupérés, "
                     + "5 à 20 minutes, aucun risque pour tes fichiers.", Action = ChatActions.ComponentCleanupAction() };
+            if (UtilityTools.IsHeavyApps(s))
+                return new Reply { Text = "Je mesure le poids RÉEL de chaque application installée (Windows se contente de la taille "
+                    + "déclarée, souvent fausse). Quelques secondes la première fois, ensuite c'est en cache…",
+                    Action = ChatActions.MeasureHeavyApps() };
+            if (UtilityTools.IsBigFiles(s))
+                return new Reply { Text = "Je passe tes disques au crible : vidéos, archives (zip, rar, iso…) et autres gros fichiers, "
+                    + "hors système et hors dossiers de jeux. Quelques secondes par disque…",
+                    Action = ChatActions.MeasureBigFiles() };
 
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).

@@ -626,6 +626,30 @@ namespace BTOptimizer
                 || (n.Contains("composants") && n.Contains("windows"));
         }
 
+        /// <summary>« quelles applis prennent le plus de place », « logiciels les plus lourds » → vrai.
+        /// Exige un SUJET (appli/logiciel/programme) ET une notion de POIDS : « les applications au
+        /// démarrage » ou « libérer de l'espace » ne doivent pas atterrir ici.</summary>
+        internal static bool IsHeavyApps(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (!Regex.IsMatch(n, "\\b(appli|applis|application|applications|logiciel|logiciels|programme|programmes)\\b")) return false;
+            return n.Contains("place") || n.Contains("espace") || n.Contains("lourd") || n.Contains("gros")
+                || n.Contains("pese") || n.Contains("taille") || n.Contains("volumineu") || n.Contains("encombre");
+        }
+
+        /// <summary>« quels sont mes plus gros fichiers », « les grosses vidéos » → vrai.
+        /// Sujet FICHIER (fichier/vidéo/archive/zip/rar/iso) + notion de poids — les applis lourdes
+        /// ont leur propre détecteur (<see cref="IsHeavyApps"/>), testé en premier côté routage.</summary>
+        internal static bool IsBigFiles(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (IsHeavyApps(s)) return false;
+            bool subj = Regex.IsMatch(n, "\\b(fichier|fichiers|video|videos|film|films|archive|archives|zip|rar|7z|iso|telechargement|telechargements)\\b");
+            if (!subj) return false;
+            return n.Contains("gros") || n.Contains("lourd") || n.Contains("volumineu") || n.Contains("place")
+                || n.Contains("espace") || n.Contains("pese") || n.Contains("taille") || n.Contains("encombre");
+        }
+
         /// <summary>La sortie de « Dism /AnalyzeComponentStore » recommande-t-elle un nettoyage ? (FR/EN)</summary>
         internal static bool DismRecommended(string output)
         {
