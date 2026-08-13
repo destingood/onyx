@@ -4,6 +4,25 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.66 — Quel pilote fait saccader ton PC ? La réponse, en direct
+- **Latence DPC/ISR par pilote, mesurée en direct.** Un DPC est un travail que les pilotes diffèrent.
+  Tant qu'il s'exécute, il **monopolise son cœur** : rien d'autre ne passe. Un pilote qui tient un
+  cœur pendant 3 ms produit une saccade que ni le processeur ni la carte graphique n'expliquent — et
+  c'est invisible dans le Gestionnaire des tâches, qui ne montre qu'un pourcentage global. ONYX
+  nomme désormais le pilote responsable, sans installer aucun outil.
+- **Le classement se fait sur le PIRE temps d'exécution, pas sur le total.** C'est la différence qui
+  compte : un pilote qui cumule 900 ms en milliers d'exécutions très courtes ne gêne personne, tandis
+  qu'une **seule** exécution de 3 ms bloque son cœur et se voit à l'écran. Une adresse qui ne
+  correspond à aucun pilote connu est annoncée comme telle — jamais un nom deviné.
+- **Répartir les interruptions audio sur tous les cœurs.** Les contrôleurs audio (carte mère et
+  sortie HDMI de la carte graphique) empilent souvent leurs interruptions sur le cœur 0 — celui-là
+  même où tourne le thread principal du jeu. Mesuré sur une machine réelle : **cœur 0 à 15,8 % de
+  temps DPC, les quinze autres à zéro**. Le nouveau réglage demande à Windows de les étaler. Le
+  mécanisme d'interruption n'est pas modifié : aucun risque pour le son.
+- **Interruptions audio par message (MSI)**, en option et hors préréglages : gain supérieur, mais
+  certains pilotes audio démarrent **sans son** ensuite. Réversible — l'avertissement le dit
+  franchement, parce que la marche arrière se fait sans entendre le PC.
+
 ## v15.65 — Fréquences GPU verrouillées, hyperviseur démasqué, profil pilote mieux jugé
 - **Verrouiller les fréquences GPU au maximum, façon K-Boost.** La carte cesse de faire redescendre
   sa fréquence entre deux scènes : plus de montées ni de descentes, donc des **creux d'images plus
