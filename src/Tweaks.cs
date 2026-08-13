@@ -2123,11 +2123,25 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "sensor_service_off", Category = Cat.Services,
-                Name = "Désactiver le service de capteurs (PC sans capteur)",
-                Desc = "Coupe SensorService (luminosité auto, orientation), inutile sur un PC fixe sans capteur. À laisser actif sur un portable. « Rétablir » le remet à la demande.",
-                Apply  = () => Sys.ConfigureService("SensorService", "disabled", true, false),
-                Revert = () => Sys.ConfigureService("SensorService", "demand", false, false),
-                Check  = () => Sys.ServiceDisabled("SensorService")
+                Name = "Mettre le service de capteurs en veille (PC sans capteur)",
+                // DÉSACTIVÉ, ce service FAIT PLANTER une page de Windows. Constaté et prouvé par
+                // bissection sur une machine réelle : Paramètres → Système → Marche/Arrêt s'ouvre
+                // sur un rectangle vide. Le réglage « Économiseur d'énergie » interroge les
+                // capteurs (luminosité ambiante) ; service désactivé = aucun endpoint RPC =
+                // exception non rattrapée dans le modèle de vue XAML = page morte.
+                //
+                // « Manuel » donne le même résultat sans le bug : le service ne démarre PAS tout
+                // seul, il ne consomme rien, et Windows le lance uniquement si une page en a besoin.
+                Desc = "Met SensorService en démarrage MANUEL (luminosité auto, orientation) : il ne tourne plus de "
+                     + "lui-même sur un PC fixe sans capteur, donc le gain est le même qu'en le désactivant. "
+                     + "On ne le DÉSACTIVE pas : Windows en a besoin pour afficher la page « Marche/Arrêt » des "
+                     + "Paramètres, qui plante sans lui. « Rétablir » le remet en automatique.",
+                Apply  = () => Sys.ConfigureService("SensorService", "demand", true, false),
+                Revert = () => Sys.ConfigureService("SensorService", "auto", false, true),
+                // « Appliqué » = le service ne démarre plus tout seul. Manuel ET désactivé
+                // remplissent ce contrat : une machine déjà réglée par une ancienne version d'ONYX
+                // (donc désactivée) n'est pas signalée comme dérivée pour autant.
+                Check  = () => !Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\SensorService", "Start"), 2)
             });
 
             // ================= LOT SUPPLÉMENTAIRE 7 =================
