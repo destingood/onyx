@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport, SettingsCrash }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport, SettingsCrash, HyperviseurInfo }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -98,6 +98,24 @@ namespace BTOptimizer
             object hvci = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
             if (Sys.IntEquals(hvci, 1))
                 f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu.", FixKind.DisableVbs, "Désactiver"));
+
+            // L'hyperviseur qui tourne SANS que HVCI soit actif : le test ci-dessus le ratait
+            // entièrement. Sur une machine où WSL2 ou Docker a été installé, c'est la « Plateforme
+            // de machine virtuelle » qui démarre l'hyperviseur au boot — les clés de registre VBS
+            // n'y changent rien, et Windows continue de s'exécuter au-dessus de lui.
+            try
+            {
+                Hyperviseur.Etat hv = Hyperviseur.Lire();
+                if (hv.HyperviseurActif && !Sys.IntEquals(hvci, 1))
+                {
+                    // Niveau 2 seulement quand il ne rend RIEN : payer pour une protection réelle
+                    // est un choix défendable, payer pour rien ne l'est pas.
+                    bool pure = Hyperviseur.CouteSansRienRendre(hv.HyperviseurActif, hv.ServicesEnCours);
+                    f.Add(new Finding(pure ? 2 : 1, Hyperviseur.Explique(hv), FixKind.HyperviseurInfo,
+                        "Comprendre"));
+                }
+            }
+            catch { }
 
             // Samsung CoreSync (synchro d'éclairage des moniteurs Odyssey) — capture
             // l'écran en continu : cause connue de saccades / pertes de FPS en jeu.

@@ -311,6 +311,10 @@ namespace BTOptimizer
                     case FixKind.SettingsCrash:
                         EnqueterPlantageParametres();
                         break;
+
+                    case FixKind.HyperviseurInfo:
+                        ExpliquerHyperviseur();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -348,6 +352,48 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Explique le coût de l'hyperviseur et laisse l'arbitrage à l'utilisateur. ONYX ne coupe
+        /// RIEN ici : désactiver l'hyperviseur casse WSL2, Docker et les machines virtuelles. Un
+        /// optimiseur n'a pas à trancher ça pour quelqu'un — il doit donner les éléments.
+        /// </summary>
+        private void ExpliquerHyperviseur()
+        {
+            Hyperviseur.Etat hv;
+            try { hv = Hyperviseur.Lire(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append(Hyperviseur.Explique(hv)).Append("\n\n");
+            sb.Append("CE QUE TU PEUX FAIRE\n\n");
+            if (hv.VirtualisationUtilisee)
+            {
+                sb.Append("Tu utilises ").Append(hv.QuiLUtilise).Append(". Le désactiver le CASSERA — ")
+                  .Append("ce n'est pas un réglage cosmétique, c'est un arbitrage.\n\n")
+                  .Append("Dans une invite de commandes ADMINISTRATEUR :\n")
+                  .Append("    bcdedit /set hypervisorlaunchtype off\n\n")
+                  .Append("Puis redémarre. Pour revenir en arrière, la même commande avec « auto ».\n\n");
+            }
+            else
+            {
+                sb.Append("Aucun logiciel de virtualisation ne tourne actuellement. L'hyperviseur a ")
+                  .Append("probablement été activé par une fonctionnalité Windows installée puis oubliée ")
+                  .Append("(Plateforme de machine virtuelle, Bac à sable, Hyper-V).\n\n")
+                  .Append("Dans une invite de commandes ADMINISTRATEUR :\n")
+                  .Append("    bcdedit /set hypervisorlaunchtype off\n\n")
+                  .Append("Puis redémarre. Pour revenir en arrière, la même commande avec « auto ».\n\n");
+            }
+            sb.Append("ONYX ne le fait pas à ta place : cette commande touche au démarrage de Windows, ")
+              .Append("et le choix entre quelques FPS et tes outils de développement t'appartient.");
+
+            MessageBox.Show(this, sb.ToString(), "Hyperviseur actif",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
