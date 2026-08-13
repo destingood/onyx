@@ -41,6 +41,7 @@ namespace BTOptimizer
                 TrimDisabled(),
                 ScheduledDefragOff(),
                 DefragServiceOff(),
+                FastStartupSansHibernation(),
                 ClearPageFile(),
                 LargeSystemCache(),
                 UpdateBlocked(),
@@ -105,6 +106,34 @@ namespace BTOptimizer
                 {
                     Sys.SetScheduledTask(DefragTask, true);
                     log("Optimisation planifiée des lecteurs réactivée.", 1);
+                }
+            };
+        }
+
+        // ÉTAT IMPOSSIBLE : démarrage rapide activé alors que la veille prolongée est coupée.
+        // Le démarrage rapide range la session système dans hiberfil.sys — sans veille prolongée,
+        // ce fichier n'existe pas. Windows ne produit JAMAIS cette combinaison lui-même ; elle
+        // vient toujours d'un outil (ONYX inclus, avant correction) qui a écrit HiberbootEnabled
+        // en direct sans regarder l'autre valeur. La page « Marche/Arrêt » des Paramètres, qui
+        // affiche ces deux options côte à côte, peut planter en lisant cet état incohérent.
+        private static Item FastStartupSansHibernation()
+        {
+            bool fastOn = Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled"), 1);
+            bool hiberOn = Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled"), 1);
+            bool bad = fastOn && !hiberOn;
+            return new Item
+            {
+                Name = "Démarrage rapide activé sans veille prolongée (état incohérent)",
+                Problem = bad,
+                Status = bad ? "INCOHÉRENT — le démarrage rapide a besoin de la veille prolongée, qui est coupée : il ne fonctionne pas, et la page « Marche/Arrêt » de Windows peut planter"
+                             : "cohérent",
+                Fix = delegate(Action<string, int> log)
+                {
+                    // On aligne sur le choix DÉJÀ fait : la veille prolongée est coupée, donc on
+                    // coupe le démarrage rapide. C'est le sens le moins intrusif — l'inverse
+                    // recréerait un hiberfil.sys de plusieurs Go sans que l'utilisateur l'ait demandé.
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, RegistryValueKind.DWord);
+                    log("Démarrage rapide désactivé pour rétablir la cohérence (la veille prolongée était coupée).", 1);
                 }
             };
         }

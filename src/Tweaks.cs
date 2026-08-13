@@ -571,7 +571,17 @@ namespace BTOptimizer
                 Desc = "Le démarrage rapide peut laisser pilotes/services dans un état dégradé au fil des arrêts. Boot un peu plus long mais plus « propre ». Optionnel.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" },
                 Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, RegistryValueKind.DWord),
-                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 1, RegistryValueKind.DWord),
+                Revert = () =>
+                {
+                    // Le démarrage rapide REPOSE sur la veille prolongée : il range la session
+                    // système dans hiberfil.sys. Réactiver l'un pendant que l'autre est coupé
+                    // écrit un état que Windows ne produit jamais (HiberbootEnabled=1 avec
+                    // HibernateEnabled=0) — et la page « Marche/Arrêt » des Paramètres, qui
+                    // affiche justement ces deux options, peut alors planter en la lisant.
+                    if (!Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled"), 1))
+                        Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/hibernate on", "Réactivation de la veille prolongée (requise par le démarrage rapide)");
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 1, RegistryValueKind.DWord);
+                },
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled"), 0)
             });
 
