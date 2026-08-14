@@ -4,6 +4,52 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.70 — Les interruptions, et deux réglages qui allaient dans le mauvais sens
+
+Version née d'une mesure réelle : sur une machine à seize threads, le **cœur 0 encaissait
+6 588 interruptions par seconde contre 2 131 en moyenne** — trois fois la charge des autres. Or
+c'est le cœur où Windows place le fil principal d'un jeu. La cause était lisible dans le registre :
+la carte graphique, la carte Wi-Fi et le contrôleur USB n'avaient **aucune politique d'affinité**,
+quand l'audio et le stockage en avaient une.
+
+- **Répartir les interruptions de la carte graphique, du réseau et du stockage** (eSport). Le même
+  geste qu'ONYX appliquait déjà à l'audio, étendu à ce qui produit réellement le plus
+  d'interruptions — le pilote graphique génère à lui seul deux fois plus de travail différé que le
+  suivant. Le mécanisme d'interruption n'est pas modifié : il n'y a rien à casser.
+- **Servir les interruptions de la carte graphique en priorité** (eSport). Répartir dit *où* ; ceci
+  dit *quand*, lorsque plusieurs interruptions se présentent ensemble. C'est de l'ordonnancement,
+  pas de la durée : ça n'accélère aucune exécution, ça évite des attentes.
+
+### Deux réglages qui augmentaient les interruptions sans le dire
+
+- **Le tick noyau à cadence fixe SORT du préréglage eSport.** Son propre nom disait
+  « EXPÉRIMENTAL » et sa description « à tester » — et il s'appliquait automatiquement. Mesuré :
+  il fait passer une machine seize threads de ~34 000 à ~48 000 interruptions par seconde, **+40 %**,
+  dans un préréglage censé réduire la latence. Il reste offert, à choisir.
+- **Le timer haute résolution global** garde sa place, mais sa description chiffre enfin son coût :
+  un seul logiciel demandant 0,5 ms fait ticker tous les cœurs actifs à 2 000 Hz, soit
+  **18 000 interruptions par seconde — 53 % de toutes celles de la machine**, plus que la carte
+  graphique, le réseau et le stockage réunis. C'est un arbitrage défendable ; ce n'était pas une
+  évidence, et le taire ne l'était pas non plus.
+
+### Un plafond d'images qui aurait bridé un écran de 500 Hz à 189
+
+Sur un poste multi-écrans, ONYX lisait la fréquence via une propriété qui décrit **la carte
+graphique**, pas l'écran de jeu. Mesuré sur trois dalles à 500, 200 et 180 Hz : elle répondait 200 —
+la sortie du milieu. Le plafond calculé valait 189 images par seconde. Le pire genre de bogue :
+silencieux, plausible, et présenté comme une optimisation. ONYX interroge désormais l'écran
+principal.
+
+### Le rapport de latence DPC dit enfin ce que ses chiffres signifient
+
+- **Le « temps total » ne veut rien dire seul** : il grandit avec la durée de la mesure. Les mêmes
+  1 304 ms valent 0,43 % d'un cœur sur cinq minutes, et 2,17 % sur une. Chaque pilote est maintenant
+  accompagné de la **part d'un cœur** qu'il a réellement consommée et de son **débit par seconde**,
+  comparable d'une mesure à l'autre. Le rapport se termine par le coût total du travail différé.
+- **`Wdf01000.sys` n'accuse personne.** Ce n'est pas un périphérique mais le cadre d'exécution des
+  pilotes modernes — Wi-Fi, USB, contrôleurs. Le voir en tête faisait chercher un coupable qui
+  n'existe pas ; le rapport le précise quand ce nom apparaît.
+
 ## v15.69 — Les réglages sans risque entrent dans les préréglages
 
 La 15.68 apportait beaucoup de nouveautés, mais la plupart n'étaient atteignables qu'en ouvrant une
