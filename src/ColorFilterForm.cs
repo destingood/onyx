@@ -17,6 +17,13 @@ namespace BTOptimizer
         private Label _lblIntensity;
         private bool _loading;
 
+        // État tel qu'il était à l'ouverture, et mémoire d'un enregistrement explicite.
+        // L'aperçu ÉCRIT la rampe gamma de l'écran en direct ; sans ces deux champs, fermer la
+        // fenêtre sans enregistrer laissait les couleurs de l'aperçu en place — « Fermer » se
+        // comprend comme « annuler », il ne doit rien valider.
+        private int _ouvertIndex, _ouvertValeur;
+        private bool _ouvertVivid, _enregistre;
+
         public ColorFilterForm(Action<string, int> log)
         {
             _log = log;
@@ -87,6 +94,31 @@ namespace BTOptimizer
             _vivid.Checked = vivid;
             _lblIntensity.Text = "Intensité : " + _intensity.Value + " %";
             _loading = false;
+
+            // On retient l'état d'ouverture pour pouvoir y revenir si l'utilisateur ferme
+            // sans enregistrer.
+            _ouvertIndex = _preset.SelectedIndex;
+            _ouvertValeur = _intensity.Value;
+            _ouvertVivid = _vivid.Checked;
+        }
+
+        /// <summary>
+        /// Fermeture sans enregistrement = annulation. On remet la rampe gamma dans l'état où on
+        /// l'a trouvée : l'aperçu écrit sur l'écran pour de vrai, il ne doit rien laisser derrière
+        /// lui que l'utilisateur n'ait pas validé.
+        /// </summary>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (!_enregistre)
+            {
+                try
+                {
+                    if (_ouvertIndex <= 0) ColorFilter.Disable();
+                    else ColorFilter.Apply(_ouvertIndex, _ouvertValeur, _ouvertVivid);
+                }
+                catch { }
+            }
+            base.OnFormClosing(e);
         }
 
         /// <summary>Aperçu en direct (n'enregistre pas).</summary>
@@ -106,6 +138,7 @@ namespace BTOptimizer
             bool ok = false;
             try { ok = ColorFilter.Apply(index, value, vivid); } catch { }
             ColorFilter.Save(index, value, vivid);
+            _enregistre = true;   // choix validé : la fermeture ne doit plus rien annuler
             if (_log != null)
             {
                 if (index <= 0) _log("Filtre couleur désactivé.", 0);
@@ -123,6 +156,9 @@ namespace BTOptimizer
             _loading = false;
             try { ColorFilter.Disable(); } catch { }
             ColorFilter.Save(0, _intensity.Value, _vivid.Checked);
+            // Désactivation explicite : elle devient l'état de référence, sans quoi fermer la
+            // fenêtre juste après aurait remis le filtre que l'utilisateur vient de retirer.
+            _enregistre = true; _ouvertIndex = 0;
             if (_log != null) _log("Filtre couleur désactivé (rampe gamma rétablie).", 0);
         }
 

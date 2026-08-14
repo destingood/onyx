@@ -114,6 +114,11 @@ namespace BTOptimizer
                 // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
                 try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
+                // Le filtre couleur avait été oublié lors de cette même migration. Une rampe gamma
+                // ne survit pas à la fermeture de session : sans cet appel, « Appliquer &
+                // enregistrer » ne tenait que jusqu'au redémarrage, et le réglage sauvegardé
+                // n'était rétabli que si l'utilisateur ouvrait « Optimiseur complet ».
+                try { ColorFilter.ReapplyOnStartup(Log); } catch { }
             };
 
 #if !BTTEST
