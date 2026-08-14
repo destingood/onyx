@@ -21,6 +21,7 @@ namespace BTOptimizer
 
         private Button _btnRun, _btnClose;
         private double _mbps = double.NaN, _latency = double.NaN, _jitter = double.NaN;
+        private double _chargeMs = double.NaN;   // ping mesure PENDANT le telechargement
         private string _status = "Prêt. Lance le test pour mesurer ta connexion.";
         private Panel _canvas;
 
@@ -76,7 +77,7 @@ namespace BTOptimizer
         private void Run()
         {
             _btnRun.Enabled = false;
-            _mbps = _latency = _jitter = double.NaN;
+            _mbps = _latency = _jitter = _chargeMs = double.NaN;
             _status = "Mesure de la latence…";
             _canvas.Invalidate();
             Task.Run(() =>
@@ -84,11 +85,24 @@ namespace BTOptimizer
                 double lat, jit;
                 MeasureLatency(out lat, out jit);
                 Ui(() => { _latency = lat; _jitter = jit; _status = "Téléchargement de test en cours…"; _canvas.Invalidate(); });
+
+                // BUFFERBLOAT : on mesure le ping PENDANT le téléchargement, pas seulement avant.
+                // Le transfert a lieu de toute façon — la mesure ne coûte donc pas un octet de plus,
+                // et c'est le seul chiffre qui explique « mon ping explose quand ça télécharge ».
+                double sousCharge = double.NaN;
+                var sonde = new System.Threading.Thread(() => { sousCharge = PingMoyenPendant(11000); });
+                sonde.IsBackground = true;
+                sonde.Start();
+
                 double mbps = -1;
                 try { mbps = DownloadMbps(); } catch (Exception ex) { if (_log != null) _log("Speed test : " + ex.Message, 2); }
+                try { sonde.Join(3000); } catch { }
+
+                double charge = sousCharge;
                 Ui(() =>
                 {
                     _mbps = mbps;
+                    _chargeMs = mbps < 0 ? double.NaN : charge;   // sans transfert, la mesure ne veut rien dire
                     _status = mbps < 0 ? "Échec du téléchargement (pas de connexion ?). Latence affichée si dispo." : null;
                     _btnRun.Enabled = true; _canvas.Invalidate();
                 });
@@ -116,6 +130,34 @@ namespace BTOptimizer
                 }
             }
             catch { }
+        }
+
+        /// <summary>Ping moyen pendant que le lien travaille. Rend NaN si aucune réponse — on
+        /// préfère l'absence de chiffre à un chiffre inventé.</summary>
+        private static double PingMoyenPendant(int dureeMs)
+        {
+            try
+            {
+                var sw = Stopwatch.StartNew();
+                var samples = new System.Collections.Generic.List<long>();
+                using (var p = new Ping())
+                {
+                    while (sw.ElapsedMilliseconds < dureeMs)
+                    {
+                        try
+                        {
+                            var r = p.Send("1.1.1.1", 2000);
+                            if (r.Status == IPStatus.Success) samples.Add(r.RoundtripTime);
+                        }
+                        catch { }
+                        System.Threading.Thread.Sleep(200);
+                    }
+                }
+                if (samples.Count == 0) return double.NaN;
+                double sum = 0; foreach (long s in samples) sum += s;
+                return sum / samples.Count;
+            }
+            catch { return double.NaN; }
         }
 
         private static double DownloadMbps()
@@ -163,17 +205,38 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, "Gigue (jitter) : " + _jitter.ToString("0.0") + " ms", new Font("Segoe UI", 9f),
                     new Point(w / 2 + 20, 168), dim, TextFormatFlags.NoPadding);
 
+            // BUFFERBLOAT : la hausse de ping SOUS CHARGE. C'est ce chiffre, et lui seul, qui
+            // explique « mon ping explose quand quelqu'un télécharge ».
+            string note = Bufferbloat.Note(Bufferbloat.Hausse(_latency, _chargeMs));
+            if (note.Length > 0)
+            {
+                Color c = note == "A+" || note == "A" ? Accent
+                        : note == "B" ? Color.FromArgb(220, 170, 40)
+                        : Color.FromArgb(210, 90, 70);
+                TextRenderer.DrawText(g, "Sous charge : " + _chargeMs.ToString("0") + " ms  (note "
+                    + note + ")", new Font("Segoe UI Semibold", 9f),
+                    new Point(w / 2 + 20, 186), c, TextFormatFlags.NoPadding);
+            }
+
             // Verdict / statut.
             string verdict = _status;
             if (verdict == null)
             {
-                bool goodLat = !double.IsNaN(_latency) && _latency <= 40;
-                bool goodBw = !double.IsNaN(_mbps) && _mbps >= 25;
-                verdict = goodLat && goodBw
-                    ? "✔ Connexion prête pour le jeu en ligne : latence basse et débit confortable."
-                    : !goodLat
-                        ? "⚠ Latence élevée : c'est ELLE qui compte le plus en jeu. Câble Ethernet > Wi-Fi, et vérifie le Trajet réseau."
-                        : "⚠ Débit modeste, mais en jeu la latence prime. Ça peut suffire si le ping est bas.";
+                // Le bufferbloat passe DEVANT le reste quand il est mauvais : c'est la seule cause
+                // qui rend une connexion par ailleurs excellente injouable dès qu'elle est chargée.
+                string bb = Bufferbloat.Verdict(_latency, _chargeMs);
+                if (bb != null && Bufferbloat.EstProblematique(note)) verdict = "⚠ " + bb;
+                else
+                {
+                    bool goodLat = !double.IsNaN(_latency) && _latency <= 40;
+                    bool goodBw = !double.IsNaN(_mbps) && _mbps >= 25;
+                    verdict = goodLat && goodBw
+                        ? "✔ Connexion prête pour le jeu en ligne : latence basse et débit confortable."
+                        : !goodLat
+                            ? "⚠ Latence élevée : c'est ELLE qui compte le plus en jeu. Câble Ethernet > Wi-Fi, et vérifie le Trajet réseau."
+                            : "⚠ Débit modeste, mais en jeu la latence prime. Ça peut suffire si le ping est bas.";
+                    if (bb != null) verdict += "  " + bb;
+                }
             }
             using (var f = new Font("Segoe UI", 9.5f))
                 TextRenderer.DrawText(g, verdict, f, new Rectangle(40, 214, w - 80, 70), ink,

@@ -878,9 +878,9 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "qos_reserve_off", Category = Cat.Reseau, Esport = true,
-                Name = "Libérer la bande passante réservée par QoS (20 %)",
-                Desc = "Windows réserve 20 % de la bande passante pour QoS. Ce réglage la libère entièrement. « Rétablir » remet le comportement par défaut.",
+                Id = "qos_reserve_off", Category = Cat.Reseau,
+                Name = "Lever le plafond QoS (NonBestEffortLimit) — sans effet dans presque tous les cas",
+                Desc = "MISE AU POINT : « Windows réserve 20 % de ta bande passante » est un des plus vieux mythes du réglage Windows, et cette description le répétait. Microsoft l'a démenti explicitement : la réserve ne s'applique QU'AUX applications qui demandent de la bande passante via l'API QoS, et même là, elle reste disponible pour les autres tant qu'elle n'est pas utilisée. Aucun jeu ne passe par cette API. Ce réglage lève quand même le plafond, pour les rares logiciels concernés (visioconférence d'entreprise, streaming professionnel) — mais n'attends AUCUN gain en jeu, et méfie-toi de tout guide qui te le vend comme tel. Il est pour cette raison sorti du préréglage eSport. « Rétablir » supprime la valeur.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" },
                 Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit"),
