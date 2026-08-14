@@ -87,6 +87,32 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // PÉRIPHÉRIQUE EN PANNE — la première chose à regarder devant des saccades.
+            //
+            // Un appareil dont le pilote a échoué à démarrer, ou qui se dispute une ressource avec
+            // un autre, ne se contente pas de « ne pas marcher » : son pilote peut réessayer en
+            // boucle et monopoliser un cœur en interruption. C'est une des causes les plus
+            // fréquentes de latence DPC, et l'une des rares qui se voient d'un coup d'œil.
+            //
+            // ONYX savait déjà les détecter — mais seulement dans une fenêtre qu'il fallait penser
+            // à ouvrir. Le constat remonte maintenant tout seul dans le diagnostic.
+            try
+            {
+                var soucis = DeviceInfo.Problems(DeviceInfo.ListAll());
+                if (soucis != null && soucis.Count > 0)
+                {
+                    string liste = "";
+                    for (int i = 0; i < soucis.Count && i < 3; i++)
+                        liste += (liste.Length > 0 ? ", " : "") + soucis[i].Name;
+                    if (soucis.Count > 3) liste += "…";
+                    f.Add(new Finding(1, soucis.Count + " périphérique(s) en panne (" + liste
+                        + ") — un pilote qui échoue peut réessayer en boucle et monopoliser un cœur, "
+                        + "ce qui se voit en saccades audio et vidéo.",
+                        FixKind.DeviceManager, "Voir les périphériques"));
+                }
+            }
+            catch { }
+
             // Wi-Fi alors qu'une prise Ethernet dort derrière la machine : le gain de latence le
             // plus net, et le seul qui ne se règle pas dans un menu — il se branche.
             try
