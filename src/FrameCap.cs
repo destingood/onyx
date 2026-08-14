@@ -105,8 +105,55 @@ namespace BTOptimizer
         private static string EtatPath { get { return AppPaths.File("bt-framecap.txt"); } }
 
         /// <summary>Fréquence de l'écran principal, en Hz. 0 si illisible.</summary>
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential,
+            CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private struct DEVMODE
+        {
+            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmDeviceName;
+            public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
+            public int dmFields;
+            public int dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmFormName;
+            public short dmLogPixels;
+            public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+            public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern bool EnumDisplaySettings(string nomEcran, int mode, ref DEVMODE dm);
+
+        private const int ModeCourant = -1;
+
+        /// <summary>
+        /// Fréquence de l'écran PRINCIPAL, en Hz. 0 si illisible.
+        ///
+        /// ATTENTION AU PIÈGE, ET IL A ÉTÉ VÉRIFIÉ SUR UNE MACHINE À TROIS ÉCRANS : la propriété
+        /// CurrentRefreshRate de Win32_VideoController décrit LA CARTE, pas l'écran sur lequel on
+        /// joue. Sur un poste multi-écrans elle rend l'une des sorties, pas forcément la principale.
+        /// Mesuré : trois dalles à 500, 200 et 180 Hz, et WMI répondait 200 — la sortie du milieu.
+        /// Un plafond d'images calculé là-dessus aurait bridé un écran de 500 Hz à 189 images par
+        /// seconde. Le pire genre de bogue : silencieux, plausible, et présenté comme une
+        /// optimisation.
+        ///
+        /// EnumDisplaySettings(null, …) interroge l'écran PRINCIPAL et rend son mode courant, ce qui
+        /// est exactement la question posée. WMI ne sert plus que de repli.
+        /// </summary>
         public static int FrequenceEcran()
         {
+            try
+            {
+                var dm = new DEVMODE();
+                dm.dmSize = (short)System.Runtime.InteropServices.Marshal.SizeOf(typeof(DEVMODE));
+                if (EnumDisplaySettings(null, ModeCourant, ref dm))
+                {
+                    int hz = dm.dmDisplayFrequency;
+                    if (hz >= 30 && hz <= 1000) return hz;
+                }
+            }
+            catch { }
             try
             {
                 using (var s = new System.Management.ManagementObjectSearcher(
