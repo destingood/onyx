@@ -133,19 +133,24 @@ namespace BTOptimizer
                 // Les interruptions de PÉRIPHÉRIQUES sont réparties par les deux réglages ci-dessus.
                 // Restent les interruptions de MINUTEUR, qui sont la majorité sur une machine au
                 // minuteur fin — 53 % du total mesuré. Elles se répartissent par un autre chemin.
-                Id = "distribuer_minuteurs", Category = Cat.Systeme, Reboot = true,
-                Name = "Répartir l'expiration des minuteurs sur tous les cœurs — À MESURER",
+                Id = "distribuer_minuteurs", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Name = "Répartir l'expiration des minuteurs sur tous les cœurs",
                 Desc = "Les deux réglages de répartition d'interruptions ne touchent que les PÉRIPHÉRIQUES. "
                      + "Or sur une machine au minuteur fin, ce sont les MINUTEURS qui dominent : mesuré à "
                      + "18 000 interruptions par seconde, soit 53 % du total, plus que la carte graphique, le "
                      + "réseau et le stockage réunis. Ce réglage demande au noyau de répartir leur expiration "
                      + "au lieu de la concentrer. "
-                     + "CE QUE JE NE SAIS PAS, ET QUE JE PRÉFÈRE ÉCRIRE : cette valeur est bien moins documentée "
-                     + "par Microsoft que les autres réglages de cette app. Si le noyau de ta version la lit, "
-                     + "elle répartit ; s'il l'ignore, il ne se passe rien — dans les deux cas il n'y a rien à "
-                     + "casser, et « Rétablir » supprime la valeur. C'est pour cette raison qu'elle n'est dans "
-                     + "AUCUN préréglage : un réglage dont on ignore l'effet ne s'applique pas tout seul. "
-                     + "Mesure la latence DPC avant et après, et garde le meilleur — c'est le seul verdict qui vaille.",
+                     + "CE QUI EST SÛR, ET CE QUI NE L'EST PAS. Cette valeur est bien moins documentée par "
+                     + "Microsoft que les autres réglages de cette app : si le noyau de ta version la lit, elle "
+                     + "répartit ; s'il l'ignore, il ne se passe rien. Dans les deux cas il n'y a RIEN À CASSER, "
+                     + "et « Rétablir » supprime la valeur. Une comparaison faite sur une machine réelle n'a pas "
+                     + "pu démontrer de gain : les temps mesurés avaient baissé, mais le nombre d'événements aussi, "
+                     + "et un pire temps se mesure sur moins de tirages — huit pilotes sur neuf variaient dans le "
+                     + "même sens que leur nombre d'exécutions. Le seul indicateur indépendant de l'activité, la "
+                     + "répartition entre cœurs, n'avait pas bougé dans le bon sens. Le réglage est donc offert "
+                     + "dans le préréglage eSport, sans promesse : mesure la latence DPC avant et après, avec la "
+                     + "MÊME charge des deux côtés — un jeu qui tourne, pas un bureau au repos — et décoche-le "
+                     + "s'il ne te donne rien.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" },
                 Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "DistributeTimers", 1, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "DistributeTimers"),
