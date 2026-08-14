@@ -461,7 +461,7 @@ namespace BTOptimizer
         // (Économie d'énergie sur portable, plan OEM/perso…) et non un « Utilisation normale » imposé.
         private static string PrevPlanPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-prev-powerplan.txt"); }
+            get { return AppPaths.File("bt-prev-powerplan.txt"); }
         }
 
         private static string GetActiveSchemeGuid()
@@ -1202,7 +1202,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string EulaPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-eula.txt"); }
+            get { return AppPaths.File("bt-eula.txt"); }
         }
 
         public static int EulaAcceptedVersion()
@@ -1226,7 +1226,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string AutoLevelPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-autolevel.txt"); }
+            get { return AppPaths.File("bt-autolevel.txt"); }
         }
 
         public static int LoadAutoLevel()
@@ -1251,7 +1251,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string RamCleanerPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ramcleaner.txt"); }
+            get { return AppPaths.File("bt-ramcleaner.txt"); }
         }
 
         public static bool LoadRamCleaner(out int thresholdMB)
@@ -1312,7 +1312,7 @@ namespace BTOptimizer
             try { Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/setactive " + guid, UseShellExecute = false, CreateNoWindow = true }).WaitForExit(); } catch { }
         }
 
-        public static string GameAffinityPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-game-affinity.txt"); } }
+        public static string GameAffinityPath { get { return AppPaths.File("bt-game-affinity.txt"); } }
 
         public static Dictionary<string, Tuple<string, long>> LoadGameAffinity()
         {
@@ -1351,7 +1351,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static string ProfilePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-profile.txt"); }
+            get { return AppPaths.File("bt-profile.txt"); }
         }
 
         public static void SaveProfile(List<string> tweakIds)
@@ -1665,7 +1665,7 @@ namespace BTOptimizer
 
         public static string GpuOcConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpuoc.txt"); }
+            get { return AppPaths.File("bt-gpuoc.txt"); }
         }
 
         public static void SaveGpuOcConfig(int powerLimit)

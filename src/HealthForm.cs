@@ -364,7 +364,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string HistoryPath()
         {
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-health-history.txt");
+            return AppPaths.File("bt-health-history.txt");
         }
 
         private static List<int> LoadHistory()

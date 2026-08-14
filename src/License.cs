@@ -35,7 +35,7 @@ namespace BTOptimizer
 
         private static string StorePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-license.txt"); }
+            get { return AppPaths.File("bt-license.txt"); }
         }
 
         // ---- Essai gratuit ----
@@ -43,7 +43,7 @@ namespace BTOptimizer
         private const string TrialRegPath = @"SOFTWARE\BTOptimizer";
         private static string TrialFile
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-trial.txt"); }
+            get { return AppPaths.File("bt-trial.txt"); }
         }
         public static DateTime? TrialStart { get; private set; }
 

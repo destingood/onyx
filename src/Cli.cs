@@ -36,7 +36,7 @@ namespace BTOptimizer
 
             try
             {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-optimizer-log.txt");
+                string logPath = AppPaths.File("bt-optimizer-log.txt");
                 File.AppendAllText(logPath,
                     "===== CLI " + string.Join(" ", args) + " =====" + Environment.NewLine +
                     string.Join(Environment.NewLine, lines.ToArray()) + Environment.NewLine,

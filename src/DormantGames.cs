@@ -61,7 +61,7 @@ namespace BTOptimizer
 
         private static string CachePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gamesize.txt"); }
+            get { return AppPaths.File("bt-gamesize.txt"); }
         }
 
         /// <summary>Analyse complète. <paramref name="progress"/> reçoit (fait, total).</summary>

@@ -19,7 +19,7 @@ namespace BTOptimizer
         public bool Enabled = false;
         public int Corner = 1;   // 0 haut-gauche · 1 haut-droit · 2 bas-gauche · 3 bas-droit
 
-        public string ConfigPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-overlay.txt"); } }
+        public string ConfigPath { get { return AppPaths.File("bt-overlay.txt"); } }
 
         public void Save() { try { File.WriteAllText(ConfigPath, (Enabled ? "1" : "0") + ";" + Corner); } catch { } }
 

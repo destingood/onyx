@@ -228,7 +228,7 @@ namespace BTOptimizer
         // --- Mémoire du dernier passage (bt-entretien.txt) ---------------------
         private static string StampPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-entretien.txt"); }
+            get { return AppPaths.File("bt-entretien.txt"); }
         }
 
         private static Dictionary<int, DateTime> LoadStamps()

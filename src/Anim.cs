@@ -117,7 +117,7 @@ namespace BTOptimizer
 
         private static string StorePath
         {
-            get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-anim.txt"); }
+            get { return AppPaths.File("bt-anim.txt"); }
         }
 
         /// <summary>Choix utilisateur (« 0 » = désactivé ; activé par défaut).</summary>

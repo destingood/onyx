@@ -21,15 +21,15 @@ namespace BTOptimizer
 
         private static string FlagPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-locale.txt"); }
+            get { return AppPaths.File("bt-ia-locale.txt"); }
         }
         private static string OffPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-off.txt"); }
+            get { return AppPaths.File("bt-ia-off.txt"); }
         }
         private static string TriesPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-setup.txt"); }
+            get { return AppPaths.File("bt-ia-setup.txt"); }
         }
 
         /// <summary>Vrai si le cerveau IA local est actif (fichier-drapeau).</summary>
@@ -54,7 +54,7 @@ namespace BTOptimizer
         //     « coupe internet » écrit ce drapeau pour rester 100 % hors-ligne. ---
         private static string WebOffPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-web-off.txt"); }
+            get { return AppPaths.File("bt-web-off.txt"); }
         }
         public static bool WebOff() { try { return File.Exists(WebOffPath); } catch { return false; } }
         public static void SetWebEnabled(bool on)
@@ -69,7 +69,7 @@ namespace BTOptimizer
 
         private static string ConsentPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ia-consent.txt"); }
+            get { return AppPaths.File("bt-ia-consent.txt"); }
         }
 
         /// <summary>Vrai si l'utilisateur a déjà répondu à la question « Installer le cerveau IA
@@ -634,7 +634,7 @@ namespace BTOptimizer
         private static bool _learnedLoaded;
         private const int MaxFacts = 30;
         private const int LearnedTtlMonths = 18;   // TTL : au-delà, un fait appris est périmé et retiré
-        private static string LearnedPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-appris.md"); } }
+        private static string LearnedPath { get { return AppPaths.File("bt-appris.md"); } }
 
         /// <summary>Un fait daté « MM/yyyy » a-t-il dépassé son TTL (état périmé à retirer) ?</summary>
         internal static bool IsStampExpired(string stamp)

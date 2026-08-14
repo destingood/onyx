@@ -48,7 +48,7 @@ namespace BTOptimizer
             };
         }
 
-        private static string ManualPath { get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-manual-games.txt"); } }
+        private static string ManualPath { get { return AppPaths.File("bt-manual-games.txt"); } }
 
         private static List<Game> ManualGames()
         {

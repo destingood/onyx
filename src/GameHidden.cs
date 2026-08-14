@@ -19,7 +19,7 @@ namespace BTOptimizer
 
         private static string StorePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-games-hidden.txt"); }
+            get { return AppPaths.File("bt-games-hidden.txt"); }
         }
 
         private static HashSet<string> Set()

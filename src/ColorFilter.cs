@@ -122,7 +122,7 @@ namespace BTOptimizer
         // ---- Persistance : bt-colorfilter.txt = "index;value;vivid" ----
         public static string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-colorfilter.txt"); }
+            get { return AppPaths.File("bt-colorfilter.txt"); }
         }
 
         public static void Save(int index, int value, bool vivid)

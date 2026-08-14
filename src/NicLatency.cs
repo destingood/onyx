@@ -101,7 +101,7 @@ namespace BTOptimizer
 
         public static string CheminSauvegarde()
         {
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-nic-backup.txt");
+            return AppPaths.File("bt-nic-backup.txt");
         }
 
         public static Dictionary<string, string> LitSauvegarde()

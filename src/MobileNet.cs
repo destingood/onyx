@@ -78,7 +78,7 @@ namespace BTOptimizer
         private const string ProbeV6 = "2606:4700:4700::1111";
         private const string LoadUrl = "https://speed.cloudflare.com/__down?bytes=80000000";
         private const string UpUrl = "https://speed.cloudflare.com/__up";
-        private static string MtuStore { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-mtu.txt"); } }
+        private static string MtuStore { get { return AppPaths.File("bt-mtu.txt"); } }
 
         // ------------------------------------------------------------------
         //  Interface active
@@ -313,7 +313,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Opérateur, journal de mesures et dossier à remettre au support
         // ------------------------------------------------------------------
-        private static string LogPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-netlog.txt"); } }
+        private static string LogPath { get { return AppPaths.File("bt-netlog.txt"); } }
 
         /// <summary>Devine l'opérateur par le nom DNS INVERSE des premiers sauts (bouyguestelecom.fr,
         /// orange.fr, sfr.net, proxad/free…). Aucun service tiers : une simple résolution inverse.

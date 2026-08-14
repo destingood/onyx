@@ -57,7 +57,7 @@ namespace BTOptimizer
             }
         }
 
-        private static string ExclPath { get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gamemode-excl.txt"); } }
+        private static string ExclPath { get { return AppPaths.File("bt-gamemode-excl.txt"); } }
 
         /// <summary>Services EXCLUS du Mode Jeu (laissés tourner) — choix persisté de l'utilisateur.</summary>
         public static HashSet<string> LoadExclusions()

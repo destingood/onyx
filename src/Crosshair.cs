@@ -34,7 +34,7 @@ namespace BTOptimizer
 
         public string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-crosshair.txt"); }
+            get { return AppPaths.File("bt-crosshair.txt"); }
         }
 
         public void Save()

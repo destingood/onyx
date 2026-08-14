@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private static string MemPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-copilote.txt"); }
+            get { return AppPaths.File("bt-copilote.txt"); }
         }
 
         private static string MemLabel(string key)

@@ -474,7 +474,7 @@ namespace BTOptimizer
         // --- Mémoire de l'avertissement « exclusion antivirus » (une fois) -----
         private static string DefenderWarnPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-defender-warned.txt"); }
+            get { return AppPaths.File("bt-defender-warned.txt"); }
         }
         private static bool DefenderWarningAccepted() { return File.Exists(DefenderWarnPath); }
         private static void MarkDefenderWarningAccepted()
@@ -487,7 +487,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string StorePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-games.txt"); }
+            get { return AppPaths.File("bt-games.txt"); }
         }
 
         private static List<string[]> LoadStore()
