@@ -182,7 +182,42 @@ namespace BTOptimizer
         }
 
         // ---- Température CPU via zone thermique ACPI (nécessite l'élévation) ----
+
+        // Cache PARTAGÉ entre toutes les instances : plusieurs fenêtres tiennent chacune leur
+        // HwMonitor et échantillonnent toutes à 1 Hz. Sans mise en commun, on multiplierait les
+        // requêtes WMI par le nombre de fenêtres ouvertes. Voir CadenceSonde pour le raisonnement.
+        private static readonly object _tempVerrou = new object();
+        private static double _tempCache = double.NaN;
+        private static System.Diagnostics.Stopwatch _tempAge;
+        private static int _tempEchecs;
+
         private static double ReadCpuTemp()
+        {
+            lock (_tempVerrou)
+            {
+                double age = _tempAge == null ? -1 : _tempAge.Elapsed.TotalMilliseconds;
+                if (!CadenceSonde.DoitRelire(age, _tempEchecs)) return _tempCache;
+
+                double v = LitTempAcpi();
+                if (double.IsNaN(v))
+                {
+                    _tempEchecs++;
+                    // Une sonde qui tombe en panne ne doit pas laisser sa dernière valeur à
+                    // l'écran : au bout de trois échecs, mieux vaut « n/d » qu'un chiffre figé
+                    // que l'utilisateur croirait actuel.
+                    if (_tempEchecs >= 3) _tempCache = double.NaN;
+                }
+                else { _tempEchecs = 0; _tempCache = v; }
+
+                if (_tempAge == null) _tempAge = System.Diagnostics.Stopwatch.StartNew();
+                else _tempAge.Restart();
+                return _tempCache;
+            }
+        }
+
+        /// <summary>Lecture brute, sans cache. NaN si la zone thermique ACPI est absente,
+        /// refusée, ou hors bornes plausibles.</summary>
+        private static double LitTempAcpi()
         {
             try
             {
@@ -239,7 +274,43 @@ namespace BTOptimizer
         }
 
         // ---- Repli GPU NVIDIA via nvidia-smi (outil officiel) ----
+
+        // Ce repli LANCE UN PROCESSUS (mesuré : ~39 ms). Il n'est pris que si la lecture
+        // en-processus échoue — mais rien ne garantissait qu'elle réussisse : il suffit qu'un
+        // pilote ne publie pas la fréquence cœur pour que l'app se mette à créer un processus
+        // PAR SECONDE, en pleine partie, sans que personne ne s'en aperçoive. La cadence de
+        // CadenceSonde borne ce coût au lieu de compter sur la chance.
+        private static readonly object _smiVerrou = new object();
+        private static GpuInfo _smiCache;
+        private static System.Diagnostics.Stopwatch _smiAge;
+        private static int _smiEchecs;
+
         private GpuInfo ReadGpu()
+        {
+            lock (_smiVerrou)
+            {
+                double age = _smiAge == null ? -1 : _smiAge.Elapsed.TotalMilliseconds;
+                if (!CadenceSonde.DoitRelire(age, _smiEchecs) && _smiCache != null) return _smiCache;
+
+                GpuInfo g = LitGpuSmi();
+                if (g.Ok) { _smiEchecs = 0; _smiCache = g; }
+                else
+                {
+                    _smiEchecs++;
+                    // Comme pour la température : au bout de trois échecs, on cesse d'afficher
+                    // la dernière valeur connue plutôt que de la faire passer pour actuelle.
+                    if (_smiEchecs >= 3 || _smiCache == null) _smiCache = g;
+                }
+
+                if (_smiAge == null) _smiAge = System.Diagnostics.Stopwatch.StartNew();
+                else _smiAge.Restart();
+                return _smiCache;
+            }
+        }
+
+        /// <summary>Lecture brute par nvidia-smi, sans cadence. Crée un processus : ne pas
+        /// appeler directement depuis une boucle d'échantillonnage.</summary>
+        private GpuInfo LitGpuSmi()
         {
             var g = new GpuInfo();
             try
