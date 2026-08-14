@@ -4,6 +4,69 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.71 — Le démarrage automatique ne pouvait pas fonctionner, et ton NVMe n'est peut-être pas ton disque le plus rapide
+
+### Le démarrage avec Windows ne se lançait jamais
+
+ONYX s'inscrivait dans la clé « Run » de l'utilisateur, avec ce commentaire dans le code : *aucun
+droit admin requis*. C'était exactement le problème. ONYX **exige** les droits administrateur, et une
+entrée « Run » est traitée à l'ouverture de session dans le contexte **non élevé** : Windows ne peut
+pas l'élever à ce moment-là, n'affiche aucune demande d'autorisation, et passe l'entrée.
+
+L'entrée existait, le Gestionnaire des tâches la montrait activée, et rien ne démarrait. Aucun
+message, aucune erreur — le pire cas.
+
+C'est désormais une **tâche planifiée à l'ouverture de session avec le niveau d'exécution le plus
+élevé**, le seul chemin qui lance une application élevée sans redemander l'autorisation. Les vieilles
+entrées « Run » sont supprimées : les laisser entretiendrait l'illusion que quelque chose est actif.
+Et si la tâche ne peut pas être créée, ONYX le dit au lieu de retomber sur une méthode qui ne
+marche pas. Lancement retardé de 30 secondes : une app dont le sujet est la latence n'a rien
+d'urgent à faire pendant l'ouverture de session.
+
+*Pour en profiter : décoche puis recoche « Démarrer avec Windows » dans le menu ⋯ → Système.*
+
+### Quel disque est vraiment le plus rapide pour tes jeux ?
+
+Tout le monde suppose la même hiérarchie : NVMe plus rapide que SATA. Pour le débit séquentiel c'est
+vrai ; pour ce que fait un jeu, pas forcément.
+
+Un jeu qui charge des textures pioche des milliers de petits blocs au hasard. Ce qui compte alors
+n'est pas le débit mais le **temps d'un accès isolé** — et un NVMe d'entrée de gamme **sans mémoire
+cache**, surtout s'il est presque plein, peut y être plus lent qu'un bon SATA.
+
+Mesuré sur la machine de test : le NVMe répondait en **0,50 ms** contre **0,30 ms** pour les deux
+SATA, soit **1,7 fois plus lent** — et c'est lui qui portait les gros jeux récents.
+
+Le nouveau test (menu ⋯) mesure chaque disque en lecture seule, cache de Windows contourné. Il ne
+conseille rien sous 30 % d'écart — on ne fait pas déplacer 150 Go pour rien — et quand le disque lent
+est aussi trop plein, il propose de **libérer de la place d'abord**. Ses limites sont écrites dans le
+rapport : c'est de la latence, pas du débit.
+
+### Les logiciels qui interrogent tes capteurs
+
+Sur une machine dont tous les réglages sont faits, la latence qui reste ne vient plus du système :
+elle vient des outils qui lisent les capteurs en boucle. Lire une température ou une tension passe
+par les bus SMBus et I²C, qui sont **lents et bloquants** : chaque relevé immobilise un cœur, et
+c'est la forme même d'un pic de latence différée.
+
+Un seul ne se voit pas ; empilés — et ils s'empilent, chaque marque livrant le sien — ils deviennent
+le premier poste de la mesure. ONYX les **nomme** et explique ce qu'ils coûtent, sans rien
+désinstaller : ce sont des choix, et certains rendent un vrai service. Sous deux outils détectés, il
+se tait.
+
+Le **Mode Jeu** suspend désormais les *services* d'arrière-plan de ces suites (Corsair, Logitech,
+NVIDIA), arrêtés puis relancés comme les autres. Les applications visibles ne sont pas touchées.
+
+### Répartir l'expiration des minuteurs — à mesurer
+
+Les réglages de répartition d'interruptions ne touchent que les périphériques. Or sur une machine au
+minuteur fin, ce sont les **minuteurs** qui dominent : 53 % du total mesuré. Un nouveau réglage
+demande au noyau de répartir leur expiration.
+
+Il n'est dans **aucun préréglage**, et sa description dit pourquoi : cette valeur est moins
+documentée que les autres. Si ton noyau la lit, elle répartit ; sinon il ne se passe rien. Un réglage
+dont on ignore l'effet ne s'applique pas tout seul — mesure avant et après.
+
 ## v15.70 — Les interruptions, et deux réglages qui allaient dans le mauvais sens
 
 Version née d'une mesure réelle : sur une machine à seize threads, le **cœur 0 encaissait
