@@ -27,13 +27,31 @@ namespace BTOptimizer
         private static readonly Color Accent = Theme.AccentColor;
         private const string ClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
 
-        // Réglages gérés : clé pilote (standardisée) -> (libellé, valeur « latence min »).
+        // Réglages gérés : clé pilote -> (libellé, valeur « latence min »).
+        //
+        // UNIQUEMENT DES MOTS-CLÉS NDIS NORMALISÉS (préfixe « * »). C'est une règle, pas une
+        // préférence : ceux-là sont définis par Microsoft, donc 0 veut dire « désactivé » chez tous
+        // les fabricants. Les réglages propriétaires des cartes Wi-Fi — agressivité de l'itinérance,
+        // économie MIMO, bande privilégiée, largeur de canal — portent des noms ET des encodages
+        // DIFFÉRENTS d'un fabricant à l'autre : « 1 » vaut « le plus bas » chez l'un et « le plus
+        // agressif » chez l'autre. Écrire une valeur devinée sur un de ces réglages, c'est risquer
+        // de faire exactement l'inverse de ce qu'on annonce. Ils sont donc laissés à la main de
+        // l'utilisateur, dans le Gestionnaire de périphériques.
         private static readonly string[][] Managed =
         {
             new[] { "*InterruptModeration", "Modération d'interruptions", "0" },
             new[] { "*FlowControl",         "Contrôle de flux",           "0" },
             new[] { "*EEE",                 "Ethernet écoénergétique (EEE)", "0" },
             new[] { "EnableGreenEthernet",  "Green Ethernet (Realtek)",   "0" },
+            // Regroupement de segments à la RÉCEPTION : la carte empile plusieurs segments avant de
+            // les remettre à Windows. Elle économise du processeur en échange d'un délai — c'est
+            // l'équivalent, côté réception, de la modération d'interruptions déjà traitée ici.
+            new[] { "*RscIPv4",             "Regroupement de segments reçus (RSC IPv4)", "0" },
+            new[] { "*RscIPv6",             "Regroupement de segments reçus (RSC IPv6)", "0" },
+            // Regroupement de paquets : même marché, même verdict pour du temps réel.
+            new[] { "*PacketCoalescing",    "Regroupement de paquets",    "0" },
+            // Veille sélective de la carte : le réveil coûte des millisecondes après une accalmie.
+            new[] { "*SelectiveSuspend",    "Veille sélective de la carte", "0" },
         };
 
         private class Prop { public string Key, Label, Optimal, Current; }
