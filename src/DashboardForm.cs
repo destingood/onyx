@@ -620,6 +620,18 @@ namespace BTOptimizer
                     try { sos = Guardian.FreshCrash(); } catch { }
                     // 2) Contrôle quotidien classique (silencieux si tout va bien).
                     var al = new System.Collections.Generic.List<string>();
+                    // MISE À JOUR : vérifiée AVANT et EN DEHORS du passage quotidien du Gardien.
+                    //
+                    // Elle était enfermée dans « if (sos == null) { if (!Guardian.DueToday()) … } »,
+                    // donc soumise à deux conditions qui ne la concernent pas :
+                    //   · un jeu planté dans les 30 dernières minutes (sos != null) sautait tout
+                    //     le bloc — et c'est justement là qu'on relance ONYX ;
+                    //   · le Gardien devait ne pas être encore passé aujourd'hui, alors qu'il a
+                    //     son propre horodatage et peut l'avoir consommé lors d'un lancement
+                    //     précédent.
+                    // Updater.DueToday() suffit à la limiter à une fois par jour.
+                    try { VerifieMiseAJour(); } catch { }
+
                     if (sos == null)
                     {
                         if (!Guardian.DueToday()) return;
@@ -627,65 +639,7 @@ namespace BTOptimizer
                         try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
                         // photo quotidienne de l'état du système (« qu'est-ce qui a changé sur mon PC ? »)
                         try { StateDiff.SaveToday(); } catch { }
-                        // Nouvelle version d'ONYX ? Vérification silencieuse, 1×/jour, jamais bloquante.
-                        try
-                        {
-                            if (Updater.DueToday())
-                            {
-                                string st;
-                                var nu = Updater.Check(out st);
-                                if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
-                                {
-                                    string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
-                                    // Mémorisée pour l'affichage DANS l'app : la notification Windows
-                                    // peut être manquée (PC absent, notifications coupées), l'en-tête
-                                    // de la fenêtre, lui, reste visible tant que la mise à jour est là.
-                                    try { UpdateFlag.Set(dispo); } catch { }
-                                    // La fenêtre est peut-être ouverte pendant que le Gardien
-                                    // découvre la version : le bandeau apparaît sans attendre le
-                                    // prochain lancement.
-                                    try
-                                    {
-                                        BeginInvoke((Action)(() =>
-                                        {
-                                            try
-                                            {
-                                                Text = "ONYX — QG     •  mise à jour " + dispo + " disponible";
-                                                MonteBandeauMaj(dispo);
-                                            }
-                                            catch { }
-                                        }));
-                                    }
-                                    catch { }
-                                    // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » :
-                                    // une mise à jour n'est pas une alerte de santé, et un titre
-                                    // générique se referme sans être lu. Envoyée ici plutôt qu'avec
-                                    // le lot du Gardien, qui pourrait ne jamais partir s'il n'y a
-                                    // aucune autre alerte à signaler.
-                                    try
-                                    {
-                                        if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
-                                                "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
-                                        {
-                                            BeginInvoke((Action)(() =>
-                                            {
-                                                try
-                                                {
-                                                    _tray.Visible = true;
-                                                    _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
-                                                    _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
-                                                    _tray.ShowBalloonTip(10000);
-                                                }
-                                                catch { }
-                                            }));
-                                        }
-                                    }
-                                    catch { }
-                                }
-                                else { try { UpdateFlag.Clear(); } catch { } }
-                            }
-                        }
-                        catch { }
+                        // (la vérification de mise à jour a lieu plus haut, hors de ce bloc)
                         // Mesures faites : en VEILLE, on s'arrête là — on mesure, on ne dérange pas.
                         if (Guardian.AlertsMuted()) return;
                         // AddRange, PAS d'affectation : « al = Guardian.Alerts() » ÉCRASAIT la liste
@@ -852,6 +806,74 @@ namespace BTOptimizer
         /// « Plus tard » le referme — un rappel ne doit pas devenir un mur — mais il REVIENT au
         /// lancement suivant : reporter est un choix légitime, oublier n'en est pas un.
         /// </summary>
+        /// <summary>
+        /// Nouvelle version d'ONYX ? Silencieux, une fois par jour, jamais bloquant.
+        ///
+        /// Le jour n'est marqué comme fait QUE si GitHub a répondu. Auparavant l'horodatage était
+        /// écrit avant l'appel : quand ONYX démarrait avant que le Wi-Fi soit connecté — ce qui
+        /// arrive systématiquement puisqu'il se lance 30 secondes après l'ouverture de session —
+        /// la vérification échouait, le jour était consommé, et aucune nouvelle tentative n'avait
+        /// lieu avant le lendemain.
+        /// </summary>
+        private void VerifieMiseAJour()
+        {
+            if (!Updater.DueToday()) return;
+
+            string st;
+            Updater.Release nu;
+            try { nu = Updater.Check(out st); }
+            catch { return; }              // réseau absent : on NE marque pas, on réessaiera
+            if (nu == null) return;        // idem : rien de lisible, donc rien de conclu
+
+            Updater.MarqueVerifie();       // GitHub a répondu : la journée est faite
+
+            if (!Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
+            {
+                try { UpdateFlag.Clear(); } catch { }
+                return;
+            }
+
+            string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
+            // Mémorisée pour l'affichage DANS l'app : la notification Windows peut être manquée
+            // (PC absent, notifications coupées), l'en-tête de la fenêtre, lui, reste visible.
+            try { UpdateFlag.Set(dispo); } catch { }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try
+                    {
+                        Text = "ONYX — QG     •  mise à jour " + dispo + " disponible";
+                        MonteBandeauMaj(dispo);
+                    }
+                    catch { }
+                }));
+            }
+            catch { }
+
+            // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » : une mise à jour n'est
+            // pas une alerte de santé, et un titre générique se referme sans être lu.
+            try
+            {
+                if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
+                        "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            _tray.Visible = true;
+                            _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
+                            _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
+                            _tray.ShowBalloonTip(10000);
+                        }
+                        catch { }
+                    }));
+                }
+            }
+            catch { }
+        }
+
         private void MonteBandeauMaj(string version)
         {
             if (_bandeauMaj != null) return;   // déjà là (détection au lancement puis par le Gardien)
