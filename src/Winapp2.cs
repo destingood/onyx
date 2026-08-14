@@ -197,13 +197,23 @@ namespace BTOptimizer
         /// Ne supprime jamais les dossiers eux-mêmes.</summary>
         public static int Clean(Entry e, Action<string, int> log)
         {
-            int removed = 0;
+            int removed = 0, refuses = 0;
             foreach (FileKey fk in e.Files)
                 foreach (string f in EnumFiles(fk))
                 {
+                    // DEUXIÈME LIGNE DE DÉFENSE. Le garde-fou de racine s'applique au dossier
+                    // déclaré par la règle ; ici on revérifie CHAQUE fichier juste avant de le
+                    // détruire. Une suppression ne doit jamais dépendre d'un seul contrôle fait
+                    // ailleurs, à un autre moment, sur une autre chaîne de caractères.
+                    if (!EstDansPerimetre(f)) { refuses++; continue; }
                     try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); removed++; } catch { }
                 }
-            if (log != null) log("winapp2 — " + e.Name + " : " + removed + " fichier(s) supprimé(s).", 1);
+            if (log != null)
+            {
+                log("winapp2 — " + e.Name + " : " + removed + " fichier(s) supprimé(s).", 1);
+                if (refuses > 0)
+                    log("winapp2 — " + e.Name + " : " + refuses + " fichier(s) REFUSÉ(S), hors du périmètre autorisé.", 2);
+            }
             return removed;
         }
 
@@ -236,16 +246,47 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>
+        /// Options d'énumération. Trois réglages, trois raisons vérifiées sur machine réelle :
+        ///
+        /// IgnoreInaccessible — SANS LUI, LE NETTOYAGE NE VOYAIT PRESQUE RIEN. L'ancien code
+        /// attrapait l'exception d'accès refusé et faisait « yield break », ce qui interrompait
+        /// TOUTE l'énumération au premier dossier interdit. Or %LOCALAPPDATA% en contient dès la
+        /// racine (les jonctions héritées « Application Data », « Historique »… portent une ACL
+        /// qui refuse tout). Mesuré : 1 fichier trouvé au lieu de plus de 200 000. Les entrées
+        /// étaient donc mesurées à 0 Mo, filtrées par « SizeMB > 0 », et n'apparaissaient jamais
+        /// dans la liste. L'outil se taisait au lieu de signaler qu'il ne pouvait pas lire.
+        ///
+        /// AttributesToSkip = ReparsePoint — le garde-fou de racine s'applique au dossier DÉCLARÉ
+        /// par la règle, mais RECURSE descendait ensuite dans tout l'arbre, jonctions comprises.
+        /// Vérifié : une jonction placée sous une racine autorisée menait l'énumération vers des
+        /// fichiers HORS du périmètre, que Clean aurait supprimés. On ne descend plus dedans.
+        ///
+        /// MatchType.Win32 — indispensable pour ne rien casser : avec le MatchType par défaut
+        /// (Simple), « *.* » cesse de correspondre aux fichiers SANS extension. Les règles
+        /// winapp2 comptent sur la sémantique historique de Windows.
+        /// </summary>
+        private static EnumerationOptions Options(SearchOption opt)
+        {
+            return new EnumerationOptions
+            {
+                RecurseSubdirectories = opt == SearchOption.AllDirectories,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.ReparsePoint,
+                MatchType = MatchType.Win32
+            };
+        }
+
         private static IEnumerable<string> SafeEnum(string folder, string pattern, SearchOption opt)
         {
             IEnumerator<string> it;
-            try { it = Directory.EnumerateFiles(folder, pattern, opt).GetEnumerator(); }
+            try { it = Directory.EnumerateFiles(folder, pattern, Options(opt)).GetEnumerator(); }
             catch { yield break; }
             while (true)
             {
                 string cur;
                 try { if (!it.MoveNext()) yield break; cur = it.Current; }
-                catch { yield break; }   // accès refusé en cours de route
+                catch { yield break; }   // imprévu : on s'arrête, sans faire de dégât
                 yield return cur;
             }
         }
@@ -306,9 +347,28 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        /// <summary>
+        /// PUR (au sens : ne dépend que du chemin) — ce FICHIER est-il dans le périmètre où l'on
+        /// s'autorise à supprimer ? Appliqué juste avant chaque suppression, indépendamment du
+        /// contrôle fait sur le dossier de la règle.
+        /// </summary>
+        internal static bool EstDansPerimetre(string fichier)
+        {
+            if (string.IsNullOrWhiteSpace(fichier)) return false;
+            // Un chemin RELATIF se résoudrait contre le dossier courant du processus : le verdict
+            // dépendrait alors d'où ONYX a été lancé. Un garde-fou de suppression ne peut pas
+            // reposer là-dessus. On exige un chemin absolu et on refuse le reste.
+            try { if (!Path.IsPathRooted(fichier)) return false; }
+            catch { return false; }
+            string dossier;
+            try { dossier = Path.GetDirectoryName(Path.GetFullPath(fichier)); }
+            catch { return false; }
+            return IsSafeRoot(dossier);
+        }
+
         /// <summary>Vrai seulement si le dossier est un SOUS-dossier (≥ 1 niveau) d'une racine cache
         /// autorisée, et n'est pas lui-même un emplacement protégé. Sinon on refuse la suppression.</summary>
-        private static bool IsSafeRoot(string folder)
+        internal static bool IsSafeRoot(string folder)
         {
             string n = Norm(folder);
             if (n == null || n.Length < 4) return false;
