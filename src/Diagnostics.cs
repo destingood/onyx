@@ -87,6 +87,73 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
+            // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
+            // qu'il héberge qui travaille.
+            try
+            {
+                SvcHost.Groupe g = SvcHost.PlusGourmand(SvcHost.Mesure(800));
+                string sv = SvcHost.Verdict(g, 6.0);
+                if (sv != null)
+                    f.Add(new Finding(SvcHost.EstTravailLegitime(g.Services) ? 0 : 1, sv));
+            }
+            catch { }
+
+            // PÉRIPHÉRIQUE EN PANNE — la première chose à regarder devant des saccades.
+            //
+            // Un appareil dont le pilote a échoué à démarrer, ou qui se dispute une ressource avec
+            // un autre, ne se contente pas de « ne pas marcher » : son pilote peut réessayer en
+            // boucle et monopoliser un cœur en interruption. C'est une des causes les plus
+            // fréquentes de latence DPC, et l'une des rares qui se voient d'un coup d'œil.
+            //
+            // ONYX savait déjà les détecter — mais seulement dans une fenêtre qu'il fallait penser
+            // à ouvrir. Le constat remonte maintenant tout seul dans le diagnostic.
+            try
+            {
+                var soucis = DeviceInfo.Problems(DeviceInfo.ListAll());
+                if (soucis != null && soucis.Count > 0)
+                {
+                    string liste = "";
+                    for (int i = 0; i < soucis.Count && i < 3; i++)
+                        liste += (liste.Length > 0 ? ", " : "") + soucis[i].Name;
+                    if (soucis.Count > 3) liste += "…";
+                    f.Add(new Finding(1, soucis.Count + " périphérique(s) en panne (" + liste
+                        + ") — un pilote qui échoue peut réessayer en boucle et monopoliser un cœur, "
+                        + "ce qui se voit en saccades audio et vidéo.",
+                        FixKind.DeviceManager, "Voir les périphériques"));
+                }
+            }
+            catch { }
+
+            // Wi-Fi alors qu'une prise Ethernet dort derrière la machine : le gain de latence le
+            // plus net, et le seul qui ne se règle pas dans un menu — il se branche.
+            try
+            {
+                LienReseau.Etat lien = LienReseau.Lire();
+                string verdict = LienReseau.Verdict(lien);
+                if (verdict != null) f.Add(new Finding(1, verdict, FixKind.DeviceManager, "Gestionnaire de périphériques"));
+                else if (lien.FilaireActif) f.Add(new Finding(0, "Connexion filaire active — pas de gigue Wi-Fi."));
+
+                // QUALITÉ du lien radio. « Tu es en Wi-Fi » ne suffit pas : un lien à 93 % sur
+                // 5 GHz et un lien à 35 % sur 2,4 GHz saturé n'ont rien à voir. Et quand le lien
+                // est bon, on le dit — pour cesser de chercher de ce côté.
+                if (lien.SansFilActif)
+                {
+                    WifiLink.Etat radio = WifiLink.Lire();
+                    string vw = WifiLink.Verdict(radio);
+                    if (vw != null) f.Add(new Finding(WifiLink.Niveau(radio), vw));
+                }
+            }
+            catch { }
+
+            // Cartes réseau apparues APRÈS l'application du réglage anti-Nagle : elles ne l'ont pas.
+            try
+            {
+                string nagle = NagleGuard.Texte(NagleGuard.Inventaire());
+                if (nagle != null) f.Add(new Finding(1, nagle, FixKind.ReapplyTweaks, "Réappliquer"));
+            }
+            catch { }
+
             // Âge du pilote GPU
             int days = GpuDriverAgeDays();
             if (days > 270)

@@ -178,7 +178,11 @@ namespace BTOptimizer
                     if (_fps != null && _fps.Running)
                     {
                         var ps = _fps.Snapshot(1000);
-                        if (ps != null && ps.Count > 0) { fps = ps[0].Fps; low = ps[0].OnePctLowFps; fname = ps[0].Name; }   // trié par FPS desc : le jeu
+                        // Le jeu est la fenêtre au premier plan — PAS le processus le plus rapide.
+                        // Un navigateur accéléré dépasse un jeu bridé à 60 Hz, et l'overlay
+                        // affichait alors le débit d'images de Chrome pendant la partie.
+                        var jeu = FpsEtw.ChoisirJeu(ps, FpsEtw.PidPremierPlan());
+                        if (jeu != null) { fps = jeu.Fps; low = jeu.OnePctLowFps; fname = jeu.Name; }
                     }
                 }
                 catch { }
