@@ -80,7 +80,36 @@ namespace BTOptimizer
                 if (p.Length > 9) c.AutoGame = p[9] == "1";
             }
             catch { }
+            c.Normalise();
             return c;
+        }
+
+        /// <summary>
+        /// PUR : ramène chaque réglage dans les bornes que propose l'interface.
+        ///
+        /// Les curseurs sont bornés (taille 1–40, épaisseur 1–8, écart 0–30, point 0–12), mais la
+        /// lecture du fichier ne l'était pas : n'importe quelle valeur pouvait entrer par là. Or
+        /// la taille de la fenêtre overlay se déduit de ces nombres, et l'en-tête de ce fichier
+        /// explique pourquoi elle NE DOIT JAMAIS couvrir l'écran — un overlay plein écran fait
+        /// perdre aux jeux sans bordure le « flip indépendant » DWM, avec une chute de FPS qui
+        /// dure jusqu'au redémarrage du jeu.
+        ///
+        /// Une contrainte de cette importance ne peut pas reposer sur le fait qu'un fichier texte
+        /// soit bien formé.
+        /// </summary>
+        public void Normalise()
+        {
+            Shape     = Borne(Shape, 0, 4);
+            Size      = Borne(Size, 1, 40);
+            Thickness = Borne(Thickness, 1, 8);
+            Gap       = Borne(Gap, 0, 30);
+            Dot       = Borne(Dot, 0, 12);
+            Opacity   = Borne(Opacity, 10, 100);
+        }
+
+        private static int Borne(int v, int min, int max)
+        {
+            return v < min ? min : (v > max ? max : v);
         }
     }
 
@@ -199,12 +228,33 @@ namespace BTOptimizer
         /// <summary>Plus petite fenêtre carrée, centrée sur l'écran principal, qui contient
         /// le réticule (branches + cercle + point + liseré). Voir la contrainte de
         /// performance en tête de fichier : jamais plein écran.</summary>
-        private static Rectangle CenteredBounds(CrosshairSettings s)
+        /// <summary>
+        /// PUR : demi-côté de la fenêtre overlay, en pixels.
+        ///
+        /// Séparé du positionnement pour être vérifiable : c'est LUI qui garantit la contrainte
+        /// de performance décrite en tête de fichier. Les entrées sont bornées ici aussi, et pas
+        /// seulement à la lecture du fichier — cette fonction décide seule de la taille d'une
+        /// fenêtre posée par-dessus le jeu, elle ne doit dépendre de la prudence de personne.
+        /// </summary>
+        internal static int DemiTaille(CrosshairSettings s)
         {
-            int th = Math.Max(1, s.Thickness) + (s.Outline ? 2 : 0);
-            int reach = Math.Max(Math.Max(s.Gap + s.Size, s.Dot / 2 + 1), 2);
+            if (s == null) return 12;
+            int taille = Borne(s.Size, 1, 40);
+            int ecart = Borne(s.Gap, 0, 30);
+            int point = Borne(s.Dot, 0, 12);
+            int th = Borne(s.Thickness, 1, 8) + (s.Outline ? 2 : 0);
+
+            int reach = Math.Max(Math.Max(ecart + taille, point / 2 + 1), 2);
             int half = reach + th + 6;                 // marge pour les bouts arrondis du trait
             if (half < 12) half = 12;
+            return half;
+        }
+
+        private static int Borne(int v, int min, int max) { return v < min ? min : (v > max ? max : v); }
+
+        private static Rectangle CenteredBounds(CrosshairSettings s)
+        {
+            int half = DemiTaille(s);
             Rectangle scr = Screen.PrimaryScreen.Bounds;
             return new Rectangle(scr.Left + scr.Width / 2 - half,
                                  scr.Top + scr.Height / 2 - half,
@@ -269,9 +319,28 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>
+        /// Le maintien au premier plan ne bat que tant que le viseur est affiché.
+        ///
+        /// Crosshair.Hide() appelle Hide() sur la fenêtre, ce qui ne la FERME pas : le minuteur
+        /// n'était donc arrêté qu'à la fermeture, c'est-à-dire jamais en pratique. Il continuait
+        /// de battre toutes les 3 secondes pour une fenêtre invisible, pendant toute la session.
+        /// </summary>
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            try
+            {
+                if (_topmostKeeper == null) return;
+                if (Visible) { if (!_topmostKeeper.Enabled) _topmostKeeper.Start(); }
+                else _topmostKeeper.Stop();
+            }
+            catch { }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (_topmostKeeper != null) { _topmostKeeper.Stop(); _topmostKeeper.Dispose(); }
+            if (_topmostKeeper != null) { _topmostKeeper.Stop(); _topmostKeeper.Dispose(); _topmostKeeper = null; }
             base.OnFormClosing(e);
         }
     }
