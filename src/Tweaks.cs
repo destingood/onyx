@@ -878,6 +878,18 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "qos_dscp_jeux", Category = Cat.Reseau, Esport = true,
+                Name = "Marquer les paquets de tes jeux comme prioritaires (DSCP 46)",
+                Desc = "Pose la marque « urgent » (Expedited Forwarding) sur les paquets sortants de tes jeux INSTALLÉS — pas sur tous les programmes. C'est la différence qui compte : la recette qui circule vise « *.exe », donc navigateur et téléchargements compris, et une priorité que tout le monde a n'est plus une priorité. ONYX écrit aussi le réglage documenté par Microsoft sans lequel Windows ignore purement et simplement ces politiques hors réseau d'entreprise — l'oubli qui rend la manœuvre inerte chez soi. HONNÊTETÉ : la marque est une demande, pas un ordre. Beaucoup de box l'ignorent et les opérateurs la réécrivent souvent en sortie. Le gain est réel sur un routeur qui en tient compte, nul ailleurs, jamais négatif — et ça ne remplace pas un routeur qui gère sa file d'attente (SQM). Effet au redémarrage. « Rétablir » retire les politiques d'ONYX, et elles seules.",
+                Reboot = true,
+                BackupKeys = new[] { @"HKLM\" + QosGaming.Racine },
+                Apply  = () => QosGaming.Appliquer(QosGaming.ExesDesJeuxDetectes(), null),
+                Revert = () => QosGaming.Retirer(null),
+                Check  = () => QosGaming.Existantes().Count > 0
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "qos_reserve_off", Category = Cat.Reseau,
                 Name = "Lever le plafond QoS (NonBestEffortLimit) — sans effet dans presque tous les cas",
                 Desc = "MISE AU POINT : « Windows réserve 20 % de ta bande passante » est un des plus vieux mythes du réglage Windows, et cette description le répétait. Microsoft l'a démenti explicitement : la réserve ne s'applique QU'AUX applications qui demandent de la bande passante via l'API QoS, et même là, elle reste disponible pour les autres tant qu'elle n'est pas utilisée. Aucun jeu ne passe par cette API. Ce réglage lève quand même le plafond, pour les rares logiciels concernés (visioconférence d'entreprise, streaming professionnel) — mais n'attends AUCUN gain en jeu, et méfie-toi de tout guide qui te le vend comme tel. Il est pour cette raison sorti du préréglage eSport. « Rétablir » supprime la valeur.",
