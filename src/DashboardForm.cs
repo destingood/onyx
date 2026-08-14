@@ -875,7 +875,9 @@ namespace BTOptimizer
                     else
                     {
                         System.Threading.Thread.Sleep(20000);
-                        texte = DpcLive.Texte(d.Instantane(), 12, 20);
+                        // On transmet les événements JETÉS : un rapport bâti sur une mesure trouée
+                        // doit le dire, sinon il rassure à tort — l'erreur va toujours vers le bas.
+                        texte = DpcLive.Texte(d.Instantane(), 12, 20, d.EvenementsPerdus);
                     }
                 }
                 catch (Exception ex) { texte = "Mesure impossible : " + ex.Message; }

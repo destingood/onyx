@@ -45,11 +45,17 @@ namespace BTOptimizer
             public long Isr;            // nombre d'interruptions
             public double TotalMs;      // temps cumulé
             public double PireMs;       // pire exécution isolée — c'est elle qui fait la saccade
+            public double PireDpcMs;    // pire DPC seul
+            public double PireIsrMs;    // pire interruption seule
         }
 
         private readonly object _lock = new object();
         private readonly List<Module> _modules = new List<Module>();
         private readonly Dictionary<string, Pilote> _pilotes = new Dictionary<string, Pilote>(StringComparer.OrdinalIgnoreCase);
+        // Instantané IMMUABLE de la table de résolution, remplacé d'un bloc à chaque nouveau
+        // module. Les rappels ETW le lisent sans verrou : jamais de liste modifiée en cours de
+        // lecture, et aucune attente sur le chemin le plus chaud du programme.
+        private volatile Module[] _index = new Module[0];
         private TraceEventSession _session;
         private System.Threading.Thread _thread;
 
@@ -57,8 +63,22 @@ namespace BTOptimizer
         public string DerniereErreur { get; private set; }
 
         /// <summary>
+        /// Événements JETÉS par le noyau parce que le consommateur ne suivait pas.
+        ///
+        /// C'est le chiffre que tout outil de mesure doit publier et qu'aucun ne publie. Quand ETW
+        /// déborde, il n'attend pas : il jette. Les DPC perdus sont invisibles dans le résultat, et
+        /// l'erreur va TOUJOURS dans le même sens — la latence paraît meilleure qu'elle n'est.
+        /// Rendre un beau rapport bâti sur une mesure trouée serait le pire service à rendre.
+        /// </summary>
+        public int EvenementsPerdus
+        {
+            get { try { return _session == null ? 0 : _session.EventsLost; } catch { return 0; } }
+        }
+
+        /// <summary>
         /// Résolution PURE d'une adresse vers un nom de pilote (testable sans noyau).
         /// Renvoie null si l'adresse ne tombe dans aucun module connu — on ne devine JAMAIS.
+        /// Balayage linéaire : sert de RÉFÉRENCE aux tests, pas au chemin chaud.
         /// </summary>
         public static string Resout(List<Module> modules, ulong adresse)
         {
@@ -66,6 +86,52 @@ namespace BTOptimizer
             foreach (Module m in modules)
                 if (adresse >= m.Base && adresse < m.Fin) return m.Nom;
             return null;
+        }
+
+        /// <summary>
+        /// Prépare PUREMENT la table de résolution : triée par adresse de base, et DÉDOUBLONNÉE.
+        ///
+        /// Le dédoublonnage n'est pas cosmétique. Un pilote déchargé puis rechargé laisse son
+        /// ancienne plage dans la liste, à une adresse différente. Le balayage linéaire rendait
+        /// alors le PREMIER module trouvé — c'est-à-dire potentiellement le périmé. On garde la
+        /// dernière plage connue pour chaque nom.
+        /// </summary>
+        public static Module[] Indexe(List<Module> modules)
+        {
+            if (modules == null || modules.Count == 0) return new Module[0];
+            var dernier = new Dictionary<string, Module>(StringComparer.OrdinalIgnoreCase);
+            foreach (Module m in modules)
+            {
+                if (m == null || string.IsNullOrEmpty(m.Nom) || m.Fin <= m.Base) continue;
+                dernier[m.Nom] = m;   // le plus récent l'emporte
+            }
+            var arr = new List<Module>(dernier.Values).ToArray();
+            Array.Sort(arr, delegate (Module a, Module b) { return a.Base.CompareTo(b.Base); });
+            return arr;
+        }
+
+        /// <summary>
+        /// Résolution PURE par recherche dichotomique sur la table préparée.
+        ///
+        /// POURQUOI CE N'EST PAS UNE COQUETTERIE : ce code tourne sur CHAQUE DPC et CHAQUE
+        /// interruption, soit des dizaines de milliers de fois par seconde. À 300 modules noyau, le
+        /// balayage linéaire faisait des millions de comparaisons par seconde — et quand le
+        /// consommateur ETW ne suit plus, le noyau JETTE des événements. L'outil de mesure faussait
+        /// alors sa propre mesure, silencieusement et toujours dans le même sens : vers le bas.
+        /// </summary>
+        public static string ResoutRapide(Module[] tries, ulong adresse)
+        {
+            if (tries == null || tries.Length == 0) return null;
+            int lo = 0, hi = tries.Length - 1, trouve = -1;
+            while (lo <= hi)
+            {
+                int mid = (int)(((uint)lo + (uint)hi) >> 1);
+                if (tries[mid].Base <= adresse) { trouve = mid; lo = mid + 1; }
+                else hi = mid - 1;
+            }
+            if (trouve < 0) return null;
+            Module m = tries[trouve];
+            return adresse < m.Fin ? m.Nom : null;
         }
 
         /// <summary>Classement PUR : pire temps d'exécution d'abord, c'est lui qui compte.</summary>
@@ -98,7 +164,13 @@ namespace BTOptimizer
 
         private string NomDe(ulong adresse)
         {
-            string n = Resout(_modules, adresse);
+            // Lecture SANS VERROU d'un instantané IMMUABLE. L'ancien code parcourait la liste
+            // vivante pendant qu'un chargement de pilote y ajoutait une entrée : une énumération
+            // concurrente lève « Collection was modified », l'exception remontait hors du rappel
+            // ETW, et le try/catch autour de Process() avalait tout — la mesure s'arrêtait sans
+            // un mot, en laissant croire que le PC n'avait plus de DPC.
+            Module[] snap = _index;
+            string n = ResoutRapide(snap, adresse);
             return n ?? "(pilote inconnu)";
         }
 
@@ -113,6 +185,10 @@ namespace BTOptimizer
                 if (estDpc) p.Dpc++; else p.Isr++;
                 p.TotalMs += ms;
                 if (ms > p.PireMs) p.PireMs = ms;
+                // Séparer DPC et interruptions : ce ne sont pas les mêmes causes ni les mêmes
+                // remèdes, et les confondre masque lequel des deux fait la saccade.
+                if (estDpc) { if (ms > p.PireDpcMs) p.PireDpcMs = ms; }
+                else { if (ms > p.PireIsrMs) p.PireIsrMs = ms; }
             }
         }
 
@@ -176,7 +252,10 @@ namespace BTOptimizer
                 ulong b = (ulong)d.ImageBase;
                 if (b == 0 || d.ImageSize <= 0) return;
                 lock (_lock)
+                {
                     _modules.Add(new Module { Base = b, Fin = b + (ulong)d.ImageSize, Nom = nom });
+                    _index = Indexe(_modules);   // publication atomique du nouvel instantané
+                }
             }
             catch { }
         }
@@ -188,19 +267,34 @@ namespace BTOptimizer
             {
                 var copie = new List<Pilote>();
                 foreach (var kv in _pilotes)
-                    copie.Add(new Pilote { Nom = kv.Value.Nom, Dpc = kv.Value.Dpc, Isr = kv.Value.Isr, TotalMs = kv.Value.TotalMs, PireMs = kv.Value.PireMs });
+                    copie.Add(new Pilote { Nom = kv.Value.Nom, Dpc = kv.Value.Dpc, Isr = kv.Value.Isr,
+                        TotalMs = kv.Value.TotalMs, PireMs = kv.Value.PireMs,
+                        PireDpcMs = kv.Value.PireDpcMs, PireIsrMs = kv.Value.PireIsrMs });
                 return Classement(copie);
             }
         }
 
-        /// <summary>Mise en forme PURE, façon rapport de latence.</summary>
+        /// <summary>Mise en forme, façon rapport de latence.</summary>
         public static string Texte(List<Pilote> classement, int top, double secondes)
+        {
+            return Texte(classement, top, secondes, 0);
+        }
+
+        /// <summary>
+        /// Mise en forme PURE. <paramref name="perdus"/> = événements jetés par le noyau : s'il y
+        /// en a, le rapport le dit EN PREMIER, avant les chiffres qu'il rend douteux.
+        /// </summary>
+        public static string Texte(List<Pilote> classement, int top, double secondes, int perdus)
         {
             if (classement == null || classement.Count == 0)
                 return "Aucun événement DPC/ISR capturé — mesure trop courte, ou session noyau refusée.";
             double pire = classement[0].PireMs;
             var sb = new System.Text.StringBuilder();
             sb.Append("LATENCE DPC / ISR — ").Append(Math.Round(secondes)).Append(" s de mesure\n\n");
+            if (perdus > 0)
+                sb.Append("⚠ ").Append(perdus).Append(" événement(s) JETÉ(S) par le noyau pendant la mesure.\n")
+                  .Append("Les chiffres ci-dessous sont donc SOUS-ESTIMÉS : la latence réelle est pire.\n")
+                  .Append("Ferme ce qui charge la machine, puis recommence.\n\n");
             sb.Append("Pire exécution isolée : ").Append(pire.ToString("0.000")).Append(" ms\n");
             sb.Append(Verdict(pire)).Append("\n\n");
             sb.Append("Pilotes classés par PIRE temps d'exécution (c'est lui qui fait les saccades) :\n\n");
@@ -211,7 +305,14 @@ namespace BTOptimizer
                 sb.Append("  ").Append(p.PireMs.ToString("0.000").PadLeft(8)).Append(" ms   ")
                   .Append(p.Nom.PadRight(28))
                   .Append("total ").Append(p.TotalMs.ToString("0.0")).Append(" ms  ")
-                  .Append(p.Dpc).Append(" DPC / ").Append(p.Isr).Append(" ISR\n");
+                  .Append(p.Dpc).Append(" DPC / ").Append(p.Isr).Append(" ISR");
+                // Dire LEQUEL des deux fait le pire temps quand le pilote produit les deux : un DPC
+                // trop long et une interruption trop longue n'ont ni la même cause ni le même
+                // remède, et les confondre envoie chercher au mauvais endroit.
+                if (p.PireDpcMs > 0 && p.PireIsrMs > 0)
+                    sb.Append("   (pire DPC ").Append(p.PireDpcMs.ToString("0.000"))
+                      .Append(" / pire ISR ").Append(p.PireIsrMs.ToString("0.000")).Append(")");
+                sb.Append("\n");
             }
             sb.Append("\nUn pilote peut avoir un total élevé sans gêner (beaucoup d'exécutions très courtes). "
                     + "C'est le PIRE temps qui compte : pendant qu'il s'exécute, son cœur ne fait rien d'autre.");
