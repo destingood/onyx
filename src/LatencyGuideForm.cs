@@ -69,7 +69,14 @@ namespace BTOptimizer
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
             _tip.SetToolTip(scr, "Ouvre l'Affichage avancé : choisis l'écran et sa fréquence de rafraîchissement maximale.");
             var gpu = MakeBtn("Panneau NVIDIA...", 150, DockStyle.Left);
-            gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
+            // Même correctif que dans les guides Streamer et 500 FPS : « nvcpl.cpl » n'existe plus.
+            gpu.Click += (s, e) =>
+            {
+                if (!PanneauNvidia.Ouvrir())
+                    MessageBox.Show(this, "Le panneau NVIDIA est introuvable sur cette machine.\n\n"
+                        + "Ouvre-le par un clic droit sur le bureau, ou depuis le menu Démarrer.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
             _tip.SetToolTip(gpu, "Ouvre le panneau NVIDIA (G-Sync, faible latence, fréquence préférée).");
             var refresh = MakeBtn("Rafraîchir", 100, DockStyle.Left);
             refresh.Click += (s, e) => Reload();

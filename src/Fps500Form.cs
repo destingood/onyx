@@ -92,7 +92,14 @@ namespace BTOptimizer
             var scr = MakeBtn("Réglages écran...", 125, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
             var gpu = MakeBtn("Panneau NVIDIA...", 125, DockStyle.Left);
-            gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
+            // Même correctif que dans le guide Streamer : « nvcpl.cpl » n'existe plus.
+            gpu.Click += (s, e) =>
+            {
+                if (!PanneauNvidia.Ouvrir())
+                    MessageBox.Show(this, "Le panneau NVIDIA est introuvable sur cette machine.\n\n"
+                        + "Ouvre-le par un clic droit sur le bureau, ou depuis le menu Démarrer.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
             var refresh = MakeBtn("Rafraîchir", 85, DockStyle.Left);
             refresh.Click += (s, e) => Reload();
             var close = MakeBtn("Fermer", 80, DockStyle.Right);
