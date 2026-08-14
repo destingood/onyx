@@ -26,6 +26,9 @@ namespace BTOptimizer
         private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
         private ContextMenuStrip _toolsMenu;
         private Timer _sysTimer;
+        /// <summary>Rattrapage des taches reseau ratees au demarrage (voir sa mise en place).
+        /// Ne fait rien une fois qu elles ont abouti : leurs compteurs quotidiens s en chargent.</summary>
+        private Timer _rattrapage;
         private bool _trayShown;
 
         public DashboardForm()
@@ -106,6 +109,22 @@ namespace BTOptimizer
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
             try { Audience.PingSiActive(); } catch { }            // comptage des installations (voir Audience)
+
+            // RATTRAPAGE RÉSEAU — ONYX démarre 30 secondes après l'ouverture de session, souvent
+            // avant que le Wi-Fi soit connecté. Ce qui a besoin du réseau échoue alors, et comme
+            // c'est un outil de zone de notification qui reste ouvert toute la journée, il n'y a
+            // pas de « prochain lancement » pour réessayer : la journée entière est perdue.
+            //
+            // Ces deux appels portent chacun leur propre compteur quotidien : dès qu'ils ont
+            // abouti, ce minuteur ne fait plus rien du tout. Il ne coûte donc que le jour où le
+            // réseau manquait au démarrage — précisément le cas qu'il répare.
+            _rattrapage = new Timer { Interval = 15 * 60 * 1000 };   // toutes les 15 minutes
+            _rattrapage.Tick += (s, e) => System.Threading.Tasks.Task.Run(() =>
+            {
+                try { VerifieMiseAJour(); } catch { }   // réseau : jamais sur le thread interface
+                try { Audience.PingSiActive(); } catch { }
+            });
+            _rattrapage.Start();
 
             Shown += (s, e) =>
             {
@@ -1231,6 +1250,7 @@ namespace BTOptimizer
             try { Crosshair.Hide(); } catch { }
             try { StatsOverlayManager.Hide(); } catch { }
             try { if (_sysTimer != null) _sysTimer.Stop(); } catch { }
+            try { if (_rattrapage != null) { _rattrapage.Stop(); _rattrapage.Dispose(); _rattrapage = null; } } catch { }
             try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
         }
 
