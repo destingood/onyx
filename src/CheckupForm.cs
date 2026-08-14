@@ -21,6 +21,11 @@ namespace BTOptimizer
             public string Name;
             public string Status;
             public bool Problem;
+            /// <summary>La vérification n'a PAS pu aboutir. Distinct de « pas de problème » :
+            /// un détecteur qui n'a rien pu lire ne doit ni accuser, ni rassurer. Reste faux
+            /// pour les contrôles qui lisent le registre, où l'absence de valeur est une
+            /// réponse en soi (Windows applique son défaut).</summary>
+            public bool Indetermine;
             public bool NeedReboot;
             public bool Security;
             public Action<Action<string, int>> Fix;
@@ -186,14 +191,23 @@ namespace BTOptimizer
         // 1. bcdedit useplatformclock=Yes : force le HPET → LATENCE en plus (mythe des guides).
         private static Item UsePlatformClock()
         {
-            bool on = false;
+            // Même piège que pour le TRIM : l'ABSENCE de « useplatformclock » dans la sortie ne
+            // prouve rien si bcdedit n'a pas répondu du tout — sans élévation il rend « Accès
+            // refusé », ce que l'ancien code lisait comme « non forcé (bon) ».
+            //
+            // On se fie au CODE DE RETOUR, pas au texte : bcdedit traduit ses messages, et chercher
+            // un mot anglais dans la sortie aurait marqué toutes les machines françaises comme
+            // non vérifiables. Ses échecs rendent 1, ses succès 0 — dans toutes les langues.
+            bool on = false, lu = false;
             try
             {
                 NativeResult r = Sys.Run(Sys.Sys32("bcdedit.exe"), "/enum {current}");
                 string o = (r.Output ?? "").ToLowerInvariant();
+                lu = r.ExitCode == 0 && o.Length > 0;
                 int idx = o.IndexOf("useplatformclock");
                 if (idx >= 0)
                 {
+                    lu = true;
                     string rest = o.Substring(idx, Math.Min(40, o.Length - idx));
                     on = rest.Contains("yes") || rest.Contains("true");
                 }
@@ -202,8 +216,9 @@ namespace BTOptimizer
             return new Item
             {
                 Name = "Timer HPET forcé (bcdedit useplatformclock)",
-                Problem = on, NeedReboot = true,
-                Status = on ? "ACTIVÉ — force le HPET, ajoute de la latence (à retirer)"
+                Problem = on, Indetermine = !lu, NeedReboot = true,
+                Status = !lu ? "impossible à vérifier — bcdedit n'a pas rendu la configuration de démarrage"
+                            : on ? "ACTIVÉ — force le HPET, ajoute de la latence (à retirer)"
                             : "non forcé (bon)",
                 Fix = delegate(Action<string, int> log)
                 {
@@ -252,22 +267,36 @@ namespace BTOptimizer
         // 4. Fichier d'échange désactivé : cause de crashs / « out of memory » en jeu.
         private static Item PagefileDisabled()
         {
-            bool auto = false, hasPageFile = false;
+            // Ce contrôle conclut « désactivé » à partir de DEUX ABSENCES : pas de gestion
+            // automatique, et aucun fichier d'échange listé. Or une requête WMI qui échoue produit
+            // exactement les mêmes deux absences. Sans distinguer les cas, l'app accusait
+            // l'utilisateur d'avoir coupé son fichier d'échange alors qu'elle n'avait rien pu lire
+            // — et le verdict descend jusqu'au score de santé, qui perdait des points pour un
+            // problème inventé.
+            //
+            // Le pire est que la panne de WMI est PRÉCISÉMENT le terrain de cette fenêtre : les
+            // machines qu'un « optimiseur » a saccagées sont celles où le service Winmgmt a des
+            // chances d'avoir été désactivé.
+            bool auto = false, hasPageFile = false, lu = false;
             try
             {
                 using (var cs = new ManagementObjectSearcher("SELECT AutomaticManagedPagefile FROM Win32_ComputerSystem"))
                     foreach (ManagementObject mo in cs.Get())
+                    {
                         auto = Convert.ToBoolean(mo["AutomaticManagedPagefile"]);
+                        lu = true;   // WMI a répondu : à partir d'ici, une absence veut dire quelque chose
+                    }
                 using (var pf = new ManagementObjectSearcher("SELECT Name FROM Win32_PageFileUsage"))
                     foreach (ManagementObject mo in pf.Get()) { hasPageFile = true; break; }
             }
-            catch { }
-            bool bad = !auto && !hasPageFile;
+            catch { lu = false; }
+            bool bad = lu && !auto && !hasPageFile;
             return new Item
             {
                 Name = "Fichier d'échange (pagefile) désactivé",
-                Problem = bad, NeedReboot = true,
-                Status = bad ? "DÉSACTIVÉ — cause de plantages et d'« out of memory » en jeu"
+                Problem = bad, Indetermine = !lu, NeedReboot = true,
+                Status = !lu ? "impossible à vérifier — Windows n'a pas répondu (le service WMI est peut-être désactivé)"
+                             : bad ? "DÉSACTIVÉ — cause de plantages et d'« out of memory » en jeu"
                              : (auto ? "géré automatiquement par Windows (bon)" : "configuré manuellement (ok)"),
                 Fix = delegate(Action<string, int> log)
                 {
@@ -289,19 +318,26 @@ namespace BTOptimizer
         // 5. TRIM SSD désactivé : use un SSD prématurément, ralentit les écritures.
         private static Item TrimDisabled()
         {
-            bool off = false;
+            // « Aucune ligne ne dit = 1 » ne vaut « TRIM actif » que si fsutil a effectivement
+            // répondu. S'il n'a rien rendu, l'ancien code annonçait « actif (bon) » : une bonne
+            // nouvelle fabriquée à partir d'une absence de réponse.
+            bool off = false, lu = false;
             try
             {
                 NativeResult r = Sys.Run(Sys.Sys32("fsutil.exe"), "behavior query DisableDeleteNotify");
                 foreach (string line in (r.Output ?? "").Split('\n'))
+                {
+                    if (line.IndexOf("DisableDeleteNotify", StringComparison.OrdinalIgnoreCase) >= 0) lu = true;
                     if (line.IndexOf("NTFS", StringComparison.OrdinalIgnoreCase) >= 0 && line.Contains("= 1")) off = true;
+                }
             }
             catch { }
             return new Item
             {
                 Name = "TRIM SSD désactivé (DisableDeleteNotify=1)",
-                Problem = off,
-                Status = off ? "DÉSACTIVÉ — mauvais pour la durée de vie et la vitesse d'un SSD"
+                Problem = off, Indetermine = !lu,
+                Status = !lu ? "impossible à vérifier — fsutil n'a pas répondu"
+                             : off ? "DÉSACTIVÉ — mauvais pour la durée de vie et la vitesse d'un SSD"
                              : "actif (bon pour les SSD)",
                 Fix = delegate(Action<string, int> log)
                 {
@@ -454,16 +490,24 @@ namespace BTOptimizer
         {
             _items = items;
             _list.Items.Clear();
-            int problems = 0;
+            int problems = 0, inconnus = 0;
             foreach (Checkup.Item it in items)
             {
                 if (it.Problem) problems++;
-                string prefix = it.Problem ? "⚠  " : "✔  ";
+                else if (it.Indetermine) inconnus++;
+                // Trois états, pas deux : un contrôle qui n'a pas pu lire n'a pas sa place
+                // derrière une coche verte.
+                string prefix = it.Problem ? "⚠  " : it.Indetermine ? "?  " : "✔  ";
                 _list.Items.Add(prefix + it.Name + "   —   " + it.Status, it.Problem);
             }
-            _summary.Text = problems == 0
+            // « Aucun réglage néfaste » est une affirmation : on ne la fait que si TOUS les
+            // contrôles ont abouti. Sinon on dit ce qu'on sait, et ce qu'on ignore.
+            _summary.Text = problems > 0
+                ? problems + " réglage(s) néfaste(s) détecté(s) — clique sur CORRIGER LA SÉLECTION."
+                : inconnus == 0
                 ? "✔ Aucun réglage néfaste détecté — ton PC n'a pas été abîmé par un mauvais optimiseur."
-                : problems + " réglage(s) néfaste(s) détecté(s) — clique sur CORRIGER LA SÉLECTION.";
+                : "Aucun réglage néfaste parmi les contrôles qui ont abouti, mais " + inconnus
+                  + " n'ont pas pu être vérifiés (marqués « ? ») — je ne peux pas te garantir que tout est sain.";
             SetBusy(false);
         }
 

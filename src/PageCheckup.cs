@@ -139,15 +139,32 @@ namespace BTOptimizer
             switch (id)
             {
                 case 0: return "Fichiers temporaires : " + CleanDirs(new[] { Path.GetTempPath(), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp") }) + " libéré(s).";
-                case 1: Console("defrag", "/C /O", false); return "Optimisation des disques lancée (console).";
+                case 1: return Maintenance.ResumeLancement(Console("defrag", "/C /O", false), "Optimisation des disques");
                 case 2:
                     string la = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                     return "Caches GPU : " + CleanDirs(new[] { Path.Combine(la, "D3DSCache"), Path.Combine(la, @"NVIDIA\DXCache"), Path.Combine(la, @"NVIDIA\GLCache") }) + " libéré(s).";
                 case 3:
+                {
+                    // La description promet trois choses : fichiers récents, Jump Lists ET cache de
+                    // miniatures. Les deux premières étaient faites (les Jump Lists vivent dans des
+                    // sous-dossiers de Recent) ; la troisième, jamais — la promesse était vide.
                     string rec = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent");
-                    return "Historique Windows : " + CleanDirs(new[] { rec }) + " nettoyé(s).";
-                case 4: Console("cmd.exe", "/k sfc /scannow & DISM /Online /Cleanup-Image /RestoreHealth", true); return "Réparation système lancée (console SFC + DISM).";
-                case 5: Console("cmd.exe", "/c ipconfig /flushdns & netsh interface ip delete arpcache", false); return "Cache DNS et ARP vidés.";
+                    string expl = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\Windows\Explorer");
+                    long freed = CleanOne(rec) + CleanMotif(expl, Maintenance.EstCacheMiniature);
+                    return "Historique Windows et cache de miniatures : " + Taille(freed) + " nettoyé(s).";
+                }
+                case 4: return Maintenance.ResumeLancement(
+                    Console("cmd.exe", "/k sfc /scannow & DISM /Online /Cleanup-Image /RestoreHealth", true),
+                    "Réparation système (SFC + DISM)");
+                case 5:
+                {
+                    // Commandes COURTES : on les attend et on lit leur code de retour. Annoncer
+                    // « vidés » sans avoir regardé était une confirmation qui ne reposait sur rien.
+                    bool dns = false, arp = false;
+                    try { dns = Sys.Run(Sys.Sys32("ipconfig.exe"), "/flushdns").ExitCode == 0; } catch { }
+                    try { arp = Sys.Run(Sys.Sys32("netsh.exe"), "interface ip delete arpcache").ExitCode == 0; } catch { }
+                    return Maintenance.ResumeReseau(dns, arp);
+                }
                 default: return "Routine inconnue.";
             }
         }
@@ -156,8 +173,31 @@ namespace BTOptimizer
         {
             long freed = 0;
             foreach (string d in dirs) freed += CleanOne(d);
-            double mb = freed / (1024.0 * 1024.0);
-            return mb >= 1 ? mb.ToString("0.0") + " Mo" : (freed / 1024.0).ToString("0") + " Ko";
+            return Taille(freed);
+        }
+
+        private static string Taille(long octets)
+        {
+            double mb = octets / (1024.0 * 1024.0);
+            return mb >= 1 ? mb.ToString("0.0") + " Mo" : (octets / 1024.0).ToString("0") + " Ko";
+        }
+
+        /// <summary>Supprime, dans un dossier et lui seul, les fichiers retenus par le filtre.
+        /// Sert là où le dossier contient aussi des fichiers qui ne sont PAS des caches.</summary>
+        private static long CleanMotif(string dir, Func<string, bool> garde)
+        {
+            long freed = 0;
+            if (!Directory.Exists(dir)) return 0;
+            try
+            {
+                foreach (string f in Directory.EnumerateFiles(dir))
+                {
+                    if (!garde(Path.GetFileName(f))) continue;
+                    try { var fi = new FileInfo(f); long sz = fi.Length; fi.Delete(); freed += sz; } catch { }
+                }
+            }
+            catch { }
+            return freed;
         }
 
         // Parcours récursif résilient : un sous-dossier protégé (accès refusé) n'interrompt
@@ -182,10 +222,20 @@ namespace BTOptimizer
             return freed;
         }
 
-        private static void Console(string exe, string args, bool keepOpen)
+        /// <summary>Lance une console. Rend VRAI seulement si le processus a réellement démarré :
+        /// l'échec était avalé, et le compte-rendu annonçait quand même une réussite.</summary>
+        private static bool Console(string exe, string args, bool keepOpen)
         {
-            try { Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = true, WindowStyle = keepOpen ? ProcessWindowStyle.Normal : ProcessWindowStyle.Minimized }); }
-            catch { }
+            try
+            {
+                Process p = Process.Start(new ProcessStartInfo(exe, args)
+                {
+                    UseShellExecute = true,
+                    WindowStyle = keepOpen ? ProcessWindowStyle.Normal : ProcessWindowStyle.Minimized
+                });
+                return p != null;
+            }
+            catch { return false; }
         }
 
         protected override void OnPaint(PaintEventArgs e)
