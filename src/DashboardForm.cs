@@ -105,6 +105,7 @@ namespace BTOptimizer
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
+            try { Audience.PingSiActive(); } catch { }            // comptage des installations (voir Audience)
 
             Shown += (s, e) =>
             {
@@ -281,6 +282,20 @@ namespace BTOptimizer
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
             sys.DropDownItems.Add("Activer la présence Discord (coller l'App ID)…", null, (s, e) => ConfigureDiscordAppId());
+            // Mesure d'audience : visible, cochée, et coupable en un clic. C'est la contrepartie
+            // d'un envoi actif par défaut — voir Audience pour ce qui part exactement.
+            var audience = new ToolStripMenuItem("Statistiques anonymes (compter les installations)") { Checked = Audience.Active };
+            audience.Click += (s, e) =>
+            {
+                bool now = !Audience.Active;
+                Audience.Active = now;
+                audience.Checked = now;
+                Log(now
+                    ? "Statistiques : ONYX enverra une fois par jour un identifiant de machine haché et son numéro de version. Rien d'autre."
+                    : "Statistiques : plus aucun envoi.", 0);
+            };
+            sys.DropDownItems.Add(audience);
+            sys.DropDownItems.Add("Ce que les statistiques envoient…", null, (s, e) => ExpliqueAudience());
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
@@ -1574,6 +1589,31 @@ namespace BTOptimizer
         }
 
         private static FpsPage.ToolItem Tool(string label, Action act) { return new FpsPage.ToolItem(label, act); }
+
+        /// <summary>
+        /// Dit exactement ce qui part, sans enrobage. Une case à cocher ne vaut consentement que
+        /// si la personne peut savoir ce qu'elle coche — et le mot « anonyme » est ici abusif :
+        /// l'identifiant est stable, donc pseudonyme. On l'écrit.
+        /// </summary>
+        private void ExpliqueAudience()
+        {
+            string url = Audience.PointDeCollecte;
+            MessageBox.Show(this,
+                "Une fois par jour au maximum, ONYX envoie TROIS informations :\n\n"
+                + "  · un identifiant de machine, haché — impossible de remonter jusqu'à toi,\n"
+                + "    mais stable, donc deux envois de ce PC se ressemblent ;\n"
+                + "  · la version d'ONYX installée ;\n"
+                + "  · le numéro de version de Windows.\n\n"
+                + "C'est tout. Ni ton nom, ni celui de ta machine, ni tes jeux, ni ton matériel, "
+                + "ni ce que tu fais dans l'application.\n\n"
+                + "À quoi ça sert : savoir combien de personnes utilisent ONYX et quelles versions "
+                + "sont installées, pour ne pas casser celles qui servent encore.\n\n"
+                + "Tu peux couper l'envoi à tout moment : Système → « Statistiques anonymes ».\n\n"
+                + (url.Length == 0
+                    ? "État actuel : aucun point de collecte configuré — ONYX n'envoie RIEN."
+                    : "Destination : " + url),
+                "Ce que les statistiques envoient", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
 
         public void OpenDialog(Form f)
         {
