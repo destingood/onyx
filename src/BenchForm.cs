@@ -10,8 +10,11 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Benchmark rapide de PERFORMANCE (différent de l'analyse de latence) : mesure la
-    /// puissance CPU (1 cœur et tous cœurs), la bande passante mémoire, et la vitesse du
-    /// disque système. Indicatif — utile pour comparer avant/après optimisation ou entre PC.
+    /// puissance CPU (1 cœur et tous cœurs), la bande passante mémoire, et la vitesse du disque
+    /// qui héberge le dossier TEMPORAIRE — pas forcément le disque système, ce que l'affichage
+    /// prétendait sans jamais le vérifier. Le lecteur mesuré est donc nommé.
+    ///
+    /// Indicatif — utile pour comparer avant/après optimisation ou entre PC.
     /// </summary>
     internal static class PerfBench
     {
@@ -19,7 +22,14 @@ namespace BTOptimizer
         {
             public double CpuSingleMops, CpuMultiMops;   // millions d'opérations / s
             public double RamGBs;                        // Go/s
-            public double DiskWriteMBs, DiskReadMBs;     // Mo/s
+            public double DiskWriteMBs, DiskReadMBs;     // Mo/s (négatif = mesure échouée)
+            /// <summary>Lettre du lecteur RÉELLEMENT mesuré. Le test écrit dans le dossier
+            /// temporaire, qui n'est pas forcément sur le disque système — l'affichage annonçait
+            /// « Disque système » sans jamais le vérifier.</summary>
+            public string DiskLettre = "";
+            /// <summary>Type de média tel que Windows le déclare (3 = mécanique, 4 = SSD,
+            /// 0 = inconnu). Lu, pas déduit du débit.</summary>
+            public int DiskMedia;
         }
 
         // Charge de calcul mixte entier/flottant ; retourne un accumulateur pour éviter que le JIT ne l'élimine.
@@ -38,13 +48,20 @@ namespace BTOptimizer
         {
             const int inner = 2048;   // opérations par itération
             long totalIters = 0;
-            double sink = 0;
+            // L'accumulateur ne sert qu'à empêcher le compilateur d'éliminer le calcul. Il était
+            // partagé et écrit par tous les threads sans synchronisation : une course de données,
+            // sans effet sur le résultat (le comptage passe par Interlocked) mais qui fait écrire
+            // les cœurs sur la même ligne de cache — exactement ce qu'un banc d'essai CPU doit
+            // éviter. Chaque thread garde donc le sien.
+            long sinkGarde = 0;
             var work = new Action(() =>
             {
                 var sw = Stopwatch.StartNew();
                 long iters = 0;
-                while (sw.ElapsedMilliseconds < durationMs) { sink += Workload(inner); iters++; }
+                double local = 0;
+                while (sw.ElapsedMilliseconds < durationMs) { local += Workload(inner); iters++; }
                 Interlocked.Add(ref totalIters, iters);
+                Interlocked.Add(ref sinkGarde, (long)local & 1);   // consomme « local » sans le partager
             });
 
             var sw2 = Stopwatch.StartNew();
@@ -56,7 +73,7 @@ namespace BTOptimizer
                 foreach (Thread t in ts) t.Join();
             }
             sw2.Stop();
-            GC.KeepAlive(sink);
+            GC.KeepAlive(sinkGarde);
             double ops = (double)totalIters * inner;
             return ops / sw2.Elapsed.TotalSeconds / 1e6;   // MOPS
         }
@@ -122,8 +139,24 @@ namespace BTOptimizer
             r.CpuMultiMops = CpuBench(Environment.ProcessorCount, 1500);
             if (progress != null) progress("Mémoire...");
             r.RamGBs = RamBench();
-            if (progress != null) progress("Disque système...");
+            if (progress != null) progress("Disque...");
             DiskBench(out r.DiskWriteMBs, out r.DiskReadMBs);
+
+            // Quel disque vient-on RÉELLEMENT de mesurer, et qu'en dit Windows ? Deviner le média
+            // à partir du débit était la seule façon de se tromper — la réponse est disponible.
+            try
+            {
+                string racine = Path.GetPathRoot(Path.GetTempPath());
+                if (!string.IsNullOrEmpty(racine))
+                {
+                    r.DiskLettre = racine.TrimEnd('\\');
+                    var types = Diagnostics.DriveTypes();
+                    Diagnostics.DriveKind k;
+                    if (types != null && types.TryGetValue(char.ToUpperInvariant(racine[0]), out k) && k != null)
+                        r.DiskMedia = k.MediaType;
+                }
+            }
+            catch { }
             return r;
         }
     }
@@ -238,19 +271,23 @@ namespace BTOptimizer
             _cpu1.Text = "CPU — 1 cœur : " + r.CpuSingleMops.ToString("N0") + " Mops/s";
             _cpuN.Text = "CPU — tous les cœurs (" + Environment.ProcessorCount + ") : " + r.CpuMultiMops.ToString("N0") + " Mops/s";
             _ram.Text = "Mémoire : " + r.RamGBs.ToString("0.0") + " Go/s (lecture séquentielle)";
-            _disk.Text = "Disque système : écriture " + r.DiskWriteMBs.ToString("N0") + " Mo/s · lecture " + r.DiskReadMBs.ToString("N0") + " Mo/s";
+            // On nomme le lecteur mesuré : le test écrit dans le dossier temporaire, qui n'est pas
+            // toujours sur le disque système. Et un échec (-1) ne s'affiche plus comme un chiffre.
+            _disk.Text = "Disque " + (string.IsNullOrEmpty(r.DiskLettre) ? "(temporaire)" : r.DiskLettre)
+                + " : écriture " + VerdictDisque.Debit(r.DiskWriteMBs)
+                + " · lecture " + VerdictDisque.Debit(r.DiskReadMBs);
 
             // Verdict indicatif (seuils larges pour un PC de jeu actuel).
             bool cpuGood = r.CpuMultiMops > 8000;
             bool ramGood = r.RamGBs > 8;
-            bool diskGood = r.DiskReadMBs > 400;   // > 400 Mo/s = SSD ; < ~150 = HDD
+            bool diskGood = r.DiskReadMBs > 400;
             int good = (cpuGood ? 1 : 0) + (ramGood ? 1 : 0) + (diskGood ? 1 : 0);
 
-            if (r.DiskReadMBs >= 0 && r.DiskReadMBs < 150)
+            string surDisque = VerdictDisque.Media(r.DiskMedia, r.DiskReadMBs, r.DiskLettre);
+            if (surDisque != null)
             {
                 _verdict.ForeColor = Color.FromArgb(200, 110, 0);
-                _verdict.Text = "→ Disque système lent (~" + r.DiskReadMBs.ToString("0") + " Mo/s) : c'est un disque dur mécanique. "
-                    + "Passer Windows et tes jeux sur un SSD est le plus gros gain de réactivité possible.";
+                _verdict.Text = "→ " + surDisque;
             }
             else if (good == 3)
             {
@@ -267,8 +304,9 @@ namespace BTOptimizer
             _status.Text = "";
             if (_log != null)
                 _log("Benchmark : CPU 1c " + r.CpuSingleMops.ToString("N0") + " / multi " + r.CpuMultiMops.ToString("N0")
-                    + " Mops/s, RAM " + r.RamGBs.ToString("0.0") + " Go/s, disque L " + r.DiskReadMBs.ToString("N0")
-                    + " / E " + r.DiskWriteMBs.ToString("N0") + " Mo/s.", 0);
+                    + " Mops/s, RAM " + r.RamGBs.ToString("0.0") + " Go/s, disque " + r.DiskLettre
+                    + " L " + VerdictDisque.Debit(r.DiskReadMBs)
+                    + " / E " + VerdictDisque.Debit(r.DiskWriteMBs) + ".", 0);
             _btnRun.Enabled = true;
             Cursor = Cursors.Default;
         }
