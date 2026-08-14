@@ -87,6 +87,25 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // Wi-Fi alors qu'une prise Ethernet dort derrière la machine : le gain de latence le
+            // plus net, et le seul qui ne se règle pas dans un menu — il se branche.
+            try
+            {
+                LienReseau.Etat lien = LienReseau.Lire();
+                string verdict = LienReseau.Verdict(lien);
+                if (verdict != null) f.Add(new Finding(1, verdict, FixKind.DeviceManager, "Gestionnaire de périphériques"));
+                else if (lien.FilaireActif) f.Add(new Finding(0, "Connexion filaire active — pas de gigue Wi-Fi."));
+            }
+            catch { }
+
+            // Cartes réseau apparues APRÈS l'application du réglage anti-Nagle : elles ne l'ont pas.
+            try
+            {
+                string nagle = NagleGuard.Texte(NagleGuard.Inventaire());
+                if (nagle != null) f.Add(new Finding(1, nagle, FixKind.ReapplyTweaks, "Réappliquer"));
+            }
+            catch { }
+
             // Âge du pilote GPU
             int days = GpuDriverAgeDays();
             if (days > 270)
