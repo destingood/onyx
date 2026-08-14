@@ -55,8 +55,67 @@ namespace BTOptimizer
                 || n.Contains("audio controller") || n.Contains("contrôleur audio");
         }
 
+        /// <summary>
+        /// PUR : ce nom désigne-t-il un GROS PRODUCTEUR D'INTERRUPTIONS ?
+        ///
+        /// L'audio est traité à part (réglage dédié). Ici : la carte graphique, le réseau, le
+        /// stockage et les contrôleurs USB. Ce ne sont pas des choix arbitraires — ce sont les
+        /// quatre familles qui remontent en tête de toutes les mesures de latence noyau. Sur la
+        /// machine de référence, le pilote graphique produit à lui seul 129 424 travaux différés,
+        /// deux fois plus que le suivant, et il n'avait AUCUNE politique d'affinité : ses
+        /// interruptions tombaient donc là où Windows les mettait — en pratique, le cœur 0, celui
+        /// où tourne le fil principal du jeu.
+        /// </summary>
+        public static bool EstGrosProducteur(string nom)
+        {
+            if (string.IsNullOrEmpty(nom)) return false;
+            if (EstAudio(nom)) return false;   // couvert par le réglage audio, on ne double pas
+            string n = nom.ToLowerInvariant();
+            return n.Contains("nvidia") || n.Contains("radeon") || n.Contains("geforce")
+                || n.Contains("intel(r) arc") || n.Contains("graphics")
+                || n.Contains("ethernet") || n.Contains("wi-fi") || n.Contains("wifi")
+                || n.Contains("wireless") || n.Contains("réseau") || n.Contains("network")
+                // « nvme » NE SUFFIT PAS : Windows nomme ces contrôleurs « NVM Express », avec une
+                // espace. Sans cette seconde forme, le SSD principal de la machine — souvent le
+                // deuxième producteur d'interruptions — était silencieusement ignoré.
+                || n.Contains("nvme") || n.Contains("nvm express")
+                || n.Contains("ahci") || n.Contains("sata") || n.Contains("raid")
+                || n.Contains("xhci") || n.Contains("usb");
+        }
+
+        /// <summary>Gros producteurs d'interruptions présents, et leur état.</summary>
+        public static List<Peripherique> GrosProducteurs()
+        {
+            return Recense(EstGrosProducteur);
+        }
+
+        /// <summary>Répartit les interruptions des gros producteurs sur tous les cœurs.
+        /// SANS RISQUE : le mécanisme d'interruption n'est pas modifié — c'est exactement le même
+        /// geste que celui déjà appliqué aux contrôleurs audio.</summary>
+        public static Resultat RepartirProducteurs(Action<string, int> log)
+        {
+            return Ecrit(GrosProducteurs(), SousCleAffinite, "DevicePolicy", PolitiqueRepartie, log);
+        }
+
+        /// <summary>Rend la main à Windows sur les gros producteurs.</summary>
+        public static Resultat NePlusRepartirProducteurs(Action<string, int> log)
+        {
+            return Ecrit(GrosProducteurs(), SousCleAffinite, "DevicePolicy", null, log);
+        }
+
+        public static bool? EtatRepartitionProducteurs()
+        {
+            return Etat(GrosProducteurs(), delegate (Peripherique p) { return p.Politique == PolitiqueRepartie; });
+        }
+
         /// <summary>Contrôleurs audio PCI présents et leur état d'interruption.</summary>
         public static List<Peripherique> ControleursAudio()
+        {
+            return Recense(EstAudio);
+        }
+
+        /// <summary>Recense les périphériques PCI retenus par <paramref name="retenir"/>.</summary>
+        private static List<Peripherique> Recense(Func<string, bool> retenir)
         {
             var list = new List<Peripherique>();
             try
@@ -68,7 +127,7 @@ namespace BTOptimizer
                         string nom = Convert.ToString(mo["Name"]) ?? "";
                         string id = Convert.ToString(mo["PNPDeviceID"]) ?? "";
                         if (!id.StartsWith("PCI\\", StringComparison.OrdinalIgnoreCase)) continue;
-                        if (!EstAudio(nom)) continue;
+                        if (retenir == null || !retenir(nom)) continue;
                         list.Add(new Peripherique
                         {
                             Nom = nom,

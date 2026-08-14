@@ -98,6 +98,33 @@ namespace BTOptimizer
                 Check = () => IrqTuning.EtatRepartition()
             });
 
+            // Le MÊME geste, étendu à ce qui produit vraiment le plus d'interruptions. Mesuré sur
+            // une machine réelle : le pilote graphique produit à lui seul 129 424 travaux différés,
+            // deux fois plus que le suivant — et il n'avait AUCUNE politique d'affinité, quand
+            // l'audio et le stockage en avaient une.
+            list.Add(new Tweak
+            {
+                Id = "irq_spread_producteurs", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Name = "Répartir les interruptions de la carte graphique, du réseau et du stockage",
+                Desc = "Même geste que pour l'audio, appliqué à ce qui produit RÉELLEMENT le plus d'interruptions. "
+                     + "Sur la machine de référence, le pilote graphique génère à lui seul 129 424 travaux différés — "
+                     + "deux fois plus que le suivant — et n'avait aucune politique d'affinité : ses interruptions "
+                     + "tombaient donc là où Windows les met, en pratique le cœur 0, celui-là même où tourne le fil "
+                     + "principal du jeu. Ce réglage demande à Windows de les étaler sur tous les cœurs. "
+                     + "Le mécanisme d'interruption n'est PAS modifié (contrairement à MSI) : c'est exactement le "
+                     + "réglage déjà appliqué à l'audio, sur d'autres périphériques. Effet au redémarrage. "
+                     + "« Rétablir » rend la main à Windows. Hors du préréglage Recommandé : il touche la carte "
+                     + "graphique et exige un redémarrage, deux raisons de le choisir plutôt que de le subir.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.RepartirProducteurs(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun périphérique n'a accepté l'écriture (clés protégées par le système).");
+                },
+                Revert = () => IrqTuning.NePlusRepartirProducteurs(null),
+                Check = () => IrqTuning.EtatRepartitionProducteurs()
+            });
+
             // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
             // pilotes audio démarrent sans son en MSI. Hors presets, avertissement explicite.
             list.Add(new Tweak
