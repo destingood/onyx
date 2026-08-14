@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -7,40 +6,52 @@ using Microsoft.Win32;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Démarrage automatique avec Windows + redémarrage de l'explorateur — deux fonctions
-    /// reprises du concurrent (page Plan : is/enable/disable_autostart ; fix restart_explorer).
-    /// Autostart via la clé Run de l'utilisateur courant (aucun droit admin requis).
+    /// DÉMARRAGE AUTOMATIQUE AVEC WINDOWS — et pourquoi la clé « Run » ne pouvait pas marcher.
+    ///
+    /// L'ancienne version inscrivait ONYX dans HKCU\...\Run, avec ce commentaire : « aucun droit
+    /// admin requis ». C'était exactement le problème. ONYX déclare dans son manifeste qu'il EXIGE
+    /// les droits administrateur — et une entrée « Run » est traitée à l'ouverture de session dans
+    /// le contexte NON élevé de l'utilisateur. Windows ne peut pas l'élever à ce moment-là : il
+    /// n'affiche aucune demande d'autorisation au démarrage, et passe simplement l'entrée.
+    ///
+    /// Résultat : l'entrée existait, elle était marquée « activée » dans le Gestionnaire des tâches,
+    /// et l'application ne démarrait jamais. Aucun message, aucune erreur — le pire cas.
+    ///
+    /// LA BONNE MÉTHODE est une tâche planifiée déclenchée à l'ouverture de session, créée avec le
+    /// niveau d'exécution le plus élevé. C'est le seul chemin qui lance une application élevée sans
+    /// demander d'autorisation à chaque démarrage. Le projet l'utilisait DÉJÀ pour son gardien de
+    /// profil : la machinerie était là, l'autostart ne s'en servait pas.
+    ///
+    /// Le lancement est retardé de trente secondes. Une application dont le sujet est la latence n'a
+    /// aucune raison de se disputer le disque et le processeur avec le reste de l'ouverture de
+    /// session : elle n'a rien d'urgent à faire dans les premières secondes.
     /// </summary>
     internal static class AppAutostart
     {
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string ValueName = "ONYX";
-        private const string LegacyName = "Fluide";   // renommage v14.54 : migrer l'ancienne entrée
+        private const string LegacyName = "Fluide";     // renommage v14.54
+        private const string Tache = "ONYXDemarrage";
 
-        public static bool IsEnabled()
+        /// <summary>Retard au démarrage, en minutes:secondes (format attendu par schtasks).</summary>
+        private const string Retard = "0000:30";
+
+        // ------------------------------------------------------------------ pur
+
+        /// <summary>Argument /tr de schtasks pour un exécutable donné. PUR — c'est la partie qui se
+        /// trompe le plus facilement : le chemin doit rester entouré de guillemets À L'INTÉRIEUR de
+        /// l'argument, sinon un dossier contenant une espace casse la tâche en silence.</summary>
+        public static string ArgumentTache(string exe)
         {
-            try
-            {
-                using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true))
-                {
-                    if (k == null) return false;
-                    if (k.GetValue(LegacyName) != null)
-                    {   // l'utilisateur avait activé l'autostart sous l'ancien nom : même réglage, nouveau nom
-                        try { k.SetValue(ValueName, LaunchCommand()); k.DeleteValue(LegacyName, false); } catch { }
-                    }
-                    return k.GetValue(ValueName) != null;
-                }
-            }
-            catch { return false; }
+            if (string.IsNullOrEmpty(exe)) return "";
+            return "\"\\\"" + exe + "\\\"\"";
         }
 
-        /// <summary>Commande de lancement robuste : gère le lancement direct (.exe) ET via l'hôte
-        /// dotnet (dossier framework-dependent) pour rester compatible Smart App Control.</summary>
+        /// <summary>Commande de lancement PURE, pour la clé Run héritée et les diagnostics. Gère le
+        /// lancement direct (.exe) ET via l'hôte dotnet (dossier dépendant du runtime).</summary>
         public static string LaunchCommand()
         {
-            string exe = null;
-            try { exe = Environment.ProcessPath; } catch { }
-            if (string.IsNullOrEmpty(exe)) exe = Application.ExecutablePath;
+            string exe = Executable();
             if (exe != null && exe.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase))
             {
                 string dll = null;
@@ -50,40 +61,90 @@ namespace BTOptimizer
             return "\"" + exe + "\"";
         }
 
-        public static bool SetEnabled(bool on)
+        private static string Executable()
+        {
+            string exe = null;
+            try { exe = Environment.ProcessPath; } catch { }
+            if (string.IsNullOrEmpty(exe)) exe = Application.ExecutablePath;
+            return exe;
+        }
+
+        // ------------------------------------------------------------------ machine
+
+        /// <summary>La tâche planifiée existe-t-elle ?</summary>
+        private static bool TacheExiste()
+        {
+            try { return Sys.Run(Sys.Sys32("schtasks.exe"), "/query /tn " + Tache).ExitCode == 0; }
+            catch { return false; }
+        }
+
+        /// <summary>Supprime les vieilles entrées « Run », qui ne pouvaient de toute façon pas
+        /// lancer une application élevée. Les laisser entretiendrait l'illusion que c'est actif.</summary>
+        private static void PurgeRun()
         {
             try
             {
-                using (var k = Registry.CurrentUser.CreateSubKey(RunKey))
+                using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true))
                 {
-                    if (k == null) return false;
-                    try { k.DeleteValue(LegacyName, false); } catch { }   // purge l'entrée pré-renommage
-                    if (on) k.SetValue(ValueName, LaunchCommand());
-                    else k.DeleteValue(ValueName, false);
+                    if (k == null) return;
+                    try { k.DeleteValue(ValueName, false); } catch { }
+                    try { k.DeleteValue(LegacyName, false); } catch { }
                 }
-                return true;
+            }
+            catch { }
+        }
+
+        public static bool IsEnabled()
+        {
+            return TacheExiste();
+        }
+
+        /// <summary>
+        /// Active ou désactive le démarrage automatique. Rend false si la tâche n'a pas pu être
+        /// créée — et dans ce cas on ne retombe PAS sur la clé « Run » : elle ne marcherait pas, et
+        /// afficher « activé » sans que ça démarre est précisément le défaut qu'on corrige.
+        /// </summary>
+        public static bool SetEnabled(bool on)
+        {
+            PurgeRun();   // dans les deux sens : cette entrée n'a jamais rien lancé
+            if (!on)
+            {
+                try { Sys.Run(Sys.Sys32("schtasks.exe"), "/delete /f /tn " + Tache); }
+                catch { }
+                return !TacheExiste();
+            }
+
+            string exe = Executable();
+            if (string.IsNullOrEmpty(exe)) return false;
+            try
+            {
+                NativeResult r = Sys.Run(Sys.Sys32("schtasks.exe"),
+                    "/create /f /rl HIGHEST /sc ONLOGON /delay " + Retard
+                    + " /tn " + Tache + " /tr " + ArgumentTache(exe));
+                if (r.ExitCode == 0) return true;
+
+                // Certaines versions de schtasks refusent /delay avec ONLOGON : on retente sans.
+                r = Sys.Run(Sys.Sys32("schtasks.exe"),
+                    "/create /f /rl HIGHEST /sc ONLOGON /tn " + Tache + " /tr " + ArgumentTache(exe));
+                return r.ExitCode == 0;
             }
             catch { return false; }
         }
 
-        /// <summary>Redémarre explorer.exe : rafraîchit le shell Windows (barre des tâches, icônes)
-        /// après des réglages, ou débloque une barre des tâches figée. À exécuter en arrière-plan.</summary>
-        public static void RestartExplorer()
+        /// <summary>Redémarre l'explorateur Windows (dépannage d'interface).</summary>
+        public static void RestartExplorer(Action<string, int> log = null)
         {
             try
             {
-                foreach (Process p in Process.GetProcessesByName("explorer"))
-                {
+                foreach (var p in System.Diagnostics.Process.GetProcessesByName("explorer"))
                     try { p.Kill(); } catch { }
-                }
-                System.Threading.Thread.Sleep(700);
-                // Windows relance normalement explorer tout seul ; sinon on le relance.
-                if (Process.GetProcessesByName("explorer").Length == 0)
-                {
-                    try { Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = true }); } catch { }
-                }
+                System.Threading.Thread.Sleep(600);
+                try { System.Diagnostics.Process.Start(System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")); }
+                catch { }
+                if (log != null) log("Explorateur Windows redémarré.", 1);
             }
-            catch { }
+            catch (Exception ex) { if (log != null) log("Redémarrage de l'explorateur impossible : " + ex.Message, 3); }
         }
     }
 }
