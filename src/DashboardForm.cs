@@ -914,7 +914,9 @@ namespace BTOptimizer
                     + "• Un DPC est un travail que différent les pilotes. Tant qu'il s'exécute, il monopolise son cœur.\n"
                     + "• Pour un résultat utile, LANCE TON JEU et joue pendant la mesure : c'est en charge que les "
                     + "pilotes fautifs se révèlent.\n"
-                    + "• Lecture seule : rien n'est modifié sur ton système.",
+                    + "• Lecture seule : rien n'est modifié sur ton système.\n\n"
+                    + "La mesure est comparée à ton relevé de référence, s'il existe — et la comparaison "
+                    + "est REFUSÉE si les deux n'ont pas été prises sous la même charge.",
                     "Latence DPC / ISR", MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK)
                 return;
 
@@ -933,7 +935,28 @@ namespace BTOptimizer
                         System.Threading.Thread.Sleep(20000);
                         // On transmet les événements JETÉS : un rapport bâti sur une mesure trouée
                         // doit le dire, sinon il rassure à tort — l'erreur va toujours vers le bas.
-                        texte = DpcLive.Texte(d.Instantane(), 12, 20, d.EvenementsPerdus);
+                        var classement = d.Instantane();
+                        texte = DpcLive.Texte(classement, 12, 20, d.EvenementsPerdus);
+
+                        // AVANT / APRÈS. Le pire temps est un maximum sur un échantillon : une
+                        // machine moins occupée rend de meilleurs chiffres sans qu'aucun réglage
+                        // n'ait change. On compare donc, mais on REFUSE de conclure quand les
+                        // charges different — un verdict flatteur sur une comparaison invalide
+                        // ferait garder un reglage inutile en croyant l'avoir mesure.
+                        DpcCompare.Releve maintenant = DpcCompare.Depuis(classement, 20);
+                        DpcCompare.Releve reference = DpcCompare.Reference();
+                        if (maintenant != null)
+                        {
+                            if (reference != null)
+                                texte += "\n\n" + new string('-', 60) + "\nCOMPARAISON AVEC TON RELEVÉ DE RÉFÉRENCE\n\n"
+                                       + DpcCompare.Verdict(reference, maintenant);
+                            else
+                                texte += "\n\nAucun relevé de référence : celui-ci en devient un. "
+                                       + "Change UN réglage, puis relance cette mesure DANS LE MÊME ÉTAT "
+                                       + "(même jeu, même scène) — ONYX comparera les deux et te dira "
+                                       + "franchement si l'écart veut dire quelque chose.";
+                            DpcCompare.EnregistreReference(reference == null ? maintenant : reference);
+                        }
                     }
                 }
                 catch (Exception ex) { texte = "Mesure impossible : " + ex.Message; }
