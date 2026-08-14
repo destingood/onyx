@@ -4,6 +4,81 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.68 — Les curseurs d'Afterburner, et deux mesures qui mentaient
+
+### Deux outils qui donnaient de faux chiffres
+
+- **Le compteur d'images mesurait le mauvais programme.** Il retenait comme « le jeu » celui qui
+  avait le plus d'images par seconde. C'est faux par construction : un navigateur avec
+  l'accélération matérielle présente en continu, souvent **plus vite** qu'un jeu synchronisé à
+  60 Hz — l'overlay affichait donc le débit de Chrome pendant la partie. Le jeu est désormais la
+  fenêtre **au premier plan**. Et le chiffre **retombe à zéro** quand le jeu s'arrête, au lieu de
+  rester figé sur la dernière valeur connue.
+- **La mesure DPC pouvait s'arrêter en silence.** Une course entre la lecture des modules noyau et
+  l'arrivée d'un pilote levait une exception avalée par le moteur : la session s'arrêtait, le
+  rapport s'affichait quand même, et on en concluait que la machine n'avait plus de DPC. Corrigé.
+  La résolution d'adresse, qui tournait des dizaines de milliers de fois par seconde, faisait aussi
+  déborder le tampon du noyau — qui **jette** alors des événements, toujours dans le sens qui
+  flatte. Le rapport **avoue maintenant les événements perdus**, avant les chiffres qu'ils rendent
+  douteux.
+
+### Réglages carte graphique — les curseurs d'Afterburner, dans l'app
+
+- **Limite de puissance et limite de température**, avec les bornes lues sur ta carte. Le « 125 % »
+  des outils d'overclocking, c'est le rapport à la puissance d'usine : ONYX fait la conversion et
+  affiche les watts, parce qu'un pourcentage seul ne veut rien dire d'une carte à l'autre.
+- **Décalage de fréquence du cœur et de la mémoire**, par la bibliothèque du pilote — le chemin
+  qu'empruntent Afterburner et Precision X1. La tension n'est pas proposée : cette génération de
+  cartes n'expose aucun point modifiable, c'est mesuré et pas supposé.
+- **Plafond d'images calé sur ton écran** : la réponse sans injection au « Scanline Sync ». Sur un
+  écran à fréquence variable, garder la synchronisation active et plafonner juste sous la fréquence
+  maximale donne une image sans déchirure ET sans l'attente de la V-Sync.
+
+### Réseau et Wi-Fi
+
+- **Mesure du bufferbloat** : la hausse de ping **sous charge**, le seul chiffre qui explique « mon
+  ping explose dès que quelqu'un télécharge ». Et le verdict dit la vérité — quand c'est mauvais, la
+  file d'attente est dans la box, aucun réglage de Windows n'y peut rien.
+- **Marquage DSCP des jeux installés** — pas de tous les programmes : une priorité que tout le monde
+  a n'est plus une priorité. ONYX écrit aussi le réglage sans lequel Windows ignore purement et
+  simplement ces politiques hors réseau d'entreprise.
+- **Qualité du lien Wi-Fi** : signal, bande, canal, débit négocié. Le constat se prononce dans les
+  deux sens — quand le signal est bon, il le dit, pour qu'on arrête de chercher de ce côté.
+- **Geler la recherche de réseaux Wi-Fi pendant la partie** : supprime le pic de ping périodique dû
+  au balayage des canaux. Rétabli automatiquement à la fermeture, **et au lancement suivant** si
+  l'app s'est fermée brutalement — la carte ne doit jamais rester incapable de se reconnecter.
+- **Le réglage anti-Nagle se recolle tout seul** sur les cartes apparues après son application (WSL,
+  VPN, pilote réinstallé) : il vit dans une sous-clé par carte réseau, il ne tenait pas dans le temps.
+- **La fenêtre « Carte réseau » couvre enfin le sans-fil** (regroupement de segments reçus, de
+  paquets, veille sélective) : ses quatre réglages étaient tous orientés Ethernet.
+
+### Diagnostic
+
+- **Un périphérique en panne remonte tout seul** : un pilote qui échoue à démarrer réessaie en
+  boucle et monopolise un cœur. ONYX savait le détecter, mais seulement dans une fenêtre qu'il
+  fallait penser à ouvrir.
+- **« Service hôte » qui consomme : ONYX nomme le service**, pas le conteneur. Et quand c'est
+  Windows Update qui travaille, il le dit au lieu d'alarmer — couper ces services-là pour 2 % de
+  processeur laisse la machine sans correctifs de sécurité.
+- **Tu joues en Wi-Fi alors qu'une prise Ethernet dort derrière la machine** — signalé seulement si
+  une carte filaire existe vraiment.
+- **Le testeur de souris** distingue enfin un taux de rapport *annoncé* d'un taux *tenu*, et dit ce
+  que coûtent 8000 Hz : autant d'interruptions par seconde, souvent sur le cœur du jeu.
+
+### Deux corrections d'honnêteté
+
+- **Le mythe des 20 % de bande passante réservée par QoS** était répété dans la description d'un
+  réglage. Microsoft l'a démenti : la réserve ne concerne que les applications qui la demandent.
+  Le réglage reste, sa description dit la vérité, et il **sort du préréglage eSport** — un réglage
+  qui ne change rien de mesurable n'a pas sa place dans un lot qui promet un gain.
+- **Le Copilote vendait le réglage anti-Nagle** que le réglage lui-même déclare sans effet sur les
+  jeux en UDP. Deux réponses contraires dans la même app ; c'est la version vendeuse qui avait tort.
+
+### Discord
+
+- La présence Discord fonctionne **sans rien configurer** : ONYX a sa propre application. Il fallait
+  jusqu'ici en créer une soi-même sur le portail développeur.
+
 ## v15.67 — L'avis de mise à jour ne se manque plus
 - **La notification Windows était noyée.** L'avis partait dans le lot du Gardien, sous le titre
   « Gardien ONYX — N alerte(s) » : au milieu d'alertes de santé, avec un titre qui ne parle même pas
