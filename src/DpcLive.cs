@@ -316,7 +316,28 @@ namespace BTOptimizer
             }
             sb.Append("\nUn pilote peut avoir un total élevé sans gêner (beaucoup d'exécutions très courtes). "
                     + "C'est le PIRE temps qui compte : pendant qu'il s'exécute, son cœur ne fait rien d'autre.");
+            // Wdf01000.sys n'est pas un pilote de périphérique : c'est le cadre d'exécution dans
+            // lequel tournent la plupart des pilotes modernes (Wi-Fi, USB, contrôleurs…). Leurs DPC
+            // lui sont attribués, à lui et pas à eux. Voir ce nom en tête n'accuse donc PERSONNE en
+            // particulier — le taire laisserait chercher un coupable qui n'existe pas.
+            if (Contient(classement, top, "Wdf01000.sys"))
+                sb.Append("\n\nWdf01000.sys n'est pas un périphérique : c'est le cadre d'exécution des pilotes "
+                        + "modernes (Wi-Fi, USB, contrôleurs). Les leurs y sont comptés, donc ce nom ne "
+                        + "désigne aucun matériel précis — il faut débrancher ou désactiver pour trancher.");
             return sb.ToString();
+        }
+
+        /// <summary>PUR : ce nom figure-t-il dans les <paramref name="top"/> premiers du classement ?</summary>
+        public static bool Contient(List<Pilote> classement, int top, string nom)
+        {
+            if (classement == null || string.IsNullOrEmpty(nom)) return false;
+            int n = 0;
+            foreach (Pilote p in classement)
+            {
+                if (n++ >= top) break;
+                if (string.Equals(p.Nom, nom, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
 
         private void Nettoie()
