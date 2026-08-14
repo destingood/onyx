@@ -284,6 +284,7 @@ namespace BTOptimizer
             m.Add(new ToolStripSeparator());
             m.Add("🎛  Réglages carte graphique (puissance, température, fréquences)…", null,
                 (s, e) => OpenDialog(new GpuTuningForm(Log)));
+            m.Add("💽  Quel disque est le plus rapide pour tes jeux ?", null, (s, e) => MesureDisques());
             var gel = new ToolStripMenuItem("📶  Geler la recherche de réseaux Wi-Fi (pendant la partie)")
             { Checked = false };
             gel.Click += (s, e) => BasculeGelWifi(gel);
@@ -729,6 +730,61 @@ namespace BTOptimizer
             {
                 try { ShowUpdateCheck(); } catch { }
             }
+        }
+
+        /// <summary>
+        /// Mesure le temps de réponse de chaque disque sur des accès ALÉATOIRES — le seul motif qui
+        /// compte quand un jeu charge ses textures, et celui où l'étiquette « NVMe » ne garantit
+        /// rien. Strictement en lecture.
+        /// </summary>
+        private void MesureDisques()
+        {
+            if (MessageBox.Show(this,
+                    "Mesurer le temps de réponse de tes disques ?\n\n"
+                    + "• On lit des petits blocs à des endroits au hasard : c'est ce que fait un jeu qui "
+                    + "charge ses textures, et ce n'est PAS ce que mesurent les tests de débit.\n"
+                    + "• Lecture seule : aucun octet n'est écrit.\n"
+                    + "• Quelques secondes par disque.",
+                    "Temps de réponse des disques",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK)
+                return;
+
+            Log("Mesure du temps de réponse des disques…", 0);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string texte;
+                try
+                {
+                    var l = DiskLatency.Scan(4000, 6000);
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("TEMPS DE RÉPONSE DES DISQUES — accès aléatoires de 4 Ko\n\n");
+                    foreach (DiskLatency.Resultat r in l)
+                    {
+                        sb.Append("  ").Append(r.Lecteur.PadRight(4));
+                        sb.Append((r.Disque ?? "").PadRight(32).Substring(0, 32)).Append("  ");
+                        if (r.MsParAcces <= 0) { sb.Append("— ").Append(r.Motif).Append('\n'); continue; }
+                        sb.Append(r.MsParAcces.ToString("0.00")).Append(" ms   ")
+                          .Append(r.RemplissagePourcent).Append(" % plein   ")
+                          .Append(DiskLatency.Verdict(r.MsParAcces)).Append('\n');
+                    }
+                    var cl = DiskLatency.Classement(l);
+                    string conseil = cl.Count >= 2 ? DiskLatency.Conseil(cl[0], cl[cl.Count - 1]) : null;
+                    sb.Append('\n').Append(conseil ?? "Aucun écart significatif entre tes disques : "
+                        + "déplacer un jeu ne changerait rien.");
+                    sb.Append("\n\nCe test mesure le TEMPS DE RÉPONSE, pas le débit. Un jeu qui empile "
+                            + "plusieurs demandes à la fois exploite mieux un NVMe et l'écart se resserre — "
+                            + "mais c'est bien ce temps-là qui produit les micro-saccades de chargement.");
+                    texte = sb.ToString();
+                }
+                catch (Exception ex) { texte = "Mesure impossible : " + ex.Message; }
+
+                string t = texte;
+                try { BeginInvoke((Action)(() =>
+                {
+                    Log("Mesure du temps de réponse des disques terminée.", 1);
+                    MessageBox.Show(this, t, "Temps de réponse des disques", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); } catch { }
+            });
         }
 
         /// <summary>
