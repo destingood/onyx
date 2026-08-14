@@ -50,6 +50,9 @@ namespace BTOptimizer
         private const uint DM_DISPLAYFREQUENCY = 0x400000;
         private const uint CDS_TEST = 0x2;
         private const uint CDS_UPDATEREGISTRY = 0x1;
+        /// <summary>Aucun drapeau : le mode s'applique tout de suite mais N'EST PAS mémorisé.
+        /// Un redémarrage rétablit alors l'ancien mode — la sortie de secours.</summary>
+        private const uint CDS_DYNAMIQUE = 0x0;
         private const int DISP_CHANGE_SUCCESSFUL = 0;
 
         public class DisplayMode
@@ -123,10 +126,24 @@ namespace BTOptimizer
 
         /// <summary>
         /// Change la fréquence de rafraîchissement d'un écran (résolution inchangée).
-        /// Teste d'abord le mode (CDS_TEST) puis l'applique et le mémorise dans le registre.
-        /// Renvoie true si le mode a bien été appliqué.
+        ///
+        /// <paramref name="persister"/> décide de la portée du changement, et c'est le réglage le
+        /// plus important de cette fonction :
+        ///
+        ///   VRAI  — le mode est écrit dans le registre. Il survit au redémarrage. C'est ce qu'on
+        ///           veut UNE FOIS QUE l'utilisateur a confirmé qu'il voit son écran.
+        ///   FAUX  — le mode n'est appliqué que dynamiquement. Un redémarrage rétablit l'ancien.
+        ///
+        /// Pourquoi ça compte : CDS_TEST demande au PILOTE si le mode est valide, pas à l'écran
+        /// s'il sait l'afficher. Un pilote peut annoncer une fréquence qu'un panneau ne
+        /// synchronise pas — cas typique d'un très haut rafraîchissement sur un câble limite.
+        /// Le test passe, le mode s'applique, et l'écran devient noir.
+        ///
+        /// Si ce mode a été écrit dans le registre, l'écran noir SURVIT AU REDÉMARRAGE. Appliquer
+        /// d'abord sans persister laisse toujours une sortie de secours qui ne dépend pas d'ONYX :
+        /// couper et rallumer la machine suffit.
         /// </summary>
-        public static bool SetHz(string device, int hz)
+        public static bool SetHz(string device, int hz, bool persister = true)
         {
             if (string.IsNullOrEmpty(device) || hz <= 0) return false;
             try
@@ -137,7 +154,8 @@ namespace BTOptimizer
                 dm.dmFields = DM_DISPLAYFREQUENCY;
                 if (ChangeDisplaySettingsEx(device, ref dm, IntPtr.Zero, CDS_TEST, IntPtr.Zero) != DISP_CHANGE_SUCCESSFUL)
                     return false;
-                return ChangeDisplaySettingsEx(device, ref dm, IntPtr.Zero, CDS_UPDATEREGISTRY, IntPtr.Zero) == DISP_CHANGE_SUCCESSFUL;
+                uint drapeaux = persister ? CDS_UPDATEREGISTRY : CDS_DYNAMIQUE;
+                return ChangeDisplaySettingsEx(device, ref dm, IntPtr.Zero, drapeaux, IntPtr.Zero) == DISP_CHANGE_SUCCESSFUL;
             }
             catch { return false; }
         }
