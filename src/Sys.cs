@@ -1634,6 +1634,9 @@ namespace BTOptimizer
             public bool Ok;
             public string Name = "-";
             public double PowerCur, PowerDefault, PowerMax;
+            /// <summary>Power limit minimal AUTORISE PAR LE PILOTE. Sans lui, le curseur
+            /// devinait un plancher a 50 %, ce qui le mettait en desaccord avec la carte.</summary>
+            public double PowerMin;
             public double MaxCoreMhz;
         }
 
@@ -1648,17 +1651,30 @@ namespace BTOptimizer
             var info = new GpuOcInfo();
             string smi = NvSmiPath();
             if (smi == null) return info;
-            NativeResult r = Run(smi,
-                "--query-gpu=name,power.limit,power.default_limit,power.max_limit,clocks.max.gr --format=csv,noheader,nounits");
-            if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) return info;
-            string[] p = r.Output.Split('\n')[0].Trim().Split(',');
-            if (p.Length < 5) return info;
+            // ATTENTION : nvidia-smi invalide la requête ENTIÈRE dès qu'un champ demandé lui est
+            // inconnu — et il le fait en rendant un CODE 0 avec un message d'erreur en guise de
+            // résultat. Ajouter naïvement power.min_limit ferait donc disparaître la carte tout
+            // entière sur un pilote qui ne connaît pas ce champ : « aucun GPU NVIDIA détecté ».
+            // On demande donc le champ récent d'abord, et on retombe sur la requête historique.
+            const string champsBase = "name,power.limit,power.default_limit,power.max_limit,clocks.max.gr";
+            string[] p = null;
+            foreach (string champs in new[] { champsBase + ",power.min_limit", champsBase })
+            {
+                NativeResult r = Run(smi, "--query-gpu=" + champs + " --format=csv,noheader,nounits");
+                if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) continue;
+                string[] c = r.Output.Split('\n')[0].Trim().Split(',');
+                if (c.Length >= 5) { p = c; break; }
+            }
+            if (p == null) return info;
             info.Name = p[0].Trim();
             double v;
             if (double.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerCur = v;
             if (double.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerDefault = v;
             if (double.TryParse(p[3].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerMax = v;
             if (double.TryParse(p[4].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.MaxCoreMhz = v;
+            // Absent sur les pilotes anciens (requête de repli) : reste à 0, et les bornes du
+            // curseur retombent alors sur une valeur prudente.
+            if (p.Length >= 6 && double.TryParse(p[5].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerMin = v;
             info.Ok = true;
             return info;
         }
@@ -1695,33 +1711,47 @@ namespace BTOptimizer
         /// figer le plancher de fréquence trop haut peut geler la machine (écran noir + reboot).
         /// Le GPU gère lui-même son boost dans sa courbe stable ; seul le budget de puissance change.
         /// </summary>
-        public static void ApplyGpuOc(int powerLimit, Action<string, int> log)
+        /// <summary>Applique le power limit. Rend VRAI seulement si nvidia-smi a accepté :
+        /// l'appelant affichait auparavant « appliqué » quelle que soit l'issue.</summary>
+        public static bool ApplyGpuOc(int powerLimit, Action<string, int> log)
         {
             string smi = NvSmiPath();
-            if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return; }
+            if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return false; }
             GpuOcInfo cur = QueryGpuOc();
-            if (powerLimit <= 0 || !cur.Ok) return;
+            if (powerLimit <= 0 || !cur.Ok) return false;
             int pl = powerLimit;
-            if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;                 // borne haute (pilote)
-            if (cur.PowerDefault > 0 && pl < (int)(cur.PowerDefault * 0.5)) pl = (int)(cur.PowerDefault * 0.5); // garde-fou bas
+            if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;   // borne haute (pilote)
+            // Borne basse : celle que la CARTE déclare. L'ancien garde-fou à 50 % du défaut était
+            // une supposition, et elle interdisait le vrai minimum du pilote — 150 W sur 320 W de
+            // défaut, soit 47 %, se retrouvaient remontés à 160 W sans que personne ne le dise.
+            int plancher = cur.PowerMin > 0 ? (int)Math.Ceiling(cur.PowerMin)
+                         : cur.PowerDefault > 0 ? (int)(cur.PowerDefault * 0.5) : 0;
+            if (plancher > 0 && pl < plancher) pl = plancher;
             NativeResult r = Run(smi, "-pl " + pl);
-            if (r.ExitCode == 0) log("Power limit GPU -> " + pl + " W (fréquences gérées par le pilote).", 1);
-            else log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            if (r.ExitCode == 0) { log("Power limit GPU -> " + pl + " W (fréquences gérées par le pilote).", 1); return true; }
+            log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            return false;
         }
 
-        public static void ResetGpuLocks(Action<string, int> log)
+        /// <summary>Remet le GPU au défaut constructeur. Rend VRAI seulement si le power limit
+        /// par défaut a effectivement pu être réécrit.</summary>
+        public static bool ResetGpuLocks(Action<string, int> log)
         {
             string smi = NvSmiPath();
-            if (smi == null) return;
+            if (smi == null) return false;
             GpuOcInfo cur = QueryGpuOc();
             NativeResult r = Run(smi, "-rgc");
             if (r.ExitCode == 0) log("Verrou de fréquences GPU retiré (gestion pilote).", 1);
             else log("Echec -rgc (code " + r.ExitCode + ").", 2);
-            if (cur.Ok && cur.PowerDefault > 0)
+            if (!cur.Ok || cur.PowerDefault <= 0) return false;
+            NativeResult rp = Run(smi, "-pl " + (int)cur.PowerDefault);
+            if (rp.ExitCode != 0)
             {
-                Run(smi, "-pl " + (int)cur.PowerDefault);
-                log("Power limit GPU remis au défaut constructeur (" + (int)cur.PowerDefault + " W).", 0);
+                log("Echec du retour au power limit par défaut (code " + rp.ExitCode + ") : " + (rp.Output ?? "").Trim(), 3);
+                return false;
             }
+            log("Power limit GPU remis au défaut constructeur (" + (int)cur.PowerDefault + " W).", 0);
+            return true;
         }
 
         private const string OcTask = "BTOptimizerOC";
