@@ -57,7 +57,11 @@ namespace BTOptimizer
                     return 3;
                 }
                 log("Ré-application du power limit GPU (pl=" + pl + " W).", 0);
-                Sys.ApplyGpuOc(pl, log);
+                // Le code de retour compte : c'est une TÂCHE PLANIFIÉE qui appelle ceci au
+                // démarrage. En rendant 0 quoi qu'il arrive, un power limit qui ne s'applique
+                // plus (pilote changé, carte remplacée) restait invisible dans l'historique de
+                // la tâche — l'utilisateur croyait son réglage actif pendant des mois.
+                if (!Sys.ApplyGpuOc(pl, log)) { log("Le power limit n'a pas pu être ré-appliqué.", 3); return 4; }
                 return 0;
             }
 

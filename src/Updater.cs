@@ -370,16 +370,34 @@ namespace BTOptimizer
         // Vérification quotidienne discrète (jamais plus d'une fois par jour).
         private static string StampPath { get { return AppPaths.File("bt-update-check.txt"); } }
 
+        /// <summary>
+        /// La vérification du jour a-t-elle déjà eu lieu ? LECTURE SEULE.
+        ///
+        /// Elle marquait le jour comme fait AVANT que la vérification n'ait lieu. Or ONYX démarre
+        /// 30 secondes après l'ouverture de session : le Wi-Fi n'est pas toujours connecté, et
+        /// l'appel à GitHub échoue. Le jour était pourtant consommé — aucune nouvelle tentative
+        /// avant le lendemain, et la mise à jour restait invisible.
+        ///
+        /// C'est le même piège que pour la présence Discord : le démarrage automatique a déplacé
+        /// le moment où le code s'exécute, et ce qui marchait au lancement manuel ne marche plus.
+        ///
+        /// Le marquage est donc séparé — voir MarqueVerifie, appelé seulement en cas de succès.
+        /// </summary>
         public static bool DueToday()
         {
             try
             {
                 string today = DateTime.Now.ToString("yyyyMMdd");
-                if (File.Exists(StampPath) && File.ReadAllText(StampPath).Trim() == today) return false;
-                File.WriteAllText(StampPath, today);
-                return true;
+                return !(File.Exists(StampPath) && File.ReadAllText(StampPath).Trim() == today);
             }
             catch { return false; }
+        }
+
+        /// <summary>À appeler UNIQUEMENT quand la vérification a réellement abouti.</summary>
+        public static void MarqueVerifie()
+        {
+            try { File.WriteAllText(StampPath, DateTime.Now.ToString("yyyyMMdd")); }
+            catch { }
         }
     }
 }

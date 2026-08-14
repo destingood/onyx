@@ -70,7 +70,15 @@ namespace BTOptimizer
             tools.Click += (s, e) => { try { LibScan.OpenTools(this, _log, new[] { "OBSProject.OBSStudio", "Guru3D.Afterburner" }); } catch { } Reload(); };
             _tip.SetToolTip(tools, "Installe OBS Studio et MSI Afterburner (RTSS est fourni avec) via winget.");
             var gpu = MakeBtn("Panneau NVIDIA...", 150, DockStyle.Left);
-            gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
+            // « nvcpl.cpl » n'existe plus depuis des années : le bouton ne faisait rien, en
+            // silence. Voir PanneauNvidia — et on prévient désormais quand rien ne s'ouvre.
+            gpu.Click += (s, e) =>
+            {
+                if (!PanneauNvidia.Ouvrir())
+                    MessageBox.Show(this, "Le panneau NVIDIA est introuvable sur cette machine.\n\n"
+                        + "Ouvre-le par un clic droit sur le bureau, ou depuis le menu Démarrer.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
             _tip.SetToolTip(gpu, "Panneau NVIDIA : mise à l'échelle plein écran, faible latence, fréquence préférée.");
             var scr = MakeBtn("Réglages écran...", 150, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display", null);

@@ -115,28 +115,77 @@ namespace BTOptimizer
             try { if (_pipe != null) { _pipe.Dispose(); _pipe = null; } } catch { }
         }
 
+        /// <summary>Ce que fait la présence en ce moment — pour que « ça ne marche pas » puisse
+        /// se diagnostiquer au lieu de se deviner.</summary>
+        public static string Etat { get; private set; } = "arrêtée";
+
+        private static int _tick;
+
+        /// <summary>
+        /// Boucle de présence. Elle RÉESSAIE : c'est tout l'objet de la correction.
+        ///
+        /// L'ancienne version faisait « if (!Connect()) { return; } » — un seul essai, puis
+        /// abandon définitif pour toute la session. Tant qu'ONYX était lancé à la main, Discord
+        /// tournait déjà et ça passait. Mais ONYX démarre désormais tout seul, 30 secondes après
+        /// l'ouverture de session : il arrive donc AVANT que Discord ait ouvert son tuyau. Un
+        /// essai, un échec, plus jamais de présence — alors que tout le reste fonctionnait.
+        ///
+        /// Elle se reconnecte aussi quand Discord redémarre ou se ferme en cours de route, ce que
+        /// l'ancienne boucle ne faisait pas davantage.
+        /// </summary>
         private static void Loop()
         {
-            try
+            while (_running)
             {
-                if (!Connect()) { _running = false; return; }
-                Write(0, "{\"v\":1,\"client_id\":\"" + AppId + "\"}");   // handshake
-                ReadFrame();                                            // READY (ignoré)
-                int tick = 0, secs = 0;
-                SendActivity(tick++);
-                // Garde le pipe vivant, et fait TOURNER l'activité toutes les 60 s (statut vivant).
-                while (_running && _pipe != null && _pipe.IsConnected)
+                if (!Connect())
                 {
-                    Thread.Sleep(1000);
-                    if (_running && ++secs % 60 == 0) SendActivity(tick++);
+                    Etat = "Discord introuvable — nouvelle tentative dans 15 s";
+                    Patiente(15);
+                    continue;
                 }
-            }
-            catch { }
-            finally
-            {
+
+                bool ok = false;
+                try
+                {
+                    Write(0, "{\"v\":1,\"client_id\":\"" + AppId + "\"}");
+                    // On LIT la réponse du handshake au lieu de la jeter : Discord y annonce
+                    // READY, ou refuse l'identifiant. Sans ce contrôle, un App ID invalide
+                    // laissait la boucle envoyer des activités dans le vide, sans un mot.
+                    string reponse = ReadFrame();
+                    ok = reponse != null && reponse.IndexOf("READY", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!ok)
+                        Etat = "Discord a refusé l'application (identifiant " + AppId + ")";
+                }
+                catch { ok = false; }
+
+                if (ok)
+                {
+                    Etat = "connectée";
+                    int secs = 0;
+                    try
+                    {
+                        SendActivity(_tick++);
+                        while (_running && _pipe != null && _pipe.IsConnected)
+                        {
+                            Thread.Sleep(1000);
+                            if (_running && ++secs % 60 == 0) SendActivity(_tick++);
+                        }
+                    }
+                    catch { }
+                    if (_running) Etat = "Discord s'est fermé — reconnexion";
+                }
+
                 try { if (_pipe != null) _pipe.Dispose(); } catch { }
-                _pipe = null; _running = false;
+                _pipe = null;
+                if (_running) Patiente(ok ? 5 : 30);
             }
+            Etat = "arrêtée";
+        }
+
+        /// <summary>Attente découpée en secondes, pour que Stop() soit pris en compte tout de suite.</summary>
+        private static void Patiente(int secondes)
+        {
+            for (int i = 0; i < secondes && _running; i++) Thread.Sleep(1000);
         }
 
         private static bool Connect()
@@ -166,7 +215,10 @@ namespace BTOptimizer
             _pipe.Flush();
         }
 
-        private static void ReadFrame()
+        /// <summary>Lit une trame et REND son contenu. Elle était lue puis jetée : la réponse de
+        /// Discord — READY, ou un refus motivé — était donc perdue au moment précis où elle
+        /// aurait expliqué pourquoi rien ne s'affiche.</summary>
+        private static string ReadFrame()
         {
             // Un pipe peut rendre MOINS d'octets que demandé : un seul Read() tronquait
             // silencieusement l'en-tête (donc la longueur lue était fausse), et le corps était
@@ -174,13 +226,14 @@ namespace BTOptimizer
             // toutes les trames suivantes. ReadExactly boucle jusqu'à complétion et lève si le
             // flux se termine avant : les catch reproduisent l'ancien « on abandonne » (CA2022).
             byte[] head = new byte[8];
-            try { _pipe.ReadExactly(head, 0, 8); } catch { return; }
+            try { _pipe.ReadExactly(head, 0, 8); } catch { return null; }
 
             int len = BitConverter.ToInt32(head, 4);
-            if (len <= 0 || len >= 65536) return;
+            if (len <= 0 || len >= 65536) return null;
 
             byte[] buf = new byte[len];
-            try { _pipe.ReadExactly(buf, 0, len); } catch { }
+            try { _pipe.ReadExactly(buf, 0, len); } catch { return null; }
+            try { return Encoding.UTF8.GetString(buf); } catch { return null; }
         }
 
         private static readonly long StartTs = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

@@ -26,6 +26,9 @@ namespace BTOptimizer
         private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
         private ContextMenuStrip _toolsMenu;
         private Timer _sysTimer;
+        /// <summary>Rattrapage des taches reseau ratees au demarrage (voir sa mise en place).
+        /// Ne fait rien une fois qu elles ont abouti : leurs compteurs quotidiens s en chargent.</summary>
+        private Timer _rattrapage;
         private bool _trayShown;
 
         public DashboardForm()
@@ -105,6 +108,23 @@ namespace BTOptimizer
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
+            try { Audience.PingSiActive(); } catch { }            // comptage des installations (voir Audience)
+
+            // RATTRAPAGE RÉSEAU — ONYX démarre 30 secondes après l'ouverture de session, souvent
+            // avant que le Wi-Fi soit connecté. Ce qui a besoin du réseau échoue alors, et comme
+            // c'est un outil de zone de notification qui reste ouvert toute la journée, il n'y a
+            // pas de « prochain lancement » pour réessayer : la journée entière est perdue.
+            //
+            // Ces deux appels portent chacun leur propre compteur quotidien : dès qu'ils ont
+            // abouti, ce minuteur ne fait plus rien du tout. Il ne coûte donc que le jour où le
+            // réseau manquait au démarrage — précisément le cas qu'il répare.
+            _rattrapage = new Timer { Interval = 15 * 60 * 1000 };   // toutes les 15 minutes
+            _rattrapage.Tick += (s, e) => System.Threading.Tasks.Task.Run(() =>
+            {
+                try { VerifieMiseAJour(); } catch { }   // réseau : jamais sur le thread interface
+                try { Audience.PingSiActive(); } catch { }
+            });
+            _rattrapage.Start();
 
             Shown += (s, e) =>
             {
@@ -114,6 +134,11 @@ namespace BTOptimizer
                 // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
                 try { Crosshair.ShowOnStartupIfEnabled(Log); } catch { }
                 try { StatsOverlayManager.ShowOnStartupIfEnabled(Log); } catch { }
+                // Le filtre couleur avait été oublié lors de cette même migration. Une rampe gamma
+                // ne survit pas à la fermeture de session : sans cet appel, « Appliquer &
+                // enregistrer » ne tenait que jusqu'au redémarrage, et le réglage sauvegardé
+                // n'était rétabli que si l'utilisateur ouvrait « Optimiseur complet ».
+                try { ColorFilter.ReapplyOnStartup(Log); } catch { }
             };
 
 #if !BTTEST
@@ -276,6 +301,20 @@ namespace BTOptimizer
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
             sys.DropDownItems.Add("Activer la présence Discord (coller l'App ID)…", null, (s, e) => ConfigureDiscordAppId());
+            // Mesure d'audience : visible, cochée, et coupable en un clic. C'est la contrepartie
+            // d'un envoi actif par défaut — voir Audience pour ce qui part exactement.
+            var audience = new ToolStripMenuItem("Statistiques anonymes (compter les installations)") { Checked = Audience.Active };
+            audience.Click += (s, e) =>
+            {
+                bool now = !Audience.Active;
+                Audience.Active = now;
+                audience.Checked = now;
+                Log(now
+                    ? "Statistiques : ONYX enverra une fois par jour un identifiant de machine haché et son numéro de version. Rien d'autre."
+                    : "Statistiques : plus aucun envoi.", 0);
+            };
+            sys.DropDownItems.Add(audience);
+            sys.DropDownItems.Add("Ce que les statistiques envoient…", null, (s, e) => ExpliqueAudience());
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
@@ -600,6 +639,18 @@ namespace BTOptimizer
                     try { sos = Guardian.FreshCrash(); } catch { }
                     // 2) Contrôle quotidien classique (silencieux si tout va bien).
                     var al = new System.Collections.Generic.List<string>();
+                    // MISE À JOUR : vérifiée AVANT et EN DEHORS du passage quotidien du Gardien.
+                    //
+                    // Elle était enfermée dans « if (sos == null) { if (!Guardian.DueToday()) … } »,
+                    // donc soumise à deux conditions qui ne la concernent pas :
+                    //   · un jeu planté dans les 30 dernières minutes (sos != null) sautait tout
+                    //     le bloc — et c'est justement là qu'on relance ONYX ;
+                    //   · le Gardien devait ne pas être encore passé aujourd'hui, alors qu'il a
+                    //     son propre horodatage et peut l'avoir consommé lors d'un lancement
+                    //     précédent.
+                    // Updater.DueToday() suffit à la limiter à une fois par jour.
+                    try { VerifieMiseAJour(); } catch { }
+
                     if (sos == null)
                     {
                         if (!Guardian.DueToday()) return;
@@ -607,65 +658,7 @@ namespace BTOptimizer
                         try { AppStats.Get(snap => { try { HealthTrend.RecordToday(snap.Health); } catch { } }); } catch { }
                         // photo quotidienne de l'état du système (« qu'est-ce qui a changé sur mon PC ? »)
                         try { StateDiff.SaveToday(); } catch { }
-                        // Nouvelle version d'ONYX ? Vérification silencieuse, 1×/jour, jamais bloquante.
-                        try
-                        {
-                            if (Updater.DueToday())
-                            {
-                                string st;
-                                var nu = Updater.Check(out st);
-                                if (nu != null && Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
-                                {
-                                    string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
-                                    // Mémorisée pour l'affichage DANS l'app : la notification Windows
-                                    // peut être manquée (PC absent, notifications coupées), l'en-tête
-                                    // de la fenêtre, lui, reste visible tant que la mise à jour est là.
-                                    try { UpdateFlag.Set(dispo); } catch { }
-                                    // La fenêtre est peut-être ouverte pendant que le Gardien
-                                    // découvre la version : le bandeau apparaît sans attendre le
-                                    // prochain lancement.
-                                    try
-                                    {
-                                        BeginInvoke((Action)(() =>
-                                        {
-                                            try
-                                            {
-                                                Text = "ONYX — QG     •  mise à jour " + dispo + " disponible";
-                                                MonteBandeauMaj(dispo);
-                                            }
-                                            catch { }
-                                        }));
-                                    }
-                                    catch { }
-                                    // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » :
-                                    // une mise à jour n'est pas une alerte de santé, et un titre
-                                    // générique se referme sans être lu. Envoyée ici plutôt qu'avec
-                                    // le lot du Gardien, qui pourrait ne jamais partir s'il n'y a
-                                    // aucune autre alerte à signaler.
-                                    try
-                                    {
-                                        if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
-                                                "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
-                                        {
-                                            BeginInvoke((Action)(() =>
-                                            {
-                                                try
-                                                {
-                                                    _tray.Visible = true;
-                                                    _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
-                                                    _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
-                                                    _tray.ShowBalloonTip(10000);
-                                                }
-                                                catch { }
-                                            }));
-                                        }
-                                    }
-                                    catch { }
-                                }
-                                else { try { UpdateFlag.Clear(); } catch { } }
-                            }
-                        }
-                        catch { }
+                        // (la vérification de mise à jour a lieu plus haut, hors de ce bloc)
                         // Mesures faites : en VEILLE, on s'arrête là — on mesure, on ne dérange pas.
                         if (Guardian.AlertsMuted()) return;
                         // AddRange, PAS d'affectation : « al = Guardian.Alerts() » ÉCRASAIT la liste
@@ -832,6 +825,74 @@ namespace BTOptimizer
         /// « Plus tard » le referme — un rappel ne doit pas devenir un mur — mais il REVIENT au
         /// lancement suivant : reporter est un choix légitime, oublier n'en est pas un.
         /// </summary>
+        /// <summary>
+        /// Nouvelle version d'ONYX ? Silencieux, une fois par jour, jamais bloquant.
+        ///
+        /// Le jour n'est marqué comme fait QUE si GitHub a répondu. Auparavant l'horodatage était
+        /// écrit avant l'appel : quand ONYX démarrait avant que le Wi-Fi soit connecté — ce qui
+        /// arrive systématiquement puisqu'il se lance 30 secondes après l'ouverture de session —
+        /// la vérification échouait, le jour était consommé, et aucune nouvelle tentative n'avait
+        /// lieu avant le lendemain.
+        /// </summary>
+        private void VerifieMiseAJour()
+        {
+            if (!Updater.DueToday()) return;
+
+            string st;
+            Updater.Release nu;
+            try { nu = Updater.Check(out st); }
+            catch { return; }              // réseau absent : on NE marque pas, on réessaiera
+            if (nu == null) return;        // idem : rien de lisible, donc rien de conclu
+
+            Updater.MarqueVerifie();       // GitHub a répondu : la journée est faite
+
+            if (!Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
+            {
+                try { UpdateFlag.Clear(); } catch { }
+                return;
+            }
+
+            string dispo = nu.Ver.Major + "." + nu.Ver.Minor.ToString("00");
+            // Mémorisée pour l'affichage DANS l'app : la notification Windows peut être manquée
+            // (PC absent, notifications coupées), l'en-tête de la fenêtre, lui, reste visible.
+            try { UpdateFlag.Set(dispo); } catch { }
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try
+                    {
+                        Text = "ONYX — QG     •  mise à jour " + dispo + " disponible";
+                        MonteBandeauMaj(dispo);
+                    }
+                    catch { }
+                }));
+            }
+            catch { }
+
+            // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » : une mise à jour n'est
+            // pas une alerte de santé, et un titre générique se referme sans être lu.
+            try
+            {
+                if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
+                        "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            _tray.Visible = true;
+                            _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
+                            _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
+                            _tray.ShowBalloonTip(10000);
+                        }
+                        catch { }
+                    }));
+                }
+            }
+            catch { }
+        }
+
         private void MonteBandeauMaj(string version)
         {
             if (_bandeauMaj != null) return;   // déjà là (détection au lancement puis par le Gardien)
@@ -1189,6 +1250,7 @@ namespace BTOptimizer
             try { Crosshair.Hide(); } catch { }
             try { StatsOverlayManager.Hide(); } catch { }
             try { if (_sysTimer != null) _sysTimer.Stop(); } catch { }
+            try { if (_rattrapage != null) { _rattrapage.Stop(); _rattrapage.Dispose(); _rattrapage = null; } } catch { }
             try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
         }
 
@@ -1569,6 +1631,31 @@ namespace BTOptimizer
         }
 
         private static FpsPage.ToolItem Tool(string label, Action act) { return new FpsPage.ToolItem(label, act); }
+
+        /// <summary>
+        /// Dit exactement ce qui part, sans enrobage. Une case à cocher ne vaut consentement que
+        /// si la personne peut savoir ce qu'elle coche — et le mot « anonyme » est ici abusif :
+        /// l'identifiant est stable, donc pseudonyme. On l'écrit.
+        /// </summary>
+        private void ExpliqueAudience()
+        {
+            string url = Audience.PointDeCollecte;
+            MessageBox.Show(this,
+                "Une fois par jour au maximum, ONYX envoie TROIS informations :\n\n"
+                + "  · un identifiant de machine, haché — impossible de remonter jusqu'à toi,\n"
+                + "    mais stable, donc deux envois de ce PC se ressemblent ;\n"
+                + "  · la version d'ONYX installée ;\n"
+                + "  · le numéro de version de Windows.\n\n"
+                + "C'est tout. Ni ton nom, ni celui de ta machine, ni tes jeux, ni ton matériel, "
+                + "ni ce que tu fais dans l'application.\n\n"
+                + "À quoi ça sert : savoir combien de personnes utilisent ONYX et quelles versions "
+                + "sont installées, pour ne pas casser celles qui servent encore.\n\n"
+                + "Tu peux couper l'envoi à tout moment : Système → « Statistiques anonymes ».\n\n"
+                + (url.Length == 0
+                    ? "État actuel : aucun point de collecte configuré — ONYX n'envoie RIEN."
+                    : "Destination : " + url),
+                "Ce que les statistiques envoient", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
 
         public void OpenDialog(Form f)
         {
