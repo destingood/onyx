@@ -4,6 +4,39 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.69 — Les réglages sans risque entrent dans les préréglages
+
+La 15.68 apportait beaucoup de nouveautés, mais la plupart n'étaient atteignables qu'en ouvrant une
+fenêtre et en cliquant. Trois d'entre elles rejoignent les lots automatiques — celles qui **ne
+peuvent rien dégrader chez personne**.
+
+- **Réglages de latence de la carte réseau** (nouveau réglage, Recommandé + eSport). Coupe les
+  mécanismes par lesquels la carte économise du processeur **en ajoutant du délai** : modération
+  d'interruptions, contrôle de flux, Ethernet écoénergétique, regroupement de segments reçus,
+  regroupement de paquets, veille sélective. C'est le même marché à chaque fois, et pour du temps
+  réel c'est le mauvais côté du marché. Ne touche que ce que ta carte expose réellement, et
+  uniquement des réglages **normalisés par Microsoft** : les options propriétaires des cartes Wi-Fi
+  (itinérance, MIMO, largeur de canal) ont des encodages différents selon le fabricant et restent à
+  ta main. Valeurs d'origine sauvegardées.
+- **Marquage DSCP des jeux** rejoint le préréglage Recommandé. Une marque sur un paquet est une
+  demande : un routeur qui l'ignore ne fait rien de plus, un routeur qui la respecte sert le jeu
+  avant le reste. Jamais négatif.
+- **Répartition des interruptions audio** rejoint le préréglage Recommandé. Le mécanisme
+  d'interruption n'est pas modifié : on demande seulement à Windows de ne pas tout poser sur le
+  cœur 0, celui où tourne le fil principal du jeu.
+
+**Trois réglages restent volontairement hors des lots**, et la raison est écrite dans le code :
+
+- Le **plafond d'images** réduit la latence sur un écran à fréquence variable, mais l'augmente sur un
+  écran qui n'en a pas. Le bon choix dépend du moniteur ; l'imposer reviendrait à parier sur l'écran
+  de l'utilisateur.
+- Le **verrouillage des fréquences GPU** (K-Boost) se paie en consommation, chaleur et bruit, en
+  permanence.
+- Les **interruptions audio par message** (MSI) peuvent faire démarrer certaines cartes son sans
+  aucun son — et la marche arrière se fait alors sans entendre le PC.
+
+Préréglages : Recommandé passe de 31 à 34, eSport de 68 à 69.
+
 ## v15.68 — Les curseurs d'Afterburner, et deux mesures qui mentaient
 
 ### Deux outils qui donnaient de faux chiffres
