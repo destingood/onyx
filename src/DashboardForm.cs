@@ -284,6 +284,11 @@ namespace BTOptimizer
             m.Add(new ToolStripSeparator());
             m.Add("🎛  Réglages carte graphique (puissance, température, fréquences)…", null,
                 (s, e) => OpenDialog(new GpuTuningForm(Log)));
+            var gel = new ToolStripMenuItem("📶  Geler la recherche de réseaux Wi-Fi (pendant la partie)")
+            { Checked = false };
+            gel.Click += (s, e) => BasculeGelWifi(gel);
+            try { gel.Checked = WifiScan.GeleeParNous() != null; } catch { }
+            m.Add(gel);
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("🔄  Vérifier les mises à jour d'ONYX", null, (s, e) => ShowUpdateCheck());
@@ -583,6 +588,11 @@ namespace BTOptimizer
                     //    l'a pas. On recolle les manquantes — mais JAMAIS on n'active le réglage de
                     //    sa propre initiative : sans aucune carte déjà réglée, ce garde ne fait rien.
                     try { NagleGuard.Soigne(Log); } catch { }
+                    // 0 quinquies) Recherche de reseaux Wi-Fi laissee GELEE par une session
+                    //    precedente (fermeture brutale, plantage, extinction en pleine partie).
+                    //    Dans cet etat la carte ne se reconnecte plus toute seule : un outil de
+                    //    latence n'a pas le droit de laisser une machine comme ca.
+                    try { WifiScan.Soigne(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;
@@ -719,6 +729,36 @@ namespace BTOptimizer
             {
                 try { ShowUpdateCheck(); } catch { }
             }
+        }
+
+        /// <summary>
+        /// Gèle / dégèle la recherche de réseaux Wi-Fi. Le gel supprime le pic de ping périodique
+        /// dû au balayage, au prix d'une carte qui ne voit plus rien d'autre — d'où la confirmation
+        /// avant, et le rétablissement automatique à la fermeture.
+        /// </summary>
+        private void BasculeGelWifi(ToolStripMenuItem item)
+        {
+            try
+            {
+                if (WifiScan.GeleeParNous() != null)
+                {
+                    WifiScan.Degeler(Log);
+                    item.Checked = false;
+                    return;
+                }
+                if (MessageBox.Show(this,
+                        "Geler la recherche de réseaux Wi-Fi pendant la partie ?\n\n"
+                        + "• Supprime le pic de ping périodique dû au balayage des canaux.\n"
+                        + "• PENDANT CE TEMPS, ta carte ne verra aucun autre réseau et ne se "
+                        + "reconnectera PAS toute seule si le lien tombe.\n"
+                        + "• ONYX rétablit tout seul à la fermeture de l'app — et au prochain "
+                        + "lancement s'il se ferme mal.",
+                        "Recherche de réseaux Wi-Fi",
+                        MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                    return;
+                item.Checked = WifiScan.Geler(Log);
+            }
+            catch (Exception ex) { Log("Gel Wi-Fi impossible : " + ex.Message, 3); }
         }
 
         /// <summary>
@@ -1061,6 +1101,9 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
+            // La recherche de réseaux ne doit JAMAIS survivre à l'app : sans elle, la carte ne se
+            // reconnecte pas toute seule. Rétabli ici, et de nouveau au lancement si on meurt avant.
+            try { if (WifiScan.GeleeParNous() != null) WifiScan.Degeler(null); } catch { }
             try { Native.SetTimer1ms(false); } catch { }
             try { Crosshair.Hide(); } catch { }
             try { StatsOverlayManager.Hide(); } catch { }
