@@ -70,6 +70,7 @@ namespace BTOptimizer
     {
         private readonly HwMonitor _mon = new HwMonitor();
         private readonly Timer _timer = new Timer();
+        private Timer _keeper;
         private HwSample _last;
         private bool _sampling;
         private int _corner = 1;
@@ -102,9 +103,12 @@ namespace BTOptimizer
 
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Sample();
-            var keeper = new Timer { Interval = 3000 };
-            keeper.Tick += (s, e) => { try { if (Visible) TopMost = true; } catch { } };
-            keeper.Start();
+            // Ce minuteur était une variable LOCALE, démarrée et jamais arrêtée : il continuait de
+            // battre toutes les 3 secondes bien après que l'utilisateur ait masqué l'overlay, et
+            // sa capture de « this » empêchait la fenêtre d'être libérée. Il devient un champ,
+            // arrêté en même temps que le reste.
+            _keeper = new Timer { Interval = 3000 };
+            _keeper.Tick += (s, e) => { try { if (Visible) TopMost = true; } catch { } };
         }
 
         protected override bool ShowWithoutActivation { get { return true; } }
@@ -126,6 +130,8 @@ namespace BTOptimizer
             if (_fps == null) { try { _fps = new FpsEtw(); _fps.Start(); } catch { } }
             Sample();
             if (!_timer.Enabled) _timer.Start();
+            // Le maintien au premier plan repart avec l'overlay : il est arrêté quand on le masque.
+            try { if (_keeper != null && !_keeper.Enabled) _keeper.Start(); } catch { }
         }
 
         /// <summary>Alimente l'overlay avec des données de démonstration (pour l'inspection
@@ -159,10 +165,37 @@ namespace BTOptimizer
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            if (!Visible) { try { _timer.Stop(); } catch { } }
+            if (Visible) return;
+            try { _timer.Stop(); } catch { }
+            try { if (_keeper != null) _keeper.Stop(); } catch { }
+
+            // ON FERME AUSSI LA SESSION ETW. Masquer l'overlay arrêtait bien l'échantillonnage,
+            // mais la session de mesure d'images restait ouverte : Hide() ne détruit pas le
+            // handle de la fenêtre, et FpsEtw n'est libérée que dans OnHandleDestroyed.
+            //
+            // Cette session reçoit un événement PAR IMAGE PRÉSENTÉE, par TOUS les processus de la
+            // machine — puis range chaque frametime dans une liste qu'elle élague en continu.
+            // Elle continuait donc de tourner indéfiniment après que l'utilisateur ait décoché
+            // « Afficher l'overlay en jeu », c'est-à-dire précisément quand il croyait avoir
+            // rendu la main au jeu. Dans une application dont c'est tout le propos, c'est le
+            // dernier endroit où laisser tourner quelque chose d'invisible.
+            //
+            // BeginSampling la recrée à la réouverture : le champ est remis à null.
+            try { if (_fps != null) { _fps.Dispose(); _fps = null; } } catch { }
         }
 
-        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _mon.Dispose(); if (_fps != null) _fps.Dispose(); } catch { } base.OnHandleDestroyed(e); }
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            try
+            {
+                _timer.Stop();
+                if (_keeper != null) { _keeper.Stop(); _keeper.Dispose(); _keeper = null; }
+                _mon.Dispose();
+                if (_fps != null) { _fps.Dispose(); _fps = null; }
+            }
+            catch { }
+            base.OnHandleDestroyed(e);
+        }
 
         private void Sample()
         {
