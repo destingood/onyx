@@ -4,6 +4,26 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.72 — La répartition des minuteurs entre dans le préréglage eSport
+
+Le réglage **« Répartir l'expiration des minuteurs sur tous les cœurs »**, introduit hors préréglage
+en 15.71, rejoint **eSport** (qui passe de 70 à 71 réglages).
+
+Il était tenu à l'écart parce qu'une comparaison sur machine réelle n'avait pas pu démontrer de
+gain : les temps mesurés avaient baissé, mais le nombre d'événements aussi — et un pire temps
+d'exécution se mesure sur un échantillon, donc moins de tirages donne un maximum plus bas même sans
+qu'un seul microcode ait changé. Huit pilotes sur neuf variaient dans le même sens que leur nombre
+d'exécutions.
+
+Sa description a été réécrite en même temps, parce qu'elle affirmait le contraire de ce qui est
+désormais vrai : elle disait « c'est pour cette raison qu'elle n'est dans AUCUN préréglage ». Elle
+expose maintenant ce qui est sûr, ce qui ne l'est pas, raconte la comparaison qui n'a rien prouvé, et
+demande de mesurer **avec la même charge des deux côtés** — un jeu qui tourne, pas un bureau au
+repos, puisque c'est précisément la variable qui rendait les comparaisons ininterprétables.
+
+Le réglage reste sans risque : si le noyau lit la valeur il répartit, sinon il ne se passe rien, et
+« Rétablir » la supprime.
+
 ## v15.71 — Le démarrage automatique ne pouvait pas fonctionner, et ton NVMe n'est peut-être pas ton disque le plus rapide
 
 ### Le démarrage avec Windows ne se lançait jamais
