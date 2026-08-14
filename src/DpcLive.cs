@@ -304,8 +304,11 @@ namespace BTOptimizer
                 if (n++ >= top) break;
                 sb.Append("  ").Append(p.PireMs.ToString("0.000").PadLeft(8)).Append(" ms   ")
                   .Append(p.Nom.PadRight(28))
-                  .Append("total ").Append(p.TotalMs.ToString("0.0")).Append(" ms  ")
-                  .Append(p.Dpc).Append(" DPC / ").Append(p.Isr).Append(" ISR");
+                  // Le total BRUT est trompeur : il grandit avec la durée de la mesure. On donne
+                  // donc à côté ce qu'il représente vraiment — une part d'un cœur — et un débit
+                  // d'exécutions comparable d'une mesure à l'autre.
+                  .Append(PartUnCoeur(p.TotalMs, secondes).ToString("0.00")).Append(" % d'un cœur  ")
+                  .Append(ParSeconde(p.Dpc + p.Isr, secondes).ToString("0")).Append("/s");
                 // Dire LEQUEL des deux fait le pire temps quand le pilote produit les deux : un DPC
                 // trop long et une interruption trop longue n'ont ni la même cause ni le même
                 // remède, et les confondre envoie chercher au mauvais endroit.
@@ -314,8 +317,17 @@ namespace BTOptimizer
                       .Append(" / pire ISR ").Append(p.PireIsrMs.ToString("0.000")).Append(")");
                 sb.Append("\n");
             }
-            sb.Append("\nUn pilote peut avoir un total élevé sans gêner (beaucoup d'exécutions très courtes). "
-                    + "C'est le PIRE temps qui compte : pendant qu'il s'exécute, son cœur ne fait rien d'autre.");
+            // Somme de ce que TOUT le travail différé a coûté : le chiffre qui dit s'il vaut la
+            // peine de chercher à le réduire, ou s'il faut regarder ailleurs.
+            double totalTout = 0;
+            foreach (Pilote p in classement) totalTout += p.TotalMs;
+            sb.Append("\nCoût total du travail différé : ")
+              .Append(PartUnCoeur(totalTout, secondes).ToString("0.00"))
+              .Append(" % d'un cœur (sur ").Append(Environment.ProcessorCount).Append(" disponibles).\n");
+            sb.Append("Un pilote peut avoir un total élevé sans gêner (beaucoup d'exécutions très courtes). "
+                    + "C'est le PIRE temps qui compte : pendant qu'il s'exécute, son cœur ne fait rien d'autre. "
+                    + "Le total, lui, ne dit que la charge de fond — et il grandit avec la durée de la mesure, "
+                    + "d'où le pourcentage à côté.");
             // Wdf01000.sys n'est pas un pilote de périphérique : c'est le cadre d'exécution dans
             // lequel tournent la plupart des pilotes modernes (Wi-Fi, USB, contrôleurs…). Leurs DPC
             // lui sont attribués, à lui et pas à eux. Voir ce nom en tête n'accuse donc PERSONNE en
@@ -325,6 +337,28 @@ namespace BTOptimizer
                         + "modernes (Wi-Fi, USB, contrôleurs). Les leurs y sont comptés, donc ce nom ne "
                         + "désigne aucun matériel précis — il faut débrancher ou désactiver pour trancher.");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// PUR : part d'UN cœur qu'a réellement consommée ce pilote, en pourcentage.
+        ///
+        /// C'est la seule lecture honnête du « temps total ». Brut, ce nombre ne veut rien dire :
+        /// il grandit avec la durée de la mesure. Un pilote à 1 300 ms paraît catastrophique — sur
+        /// cinq minutes de mesure, c'est 0,43 % d'un cœur, c'est-à-dire rien. Sans cette division,
+        /// on part chasser un problème qui n'existe pas.
+        /// </summary>
+        public static double PartUnCoeur(double totalMs, double secondes)
+        {
+            if (secondes <= 0 || totalMs <= 0) return 0;
+            return totalMs / (secondes * 1000.0) * 100.0;
+        }
+
+        /// <summary>PUR : nombre d'exécutions par seconde — comparable d'une mesure à l'autre,
+        /// contrairement au compte brut.</summary>
+        public static double ParSeconde(long nombre, double secondes)
+        {
+            if (secondes <= 0 || nombre <= 0) return 0;
+            return nombre / secondes;
         }
 
         /// <summary>PUR : ce nom figure-t-il dans les <paramref name="top"/> premiers du classement ?</summary>
