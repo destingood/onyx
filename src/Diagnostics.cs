@@ -87,6 +87,18 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
+            // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
+            // qu'il héberge qui travaille.
+            try
+            {
+                SvcHost.Groupe g = SvcHost.PlusGourmand(SvcHost.Mesure(800));
+                string sv = SvcHost.Verdict(g, 6.0);
+                if (sv != null)
+                    f.Add(new Finding(SvcHost.EstTravailLegitime(g.Services) ? 0 : 1, sv));
+            }
+            catch { }
+
             // PÉRIPHÉRIQUE EN PANNE — la première chose à regarder devant des saccades.
             //
             // Un appareil dont le pilote a échoué à démarrer, ou qui se dispute une ressource avec
