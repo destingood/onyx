@@ -39,6 +39,10 @@ namespace BTOptimizer
             public double OnePctLowFps;   // 1% low : 1000 / moyenne du pire 1 % des frametimes
             public double TenthPctLowFps; // 0.1% low (les pires micro-saccades) — 0 tant que < 1000 frames
             public double WorstMs;        // pire frametime (fenêtre récente)
+            /// <summary>Durée RÉELLEMENT couverte par ces chiffres, en ms. Peut être inférieure à
+            /// la fenêtre demandée : l'historique de frametimes est borné en temps. Un appelant qui
+            /// annonce « benchmark d'une minute » doit dire ce qu'il a vraiment mesuré.</summary>
+            public double FenetreMs;
             public long Total;            // total d'images depuis le début / la remise à zéro
         }
 
@@ -194,6 +198,20 @@ namespace BTOptimizer
         public List<ProcStat> Snapshot(double windowMs)
         {
             var result = new List<ProcStat>();
+
+            // On ne peut pas compter sur des images qui n'existent plus. L'historique est borné à
+            // MemoireMs ; demander une fenêtre plus large ne fait pas apparaître d'images, mais le
+            // FPS était quand même divisé par la durée DEMANDÉE.
+            //
+            // Conséquence mesurée : un benchmark d'une minute annonçait le tiers du vrai FPS, deux
+            // minutes le sixième. Le compteur en direct (fenêtre de 2 s) était juste, si bien que
+            // l'utilisateur voyait 300 FPS pendant toute la capture puis lisait un résumé à 100.
+            //
+            // On borne donc la fenêtre à ce qui est réellement couvert. L'horloge murale reste la
+            // référence : un jeu qui cesse de présenter voit toujours son FPS retomber, puisque ses
+            // images vieillissent hors de la fenêtre au lieu d'être recomptées.
+            double fenetre = Math.Min(windowMs, MemoireMs);
+
             lock (_lock)
             {
                 double maintenant = Maintenant();
@@ -201,7 +219,7 @@ namespace BTOptimizer
                 {
                     Track t = kv.Value;
                     if (t.Times.Count == 0) continue;
-                    double cutoff = maintenant - windowMs;
+                    double cutoff = maintenant - fenetre;
                     if (t.Times[t.Times.Count - 1] < maintenant - 3000) continue;  // plus rien depuis 3 s : ignorer
 
                     int first = PremierDansFenetre(t.Times, cutoff);
@@ -230,7 +248,8 @@ namespace BTOptimizer
                     {
                         Pid = kv.Key,
                         Name = NameOf(kv.Key),
-                        Fps = CalculeFps(n, windowMs),
+                        Fps = CalculeFps(n, fenetre),
+                        FenetreMs = fenetre,
                         AvgMs = sum / n,
                         OnePctLowFps = onePct,
                         TenthPctLowFps = tenthPct,
