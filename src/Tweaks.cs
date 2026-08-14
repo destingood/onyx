@@ -878,6 +878,16 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                Id = "frame_cap", Category = Cat.Gpu,
+                Name = "Plafonner les images juste sous la fréquence de l'écran",
+                Desc = "La réponse SANS INJECTION au problème que résout le « Scanline Sync » de RTSS. Sur un écran à fréquence variable (G-Sync / FreeSync), la recette de référence est de garder la synchronisation adaptative ACTIVE et de plafonner les images juste en dessous de la fréquence maximale : le plafond empêche le jeu d'atteindre le haut de la plage, là où l'écran retombe en V-Sync classique et où la latence saute d'un coup. Image sans déchirure, et sans l'attente de la V-Sync. Le plafond est calculé pour TON écran (fréquence moins Hz²/3600 — la règle qui redonne 138 à 144 Hz et 224 à 240 Hz) et posé par le pilote lui-même, sans rien injecter dans le jeu. À SAVOIR : sur un écran SANS fréquence variable, le plafond régularise les images mais ne supprime pas la déchirure. « Rétablir » rend la main au pilote.",
+                Apply  = () => FrameCap.Applique(FrameCap.Recommande(FrameCap.FrequenceEcran()), null),
+                Revert = () => FrameCap.Applique(0, null),
+                Check  = () => FrameCap.Pose() > 0
+            });
+
+            list.Add(new Tweak
+            {
                 Id = "qos_dscp_jeux", Category = Cat.Reseau, Esport = true,
                 Name = "Marquer les paquets de tes jeux comme prioritaires (DSCP 46)",
                 Desc = "Pose la marque « urgent » (Expedited Forwarding) sur les paquets sortants de tes jeux INSTALLÉS — pas sur tous les programmes. C'est la différence qui compte : la recette qui circule vise « *.exe », donc navigateur et téléchargements compris, et une priorité que tout le monde a n'est plus une priorité. ONYX écrit aussi le réglage documenté par Microsoft sans lequel Windows ignore purement et simplement ces politiques hors réseau d'entreprise — l'oubli qui rend la manœuvre inerte chez soi. HONNÊTETÉ : la marque est une demande, pas un ordre. Beaucoup de box l'ignorent et les opérateurs la réécrivent souvent en sortie. Le gain est réel sur un routeur qui en tient compte, nul ailleurs, jamais négatif — et ça ne remplace pas un routeur qui gère sa file d'attente (SQM). Effet au redémarrage. « Rétablir » retire les politiques d'ONYX, et elles seules.",
