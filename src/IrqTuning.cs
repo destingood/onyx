@@ -44,6 +44,7 @@ namespace BTOptimizer
             public string InstanceId;
             public int? Msi;          // 1 = MSI, 0 = ligne, null = non défini
             public int? Politique;    // DevicePolicy, null si absente
+            public int? Priorite;     // DevicePriority, null si absente
         }
 
         /// <summary>Un nom désigne-t-il un contrôleur audio ? PUR (FR et EN).</summary>
@@ -108,6 +109,48 @@ namespace BTOptimizer
             return Etat(GrosProducteurs(), delegate (Peripherique p) { return p.Politique == PolitiqueRepartie; });
         }
 
+        /// <summary>Priorité d'interruption « haute » (IRQ_PRIORITY_HIGH).</summary>
+        public const int PrioriteHaute = 3;
+
+        /// <summary>
+        /// PRIORITÉ D'INTERRUPTION — l'ordre dans lequel le noyau sert ce qui arrive en même temps.
+        ///
+        /// Répartir dit OÙ une interruption est traitée ; la priorité dit QUAND, lorsque plusieurs
+        /// se présentent ensemble. Mettre la carte graphique en haut de la file réduit le temps
+        /// qu'elle passe à attendre son tour derrière un contrôleur qui n'a rien d'urgent à dire.
+        ///
+        /// Ce n'est pas un tour de passe-passe : la valeur est celle qu'attend le noyau, à côté de
+        /// la politique d'affinité, et le pilote n'est pas touché. Mais soyons honnête sur ce qu'on
+        /// en sait : c'est un réglage d'ORDONNANCEMENT, pas de durée. Il ne raccourcit aucune
+        /// exécution — il ne fait qu'éviter des attentes. Le gain se mesure sur le pire temps, ou ne
+        /// se mesure pas du tout.
+        /// </summary>
+        public static Resultat PrioriserGraphique(Action<string, int> log)
+        {
+            return Ecrit(Graphiques(), SousCleAffinite, "DevicePriority", PrioriteHaute, log);
+        }
+
+        public static Resultat NePlusPrioriserGraphique(Action<string, int> log)
+        {
+            return Ecrit(Graphiques(), SousCleAffinite, "DevicePriority", null, log);
+        }
+
+        /// <summary>PUR : ce nom désigne-t-il une carte graphique ?</summary>
+        public static bool EstGraphique(string nom)
+        {
+            if (string.IsNullOrEmpty(nom)) return false;
+            string n = nom.ToLowerInvariant();
+            return n.Contains("nvidia") || n.Contains("geforce") || n.Contains("radeon")
+                || n.Contains("intel(r) arc") || n.Contains("graphics");
+        }
+
+        public static List<Peripherique> Graphiques() { return Recense(EstGraphique); }
+
+        public static bool? EtatPrioriteGraphique()
+        {
+            return Etat(Graphiques(), delegate (Peripherique p) { return p.Priorite == PrioriteHaute; });
+        }
+
         /// <summary>Contrôleurs audio PCI présents et leur état d'interruption.</summary>
         public static List<Peripherique> ControleursAudio()
         {
@@ -133,7 +176,8 @@ namespace BTOptimizer
                             Nom = nom,
                             InstanceId = id,
                             Msi = LitDword(EnumBase + id + SousCleMsi, "MSISupported"),
-                            Politique = LitDword(EnumBase + id + SousCleAffinite, "DevicePolicy")
+                            Politique = LitDword(EnumBase + id + SousCleAffinite, "DevicePolicy"),
+                            Priorite = LitDword(EnumBase + id + SousCleAffinite, "DevicePriority")
                         });
                     }
             }

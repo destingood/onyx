@@ -125,6 +125,31 @@ namespace BTOptimizer
                 Check = () => IrqTuning.EtatRepartitionProducteurs()
             });
 
+            // Répartir dit OÙ ; prioriser dit QUAND. Deux réglages voisins dans la même clé, deux
+            // effets distincts, et celui-ci ne coûte rien : il ne change ni le mécanisme
+            // d'interruption ni le pilote, il donne un rang dans la file.
+            list.Add(new Tweak
+            {
+                Id = "irq_priorite_gpu", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Name = "Servir les interruptions de la carte graphique en priorité",
+                Desc = "Répartir les interruptions dit à Windows OÙ les traiter ; ce réglage-ci dit QUAND, "
+                     + "lorsque plusieurs se présentent en même temps. La carte graphique passe en tête de file : "
+                     + "elle cesse d'attendre son tour derrière un contrôleur qui n'a rien d'urgent à dire. "
+                     + "HONNÊTETÉ SUR CE QU'ON EN SAIT : c'est un réglage d'ORDONNANCEMENT, pas de durée. Il ne "
+                     + "raccourcit aucune exécution — il évite des attentes. Le gain se voit sur le PIRE temps "
+                     + "d'exécution, ou ne se voit pas du tout ; mesure avant et après plutôt que de me croire. "
+                     + "Le mécanisme d'interruption et le pilote ne sont pas touchés : rien à casser. "
+                     + "Effet au redémarrage. « Rétablir » supprime la valeur et rend le rang à Windows.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.PrioriserGraphique(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("la carte graphique n'a pas accepté l'écriture (clé protégée par le système).");
+                },
+                Revert = () => IrqTuning.NePlusPrioriserGraphique(null),
+                Check = () => IrqTuning.EtatPrioriteGraphique()
+            });
+
             // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
             // pilotes audio démarrent sans son en MSI. Hors presets, avertissement explicite.
             list.Add(new Tweak
@@ -539,9 +564,14 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dynamic_tick", Category = Cat.Systeme, Esport = true, Reboot = true,
+                // SORTI DU PRÉRÉGLAGE eSPORT. Son propre nom dit « EXPÉRIMENTAL » et sa
+                // description dit « à tester » : un réglage dont on ignore l'effet n'a pas sa place
+                // dans un lot qui s'applique sans qu'on le regarde. Et sa mesure est sans ambiguïté
+                // — il AUGMENTE les interruptions de 40 % sur une machine 16 threads, alors que le
+                // préréglage eSport est censé réduire la latence. Il reste offert et explicité.
+                Id = "dynamic_tick", Category = Cat.Systeme, Reboot = true,
                 Name = "Désactiver le tick dynamique du noyau (bcdedit) — EXPÉRIMENTAL",
-                Desc = "Timer noyau à cadence fixe : peut lisser la latence sur certaines machines, augmente la consommation. À tester, réversible.",
+                Desc = "Timer noyau à cadence fixe : chaque cœur reçoit un tick régulier au lieu de rester silencieux quand il est inactif. Peut lisser la latence sur certaines machines. LE COÛT EST MESURABLE ET IL EST GROS : sur une machine 16 threads avec un minuteur à 0,5 ms, forcer le tick constant fait passer les interruptions de ~34 000 à ~48 000 par seconde, soit +40 %. Chacune préempte le cœur où elle tombe. Si ton objectif est de RÉDUIRE les préemptions, laisse ce réglage éteint : il fait l'inverse. Il ne se justifie que si tu constates, mesure à l'appui, une latence plus régulière avec. À tester, réversible.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/set disabledynamictick yes", "bcdedit disabledynamictick"),
                 Revert = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/deletevalue disabledynamictick", "bcdedit deletevalue"),
                 Check = () =>
@@ -561,7 +591,7 @@ namespace BTOptimizer
             {
                 Id = "timer_global", Category = Cat.Systeme, Esport = true, Reboot = true,
                 Name = "Timer haute résolution GLOBAL (Windows 11)",
-                Desc = "Depuis Windows 10 2004/11, les demandes de timer 1 ms sont ignorées pour les fenêtres en arrière-plan. Ce réglage restaure le comportement global : complète la case « Timer 1 ms » de cette app.",
+                Desc = "Depuis Windows 10 2004, une demande de minuteur fin ne s'applique QU'AU PROCESSUS qui la fait. Ce réglage restaure l'ancien comportement : la demande la plus fine s'impose à toute la machine. LE COÛT, MESURÉ : un seul logiciel demandant 0,5 ms fait ticker tous les cœurs actifs à 2 000 Hz. Sur une machine 16 threads, cela représentait 18 000 interruptions par seconde, soit 53 % de TOUTES les interruptions de la machine — plus que la carte graphique, le réseau et le stockage réunis. En échange, l'ordonnanceur est plus réactif partout, pas seulement dans le jeu. C'est un arbitrage, pas une évidence : mesure les deux avant de trancher. Complète la case « Timer 1 ms » de cette app.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" },
                 Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests"),
