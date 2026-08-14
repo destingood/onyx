@@ -99,6 +99,16 @@ namespace BTOptimizer
             }
             catch { }
 
+            // LOGICIELS QUI INTERROGENT LES CAPTEURS — sur une machine dont les réglages sont
+            // déjà faits, c'est ce qui reste, et aucun réglage ne peut le compenser.
+            try
+            {
+                var sondes = SondesMaterielles.EnCours();
+                string ts = SondesMaterielles.Texte(sondes);
+                if (ts != null) f.Add(new Finding(SondesMaterielles.Niveau(sondes.Count), ts));
+            }
+            catch { }
+
             // PÉRIPHÉRIQUE EN PANNE — la première chose à regarder devant des saccades.
             //
             // Un appareil dont le pilote a échoué à démarrer, ou qui se dispute une ressource avec
