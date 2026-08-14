@@ -287,7 +287,10 @@ namespace BTOptimizer
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\mouclass\Parameters", "MouseDataQueueSize", 100, RegistryValueKind.DWord);
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\kbdclass\Parameters", "KeyboardDataQueueSize", 100, RegistryValueKind.DWord);
                 },
+                // Souris ET clavier : ce sont deux clés de service distinctes, l'une peut être
+                // refusée sans l'autre, et l'app annonçait « appliqué » sur la foi de la souris seule.
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\mouclass\Parameters", "MouseDataQueueSize"), 32)
+                           && Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\kbdclass\Parameters", "KeyboardDataQueueSize"), 32)
             });
 
             list.Add(new Tweak
@@ -490,7 +493,10 @@ namespace BTOptimizer
                     Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", 1, RegistryValueKind.DWord);
                     Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR");
                 },
+                // La valeur utilisateur passe presque toujours ; c'est la STRATÉGIE en HKLM qui peut
+                // être refusée ou réécrite par une politique d'entreprise. Vérifier les deux.
                 Check = () => Sys.IntEquals(Sys.GetUser(@"System\GameConfigStore", "GameDVR_Enabled"), 0)
+                           && Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"), 0)
             });
 
             list.Add(new Tweak
@@ -718,7 +724,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "fastboot_off", Category = Cat.Rapidite,
+                Id = "fastboot_off", Category = Cat.Rapidite, Reboot = true,
                 Name = "Désactiver le démarrage rapide (Fast Startup)",
                 Desc = "Le démarrage rapide peut laisser pilotes/services dans un état dégradé au fil des arrêts. Boot un peu plus long mais plus « propre ». Optionnel.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" },
@@ -805,7 +811,10 @@ namespace BTOptimizer
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String);
                     Sys.DelUser(@"Control Panel\Desktop", "AutoEndTasks");
                 },
+                // Les deux ruches : la valeur machine peut être refusée pendant que la valeur
+                // utilisateur passe. N'en vérifier qu'une affichait « appliqué » sur une moitié.
                 Check = () => Sys.StrEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout"), "2000")
+                           && Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "AutoEndTasks"), "1")
             });
 
             list.Add(new Tweak
@@ -1034,7 +1043,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dns_negative_cache_off", Category = Cat.Reseau, Esport = true,
+                Id = "dns_negative_cache_off", Category = Cat.Reseau, Esport = true, Reboot = true,
                 Name = "Ne pas mémoriser les échecs DNS (réessai immédiat)",
                 Desc = "Windows garde en cache les résolutions DNS échouées pendant 5 s. Ce réglage les oublie aussitôt (MaxNegativeCacheTtl=0) : une résolution qui a raté un instant est retentée tout de suite au lieu d'échouer 5 s. « Rétablir » remet le comportement par défaut.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" },
@@ -1510,7 +1519,11 @@ namespace BTOptimizer
                     Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity");
                     Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
                 },
+                // Les DEUX valeurs, pas une. L'intégrité mémoire peut être coupée pendant que la
+                // sécurité par virtualisation reste active — état constaté sur une machine réelle,
+                // et l'ancien contrôle l'aurait affiché comme « appliqué ».
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled"), 0)
+                           && Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity"), 0)
             });
 
             list.Add(new Tweak
@@ -2197,7 +2210,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "lmhosts_off", Category = Cat.Reseau,
+                Id = "lmhosts_off", Category = Cat.Reseau, Reboot = true,
                 Name = "Désactiver la recherche LMHOSTS (NetBIOS hérité)",
                 Desc = "Coupe la résolution de noms via le fichier LMHOSTS, héritage inutile aujourd'hui : petite réduction de surface et de requêtes. « Rétablir » la réactive.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" },
@@ -2434,7 +2447,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dns_priority", Category = Cat.Reseau, Esport = true,
+                Id = "dns_priority", Category = Cat.Reseau, Esport = true, Reboot = true,
                 Name = "Prioriser la résolution locale des noms (DNS plus réactif)",
                 Desc = "Réordonne les fournisseurs de résolution pour privilégier le cache/hosts/DNS local avant NetBIOS : résolution de noms plus rapide. « Rétablir » remet les priorités Windows.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" },
@@ -2716,7 +2729,10 @@ namespace BTOptimizer
                     Sys.SetUser(@"Control Panel\Desktop", "MenuShowDelay", "400", RegistryValueKind.String);
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String);
                 },
+                // Idem : le délai de menu est en ruche utilisateur, le délai des services en ruche
+                // machine. Les deux ou rien.
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "MenuShowDelay"), "8")
+                           && Sys.StrEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout"), "2000")
             });
 
             list.Add(new Tweak
@@ -2792,7 +2808,10 @@ namespace BTOptimizer
                     Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
                     Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle");
                 },
+                // La stratégie (machine) ET l'interrupteur global (utilisateur) : Windows regarde
+                // les deux, et l'un sans l'autre laisse des applications tourner en fond.
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground"), 2)
+                           && Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle"), 0)
             });
 
             list.Add(new Tweak
