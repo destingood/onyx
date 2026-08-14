@@ -133,6 +133,16 @@ namespace BTOptimizer
                 string verdict = LienReseau.Verdict(lien);
                 if (verdict != null) f.Add(new Finding(1, verdict, FixKind.DeviceManager, "Gestionnaire de périphériques"));
                 else if (lien.FilaireActif) f.Add(new Finding(0, "Connexion filaire active — pas de gigue Wi-Fi."));
+
+                // QUALITÉ du lien radio. « Tu es en Wi-Fi » ne suffit pas : un lien à 93 % sur
+                // 5 GHz et un lien à 35 % sur 2,4 GHz saturé n'ont rien à voir. Et quand le lien
+                // est bon, on le dit — pour cesser de chercher de ce côté.
+                if (lien.SansFilActif)
+                {
+                    WifiLink.Etat radio = WifiLink.Lire();
+                    string vw = WifiLink.Verdict(radio);
+                    if (vw != null) f.Add(new Finding(WifiLink.Niveau(radio), vw));
+                }
             }
             catch { }
 
