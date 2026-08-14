@@ -17,11 +17,11 @@ namespace BTOptimizer
     {
         private readonly Action<string, int> _log;
         private static readonly Color Accent = Theme.AccentColor;
-        private const string DownUrl = "https://speed.cloudflare.com/__down?bytes=25000000"; // ~25 Mo
 
         private Button _btnRun, _btnClose;
         private double _mbps = double.NaN, _latency = double.NaN, _jitter = double.NaN;
         private double _chargeMs = double.NaN;   // ping mesure PENDANT le telechargement
+        private double _fenetreS = 0;            // duree pendant laquelle des octets ont reellement circule
         private string _status = "Prêt. Lance le test pour mesurer ta connexion.";
         private Panel _canvas;
 
@@ -94,14 +94,15 @@ namespace BTOptimizer
                 sonde.IsBackground = true;
                 sonde.Start();
 
-                double mbps = -1;
-                try { mbps = DownloadMbps(); } catch (Exception ex) { if (_log != null) _log("Speed test : " + ex.Message, 2); }
+                double mbps = -1, fenetre = 0;
+                try { mbps = DownloadMbps(out fenetre); } catch (Exception ex) { if (_log != null) _log("Speed test : " + ex.Message, 2); }
                 try { sonde.Join(3000); } catch { }
 
                 double charge = sousCharge;
                 Ui(() =>
                 {
                     _mbps = mbps;
+                    _fenetreS = fenetre;
                     _chargeMs = mbps < 0 ? double.NaN : charge;   // sans transfert, la mesure ne veut rien dire
                     _status = mbps < 0 ? "Échec du téléchargement (pas de connexion ?). Latence affichée si dispo." : null;
                     _btnRun.Enabled = true; _canvas.Invalidate();
@@ -160,24 +161,67 @@ namespace BTOptimizer
             catch { return double.NaN; }
         }
 
-        private static double DownloadMbps()
+        /// <summary>
+        /// Débit descendant. Le chronomètre ne tourne QUE pendant que des octets circulent :
+        /// voir DebitReseau pour ce que l'ancienne version comptait à tort.
+        /// <paramref name="secondesMesurees"/> ressort pour que l'affichage puisse dire si la
+        /// fenêtre a été assez longue pour que le chiffre veuille dire quelque chose.
+        /// </summary>
+        private static double DownloadMbps(out double secondesMesurees)
         {
+            // On essaie la plus grande taille d'abord, puis on se rabat : un refus du serveur sur
+            // un gros fichier ne doit pas se transformer en « pas de connexion ».
+            Exception derniere = null;
+            foreach (long taille in DebitReseau.TaillesAEssayer)
+            {
+                try { return UnEssai(DebitReseau.Adresse(taille), out secondesMesurees); }
+                catch (Exception ex) { derniere = ex; }
+            }
+            secondesMesurees = 0;
+            throw derniere ?? new Exception("aucune taille de test acceptée par le serveur");
+        }
+
+        private static double UnEssai(string url, out double secondesMesurees)
+        {
+            secondesMesurees = 0;
             using (var http = new HttpClient())
             {
                 http.Timeout = TimeSpan.FromSeconds(25);
-                var sw = Stopwatch.StartNew();
-                using (var stream = http.GetStreamAsync(DownUrl).GetAwaiter().GetResult())
+                using (var stream = http.GetStreamAsync(url).GetAwaiter().GetResult())
                 {
                     var buf = new byte[65536];
-                    long total = 0; int n;
+                    long total = 0, octetsEchauffement = 0;
+                    int n;
+                    var depuisPremierOctet = new Stopwatch();
+                    bool regimeAtteint = false;
+                    double debutRegime = 0;
+
                     while ((n = stream.Read(buf, 0, buf.Length)) > 0)
                     {
+                        // Le chronomètre part au PREMIER OCTET, pas avant la connexion.
+                        if (!depuisPremierOctet.IsRunning) depuisPremierOctet.Start();
                         total += n;
-                        if (sw.Elapsed.TotalSeconds > 12) break;   // fenêtre de mesure suffisante
+
+                        // On écarte la montée en régime de TCP : les octets qui arrivent pendant
+                        // qu'il accélère encore tireraient la moyenne vers le bas.
+                        if (!regimeAtteint && depuisPremierOctet.Elapsed.TotalSeconds >= DebitReseau.EchauffementSecondes)
+                        {
+                            regimeAtteint = true;
+                            octetsEchauffement = total;
+                            debutRegime = depuisPremierOctet.Elapsed.TotalSeconds;
+                        }
+                        if (depuisPremierOctet.Elapsed.TotalSeconds > 12) break;
                     }
-                    sw.Stop();
-                    double sec = Math.Max(0.05, sw.Elapsed.TotalSeconds);
-                    return total * 8.0 / 1_000_000.0 / sec;   // Mb/s
+                    depuisPremierOctet.Stop();
+
+                    double fin = depuisPremierOctet.Elapsed.TotalSeconds;
+                    // Si le transfert s'est terminé avant la fin de l'échauffement, il n'y a pas de
+                    // régime établi à isoler : on mesure tout, et la réserve dira que c'est court.
+                    long octets = regimeAtteint ? total - octetsEchauffement : total;
+                    double secondes = regimeAtteint ? fin - debutRegime : fin;
+
+                    secondesMesurees = secondes;
+                    return DebitReseau.Mbps(octets, secondes);
                 }
             }
         }
@@ -236,6 +280,13 @@ namespace BTOptimizer
                             ? "⚠ Latence élevée : c'est ELLE qui compte le plus en jeu. Câble Ethernet > Wi-Fi, et vérifie le Trajet réseau."
                             : "⚠ Débit modeste, mais en jeu la latence prime. Ça peut suffire si le ping est bas.";
                     if (bb != null) verdict += "  " + bb;
+                    // Une connexion très rapide vide le fichier de test avant qu'on ait eu le temps
+                    // de la mesurer. Le dire, plutôt que d'afficher un chiffre précis qui ne l'est pas.
+                    if (_mbps > 0)
+                    {
+                        string reserve = DebitReseau.Reserve(_fenetreS);
+                        if (reserve.Length > 0) verdict += "  " + reserve;
+                    }
                 }
             }
             using (var f = new Font("Segoe UI", 9.5f))
