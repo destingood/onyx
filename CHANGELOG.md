@@ -4,6 +4,105 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.73 — Les quatorze outils du Laboratoire passés au banc d'essai
+
+Chaque outil a été confronté à la machine plutôt qu'au raisonnement : l'IPC de Discord interrogé en
+direct, la rampe gamma écrite puis relue, `nvidia-smi` questionné champ par champ, une jonction NTFS
+créée pour tester une évasion de périmètre. Plusieurs hypothèses de départ se sont révélées fausses
+et ont été abandonnées en cours de route.
+
+Un même défaut revient partout : **le code savait, ou pouvait savoir, et ne regardait pas.** Un
+`catch` vide, un code de retour ignoré, une relecture faite juste avant d'affirmer le contraire.
+
+### Trois outils ne faisaient rien du tout
+
+Le **filtre couleur** écrivait la rampe gamma sur le contexte du bureau, que Windows refuse sur un
+poste à plusieurs écrans : la fonction était inerte. Elle écrit désormais écran par écran — et donc
+sur tous les écrans, pas seulement le principal.
+
+Le **nettoyage avancé** interrompait toute son exploration au premier dossier interdit. Sur
+`%LOCALAPPDATA%`, qui en contient dès la racine : 1 fichier trouvé au lieu de plus de 200 000. La
+liste restait donc vide et l'outil se taisait, au lieu de dire qu'il ne pouvait pas lire.
+
+Le bouton **Panneau NVIDIA** lançait `nvcpl.cpl`, retiré des pilotes depuis des années. Trois guides
+avaient ce bouton mort, et l'échec était avalé sans un mot.
+
+### Trois chiffres étaient faux
+
+Le **benchmark FPS** divisait par la durée demandée alors que les frametimes ne sont conservés que
+20 secondes : un banc d'essai d'une minute annonçait le tiers du vrai résultat, deux minutes le
+sixième. Le compteur en direct, lui, était juste — on voyait donc 300 FPS pendant la mesure puis un
+résumé à 100.
+
+Le **test de débit** lançait son chronomètre avant d'ouvrir la connexion. Mesuré : 181 ms de mise en
+place pour 142 ms de transfert réel. 617,9 Mb/s affichés là où le lien en faisait 1404,5.
+
+Le **compteur FPS** choisissait le processus le plus rapide qui ne fût pas système. Sur neuf
+scénarios, il en désignait sept de travers : Chrome, Discord, OBS, Steam et VLC pouvaient s'afficher
+sous le nom du jeu.
+
+### Deux risques n'étaient pas couverts
+
+**Objectif 500 FPS** écrivait le nouveau mode d'affichage dans le registre *avant* que l'utilisateur
+ait confirmé voir son écran. Si le retour automatique échouait, l'écran noir survivait au
+redémarrage. Le mode est maintenant appliqué sans être mémorisé, et gravé seulement après le clic —
+un redémarrage suffit désormais à tout rattraper. Le bouton par défaut a aussi été inversé : devant
+un écran noir, une touche Entrée tapée au hasard figeait le mauvais réglage.
+
+Le **nettoyage avancé** pouvait sortir de son périmètre : une jonction placée sous un dossier
+autorisé menait la suppression ailleurs. Deux verrous désormais, dont une revérification de chaque
+fichier juste avant de le détruire.
+
+### Ce qui tournait sans se voir
+
+Masquer l'**overlay de stats** arrêtait l'échantillonnage mais laissait ouverte sa session de mesure
+d'images — un événement par image présentée, par tous les processus, indéfiniment. Trois overlays
+gardaient par ailleurs un minuteur qui battait pour une fenêtre invisible.
+
+Le panneau **thermique** lançait six processus `nvidia-smi` par cycle ; il n'en lance plus qu'un.
+
+### Le démarrage automatique avait cassé deux choses
+
+En passant au lancement automatique 30 secondes après l'ouverture de session, ONYX arrive désormais
+*avant* Discord et parfois avant le Wi-Fi. Deux fonctions supposaient le contraire :
+
+- la **présence Discord** tentait une connexion, une seule, puis abandonnait pour toute la session ;
+- la **vérification de mise à jour** marquait sa journée comme faite *avant* d'appeler GitHub : sans
+  réseau au démarrage, la journée entière était perdue.
+
+Les deux réessaient maintenant, et un rattrapage périodique couvre le cas d'une session qui reste
+ouverte toute la journée.
+
+### Compter les installations
+
+ONYX peut envoyer, une fois par jour au plus, **trois informations** : un identifiant de machine
+haché, sa version, et le numéro de build de Windows. Rien d'autre — ni nom, ni matériel, ni jeux, ni
+réglages.
+
+L'identifiant est **pseudonyme, pas anonyme** : il est stable, donc il désigne toujours la même
+machine. On ne peut pas remonter jusqu'à elle, mais le dire « anonyme » serait faux. Le réglage est
+visible dans Système et se coupe en un clic, et une entrée de menu énumère les trois champs sans
+enrobage.
+
+### Aussi
+
+- Le **viseur** garantissait sa taille par un fichier texte : des valeurs trafiquées donnaient une
+  fenêtre de 156 016 pixels de côté, ce que l'en-tête du fichier interdit explicitement pour ne pas
+  faire chuter les FPS des jeux sans bordure.
+- La fenêtre **Overclock** refusait de s'ouvrir si la carte était bridée au minimum du pilote.
+- Le **bench disque** traitait un SSD lent de disque mécanique, et affichait `-1 Mo/s` en cas
+  d'échec de mesure.
+- Le **test manette** déduisait le type de câble du seul débit, et conseillait l'USB à une manette
+  déjà filaire.
+- Le bouton **Redémarrer dans le BIOS** ne lisait pas le résultat de sa commande : on validait un
+  avertissement inquiétant, et il ne se passait parfois rien.
+
+### Limites assumées
+
+Aucune manette n'était branchée pendant l'audit, la fréquence d'écran n'a pas été réellement
+basculée, et le cycle masquer/réafficher de l'overlay n'a pas été exercé. Ces trois points reposent
+sur la lecture du code, pas sur l'observation.
+
 ## v15.72 — La répartition des minuteurs entre dans le préréglage eSport
 
 Le réglage **« Répartir l'expiration des minuteurs sur tous les cœurs »**, introduit hors préréglage
