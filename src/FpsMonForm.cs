@@ -241,13 +241,6 @@ namespace BTOptimizer
             _refresh.Start();
         }
 
-        private static bool IsSystemProc(string name)
-        {
-            string low = (name ?? "").ToLowerInvariant();
-            return low.StartsWith("dwm") || low.StartsWith("explorer") || low.StartsWith("btoptimizer")
-                || low.StartsWith("dotnet") || low.StartsWith("searchhost") || low.StartsWith("shellexperiencehost")
-                || low.StartsWith("startmenuexperiencehost") || low.StartsWith("textinputhost");
-        }
 
         private void Repaint()
         {
@@ -261,8 +254,19 @@ namespace BTOptimizer
             if (sel == null)
             {
                 _manualSelect = false;
-                foreach (var st in stats) if (!IsSystemProc(st.Name)) { sel = st; break; }
-                if (sel == null && stats.Count > 0) sel = stats[0];
+                // On utilise la MÊME sélection que le benchmark. Ce panneau avait la sienne :
+                // « le processus non-système qui présente le plus vite ». Or les statistiques
+                // arrivent triées par FPS décroissant, et sa liste d'exclusion ne comptait que
+                // huit préfixes — ni chrome, ni Discord, ni Steam, ni OBS, ni VLC.
+                //
+                // Vérifié sur sept scénarios : dans six, l'ancien code désignait le mauvais
+                // processus. Un navigateur affichant une vidéo à 240 images/s passait devant un
+                // jeu bridé à 60 — le compteur annonçait alors les FPS de Chrome sous le nom du
+                // jeu. C'est très exactement « le compteur n'est pas fiable ».
+                //
+                // ChoisirJeu regarde d'abord la fenêtre AU PREMIER PLAN, puis retombe sur le
+                // meilleur candidat qui ne soit pas dans la liste des non-jeux (38 entrées).
+                sel = FpsEtw.ChoisirJeu(stats, FpsEtw.PidPremierPlan());
                 if (sel != null) _selectedPid = sel.Pid;
             }
             _selectedName = sel != null ? sel.Name : "";
@@ -344,7 +348,10 @@ namespace BTOptimizer
                 it.SubItems.Add(st.WorstMs.ToString("0.0"));
                 it.SubItems.Add(st.Total.ToString("#,0"));
                 if (st.Pid == _selectedPid) { it.Font = _boldRow; it.Selected = true; }
-                if (IsSystemProc(st.Name)) it.ForeColor = Color.FromArgb(130, 135, 145);
+                // Grisé = « ce n'est pas un jeu, il ne sera pas choisi tout seul ». Le tableau
+                // doit donc griser selon la MÊME liste que le sélecteur, sinon Chrome s'affiche
+                // en clair alors qu'il ne sera jamais retenu — l'utilisateur ne comprend pas.
+                if (FpsEtw.EstIgnore(st.Name)) it.ForeColor = Color.FromArgb(130, 135, 145);
                 _grid.Items.Add(it);
             }
             _grid.EndUpdate();

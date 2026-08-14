@@ -308,9 +308,12 @@ namespace BTOptimizer
         {
             if (stats == null || stats.Count == 0) return null;
 
+            // Le processus au premier plan est le meilleur indice — MAIS il reste soumis à la
+            // liste d'exclusion. Sans cela, la fenêtre du compteur FPS elle-même, ou un navigateur
+            // qu'on vient de consulter, deviendrait « le jeu » du seul fait d'être devant.
             if (pidPremierPlan > 0)
                 foreach (ProcStat p in stats)
-                    if (p.Pid == pidPremierPlan && p.Fps > 0) return p;
+                    if (p.Pid == pidPremierPlan && p.Fps > 0 && !EstIgnore(p.Name)) return p;
 
             ProcStat meilleur = null;
             foreach (ProcStat p in stats)
