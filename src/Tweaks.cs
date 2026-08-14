@@ -82,7 +82,7 @@ namespace BTOptimizer
             // poser au même endroit. C'est déjà ce que fait le stockage sur cette machine.
             list.Add(new Tweak
             {
-                Id = "audio_irq_spread", Category = Cat.Audio, Esport = true, Reboot = true,
+                Id = "audio_irq_spread", Category = Cat.Audio, Recommended = true, Esport = true, Reboot = true,
                 Name = "Répartir les interruptions audio sur tous les cœurs",
                 Desc = "Les contrôleurs audio (carte mère et sortie HDMI de la carte graphique) empilent souvent "
                      + "leurs interruptions sur le cœur 0 — celui-là même où tourne le thread principal du jeu. "
@@ -878,6 +878,13 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                // HORS PRÉRÉGLAGES, ET C'EST VOULU. Sur un écran à fréquence variable, plafonner
+                // sous la fréquence maximale RÉDUIT la latence. Sur un écran SANS fréquence
+                // variable et sans V-Sync, le même plafond l'AUGMENTE par rapport à un rendu
+                // débridé. Le bon choix dépend donc du moniteur, et ONYX ne sait pas lire de façon
+                // fiable si la synchronisation adaptative est active. Mettre ce réglage dans un lot
+                // automatique reviendrait à parier sur l'écran de l'utilisateur, et à faire perdre
+                // des images à la moitié d'entre eux. Il reste offert, expliqué, et choisi.
                 Id = "frame_cap", Category = Cat.Gpu,
                 Name = "Plafonner les images juste sous la fréquence de l'écran",
                 Desc = "La réponse SANS INJECTION au problème que résout le « Scanline Sync » de RTSS. Sur un écran à fréquence variable (G-Sync / FreeSync), la recette de référence est de garder la synchronisation adaptative ACTIVE et de plafonner les images juste en dessous de la fréquence maximale : le plafond empêche le jeu d'atteindre le haut de la plage, là où l'écran retombe en V-Sync classique et où la latence saute d'un coup. Image sans déchirure, et sans l'attente de la V-Sync. Le plafond est calculé pour TON écran (fréquence moins Hz²/3600 — la règle qui redonne 138 à 144 Hz et 224 à 240 Hz) et posé par le pilote lui-même, sans rien injecter dans le jeu. À SAVOIR : sur un écran SANS fréquence variable, le plafond régularise les images mais ne supprime pas la déchirure. « Rétablir » rend la main au pilote.",
@@ -888,7 +895,17 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "qos_dscp_jeux", Category = Cat.Reseau, Esport = true,
+                Id = "nic_latency", Category = Cat.Reseau, Recommended = true, Esport = true, Reboot = true,
+                Name = "Réglages de latence de la carte réseau (modération d'interruptions, regroupements…)",
+                Desc = "Coupe les mécanismes par lesquels la carte réseau ÉCONOMISE DU PROCESSEUR EN AJOUTANT DU DÉLAI : modération d'interruptions, contrôle de flux, Ethernet écoénergétique, regroupement de segments reçus (RSC), regroupement de paquets, veille sélective. C'est le même marché à chaque fois — moins de travail pour le processeur, un peu plus d'attente pour les paquets — et pour du temps réel, le mauvais côté du marché. Ne touche QUE ce que ta carte expose réellement, et uniquement des réglages NORMALISÉS par Microsoft : les options propriétaires des cartes Wi-Fi (itinérance, MIMO, largeur de canal) portent des encodages différents selon le fabricant et restent à ta main. Les valeurs d'origine sont sauvegardées ; « Rétablir » les remet exactement. Effet au redémarrage de la carte.",
+                Apply  = () => NicLatency.Applique(true, null),
+                Revert = () => NicLatency.Applique(false, null),
+                Check  = () => NicLatency.Etat()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "qos_dscp_jeux", Category = Cat.Reseau, Recommended = true, Esport = true,
                 Name = "Marquer les paquets de tes jeux comme prioritaires (DSCP 46)",
                 Desc = "Pose la marque « urgent » (Expedited Forwarding) sur les paquets sortants de tes jeux INSTALLÉS — pas sur tous les programmes. C'est la différence qui compte : la recette qui circule vise « *.exe », donc navigateur et téléchargements compris, et une priorité que tout le monde a n'est plus une priorité. ONYX écrit aussi le réglage documenté par Microsoft sans lequel Windows ignore purement et simplement ces politiques hors réseau d'entreprise — l'oubli qui rend la manœuvre inerte chez soi. HONNÊTETÉ : la marque est une demande, pas un ordre. Beaucoup de box l'ignorent et les opérateurs la réécrivent souvent en sortie. Le gain est réel sur un routeur qui en tient compte, nul ailleurs, jamais négatif — et ça ne remplace pas un routeur qui gère sa file d'attente (SQM). Effet au redémarrage. « Rétablir » retire les politiques d'ONYX, et elles seules.",
                 Reboot = true,
