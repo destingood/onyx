@@ -38,6 +38,36 @@ namespace BTOptimizer
         /// <summary>« Étaler les messages sur tous les processeurs » — la valeur qui répartit.</summary>
         public const int PolitiqueRepartie = 5;
 
+        /// <summary>
+        /// NOMBRE DE VECTEURS MSI — ce qui décide si « répartir » veut dire quelque chose.
+        ///
+        /// La politique 5 étale LES MESSAGES d'un périphérique sur plusieurs cœurs. Un
+        /// périphérique qui n'expose qu'UN SEUL message n'a rien à étaler : la valeur est écrite,
+        /// Windows l'accepte, et il ne se passe rien.
+        ///
+        /// Constaté sur une machine réelle : carte graphique NVIDIA et carte Wi-Fi toutes deux à
+        /// MessageNumberLimit = 1, avec DevicePolicy = 5 posée par ONYX. Résultat mesuré au bout
+        /// d'une minute : 92 % des DPC et 93 % du temps DPC sur le CŒUR 0, qui passait 18 % de son
+        /// temps en interruptions contre 1,3 % pour les quinze autres. Les contrôleurs NVMe, eux,
+        /// annoncent 2048 vecteurs — et leurs interruptions étaient bien réparties.
+        ///
+        /// ONYX annonçait donc une répartition qui n'avait pas lieu. On lit désormais le nombre de
+        /// vecteurs AVANT d'écrire, et on ne prétend répartir que là où c'est possible.
+        ///
+        /// Valeur absente = non bornée : le périphérique prend ce que le pilote demande.
+        /// </summary>
+        public static int? Vecteurs(string instanceId)
+        {
+            return LitDword(EnumBase + instanceId + SousCleMsi, "MessageNumberLimit");
+        }
+
+        /// <summary>PUR : « répartir les messages » peut-il avoir un effet avec ce nombre de
+        /// vecteurs ? Une valeur absente (null) signifie « non bornée » — donc oui.</summary>
+        public static bool PeutRepartir(int? vecteurs)
+        {
+            return !vecteurs.HasValue || vecteurs.Value > 1;
+        }
+
         public sealed class Peripherique
         {
             public string Nom;
@@ -95,7 +125,31 @@ namespace BTOptimizer
         /// geste que celui déjà appliqué aux contrôleurs audio.</summary>
         public static Resultat RepartirProducteurs(Action<string, int> log)
         {
-            return Ecrit(GrosProducteurs(), SousCleAffinite, "DevicePolicy", PolitiqueRepartie, log);
+            // On ne pose la politique que là où elle peut agir. Les périphériques à vecteur unique
+            // sont écartés ET signalés : leur écrire « répartis-toi » ne produirait rien, et le
+            // dire serait un succès inventé. Voir Vecteurs().
+            var eligibles = new List<Peripherique>();
+            var uniques = new List<string>();
+            foreach (Peripherique p in GrosProducteurs())
+            {
+                if (PeutRepartir(Vecteurs(p.InstanceId))) eligibles.Add(p);
+                else uniques.Add(p.Nom);
+            }
+
+            Resultat r = Ecrit(eligibles, SousCleAffinite, "DevicePolicy", PolitiqueRepartie, log);
+
+            if (uniques.Count > 0 && log != null)
+            {
+                var noms = new System.Text.StringBuilder();
+                for (int i = 0; i < uniques.Count && i < 3; i++)
+                    noms.Append(noms.Length > 0 ? ", " : "").Append(uniques[i]);
+                if (uniques.Count > 3) noms.Append('…');
+                log(uniques.Count + " périphérique(s) NON répartis — " + noms
+                  + " : ils n'exposent qu'un seul vecteur d'interruption, il n'y a rien à étaler. "
+                  + "Leurs interruptions resteront sur un seul cœur, et aucun réglage de Windows "
+                  + "n'y changera quoi que ce soit.", 2);
+            }
+            return r;
         }
 
         /// <summary>Rend la main à Windows sur les gros producteurs.</summary>
