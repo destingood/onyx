@@ -315,14 +315,31 @@ namespace BTOptimizer
                 foreach (ProcStat p in stats)
                     if (p.Pid == pidPremierPlan && p.Fps > 0 && !EstIgnore(p.Name)) return p;
 
+            // REPLI : personne au premier plan ne présente. On CHERCHE alors un jeu, et une
+            // recherche demande plus de preuves qu'une constatation.
+            //
+            // L'ancien code acceptait tout processus avec « Fps > 0 ». Sur une fenêtre d'une
+            // seconde, un processus qui a présenté UNE SEULE image donne exactement 1 FPS — et
+            // n'importe quelle fenêtre qui se repeint le fait : une notification, un lanceur, une
+            // boîte de dialogue, un installateur. L'overlay s'accrochait à ce bruit et affichait
+            // « 1 » alors qu'aucun jeu ne tournait.
+            //
+            // Au premier plan, on fait confiance quel que soit le débit : un jeu qui rame à 6 FPS,
+            // c'est précisément le moment où l'utilisateur veut voir le chiffre. Mais un processus
+            // que PERSONNE NE REGARDE et qui présente au compte-gouttes n'est pas un jeu qui
+            // souffre — c'est une fenêtre qui vit sa vie.
             ProcStat meilleur = null;
             foreach (ProcStat p in stats)
             {
-                if (p.Fps <= 0 || EstIgnore(p.Name)) continue;
+                if (p.Fps < FpsPlancherRepli || EstIgnore(p.Name)) continue;
                 if (meilleur == null || p.Fps > meilleur.Fps) meilleur = p;
             }
             return meilleur;
         }
+
+        /// <summary>Débit minimal pour qu'un processus HORS PREMIER PLAN soit pris pour un jeu.
+        /// En dessous, c'est du bruit d'interface — voir ChoisirJeu.</summary>
+        public const double FpsPlancherRepli = 20.0;
 
         /// <summary>PID de la fenêtre au premier plan, 0 si indéterminé.</summary>
         public static int PidPremierPlan()
