@@ -78,11 +78,24 @@ namespace BTOptimizer
             return Famille(pilote) == "mesure";
         }
 
-        /// <summary>PUR : les leviers connus pour cette famille, du plus prometteur au moins.</summary>
+        /// <summary>PUR : les leviers connus pour un NOM DE PILOTE (nvlddmkm.sys, tcpip.sys…).</summary>
         public static List<Levier> Pour(string pilote)
         {
+            return PourFamille(Famille(pilote));
+        }
+
+        /// <summary>
+        /// PUR : les leviers d'une FAMILLE déjà résolue (« gpu », « reseau »…), du plus
+        /// prometteur au moins.
+        ///
+        /// Séparé de Pour() parce que Plan() rend des familles, pas des noms de pilote : les
+        /// enchaîner passait « gpu.sys » à Famille(), qui ne reconnaissait rien et rendait une
+        /// liste vide. Le rapport affichait alors « ce qu'on peut tenter » sans rien dessous.
+        /// </summary>
+        public static List<Levier> PourFamille(string famille)
+        {
             var l = new List<Levier>();
-            switch (Famille(pilote))
+            switch (famille)
             {
                 case "gpu":
                     l.Add(new Levier
