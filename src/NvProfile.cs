@@ -60,9 +60,30 @@ namespace BTOptimizer
             sb.Append(Setting("Ultra Low Latency - CPL State", IdCplState, cpl));
             sb.Append(Setting("Maximum pre-rendered frames", IdPreRendered, pre));
             sb.Append(Setting("Ultra Low Latency - Enabled", IdUllEnabled, ull));
-            // Le mode « performances maximales » ne coûte aucune image : on le garde sauf retour
-            // complet aux réglages d'usine.
-            if (kind != Kind.Defaut) sb.Append(Setting("Power management mode", IdPowerMode, 1));
+
+            // LE MODE « PERFORMANCES MAXIMALES » N'EST PLUS POSÉ D'OFFICE.
+            //
+            // Le commentaire précédent disait « ne coûte aucune image ». C'est vrai des FPS, et
+            // faux de tout le reste : ce réglage INTERDIT à la carte de redescendre en fréquence.
+            // Elle reste en P0 en permanence — au bureau, pendant qu'on lit un texte, écran de
+            // veille compris.
+            //
+            // Constaté sur une machine réelle, profil « Sûr » posé le matin même : GPU à
+            // 2 625 MHz, P-state P0, 56 W, sur un bureau vide. Et le pilote graphique consommait
+            // 3 850 ms de temps noyau par minute — contre 57 ms avant que le profil soit posé,
+            // soit soixante-sept fois moins. L'utilisateur cherchait d'où venait sa latence ;
+            // elle venait de nous.
+            //
+            // « Sûr » doit être sûr : il règle la latence de rendu, il n'a pas à clouer la carte
+            // à sa fréquence maximale vingt-quatre heures sur vingt-quatre. Seul « Ultra », qui
+            // est un choix explicite de performance, le conserve.
+            if (kind == Kind.Ultra) sb.Append(Setting("Power management mode", IdPowerMode, 1));
+
+            // Retour aux défauts : on REMET la valeur au lieu de simplement omettre la ligne.
+            // Omettre ne rétablit rien — nvidiaProfileInspector n'applique que ce qu'on lui
+            // donne. « Retire() » laissait donc la carte en performances maximales pour
+            // toujours, en annonçant un retour aux réglages d'usine.
+            if (kind == Kind.Defaut) sb.Append(Setting("Power management mode", IdPowerMode, 0));
             sb.Append("    </Settings>\r\n    <ExecutableFindFiles />\r\n  </Profile>\r\n</ArrayOfProfile>");
             return sb.ToString();
         }
