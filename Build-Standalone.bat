@@ -120,6 +120,27 @@ rem compilation, en retouchant des artefacts d'anciennes versions.
 for /f "delims=" %%F in ('dir /b /o-d "installer\Output\*.exe" 2^^>nul') do (
     call "%~dp0Sign.bat" "installer\Output\%%F"
     goto :signe
+
+rem --- Archive ZIP a cote de l installateur ------------------------------------
+rem  SmartScreen affiche "fichier peu telecharge" sur les .EXE qu il ne connait pas
+rem  encore. L installeur n etant pas signe, chaque nouvelle version repart avec zero
+rem  reputation et l avertissement revient a chaque fois.
+rem
+rem  Cet avertissement vise les EXECUTABLES : un .zip ne le declenche pas. On livre
+rem  donc les deux, et la page de telechargement met le .zip en avant.
+rem
+rem  A savoir : cela regle le TELECHARGEMENT, pas l ecran "Windows a protege votre
+rem  ordinateur" au lancement. Celui-la ne tombe qu avec un certificat de signature.
+set "SETUPEXE="
+for /f "delims=" %%F in ('dir /b /o-d "installer\Output\ONYX-Setup-*.exe" 2^>nul') do (
+    if not defined SETUPEXE set "SETUPEXE=%%F"
+)
+if defined SETUPEXE (
+    for %%N in ("!SETUPEXE!") do set "ZIPBASE=%%~nN"
+    set "ZIPBASE=!ZIPBASE:Setup-=!"
+    powershell -NoProfile -Command "Compress-Archive -Path 'installer\Output\!SETUPEXE!' -DestinationPath 'installer\Output\!ZIPBASE!.zip' -CompressionLevel Optimal -Force"
+    echo [OK] Archive : installer\Output\!ZIPBASE!.zip
+)
 )
 :signe
 
