@@ -69,6 +69,8 @@ namespace BTOptimizer.Tests
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             PilotesRefusesTests.Tout();
+            JournalTechniqueTests.Tout();
+            CanauxWindowsTests.Tout();
             return Banc.Bilan();
         }
     }

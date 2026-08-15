@@ -401,7 +401,20 @@ namespace BTOptimizer
                 string tl = FormatTimeline(Timeline(raw), changes);
                 if (!string.IsNullOrEmpty(tl)) text += "\n" + tl;
             }
-            catch { }
+            catch (Exception ex) { JournalTechnique.Echec("LogDoctor.Timeline", ex); }
+
+            // LES 139 AUTRES JOURNAUX. « Système » et « Application » sont les deux que tout le
+            // monde connaît, et les deux où les pannes modernes ne s'écrivent plus : un pilote
+            // refusé par l'intégrité du code n'apparaît dans NI L'UN NI L'AUTRE. Ce balayage
+            // couvre les canaux Operational et Admin — voir CanauxWindows.
+            try
+            {
+                if (log != null) log("Balayage des autres journaux…", 0);
+                string autres = CanauxWindows.Rapport(CanauxWindows.LireEnCache(days), days);
+                if (!string.IsNullOrEmpty(autres)) text += "\n\n" + autres;
+            }
+            catch (Exception ex) { JournalTechnique.Echec("LogDoctor.Canaux", ex); }
+
             return text;
         }
     }

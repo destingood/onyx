@@ -376,7 +376,13 @@ namespace BTOptimizer
                     }
                 }
             }
-            catch { }   // journal absent, désactivé ou refusé : on ne dira rien plutôt que faux
+            catch (Exception ex)
+            {
+                // On ne dira rien plutôt que faux — mais on NOTE. Sans cette ligne, un journal
+                // désactivé et une machine saine rendent la même liste vide, et le rapport se
+                // tait pour deux raisons opposées sans qu'on puisse jamais les distinguer.
+                JournalTechnique.Echec("PilotesRefuses.Lire", ex);
+            }
 
             var l = new List<Refus>(parFichier.Values);
             foreach (Refus r in l) Complete(r);
@@ -431,7 +437,7 @@ namespace BTOptimizer
                 }
                 LitService(r);
             }
-            catch { }
+            catch (Exception ex) { JournalTechnique.Echec("PilotesRefuses.Complete " + r.Fichier, ex); }
         }
 
         /// <summary>Où est ce pilote ? Le chemin du journal est une forme noyau

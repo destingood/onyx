@@ -63,6 +63,17 @@ namespace BTOptimizer
             l.Add(new Line { Ok = freeGb < 0 || freeGb >= 10, What = "Espace disque système",
                 Detail = freeGb < 0 ? "inconnu" : freeGb.ToString("0") + " Go libres" + (freeGb < 10 ? " — TROP PEU, dis « libère de la place »" : "") });
 
+            // ÉCHECS SILENCIEUX D'ONYX LUI-MÊME. Zéro est la réponse attendue ; tout le reste
+            // désigne une fonction qui a rendu un résultat sans pouvoir le calculer. Voir
+            // JournalTechnique : sans lui, une lecture impossible et une machine saine
+            // produisaient exactement le même silence.
+            int echecs = 0;
+            try { echecs = JournalTechnique.EchecsDistincts(); } catch { }
+            l.Add(new Line { Ok = echecs == 0, What = "Échecs internes notés depuis le lancement",
+                Detail = echecs == 0
+                    ? "aucun — tout ce qu'ONYX a tenté a abouti"
+                    : echecs + " échec(s) distinct(s), détail dans " + JournalTechnique.Chemin });
+
             return l;
         }
 
@@ -113,6 +124,22 @@ namespace BTOptimizer
                 sb.Append("Auto-diag : ").Append(ko == 0 ? "tout OK" : ko + " point(s) en échec").Append("\r\n");
             }
             catch { }
+            // Les derniers échecs internes, NETTOYÉS. C'est ce qui manquait le plus pour
+            // dépanner à distance : sans eux, on ne dispose que du symptôme. Chaque ligne passe
+            // par SansDonneesPerso — un message d'exception cite très souvent le chemin du
+            // profil, et la promesse de la dernière ligne ne serait plus tenue.
+            try
+            {
+                List<string> derniers = JournalTechnique.Dernieres(8);
+                if (derniers.Count > 0)
+                {
+                    sb.Append("Derniers échecs internes :\r\n");
+                    foreach (string ligne in derniers)
+                        sb.Append("  ").Append(JournalTechnique.SansDonneesPerso(ligne)).Append("\r\n");
+                }
+            }
+            catch { }
+
             sb.Append("(Aucune donnée personnelle : ni nom d'utilisateur, ni adresse IP, ni chemin privé.)");
             return sb.ToString();
         }

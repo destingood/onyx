@@ -32,6 +32,10 @@
     <!-- Les modules sous test, TELS QUELS : les fichiers du dépôt, pas des copies. Une copie
          diverge en silence et finit par tester du code que plus personne ne livre. -->
     <Compile Include="..\src\PilotesRefuses.cs" />
+    <Compile Include="..\src\CanauxWindows.cs" />
+    <Compile Include="..\src\JournalTechnique.cs" />
+    <!-- Dépendance de JournalTechnique : où vivent les données. Aucune autre classe d'ONYX. -->
+    <Compile Include="..\src\AppPaths.cs" />
   </ItemGroup>
 
   <ItemGroup>
