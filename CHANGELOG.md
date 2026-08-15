@@ -108,6 +108,49 @@ ONYX **ne propose pas de contourner**. Désactiver l'intégrité du code affaibl
 durablement, pour un seul outil — et la mesure intégrée fait le même relevé par session ETW noyau,
 sans aucun pilote.
 
+### Les 139 journaux que personne n'ouvre
+
+Le point précédent traite **un** type de panne invisible. Restait la question générale : comment
+sait-on qu'il y en a d'autres ? Le « médecin des journaux » lisait **Système** et **Application** —
+les deux que tout le monde connaît, et les deux où les pannes modernes ne s'écrivent plus. Le refus
+de charger un pilote n'apparaît dans **ni l'un ni l'autre**.
+
+Relevé sur la machine de référence : **141 journaux non vides**, dont **139** hors des deux
+classiques, **25 portant des erreurs** sur sept jours — et un balayage complet en **1,2 seconde**.
+Le coût n'a donc jamais été la raison de ne pas le faire. ONYX les balaie désormais tous.
+
+Ce qui en sort ici : un **disque qui met trop longtemps à répondre** (60 événements — micro-blocages
+du système entier pendant que Windows attend), des **sessions ETW en échec**, c'est-à-dire le
+mécanisme même dont ONYX se sert pour mesurer la latence, et un **périphérique qui n'a pas pu
+démarrer** alors qu'il s'affiche normalement dans le Gestionnaire de périphériques.
+
+Trois refus assumés. **Ne pas interpréter l'inconnu** : un canal jamais vu est montré tel quel, avec
+son compte et sa date — inventer une cause plausible pour des centaines de sources produirait un
+faux diagnostic la plupart du temps, et un faux diagnostic coûte plus cher que pas de diagnostic.
+**Ne pas tout remonter** : 435 événements de bruit connu (tuiles du menu Démarrer, Store,
+notifications) noieraient le seul qui compte — ils sont comptés et résumés en une ligne, jamais
+détaillés. **Ne pas doubler l'existant** : Système et Application gardent leur base de connaissances
+dédiée.
+
+### ONYX note désormais ses propres échecs
+
+Le dépôt comptait **1318 blocs `catch { }` vides** répartis sur 185 fichiers. La règle qui les a
+produits est bonne — un module qui lit la machine n'a pas le droit de faire tomber la fenêtre — mais
+« ne pas lever » avait été confondu avec « ne rien dire ». Un module qui échouait rendait alors une
+liste vide **indistinguable** d'une machine où il n'y avait rien à trouver. C'est exactement le
+défaut qu'on venait de corriger chez Windows.
+
+Un journal technique note ce qui aurait dû marcher et n'a pas marché. Ce n'est **pas** une
+télémétrie : rien ne part, le fichier reste à côté de l'exécutable. Ce n'est **pas** un journal de
+débogage : on n'y écrit pas le déroulement normal — un journal qui grossit quand tout va bien ne se
+lit jamais. Et la répétition est **comptée, pas recopiée** : les dix premières occurrences puis les
+puissances de dix, de sorte que 100 000 échecs identiques tiennent en 14 lignes au lieu de remplir
+le disque.
+
+L'auto-diagnostic affiche le compte, et les infos de support emportent les derniers échecs — **après
+nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
+sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
+
 ### L'overlay affichait 1 FPS quand aucun jeu ne tournait
 
 La sélection de repli acceptait tout processus au-dessus de 0 FPS. Or la fenêtre d'interrogation
