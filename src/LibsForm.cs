@@ -483,7 +483,10 @@ namespace BTOptimizer
             {
                 int missing = MissingCount(wingetIds);
                 string txt = baseText + (missing == 0 ? "  ✔" : "  ○ " + missing);
-                try { btn.BeginInvoke((Action)(() => { try { btn.Text = txt; } catch { } })); }
+                // Un bouton DÉSACTIVÉ porte déjà un libellé qui explique pourquoi (pilote refusé
+                // par Windows, voir PilotesRefuses). L'écraser par le décompte d'installation
+                // remettrait « installer » sur un outil qui ne peut pas tourner.
+                try { btn.BeginInvoke((Action)(() => { try { if (btn.Enabled) btn.Text = txt; } catch { } })); }
                 catch { }   // fenêtre fermée entre-temps : sans conséquence
             });
         }

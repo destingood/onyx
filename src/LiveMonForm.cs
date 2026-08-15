@@ -111,6 +111,7 @@ namespace BTOptimizer
             var btnTool = MakeBtn("Aller plus loin : LatencyMon", 210);
             btnTool.Dock = DockStyle.Left;
             LibScan.WireToolButton(btnTool, this, _log, "Aller plus loin : LatencyMon", new[] { "Resplendence.LatencyMon" });
+            CoupeLOutilSiWindowsLeRefuse(btnTool, "LatencyMon");
             var btnClose = MakeBtn("Fermer", 110);
             btnClose.Dock = DockStyle.Right;
             btnClose.Click += (s, e) => Close();
@@ -223,6 +224,43 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        /// <summary>
+        /// Coupe le bouton « aller plus loin » quand Windows refuse le pilote de l'outil visé.
+        ///
+        /// Proposer d'installer un outil dont le pilote ne peut pas se charger envoie quelqu'un
+        /// réinstaller, redémarrer, désinstaller — pour une cause qui n'est ni de son côté, ni
+        /// touchée par aucun de ces gestes. Le bouton désactivé porte le motif ; le clic n'est
+        /// pas nécessaire pour comprendre.
+        ///
+        /// En arrière-plan : la lecture du journal d'intégrité coûte quelques centaines de
+        /// millisecondes, et elle réchauffe au passage le cache utilisé par le rapport d'enquête.
+        /// </summary>
+        private void CoupeLOutilSiWindowsLeRefuse(Button btn, string nomOutil)
+        {
+            Shown += (s, e) => System.Threading.Tasks.Task.Run(() =>
+            {
+                bool bloque;
+                try { bloque = PilotesRefuses.OutilBloque(PilotesRefuses.LireEnCache(), nomOutil); }
+                catch { return; }
+                if (!bloque) return;
+                try
+                {
+                    btn.BeginInvoke((Action)(() =>
+                    {
+                        try
+                        {
+                            // Désactiver AVANT de renommer : WireToolButton ne réécrit plus le
+                            // libellé d'un bouton désactivé (voir LibScan.WireToolButton).
+                            btn.Enabled = false;
+                            btn.Text = nomOutil + " : refusé par Windows";
+                        }
+                        catch { }
+                    }));
+                }
+                catch { }   // fenêtre fermée entre-temps : sans conséquence
+            });
+        }
+
         /// <summary>Le rapport : d'où vient la latence, que faire, et — s'il y a une référence —
         /// ce que le dernier changement a produit, ou pourquoi on refuse de le dire.</summary>
         private void MontreEnquete()
@@ -257,7 +295,54 @@ namespace BTOptimizer
                 + "Agir ailleurs ne peut rien rapporter de visible.");
             sb.AppendLine();
 
+            // INSTALLATION GRAPHIQUE : passe AVANT les leviers, et pas par coquetterie d'ordre.
+            // Un pilote installé en deux temps rend toute mesure de levier ininterprétable — on
+            // évaluerait un réglage par-dessus une pile bancale. Silencieux si le GPU n'est pas
+            // le sujet du relevé, ou s'il est cher sans que l'installation y soit pour rien.
+            const double PartGpuQuiJustifieLeDiagnostic = 0.50;
+            string install = InstallGraphique.Rapport(InstallGraphique.Lire(), r,
+                                                      PartGpuQuiJustifieLeDiagnostic);
+            if (install.Length > 0)
+            {
+                sb.Append(install);
+                sb.AppendLine();
+            }
+
+            // RÉGLAGES QUI PÈSENT : question distincte de l'installation, et cumulable avec elle.
+            // Un CPU qui dort au bureau rend le relevé pessimiste sans qu'aucun pilote soit en
+            // cause ; une politique d'interruption contradictoire coûte, elle, du temps réel.
+            string reglages = ReglagesQuiCoutent.Rapport(ReglagesQuiCoutent.Lire());
+            if (reglages.Length > 0)
+            {
+                sb.Append(reglages);
+                sb.AppendLine();
+            }
+
+            // POLLEURS DE CAPTEURS : la seule cause de ce rapport qui produise un motif RÉPÉTÉ,
+            // et la seule qui n'apparaisse dans aucune colonne — les SMI sont hors de portée de
+            // Windows. ONYX s'y dénonce lui-même : il lit les capteurs pendant qu'il mesure.
+            string polleurs = PolleursDeCapteurs.Rapport(PolleursDeCapteurs.EnMarche());
+            if (polleurs.Length > 0)
+            {
+                sb.Append(polleurs);
+                sb.AppendLine();
+            }
+
+            // PILOTES REFUSÉS : ne change RIEN au relevé ci-dessus — ONYX mesure par session ETW
+            // noyau, sans pilote, donc rien que Windows puisse refuser. Ce que ça change, c'est
+            // ce vers quoi on enverrait l'utilisateur ensuite : un outil dont le pilote est
+            // bloqué ne mesurera jamais rien, et aucun geste de son côté n'y peut quoi que ce
+            // soit. D'où sa place ici, juste avant les actions.
+            string refuses = PilotesRefuses.Rapport(PilotesRefuses.LireEnCache());
+            if (refuses.Length > 0)
+            {
+                sb.Append(refuses);
+                sb.AppendLine();
+            }
+
             sb.AppendLine("CE QU'ON PEUT TENTER");
+            if (install.Length > 0)
+                sb.AppendLine("   (à ne mesurer qu'APRÈS la réinstallation propre ci-dessus.)");
             foreach (string fam in LeviersLatence.Plan(r, 0.90))
             {
                 foreach (LeviersLatence.Levier lv in LeviersLatence.PourFamille(fam))

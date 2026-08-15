@@ -67,6 +67,10 @@
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.4" />
     <PackageReference Include="System.Management" Version="10.0.2" />
+    <!-- Note : System.Diagnostics.EventLog (lecture du journal « CodeIntegrity/Operational »
+         par PilotesRefuses) vient déjà du SDK Windows Desktop — le référencer explicitement
+         déclencherait NU1510. -->
+
     <!-- Extraction de texte des PDF pour la base de connaissances (100 % managé, MIT). -->
     <PackageReference Include="PdfPig" Version="0.1.9" />
   </ItemGroup>

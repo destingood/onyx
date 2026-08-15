@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Banc d'essai d'ONYX.
+       Pas de framework de test : les modules d'analyse sont écrits pour être PURS, donc
+       vérifiables par de simples assertions, et le peu de lecture machine se vérifie sur la
+       machine elle-même. Ajouter xUnit ici coûterait une dépendance et un runner pour des
+       fonctions qui n'en demandent aucun.
+
+       Le projet n'est jamais publié : les scripts Build*.bat nomment BTOptimizer.csproj. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Mêmes cadre et références que BTOptimizer : on teste sous le jeu d'assemblys de
+         production, pas sous un jeu voisin. C'est ce qui garantit que System.Diagnostics
+         .Eventing.Reader est bien celui que l'application utilisera. -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>BTOptimizer.Tests</RootNamespace>
+    <AssemblyName>ONYX.Tests</AssemblyName>
+
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>CA1416</NoWarn>
+
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <!-- Les modules sous test, TELS QUELS : les fichiers du dépôt, pas des copies. Une copie
+         diverge en silence et finit par tester du code que plus personne ne livre. -->
+    <Compile Include="..\src\PilotesRefuses.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.2" />
+  </ItemGroup>
+
+</Project>
