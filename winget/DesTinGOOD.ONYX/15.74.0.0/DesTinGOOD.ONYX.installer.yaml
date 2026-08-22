@@ -1,0 +1,17 @@
+﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: DesTinGOOD.ONYX
+PackageVersion: 15.74.0.0
+InstallerType: inno
+Scope: machine
+InstallModes:
+  - interactive
+  - silent
+  - silentWithProgress
+UpgradeBehavior: install
+ProductCode: '{2B539D2F-3B49-466B-B095-FEB9A1123E65}_is1'
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/destingood/onyx-releases/releases/download/v15.74/ONYX-Setup-15.74.0.0.exe
+    InstallerSha256: ADC55C411616C4EF78B0C70C81F2414E14DB62FF4367316812D0F2D2B79CDE83
+ManifestType: installer
+ManifestVersion: 1.6.0
