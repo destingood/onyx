@@ -6,7 +6,8 @@
 ;            2) compile ce script : "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" BTOptimizer.iss
 ;  Résultat :  installer\Output\BTOptimizer-Setup-<version>.exe
 ;
-;  Deux modes de diffusion, détectés AUTOMATIQUEMENT selon le contenu de ..\dist :
+;  Source compilée : ..\build\stage (préparé par les scripts de build), sinon ..\dist.
+;  Deux modes de diffusion, détectés AUTOMATIQUEMENT selon le contenu de ce dossier :
 ;   • Dépendant du runtime (Build-Installer.bat) : ~16 Mo, exige .NET Desktop 10 (x64)
 ;     côté client -> le script le vérifie et propose la page de téléchargement s'il manque.
 ;   • AUTONOME / self-contained (Build-Standalone.bat) : ~120 Mo, runtime embarqué,
@@ -15,9 +16,25 @@
 
 #define AppName "ONYX"
 #define AppExe "BTOptimizer.exe"
+; DOSSIER SOURCE DE LA LIVRAISON.
+; On ne compile PLUS depuis « dist\ » : c'est le dossier où le développeur EXÉCUTE l'app.
+; Il bouge donc pendant la compilation (l'app y écrit son état, l'antivirus y intervient,
+; une seconde compilation lancée en parallèle commence par le vider). Inno liste les
+; fichiers au début, puis les compresse ~40 s plus tard : si l'un d'eux disparaît entre
+; temps, la compilation s'arrête sur « Le fichier spécifié est introuvable » — à un endroit
+; DIFFÉRENT à chaque fois, ce qui rendait la panne incompréhensible.
+; « build\stage » est créé par les scripts de build juste avant l'appel à ISCC, ne contient
+; QUE ce qui doit être livré, et rien d'autre ne l'utilise.
+#ifexist "..\build\stage\BTOptimizer.exe"
+  #define Src "..\build\stage"
+#else
+  ; Repli : compilation manuelle après un simple « dotnet publish -o dist ».
+  #define Src "..\dist"
+#endif
+
 ; La version est lue automatiquement depuis le binaire publié (évite toute dérive).
-#ifexist "..\dist\BTOptimizer.exe"
-  #define AppVersion GetVersionNumbersString("..\dist\BTOptimizer.exe")
+#ifexist Src + "\BTOptimizer.exe"
+  #define AppVersion GetVersionNumbersString(Src + "\BTOptimizer.exe")
 #else
   #define AppVersion "7.9.0.0"
 #endif
@@ -26,19 +43,19 @@
 ; landing hébergée dès qu'elle existe.
 #define AppURL "https://fluide.gumroad.com"
 
-; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained) : coreclr.dll n'est
-; présent que dans ce mode. Si oui, le runtime .NET est embarqué -> on n'exige rien du client.
-#ifexist "..\dist\coreclr.dll"
+; Détection AUTOMATIQUE d'une publication AUTONOME (self-contained), DEUX formes possibles :
+;  · éclatée      : coreclr.dll est posé à côté de l'exe ;
+;  · FICHIER UNIQUE : tout est DANS l'exe (aucun coreclr.dll sur le disque) -> on le reconnaît
+;    à la taille du binaire (> 40 Mo). Sans ce test, une publication single-file était prise
+;    pour du « dépendant du runtime » et l'installateur réclamait .NET à tort au client.
+#ifexist Src + "\coreclr.dll"
   #define SelfContained
 #endif
-; Cas du MONO-FICHIER autonome (Build.bat : PublishSingleFile) : coreclr.dll est bundle
-; DANS l'exe, la detection ci-dessus le rate donc et le setup exigerait .NET a tort.
-; Signature de ce mode : pas de BTOptimizer.runtimeconfig.json sur le disque non plus
-; (bundle lui aussi). Une publication dependante du runtime, elle, l'a toujours.
-#ifnexist "..\dist\BTOptimizer.runtimeconfig.json"
-  #define SelfContained
+#ifexist Src + "\BTOptimizer.exe"
+  #if !defined(SelfContained) && FileSize(Src + "\BTOptimizer.exe") > 40000000
+    #define SelfContained
+  #endif
 #endif
-
 ; Rappel a la compilation : on sait ainsi tout de suite quel type de setup on fabrique.
 #ifdef SelfContained
   #pragma message "Mode AUTONOME detecte -> aucun runtime .NET exige du client."
@@ -91,8 +108,25 @@ Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfile
 [Files]
 ; Binaires .NET 10 (produits par « dotnet publish -o dist »).
 ; On exclut les fichiers d'état générés à l'exécution et les symboles de débogage.
-Source: "..\dist\*"; DestDir: "{app}"; \
-  Excludes: "bt-*.txt,bt-*.csv,bt-*.nip,*.pdb,*.etl"; \
+; ANTI-FUITE : tout ce qui n'est pas le binaire est exclu explicitement — donnees de l'utilisateur
+; developpeur (memoire du Copilote, faits appris, journal, jeton de mise a jour), symboles de
+; debogage et sources. « bt-*.md » manquait : bt-appris.md (conversations apprises) partait chez
+; TOUS les utilisateurs. Le probe BT_RELEASE verifie ce dossier avant chaque publication.
+; ANTI-FUITE — exclusion par PRÉFIXE, et non par extension.
+; Le dossier de publication est aussi celui où le développeur SE SERT de l'app : s'y
+; accumulent la mémoire du Copilote, les faits appris, le journal, la licence, le jeton de
+; mise à jour. L'ancienne liste énumérait des extensions (« bt-*.txt, bt-*.csv, bt-*.md… ») :
+; il suffisait qu'un nouveau fichier d'état apparaisse avec une extension non prévue pour
+; qu'il parte chez TOUS les utilisateurs — c'est précisément ce qui était arrivé à
+; bt-appris.md, qui contenait de vraies conversations. « bt-* » couvre les fichiers ET les
+; dossiers, actuels comme futurs.
+;
+; Une liste explicite (nom par nom) a aussi été essayée : elle a produit un setup AMPUTÉ de
+; Microsoft.Diagnostics.Tracing.TraceEvent.dll, que .NET ne peut pas embarquer — la mesure
+; de latence DPC/ISR aurait planté chez le client. Un joker filtré ne peut pas, lui,
+; oublier un binaire.
+Source: "{#Src}\*"; DestDir: "{app}"; \
+  Excludes: "bt-*,*.pdb,*.cs,*.csproj,*.sln,*.etl,*.log,*.pfx,*.tmp"; \
   Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
 
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
@@ -100,7 +134,8 @@ Source: "..\tools\dpc-trace.wprp"; DestDir: "{app}\tools"; Flags: ignoreversion 
 
 ; Composant NVIDIA optionnel. nvidiaProfileInspector est un outil tiers :
 ; vérifiez ses droits de redistribution avant toute diffusion commerciale.
-Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; \
+; (les symboles de débogage de l'outil tiers ne servent à personne : on ne les livre pas)
+Source: "..\tools\npi\*"; DestDir: "{app}\tools\npi"; Excludes: "*.pdb"; \
   Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: nvidia
 
 [Icons]
@@ -120,11 +155,16 @@ Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app
 Type: files;      Name: "{app}\bt-*.txt"
 Type: files;      Name: "{app}\bt-*.csv"
 Type: files;      Name: "{app}\bt-*.nip"
+Type: files;      Name: "{app}\bt-*.md"
 Type: files;      Name: "{app}\tools\trace-*.etl"
 Type: files;      Name: "{app}\tools\dpcisr-*.txt"
+; Photos quotidiennes de l'etat du systeme (« ca marchait hier ») : dossier cree par l'app.
+Type: filesandordirs; Name: "{app}\bt-etat"
 Type: dirifempty; Name: "{app}\tools\npi"
 Type: dirifempty; Name: "{app}\tools"
 Type: dirifempty; Name: "{app}"
+; Dossier de repli utilise quand « Program Files » n'est pas accessible en ecriture.
+Type: filesandordirs; Name: "{localappdata}\ONYX"
 
 [Code]
 // La vérification du runtime .NET ne sert QUE pour une publication dépendante du runtime.

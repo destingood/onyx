@@ -16,6 +16,14 @@ namespace BTOptimizer
     {
         [DllImport("gdi32.dll")]
         private static extern bool SetDeviceGammaRamp(IntPtr hDC, ref RAMP lpRamp);
+
+        // Contexte d'affichage propre à UN écran : c'est le seul qui accepte une rampe gamma sur
+        // un poste multi-écrans (voir SetRamp).
+        [System.Runtime.InteropServices.DllImport("gdi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern IntPtr CreateDC(string pilote, string peripherique, string port, IntPtr donneesMode);
+
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern bool DeleteDC(IntPtr hdc);
         [DllImport("user32.dll")]
         private static extern IntPtr GetDC(IntPtr hWnd);
         [DllImport("user32.dll")]
@@ -110,8 +118,42 @@ namespace BTOptimizer
             return SetRamp(ref ramp);
         }
 
+        /// <summary>
+        /// Écrit la rampe sur CHAQUE écran, via un contexte dédié à l'écran.
+        ///
+        /// L'ancienne version écrivait sur le contexte du BUREAU — GetDC(NULL). Mesuré sur cette
+        /// machine à trois écrans :
+        ///
+        ///     GetDC(NULL)                                 SetDeviceGammaRamp -> False
+        ///     CreateDC("DISPLAY", "\\.\DISPLAY1/2/3")     SetDeviceGammaRamp -> True (x3)
+        ///
+        /// Autrement dit, le filtre couleur ne faisait RIEN. Le contexte du bureau couvre
+        /// plusieurs écrans à la fois ; une rampe gamma s'adresse à un affichage précis, et
+        /// Windows refuse l'opération sur le contexte global.
+        ///
+        /// Effet secondaire souhaitable : le filtre s'applique désormais à TOUS les écrans, au
+        /// lieu de dépendre de ce que le contexte du bureau aurait bien voulu accepter.
+        ///
+        /// Le contexte du bureau reste en dernier recours : sur une machine à un seul écran il
+        /// fonctionne, et rien ne justifie de casser ce qui marchait.
+        /// </summary>
         private static bool SetRamp(ref RAMP ramp)
         {
+            bool auMoinsUn = false;
+            try
+            {
+                foreach (System.Windows.Forms.Screen sc in System.Windows.Forms.Screen.AllScreens)
+                {
+                    IntPtr dc = CreateDC("DISPLAY", sc.DeviceName, null, IntPtr.Zero);
+                    if (dc == IntPtr.Zero) continue;
+                    try { if (SetDeviceGammaRamp(dc, ref ramp)) auMoinsUn = true; }
+                    catch { }
+                    finally { try { DeleteDC(dc); } catch { } }
+                }
+            }
+            catch { }
+            if (auMoinsUn) return true;
+
             IntPtr hdc = GetDC(IntPtr.Zero);
             if (hdc == IntPtr.Zero) return false;
             try { return SetDeviceGammaRamp(hdc, ref ramp); }
@@ -122,7 +164,7 @@ namespace BTOptimizer
         // ---- Persistance : bt-colorfilter.txt = "index;value;vivid" ----
         public static string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-colorfilter.txt"); }
+            get { return AppPaths.File("bt-colorfilter.txt"); }
         }
 
         public static void Save(int index, int value, bool vivid)

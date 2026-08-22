@@ -21,7 +21,7 @@ namespace BTOptimizer
             Tuple.Create("Xbox (overlay, barre de jeu, appli Xbox)", "Microsoft.Xbox", false),
             Tuple.Create("Xbox Game Bar",                            "Microsoft.XboxGamingOverlay", false),
             Tuple.Create("Solitaire Collection",                     "Microsoft.MicrosoftSolitaireCollection", false),
-            Tuple.Create("Cortana",                                  "Microsoft.549981C3F5F10", false),
+            Tuple.Create("Cortana (retirée par Microsoft, non réinstallable)", "Microsoft.549981C3F5F10", false),
             Tuple.Create("Microsoft Teams (grand public)",           "MicrosoftTeams", false),
             Tuple.Create("Actualités (Bing News)",                   "Microsoft.BingNews", false),
             Tuple.Create("Météo (Bing Weather)",                     "Microsoft.BingWeather", false),
@@ -63,15 +63,16 @@ namespace BTOptimizer
             Font = new Font("Segoe UI", 9f);
 
             var intro = new Label();
-            intro.SetBounds(16, 12, 528, 56);
+            intro.SetBounds(16, 12, 528, 72);
             intro.Text = "Coche les applications préinstallées que tu veux RETIRER (rien n'est coché par défaut). "
-                       + "⚠️ Irréversible : la réinstallation ne se fait qu'à la main via le Microsoft Store. "
+                       + "⚠️ Irréversible : la réinstallation ne se fait qu'à la main via le Microsoft Store, "
+                       + "et seulement si l'appli y est encore publiée. "
                        + "Les composants critiques (Store, Calculatrice, Photos, sécurité) ne sont jamais proposés. "
                        + "« (parfois utile) » = à réfléchir avant de retirer.";
             intro.ForeColor = Theme.InkDimColor;
 
             _list = new CheckedListBox();
-            _list.SetBounds(16, 74, 528, 380);
+            _list.SetBounds(16, 90, 528, 364);
             _list.CheckOnClick = true;
             _list.IntegralHeight = false;
             foreach (var a in Catalog)
@@ -103,7 +104,7 @@ namespace BTOptimizer
             if (MessageBox.Show(this,
                     "Retirer " + sel.Count + " application(s) de Windows ?\r\n\r\n"
                     + "⚠️ IRRÉVERSIBLE : pour les récupérer, il faudra les réinstaller une par une "
-                    + "depuis le Microsoft Store. Continuer ?",
+                    + "depuis le Microsoft Store — et seulement celles qui y sont encore publiées. Continuer ?",
                     "Retirer des applis Windows", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
 

@@ -39,7 +39,7 @@ namespace BTOptimizer
 
         private static string MemPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-copilote.txt"); }
+            get { return AppPaths.File("bt-copilote.txt"); }
         }
 
         private static string MemLabel(string key)
@@ -122,21 +122,60 @@ namespace BTOptimizer
             // --- 1bis. Crashs du pilote GPU sur 14 jours (LE signal de l'instabilité en jeu) ---
             try
             {
+                // On juge sur le PRÉSENT (2 derniers jours), pas sur le cumul : une crise déjà passée
+                // ne doit pas afficher « CRITIQUE » ni pousser un DDU devenu inutile (leçon v15.46).
                 int gpuErr = CrashScan.GpuDriverErrors(14);
-                if (gpuErr > 0)
+                int gpuErr2 = CrashScan.GpuDriverErrors(2);
+                int impact = GpuStability.CardImpact(gpuErr, gpuErr2);
+                if (impact >= 45)
                     found.Add(new Finding
                     {
-                        Impact = 90, Key = "crashgpu",
-                        Text = "Le pilote de ta carte graphique a signalé " + gpuErr + " erreur(s) ces 14 derniers jours. "
-                             + "C'est la signature des crashs « dispositif de rendu perdu » : surchauffe, overclock instable "
-                             + "ou pilote abîmé. Gratuit : dépoussiérage + panneau Températures pour surveiller, et si ça "
-                             + "persiste, pilote réinstallé PROPREMENT avec DDU (gratuit, 1 clic depuis Bibliothèques).",
-                        Why = "Crashs GPU — constaté : " + gpuErr + " événement(s) du pilote graphique dans le journal "
-                            + "système Windows sur 14 jours ; attendu sur un PC stable : 0. Chaque événement = le pilote "
-                            + "s'est réinitialisé (freeze/écran noir possible en jeu). Les remèdes proposés sont tous gratuits.",
+                        Impact = impact, Key = "crashgpu",
+                        Text = "Le pilote de ta carte graphique a signalé " + gpuErr2 + " erreur(s) ces 2 DERNIERS JOURS"
+                             + (gpuErr > gpuErr2 ? " (" + gpuErr + " sur 14 jours)" : "") + ". C'est la signature des crashs "
+                             + "« dispositif de rendu perdu » : surchauffe, overclock instable ou pilote abîmé. Gratuit : "
+                             + "dépoussiérage + panneau Températures pour surveiller, et si ça persiste, pilote réinstallé "
+                             + "PROPREMENT avec DDU (gratuit, 1 clic depuis Bibliothèques).",
+                        Why = "Crashs GPU — constaté : " + gpuErr2 + " événement(s) du pilote graphique dans le journal "
+                            + "système Windows sur les 2 derniers jours (" + gpuErr + " sur 14 j) ; attendu sur un PC stable : 0. "
+                            + "Chaque événement = le pilote s'est réinitialisé (freeze/écran noir possible en jeu). "
+                            + "On juge sur les jours récents : une crise passée ne justifie pas de manipulation.",
                         Fix = ChatActions.InstallTool("Wagnardsoft.DisplayDriverUninstaller", "DDU")
                     });
-                else ok.Add("aucun crash du pilote GPU (14 j)");
+                else if (impact == 15)
+                    found.Add(new Finding
+                    {
+                        Impact = 15, Key = "crashgpu",
+                        Text = "Ton pilote graphique a beaucoup planté récemment (" + gpuErr + " erreurs sur 14 jours), mais "
+                             + "PLUS RIEN ces 2 derniers jours : la crise est passée. Ne touche à rien — surveille "
+                             + "simplement (Check Up+ → « Mon pilote GPU est-il instable ? »).",
+                        Why = "Crashs GPU — constaté : " + gpuErr + " sur 14 jours mais " + gpuErr2 + " sur les 2 derniers. "
+                            + "Un problème résolu ne se répare pas : refaire un DDU maintenant serait inutile et risqué."
+                    });
+                else ok.Add("aucun crash récent du pilote GPU");
+            }
+            catch { }
+
+            // --- 1ter. CE QUI A CHANGÉ depuis la dernière photo : la cause n°1 d'un « ça marchait
+            //     avant ». Purement informatif (aucun bouton) : c'est un CONTEXTE, pas un défaut. ---
+            try
+            {
+                var changes = StateDiff.RecentChanges();
+                if (changes.Count > 0)
+                {
+                    var cs = new System.Text.StringBuilder();
+                    cs.Append("Depuis ma dernière photo de ton PC, ").Append(changes.Count == 1 ? "1 chose a changé" : changes.Count + " choses ont changé").Append(" :\n");
+                    foreach (var c in changes) cs.Append("• ").Append(c).Append('\n');
+                    cs.Append("Si un souci est apparu récemment, la cause est très probablement là-dedans.");
+                    found.Add(new Finding
+                    {
+                        Impact = 50, Key = "changements",
+                        Text = cs.ToString().TrimEnd(),
+                        Why = "Changements — comparaison entre la photo quotidienne de l'état du système (pilote GPU, "
+                            + "version de Windows, programmes au démarrage, espace disque) et l'état actuel. Ce n'est pas "
+                            + "un défaut : c'est le contexte qui explique le plus souvent un comportement qui change du jour au lendemain."
+                    });
+                }
             }
             catch { }
 

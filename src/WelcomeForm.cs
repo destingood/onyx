@@ -11,7 +11,7 @@ namespace BTOptimizer
         public enum StartAction { Open, ApplyRecommended, StartTrial }
         public StartAction Choice { get; private set; }
 
-        private static string FlagPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-welcome.txt"); } }
+        private static string FlagPath { get { return AppPaths.File("bt-welcome.txt"); } }
         public static bool AlreadyShown { get { return File.Exists(FlagPath); } }
         public static void MarkShown() { try { File.WriteAllText(FlagPath, "1"); } catch { } }
 

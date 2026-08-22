@@ -408,7 +408,7 @@ namespace BTOptimizer
         private void Send(string q)
         {
             AddBubble(false, q, null);
-            var reply = DocAssistant.Answer(q, _stats, Host.Log, _last);
+            var reply = DocAssistant.SafeAnswer(q, _stats, Host.Log, _last);
             // Sous capture : réponse immédiate (pas de message loop long). En vrai : « Le Copilote écrit… ».
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UISHOT")))
             {
@@ -492,6 +492,7 @@ namespace BTOptimizer
                         }
                         if (res != null) AddBubble(true, res.Text, res);
                         if (a.IsChange) RefreshTiles();   // le cockpit suit la réalité après une correction
+                        if (a.IsChange && !failed) { try { Journal.Add(a.Label); } catch { } }   // journal de bord
                         // Enchaînement automatique d'une MESURE portée par le résultat
                         // (ex. vérification complète après « TOUT réparer »).
                         if (res != null && res.Action != null && res.Action.AutoRun) RunAction(res.Action);
@@ -636,6 +637,7 @@ namespace BTOptimizer
                 ("Ça rame en jeu", "ça rame et ça saccade en jeu"),
                 ("FPS bas", "mes fps sont bas"),
                 ("Ping / lag en ligne", "ça lag en ligne, ping élevé"),
+                ("CPU ou GPU : qui me limite ?", "c'est mon cpu ou mon gpu qui me limite ?"),
                 ("Ça crash / écran bleu", "mes jeux crashent, parfois ecran bleu"),
                 ("Un jeu ne démarre pas", "un jeu refuse de démarrer, dll manquante"),
                 ("Écran bloqué à 60 Hz", "mon écran semble bloqué à 60 hz"),

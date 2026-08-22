@@ -92,7 +92,14 @@ namespace BTOptimizer
             var scr = MakeBtn("Réglages écran...", 125, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
             var gpu = MakeBtn("Panneau NVIDIA...", 125, DockStyle.Left);
-            gpu.Click += (s, e) => Shell("nvcpl.cpl", null);
+            // Même correctif que dans le guide Streamer : « nvcpl.cpl » n'existe plus.
+            gpu.Click += (s, e) =>
+            {
+                if (!PanneauNvidia.Ouvrir())
+                    MessageBox.Show(this, "Le panneau NVIDIA est introuvable sur cette machine.\n\n"
+                        + "Ouvre-le par un clic droit sur le bureau, ou depuis le menu Démarrer.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
             var refresh = MakeBtn("Rafraîchir", 85, DockStyle.Left);
             refresh.Click += (s, e) => Reload();
             var close = MakeBtn("Fermer", 80, DockStyle.Right);
@@ -311,13 +318,24 @@ namespace BTOptimizer
                        + target.Width + "×" + target.Height + ") ?\n\n"
                        + "L'écran peut clignoter un court instant.\n"
                        + "Sécurité : si l'image disparaît, NE TOUCHE À RIEN — retour automatique à "
-                       + target.CurrentHz + " Hz au bout de 12 secondes.";
+                       + target.CurrentHz + " Hz au bout de 12 secondes.\n"
+                       + "Et si même ça échouait : le réglage n'est mémorisé qu'APRÈS ta confirmation. "
+                       + "Un simple redémarrage rétablirait " + target.CurrentHz + " Hz.";
             if (MessageBox.Show(this, msg, "Fréquence de rafraîchissement",
                     MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
 
             int oldHz = target.CurrentHz;
-            if (!DisplayInfo.SetHz(target.Device, target.MaxHz))
+            // PREMIER TEMPS : on applique SANS MÉMORISER. CDS_TEST demande au pilote si le mode
+            // est valide, pas à l'écran s'il sait l'afficher — un panneau peut refuser de se
+            // synchroniser là où le pilote dit oui, typiquement en très haut rafraîchissement sur
+            // un câble limite. L'écran devient alors noir.
+            //
+            // Tant que le mode n'est pas écrit dans le registre, la sortie de secours ne dépend
+            // pas d'ONYX : redémarrer suffit. Écrire d'abord, comme le faisait cette fenêtre,
+            // faisait survivre l'écran noir au redémarrage si le retour automatique échouait —
+            // et un utilisateur qui ne voit plus rien ne peut plus rien réparer.
+            if (!DisplayInfo.SetHz(target.Device, target.MaxHz, false))
             {
                 MessageBox.Show(this, "Le mode " + target.MaxHz + " Hz a été refusé par le pilote.\n"
                     + "Vérifie le câble (DisplayPort) et le menu de l'écran (OSD), puis passe par « Réglages écran... ».",
@@ -331,12 +349,30 @@ namespace BTOptimizer
 
             if (!keep)
             {
-                DisplayInfo.SetHz(target.Device, oldHz);
+                // Le registre n'a jamais été touché : un retour dynamique suffit à tout remettre.
+                DisplayInfo.SetHz(target.Device, oldHz, false);
                 if (_log != null) _log("Écran rétabli à " + oldHz + " Hz.", 0);
             }
-            else if (_log != null)
-                _log("Écran « " + target.Name + " » passé à " + target.MaxHz + " Hz — profite de tes "
-                     + target.MaxHz + " images par seconde !", 1);
+            else
+            {
+                // SECOND TEMPS, et seulement maintenant : l'utilisateur a VU son écran et cliqué.
+                // C'est la seule preuve valable que le mode s'affiche — on peut le mémoriser.
+                bool grave = DisplayInfo.SetHz(target.Device, target.MaxHz, true);
+                if (_log != null)
+                {
+                    if (grave)
+                        _log("Écran « " + target.Name + " » passé à " + target.MaxHz + " Hz et mémorisé — profite de tes "
+                             + target.MaxHz + " images par seconde !", 1);
+                    else
+                        _log("Écran « " + target.Name + " » à " + target.MaxHz + " Hz, mais le réglage n'a pas pu être "
+                             + "mémorisé : il retombera à " + oldHz + " Hz au prochain démarrage.", 2);
+                }
+                if (!grave)
+                    MessageBox.Show(this, "L'écran est bien à " + target.MaxHz + " Hz, mais Windows a refusé d'enregistrer "
+                        + "ce réglage : il retombera à " + oldHz + " Hz au prochain démarrage.\n\n"
+                        + "Passe par « Réglages écran... » pour le fixer durablement.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             Reload();
         }
@@ -366,7 +402,13 @@ namespace BTOptimizer
                 _revert.SetBounds(200, 66, 110, 32);
 
                 Controls.Add(lbl); Controls.Add(_keep); Controls.Add(_revert);
-                AcceptButton = _keep; CancelButton = _revert;
+                // Entrée ET Échap rétablissent. « Garder » exige un clic explicite.
+                //
+                // Ce dialogue existe pour le cas où l'utilisateur NE VOIT PLUS RIEN. Or « Garder »
+                // était le bouton par défaut : une touche Entrée tapée au hasard devant un écran
+                // noir figeait le mauvais mode. Le geste par défaut doit être celui qui répare,
+                // jamais celui qui engage.
+                AcceptButton = _revert; CancelButton = _revert;
 
                 _timer = new Timer { Interval = 1000 };
                 _timer.Tick += (s, e) =>

@@ -193,10 +193,13 @@ namespace BTOptimizer
                 int n = 0;
                 try
                 {
+                    // "ia" écarté partout : l'utilisateur a cliqué « libérer l'espace », pas
+                    // « efface mon historique Copilot/Recall ». Ça, ça se coche à la main
+                    // dans la fenêtre Nettoyage disque.
                     List<Sys.CleanTarget> targets = Sys.CleanTargets();
-                    foreach (var t in targets) before += t.SizeMB;
-                    foreach (var t in targets) { try { n += Sys.CleanTargetNow(t, log); } catch { } }
-                    foreach (var t in Sys.CleanTargets()) after += t.SizeMB;
+                    foreach (var t in targets) { if (t.Kind != "ia") before += t.SizeMB; }
+                    foreach (var t in targets) { if (t.Kind == "ia") continue; try { n += Sys.CleanTargetNow(t, log); } catch { } }
+                    foreach (var t in Sys.CleanTargets()) { if (t.Kind != "ia") after += t.SizeMB; }
                 }
                 catch { return Say("Le nettoyage n'a pas pu aller au bout (fichiers verrouillés par Windows)."); }
                 long freed = Math.Max(0, before - after);
@@ -500,15 +503,12 @@ namespace BTOptimizer
                 }
                 catch { }
 
-                // Les jeux oubliés : le plus gros gisement sur un PC de joueur, et de loin.
+                // Le plus gros levier chez un JOUEUR : les gros jeux qu'on ne lance plus.
                 try
                 {
-                    long dormant = 0; int nb = 0;
-                    foreach (DormantGames.Entry g in DormantGames.Scan(null))
-                        if (g.IsDormant) { dormant += g.SizeMB; nb++; }
-                    if (dormant > 5120)
-                        sb.Append("• Jeux dormants : ").Append(nb).Append(" jeu(x) non lancés depuis des mois pèsent ")
-                          .Append(Human(dormant)).Append(" — dis « jeux dormants » pour les trier.\n");
+                    if (log != null) log("Jeux installés (Steam)…", 0);
+                    string dorm = SteamGames.DormantText(120);
+                    if (!string.IsNullOrEmpty(dorm)) sb.Append(dorm).Append('\n');
                 }
                 catch { }
 
@@ -1806,6 +1806,215 @@ namespace BTOptimizer
             th.IsBackground = true; th.Start();
             if (!th.Join(timeoutMs)) return -1;
             return result;
+        }
+
+        /// <summary>Accès public au test « redémarrage en attente » (utilisé par le Gardien).</summary>
+        internal static bool RebootPendingPublic() { return RebootPending(); }
+
+        /// <summary>Vérifie s'il existe une version plus récente d'ONYX (lecture seule).</summary>
+        public static DocAssistant.ChatAction UpdateCheckAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Vérifier les mises à jour d'ONYX"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Recherche d'une nouvelle version…", 0);
+                string status;
+                Updater.Release rel;
+                try { rel = Updater.Check(out status); }
+                catch (Exception ex) { return Say("La vérification a échoué : " + ex.Message); }
+                var cur = Updater.CurrentVersion();
+                var r = Say(Updater.Describe(cur, rel, status));
+                if (rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl, Updater.ManifestUrl))
+                    r.Action = UpdateInstallAction(rel);
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Télécharge l'installateur officiel et le lance. Clic explicite obligatoire.</summary>
+        public static DocAssistant.ChatAction UpdateInstallAction(Updater.Release rel)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Télécharger et installer la version " + rel.Ver.Major + "." + rel.Ver.Minor.ToString("00");
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Télécharge l'installateur OFFICIEL depuis GitHub (" + SteamGames.Human(rel.Size) + "), puis le lance. "
+                      + "ONYX se fermera pour laisser l'installation se faire. Tes réglages, ta mémoire et ton journal "
+                      + "sont conservés (ils vivent à côté de l'application).";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string file = null;
+                try { file = Updater.Download(rel, log); } catch { }
+                if (file == null)
+                    return Say("Le téléchargement a échoué (connexion coupée, ou fichier différent de ce qui était annoncé). "
+                             + "Rien n'a été installé — ta version actuelle est intacte.");
+                try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true });
+                    return Say("✅ Installateur lancé — suis les étapes à l'écran. ONYX va se fermer.\n"
+                             + "(Si rien ne s'ouvre, le fichier est dans ton dossier temporaire : " + file + ")");
+                }
+                catch (Exception ex)
+                {
+                    return Say("Le fichier est téléchargé mais n'a pas pu être lancé (" + ex.Message + ").\n"
+                             + "Ouvre-le à la main : " + file);
+                }
+            };
+            return a;
+        }
+
+        /// <summary>Médecin des journaux Windows : lit les erreurs/critiques et les traduit en
+        /// diagnostic. Lecture seule.</summary>
+        public static DocAssistant.ChatAction LogDoctorAction(int days)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Diagnostic des journaux Windows"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse des journaux Windows…", 0);
+                string t;
+                try { t = LogDoctor.Run(days, log); }
+                catch (Exception ex) { return Say("L'analyse des journaux a échoué : " + ex.Message); }
+                return Say(t);
+            };
+            return a;
+        }
+
+        /// <summary>Exclut les dossiers de jeux de l'analyse temps réel de Defender. Defender reste
+        /// ACTIF ; clic explicite obligatoire ; retour arrière fourni dans la réponse.</summary>
+        public static DocAssistant.ChatAction ShieldExcludeAction(List<string> paths)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Exclure mes dossiers de jeux de l'analyse (" + paths.Count + ")";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Ajoute ces dossiers de JEUX aux exclusions de Windows Defender. L'antivirus reste ACTIVÉ "
+                      + "partout ailleurs — seuls ces dossiers ne sont plus analysés à chaque lecture de fichier. "
+                      + "N'accepte que si tu n'y mets pas de fichiers téléchargés au hasard. Réversible.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Ajout des exclusions Defender…", 0);
+                bool ok = false;
+                try { ok = GameShield.SetExclusions(paths, true); } catch { }
+                if (!ok) return Say("Windows a refusé la modification (ONYX doit être lancé en administrateur, ou une "
+                                  + "stratégie d'entreprise bloque les exclusions).");
+                var r = Say("✅ " + paths.Count + " dossier(s) de jeux exclus de l'analyse temps réel. Defender reste actif "
+                          + "partout ailleurs.\nSi tu changes d'avis : dis « annule les exclusions de jeux ».");
+                r.Action = ShieldRestoreAction(paths);
+                return r;
+            };
+            return a;
+        }
+
+        /// <summary>Retire les exclusions ajoutées (retour arrière complet).</summary>
+        public static DocAssistant.ChatAction ShieldRestoreAction(List<string> paths)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Annuler : remettre ces dossiers sous analyse";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Retire ces dossiers des exclusions : Defender les analysera de nouveau (retour à l'état d'origine).";
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Retrait des exclusions Defender…", 0);
+                bool ok = false;
+                try { ok = GameShield.SetExclusions(paths, false); } catch { }
+                return Say(ok ? "✅ Exclusions retirées : Defender analyse de nouveau ces dossiers."
+                              : "Le retrait a échoué (droits administrateur ?).");
+            };
+            return a;
+        }
+
+        /// <summary>« Où sont passés mes Go ? » : classement des plus gros dossiers, tous disques.
+        /// Lecture seule, budget de temps strict, résultat annoncé partiel si le temps manque.</summary>
+        public static DocAssistant.ChatAction BigFoldersAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Où sont passés mes Go ?"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Analyse des disques (30 s max)…", 0);
+                List<BigFolders.Folder> f;
+                try { f = BigFolders.Scan(30000, log); }
+                catch (Exception ex) { return Say("L'analyse a échoué : " + ex.Message); }
+                return Say(BigFolders.Format(f, 10));
+            };
+            return a;
+        }
+
+        /// <summary>« CPU ou GPU qui me limite ? » : 20 s de mesure pendant que le jeu tourne,
+        /// puis verdict. Lecture seule, aucun réglage touché.</summary>
+        public static DocAssistant.ChatAction BottleneckAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Qui me limite : CPU ou GPU ?"; a.AutoRun = true; a.IsChange = false;
+            a.Run = delegate (Action<string, int> log)
+            {
+                if (log != null) log("Mesure CPU/GPU pendant 20 s — laisse ton jeu tourner…", 0);
+                Bottleneck.Result r;
+                try { r = Bottleneck.Measure(20, log); }
+                catch (Exception ex) { return Say("La mesure a échoué : " + ex.Message); }
+                return Say(Bottleneck.Text(r));
+            };
+            return a;
+        }
+
+        /// <summary>Exporte le profil ONYX (mémoire, réglages, documents) en UN zip sur le Bureau.</summary>
+        public static DocAssistant.ChatAction ExportProfileAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Exporter mon profil ONYX (zip sur le Bureau)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Écrit UN fichier zip sur le Bureau : mémoire du Copilote, faits appris, journal de bord, "
+                      + "réglages, documents bt-savoir. Ne modifie RIEN au système.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string zip = Profile.Export();
+                if (zip == null) return Say("L'export a échoué (Bureau inaccessible ?).");
+                return Say("✅ Profil exporté : " + Path.GetFileName(zip) + " (sur le Bureau).\n"
+                         + "Garde-le précieusement : après une réinstallation de Windows, « importe mon profil » restaure tout. "
+                         + "Les optimisations système, elles, se réappliquent en 1 clic (« TOUT optimiser »).");
+            };
+            return a;
+        }
+
+        /// <summary>Restaure le dernier export ONYX-profil-*.zip posé sur le Bureau (avec filet).</summary>
+        public static DocAssistant.ChatAction ImportProfileAction()
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = "Restaurer le profil (zip le plus récent du Bureau)";
+            a.AutoRun = false; a.IsChange = true;
+            a.Warning = "Cherche le ONYX-profil-*.zip le plus récent sur le Bureau et restaure mémoire/réglages/documents. "
+                      + "L'état ACTUEL est d'abord sauvegardé dans bt-avant-import-<date> (retour arrière possible). "
+                      + "Redémarre ONYX ensuite pour recharger la mémoire.";
+            a.Run = delegate (Action<string, int> log)
+            {
+                string name = Profile.ImportNewest();
+                if (name == null) return Say("Aucun ONYX-profil-*.zip trouvé sur le Bureau. Pose ton fichier d'export sur le Bureau puis reclique.");
+                return Say("✅ Profil restauré depuis « " + name + " ». L'ancien état est dans bt-avant-import-<date>.\n"
+                         + "Redémarre ONYX pour que le Copilote recharge sa mémoire.");
+            };
+            return a;
+        }
+
+        /// <summary>Santé SMART des disques, en texte prêt pour le chat. 100 % local, lecture seule.</summary>
+        public static string DiskHealthText()
+        {
+            var disks = Diagnostics.DiskHealth();
+            if (disks.Count == 0) return "Je n'ai pas pu lire la santé des disques (WMI Storage indisponible).";
+            var sb = new StringBuilder();
+            sb.Append("💾 Santé de tes disques (SMART, lu en local) :\n");
+            bool bad = false;
+            foreach (var d in disks)
+            {
+                sb.Append(d.Status == 0 ? "• ✅ " : "• 🚨 ").Append(d.Name);
+                if (d.SizeGb > 0) sb.Append(" (").Append(d.SizeGb >= 1000 ? (d.SizeGb / 1000.0).ToString("0.#") + " To" : d.SizeGb + " Go").Append(d.IsSsd ? ", SSD" : "").Append(')');
+                sb.Append(" : ").Append(Diagnostics.DiskHealthLabel(d.Status)).Append('\n');
+                if (d.Status != 0) bad = true;
+            }
+            sb.Append(bad
+                ? "🚨 Un disque annonce des problèmes : SAUVEGARDE tes données importantes MAINTENANT (l'avertissement SMART précède souvent la panne de peu)."
+                : "Tout est sain. Windows connaît cet état mais ne l'affiche jamais — ONYX te préviendra AVANT une panne (le Gardien vérifie à chaque ouverture).");
+            return sb.ToString();
         }
 
         // Windows attend-il un redémarrage pour finir des mises à jour ? (2 clés registre standard)

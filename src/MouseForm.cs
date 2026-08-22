@@ -166,28 +166,12 @@ namespace BTOptimizer
 
             _live.Text = hz + " Hz";
             _best.Text = "Meilleur stable : " + (int)_bestHz + " Hz";
-            _verdict.Text = Verdict(hz, (int)_bestHz);
+            // hz = mediane (ce que la souris tient VRAIMENT), _bestHz = palier atteint.
+            // L'ecart entre les deux etait calcule puis jete : c'est lui qui revele un
+            // taux de rapport annonce mais pas tenu.
+            _verdict.Text = PollingVerdict.Verdict(hz, (int)_bestHz, FrameCap.FrequenceEcran());
         }
 
-        private static readonly int[] Tiers = { 125, 250, 500, 1000, 2000, 4000, 8000 };
-
-        private static string Verdict(int hz, int best)
-        {
-            int nearest = Tiers[0]; int bd = int.MaxValue;
-            foreach (int t in Tiers) { int d = Math.Abs(t - best); if (d < bd) { bd = d; nearest = t; } }
-
-            if (best >= 950)
-                return "✔ Excellent : ta souris rapporte à ~" + nearest + " Hz — palier gaming atteint. "
-                     + "En dessous de 1 ms entre deux rapports, l'input est ultra-réactif.";
-            if (best >= 450)
-                return "Correct : ~" + nearest + " Hz. Beaucoup de souris montent à 1000 Hz — vérifie le logiciel "
-                     + "du constructeur (Logitech G HUB, Razer Synapse…) ou un interrupteur sous la souris.";
-            if (best >= 200)
-                return "⚠ ~" + nearest + " Hz seulement. Passe le polling à 1000 Hz dans le logiciel de ta souris : "
-                     + "gain d'input net, surtout en visée.";
-            return "⚠ ~" + nearest + " Hz — très bas (réglage par défaut ou USB lent). Monte à 500-1000 Hz dans le "
-                 + "logiciel constructeur et branche la souris sur un port USB direct (pas un hub).";
-        }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {

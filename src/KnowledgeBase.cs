@@ -31,8 +31,8 @@ namespace BTOptimizer
         private static List<Chunk> _index;          // en mémoire (chargé/reconstruit une fois)
         private static string _signature;           // empreinte du savoir source (détecte un changement)
 
-        private static string Dir { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-savoir"); } }
-        private static string IndexPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-kb-index.txt"); } }
+        private static string Dir { get { return AppPaths.File("bt-savoir"); } }
+        private static string IndexPath { get { return AppPaths.File("bt-kb-index.txt"); } }
 
         // --- Base PC/gaming INTÉGRÉE (chaque ligne = un fait interrogeable) ---
         private static readonly string[] Builtin =

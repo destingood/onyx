@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         private static string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-autoinstall.txt"); }
+            get { return AppPaths.File("bt-autoinstall.txt"); }
         }
 
         /// <summary>Mode courant ; « ask » par défaut (au premier lancement, l'app propose).</summary>

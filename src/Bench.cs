@@ -156,9 +156,52 @@ namespace BTOptimizer
         }
 
         // ------------------- Capture ETW (WPR + xperf) -------------------
+        /// <summary>
+        /// Chemin de xperf. Il était codé en dur sur « C:\Program Files (x86)\… », donc faux dès que
+        /// Windows n'est pas sur C: ou que les dossiers Programmes ont été déplacés : l'app
+        /// concluait alors que l'outil n'était pas installé alors qu'il l'était.
+        ///
+        /// On demande maintenant à Windows où sont ses dossiers, et on lit d'abord la racine des
+        /// kits déclarée par l'installeur — la seule source qui reste juste après un déplacement.
+        /// Le chemin historique reste en dernier recours, il ne coûte rien.
+        /// </summary>
         public static string XperfPath()
         {
-            return @"C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\xperf.exe";
+            const string sousChemin = @"Windows Kits\10\Windows Performance Toolkit\xperf.exe";
+            var pistes = new System.Collections.Generic.List<string>();
+
+            // 1) racine déclarée par l'installeur des kits (survit à un déplacement)
+            try
+            {
+                foreach (var vue in new[] { Microsoft.Win32.RegistryView.Registry64, Microsoft.Win32.RegistryView.Registry32 })
+                    using (var b = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, vue))
+                    using (var k = b.OpenSubKey(@"SOFTWARE\Microsoft\Windows Kits\Installed Roots"))
+                    {
+                        string racine = k == null ? null : Convert.ToString(k.GetValue("KitsRoot10"));
+                        if (!string.IsNullOrEmpty(racine))
+                            pistes.Add(System.IO.Path.Combine(racine, @"Windows Performance Toolkit\xperf.exe"));
+                    }
+            }
+            catch { }
+
+            // 2) dossiers Programmes tels que Windows les déclare, pas tels qu'on les suppose
+            foreach (var dossier in new[] { Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.ProgramFiles })
+            {
+                try
+                {
+                    string p = Environment.GetFolderPath(dossier);
+                    if (!string.IsNullOrEmpty(p)) pistes.Add(System.IO.Path.Combine(p, sousChemin));
+                }
+                catch { }
+            }
+
+            foreach (string p in pistes)
+                try { if (System.IO.File.Exists(p)) return p; } catch { }
+
+            // Aucun trouvé : on rend le chemin le plus probable, pour que le message d'erreur
+            // affiche quelque chose de lisible plutôt qu'une chaîne vide.
+            return pistes.Count > 0 ? pistes[pistes.Count - 1]
+                 : @"C:\Program Files (x86)\Windows Kits\10\" + sousChemin.Substring(sousChemin.IndexOf("Windows Performance"));
         }
 
         public static bool EtwAvailable(string appDir)

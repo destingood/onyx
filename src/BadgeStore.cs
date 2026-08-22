@@ -20,7 +20,7 @@ namespace BTOptimizer
         /// être levé depuis un thread de fond : les abonnés doivent marshaler vers l'UI.</summary>
         public static event Action<string> OnNewBadge;
 
-        private static string StorePath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-badges.txt"); } }
+        private static string StorePath { get { return AppPaths.File("bt-badges.txt"); } }
 
         static BadgeStore() { Load(); }
 

@@ -87,6 +87,30 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>Version PROTÉGÉE de Answer : un bug dans un outil ne doit jamais faire tomber
+        /// l'application — le Copilote s'excuse, note l'incident, et la conversation continue.
+        /// C'est cette version que l'interface appelle.</summary>
+        public static Reply SafeAnswer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
+        {
+            try
+            {
+                var r = Answer(q, st, log, last);
+                if (r != null) return r;
+                return new Reply { Text = "Je n'ai pas su quoi répondre à ça — reformule et je réessaie.", ShowStarters = true };
+            }
+            catch (Exception ex)
+            {
+                try { SafetyNet.Record("copilote", ex); } catch { }
+                return new Reply
+                {
+                    Text = "Aïe — j'ai buggé en traitant ta demande (" + ex.GetType().Name + "). Ce n'est pas ta faute et "
+                         + "ton PC n'a rien subi : l'incident est noté dans « bt-erreurs.txt ». Reformule autrement, ou "
+                         + "demande-moi autre chose — je continue de fonctionner.",
+                    ShowStarters = true
+                };
+            }
+        }
+
         /// <summary>'last' = dernière réponse du Copilote qui portait quelque chose d'actionnable
         /// (outil / correction / plan) : un « oui » ou un « non » de l'utilisateur s'y rapporte.</summary>
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
@@ -164,6 +188,11 @@ namespace BTOptimizer
                 return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
             }
 
+            // --- MISE À JOUR D'ONYX LUI-MÊME (avant le bilan Windows : « mets à jour ONYX » est plus précis) ---
+            if (UtilityTools.IsAppUpdate(s))
+                return new Reply { Text = "Je regarde s'il existe une version plus récente d'ONYX…",
+                    Action = ChatActions.UpdateCheckAction(), Dynamic = true };
+
             // --- BILAN MISES À JOUR : il MESURE (100 % local), puis propose — OU NON — d'installer.
             //     Jamais d'installation automatique : le bouton ouvre la page officielle, l'utilisateur décide. ---
             if (UtilityTools.IsUpdateCheck(s))
@@ -227,6 +256,103 @@ namespace BTOptimizer
                 return new Reply { Text = "Je passe tes disques au crible : vidéos, archives (zip, rar, iso…) et autres gros fichiers, "
                     + "hors système et hors dossiers de jeux. Quelques secondes par disque…",
                     Action = ChatActions.MeasureBigFiles() };
+
+            // --- PROFIL ONYX : export / restauration (réinstaller Windows sans rien perdre) ---
+            if (UtilityTools.IsExportProfile(s))
+                return new Reply { Text = "J'emballe ta mémoire, tes réglages et tes documents dans UN zip sur le Bureau — clic ci-dessous.",
+                    Action = ChatActions.ExportProfileAction() };
+            if (UtilityTools.IsImportProfile(s))
+                return new Reply { Text = "Je peux restaurer le dernier ONYX-profil-*.zip posé sur le Bureau (l'existant sera d'abord sauvegardé).",
+                    Action = ChatActions.ImportProfileAction() };
+
+            // --- MÉDECIN DES JOURNAUX WINDOWS : tout ce que Windows a noté, traduit en diagnostic ---
+            if (UtilityTools.IsLogDoctor(s))
+                return new Reply { Text = "Je lis les journaux Windows (Système + Application) des 14 derniers jours et "
+                    + "je traduis ce qu'ils disent…", Action = ChatActions.LogDoctorAction(14), Dynamic = true };
+
+            // --- DEFENDER & JEUX : exclure les dossiers de jeux de l'analyse temps réel (réversible) ---
+            if (UtilityTools.IsShieldUndo(s))
+            {
+                var undo = GameShield.SuggestedPaths();
+                if (undo.Count == 0) return new Reply { Text = "Je n'ai pas trouvé de dossiers de jeux Steam à remettre sous analyse.", ShowStarters = true };
+                return new Reply { Text = "Je peux remettre tes dossiers de jeux sous l'analyse de Defender (retour à l'état d'origine).",
+                    Action = ChatActions.ShieldRestoreAction(undo) };
+            }
+            if (UtilityTools.IsGameShield(s))
+            {
+                System.Collections.Generic.List<string> miss;
+                string shieldTxt;
+                try { shieldTxt = GameShield.Text(out miss); }
+                catch (Exception ex) { shieldTxt = "Analyse impossible : " + ex.Message; miss = new System.Collections.Generic.List<string>(); }
+                return new Reply
+                {
+                    Text = shieldTxt,
+                    Action = (miss != null && miss.Count > 0) ? ChatActions.ShieldExcludeAction(miss) : null,
+                    ShowStarters = miss == null || miss.Count == 0
+                };
+            }
+
+            // --- MES JEUX SONT-ILS SUR SSD ? (le support décide des temps de chargement) ---
+            if (UtilityTools.IsGameStorage(s))
+            {
+                string st2 = null;
+                try { st2 = SteamGames.StorageText(); } catch { }
+                if (st2 != null) return new Reply { Text = st2, ShowStarters = true };
+                return new Reply { Text = "Je n'ai pas trouvé de jeux Steam installés sur ce PC. "
+                    + "Pour le reste, « où sont passés mes go » liste les plus gros dossiers de tous tes disques.", ShowStarters = true };
+            }
+
+            // --- OÙ SONT PASSÉS MES GO : classement des plus gros dossiers (voit aussi les jeux hors Steam) ---
+            if (UtilityTools.IsBigFolders(s))
+                return new Reply { Text = "J'analyse tes disques et je classe les plus gros dossiers (30 secondes max)…",
+                    Action = ChatActions.BigFoldersAction(), Dynamic = true };
+
+            // --- JEUX QUI DORMENT : le plus gros levier d'espace disque chez un joueur ---
+            if (UtilityTools.IsDormantGames(s))
+            {
+                string dorm = null;
+                try { dorm = SteamGames.DormantText(120); } catch { }
+                if (dorm != null) return new Reply { Text = dorm, ShowStarters = true };
+                return new Reply { Text = "Je n'ai pas trouvé de bibliothèque Steam sur ce PC (ou elle est vide). "
+                    + "Pour le reste, dis « libère de la place » : je fais le grand bilan stockage.", ShowStarters = true };
+            }
+
+            // --- GOULOT D'ÉTRANGLEMENT : CPU ou GPU ? (20 s de mesure, jeu lancé de préférence) ---
+            if (UtilityTools.IsBottleneck(s))
+                return new Reply { Text = "Je mesure la charge CPU et l'utilisation GPU pendant 20 secondes. "
+                    + "Idéalement, laisse ton JEU tourner en pleine action pendant la mesure — au bureau, les chiffres ne "
+                    + "veulent rien dire (je te le dirai si c'est le cas).", Action = ChatActions.BottleneckAction(), Dynamic = true };
+
+            // --- SANTÉ SMART des disques (local, lecture seule) : prévenir AVANT la panne ---
+            if (UtilityTools.IsDiskHealth(s))
+                return new Reply { Text = ChatActions.DiskHealthText(), ShowStarters = true };
+
+            // --- JOURNAL DE BORD : tout ce qu'ONYX a changé, daté — transparence totale ---
+            if (UtilityTools.IsJournal(s))
+                return new Reply { Text = Journal.TailText(15), ShowStarters = true };
+
+            // --- TENDANCE SANTÉ : le score du cockpit, historisé (1 mesure/jour par le Gardien) ---
+            if (UtilityTools.IsHealthTrend(s))
+                return new Reply { Text = HealthTrend.TrendText(), ShowStarters = true };
+
+            // --- « ÇA MARCHAIT HIER ! » : diff entre la photo quotidienne du système et maintenant ---
+            if (UtilityTools.IsWhatChanged(s))
+                return new Reply { Text = StateDiff.DiffText(), ShowStarters = true };
+
+            // --- LE GARDIEN : le résumé des alertes du jour (disque, SMART, reboot, uptime) ---
+            if (UtilityTools.IsGuardian(s))
+            {
+                var al = Guardian.Alerts();
+                if (al.Count == 0)
+                    return new Reply { Text = "🛡 Gardien : RIEN à signaler aujourd'hui — disque OK, disques sains (SMART), pas de "
+                        + "redémarrage en attente, uptime raisonnable. Je re-vérifie à chaque ouverture d'ONYX.", ShowStarters = true };
+                var gsb = new System.Text.StringBuilder();
+                gsb.Append("🛡 Gardien — ").Append(al.Count).Append(" alerte(s) :\n");
+                foreach (var x in al) gsb.Append("• ").Append(x).Append('\n');
+                bool disk = false; foreach (var x in al) if (x.Contains("Disque système")) disk = true;
+                return new Reply { Text = gsb.ToString().TrimEnd(),
+                    Action = disk ? ChatActions.StorageAuditAction() : null, Dynamic = false };
+            }
 
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
             // 1) Conversion d'UNITÉS : LOCALE, exacte, hors-ligne (ex. « 100 km en miles »).
@@ -607,7 +733,18 @@ namespace BTOptimizer
             }
 
             if (Has(s, "aide", "help", "comment", "que fais", "que peux", "sais tu faire", "tu fais quoi"))
-                return new Reply { Text = "Je diagnostique et je corrige : je mesure ton PC en direct (écrans, ping, capteurs, processus en fond, disque…), je classe les causes par impact et chaque correction attend TON clic. Tout est gratuit. Dis-moi ce qui cloche.", ShowStarters = true };
+                return new Reply
+                {
+                    Text = "🧭 Voilà TOUT ce que je sais faire — pose ta question, ou tape la commande :\n"
+                         + "🎮 Jeu & perfs : « ça rame en jeu » · « fps bas » · « ça crash » · « écran bloqué à 60 » · « prépare ma partie »\n"
+                         + "🖥 PC & Windows : « mes fenêtres saccadent » · « le pc chauffe » · « qui bouffe mon cpu » · « répare windows » · « plus de son / d'internet »\n"
+                         + "🧰 Entretien : « bilan complet » · « bilan maj » · « libère de la place » · « désactive l'hibernation » · « nettoyage profond » · « état de mes disques » · « gardien » · « journal »\n"
+                         + "📦 Profil : « exporte mon profil » · « importe mon profil » (réinstalle Windows sans rien perdre)\n"
+                         + "🔧 Infos locales (hors-ligne) : heure · batterie · uptime · calculs (« 15% de 240 ») · unités (« 100 km en miles ») · phase de la lune\n"
+                         + "🌍 Monde (gratuit, sans clé) : météo · qualité de l'air · actus · jeux gratuits PC · « c'est quoi X » (Wikipédia) · « définition de X » · distance entre 2 villes · devises · crypto · fériés · pokémon · série TV · prix Nobel · ISS · séismes · dette de la France · photo NASA · « traduis X en anglais » · mon IP · soleil · livres · code postal · avions au-dessus de moi\n"
+                         + "Chaque mesure part toute seule ; chaque CHANGEMENT attend ton clic (et se journalise). Et quand je ne sais pas : je le DIS.",
+                    ShowStarters = true
+                };
 
             // --- « gratuit » : la règle de la maison, puis la preuve par la mesure ---
             if (Has(s, "gratuit", "gratos", "sans payer", "payant", "payer", "argent", "free"))
@@ -1011,7 +1148,11 @@ namespace BTOptimizer
             new[] { "overlay", "Un overlay est une appli qui se dessine PAR-DESSUS ton jeu (Discord, GeForce Experience, Medal…). Chacun coûte des FPS et peut créer des conflits. En couper est un gain gratuit.", "Qui ralentit mon PC" },
             new[] { "runtime;redist;redistributable", "Les runtimes (Visual C++, DirectX, .NET) sont des briques Microsoft GRATUITES dont les jeux dépendent. Il en manque une → le jeu refuse de démarrer (erreur dll). L'app les installe en 1 clic.", "Bibliothèques de jeu" },
             new[] { "smart;s.m.a.r.t", "Le S.M.A.R.T., c'est l'auto-diagnostic des disques : usure SSD, secteurs défaillants… L'app le lit nativement et te prévient AVANT la panne — sauvegarde tes données au premier ⚠.", "Jeux & disques" },
-            new[] { "nagle", "L'algorithme de Nagle regroupe les petits paquets réseau pour économiser la bande passante — bien pour le web, mauvais pour le jeu (il retarde tes actions). L'app propose le réglage anti-Nagle, réversible.", "Réglages TCP/IP" },
+            // Le réglage lui-même dit « sans effet sur les jeux en UDP » ; l'assistant disait
+            // « mauvais pour le jeu ». Deux réponses contraires dans la même app, et c'est la
+            // vendeuse qui avait tort : Nagle ne concerne QUE TCP, et la quasi-totalité des jeux
+            // font passer leur trafic temps réel en UDP, que Nagle ne touche pas.
+            new[] { "nagle", "L'algorithme de Nagle regroupe les petits paquets TCP pour économiser de la bande passante, au prix d'un léger retard. Le couper aide les jeux qui passent en TCP (certains MMO), les lanceurs et le bureau à distance. Mais il n'a AUCUN effet sur la grande majorité des jeux, qui envoient leur trafic temps réel en UDP — Nagle ne s'y applique pas. Méfie-toi des guides qui le présentent comme un gain de ping universel. Le réglage existe dans l'app, réversible.", "Réglages TCP/IP" },
             new[] { "islc;standby list", "ISLC (Intelligent Standby List Cleaner) purge la « standby list » : un cache mémoire que Windows vide parfois trop tard, cause de micro-saccades sur certaines configs. Gratuit, installable en 1 clic depuis les Bibliothèques.", "Bibliothèques de jeu" },
             new[] { "markc", "Le « MarkC fix » est la méthode historique pour désactiver TOTALEMENT l'accélération de la souris (déplacement 1:1). L'optimisation souris de l'app fait l'équivalent proprement — et c'est réversible.", "Fréquence de la souris" },
             new[] { "sharpness;nettete;sharpen", "Le filtre de netteté NVIDIA (sharpen) redonne du piqué à l'image, utile avec DLSS/upscaling. L'app propose le réglage communautaire qui ramène l'ANCIEN filtre par jeu (EnableGR535), réversible, dans Optimisations → GPU.", null },

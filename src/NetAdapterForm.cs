@@ -27,14 +27,11 @@ namespace BTOptimizer
         private static readonly Color Accent = Theme.AccentColor;
         private const string ClassKey = @"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}";
 
-        // Réglages gérés : clé pilote (standardisée) -> (libellé, valeur « latence min »).
-        private static readonly string[][] Managed =
-        {
-            new[] { "*InterruptModeration", "Modération d'interruptions", "0" },
-            new[] { "*FlowControl",         "Contrôle de flux",           "0" },
-            new[] { "*EEE",                 "Ethernet écoénergétique (EEE)", "0" },
-            new[] { "EnableGreenEthernet",  "Green Ethernet (Realtek)",   "0" },
-        };
+        // La table ET la logique d'écriture vivent dans NicLatency : la fenêtre et les
+        // préréglages passent par le MÊME code et la MÊME sauvegarde. Deux chemins d'écriture
+        // auraient donné le pire cas — appliqué par un préréglage, « Rétablir » ne trouve rien à
+        // remettre et annonce quand même que tout est rentré dans l'ordre.
+        private static string[][] Managed { get { return NicLatency.Managed; } }
 
         private class Prop { public string Key, Label, Optimal, Current; }
         private class Adapter
@@ -127,10 +124,7 @@ namespace BTOptimizer
             _btnScan.Enabled = !busy; _btnOptimize.Enabled = !busy; _btnRevert.Enabled = !busy; _list.Enabled = !busy;
         }
 
-        private static string BackupPath()
-        {
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-nic-backup.txt");
-        }
+        private static string BackupPath() { return NicLatency.CheminSauvegarde(); }
 
         private void Scan()
         {

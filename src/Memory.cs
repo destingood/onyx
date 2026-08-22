@@ -17,7 +17,7 @@ namespace BTOptimizer
 
         private static string Path_
         {
-            get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-memoire.txt"); }
+            get { return AppPaths.File("bt-memoire.txt"); }
         }
 
         /// <summary>Faits mémorisés (lignes non vides, hors commentaires), du plus ancien au récent.</summary>

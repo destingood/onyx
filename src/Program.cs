@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.34.0.0")]
-[assembly: AssemblyFileVersion("15.34.0.0")]
+[assembly: AssemblyVersion("15.73.0.0")]
+[assembly: AssemblyFileVersion("15.73.0.0")]
 
 namespace BTOptimizer
 {
@@ -23,6 +23,9 @@ namespace BTOptimizer
 #if BTTEST
             TestHarness.Run();
 #else
+            // Filet de sécurité : une erreur imprévue est notée et expliquée, jamais une fermeture muette.
+            SafetyNet.Install();
+
             // Mode ligne de commande (gardien de démarrage / automatisation).
             if (args.Length > 0 && args[0].StartsWith("-"))
             {
@@ -43,6 +46,9 @@ namespace BTOptimizer
                 try
                 {
                     Sys.Init();
+                    // Identité de l'application AVANT toute fenêtre : sans elle, Windows refuse
+                    // silencieusement les vraies notifications d'une application de bureau.
+                    try { WinToast.DeclareIdentite(); } catch { }
                     if (!LicenseForm.EnsureAccepted()) return;
                     Application.Run(new DashboardForm());
                 }
@@ -179,6 +185,100 @@ namespace BTOptimizer
                 var res = act.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(res != null ? res.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (res != null && res.Action != null ? res.Action.Label : "(aucun — rien à installer)"));
+                Environment.Exit(0);
+            }
+
+            // BT_RELEASE=<dossier> : verifie qu'on ne livre QUE l'executable (anti-fuite), puis sort.
+            string relDir = Environment.GetEnvironmentVariable("BT_RELEASE");
+            if (!string.IsNullOrEmpty(relDir))
+            {
+                int graveCount;
+                Console.WriteLine(ReleaseGuard.Check(relDir, out graveCount));
+                Environment.Exit(graveCount > 0 ? 1 : 0);
+            }
+
+            // BT_UPDATE=1 : verifie s'il existe une nouvelle version d'ONYX, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_UPDATE") == "1")
+            {
+                string ust;
+                var urel = Updater.Check(out ust);
+                Console.WriteLine("Depot : " + Updater.Repo);
+                Console.WriteLine(Updater.Describe(Updater.CurrentVersion(), urel, ust));
+                Environment.Exit(0);
+            }
+
+            // BT_LOGDOC=1 : diagnostic des journaux Windows en console, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_LOGDOC") == "1")
+            {
+                Console.WriteLine(LogDoctor.Run(14, delegate (string m, int l) { Console.WriteLine("... " + m); }));
+                Environment.Exit(0);
+            }
+
+            // BT_SHIELD=1 : Defender et les dossiers de jeux (lecture seule), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_SHIELD") == "1")
+            {
+                System.Collections.Generic.List<string> miss;
+                Console.WriteLine(GameShield.Text(out miss));
+                Console.WriteLine("Manquants : " + (miss == null ? 0 : miss.Count));
+                Environment.Exit(0);
+            }
+
+            // BT_BIG=1 : classement des plus gros dossiers (tous disques), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_BIG") == "1")
+            {
+                var bf = BigFolders.Scan(30000, delegate (string m, int l) { });
+                Console.WriteLine(BigFolders.Format(bf, 12));
+                Environment.Exit(0);
+            }
+
+            // BT_STEAM=1 : liste les jeux Steam installes (toutes bibliotheques), puis sort.
+            if (Environment.GetEnvironmentVariable("BT_STEAM") == "1")
+            {
+                Console.WriteLine("Steam : " + (SteamGames.SteamPath() ?? "(absent)"));
+                var gl = SteamGames.Installed();
+                Console.WriteLine(gl.Count + " jeu(x) installe(s) :");
+                int shown = 0;
+                foreach (var g in gl) { if (shown++ >= 12) break; Console.WriteLine("  - " + g.Name + "  (" + SteamGames.Human(g.SizeBytes) + ", appid " + g.AppId + ")"); }
+                Console.WriteLine();
+                Console.WriteLine(SteamGames.DormantText(120) ?? "(pas de bibliotheque Steam)");
+                Console.WriteLine();
+                Console.WriteLine(SteamGames.StorageText() ?? "(emplacement des jeux indisponible)");
+                Environment.Exit(0);
+            }
+
+            // BT_BOTTLE=1 : mesure CPU/GPU (20 s) et verdict du goulot d'etranglement, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_BOTTLE") == "1")
+            {
+                var rb = Bottleneck.Measure(20, delegate (string m, int l) { Console.WriteLine("... " + m); });
+                Console.WriteLine(Bottleneck.Text(rb));
+                Environment.Exit(0);
+            }
+
+            // BT_GPU=1 : verdict « pilote GPU instable ? » + export du diagnostic complet, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_GPU") == "1")
+            {
+                Console.WriteLine(GpuStability.Text());
+                string pth = DiagExport.Save();
+                Console.WriteLine("Export diagnostic : " + (pth ?? "(echec)"));
+                Environment.Exit(0);
+            }
+
+            // BT_SELF=1 : auto-diagnostic d'ONYX + infos de support, en console, puis sort.
+            if (Environment.GetEnvironmentVariable("BT_SELF") == "1")
+            {
+                Console.WriteLine(SelfCheck.Text());
+                Console.WriteLine();
+                Console.WriteLine(SelfCheck.SupportInfo());
+                Environment.Exit(0);
+            }
+
+            // BT_GARDIEN=1 : sante SMART + alertes du Gardien en console (vraies mesures) et sort.
+            if (Environment.GetEnvironmentVariable("BT_GARDIEN") == "1")
+            {
+                Console.WriteLine(ChatActions.DiskHealthText());
+                var alz = Guardian.Alerts();
+                Console.WriteLine("GARDIEN : " + alz.Count + " alerte(s)");
+                foreach (var x in alz) Console.WriteLine(" • " + x);
                 Environment.Exit(0);
             }
 
@@ -727,9 +827,355 @@ namespace BTOptimizer
                     && !UtilityTools.IsBigFiles("ouvre un fichier") && !UtilityTools.IsBigFiles("libérer de l'espace disque")
                     && !UtilityTools.IsBigFiles("bonjour"); if (dk5) ok39++; Console.WriteLine((dk5 ? "OK  " : "FAIL") + "  gros fichiers : detecte, applis lourdes et bilan global exclus");
 
+                // v15.36 : Gardien + sante SMART des disques + journal de bord.
+                int ok40 = 0;
+                bool gd1 = UtilityTools.IsDiskHealth("etat de mes disques") && UtilityTools.IsDiskHealth("mon ssd est en bonne sante")
+                    && !UtilityTools.IsDiskHealth("bonjour") && !UtilityTools.IsDiskHealth("libere de la place sur le disque"); if (gd1) ok40++; Console.WriteLine((gd1 ? "OK  " : "FAIL") + "  sante disques : detecte, nettoyage exclu");
+                bool gd2 = UtilityTools.IsJournal("qu'est ce que tu as change") && UtilityTools.IsJournal("journal de bord")
+                    && !UtilityTools.IsJournal("bonjour"); if (gd2) ok40++; Console.WriteLine((gd2 ? "OK  " : "FAIL") + "  journal : detecte, pas un bonjour");
+                bool gd3 = UtilityTools.IsGuardian("gardien") && UtilityTools.IsGuardian("des alertes ?")
+                    && !UtilityTools.IsGuardian("comment ca va"); if (gd3) ok40++; Console.WriteLine((gd3 ? "OK  " : "FAIL") + "  gardien : detecte, 'comment ca va' exclu");
+                Journal.Add("Test harnais");
+                bool gd4 = Journal.TailText(3).Contains("Test harnais"); if (gd4) ok40++; Console.WriteLine((gd4 ? "OK  " : "FAIL") + "  journal : ecriture + relecture datee");
+
+                // v15.37 : profil ONYX (export/restauration) + Gardien crashs.
+                int ok41 = 0;
+                bool pf1 = UtilityTools.IsExportProfile("exporte mon profil") && UtilityTools.IsExportProfile("sauvegarde mon profil onyx")
+                    && !UtilityTools.IsExportProfile("bonjour"); if (pf1) ok41++; Console.WriteLine((pf1 ? "OK  " : "FAIL") + "  profil : export detecte");
+                bool pf2 = UtilityTools.IsImportProfile("importe mon profil") && UtilityTools.IsImportProfile("restaure mon profil")
+                    && !UtilityTools.IsImportProfile("cree un point de restauration"); if (pf2) ok41++; Console.WriteLine((pf2 ? "OK  " : "FAIL") + "  profil : import detecte, point de restauration exclu");
+                string pzip = Profile.Export(System.IO.Path.GetTempPath());
+                bool pf3 = pzip != null && System.IO.File.Exists(pzip) && new System.IO.FileInfo(pzip).Length > 0; if (pf3) ok41++; Console.WriteLine((pf3 ? "OK  " : "FAIL") + "  profil : export zip reel");
+                try { if (pzip != null) System.IO.File.Delete(pzip); } catch { }
+
+                // v15.39 : tendance sante (historique + deltas + mini-graphe).
+                int ok42 = 0;
+                HealthTrend.RecordAt(DateTime.Now.Date.AddDays(-8), 50);
+                HealthTrend.RecordAt(DateTime.Now.Date, 62);
+                string trend = HealthTrend.TrendText();
+                bool ht1 = trend.Contains("62 %") && trend.Contains("+12"); if (ht1) ok42++; Console.WriteLine((ht1 ? "OK  " : "FAIL") + "  tendance : 62% aujourd'hui, delta 7j = +12");
+                bool ht2 = UtilityTools.IsHealthTrend("score de sante") && UtilityTools.IsHealthTrend("tendance")
+                    && !UtilityTools.IsHealthTrend("bonjour"); if (ht2) ok42++; Console.WriteLine((ht2 ? "OK  " : "FAIL") + "  tendance : detection, pas un bonjour");
+
+                // v15.40 : « ca marchait hier » — diff d'etat systeme (pur, testable).
+                int ok43 = 0;
+                var oldSt = new System.Collections.Generic.Dictionary<string, string> {
+                    { "pilote_gpu", "RTX 4080 v551.23" }, { "windows", "25H2 build 26200" },
+                    { "demarrage", "Steam|Discord" }, { "disque_libre_go", "28" } };
+                var newSt = new System.Collections.Generic.Dictionary<string, string> {
+                    { "pilote_gpu", "RTX 4080 v560.70" }, { "windows", "25H2 build 26200" },
+                    { "demarrage", "Steam|Discord|Wallpaper Engine" }, { "disque_libre_go", "12" } };
+                var df = StateDiff.Diff(oldSt, newSt);
+                bool sd1 = df.Count == 3; if (sd1) ok43++; Console.WriteLine((sd1 ? "OK  " : "FAIL") + "  diff : pilote+demarrage+disque = 3 changements detectes (" + df.Count + ")");
+                bool sd2 = df[0].Contains("551.23") && df[0].Contains("560.70") && df[1].Contains("Wallpaper Engine"); if (sd2) ok43++; Console.WriteLine((sd2 ? "OK  " : "FAIL") + "  diff : versions pilote citees + nouveau demarrage nomme");
+                bool sd3 = StateDiff.Diff(oldSt, oldSt).Count == 0; if (sd3) ok43++; Console.WriteLine((sd3 ? "OK  " : "FAIL") + "  diff : identique -> zero changement");
+                bool sd4 = UtilityTools.IsWhatChanged("ca marchait hier") && UtilityTools.IsWhatChanged("qu'est ce qui a change sur mon pc")
+                    && !UtilityTools.IsWhatChanged("qu'est ce que tu as change") && !UtilityTools.IsWhatChanged("bonjour"); if (sd4) ok43++; Console.WriteLine((sd4 ? "OK  " : "FAIL") + "  phrases : 'marchait hier' oui, journal (tu as) non");
+
+                // v15.42 : « quoi de neuf » — parseur du CHANGELOG embarque (pur, testable).
+                int ok44 = 0;
+                string clSample = string.Join("\n", new[] { "# Titre", "", "intro", "", "## v2 - B", "- ligne b", "", "## v1 - A", "- ligne a", "", "## v0 - Z", "- ligne z" });
+                string top2 = WhatsNew.TopSections(clSample, 2);
+                bool wn1 = top2.Contains("v2") && top2.Contains("v1") && !top2.Contains("v0") && !top2.Contains("intro"); if (wn1) ok44++; Console.WriteLine((wn1 ? "OK  " : "FAIL") + "  quoi de neuf : 2 sections, sans intro ni la 3e");
+                bool wn2 = WhatsNew.TopSections(null, 2) == "" && WhatsNew.TopSections("pas de section", 2) == ""; if (wn2) ok44++; Console.WriteLine((wn2 ? "OK  " : "FAIL") + "  quoi de neuf : entree vide/illisible -> chaine vide");
+
+                // v15.43 : auto-diagnostic d'ONYX + infos de support (sans donnee perso).
+                int ok45 = 0;
+                var scLines = SelfCheck.Run();
+                bool sc1 = scLines.Count >= 6; if (sc1) ok45++; Console.WriteLine((sc1 ? "OK  " : "FAIL") + "  autodiag : " + scLines.Count + " verifications");
+                string scTxt = SelfCheck.Text();
+                bool sc2 = scTxt.Contains("Droits administrateur") && scTxt.Contains("WMI"); if (sc2) ok45++; Console.WriteLine((sc2 ? "OK  " : "FAIL") + "  autodiag : droits + WMI presents dans le texte");
+                string sup = SelfCheck.SupportInfo();
+                string userName = Environment.UserName;
+                bool sc3 = sup.Contains("ONYX") && sup.Contains("Windows") && (userName.Length < 3 || !sup.Contains(userName)); if (sc3) ok45++; Console.WriteLine((sc3 ? "OK  " : "FAIL") + "  support : infos utiles, AUCUN nom d'utilisateur");
+
+                // v15.44 : verdict pilote GPU (pur) + export diagnostic complet.
+                int ok46 = 0;
+                var vHigh = GpuStability.Verdict(200, 8, 87);
+                bool gs1 = vHigh.Level == 3 && vHigh.Title.Contains("200") && vHigh.Advice.Contains("DDU"); if (gs1) ok46++; Console.WriteLine((gs1 ? "OK  " : "FAIL") + "  GPU : 200 erreurs -> tres instable + DDU conseille");
+                var vFresh = GpuStability.Verdict(120, 2, 10);
+                bool gs2 = vFresh.Advice.Contains("PRECEDENTE") || vFresh.Advice.Contains("PRÉCÉDENTE"); if (gs2) ok46++; Console.WriteLine((gs2 ? "OK  " : "FAIL") + "  GPU : pilote recent qui plante -> revenir en arriere");
+                var vOk = GpuStability.Verdict(0, 0, 60);
+                bool gs3 = vOk.Level == 0 && !vOk.Advice.Contains("DDU"); if (gs3) ok46++; Console.WriteLine((gs3 ? "OK  " : "FAIL") + "  GPU : 0 erreur -> sain, aucune manip proposee");
+                string dexp = DiagExport.Build();
+                bool gs4 = dexp.Contains("DIAGNOSTIC COMPLET") && dexp.Contains("STABILITE") == false && dexp.Contains("PILOTE GPU"); if (gs4) ok46++; Console.WriteLine((gs4 ? "OK  " : "FAIL") + "  export : rapport complet assemble");
+
+                // v15.45 : suivi hebdo de la stabilite GPU + plan d'action coche.
+                int ok47 = 0;
+                bool tr1 = GpuStability.TrendLine(20, 100).Contains("AMELIORE") || GpuStability.TrendLine(20, 100).Contains("AMÉLIORE"); if (tr1) ok47++; Console.WriteLine((tr1 ? "OK  " : "FAIL") + "  suivi : 100 -> 20 = amelioration");
+                bool tr2 = GpuStability.TrendLine(100, 20).Contains("EMPIRE"); if (tr2) ok47++; Console.WriteLine((tr2 ? "OK  " : "FAIL") + "  suivi : 20 -> 100 = degradation");
+                bool tr3 = GpuStability.TrendLine(0, 0).Contains("stable"); if (tr3) ok47++; Console.WriteLine((tr3 ? "OK  " : "FAIL") + "  suivi : 0/0 = stable");
+                string stepT = GpuStability.Steps[0];
+                GpuStability.SetDone(stepT, true);
+                bool pl1 = GpuStability.DoneDate(stepT) != null;
+                GpuStability.SetDone(stepT, false);
+                bool pl2 = GpuStability.DoneDate(stepT) == null;
+                bool tr4 = pl1 && pl2; if (tr4) ok47++; Console.WriteLine((tr4 ? "OK  " : "FAIL") + "  plan : cocher puis decocher une etape");
+
+                // v15.46 : le verdict tient compte de la SEMAINE ECOULEE (crise passee != probleme actuel).
+                int ok48 = 0;
+                var vHeal = GpuStability.Verdict(200, 8, 88, 1);
+                bool hl1 = vHeal.Level == 0 && !vHeal.Advice.Contains("Réinstallation PROPRE") && vHeal.Advice.Contains("Ne touche à RIEN"); if (hl1) ok48++; Console.WriteLine((hl1 ? "OK  " : "FAIL") + "  verdict : 200 dont 1 cette semaine -> crise passee, aucune manip poussee");
+                var vStill = GpuStability.Verdict(200, 8, 88, 120);
+                bool hl2 = vStill.Level == 3 && vStill.Advice.Contains("DDU"); if (hl2) ok48++; Console.WriteLine((hl2 ? "OK  " : "FAIL") + "  verdict : 200 dont 120 cette semaine -> toujours tres instable");
+                var vUnknown = GpuStability.Verdict(200, 8, 88);
+                bool hl3 = vUnknown.Level == 3; if (hl3) ok48++; Console.WriteLine((hl3 ? "OK  " : "FAIL") + "  verdict : sans info hebdo -> comportement d'origine (14 j)");
+                var vSmall = GpuStability.Verdict(6, 0, 88, 2);
+                bool hl4 = vSmall.Level == 1; if (hl4) ok48++; Console.WriteLine((hl4 ? "OK  " : "FAIL") + "  verdict : petits chiffres -> pas de fausse 'guerison'");
+
+                // v15.47 : enquete anti-fausse-alerte + mise en veille du Gardien.
+                int ok49 = 0;
+                bool ca1 = GpuStability.CardImpact(200, 0) == 15 && GpuStability.CardImpact(200, 40) == 90; if (ca1) ok49++; Console.WriteLine((ca1 ? "OK  " : "FAIL") + "  enquete : crise passee=15 (info), active=90 (critique)");
+                bool ca2 = GpuStability.CardImpact(2, 1) == 45 && GpuStability.CardImpact(0, 0) == 0 && GpuStability.CardImpact(5, 0) == 0; if (ca2) ok49++; Console.WriteLine((ca2 ? "OK  " : "FAIL") + "  enquete : 1 erreur=45, rien=0, residuel ancien=0");
+                Guardian.Wake();
+                bool sn0 = !Guardian.AlertsMuted() && Guardian.DueToday();
+                Guardian.Snooze(7);
+                bool sn1 = Guardian.AlertsMuted() && Guardian.SnoozedUntil() != null;
+                Guardian.Wake();
+                bool sn2 = !Guardian.AlertsMuted() && Guardian.SnoozedUntil() == null;
+                bool ca3 = sn0 && sn1 && sn2; if (ca3) ok49++; Console.WriteLine((ca3 ? "OK  " : "FAIL") + "  gardien : veille 7 j puis reveil");
+
+                // v15.48 : carte « ce qui a change » dans l'enquete.
+                int ok50 = 0;
+                var rc = StateDiff.RecentChanges();
+                bool rc1 = rc != null; if (rc1) ok50++; Console.WriteLine((rc1 ? "OK  " : "FAIL") + "  changements : lecture sans exception (" + (rc == null ? "null" : rc.Count + " item(s)") + ")");
+                var capNow = StateDiff.Capture();
+                bool rc2 = capNow.ContainsKey("demarrage") || capNow.ContainsKey("windows"); if (rc2) ok50++; Console.WriteLine((rc2 ? "OK  " : "FAIL") + "  photo systeme : cles presentes (" + capNow.Count + ")");
+                bool rc3 = StateDiff.Diff(capNow, capNow).Count == 0; if (rc3) ok50++; Console.WriteLine((rc3 ? "OK  " : "FAIL") + "  photo systeme : identique a elle-meme = 0 changement");
+
+                // v15.49 : goulot d'etranglement CPU/GPU (verdict pur).
+                int ok51 = 0;
+                var bGpu = Bottleneck.Verdict(45, 98, 20, true);
+                bool bn1 = bGpu.Title.Contains("GPU") && bGpu.Advice.Contains("processeur"); if (bn1) ok51++; Console.WriteLine((bn1 ? "OK  " : "FAIL") + "  goulot : GPU a 98% -> normal, changer de CPU inutile");
+                var bCpu = Bottleneck.Verdict(92, 55, 20, true);
+                bool bn2 = bCpu.Title.Contains("PROCESSEUR") && bCpu.Advice.Contains("XMP"); if (bn2) ok51++; Console.WriteLine((bn2 ? "OK  " : "FAIL") + "  goulot : CPU 92% / GPU 55% -> CPU bride, XMP conseille");
+                var bNone = Bottleneck.Verdict(30, 40, 20, true);
+                bool bn3 = bNone.Advice.Contains("V-Sync") || bNone.Advice.Contains("LIMITE"); if (bn3) ok51++; Console.WriteLine((bn3 ? "OK  " : "FAIL") + "  goulot : les deux bas -> limite FPS/V-Sync suspectee");
+                var bIdle = Bottleneck.Verdict(10, 5, 20, false);
+                bool bn4 = bIdle.Title.Contains("Aucun jeu") && UtilityTools.IsBottleneck("c'est mon cpu ou mon gpu qui me limite")
+                    && !UtilityTools.IsBottleneck("bonjour"); if (bn4) ok51++; Console.WriteLine((bn4 ? "OK  " : "FAIL") + "  goulot : sans jeu -> refus honnete + detection de la question");
+
+                // v15.50 : lecture de la bibliotheque Steam (parseurs purs).
+                int ok52 = 0;
+                char qt = '"';
+                string acf = "{ " + qt + "appid" + qt + " " + qt + "1091500" + qt
+                           + " " + qt + "name" + qt + " " + qt + "Cyberpunk 2077" + qt
+                           + " " + qt + "SizeOnDisk" + qt + " " + qt + "75000000000" + qt + " }";
+                var pg = SteamGames.ParseManifest(acf);
+                bool sg1 = pg != null && pg.AppId == "1091500" && pg.Name == "Cyberpunk 2077" && pg.SizeBytes == 75000000000L; if (sg1) ok52++; Console.WriteLine((sg1 ? "OK  " : "FAIL") + "  steam : manifeste lu (id, nom, taille)");
+                bool sg2 = SteamGames.ParseManifest("nimporte quoi") == null && SteamGames.ParseManifest(null) == null; if (sg2) ok52++; Console.WriteLine((sg2 ? "OK  " : "FAIL") + "  steam : manifeste illisible -> null");
+                string sep = new string(System.IO.Path.DirectorySeparatorChar, 1);
+                string libC = "C:" + sep + "Steam";
+                string libD = "D:" + sep + "SteamLibrary";
+                string vdf = "{ " + qt + "path" + qt + " " + qt + libD + qt + " }";
+                var libs = SteamGames.ParseLibraryPaths(vdf, libC);
+                bool sg3b = false; foreach (var l in libs) if (l.StartsWith("D:")) sg3b = true;
+                bool sg3 = libs.Count >= 2 && sg3b; if (sg3) ok52++; Console.WriteLine((sg3 ? "OK  " : "FAIL") + "  steam : bibliotheques multi-disques detectees (" + libs.Count + ")");
+                bool sg4 = SteamGames.Human(75000000000L).Contains("Go") && SteamGames.Human(5242880L).Contains("Mo"); if (sg4) ok52++; Console.WriteLine((sg4 ? "OK  " : "FAIL") + "  steam : tailles lisibles (Go / Mo)");
+
+                // v15.51 : « jeux qui dorment » (tri pur : jamais lance / inactif / trop petit).
+                int ok53 = 0;
+                long gig = 1073741824L;
+                var lot = new System.Collections.Generic.List<SteamGames.Game>();
+                lot.Add(new SteamGames.Game { AppId = "1", Name = "Gros jamais lance", SizeBytes = 100L * gig, LastPlayedUnix = 0 });
+                lot.Add(new SteamGames.Game { AppId = "2", Name = "Gros joue hier", SizeBytes = 80L * gig, LastPlayedUnix = DateTimeOffset.Now.AddDays(-1).ToUnixTimeSeconds() });
+                lot.Add(new SteamGames.Game { AppId = "3", Name = "Gros endormi", SizeBytes = 60L * gig, LastPlayedUnix = DateTimeOffset.Now.AddDays(-300).ToUnixTimeSeconds() });
+                lot.Add(new SteamGames.Game { AppId = "4", Name = "Petit endormi", SizeBytes = 1L * gig, LastPlayedUnix = 0 });
+                var dorm = SteamGames.Dormant(lot, 120, 5L * gig);
+                bool dg1 = dorm.Count == 2; if (dg1) ok53++; Console.WriteLine((dg1 ? "OK  " : "FAIL") + "  jeux qui dorment : 2 retenus sur 4 (" + dorm.Count + ")");
+                bool dg2 = dorm.Count == 2 && dorm[0].Name == "Gros jamais lance" && dorm[1].Name == "Gros endormi"; if (dg2) ok53++; Console.WriteLine((dg2 ? "OK  " : "FAIL") + "  jeux qui dorment : tries par taille, le jeu recent exclu");
+                bool dg3 = SteamGames.TotalBytes(dorm) == 160L * gig; if (dg3) ok53++; Console.WriteLine((dg3 ? "OK  " : "FAIL") + "  jeux qui dorment : total recuperable = 160 Go");
+                bool dg4 = UtilityTools.IsDormantGames("quels jeux prennent de la place") && UtilityTools.IsDormantGames("les jeux que je ne joue plus")
+                    && !UtilityTools.IsDormantGames("mon jeu rame"); if (dg4) ok53++; Console.WriteLine((dg4 ? "OK  " : "FAIL") + "  jeux qui dorment : detection, 'mon jeu rame' exclu");
+
+                // v15.52 : « ou sont passes mes Go » (mise en forme pure du classement).
+                int ok54 = 0;
+                long go = 1073741824L;
+                var bfl = new System.Collections.Generic.List<BigFolders.Folder>();
+                bfl.Add(new BigFolders.Folder { Path = "D:" + System.IO.Path.DirectorySeparatorChar + "Call of Duty BO6", Name = "Call of Duty BO6", Bytes = 134L * go });
+                bfl.Add(new BigFolders.Folder { Path = "D:" + System.IO.Path.DirectorySeparatorChar + "SteamLibrary", Name = "SteamLibrary", Bytes = 900L * go, Partial = true });
+                string bftxt = BigFolders.Format(bfl, 10);
+                bool bf1 = bftxt.Contains("Call of Duty BO6") && bftxt.Contains("Go"); if (bf1) ok54++; Console.WriteLine((bf1 ? "OK  " : "FAIL") + "  gros dossiers : classement affiche avec tailles");
+                bool bf2 = bftxt.Contains("partielle"); if (bf2) ok54++; Console.WriteLine((bf2 ? "OK  " : "FAIL") + "  gros dossiers : mesure partielle signalee honnetement");
+                bool bf3 = BigFolders.Format(null, 10).Contains("Aucun dossier"); if (bf3) ok54++; Console.WriteLine((bf3 ? "OK  " : "FAIL") + "  gros dossiers : liste vide -> message honnete");
+                bool bf4 = UtilityTools.IsBigFolders("ou sont passes mes go") && UtilityTools.IsBigFolders("quel dossier prend de la place")
+                    && !UtilityTools.IsBigFolders("bonjour"); if (bf4) ok54++; Console.WriteLine((bf4 ? "OK  " : "FAIL") + "  gros dossiers : detection de la question");
+
+                // v15.53 : « mes jeux sont-ils sur SSD ? » (regroupement pur par disque).
+                int ok55 = 0;
+                long go2 = 1073741824L;
+                var gl2 = new System.Collections.Generic.List<SteamGames.Game>();
+                gl2.Add(new SteamGames.Game { AppId = "1", Name = "Jeu sur HDD", SizeBytes = 90L * go2, Dir = "H:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                gl2.Add(new SteamGames.Game { AppId = "2", Name = "Jeu sur NVMe", SizeBytes = 50L * go2, Dir = "C:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                var kinds = new System.Collections.Generic.Dictionary<char, Diagnostics.DriveKind>();
+                kinds['H'] = new Diagnostics.DriveKind { Name = "Seagate", MediaType = 3, BusType = 11 };
+                kinds['C'] = new Diagnostics.DriveKind { Name = "Samsung 990", MediaType = 4, BusType = 17 };
+                string stx = SteamGames.StorageText(gl2, kinds);
+                bool ss1 = stx.Contains("MÉCANIQUE") && stx.Contains("Jeu sur HDD"); if (ss1) ok55++; Console.WriteLine((ss1 ? "OK  " : "FAIL") + "  stockage jeux : jeu sur HDD signale");
+                bool ss2 = stx.Contains("Déplacer le dossier"); if (ss2) ok55++; Console.WriteLine((ss2 ? "OK  " : "FAIL") + "  stockage jeux : solution gratuite (deplacer) proposee");
+                var kindsOk = new System.Collections.Generic.Dictionary<char, Diagnostics.DriveKind>();
+                kindsOk['C'] = new Diagnostics.DriveKind { Name = "Samsung 990", MediaType = 4, BusType = 17 };
+                var gl3 = new System.Collections.Generic.List<SteamGames.Game>();
+                gl3.Add(new SteamGames.Game { AppId = "2", Name = "Jeu sur NVMe", SizeBytes = 50L * go2, Dir = "C:" + System.IO.Path.DirectorySeparatorChar + "steamapps" });
+                string stx2 = SteamGames.StorageText(gl3, kindsOk);
+                bool ss3 = stx2.Contains("Aucun jeu sur disque mécanique"); if (ss3) ok55++; Console.WriteLine((ss3 ? "OK  " : "FAIL") + "  stockage jeux : tout sur SSD -> rien a faire");
+                bool ss4 = UtilityTools.IsGameStorage("mes jeux sont sur ssd ?") && !UtilityTools.IsGameStorage("mon disque est plein libere de la place"); if (ss4) ok55++; Console.WriteLine((ss4 ? "OK  " : "FAIL") + "  stockage jeux : detection, nettoyage exclu");
+
+                // v15.54 : Defender & jeux (comparaison PURE des exclusions).
+                int ok56 = 0;
+                char sepc = System.IO.Path.DirectorySeparatorChar;
+                var cur1 = new System.Collections.Generic.List<string>();
+                cur1.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                var sug1 = new System.Collections.Generic.List<string>();
+                sug1.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                sug1.Add("E:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                var miss1 = GameShield.Missing(cur1, sug1);
+                bool gsh1 = miss1.Count == 1 && miss1[0].StartsWith("E:"); if (gsh1) ok56++; Console.WriteLine((gsh1 ? "OK  " : "FAIL") + "  defender : 1 seul dossier manquant detecte");
+                var cur2 = new System.Collections.Generic.List<string>();
+                cur2.Add("D:" + sepc + "SteamLibrary");                       // parent : couvre le sous-dossier
+                var miss2 = GameShield.Missing(cur2, sug1);
+                bool gsh2 = miss2.Count == 1; if (gsh2) ok56++; Console.WriteLine((gsh2 ? "OK  " : "FAIL") + "  defender : dossier couvert par un parent = deja protege");
+                var cur3 = new System.Collections.Generic.List<string>();
+                cur3.Add("d:" + sepc + "steamlibrary" + sepc + "steamapps" + sepc + "common" + sepc);
+                var sug3 = new System.Collections.Generic.List<string>();
+                sug3.Add("D:" + sepc + "SteamLibrary" + sepc + "steamapps" + sepc + "common");
+                bool gsh3 = GameShield.Missing(cur3, sug3).Count == 0; if (gsh3) ok56++; Console.WriteLine((gsh3 ? "OK  " : "FAIL") + "  defender : casse et barre finale ignorees");
+                bool gsh4 = GameShield.Missing(null, sug1).Count == 2
+                    && UtilityTools.IsGameShield("l'antivirus ralentit mes jeux") && UtilityTools.IsShieldUndo("annule les exclusions")
+                    && !UtilityTools.IsGameShield("bonjour"); if (gsh4) ok56++; Console.WriteLine((gsh4 ? "OK  " : "FAIL") + "  defender : exclusions illisibles = tout manquant, detection OK");
+
+                // v15.55 : medecin des journaux Windows (parseur + classement + formatage PURS).
+                int ok57 = 0;
+                string qm = "'";
+                string evXml =
+                    "<Events>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-WHEA-Logger" + qm + "/><EventID>18</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T10:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-DistributedCOM" + qm + "/><EventID>10016</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T11:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "Microsoft-Windows-DistributedCOM" + qm + "/><EventID>10016</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T12:00:00.000Z" + qm + "/></System></Event>"
+                  + "<Event><System><Provider Name=" + qm + "TrucInconnu" + qm + "/><EventID>4242</EventID>"
+                  + "<TimeCreated SystemTime=" + qm + "2026-07-30T13:00:00.000Z" + qm + "/></System></Event>"
+                  + "</Events>";
+                var grp = LogDoctor.Parse(evXml, "System");
+                bool ld1 = grp.Count == 3; if (ld1) ok57++; Console.WriteLine((ld1 ? "OK  " : "FAIL") + "  journaux : 4 evenements -> 3 groupes (" + grp.Count + ")");
+                var ldDiag = LogDoctor.Diagnose(grp);
+                bool ld2 = ldDiag.Count == 3 && ldDiag[0].Severity == 4 && ldDiag[0].Title.Contains("FATALE"); if (ld2) ok57++; Console.WriteLine((ld2 ? "OK  " : "FAIL") + "  journaux : WHEA fatale classee en tete");
+                bool ld3 = ldDiag[ldDiag.Count - 1].Severity == 0; if (ld3) ok57++; Console.WriteLine((ld3 ? "OK  " : "FAIL") + "  journaux : bruit connu (DCOM 10016) relegue en dernier");
+                string ldTxt = LogDoctor.Format(ldDiag, 14);
+                bool ld4 = ldTxt.Contains("Bruit connu") && ldTxt.Contains("je ne connais pas") && ldTxt.Contains("WHEA"); if (ld4) ok57++; Console.WriteLine((ld4 ? "OK  " : "FAIL") + "  journaux : bilan separe graves / bruit / inconnus");
+                bool ld5 = LogDoctor.Format(new System.Collections.Generic.List<LogDoctor.Finding>(), 14).Contains("AUCUNE erreur")
+                    && UtilityTools.IsLogDoctor("analyse les logs windows") && !UtilityTools.IsLogDoctor("journal de bord"); if (ld5) ok57++; Console.WriteLine((ld5 ? "OK  " : "FAIL") + "  journaux : rien a signaler + detection sans collision");
+
+                // v15.56 : chronologie des erreurs + correlation avec les changements du PC (PUR).
+                int ok58 = 0;
+                var evs = new System.Collections.Generic.List<LogDoctor.RawEvent>();
+                DateTime dJ = new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Local);
+                // 1 erreur serieuse le 28, 6 le 30 (le pic), + du bruit ignore
+                evs.Add(new LogDoctor.RawEvent { Provider = "disk", EventId = 7, When = dJ });
+                for (int z = 0; z < 6; z++) evs.Add(new LogDoctor.RawEvent { Provider = "disk", EventId = 7, When = dJ.AddDays(2) });
+                for (int z = 0; z < 9; z++) evs.Add(new LogDoctor.RawEvent { Provider = "DCOM", EventId = 10010, When = dJ.AddDays(2) });
+                var tl = LogDoctor.Timeline(evs);
+                bool tm1 = tl.Count == 2 && tl[dJ.Date] == 1 && tl[dJ.AddDays(2).Date] == 6; if (tm1) ok58++; Console.WriteLine((tm1 ? "OK  " : "FAIL") + "  chronologie : bruit exclu, 1 puis 6 erreurs serieuses");
+                var chg = new System.Collections.Generic.Dictionary<DateTime, string>();
+                chg[dJ.AddDays(2).Date] = "Pilote GPU CHANGE : v551 -> v560";
+                string tlTxt = LogDoctor.FormatTimeline(tl, chg);
+                bool tm2 = tlTxt.Contains("30/07") && tlTxt.Contains("suspect"); if (tm2) ok58++; Console.WriteLine((tm2 ? "OK  " : "FAIL") + "  chronologie : jour de demarrage + correlation au changement");
+                string tlTxt2 = LogDoctor.FormatTimeline(tl, new System.Collections.Generic.Dictionary<DateTime, string>());
+                bool tm3 = tlTxt2.Contains("Rien n'avait"); if (tm3) ok58++; Console.WriteLine((tm3 ? "OK  " : "FAIL") + "  chronologie : sans changement -> le dit honnetement");
+                bool tm4 = LogDoctor.FormatTimeline(new System.Collections.Generic.SortedDictionary<DateTime, int>(), null) == null
+                    && LogDoctor.SeverityOf("DCOM", 10010) == 0 && LogDoctor.SeverityOf("Inconnu", 999) == 1; if (tm4) ok58++; Console.WriteLine((tm4 ? "OK  " : "FAIL") + "  chronologie : vide -> null, gravites correctes");
+
+                // v15.57 : ROBUSTESSE — le Copilote ne doit JAMAIS tomber, quoi qu'on lui envoie.
+                int ok59 = 0;
+                var hostile = new string[]
+                {
+                    null, "", "   ", new string('a', 20000), "\0\0\0", "<script>alert(1)</script>",
+                    "'; DROP TABLE users; --", "..\\..\\..\\windows\\system32", "%s%s%s%n%n", "\u0001\u0002\u0003",
+                    "traduis  en anglais", "distance entre  et ", "100000000000000000000 km en miles",
+                    "pokemon ", "livre ", "code postal 00000", "15% de 0", "racine de -1", "1/0", "prix du ",
+                    "😀🎮🔥", "MAJUSCULES PARTOUT !!!", "\t\t\n\n"
+                };
+                int crashes = 0, nulls = 0;
+                foreach (var h in hostile)
+                {
+                    try
+                    {
+                        var rr = DocAssistant.SafeAnswer(h, null, null, null);
+                        if (rr == null || string.IsNullOrEmpty(rr.Text)) nulls++;
+                    }
+                    catch { crashes++; }
+                }
+                bool rb1 = crashes == 0; if (rb1) ok59++; Console.WriteLine((rb1 ? "OK  " : "FAIL") + "  robustesse : " + hostile.Length + " entrees hostiles, " + crashes + " plantage(s)");
+                bool rb2 = nulls == 0; if (rb2) ok59++; Console.WriteLine((rb2 ? "OK  " : "FAIL") + "  robustesse : toujours une reponse utile (" + nulls + " vide(s))");
+                string um = SafetyNet.UserMessage(new InvalidOperationException("test"), false);
+                bool rb3 = um.Contains("AUCUNE modification") && um.Contains("bt-erreurs.txt") && um.Contains("continue"); if (rb3) ok59++; Console.WriteLine((rb3 ? "OK  " : "FAIL") + "  filet : message honnete (rien modifie, ou c'est note, ca continue)");
+                string umf = SafetyNet.UserMessage(null, true);
+                bool rb4 = umf.Contains("Relance ONYX"); if (rb4) ok59++; Console.WriteLine((rb4 ? "OK  " : "FAIL") + "  filet : cas fatal -> consigne claire");
+
+                // v15.58 : durabilite des donnees (dossier inscriptible, repli, migration).
+                int ok60 = 0;
+                string dd = AppPaths.DataDir;
+                bool dp1 = !string.IsNullOrEmpty(dd) && AppPaths.IsWritable(dd); if (dp1) ok60++; Console.WriteLine((dp1 ? "OK  " : "FAIL") + "  donnees : dossier reellement inscriptible (" + dd + ")");
+                bool dp2 = !AppPaths.IsWritable("Z:" + System.IO.Path.DirectorySeparatorChar + "dossier-qui-nexiste-pas")
+                        && !AppPaths.IsWritable(null) && !AppPaths.IsWritable(""); if (dp2) ok60++; Console.WriteLine((dp2 ? "OK  " : "FAIL") + "  donnees : test d'ecriture honnete (faux si inaccessible)");
+                string ddFile = AppPaths.File("bt-test-harnais.txt");
+                bool dp3 = ddFile.StartsWith(dd) && ddFile.EndsWith("bt-test-harnais.txt"); if (dp3) ok60++; Console.WriteLine((dp3 ? "OK  " : "FAIL") + "  donnees : chemin construit dans le bon dossier");
+                bool dp4 = AppPaths.Explain().Contains(dd); if (dp4) ok60++; Console.WriteLine((dp4 ? "OK  " : "FAIL") + "  donnees : l'auto-diagnostic dit OU sont les donnees");
+                string dirty = "chemin " + Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + System.IO.Path.DirectorySeparatorChar + "Desktop";
+                string clean = DiagExport.Sanitize(dirty);
+                bool dp5 = clean.Contains("%USERPROFILE%") && !clean.Contains(Environment.UserName); if (dp5) ok60++; Console.WriteLine((dp5 ? "OK  " : "FAIL") + "  export : chemin utilisateur anonymise (promesse tenue)");
+
+                // v15.59 : mise a jour de l'app (analyse PURE de la reponse GitHub).
+                int ok61 = 0;
+                bool up1b = Updater.ParseTag("v15.60").ToString().StartsWith("15.60")
+                    && Updater.ParseTag("ONYX 16.2").Major == 16 && Updater.ParseTag("pas de version") == null; if (up1b) ok61++; Console.WriteLine((up1b ? "OK  " : "FAIL") + "  update : lecture de l'etiquette de version");
+                bool up2b = Updater.IsNewer(new Version(15, 58, 0, 0), new Version(15, 60, 0, 0))
+                    && !Updater.IsNewer(new Version(15, 60, 0, 0), new Version(15, 60, 0, 0))
+                    && !Updater.IsNewer(new Version(15, 60, 0, 0), new Version(15, 58, 0, 0)); if (up2b) ok61++; Console.WriteLine((up2b ? "OK  " : "FAIL") + "  update : comparaison de versions correcte");
+                bool up3b = Updater.IsTrustedUrl("https://github.com/x/y/releases/download/v1/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("https://exemple-pirate.fr/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("http://github.com/x.exe") && !Updater.IsTrustedUrl(null); if (up3b) ok61++; Console.WriteLine((up3b ? "OK  " : "FAIL") + "  update : SEUL github.com est accepte (anti-detournement)");
+                string relJson = "{ \"tag_name\": \"v15.60\", \"body\": \"Corrections\", \"assets\": [ { \"name\": \"notes.txt\", \"browser_download_url\": \"https://github.com/a/b/notes.txt\", \"size\": 10 }, { \"name\": \"ONYX-Setup-15.60.exe\", \"browser_download_url\": \"https://github.com/a/b/ONYX-Setup-15.60.exe\", \"size\": 12345678 } ] }";
+                var prel = Updater.ParseRelease(relJson);
+                bool up4b = prel != null && prel.Ver.Minor == 60 && prel.AssetName.Contains("Setup") && prel.Size == 12345678; if (up4b) ok61++; Console.WriteLine((up4b ? "OK  " : "FAIL") + "  update : installateur choisi parmi les fichiers publies");
+                string desc = Updater.Describe(new Version(15, 58, 0, 0), prel, "");
+                bool up5b = desc.Contains("15.60") && desc.Contains("CONSERV"); if (up5b) ok61++; Console.WriteLine((up5b ? "OK  " : "FAIL") + "  update : annonce claire + donnees conservees");
+                bool up6b = Updater.Describe(new Version(99, 0, 0, 0), prel, "").Contains("à jour")
+                    && Updater.Describe(new Version(15, 58, 0, 0), null, "Aucune version publiee").Contains("Aucune version")
+                    && UtilityTools.IsAppUpdate("mets a jour onyx") && !UtilityTools.IsAppUpdate("bilan des mises a jour windows"); if (up6b) ok61++; Console.WriteLine((up6b ? "OK  " : "FAIL") + "  update : deja a jour / rien publie / pas de collision avec Windows");
+
+                // v15.60 : depot PRIVE — manifeste personnel + confiance limitee a l'hote configure.
+                int ok62 = 0;
+                string manif = "{ \"version\": \"15.61\", \"notes\": \"Nouveautes\", \"url\": \"https://mon-site.example/ONYX-Setup-15.61.exe\", \"size\": 999 }";
+                var mrel = Updater.ParseManifest(manif);
+                bool pv1 = mrel != null && mrel.Ver.Minor == 61 && mrel.AssetName.Contains("Setup") && mrel.Size == 999; if (pv1) ok62++; Console.WriteLine((pv1 ? "OK  " : "FAIL") + "  prive : manifeste personnel lu (version, fichier, taille)");
+                bool pv2 = Updater.ParseManifest("{ \"rien\": 1 }") == null && Updater.ParseManifest("pas du json") == null; if (pv2) ok62++; Console.WriteLine((pv2 ? "OK  " : "FAIL") + "  prive : manifeste invalide -> refuse");
+                bool pv3 = Updater.IsTrustedUrl("https://mon-site.example/ONYX-Setup.exe", "https://mon-site.example/maj.json")
+                    && !Updater.IsTrustedUrl("https://autre-site.example/ONYX-Setup.exe", "https://mon-site.example/maj.json"); if (pv3) ok62++; Console.WriteLine((pv3 ? "OK  " : "FAIL") + "  prive : seul l'hote de TON manifeste est accepte");
+                bool pv4 = Updater.IsTrustedUrl("https://destingood.github.io/onyx/ONYX-Setup.exe")
+                    && !Updater.IsTrustedUrl("https://mon-site.example/x.exe"); if (pv4) ok62++; Console.WriteLine((pv4 ? "OK  " : "FAIL") + "  prive : GitHub Pages accepte, hote inconnu refuse sans manifeste");
+                bool pv5 = SelfCheck.SupportInfo().Contains("destingood"); if (pv5) ok62++; Console.WriteLine((pv5 ? "OK  " : "FAIL") + "  credit : destingood present dans les infos de support");
+
+                // v15.61 : garde-fou de publication (on ne livre QUE l'executable).
+                int ok63 = 0;
+                bool rg1 = ReleaseGuard.Inspect("BTOptimizer.exe") == null && ReleaseGuard.Inspect("System.Text.Json.dll") == null; if (rg1) ok63++; Console.WriteLine((rg1 ? "OK  " : "FAIL") + "  publication : l'executable et ses composants sont legitimes");
+                var lk1 = ReleaseGuard.Inspect("bt-appris.md");
+                bool rg2 = lk1 != null && lk1.Level == 2; if (rg2) ok63++; Console.WriteLine((rg2 ? "OK  " : "FAIL") + "  publication : bt-appris.md (conversations) = fuite GRAVE");
+                var lk2 = ReleaseGuard.Inspect("bt-update-token.txt");
+                bool rg3 = lk2 != null && lk2.Level == 2; if (rg3) ok63++; Console.WriteLine((rg3 ? "OK  " : "FAIL") + "  publication : jeton de mise a jour = fuite GRAVE");
+                var lk3 = ReleaseGuard.Inspect("BTOptimizer.pdb");
+                bool rg4 = lk3 != null && lk3.Level == 1 && ReleaseGuard.Inspect("Program.cs").Level == 2; if (rg4) ok63++; Console.WriteLine((rg4 ? "OK  " : "FAIL") + "  publication : symboles a retirer, code source = grave");
+                int gr, mi;
+                string relClean = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe" }, out gr, out mi);
+                bool rg5 = gr == 0 && mi == 0 && relClean.Contains("PROPRE"); if (rg5) ok63++; Console.WriteLine((rg5 ? "OK  " : "FAIL") + "  publication : dossier ne contenant que l'exe = PROPRE");
+                string dirty2 = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe", "bt-memoire.txt", "BTOptimizer.pdb" }, out gr, out mi);
+                bool rg6 = gr == 1 && mi == 1 && dirty2.Contains("bt-memoire.txt"); if (rg6) ok63++; Console.WriteLine((rg6 ? "OK  " : "FAIL") + "  publication : melange -> 1 grave + 1 mineur, nommes");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 5;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

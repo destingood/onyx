@@ -75,6 +75,201 @@ namespace BTOptimizer
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSpeed"), "0")
             });
 
+            // Interruptions audio empilées sur le cœur 0. Mesuré sur une machine réelle : cœur 0 à
+            // 15,8 % de DPC et 8 % d'interruptions, les quinze autres à zéro — et c'est le cœur où
+            // tourne le thread principal du jeu. Répartir ne change PAS le mécanisme d'interruption,
+            // donc aucun risque de perte de son : on demande seulement à Windows de ne pas tout
+            // poser au même endroit. C'est déjà ce que fait le stockage sur cette machine.
+            list.Add(new Tweak
+            {
+                Id = "audio_irq_spread", Category = Cat.Audio, Recommended = true, Esport = true, Reboot = true,
+                Name = "Répartir les interruptions audio sur tous les cœurs",
+                Desc = "Les contrôleurs audio (carte mère et sortie HDMI de la carte graphique) empilent souvent "
+                     + "leurs interruptions sur le cœur 0 — celui-là même où tourne le thread principal du jeu. "
+                     + "Ce réglage demande à Windows de les étaler. Le mécanisme d'interruption n'est PAS modifié : "
+                     + "aucun risque pour le son. Effet au prochain redémarrage. « Rétablir » rend la main à Windows.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.Repartir(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun contrôleur audio n'a accepté l'écriture (clés protégées).");
+                },
+                Revert = () => IrqTuning.NePlusRepartir(null),
+                Check = () => IrqTuning.EtatRepartition()
+            });
+
+            // Le MÊME geste, étendu à ce qui produit vraiment le plus d'interruptions. Mesuré sur
+            // une machine réelle : le pilote graphique produit à lui seul 129 424 travaux différés,
+            // deux fois plus que le suivant — et il n'avait AUCUNE politique d'affinité, quand
+            // l'audio et le stockage en avaient une.
+            list.Add(new Tweak
+            {
+                Id = "irq_spread_producteurs", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Name = "Répartir les interruptions de la carte graphique, du réseau et du stockage",
+                Desc = "Même geste que pour l'audio, appliqué à ce qui produit RÉELLEMENT le plus d'interruptions. "
+                     + "Sur la machine de référence, le pilote graphique génère à lui seul 129 424 travaux différés — "
+                     + "deux fois plus que le suivant — et n'avait aucune politique d'affinité : ses interruptions "
+                     + "tombaient donc là où Windows les met, en pratique le cœur 0, celui-là même où tourne le fil "
+                     + "principal du jeu. Ce réglage demande à Windows de les étaler sur tous les cœurs. "
+                     + "Le mécanisme d'interruption n'est PAS modifié (contrairement à MSI) : c'est exactement le "
+                     + "réglage déjà appliqué à l'audio, sur d'autres périphériques. Effet au redémarrage. "
+                     + "« Rétablir » rend la main à Windows. Hors du préréglage Recommandé : il touche la carte "
+                     + "graphique et exige un redémarrage, deux raisons de le choisir plutôt que de le subir.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.RepartirProducteurs(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun périphérique n'a accepté l'écriture (clés protégées par le système).");
+                },
+                Revert = () => IrqTuning.NePlusRepartirProducteurs(null),
+                Check = () => IrqTuning.EtatRepartitionProducteurs()
+            });
+
+            // Répartir dit OÙ ; prioriser dit QUAND. Deux réglages voisins dans la même clé, deux
+            // effets distincts, et celui-ci ne coûte rien : il ne change ni le mécanisme
+            // d'interruption ni le pilote, il donne un rang dans la file.
+            list.Add(new Tweak
+            {
+                // Les interruptions de PÉRIPHÉRIQUES sont réparties par les deux réglages ci-dessus.
+                // Restent les interruptions de MINUTEUR, qui sont la majorité sur une machine au
+                // minuteur fin — 53 % du total mesuré. Elles se répartissent par un autre chemin.
+                Id = "distribuer_minuteurs", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Name = "Répartir l'expiration des minuteurs sur tous les cœurs",
+                Desc = "Les deux réglages de répartition d'interruptions ne touchent que les PÉRIPHÉRIQUES. "
+                     + "Or sur une machine au minuteur fin, ce sont les MINUTEURS qui dominent : mesuré à "
+                     + "18 000 interruptions par seconde, soit 53 % du total, plus que la carte graphique, le "
+                     + "réseau et le stockage réunis. Ce réglage demande au noyau de répartir leur expiration "
+                     + "au lieu de la concentrer. "
+                     + "CE QUI EST SÛR, ET CE QUI NE L'EST PAS. Cette valeur est bien moins documentée par "
+                     + "Microsoft que les autres réglages de cette app : si le noyau de ta version la lit, elle "
+                     + "répartit ; s'il l'ignore, il ne se passe rien. Dans les deux cas il n'y a RIEN À CASSER, "
+                     + "et « Rétablir » supprime la valeur. Une comparaison faite sur une machine réelle n'a pas "
+                     + "pu démontrer de gain : les temps mesurés avaient baissé, mais le nombre d'événements aussi, "
+                     + "et un pire temps se mesure sur moins de tirages — huit pilotes sur neuf variaient dans le "
+                     + "même sens que leur nombre d'exécutions. Le seul indicateur indépendant de l'activité, la "
+                     + "répartition entre cœurs, n'avait pas bougé dans le bon sens. Le réglage est donc offert "
+                     + "dans le préréglage eSport, sans promesse : mesure la latence DPC avant et après, avec la "
+                     + "MÊME charge des deux côtés — un jeu qui tourne, pas un bureau au repos — et décoche-le "
+                     + "s'il ne te donne rien.",
+                BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" },
+                Apply  = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "DistributeTimers", 1, RegistryValueKind.DWord),
+                Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "DistributeTimers"),
+                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "DistributeTimers"), 1)
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "irq_priorite_gpu", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Name = "Servir les interruptions de la carte graphique en priorité",
+                Desc = "Répartir les interruptions dit à Windows OÙ les traiter ; ce réglage-ci dit QUAND, "
+                     + "lorsque plusieurs se présentent en même temps. La carte graphique passe en tête de file : "
+                     + "elle cesse d'attendre son tour derrière un contrôleur qui n'a rien d'urgent à dire. "
+                     + "HONNÊTETÉ SUR CE QU'ON EN SAIT : c'est un réglage d'ORDONNANCEMENT, pas de durée. Il ne "
+                     + "raccourcit aucune exécution — il évite des attentes. Le gain se voit sur le PIRE temps "
+                     + "d'exécution, ou ne se voit pas du tout ; mesure avant et après plutôt que de me croire. "
+                     + "Le mécanisme d'interruption et le pilote ne sont pas touchés : rien à casser. "
+                     + "Effet au redémarrage. « Rétablir » supprime la valeur et rend le rang à Windows.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.PrioriserGraphique(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("la carte graphique n'a pas accepté l'écriture (clé protégée par le système).");
+                },
+                Revert = () => IrqTuning.NePlusPrioriserGraphique(null),
+                Check = () => IrqTuning.EtatPrioriteGraphique()
+            });
+
+            // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
+            // pilotes audio démarrent sans son en MSI. Hors presets, avertissement explicite.
+            list.Add(new Tweak
+            {
+                Id = "audio_msi", Category = Cat.Audio, Reboot = true,
+                Name = "⚠ Interruptions audio par message (MSI) — RISQUE de perte de son",
+                Desc = "Fait passer les contrôleurs audio des interruptions par ligne (ancien mécanisme, qui se "
+                     + "concentre sur le cœur 0) aux interruptions par message. Gain de latence supérieur à la simple "
+                     + "répartition. MAIS : certains pilotes audio gèrent mal MSI et démarrent SANS SON. C'est "
+                     + "réversible en décochant puis en redémarrant — sauf qu'il faut le faire sans entendre le PC. "
+                     + "Ne prends ce réglage que si tu sais revenir en arrière à l'aveugle.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.ActiverMsi(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun contrôleur audio n'a accepté l'écriture (clés protégées).");
+                },
+                Revert = () => IrqTuning.DesactiverMsi(null),
+                Check = () => IrqTuning.EtatMsi()
+            });
+
+            // Équivalent du « K-Boost » d'EVGA Precision X1 : la carte reste en fréquence maximale
+            // au lieu de redescendre entre deux scènes. Volontairement HORS PRESETS — ça consomme,
+            // ça chauffe et ça fait du bruit en permanence, et ça ne rapporte rien à qui joue déjà
+            // avec une carte à 100 %. Ça se choisit.
+            list.Add(new Tweak
+            {
+                Id = "gpu_kboost", Category = Cat.Gpu,
+                Name = "⚡ Verrouiller les fréquences GPU au maximum (façon K-Boost)",
+                Desc = "Empêche la carte de faire redescendre sa fréquence entre deux scènes : plus de montées ni de "
+                     + "descentes, donc des creux d'images plus réguliers. Ce n'est PAS un gain de FPS moyen — une "
+                     + "carte déjà à 100 % tourne déjà au maximum. En échange : consommation, chaleur et bruit de "
+                     + "ventilateurs en hausse, en permanence. Cartes NVIDIA uniquement. « Rétablir » rend la main au pilote.",
+                Apply = () =>
+                {
+                    if (!KBoost.Disponible()) return;   // pas de GPU NVIDIA : sans objet, pas une erreur
+                    if (!KBoost.Activer(null))
+                        throw new InvalidOperationException("le pilote a refusé le verrouillage des fréquences.");
+                },
+                Revert = () => { if (KBoost.Disponible()) KBoost.Desactiver(null); },
+                Check = () => KBoost.Etat()
+            });
+
+            // Vitesse du pointeur au 6ᵉ cran. À ne pas confondre avec l'accélération ci-dessus :
+            // c'est le CURSEUR de vitesse. Seule la valeur 10 donne un rapport 1:1 — aux autres
+            // crans Windows multiplie le déplacement et se met à sauter ou dupliquer des pixels,
+            // donc la souris perd en précision même accélération coupée.
+            list.Add(new Tweak
+            {
+                Id = "mouse_pointer_speed", Category = Cat.Souris, Recommended = true, Esport = true,
+                Name = "Vitesse du pointeur au 6ᵉ cran (rapport 1:1, sans perte de pixels)",
+                Desc = "Met le curseur de vitesse de la souris exactement au milieu (valeur 10). C'est le seul cran où "
+                     + "Windows ne multiplie pas ton déplacement : au-dessus il saute des pixels, en dessous il en duplique. "
+                     + "Règle ta sensibilité dans le jeu et via le DPI de la souris, pas ici. Effet immédiat. "
+                     + "« Rétablir » remet la valeur par défaut de Windows (qui est déjà 10).",
+                BackupKeys = new[] { @"HKCU\Control Panel\Mouse" },
+                Apply = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "MouseSensitivity", "10", RegistryValueKind.String);
+                    if (Sys.SameUser) Native.SetMouseSpeed(10);
+                },
+                Revert = () =>
+                {
+                    Sys.SetUser(@"Control Panel\Mouse", "MouseSensitivity", "10", RegistryValueKind.String);
+                    if (Sys.SameUser) Native.SetMouseSpeed(10);
+                },
+                Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Mouse", "MouseSensitivity"), "10")
+            });
+
+            // Veille USB au niveau du PÉRIPHÉRIQUE — l'étage que le plan d'alimentation ne couvre
+            // pas. Chaque concentrateur porte sa propre case « Autoriser l'ordinateur à éteindre ce
+            // périphérique » : tant qu'elle est cochée, le réveil d'un hub inactif coûte quelques
+            // millisecondes au premier mouvement, pile quand on tenait une visée immobile.
+            list.Add(new Tweak
+            {
+                Id = "usb_device_power", Category = Cat.Souris, Recommended = true, Esport = true,
+                Name = "Interdire la mise en veille des concentrateurs USB (par périphérique)",
+                Desc = "Décoche « Autoriser l'ordinateur à éteindre ce périphérique » sur CHAQUE concentrateur USB — "
+                     + "ce que le réglage du plan d'alimentation ne fait pas, et qui survit au changement de plan. "
+                     + "Certaines clés appartiennent au système et peuvent refuser l'écriture : le journal indique alors "
+                     + "combien de concentrateurs ont réellement été traités. « Rétablir » réautorise la veille.",
+                Apply = () =>
+                {
+                    UsbPower.Result r = UsbPower.Applique(0, null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("aucun concentrateur n'a accepté l'écriture (clés protégées par le système).");
+                },
+                Revert = () => UsbPower.Applique(1, null),
+                Check = () => UsbPower.Etat()
+            });
+
             list.Add(new Tweak
             {
                 Id = "input_queues", Category = Cat.Souris, Esport = true, Reboot = true,
@@ -92,7 +287,10 @@ namespace BTOptimizer
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\mouclass\Parameters", "MouseDataQueueSize", 100, RegistryValueKind.DWord);
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Services\kbdclass\Parameters", "KeyboardDataQueueSize", 100, RegistryValueKind.DWord);
                 },
+                // Souris ET clavier : ce sont deux clés de service distinctes, l'une peut être
+                // refusée sans l'autre, et l'app annonçait « appliqué » sur la foi de la souris seule.
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\mouclass\Parameters", "MouseDataQueueSize"), 32)
+                           && Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\kbdclass\Parameters", "KeyboardDataQueueSize"), 32)
             });
 
             list.Add(new Tweak
@@ -191,6 +389,48 @@ namespace BTOptimizer
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode"), 2)
             });
 
+            // Profil pilote NVIDIA à faible latence, CHOISI d'après la machine. Le mode « Ultra »
+            // (+ 1 image pré-rendue) supprime la file d'attente de rendu, or c'est ce tampon qui
+            // absorbe les à-coups du processeur : sur un PC limité par le CPU, il fait PERDRE des
+            // images. On applique donc le profil sûr, et Ultra seulement quand la mesure en jeu
+            // montre une carte graphique réellement à fond.
+            list.Add(new Tweak
+            {
+                Id = "nv_latency_profile", Category = Cat.Gpu, Recommended = true, Esport = true,
+                Name = "Profil pilote NVIDIA à faible latence (adapté à ta machine)",
+                Desc = "Réduit la latence côté pilote sans assécher la file de rendu : « Mode faible latence = Activé » "
+                     + "et images pré-rendues laissées au jeu. Le mode « Ultra » n'est retenu QUE si la mesure « qui me "
+                     + "limite ? » montre ta carte graphique à fond — sur un PC limité par le processeur, Ultra coûte des "
+                     + "images et provoque des chutes brutales. Sans mesure : profil sûr, jamais Ultra à l'aveugle. "
+                     + "Sans effet si tu n'as pas de GPU NVIDIA. « Rétablir » remet les réglages d'usine du pilote.",
+                Apply = () =>
+                {
+                    if (!Sys.NvpiAvailable()) return;          // pas de GPU NVIDIA / outil absent : sans objet
+                    double c, g; DateTime q;
+                    if (!Bottleneck.LastMeasure(out c, out g, out q)) { c = -1; g = -1; }
+                    if (!NvProfile.Applique(NvProfile.Recommande(c, g), null))
+                        throw new InvalidOperationException("nvidiaProfileInspector a refusé le profil.");
+                },
+                Revert = () =>
+                {
+                    if (!Sys.NvpiAvailable()) return;
+                    if (!NvProfile.Retire(null))
+                        throw new InvalidOperationException("nvidiaProfileInspector a refusé le retour aux réglages d'usine.");
+                },
+                Check = () =>
+                {
+                    // « Indéterminé » quand on ne peut rien affirmer : pas d'outil, ou aucun profil
+                    // encore posé par ONYX. Un Check qui répond null n'est JAMAIS compté comme une
+                    // dérive — on ne crie pas au loup sans preuve.
+                    if (!Sys.NvpiAvailable()) return null;
+                    NvProfile.Kind pose; DateTime quand;
+                    if (!NvProfile.Applique(out pose, out quand)) return null;
+                    double c, g; DateTime q;
+                    if (!Bottleneck.LastMeasure(out c, out g, out q)) { c = -1; g = -1; }
+                    return pose == NvProfile.Recommande(c, g);
+                }
+            });
+
             list.Add(new Tweak
             {
                 Id = "fso_disable", Category = Cat.Gpu, Recommended = true, Esport = true,
@@ -253,7 +493,10 @@ namespace BTOptimizer
                     Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", 1, RegistryValueKind.DWord);
                     Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR");
                 },
+                // La valeur utilisateur passe presque toujours ; c'est la STRATÉGIE en HKLM qui peut
+                // être refusée ou réécrite par une politique d'entreprise. Vérifier les deux.
                 Check = () => Sys.IntEquals(Sys.GetUser(@"System\GameConfigStore", "GameDVR_Enabled"), 0)
+                           && Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"), 0)
             });
 
             list.Add(new Tweak
@@ -356,9 +599,14 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dynamic_tick", Category = Cat.Systeme, Esport = true, Reboot = true,
+                // SORTI DU PRÉRÉGLAGE eSPORT. Son propre nom dit « EXPÉRIMENTAL » et sa
+                // description dit « à tester » : un réglage dont on ignore l'effet n'a pas sa place
+                // dans un lot qui s'applique sans qu'on le regarde. Et sa mesure est sans ambiguïté
+                // — il AUGMENTE les interruptions de 40 % sur une machine 16 threads, alors que le
+                // préréglage eSport est censé réduire la latence. Il reste offert et explicité.
+                Id = "dynamic_tick", Category = Cat.Systeme, Reboot = true,
                 Name = "Désactiver le tick dynamique du noyau (bcdedit) — EXPÉRIMENTAL",
-                Desc = "Timer noyau à cadence fixe : peut lisser la latence sur certaines machines, augmente la consommation. À tester, réversible.",
+                Desc = "Timer noyau à cadence fixe : chaque cœur reçoit un tick régulier au lieu de rester silencieux quand il est inactif. Peut lisser la latence sur certaines machines. LE COÛT EST MESURABLE ET IL EST GROS : sur une machine 16 threads avec un minuteur à 0,5 ms, forcer le tick constant fait passer les interruptions de ~34 000 à ~48 000 par seconde, soit +40 %. Chacune préempte le cœur où elle tombe. Si ton objectif est de RÉDUIRE les préemptions, laisse ce réglage éteint : il fait l'inverse. Il ne se justifie que si tu constates, mesure à l'appui, une latence plus régulière avec. À tester, réversible.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/set disabledynamictick yes", "bcdedit disabledynamictick"),
                 Revert = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/deletevalue disabledynamictick", "bcdedit deletevalue"),
                 Check = () =>
@@ -378,7 +626,7 @@ namespace BTOptimizer
             {
                 Id = "timer_global", Category = Cat.Systeme, Esport = true, Reboot = true,
                 Name = "Timer haute résolution GLOBAL (Windows 11)",
-                Desc = "Depuis Windows 10 2004/11, les demandes de timer 1 ms sont ignorées pour les fenêtres en arrière-plan. Ce réglage restaure le comportement global : complète la case « Timer 1 ms » de cette app.",
+                Desc = "Depuis Windows 10 2004, une demande de minuteur fin ne s'applique QU'AU PROCESSUS qui la fait. Ce réglage restaure l'ancien comportement : la demande la plus fine s'impose à toute la machine. LE COÛT, MESURÉ : un seul logiciel demandant 0,5 ms fait ticker tous les cœurs actifs à 2 000 Hz. Sur une machine 16 threads, cela représentait 18 000 interruptions par seconde, soit 53 % de TOUTES les interruptions de la machine — plus que la carte graphique, le réseau et le stockage réunis. En échange, l'ordonnanceur est plus réactif partout, pas seulement dans le jeu. C'est un arbitrage, pas une évidence : mesure les deux avant de trancher. Complète la case « Timer 1 ms » de cette app.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" },
                 Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests", 1, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel", "GlobalTimerResolutionRequests"),
@@ -476,12 +724,22 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "fastboot_off", Category = Cat.Rapidite,
+                Id = "fastboot_off", Category = Cat.Rapidite, Reboot = true,
                 Name = "Désactiver le démarrage rapide (Fast Startup)",
                 Desc = "Le démarrage rapide peut laisser pilotes/services dans un état dégradé au fil des arrêts. Boot un peu plus long mais plus « propre ». Optionnel.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" },
                 Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, RegistryValueKind.DWord),
-                Revert = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 1, RegistryValueKind.DWord),
+                Revert = () =>
+                {
+                    // Le démarrage rapide REPOSE sur la veille prolongée : il range la session
+                    // système dans hiberfil.sys. Réactiver l'un pendant que l'autre est coupé
+                    // écrit un état que Windows ne produit jamais (HiberbootEnabled=1 avec
+                    // HibernateEnabled=0) — et la page « Marche/Arrêt » des Paramètres, qui
+                    // affiche justement ces deux options, peut alors planter en la lisant.
+                    if (!Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled"), 1))
+                        Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/hibernate on", "Réactivation de la veille prolongée (requise par le démarrage rapide)");
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 1, RegistryValueKind.DWord);
+                },
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled"), 0)
             });
 
@@ -553,7 +811,10 @@ namespace BTOptimizer
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String);
                     Sys.DelUser(@"Control Panel\Desktop", "AutoEndTasks");
                 },
+                // Les deux ruches : la valeur machine peut être refusée pendant que la valeur
+                // utilisateur passe. N'en vérifier qu'une affichait « appliqué » sur une moitié.
                 Check = () => Sys.StrEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout"), "2000")
+                           && Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "AutoEndTasks"), "1")
             });
 
             list.Add(new Tweak
@@ -712,9 +973,48 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "qos_reserve_off", Category = Cat.Reseau, Esport = true,
-                Name = "Libérer la bande passante réservée par QoS (20 %)",
-                Desc = "Windows réserve 20 % de la bande passante pour QoS. Ce réglage la libère entièrement. « Rétablir » remet le comportement par défaut.",
+                // HORS PRÉRÉGLAGES, ET C'EST VOULU. Sur un écran à fréquence variable, plafonner
+                // sous la fréquence maximale RÉDUIT la latence. Sur un écran SANS fréquence
+                // variable et sans V-Sync, le même plafond l'AUGMENTE par rapport à un rendu
+                // débridé. Le bon choix dépend donc du moniteur, et ONYX ne sait pas lire de façon
+                // fiable si la synchronisation adaptative est active. Mettre ce réglage dans un lot
+                // automatique reviendrait à parier sur l'écran de l'utilisateur, et à faire perdre
+                // des images à la moitié d'entre eux. Il reste offert, expliqué, et choisi.
+                Id = "frame_cap", Category = Cat.Gpu,
+                Name = "Plafonner les images juste sous la fréquence de l'écran",
+                Desc = "La réponse SANS INJECTION au problème que résout le « Scanline Sync » de RTSS. Sur un écran à fréquence variable (G-Sync / FreeSync), la recette de référence est de garder la synchronisation adaptative ACTIVE et de plafonner les images juste en dessous de la fréquence maximale : le plafond empêche le jeu d'atteindre le haut de la plage, là où l'écran retombe en V-Sync classique et où la latence saute d'un coup. Image sans déchirure, et sans l'attente de la V-Sync. Le plafond est calculé pour TON écran (fréquence moins Hz²/3600 — la règle qui redonne 138 à 144 Hz et 224 à 240 Hz) et posé par le pilote lui-même, sans rien injecter dans le jeu. À SAVOIR : sur un écran SANS fréquence variable, le plafond régularise les images mais ne supprime pas la déchirure. « Rétablir » rend la main au pilote.",
+                Apply  = () => FrameCap.Applique(FrameCap.Recommande(FrameCap.FrequenceEcran()), null),
+                Revert = () => FrameCap.Applique(0, null),
+                Check  = () => FrameCap.Pose() > 0
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "nic_latency", Category = Cat.Reseau, Recommended = true, Esport = true, Reboot = true,
+                Name = "Réglages de latence de la carte réseau (modération d'interruptions, regroupements…)",
+                Desc = "Coupe les mécanismes par lesquels la carte réseau ÉCONOMISE DU PROCESSEUR EN AJOUTANT DU DÉLAI : modération d'interruptions, contrôle de flux, Ethernet écoénergétique, regroupement de segments reçus (RSC), regroupement de paquets, veille sélective. C'est le même marché à chaque fois — moins de travail pour le processeur, un peu plus d'attente pour les paquets — et pour du temps réel, le mauvais côté du marché. Ne touche QUE ce que ta carte expose réellement, et uniquement des réglages NORMALISÉS par Microsoft : les options propriétaires des cartes Wi-Fi (itinérance, MIMO, largeur de canal) portent des encodages différents selon le fabricant et restent à ta main. Les valeurs d'origine sont sauvegardées ; « Rétablir » les remet exactement. Effet au redémarrage de la carte.",
+                Apply  = () => NicLatency.Applique(true, null),
+                Revert = () => NicLatency.Applique(false, null),
+                Check  = () => NicLatency.Etat()
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "qos_dscp_jeux", Category = Cat.Reseau, Recommended = true, Esport = true,
+                Name = "Marquer les paquets de tes jeux comme prioritaires (DSCP 46)",
+                Desc = "Pose la marque « urgent » (Expedited Forwarding) sur les paquets sortants de tes jeux INSTALLÉS — pas sur tous les programmes. C'est la différence qui compte : la recette qui circule vise « *.exe », donc navigateur et téléchargements compris, et une priorité que tout le monde a n'est plus une priorité. ONYX écrit aussi le réglage documenté par Microsoft sans lequel Windows ignore purement et simplement ces politiques hors réseau d'entreprise — l'oubli qui rend la manœuvre inerte chez soi. HONNÊTETÉ : la marque est une demande, pas un ordre. Beaucoup de box l'ignorent et les opérateurs la réécrivent souvent en sortie. Le gain est réel sur un routeur qui en tient compte, nul ailleurs, jamais négatif — et ça ne remplace pas un routeur qui gère sa file d'attente (SQM). Effet au redémarrage. « Rétablir » retire les politiques d'ONYX, et elles seules.",
+                Reboot = true,
+                BackupKeys = new[] { @"HKLM\" + QosGaming.Racine },
+                Apply  = () => QosGaming.Appliquer(QosGaming.ExesDesJeuxDetectes(), null),
+                Revert = () => QosGaming.Retirer(null),
+                Check  = () => QosGaming.Existantes().Count > 0
+            });
+
+            list.Add(new Tweak
+            {
+                Id = "qos_reserve_off", Category = Cat.Reseau,
+                Name = "Lever le plafond QoS (NonBestEffortLimit) — sans effet dans presque tous les cas",
+                Desc = "MISE AU POINT : « Windows réserve 20 % de ta bande passante » est un des plus vieux mythes du réglage Windows, et cette description le répétait. Microsoft l'a démenti explicitement : la réserve ne s'applique QU'AUX applications qui demandent de la bande passante via l'API QoS, et même là, elle reste disponible pour les autres tant qu'elle n'est pas utilisée. Aucun jeu ne passe par cette API. Ce réglage lève quand même le plafond, pour les rares logiciels concernés (visioconférence d'entreprise, streaming professionnel) — mais n'attends AUCUN gain en jeu, et méfie-toi de tout guide qui te le vend comme tel. Il est pour cette raison sorti du préréglage eSport. « Rétablir » supprime la valeur.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" },
                 Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\Psched", "NonBestEffortLimit"),
@@ -743,7 +1043,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dns_negative_cache_off", Category = Cat.Reseau, Esport = true,
+                Id = "dns_negative_cache_off", Category = Cat.Reseau, Esport = true, Reboot = true,
                 Name = "Ne pas mémoriser les échecs DNS (réessai immédiat)",
                 Desc = "Windows garde en cache les résolutions DNS échouées pendant 5 s. Ce réglage les oublie aussitôt (MaxNegativeCacheTtl=0) : une résolution qui a raté un instant est retentée tout de suite au lieu d'échouer 5 s. « Rétablir » remet le comportement par défaut.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" },
@@ -1254,7 +1554,11 @@ namespace BTOptimizer
                     Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity");
                     Sys.DelMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
                 },
+                // Les DEUX valeurs, pas une. L'intégrité mémoire peut être coupée pendant que la
+                // sécurité par virtualisation reste active — état constaté sur une machine réelle,
+                // et l'ancien contrôle l'aurait affiché comme « appliqué ».
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled"), 0)
+                           && Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard", "EnableVirtualizationBasedSecurity"), 0)
             });
 
             list.Add(new Tweak
@@ -1941,7 +2245,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "lmhosts_off", Category = Cat.Reseau,
+                Id = "lmhosts_off", Category = Cat.Reseau, Reboot = true,
                 Name = "Désactiver la recherche LMHOSTS (NetBIOS hérité)",
                 Desc = "Coupe la résolution de noms via le fichier LMHOSTS, héritage inutile aujourd'hui : petite réduction de surface et de requêtes. « Rétablir » la réactive.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" },
@@ -2058,11 +2362,25 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "sensor_service_off", Category = Cat.Services,
-                Name = "Désactiver le service de capteurs (PC sans capteur)",
-                Desc = "Coupe SensorService (luminosité auto, orientation), inutile sur un PC fixe sans capteur. À laisser actif sur un portable. « Rétablir » le remet à la demande.",
-                Apply  = () => Sys.ConfigureService("SensorService", "disabled", true, false),
-                Revert = () => Sys.ConfigureService("SensorService", "demand", false, false),
-                Check  = () => Sys.ServiceDisabled("SensorService")
+                Name = "Mettre le service de capteurs en veille (PC sans capteur)",
+                // DÉSACTIVÉ, ce service FAIT PLANTER une page de Windows. Constaté et prouvé par
+                // bissection sur une machine réelle : Paramètres → Système → Marche/Arrêt s'ouvre
+                // sur un rectangle vide. Le réglage « Économiseur d'énergie » interroge les
+                // capteurs (luminosité ambiante) ; service désactivé = aucun endpoint RPC =
+                // exception non rattrapée dans le modèle de vue XAML = page morte.
+                //
+                // « Manuel » donne le même résultat sans le bug : le service ne démarre PAS tout
+                // seul, il ne consomme rien, et Windows le lance uniquement si une page en a besoin.
+                Desc = "Met SensorService en démarrage MANUEL (luminosité auto, orientation) : il ne tourne plus de "
+                     + "lui-même sur un PC fixe sans capteur, donc le gain est le même qu'en le désactivant. "
+                     + "On ne le DÉSACTIVE pas : Windows en a besoin pour afficher la page « Marche/Arrêt » des "
+                     + "Paramètres, qui plante sans lui. « Rétablir » le remet en automatique.",
+                Apply  = () => Sys.ConfigureService("SensorService", "demand", true, false),
+                Revert = () => Sys.ConfigureService("SensorService", "auto", false, true),
+                // « Appliqué » = le service ne démarre plus tout seul. Manuel ET désactivé
+                // remplissent ce contrat : une machine déjà réglée par une ancienne version d'ONYX
+                // (donc désactivée) n'est pas signalée comme dérivée pour autant.
+                Check  = () => !Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\SensorService", "Start"), 2)
             });
 
             // ================= LOT SUPPLÉMENTAIRE 7 =================
@@ -2164,7 +2482,7 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "dns_priority", Category = Cat.Reseau, Esport = true,
+                Id = "dns_priority", Category = Cat.Reseau, Esport = true, Reboot = true,
                 Name = "Prioriser la résolution locale des noms (DNS plus réactif)",
                 Desc = "Réordonne les fournisseurs de résolution pour privilégier le cache/hosts/DNS local avant NetBIOS : résolution de noms plus rapide. « Rétablir » remet les priorités Windows.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" },
@@ -2446,7 +2764,10 @@ namespace BTOptimizer
                     Sys.SetUser(@"Control Panel\Desktop", "MenuShowDelay", "400", RegistryValueKind.String);
                     Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout", "5000", RegistryValueKind.String);
                 },
+                // Idem : le délai de menu est en ruche utilisateur, le délai des services en ruche
+                // machine. Les deux ou rien.
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Desktop", "MenuShowDelay"), "8")
+                           && Sys.StrEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control", "WaitToKillServiceTimeout"), "2000")
             });
 
             list.Add(new Tweak
@@ -2522,7 +2843,10 @@ namespace BTOptimizer
                     Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground");
                     Sys.DelUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle");
                 },
+                // La stratégie (machine) ET l'interrupteur global (utilisateur) : Windows regarde
+                // les deux, et l'un sans l'autre laisse des applications tourner en fond.
                 Check = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\AppPrivacy", "LetAppsRunInBackground"), 2)
+                           && Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\Windows\CurrentVersion\Search", "BackgroundAppGlobalToggle"), 0)
             });
 
             list.Add(new Tweak

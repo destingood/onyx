@@ -53,9 +53,15 @@ namespace BTOptimizer
             var note = new Label
             {
                 Location = new Point(18, 60), Size = new Size(564, 58), ForeColor = Color.FromArgb(90, 94, 102),
+                // La note annonçait « des dossiers temporaires connus ». C'était plus rassurant que
+                // vrai : le périmètre autorisé couvre aussi AppData (Local ET Roaming) et
+                // ProgramData, où vivent des réglages, pas seulement des caches. On nomme donc les
+                // emplacements réels — l'utilisateur décide sur ce que le code fait, pas sur une
+                // formule plus douce.
                 Text = "Règles communautaires (base winapp2.ini, comme BleachBit). MODE SÛR : ONYX ne touche "
-                     + "JAMAIS au registre, ne supprime que des fichiers cache sous des dossiers temporaires connus, "
-                     + "n'affiche que les applications installées, et ne coche rien d'office. Vérifie la sélection avant de nettoyer."
+                     + "JAMAIS au registre, ne supprime jamais un dossier, et refuse tout chemin hors de "
+                     + "TEMP, AppData (Local et Roaming), ProgramData et le dossier Public — sous-dossiers "
+                     + "uniquement, jamais ces racines elles-mêmes. Rien n'est coché d'office : vérifie la sélection."
             };
             Controls.Add(note);
 

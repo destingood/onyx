@@ -22,6 +22,7 @@ namespace BTOptimizer
         private bool _running, _done;
         private double _avg = double.NaN, _low1 = double.NaN, _low01 = double.NaN, _worstMs = double.NaN, _liveFps = double.NaN;
         private long _frames;
+        private double _couvertS, _demandeS;   // duree reellement couverte vs duree de la capture
         private string _game;
 
         private Panel _canvas;
@@ -104,7 +105,7 @@ namespace BTOptimizer
                 return;
             }
             _etw.Reset();
-            _avg = _low1 = _low01 = _worstMs = _liveFps = double.NaN; _frames = 0; _game = null;
+            _avg = _low1 = _low01 = _worstMs = _liveFps = double.NaN; _frames = 0; _game = null; _couvertS = _demandeS = 0;
             _running = true; _done = false;
             _sw = Stopwatch.StartNew();
             _btnStart.Enabled = false; _dur.Enabled = false; _btnCopy.Enabled = false;
@@ -116,7 +117,10 @@ namespace BTOptimizer
         private void Tick()
         {
             if (!_running) return;
-            try { var ps = _etw.Snapshot(2000); _liveFps = ps.Count > 0 ? ps[0].Fps : double.NaN; } catch { }
+            // Le jeu mesure, c'est celui au premier plan : pendant un banc d'essai, un navigateur
+            // accelere presente plus vite qu'un jeu bride a 60 Hz et prendrait sa place.
+            try { var j = FpsEtw.ChoisirJeu(_etw.Snapshot(2000), FpsEtw.PidPremierPlan());
+                  _liveFps = j != null ? j.Fps : double.NaN; } catch { }
             if (_durSec > 0 && _sw.Elapsed.TotalSeconds >= _durSec) Finish();
             else _canvas.Invalidate();
         }
@@ -129,10 +133,15 @@ namespace BTOptimizer
             try
             {
                 var ps = _etw.Snapshot(Math.Max(1000, windowMs));
-                if (ps.Count > 0)
+                var choisi = FpsEtw.ChoisirJeu(ps, FpsEtw.PidPremierPlan());
+                if (choisi != null)
                 {
-                    var t = ps[0];
+                    var t = choisi;
                     _game = t.Name; _avg = t.Fps; _low1 = t.OnePctLowFps; _low01 = t.TenthPctLowFps; _worstMs = t.WorstMs; _frames = t.Total;
+                    // Ce que les chiffres couvrent VRAIMENT : l'historique de frametimes est borné
+                    // en temps, une capture plus longue n'en garde pas davantage.
+                    _couvertS = t.FenetreMs / 1000.0;
+                    _demandeS = windowMs / 1000.0;
                 }
             }
             catch { }
@@ -157,6 +166,21 @@ namespace BTOptimizer
             catch { }
         }
 
+        /// <summary>
+        /// Ce que les chiffres couvrent réellement. L'historique de frametimes est borné en temps :
+        /// une capture de deux minutes ne résume que sa fin. L'utilisateur qui compare deux runs
+        /// doit le savoir, sans quoi il croit comparer deux minutes de jeu.
+        /// </summary>
+        private string Couverture()
+        {
+            if (_couvertS <= 0) return "durée inconnue";
+            string c = _couvertS.ToString("0") + " s";
+            if (_demandeS > _couvertS + 1.5)
+                c += " (les " + _couvertS.ToString("0") + " dernières secondes de la capture de "
+                   + _demandeS.ToString("0") + " s : l'historique de frametimes ne va pas au-delà)";
+            return c;
+        }
+
         private string SummaryText()
         {
             return "ONYX — Benchmark FPS" + (string.IsNullOrEmpty(_game) ? "" : " (" + _game + ")") + "\n"
@@ -164,7 +188,8 @@ namespace BTOptimizer
                  + "1% low  : " + (_low1 > 0 ? _low1.ToString("0") : "n/d") + " FPS\n"
                  + "0.1% low: " + (_low01 > 0 ? _low01.ToString("0") : "n/d") + " FPS\n"
                  + "Pire frame : " + (_worstMs > 0 ? _worstMs.ToString("0.0") + " ms" : "n/d") + "\n"
-                 + "Images : " + _frames;
+                 + "Images : " + _frames + "\n"
+                 + "Mesure sur : " + Couverture();
         }
 
         private void PaintBody(object sender, PaintEventArgs e)
@@ -225,8 +250,9 @@ namespace BTOptimizer
             Metric(g, w / 2 + 6, 150, "PIRE FRAME", _worstMs, "ms", _worstMs <= 20 ? neon : _worstMs <= 40 ? Color.FromArgb(220, 170, 40) : Color.FromArgb(210, 90, 70));
 
             using (var f = new Font("Segoe UI", 9f))
-                TextRenderer.DrawText(g, _frames + " images mesurées. « Copier le résumé » pour comparer avant/après.", f,
-                    new Point(30, 256), dim, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, _frames + " images présentées · chiffres calculés sur " + Couverture()
+                    + ".\n« Copier le résumé » pour comparer avant/après — à conditions de jeu identiques, sans quoi la comparaison ne prouve rien.", f,
+                    new Rectangle(30, 250, w - 60, 34), dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
         }
 
         private void Metric(Graphics g, int x, int y, string label, double value, string unit, Color col)

@@ -6,7 +6,7 @@ using System.Management;
 namespace BTOptimizer
 {
     /// <summary>Action corrective proposée à côté d'un constat.</summary>
-    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings }
+    public enum FixKind { None, CleanDisk, Timer1ms, DisableVbs, OpenRestore, WindowsUpdate, DisableCoreSync, DisableSdm, DisplaySettings, BiosGuide, CleanJunk, ReapplyTweaks, DeviceManager, NvLatencySafe, AudioPanel, CleanPowerPlans, CbsReport, SettingsCrash, HyperviseurInfo }
 
     /// <summary>Analyse l'état du système et produit des constats actionnables (niveau : 0 OK, 1 attention, 2 problème).</summary>
     internal static class Diagnostics
@@ -25,17 +25,41 @@ namespace BTOptimizer
         {
             var f = new List<Finding>();
 
-            // Espace disque système
+            // Espace disque — TOUS les disques fixes, pas seulement le disque système. Les jeux vivent
+            // sur D:/E:/F: et c'est justement là que le manque de place fait le plus mal : sous ~10 %
+            // de libre, un SSD voit son cache d'écriture fondre, le ramasse-miettes tourne en boucle
+            // et le débit s'effondre à quelques Mo/s — chargements interminables et disque « à 100 % »
+            // dans le Gestionnaire des tâches alors que rien de lourd ne tourne. Ne regarder que C:
+            // laissait passer exactement ce cas-là.
             try
             {
-                string root = Path.GetPathRoot(Environment.SystemDirectory);
-                var d = new DriveInfo(root);
-                long freeGB = d.AvailableFreeSpace / 1000000000;
-                double pct = d.TotalSize > 0 ? 100.0 * d.AvailableFreeSpace / d.TotalSize : 100;
-                if (pct < 10 || freeGB < 20)
-                    f.Add(new Finding(2, "Disque système presque plein (" + freeGB + " Go libres) — libère de l'espace.", FixKind.CleanDisk, "Nettoyer"));
-                else
-                    f.Add(new Finding(0, "Espace disque système correct (" + freeGB + " Go libres)."));
+                string sysRoot = (Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\").ToUpperInvariant();
+                foreach (DriveInfo d in DriveInfo.GetDrives())
+                {
+                    try
+                    {
+                        if (d.DriveType != DriveType.Fixed || !d.IsReady) continue;
+                        string root = d.RootDirectory.FullName;
+                        bool isSystem = string.Equals(root.ToUpperInvariant(), sysRoot, StringComparison.Ordinal);
+                        long freeGB = d.AvailableFreeSpace / 1000000000;
+                        double pct = d.TotalSize > 0 ? 100.0 * d.AvailableFreeSpace / d.TotalSize : 100;
+                        string who = isSystem ? "Disque système (" + root.TrimEnd('\\') + ")" : "Disque " + root.TrimEnd('\\');
+                        string etat = freeGB + " Go libres, " + Math.Round(pct) + " %";
+
+                        // Le disque système a besoin d'un matelas en valeur absolue (mises à jour,
+                        // fichier d'échange, points de restauration) ; les disques de données, eux,
+                        // ne souffrent que du pourcentage.
+                        if (pct < 10 || (isSystem && freeGB < 20))
+                            f.Add(new Finding(2, who + " presque plein (" + etat + ") — sous 10 % de libre, un SSD s'effondre : chargements lents et disque bloqué à 100 %.",
+                                isSystem ? FixKind.CleanDisk : FixKind.CleanJunk, isSystem ? "Nettoyer" : "Trouver le poids mort"));
+                        else if (pct < 15)
+                            f.Add(new Finding(1, who + " se remplit (" + etat + ") — vise 15 % de libre pour garder ses performances.",
+                                isSystem ? FixKind.CleanDisk : FixKind.CleanJunk, isSystem ? "Nettoyer" : "Trouver le poids mort"));
+                        else
+                            f.Add(new Finding(0, who + " : espace correct (" + etat + ")."));
+                    }
+                    catch { }
+                }
             }
             catch { }
 
@@ -49,9 +73,96 @@ namespace BTOptimizer
             // Vitesse RAM (XMP/EXPO)
             Sys.RamInfo ram = Sys.QueryRam();
             if (ram.SpeedRated > 0 && ram.SpeedRunning > 0 && ram.SpeedRunning < ram.SpeedRated - 50)
-                f.Add(new Finding(1, "RAM à " + ram.SpeedRunning + " MT/s au lieu de " + ram.SpeedRated + " — active le profil XMP/EXPO dans le BIOS."));
+            {
+                // Constat de niveau 2 quand la perte dépasse 20 % : sur un PC bridé par le processeur,
+                // c'est LE gain gratuit le plus important (jusqu'à 10-20 % de FPS déjà payés). Le
+                // profil se règle dans le firmware, donc aucune correction automatique n'est possible :
+                // le bouton ouvre le guide BIOS pas-à-pas au lieu de laisser l'utilisateur sans issue.
+                int perte = (int)Math.Round(100.0 * (ram.SpeedRated - ram.SpeedRunning) / ram.SpeedRated);
+                f.Add(new Finding(perte >= 20 ? 2 : 1,
+                    "RAM à " + ram.SpeedRunning + " MT/s au lieu des " + ram.SpeedRated + " MT/s de tes barrettes (−" + perte
+                    + " %) — le profil XMP/EXPO n'est pas activé dans le BIOS : ce sont des FPS gratuits que tu as déjà payés.",
+                    FixKind.BiosGuide, "Guide BIOS"));
+            }
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
+
+            // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
+            // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
+            // qu'il héberge qui travaille.
+            try
+            {
+                SvcHost.Groupe g = SvcHost.PlusGourmand(SvcHost.Mesure(800));
+                string sv = SvcHost.Verdict(g, 6.0);
+                if (sv != null)
+                    f.Add(new Finding(SvcHost.EstTravailLegitime(g.Services) ? 0 : 1, sv));
+            }
+            catch { }
+
+            // LOGICIELS QUI INTERROGENT LES CAPTEURS — sur une machine dont les réglages sont
+            // déjà faits, c'est ce qui reste, et aucun réglage ne peut le compenser.
+            try
+            {
+                var sondes = SondesMaterielles.EnCours();
+                string ts = SondesMaterielles.Texte(sondes);
+                if (ts != null) f.Add(new Finding(SondesMaterielles.Niveau(sondes.Count), ts));
+            }
+            catch { }
+
+            // PÉRIPHÉRIQUE EN PANNE — la première chose à regarder devant des saccades.
+            //
+            // Un appareil dont le pilote a échoué à démarrer, ou qui se dispute une ressource avec
+            // un autre, ne se contente pas de « ne pas marcher » : son pilote peut réessayer en
+            // boucle et monopoliser un cœur en interruption. C'est une des causes les plus
+            // fréquentes de latence DPC, et l'une des rares qui se voient d'un coup d'œil.
+            //
+            // ONYX savait déjà les détecter — mais seulement dans une fenêtre qu'il fallait penser
+            // à ouvrir. Le constat remonte maintenant tout seul dans le diagnostic.
+            try
+            {
+                var soucis = DeviceInfo.Problems(DeviceInfo.ListAll());
+                if (soucis != null && soucis.Count > 0)
+                {
+                    string liste = "";
+                    for (int i = 0; i < soucis.Count && i < 3; i++)
+                        liste += (liste.Length > 0 ? ", " : "") + soucis[i].Name;
+                    if (soucis.Count > 3) liste += "…";
+                    f.Add(new Finding(1, soucis.Count + " périphérique(s) en panne (" + liste
+                        + ") — un pilote qui échoue peut réessayer en boucle et monopoliser un cœur, "
+                        + "ce qui se voit en saccades audio et vidéo.",
+                        FixKind.DeviceManager, "Voir les périphériques"));
+                }
+            }
+            catch { }
+
+            // Wi-Fi alors qu'une prise Ethernet dort derrière la machine : le gain de latence le
+            // plus net, et le seul qui ne se règle pas dans un menu — il se branche.
+            try
+            {
+                LienReseau.Etat lien = LienReseau.Lire();
+                string verdict = LienReseau.Verdict(lien);
+                if (verdict != null) f.Add(new Finding(1, verdict, FixKind.DeviceManager, "Gestionnaire de périphériques"));
+                else if (lien.FilaireActif) f.Add(new Finding(0, "Connexion filaire active — pas de gigue Wi-Fi."));
+
+                // QUALITÉ du lien radio. « Tu es en Wi-Fi » ne suffit pas : un lien à 93 % sur
+                // 5 GHz et un lien à 35 % sur 2,4 GHz saturé n'ont rien à voir. Et quand le lien
+                // est bon, on le dit — pour cesser de chercher de ce côté.
+                if (lien.SansFilActif)
+                {
+                    WifiLink.Etat radio = WifiLink.Lire();
+                    string vw = WifiLink.Verdict(radio);
+                    if (vw != null) f.Add(new Finding(WifiLink.Niveau(radio), vw));
+                }
+            }
+            catch { }
+
+            // Cartes réseau apparues APRÈS l'application du réglage anti-Nagle : elles ne l'ont pas.
+            try
+            {
+                string nagle = NagleGuard.Texte(NagleGuard.Inventaire());
+                if (nagle != null) f.Add(new Finding(1, nagle, FixKind.ReapplyTweaks, "Réappliquer"));
+            }
+            catch { }
 
             // Âge du pilote GPU
             int days = GpuDriverAgeDays();
@@ -64,6 +175,24 @@ namespace BTOptimizer
             object hvci = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
             if (Sys.IntEquals(hvci, 1))
                 f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu.", FixKind.DisableVbs, "Désactiver"));
+
+            // L'hyperviseur qui tourne SANS que HVCI soit actif : le test ci-dessus le ratait
+            // entièrement. Sur une machine où WSL2 ou Docker a été installé, c'est la « Plateforme
+            // de machine virtuelle » qui démarre l'hyperviseur au boot — les clés de registre VBS
+            // n'y changent rien, et Windows continue de s'exécuter au-dessus de lui.
+            try
+            {
+                Hyperviseur.Etat hv = Hyperviseur.Lire();
+                if (hv.HyperviseurActif && !Sys.IntEquals(hvci, 1))
+                {
+                    // Niveau 2 seulement quand il ne rend RIEN : payer pour une protection réelle
+                    // est un choix défendable, payer pour rien ne l'est pas.
+                    bool pure = Hyperviseur.CouteSansRienRendre(hv.HyperviseurActif, hv.ServicesEnCours);
+                    f.Add(new Finding(pure ? 2 : 1, Hyperviseur.Explique(hv), FixKind.HyperviseurInfo,
+                        "Comprendre"));
+                }
+            }
+            catch { }
 
             // Samsung CoreSync (synchro d'éclairage des moniteurs Odyssey) — capture
             // l'écran en continu : cause connue de saccades / pertes de FPS en jeu.
@@ -123,6 +252,133 @@ namespace BTOptimizer
             }
             catch { }
 
+            // Réglages ONYX annulés par Windows. Une mise à jour de fonctionnalité, une
+            // réinstallation de pilote graphique ou un autre « optimiseur » remettent
+            // silencieusement des valeurs par défaut : l'utilisateur croit son PC réglé alors que
+            // la moitié des optimisations est retombée, et il cherche la perte d'images ailleurs.
+            try
+            {
+                List<TweakDrift.Drifted> drift = TweakDrift.Detect();
+                if (drift.Count > 0)
+                {
+                    string quand = "";
+                    DateTime plus = DateTime.MinValue;
+                    foreach (var d in drift) if (d.When > plus) plus = d.When;
+                    if (plus != DateTime.MinValue) quand = ", appliqué(s) le " + plus.ToString("dd/MM/yyyy");
+                    f.Add(new Finding(drift.Count >= 5 ? 2 : 1,
+                        drift.Count + " réglage(s) ONYX ont été ANNULÉS par Windows" + quand
+                        + " — souvent après une mise à jour ou une réinstallation de pilote.",
+                        FixKind.ReapplyTweaks, "Ré-appliquer"));
+                }
+            }
+            catch { }
+
+            // Profil pilote NVIDIA « Ultra faible latence » posé par ONYX alors que la machine est
+            // limitée par le PROCESSEUR. Ultra + 1 image pré-rendue suppriment la file d'attente de
+            // rendu — or c'est ce tampon qui absorbe les à-coups du CPU. Sur une machine limitée par
+            // le processeur, l'app faisait donc PERDRE des images en croyant gagner de la latence :
+            // GPU qui traîne à 40 % pendant que le CPU sature, et des chutes brutales à chaque pic.
+            try
+            {
+                NvProfile.Kind pose; DateTime posele;
+                if (NvProfile.Applique(out pose, out posele) && pose == NvProfile.Kind.Ultra)
+                {
+                    double cpuAvg, gpuAvg; DateTime quand;
+                    bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand);
+                    string le = posele == DateTime.MinValue ? "" : " (appliqué le " + posele.ToString("dd/MM/yyyy") + ")";
+                    if (mesure && NvProfile.UltraNocif(cpuAvg, gpuAvg))
+                        f.Add(new Finding(2,
+                            "Profil NVIDIA « Ultra faible latence »" + le + " alors que ta machine est limitée par le PROCESSEUR "
+                            + "(CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " % en jeu) — il supprime la file de rendu "
+                            + "qui amortit les à-coups du CPU : tu perds des images et tu prends des chutes brutales.",
+                            FixKind.NvLatencySafe, "Profil sûr"));
+                    else if (!mesure)
+                        f.Add(new Finding(1,
+                            "Profil NVIDIA « Ultra faible latence »" + le + " : bénéfique seulement si ta carte graphique travaille à fond. "
+                            + "Si c'est ton processeur qui limite, il te COÛTE des images. Lance la mesure « qui me limite ? » en jeu pour trancher.",
+                            FixKind.NvLatencySafe, "Profil sûr"));
+                }
+            }
+            catch { }
+
+            // Écran virtuel actif (Parsec, spacedesk, Sunshine…). Ces cartes graphiques factices
+            // restent branchées longtemps après qu'on a cessé de s'en servir : le jeu peut se
+            // retrouver rendu dessus (donc recomposé au lieu d'aller droit à l'écran), et elles
+            // sont une cause connue d'erreurs de pilote à répétition et de saccades.
+            try
+            {
+                foreach (string v in VirtualDisplays())
+                    f.Add(new Finding(1, "Écran virtuel actif : « " + v + " » — un jeu lancé dessus perd des images, "
+                        + "et ces cartes factices provoquent des erreurs de pilote à répétition. Désactive-la si tu ne joues pas à distance.",
+                        FixKind.DeviceManager, "Gestionnaire"));
+            }
+            catch { }
+
+            // Une page des Paramètres Windows qui plante. Le journal d'événements ne donne qu'une
+            // enveloppe (0xc000027b) ; le motif réel est dans le vidage mémoire, et il désigne
+            // souvent un service désactivé par un « optimiseur » — le nôtre compris.
+            try
+            {
+                SettingsCrash.Rapport rc = SettingsCrash.DernierRapport();
+                if (rc != null)
+                {
+                    List<SettingsCrash.Suspect> sus = SettingsCrash.SuspectsMachine(rc);
+                    string quoi = "Une page des Paramètres Windows plante (" + rc.Page + ")";
+                    if (sus.Count > 0)
+                        f.Add(new Finding(2, quoi + " — un service désactivé est en cause. ONYX sait lequel et peut le "
+                            + "réparer sans annuler tes optimisations.", FixKind.SettingsCrash, "Enquêter"));
+                    else
+                        f.Add(new Finding(1, quoi + " — ONYX a lu la cause exacte dans le rapport de plantage.",
+                            FixKind.SettingsCrash, "Voir la cause"));
+                }
+            }
+            catch { }
+
+            // Réparations Windows restées en échec. « Windows Resource Protection a trouvé des
+            // fichiers endommagés mais n'a pas pu en réparer certains » : le message s'arrête là et
+            // l'utilisateur relance SFC en boucle. La raison est écrite dans CBS.log — on la lit.
+            try
+            {
+                List<CbsLog.Constat> cbs = CbsLog.AnalyseMachine();
+                if (CbsLog.Grave(cbs))
+                    f.Add(new Finding(2, "Le journal de réparation de Windows signale des fichiers système que SFC "
+                        + "n'a PAS pu réparer — relancer SFC seul n'y changera rien tant que l'image n'est pas restaurée.",
+                        FixKind.CbsReport, "Voir la cause"));
+            }
+            catch { }
+
+            // Latence audio : deux réglages coûtent réellement des millisecondes. On ne signale que
+            // ce qui est EXPLICITEMENT mauvais dans le registre — une valeur absente signifie que
+            // Windows applique son défaut, ce qui ne prouve rien et ne mérite pas d'alerte.
+            try
+            {
+                List<AudioLatency.Sortie> sorties = AudioLatency.Sorties();
+                List<AudioLatency.Sortie> excl = AudioLatency.ExclusifRefuse(sorties);
+                if (excl.Count > 0)
+                    f.Add(new Finding(1, "Mode exclusif refusé sur " + AudioLatency.Noms(excl, 2)
+                        + " — une application (jeu, logiciel audio) ne peut pas parler directement à la carte son : "
+                        + "tout repasse par le mélangeur de Windows.", FixKind.AudioPanel, "Panneau Son"));
+                List<AudioLatency.Sortie> amel = AudioLatency.AmeliorationsActives(sorties);
+                if (amel.Count > 0)
+                    f.Add(new Finding(1, "Améliorations audio actives sur " + AudioLatency.Noms(amel, 2)
+                        + " — chaque effet (égalisation, spatialisation, réduction de bruit) est un calcul de plus "
+                        + "avant la sortie du son.", FixKind.AudioPanel, "Panneau Son"));
+            }
+            catch { }
+
+            // Plans d'alimentation en double : chaque script « boost » qui fait un
+            // powercfg -duplicatescheme en crée un de plus, même nom, GUID différent. Sans gravité
+            // pour les performances, mais on ne sait plus lequel on règle.
+            try
+            {
+                List<PowerPlans.Plan> doublons = PowerPlans.Doublons(PowerPlans.Lister());
+                if (doublons.Count > 0)
+                    f.Add(new Finding(1, doublons.Count + " plan(s) d'alimentation en double — laissés par des scripts "
+                        + "d'optimisation successifs. Le plan actif et ceux de Windows ne sont pas concernés.",
+                        FixKind.CleanPowerPlans, "Nettoyer"));
+            }
+            catch { }
+
             // Restauration système
             try
             {
@@ -133,6 +389,133 @@ namespace BTOptimizer
             catch { }
 
             return f;
+        }
+
+        // Cartes graphiques factices créées par les logiciels de jeu à distance / d'écran
+        // déporté. « Basic Display Adapter » n'est PAS dans la liste : c'est un pilote manquant,
+        // un autre sujet, traité ailleurs.
+        private static readonly string[] VirtualGpuMarks =
+        {
+            "parsec", "spacedesk", "sunshine", "virtual display", "idd driver",
+            "usb display", "duet display", "amyuni", "mirage driver"
+        };
+
+        /// <summary>Noms des adaptateurs d'affichage virtuels ACTIFS (code d'erreur 0 = en service).</summary>
+        public static List<string> VirtualDisplays()
+        {
+            var list = new List<string>();
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name,ConfigManagerErrorCode FROM Win32_VideoController"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["Name"]) ?? "";
+                        if (name.Length == 0) continue;
+                        string low = name.ToLowerInvariant();
+                        bool virtuel = false;
+                        foreach (var m in VirtualGpuMarks) if (low.Contains(m)) { virtuel = true; break; }
+                        if (!virtuel) continue;
+                        int err = -1;
+                        try { err = Convert.ToInt32(mo["ConfigManagerErrorCode"]); } catch { }
+                        if (err != 0) continue;      // déjà désactivé : rien à signaler
+                        list.Add(name);
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        public sealed class DriveKind
+        {
+            public string Name;          // modèle du disque physique
+            public int MediaType;        // 3 = HDD, 4 = SSD
+            public int BusType;          // 17 = NVMe, 11 = SATA, 7 = USB…
+            public bool IsSsd { get { return MediaType == 4; } }
+            public bool IsNvme { get { return BusType == 17; } }
+            /// <summary>Étiquette lisible : ce qui change VRAIMENT les temps de chargement.</summary>
+            public string Label
+            {
+                get
+                {
+                    if (MediaType == 3) return "disque MÉCANIQUE (HDD)";
+                    if (MediaType == 4) return BusType == 17 ? "SSD NVMe (le plus rapide)" : "SSD SATA";
+                    return BusType == 7 ? "disque externe/USB" : "type inconnu";
+                }
+            }
+        }
+
+        /// <summary>Type de disque PAR LETTRE de lecteur (C:, D:…) — via partition → disque physique.
+        /// Sert à dire si un jeu est installé sur un support lent.</summary>
+        public static System.Collections.Generic.Dictionary<char, DriveKind> DriveTypes()
+        {
+            var map = new System.Collections.Generic.Dictionary<char, DriveKind>();
+            try
+            {
+                var scope = new ManagementScope(@"\\.\root\microsoft\windows\storage");
+                scope.Connect();
+                var byDisk = new System.Collections.Generic.Dictionary<int, DriveKind>();
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DeviceId, MediaType, BusType, FriendlyName FROM MSFT_PhysicalDisk")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        int id; if (!int.TryParse(Convert.ToString(mo["DeviceId"]), out id)) continue;
+                        int mt = 0, bt = 0;
+                        try { mt = Convert.ToInt32(mo["MediaType"]); } catch { }
+                        try { bt = Convert.ToInt32(mo["BusType"]); } catch { }
+                        byDisk[id] = new DriveKind { Name = Convert.ToString(mo["FriendlyName"]) ?? "", MediaType = mt, BusType = bt };
+                    }
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT DriveLetter, DiskNumber FROM MSFT_Partition")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string dl = Convert.ToString(mo["DriveLetter"]);
+                        if (string.IsNullOrEmpty(dl) || dl == "\0") continue;
+                        int dn; if (!int.TryParse(Convert.ToString(mo["DiskNumber"]), out dn)) continue;
+                        DriveKind k;
+                        if (byDisk.TryGetValue(dn, out k)) map[char.ToUpperInvariant(dl[0])] = k;
+                    }
+            }
+            catch { }
+            return map;
+        }
+
+        public sealed class DiskHp { public string Name; public int Status; public int SizeGb; public bool IsSsd; }
+
+        /// <summary>Santé SMART des disques physiques (WMI Storage : HealthStatus 0=sain, 1=avertissement,
+        /// 2=défaillant). Windows la connaît mais ne la montre jamais — ONYX prévient AVANT la panne.</summary>
+        public static System.Collections.Generic.List<DiskHp> DiskHealth()
+        {
+            var list = new System.Collections.Generic.List<DiskHp>();
+            try
+            {
+                var scope = new ManagementScope(@"\\.\root\microsoft\windows\storage");
+                scope.Connect();
+                using (var s = new ManagementObjectSearcher(scope, new ObjectQuery("SELECT FriendlyName, MediaType, HealthStatus, Size FROM MSFT_PhysicalDisk")))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["FriendlyName"]) ?? "";
+                        if (name.Length == 0) continue;
+                        int st = 0, mt = 0; long size = 0;
+                        try { st = Convert.ToInt32(mo["HealthStatus"]); } catch { }
+                        try { mt = Convert.ToInt32(mo["MediaType"]); } catch { }
+                        try { size = Convert.ToInt64(mo["Size"]); } catch { }
+                        int gb = (int)(size / 1073741824);
+                        if (gb < 32 && st == 0) continue;   // clés USB & lecteurs de cartes : hors-sujet si sains
+                        list.Add(new DiskHp { Name = name, Status = st, SizeGb = gb, IsSsd = mt == 4 });
+                    }
+            }
+            catch { }
+            return list;
+        }
+
+        /// <summary>0 → « sain », 1 → « avertissement », 2 → « DÉFAILLANT ». Français, sans jargon.</summary>
+        public static string DiskHealthLabel(int status)
+        {
+            switch (status)
+            {
+                case 0: return "sain";
+                case 1: return "avertissement (pré-panne possible)";
+                case 2: return "DÉFAILLANT — panne imminente";
+                default: return "état inconnu (" + status + ")";
+            }
         }
 
         public sealed class GpuDrv { public string Name; public string Version; public int AgeDays; }

@@ -4,7 +4,7 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v15.34 — 💽 CENTRE DE STOCKAGE : une 9e page qui fait la part des choses
+## Intégration — 💽 CENTRE DE STOCKAGE (branche locale, fusionné sur 15.73)
 - **Nouvelle page « Stockage »** dans la barre latérale. Onyx savait déjà nettoyer, mesurer le disque et
   repérer les jeux oubliés — mais en pièces détachées. Tout est désormais réuni en trois zones :
   - **Tes disques** : une jauge par disque, verdict en couleur, et la **part récupérable dessinée en vert
@@ -41,6 +41,973 @@ anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assem
   complet des applications.
 - Harnais **172/172** ; UITEST **9 pages** à 3 tailles et **48/48** formes, 0 erreur. Nouveau hook
   `BT_STORAGE=1` (analyse réelle en console, lecture seule).
+
+## v15.73 — Les quatorze outils du Laboratoire passés au banc d'essai
+
+Chaque outil a été confronté à la machine plutôt qu'au raisonnement : l'IPC de Discord interrogé en
+direct, la rampe gamma écrite puis relue, `nvidia-smi` questionné champ par champ, une jonction NTFS
+créée pour tester une évasion de périmètre. Plusieurs hypothèses de départ se sont révélées fausses
+et ont été abandonnées en cours de route.
+
+Un même défaut revient partout : **le code savait, ou pouvait savoir, et ne regardait pas.** Un
+`catch` vide, un code de retour ignoré, une relecture faite juste avant d'affirmer le contraire.
+
+### Trois outils ne faisaient rien du tout
+
+Le **filtre couleur** écrivait la rampe gamma sur le contexte du bureau, que Windows refuse sur un
+poste à plusieurs écrans : la fonction était inerte. Elle écrit désormais écran par écran — et donc
+sur tous les écrans, pas seulement le principal.
+
+Le **nettoyage avancé** interrompait toute son exploration au premier dossier interdit. Sur
+`%LOCALAPPDATA%`, qui en contient dès la racine : 1 fichier trouvé au lieu de plus de 200 000. La
+liste restait donc vide et l'outil se taisait, au lieu de dire qu'il ne pouvait pas lire.
+
+Le bouton **Panneau NVIDIA** lançait `nvcpl.cpl`, retiré des pilotes depuis des années. Trois guides
+avaient ce bouton mort, et l'échec était avalé sans un mot.
+
+### Trois chiffres étaient faux
+
+Le **benchmark FPS** divisait par la durée demandée alors que les frametimes ne sont conservés que
+20 secondes : un banc d'essai d'une minute annonçait le tiers du vrai résultat, deux minutes le
+sixième. Le compteur en direct, lui, était juste — on voyait donc 300 FPS pendant la mesure puis un
+résumé à 100.
+
+Le **test de débit** lançait son chronomètre avant d'ouvrir la connexion. Mesuré : 181 ms de mise en
+place pour 142 ms de transfert réel. 617,9 Mb/s affichés là où le lien en faisait 1404,5.
+
+Le **compteur FPS** choisissait le processus le plus rapide qui ne fût pas système. Sur neuf
+scénarios, il en désignait sept de travers : Chrome, Discord, OBS, Steam et VLC pouvaient s'afficher
+sous le nom du jeu.
+
+### Deux risques n'étaient pas couverts
+
+**Objectif 500 FPS** écrivait le nouveau mode d'affichage dans le registre *avant* que l'utilisateur
+ait confirmé voir son écran. Si le retour automatique échouait, l'écran noir survivait au
+redémarrage. Le mode est maintenant appliqué sans être mémorisé, et gravé seulement après le clic —
+un redémarrage suffit désormais à tout rattraper. Le bouton par défaut a aussi été inversé : devant
+un écran noir, une touche Entrée tapée au hasard figeait le mauvais réglage.
+
+Le **nettoyage avancé** pouvait sortir de son périmètre : une jonction placée sous un dossier
+autorisé menait la suppression ailleurs. Deux verrous désormais, dont une revérification de chaque
+fichier juste avant de le détruire.
+
+### Ce qui tournait sans se voir
+
+Masquer l'**overlay de stats** arrêtait l'échantillonnage mais laissait ouverte sa session de mesure
+d'images — un événement par image présentée, par tous les processus, indéfiniment. Trois overlays
+gardaient par ailleurs un minuteur qui battait pour une fenêtre invisible.
+
+Le panneau **thermique** lançait six processus `nvidia-smi` par cycle ; il n'en lance plus qu'un.
+
+### Le démarrage automatique avait cassé deux choses
+
+En passant au lancement automatique 30 secondes après l'ouverture de session, ONYX arrive désormais
+*avant* Discord et parfois avant le Wi-Fi. Deux fonctions supposaient le contraire :
+
+- la **présence Discord** tentait une connexion, une seule, puis abandonnait pour toute la session ;
+- la **vérification de mise à jour** marquait sa journée comme faite *avant* d'appeler GitHub : sans
+  réseau au démarrage, la journée entière était perdue.
+
+Les deux réessaient maintenant, et un rattrapage périodique couvre le cas d'une session qui reste
+ouverte toute la journée.
+
+### Compter les installations
+
+ONYX peut envoyer, une fois par jour au plus, **trois informations** : un identifiant de machine
+haché, sa version, et le numéro de build de Windows. Rien d'autre — ni nom, ni matériel, ni jeux, ni
+réglages.
+
+L'identifiant est **pseudonyme, pas anonyme** : il est stable, donc il désigne toujours la même
+machine. On ne peut pas remonter jusqu'à elle, mais le dire « anonyme » serait faux. Le réglage est
+visible dans Système et se coupe en un clic, et une entrée de menu énumère les trois champs sans
+enrobage.
+
+### Aussi
+
+- Le **viseur** garantissait sa taille par un fichier texte : des valeurs trafiquées donnaient une
+  fenêtre de 156 016 pixels de côté, ce que l'en-tête du fichier interdit explicitement pour ne pas
+  faire chuter les FPS des jeux sans bordure.
+- La fenêtre **Overclock** refusait de s'ouvrir si la carte était bridée au minimum du pilote.
+- Le **bench disque** traitait un SSD lent de disque mécanique, et affichait `-1 Mo/s` en cas
+  d'échec de mesure.
+- Le **test manette** déduisait le type de câble du seul débit, et conseillait l'USB à une manette
+  déjà filaire.
+- Le bouton **Redémarrer dans le BIOS** ne lisait pas le résultat de sa commande : on validait un
+  avertissement inquiétant, et il ne se passait parfois rien.
+
+### Limites assumées
+
+Aucune manette n'était branchée pendant l'audit, la fréquence d'écran n'a pas été réellement
+basculée, et le cycle masquer/réafficher de l'overlay n'a pas été exercé. Ces trois points reposent
+sur la lecture du code, pas sur l'observation.
+
+## v15.72 — La répartition des minuteurs entre dans le préréglage eSport
+
+Le réglage **« Répartir l'expiration des minuteurs sur tous les cœurs »**, introduit hors préréglage
+en 15.71, rejoint **eSport** (qui passe de 70 à 71 réglages).
+
+Il était tenu à l'écart parce qu'une comparaison sur machine réelle n'avait pas pu démontrer de
+gain : les temps mesurés avaient baissé, mais le nombre d'événements aussi — et un pire temps
+d'exécution se mesure sur un échantillon, donc moins de tirages donne un maximum plus bas même sans
+qu'un seul microcode ait changé. Huit pilotes sur neuf variaient dans le même sens que leur nombre
+d'exécutions.
+
+Sa description a été réécrite en même temps, parce qu'elle affirmait le contraire de ce qui est
+désormais vrai : elle disait « c'est pour cette raison qu'elle n'est dans AUCUN préréglage ». Elle
+expose maintenant ce qui est sûr, ce qui ne l'est pas, raconte la comparaison qui n'a rien prouvé, et
+demande de mesurer **avec la même charge des deux côtés** — un jeu qui tourne, pas un bureau au
+repos, puisque c'est précisément la variable qui rendait les comparaisons ininterprétables.
+
+Le réglage reste sans risque : si le noyau lit la valeur il répartit, sinon il ne se passe rien, et
+« Rétablir » la supprime.
+
+## v15.71 — Le démarrage automatique ne pouvait pas fonctionner, et ton NVMe n'est peut-être pas ton disque le plus rapide
+
+### Le démarrage avec Windows ne se lançait jamais
+
+ONYX s'inscrivait dans la clé « Run » de l'utilisateur, avec ce commentaire dans le code : *aucun
+droit admin requis*. C'était exactement le problème. ONYX **exige** les droits administrateur, et une
+entrée « Run » est traitée à l'ouverture de session dans le contexte **non élevé** : Windows ne peut
+pas l'élever à ce moment-là, n'affiche aucune demande d'autorisation, et passe l'entrée.
+
+L'entrée existait, le Gestionnaire des tâches la montrait activée, et rien ne démarrait. Aucun
+message, aucune erreur — le pire cas.
+
+C'est désormais une **tâche planifiée à l'ouverture de session avec le niveau d'exécution le plus
+élevé**, le seul chemin qui lance une application élevée sans redemander l'autorisation. Les vieilles
+entrées « Run » sont supprimées : les laisser entretiendrait l'illusion que quelque chose est actif.
+Et si la tâche ne peut pas être créée, ONYX le dit au lieu de retomber sur une méthode qui ne
+marche pas. Lancement retardé de 30 secondes : une app dont le sujet est la latence n'a rien
+d'urgent à faire pendant l'ouverture de session.
+
+*Pour en profiter : décoche puis recoche « Démarrer avec Windows » dans le menu ⋯ → Système.*
+
+### Quel disque est vraiment le plus rapide pour tes jeux ?
+
+Tout le monde suppose la même hiérarchie : NVMe plus rapide que SATA. Pour le débit séquentiel c'est
+vrai ; pour ce que fait un jeu, pas forcément.
+
+Un jeu qui charge des textures pioche des milliers de petits blocs au hasard. Ce qui compte alors
+n'est pas le débit mais le **temps d'un accès isolé** — et un NVMe d'entrée de gamme **sans mémoire
+cache**, surtout s'il est presque plein, peut y être plus lent qu'un bon SATA.
+
+Mesuré sur la machine de test : le NVMe répondait en **0,50 ms** contre **0,30 ms** pour les deux
+SATA, soit **1,7 fois plus lent** — et c'est lui qui portait les gros jeux récents.
+
+Le nouveau test (menu ⋯) mesure chaque disque en lecture seule, cache de Windows contourné. Il ne
+conseille rien sous 30 % d'écart — on ne fait pas déplacer 150 Go pour rien — et quand le disque lent
+est aussi trop plein, il propose de **libérer de la place d'abord**. Ses limites sont écrites dans le
+rapport : c'est de la latence, pas du débit.
+
+### Les logiciels qui interrogent tes capteurs
+
+Sur une machine dont tous les réglages sont faits, la latence qui reste ne vient plus du système :
+elle vient des outils qui lisent les capteurs en boucle. Lire une température ou une tension passe
+par les bus SMBus et I²C, qui sont **lents et bloquants** : chaque relevé immobilise un cœur, et
+c'est la forme même d'un pic de latence différée.
+
+Un seul ne se voit pas ; empilés — et ils s'empilent, chaque marque livrant le sien — ils deviennent
+le premier poste de la mesure. ONYX les **nomme** et explique ce qu'ils coûtent, sans rien
+désinstaller : ce sont des choix, et certains rendent un vrai service. Sous deux outils détectés, il
+se tait.
+
+Le **Mode Jeu** suspend désormais les *services* d'arrière-plan de ces suites (Corsair, Logitech,
+NVIDIA), arrêtés puis relancés comme les autres. Les applications visibles ne sont pas touchées.
+
+### Répartir l'expiration des minuteurs — à mesurer
+
+Les réglages de répartition d'interruptions ne touchent que les périphériques. Or sur une machine au
+minuteur fin, ce sont les **minuteurs** qui dominent : 53 % du total mesuré. Un nouveau réglage
+demande au noyau de répartir leur expiration.
+
+Il n'est dans **aucun préréglage**, et sa description dit pourquoi : cette valeur est moins
+documentée que les autres. Si ton noyau la lit, elle répartit ; sinon il ne se passe rien. Un réglage
+dont on ignore l'effet ne s'applique pas tout seul — mesure avant et après.
+
+## v15.70 — Les interruptions, et deux réglages qui allaient dans le mauvais sens
+
+Version née d'une mesure réelle : sur une machine à seize threads, le **cœur 0 encaissait
+6 588 interruptions par seconde contre 2 131 en moyenne** — trois fois la charge des autres. Or
+c'est le cœur où Windows place le fil principal d'un jeu. La cause était lisible dans le registre :
+la carte graphique, la carte Wi-Fi et le contrôleur USB n'avaient **aucune politique d'affinité**,
+quand l'audio et le stockage en avaient une.
+
+- **Répartir les interruptions de la carte graphique, du réseau et du stockage** (eSport). Le même
+  geste qu'ONYX appliquait déjà à l'audio, étendu à ce qui produit réellement le plus
+  d'interruptions — le pilote graphique génère à lui seul deux fois plus de travail différé que le
+  suivant. Le mécanisme d'interruption n'est pas modifié : il n'y a rien à casser.
+- **Servir les interruptions de la carte graphique en priorité** (eSport). Répartir dit *où* ; ceci
+  dit *quand*, lorsque plusieurs interruptions se présentent ensemble. C'est de l'ordonnancement,
+  pas de la durée : ça n'accélère aucune exécution, ça évite des attentes.
+
+### Deux réglages qui augmentaient les interruptions sans le dire
+
+- **Le tick noyau à cadence fixe SORT du préréglage eSport.** Son propre nom disait
+  « EXPÉRIMENTAL » et sa description « à tester » — et il s'appliquait automatiquement. Mesuré :
+  il fait passer une machine seize threads de ~34 000 à ~48 000 interruptions par seconde, **+40 %**,
+  dans un préréglage censé réduire la latence. Il reste offert, à choisir.
+- **Le timer haute résolution global** garde sa place, mais sa description chiffre enfin son coût :
+  un seul logiciel demandant 0,5 ms fait ticker tous les cœurs actifs à 2 000 Hz, soit
+  **18 000 interruptions par seconde — 53 % de toutes celles de la machine**, plus que la carte
+  graphique, le réseau et le stockage réunis. C'est un arbitrage défendable ; ce n'était pas une
+  évidence, et le taire ne l'était pas non plus.
+
+### Un plafond d'images qui aurait bridé un écran de 500 Hz à 189
+
+Sur un poste multi-écrans, ONYX lisait la fréquence via une propriété qui décrit **la carte
+graphique**, pas l'écran de jeu. Mesuré sur trois dalles à 500, 200 et 180 Hz : elle répondait 200 —
+la sortie du milieu. Le plafond calculé valait 189 images par seconde. Le pire genre de bogue :
+silencieux, plausible, et présenté comme une optimisation. ONYX interroge désormais l'écran
+principal.
+
+### Le rapport de latence DPC dit enfin ce que ses chiffres signifient
+
+- **Le « temps total » ne veut rien dire seul** : il grandit avec la durée de la mesure. Les mêmes
+  1 304 ms valent 0,43 % d'un cœur sur cinq minutes, et 2,17 % sur une. Chaque pilote est maintenant
+  accompagné de la **part d'un cœur** qu'il a réellement consommée et de son **débit par seconde**,
+  comparable d'une mesure à l'autre. Le rapport se termine par le coût total du travail différé.
+- **`Wdf01000.sys` n'accuse personne.** Ce n'est pas un périphérique mais le cadre d'exécution des
+  pilotes modernes — Wi-Fi, USB, contrôleurs. Le voir en tête faisait chercher un coupable qui
+  n'existe pas ; le rapport le précise quand ce nom apparaît.
+
+## v15.69 — Les réglages sans risque entrent dans les préréglages
+
+La 15.68 apportait beaucoup de nouveautés, mais la plupart n'étaient atteignables qu'en ouvrant une
+fenêtre et en cliquant. Trois d'entre elles rejoignent les lots automatiques — celles qui **ne
+peuvent rien dégrader chez personne**.
+
+- **Réglages de latence de la carte réseau** (nouveau réglage, Recommandé + eSport). Coupe les
+  mécanismes par lesquels la carte économise du processeur **en ajoutant du délai** : modération
+  d'interruptions, contrôle de flux, Ethernet écoénergétique, regroupement de segments reçus,
+  regroupement de paquets, veille sélective. C'est le même marché à chaque fois, et pour du temps
+  réel c'est le mauvais côté du marché. Ne touche que ce que ta carte expose réellement, et
+  uniquement des réglages **normalisés par Microsoft** : les options propriétaires des cartes Wi-Fi
+  (itinérance, MIMO, largeur de canal) ont des encodages différents selon le fabricant et restent à
+  ta main. Valeurs d'origine sauvegardées.
+- **Marquage DSCP des jeux** rejoint le préréglage Recommandé. Une marque sur un paquet est une
+  demande : un routeur qui l'ignore ne fait rien de plus, un routeur qui la respecte sert le jeu
+  avant le reste. Jamais négatif.
+- **Répartition des interruptions audio** rejoint le préréglage Recommandé. Le mécanisme
+  d'interruption n'est pas modifié : on demande seulement à Windows de ne pas tout poser sur le
+  cœur 0, celui où tourne le fil principal du jeu.
+
+**Trois réglages restent volontairement hors des lots**, et la raison est écrite dans le code :
+
+- Le **plafond d'images** réduit la latence sur un écran à fréquence variable, mais l'augmente sur un
+  écran qui n'en a pas. Le bon choix dépend du moniteur ; l'imposer reviendrait à parier sur l'écran
+  de l'utilisateur.
+- Le **verrouillage des fréquences GPU** (K-Boost) se paie en consommation, chaleur et bruit, en
+  permanence.
+- Les **interruptions audio par message** (MSI) peuvent faire démarrer certaines cartes son sans
+  aucun son — et la marche arrière se fait alors sans entendre le PC.
+
+Préréglages : Recommandé passe de 31 à 34, eSport de 68 à 69.
+
+## v15.68 — Les curseurs d'Afterburner, et deux mesures qui mentaient
+
+### Deux outils qui donnaient de faux chiffres
+
+- **Le compteur d'images mesurait le mauvais programme.** Il retenait comme « le jeu » celui qui
+  avait le plus d'images par seconde. C'est faux par construction : un navigateur avec
+  l'accélération matérielle présente en continu, souvent **plus vite** qu'un jeu synchronisé à
+  60 Hz — l'overlay affichait donc le débit de Chrome pendant la partie. Le jeu est désormais la
+  fenêtre **au premier plan**. Et le chiffre **retombe à zéro** quand le jeu s'arrête, au lieu de
+  rester figé sur la dernière valeur connue.
+- **La mesure DPC pouvait s'arrêter en silence.** Une course entre la lecture des modules noyau et
+  l'arrivée d'un pilote levait une exception avalée par le moteur : la session s'arrêtait, le
+  rapport s'affichait quand même, et on en concluait que la machine n'avait plus de DPC. Corrigé.
+  La résolution d'adresse, qui tournait des dizaines de milliers de fois par seconde, faisait aussi
+  déborder le tampon du noyau — qui **jette** alors des événements, toujours dans le sens qui
+  flatte. Le rapport **avoue maintenant les événements perdus**, avant les chiffres qu'ils rendent
+  douteux.
+
+### Réglages carte graphique — les curseurs d'Afterburner, dans l'app
+
+- **Limite de puissance et limite de température**, avec les bornes lues sur ta carte. Le « 125 % »
+  des outils d'overclocking, c'est le rapport à la puissance d'usine : ONYX fait la conversion et
+  affiche les watts, parce qu'un pourcentage seul ne veut rien dire d'une carte à l'autre.
+- **Décalage de fréquence du cœur et de la mémoire**, par la bibliothèque du pilote — le chemin
+  qu'empruntent Afterburner et Precision X1. La tension n'est pas proposée : cette génération de
+  cartes n'expose aucun point modifiable, c'est mesuré et pas supposé.
+- **Plafond d'images calé sur ton écran** : la réponse sans injection au « Scanline Sync ». Sur un
+  écran à fréquence variable, garder la synchronisation active et plafonner juste sous la fréquence
+  maximale donne une image sans déchirure ET sans l'attente de la V-Sync.
+
+### Réseau et Wi-Fi
+
+- **Mesure du bufferbloat** : la hausse de ping **sous charge**, le seul chiffre qui explique « mon
+  ping explose dès que quelqu'un télécharge ». Et le verdict dit la vérité — quand c'est mauvais, la
+  file d'attente est dans la box, aucun réglage de Windows n'y peut rien.
+- **Marquage DSCP des jeux installés** — pas de tous les programmes : une priorité que tout le monde
+  a n'est plus une priorité. ONYX écrit aussi le réglage sans lequel Windows ignore purement et
+  simplement ces politiques hors réseau d'entreprise.
+- **Qualité du lien Wi-Fi** : signal, bande, canal, débit négocié. Le constat se prononce dans les
+  deux sens — quand le signal est bon, il le dit, pour qu'on arrête de chercher de ce côté.
+- **Geler la recherche de réseaux Wi-Fi pendant la partie** : supprime le pic de ping périodique dû
+  au balayage des canaux. Rétabli automatiquement à la fermeture, **et au lancement suivant** si
+  l'app s'est fermée brutalement — la carte ne doit jamais rester incapable de se reconnecter.
+- **Le réglage anti-Nagle se recolle tout seul** sur les cartes apparues après son application (WSL,
+  VPN, pilote réinstallé) : il vit dans une sous-clé par carte réseau, il ne tenait pas dans le temps.
+- **La fenêtre « Carte réseau » couvre enfin le sans-fil** (regroupement de segments reçus, de
+  paquets, veille sélective) : ses quatre réglages étaient tous orientés Ethernet.
+
+### Diagnostic
+
+- **Un périphérique en panne remonte tout seul** : un pilote qui échoue à démarrer réessaie en
+  boucle et monopolise un cœur. ONYX savait le détecter, mais seulement dans une fenêtre qu'il
+  fallait penser à ouvrir.
+- **« Service hôte » qui consomme : ONYX nomme le service**, pas le conteneur. Et quand c'est
+  Windows Update qui travaille, il le dit au lieu d'alarmer — couper ces services-là pour 2 % de
+  processeur laisse la machine sans correctifs de sécurité.
+- **Tu joues en Wi-Fi alors qu'une prise Ethernet dort derrière la machine** — signalé seulement si
+  une carte filaire existe vraiment.
+- **Le testeur de souris** distingue enfin un taux de rapport *annoncé* d'un taux *tenu*, et dit ce
+  que coûtent 8000 Hz : autant d'interruptions par seconde, souvent sur le cœur du jeu.
+
+### Deux corrections d'honnêteté
+
+- **Le mythe des 20 % de bande passante réservée par QoS** était répété dans la description d'un
+  réglage. Microsoft l'a démenti : la réserve ne concerne que les applications qui la demandent.
+  Le réglage reste, sa description dit la vérité, et il **sort du préréglage eSport** — un réglage
+  qui ne change rien de mesurable n'a pas sa place dans un lot qui promet un gain.
+- **Le Copilote vendait le réglage anti-Nagle** que le réglage lui-même déclare sans effet sur les
+  jeux en UDP. Deux réponses contraires dans la même app ; c'est la version vendeuse qui avait tort.
+
+### Discord
+
+- La présence Discord fonctionne **sans rien configurer** : ONYX a sa propre application. Il fallait
+  jusqu'ici en créer une soi-même sur le portail développeur.
+
+## v15.67 — L'avis de mise à jour ne se manque plus
+- **La notification Windows était noyée.** L'avis partait dans le lot du Gardien, sous le titre
+  « Gardien ONYX — N alerte(s) » : au milieu d'alertes de santé, avec un titre qui ne parle même pas
+  de mise à jour. Pire, elle **ne partait pas du tout** s'il n'y avait aucune autre alerte à
+  signaler — c'est-à-dire la plupart du temps, puisque le Gardien se tait quand tout va bien. Elle a
+  désormais son propre envoi et son propre titre.
+- **Une annonce franche au lancement, une seule fois par version.** Le rappel se limitait au titre de
+  la fenêtre : invisible pour qui ne le regarde pas. ONYX pose maintenant la question au démarrage.
+  Mais la reposer à chaque lancement transformerait l'information en harcèlement, et on finirait par
+  cliquer sans lire : une fois l'annonce faite, on n'y revient plus. Une **nouvelle** version, elle,
+  remet le compteur à zéro.
+- **Un bandeau dans la fenêtre, tant que la mise à jour n'est pas posée.** C'est le seul rappel qui
+  *dure* — les deux autres sont par nature ponctuels. Il porte le bouton qui lance la mise à jour :
+  plus besoin de savoir qu'elle se cache derrière le menu « ⋯ ». « Plus tard » le referme, parce
+  qu'un rappel ne doit pas devenir un mur, mais il revient au lancement suivant : reporter est un
+  choix légitime, oublier n'en est pas un.
+- Le bandeau apparaît aussi quand le Gardien découvre la version alors que la fenêtre est déjà
+  ouverte, sans attendre le prochain démarrage.
+
+## v15.66 — Quel pilote fait saccader ton PC ? La réponse, en direct
+- **Latence DPC/ISR par pilote, mesurée en direct.** Un DPC est un travail que les pilotes diffèrent.
+  Tant qu'il s'exécute, il **monopolise son cœur** : rien d'autre ne passe. Un pilote qui tient un
+  cœur pendant 3 ms produit une saccade que ni le processeur ni la carte graphique n'expliquent — et
+  c'est invisible dans le Gestionnaire des tâches, qui ne montre qu'un pourcentage global. ONYX
+  nomme désormais le pilote responsable, sans installer aucun outil.
+- **Le classement se fait sur le PIRE temps d'exécution, pas sur le total.** C'est la différence qui
+  compte : un pilote qui cumule 900 ms en milliers d'exécutions très courtes ne gêne personne, tandis
+  qu'une **seule** exécution de 3 ms bloque son cœur et se voit à l'écran. Une adresse qui ne
+  correspond à aucun pilote connu est annoncée comme telle — jamais un nom deviné.
+- **Répartir les interruptions audio sur tous les cœurs.** Les contrôleurs audio (carte mère et
+  sortie HDMI de la carte graphique) empilent souvent leurs interruptions sur le cœur 0 — celui-là
+  même où tourne le thread principal du jeu. Mesuré sur une machine réelle : **cœur 0 à 15,8 % de
+  temps DPC, les quinze autres à zéro**. Le nouveau réglage demande à Windows de les étaler. Le
+  mécanisme d'interruption n'est pas modifié : aucun risque pour le son.
+- **Interruptions audio par message (MSI)**, en option et hors préréglages : gain supérieur, mais
+  certains pilotes audio démarrent **sans son** ensuite. Réversible — l'avertissement le dit
+  franchement, parce que la marche arrière se fait sans entendre le PC.
+
+## v15.65 — Fréquences GPU verrouillées, hyperviseur démasqué, profil pilote mieux jugé
+- **Verrouiller les fréquences GPU au maximum, façon K-Boost.** La carte cesse de faire redescendre
+  sa fréquence entre deux scènes : plus de montées ni de descentes, donc des **creux d'images plus
+  réguliers**. Obtenu avec l'outil officiel du pilote, sans rien installer. Honnêtement : ce **n'est
+  pas** un gain de FPS moyen — une carte déjà à 100 % tourne déjà au maximum — et ça se paie en
+  consommation, chaleur et bruit, en permanence. C'est pour ça que ce réglage n'est dans aucun
+  préréglage : il se choisit.
+- **Windows tourne peut-être dans un hyperviseur sans que tu le saches.** Installer WSL2, Docker ou
+  le Bac à sable active la « Plateforme de machine virtuelle », qui démarre un hyperviseur à chaque
+  démarrage — Windows s'exécute alors au-dessus de lui, et chaque accès mémoire passe par une couche
+  de traduction en plus. Le constat précédent ne regardait que l'intégrité mémoire (HVCI) et **ratait
+  entièrement ce cas**, pourtant le plus répandu. ONYX le détecte maintenant, **nomme le logiciel
+  responsable**, et signale le pire cas : hyperviseur actif avec **aucun** service de sécurité en
+  cours — tu paies la virtualisation sans la protection. Il ne coupe rien tout seul : désactiver
+  l'hyperviseur casse WSL2 et Docker, l'arbitrage t'appartient.
+- **Le profil pilote « Ultra faible latence » est mieux jugé.** ONYX ne le considérait nocif que si
+  le processeur saturait. Une mesure réelle a montré l'angle mort : processeur à 45 %, carte à 42 %,
+  **les deux à moitié occupés** — c'est justement la signature du problème, puisque sans file de
+  rendu chacun attend l'autre. Le critère se résume désormais à l'essentiel : ce profil n'est
+  bénéfique que si la carte travaille déjà à fond.
+
+## v15.64 — Un réglage d'ONYX cassait une page de Windows, et les notifications n'arrivaient jamais
+- **Une page des Paramètres Windows plantait à cause d'ONYX.** Système → Marche/Arrêt s'ouvrait sur
+  un rectangle vide. Cause trouvée : le réglage qui désactive le **service de capteurs**. La page
+  interroge les capteurs pour l'Économiseur d'énergie (luminosité ambiante) ; service désactivé, la
+  demande n'aboutit nulle part et la page meurt. Le réglage le met désormais en **démarrage manuel**
+  au lieu de le désactiver : sur un PC fixe sans capteur il ne démarre jamais de lui-même, donc **le
+  gain est identique** — mais Windows peut le lancer quand une page en a besoin.
+- **Ta machine est réparée même si le mal est déjà fait.** Corriger le réglage n'aurait rien changé
+  pour ceux qui l'avaient déjà appliqué. ONYX vérifie maintenant à **chaque lancement** et **après
+  chaque application de réglages**, quel que soit le mode utilisé, qu'aucun service indispensable à
+  une page de Windows n'est resté désactivé — et le remet en manuel tout seul.
+- **Enquête automatique sur les pages de Paramètres qui plantent.** Windows n'affiche qu'un code
+  d'erreur opaque ; la vraie raison est enfouie dans le rapport de plantage. ONYX sait le lire, en
+  extraire le **réglage exact** qui a échoué et le motif, puis — quand un service est en cause —
+  le retrouver en laissant Windows le désigner lui-même, plutôt qu'en devinant.
+- **Les notifications n'étaient pas de vraies notifications.** ONYX affichait une bulle qui
+  disparaissait sans laisser de trace : rien dans le centre de notifications, et l'application
+  n'apparaissait même pas dans Système → Notifications. Ce sont désormais de vraies notifications
+  Windows, retrouvables et configurables.
+- **L'avis de mise à jour n'arrivait jamais.** Un défaut dans le code écrasait le message juste
+  après l'avoir préparé : **aucun utilisateur ne l'a jamais reçu**. Corrigé, et doublé d'un rappel
+  dans la fenêtre d'ONYX tant que la mise à jour n'est pas installée — une notification peut se
+  manquer, pas un titre qu'on a sous les yeux.
+- **Registre des problèmes rencontrés.** Note ce qui cloche au moment où ça arrive : la date et ta
+  version sont enregistrées avec. Dans trois semaines, personne ne saura plus quand ça a commencé.
+  Fichier **local**, rien n'est envoyé nulle part.
+- **Caches des fonctions IA de Windows** (Copilot, Recall) proposés au nettoyage — mais jamais
+  effacés automatiquement : c'est de l'historique, pas du temporaire, et ça ne se régénère pas.
+
+## v15.63 — Souris au pixel près, veille USB, latence audio et la vraie raison des échecs de SFC
+- **Vitesse du pointeur au 6ᵉ cran.** ONYX traitait l'*accélération* de la souris mais jamais le
+  *curseur de vitesse*. Or seule la valeur du milieu donne un rapport **1:1** : au-dessus Windows
+  saute des pixels, en dessous il en duplique. Ta souris perdait donc en précision même avec
+  l'accélération coupée. Effet immédiat, sans redémarrage.
+- **Veille USB coupée périphérique par périphérique.** Le réglage du plan d'alimentation est global
+  et saute dès qu'on change de plan. Chaque concentrateur USB porte en plus **sa propre case**
+  « Autoriser l'ordinateur à éteindre ce périphérique » : tant qu'elle est cochée, le réveil d'un
+  hub inactif coûte quelques millisecondes au premier mouvement — pile quand on tenait une visée
+  immobile. Certaines de ces clés appartiennent au système et peuvent refuser l'écriture : le
+  journal indique alors combien de concentrateurs ont **réellement** été traités, jamais un succès
+  supposé.
+- **Latence audio : deux réglages qui coûtent des millisecondes.** Le **mode exclusif refusé**
+  (l'application ne peut pas parler directement à la carte son, tout repasse par le mélangeur
+  système) et les **améliorations audio actives** (chaque effet est un calcul de plus avant la
+  sortie) sont désormais signalés. ONYX se contente de **lire** : ces valeurs sont protégées par le
+  système, et un format audio malformé rend un périphérique muet. Le bouton ouvre le panneau Son de
+  Windows.
+- **Plans d'alimentation en double.** Chaque script « boost » qui duplique le profil Performances
+  optimales en laisse un de plus, même nom, identifiant différent — **six empilés** sur la machine
+  de test. Sans gravité pour les performances, mais on ne sait plus lequel on règle. Le plan
+  **actif** et ceux de Windows ne sont jamais touchés.
+- **POURQUOI sfc /scannow échoue — enfin une réponse.** « Windows Resource Protection a trouvé des
+  fichiers endommagés mais n'a pas pu en réparer certains » : le message s'arrête là et on relance
+  SFC en boucle sans rien apprendre. La raison est écrite dans un journal de plusieurs dizaines de
+  mégaoctets, en anglais. ONYX le lit, reconnaît les causes connues (magasin de composants
+  endommagé, sources de réparation introuvables, fichiers non remplaçables) et **les traduit, en
+  citant les fichiers concernés**. Avec la marche à suivre : réparer l'IMAGE d'abord, SFC ensuite —
+  dans cet ordre uniquement, puisque SFC pioche ses fichiers de remplacement dans le magasin.
+- **Mesurer avant de réparer** : une analyse du magasin de composants précède la réparation. Quand
+  il est sain, les 10 à 20 minutes de réparation ne servent à rien — autant le dire que faire
+  patienter.
+- **Le journal de réparation n'est plus effacé automatiquement.** Il figurait parmi les fichiers
+  temporaires nettoyés par la routine d'entretien : ONYX jetait la preuve dont il a besoin pour
+  expliquer un échec. Il reste supprimable à la main (il grossit vite), mais plus jamais tout seul.
+- **Service « Optimiser les lecteurs » désactivé** détecté. Les listes de « services inutiles » le
+  citent régulièrement ; une fois coupé, ni le TRIM planifié ni l'outil d'optimisation ne démarrent,
+  et l'utilisateur ne reçoit qu'un message d'erreur sans rapport apparent.
+- Vérifié : compilation sans avertissement, **58 tests** sur les fonctions pures, et détections
+  confirmées sur une machine réelle.
+
+## v15.62 — Ce qui étrangle un PC sans qu'on le voie : disques pleins, réglages annulés, poids mort
+- **ONYX faisait PERDRE des images à certaines machines, et c'est corrigé.** Le profil pilote NVIDIA
+  « faible latence » imposait `Ultra Low Latency` + `1 image pré-rendue` à **tout le monde**. Ces deux
+  réglages suppriment la file d'attente de rendu — or c'est précisément ce tampon de 2-3 images qui
+  **absorbe les à-coups du processeur**. Sur une machine limitée par le CPU, chaque pic devient donc
+  immédiatement une image perdue : moins de FPS qu'avant « optimisation », et des chutes brutales.
+  NVIDIA le documente : le mode Ultra ne vaut que si l'on est limité par le GPU. Cas mesuré qui a
+  révélé le défaut : i9-9900K à 90 % d'occupation, RTX 4080 SUPER à **40 % et 110 W sur 400** — la
+  carte attendait des images livrées « juste à temps ». Désormais : profil **SÛR par défaut** (latence
+  réduite, file de rendu rendue au jeu), `Ultra` uniquement quand la mesure en jeu montre une carte
+  réellement à fond, et **jamais `Ultra` à l'aveugle** faute de mesure. L'app sait en plus le
+  **retirer** toute seule — avant, le code renvoyait l'utilisateur le défaire à la main dans le
+  panneau NVIDIA. Le diagnostic signale un `Ultra` posé sur une machine limitée par le processeur et
+  propose le retour au profil sûr en un clic.
+- **Le diagnostic ne regardait qu'un seul disque.** Il vérifiait l'espace libre de `C:` et s'arrêtait
+  là — alors que les jeux vivent sur `D:`, `E:`, `F:`, et que c'est précisément là que le manque de
+  place fait mal : sous **10 % de libre**, un SSD voit son cache d'écriture fondre, son ramasse-miettes
+  tourne en boucle, et le débit s'effondre à quelques Mo/s. Résultat vécu : un disque affiché « à
+  100 % » dans le Gestionnaire des tâches alors qu'il n'écrit que 12 Mo/s, des chargements
+  interminables, et ONYX qui annonçait « espace disque système correct ». Désormais **tous les
+  disques fixes** sont examinés (alerte sous 10 %, avertissement sous 15 %).
+- **Le poids mort, ce que personne ne regarde jamais.** Nouveau balayage : journaux d'application
+  partis en boucle (**un seul fichier peut dépasser 70 Go**) et restes de téléchargements Steam
+  abandonnés depuis des mois. Un journal encore alimenté ou un téléchargement en cours ne sont
+  **jamais** proposés, et rien n'est supprimé sans que la liste exacte ait été lue et confirmée.
+- **Tes réglages ont-ils tenu ?** ONYX applique 197 optimisations mais n'en gardait aucune mémoire :
+  quand Windows les annule (mise à jour de fonctionnalité, réinstallation du pilote graphique, autre
+  « optimiseur » passé derrière), rien ne le signalait. Tu crois ton PC réglé, il est retombé par
+  défaut, et tu cherches la perte d'images ailleurs. L'app tient maintenant un **journal de ce
+  qu'elle a appliqué**, relit l'état réel, et propose de **ré-appliquer en un clic** ce qui a sauté —
+  sauvegarde du registre comprise. Un rétablissement que TU as décidé n'est jamais compté comme une
+  dérive.
+- **Profil mémoire XMP/EXPO** : le constat était un cul-de-sac (simple « attention », aucune action).
+  Il passe en **problème** dès que la perte dépasse 20 %, affiche le pourcentage perdu, et ouvre le
+  guide BIOS pas-à-pas. Cas réel : de la DDR4-3200 tournant à 2133 MT/s, soit **−33 %** de bande
+  passante mémoire — sur un PC bridé par le processeur, c'est le gain gratuit le plus important.
+- **Écrans virtuels** (Parsec, spacedesk, Sunshine, IDD) : ces cartes graphiques factices restent
+  actives longtemps après qu'on a cessé de s'en servir. Un jeu lancé dessus est **recomposé** au lieu
+  d'aller droit à l'écran, et elles provoquent des erreurs de pilote à répétition (572 relevées en
+  30 jours sur une machine de test). Signalées quand elles sont en service.
+- **ONYX ne laisse plus ses vieilles peaux derrière lui.** La mise à jour intégrée téléchargeait
+  l'installateur (~45 Mo) et ne le supprimait jamais : au bout d'un an, un demi-giga de déchets chez
+  l'utilisateur — le comble pour un outil qui traque le poids mort ailleurs. Purge automatique à
+  chaque lancement, silencieuse. Une version **supérieure** à celle qui tourne est en revanche
+  conservée : c'est une mise à jour téléchargée mais pas encore posée.
+- Vérifié : compilation sans avertissement, **47 tests unitaires** sur les fonctions pures (journal
+  des réglages, comparaison d'état, décision de purge), détections confirmées sur une machine réelle.
+
+## v15.61c — Installateur : la vraie cause de la panne, et un setup complet
+- **La panne revenait**, mais à un endroit **différent** à chaque compilation
+  (`Mono.Posix.NETStandard.dll`, puis `Microsoft.DiaSymReader.Native.amd64.dll`). Or ces deux
+  fichiers étaient bien présents sur le disque. Ce n'était donc pas un fichier fautif : quelque
+  chose modifiait `dist\` **pendant** la compression — et `dist\` est justement le dossier où l'app
+  est **exécutée** pendant le développement (elle y écrit son état, l'antivirus y intervient, une
+  seconde compilation lancée en parallèle commence par le vider). Inno liste les fichiers au début
+  et les compresse ~40 s plus tard : il suffit qu'un seul disparaisse entre les deux.
+- **On ne compile plus depuis `dist\`** : les scripts figent d'abord une copie de livraison
+  (`build\stage`) qui ne contient QUE ce qui doit partir et que rien d'autre ne touche. La panne
+  devient impossible au lieu d'être seulement improbable.
+- **Défaut de la v15.61b corrigé** : la « liste de fichiers explicite » avait oublié
+  `Microsoft.Diagnostics.Tracing.TraceEvent.dll`, que .NET ne peut pas embarquer. Le setup annoncé
+  comme bon était donc **amputé** de cette DLL : la mesure de latence DPC/ISR aurait planté chez
+  l'utilisateur. Retour à un joker filtré, qui lui ne peut pas oublier un binaire.
+- **Anti-fuite renforcé** : l'exclusion se fait désormais par **préfixe** (`bt-*`, fichiers ET
+  dossiers) au lieu d'être énumérée extension par extension. C'est ce trou qui avait laissé passer
+  `bt-appris.md` : un nouveau fichier d'état avec une extension imprévue ne peut plus fuiter.
+- Vérifié : compilation réussie, 259 fichiers, **aucun `bt-*`** embarqué, `TraceEvent.dll` bien
+  présent — `ONYX-Setup-15.61.0.0.exe` (45,5 Mo, autonome, sans prérequis .NET).
+
+## v15.61b — Installateur réparé : compilation fiable et livraison au fichier près
+- **Panne corrigée** : la compilation de l'installateur échouait en cours de route
+  (« Le fichier spécifié est introuvable », après `Mono.Posix.NETStandard.dll`). Cause : `[Files]`
+  embarquait `..\dist\*`, donc **tout ce qui traînait** dans le dossier de publication — y compris
+  les restes d'une publication précédente, qui disparaissaient pendant la compression.
+- **Liste de fichiers EXPLICITE en mode fichier unique** : l'installateur ne prend plus « tout le
+  dossier » mais **exactement** `BTOptimizer.exe` + les composants natifs que .NET ne peut pas
+  embarquer (`Microsoft.Windows.SDK.NET.dll`, `amd64\`, `fr\`). Ce qui n'est pas nommé n'est pas
+  livré : plus aucun fichier fantôme, plus aucune fuite possible par oubli d'exclusion.
+- **Détection « autonome » réparée** : elle cherchait `coreclr.dll`, absent d'une publication en
+  FICHIER UNIQUE — l'installateur croyait donc être en mode « dépendant du runtime » et **réclamait
+  .NET au client alors que tout était déjà embarqué**. Détection ajoutée par la taille du binaire.
+- Les symboles de débogage de l'outil tiers NVIDIA ne sont plus livrés non plus.
+- Vérifié : compilation réussie, et le setup ne contient QUE l'exe, le composant natif requis et les
+  outils optionnels — `ONYX-Setup-15.61.0.0.exe` (61 Mo).
+
+## v15.61 — ANTI-FUITE : l'utilisateur ne reçoit QUE l'exécutable
+- **🚨 Fuite réelle trouvée et colmatée** : l'installateur excluait `bt-*.txt`, `bt-*.csv` et `*.pdb`…
+  mais **pas les `.md`**. Or `dist\bt-appris.md` contient les **conversations apprises par le Copilote**
+  sur la machine de développement — il partait donc chez **tous les utilisateurs**. Exclusion élargie :
+  `bt-*.md`, `bt-*.json`, `bt-etat\`, `bt-savoir\`, `bt-gamecache\`, `*.cs`, `*.log`.
+- **Plus aucun symbole de débogage distribué** : `DebugType=none` en Release — le `.pdb` (structure
+  interne du programme) n'est même plus produit. Vérifié : le dossier de publication n'en contient plus.
+- **Chemins sources anonymisés dans le binaire** (`PathMap`) : sans ça, chaque pile d'appels affichée à
+  un utilisateur révélait `C:\Users\<nom-du-développeur>\...` — le nom de compte Windows fuitait dans
+  le moindre message d'erreur.
+- **🛡 Garde-fou de publication** (`BT_RELEASE=<dossier>`) : contrôle automatique du dossier livré, qui
+  classe chaque fichier — **grave** (secrets, jetons, mémoire, journal, licence, code source) ou
+  **à retirer** (symboles, états, traces) — et sort en échec s'il trouve du grave. Testé en réel sur le
+  vrai dossier : **24 fichiers détectés**, dont `bt-appris.md` en rouge.
+- **Secrets protégés côté dépôt** : `bt-update-token.txt`, `*.pfx` et `installer/Output/` ajoutés au
+  `.gitignore` — un jeton de mise à jour ou un certificat de signature ne peut plus être commité par
+  accident.
+- Les mises à jour continuent de fonctionner : l'updater n'a besoin **que de l'exécutable**.
+- 6 nouveaux cas au harnais (exe légitime, `bt-appris.md` grave, jeton grave, `.pdb` mineur / source
+  grave, dossier propre, mélange nommé). Harnais **265/265**.
+
+## v15.60 — Mise à jour même avec un dépôt PRIVÉ + crédit destingood
+- **Le code peut rester privé, les mises à jour fonctionnent quand même.** Deux voies, essayées
+  automatiquement dans l'ordre :
+  1. **Manifeste personnel** (`bt-update-url.txt`) : une URL HTTPS vers un petit JSON hébergé où tu veux
+     (GitHub Pages, ton site, un stockage objet) — `{ "version", "notes", "url", "size" }`. Ton dépôt de
+     code reste totalement privé ; seule la version publiée est publique.
+  2. **Dépôt de distribution séparé** : par défaut `destingood/onyx-releases` (public) puis
+     `destingood/onyx`. Tu publies l'installateur dans le dépôt public, le code reste dans le privé.
+- **Jeton GitHub facultatif et LOCAL** (`bt-update-token.txt`) pour lire un dépôt privé **depuis tes
+  propres machines**. Il n'est **jamais embarqué dans l'application** — décision assumée : un jeton
+  livré aux utilisateurs serait extractible du binaire en quelques secondes et donnerait à n'importe
+  qui l'accès au dépôt privé. Ça, je ne le ferai pas.
+- **Confiance étendue mais toujours bornée** : le téléchargement est accepté depuis GitHub, GitHub Pages,
+  ou **l'hôte exact de TON manifeste** — jamais un domaine tiers, même si la réponse en indique un.
+- **Message d'aide au lieu d'une erreur** : dépôt privé ou aucune Release → l'app explique les deux
+  solutions ci-dessus, en français, dans la fenêtre de mise à jour.
+- **Crédit destingood** : dans « À propos » (sous-titre + « Créé et maintenu par destingood —
+  github.com/destingood/onyx ») et dans le bloc « infos de support » copiable.
+- 5 nouveaux cas au harnais (manifeste lu, manifeste invalide refusé, hôte du manifeste seul accepté,
+  GitHub Pages accepté, crédit présent). Harnais **259/259**.
+
+## v15.59 — MISE À JOUR INTÉGRÉE : fini le retéléchargement manuel à chaque version
+- **Menu ⋯ → « 🔄 Vérifier les mises à jour d'ONYX »**, ou dans le chat : « mets à jour ONYX »,
+  « nouvelle version ? ». ONYX interroge les **Releases GitHub** du projet, compare les versions,
+  affiche les nouveautés, puis — sur clic — télécharge l'installateur officiel et le lance.
+  Tes réglages, ta mémoire et ton journal sont **conservés** (ils vivent à côté de l'app).
+- **Vérification quotidienne discrète** : une fois par jour au lancement, en tâche de fond, le Gardien
+  signale l'existence d'une nouvelle version dans sa notification — sans jamais rien télécharger seul.
+- **Sécurité de la chaîne de mise à jour** :
+  - le fichier ne peut venir **QUE de github.com** (HTTPS) — une réponse détournée vers un autre
+    domaine est refusée et le dit ;
+  - la taille reçue doit correspondre à celle annoncée, sinon le fichier est jeté ;
+  - **rien n'est téléchargé ni installé sans clic explicite**, et l'action est journalisée.
+- **Honnêteté quand il n'y a rien** : dépôt privé ou aucune Release publiée → « aucune version n'est
+  publiée pour l'instant, rien à faire de ton côté » au lieu d'une erreur technique. Le dépôt visé est
+  `destingood/onyx` et reste modifiable via `bt-update-repo.txt`.
+- Lecture d'étiquette, comparaison de versions, choix de l'installateur parmi les fichiers publiés et
+  filtrage des URL : **PURS et testés** (6 cas). Sonde `BT_UPDATE=1`. Harnais **254/254** ; UITEST 45/45.
+
+## v15.58 — DURABILITÉ DES DONNÉES : ta mémoire ne peut plus disparaître en silence
+- **Le risque trouvé en auditant l'installateur** : ONYX s'installe dans « Program Files » et écrivait
+  TOUT à côté de son exécutable — mémoire du Copilote, journal de bord, tendance santé, photos du
+  système, plan GPU. Ça ne fonctionne que grâce à l'élévation administrateur : lancé sans droits (ou
+  copié dans un dossier protégé), **tout aurait été perdu silencieusement**, le pire des cas.
+- **Nouveau socle `AppPaths`** : le dossier de l'exe est conservé tant qu'il est réellement inscriptible
+  (test d'écriture réel, pas une supposition) ; sinon bascule automatique vers `%LOCALAPPDATA%\ONYX`
+  **avec recopie des données existantes** (jamais d'écrasement). L'auto-diagnostic dit désormais OÙ
+  vivent les données et pourquoi.
+- **Installateur corrigé** : le dossier `bt-etat\` (photos quotidiennes), les fichiers `bt-*.md` et le
+  dossier de repli `%LOCALAPPDATA%\ONYX` sont nettoyés à la désinstallation — plus de résidus.
+- **Bug d'honnêteté attrapé par un test** : l'export de diagnostic affichait le chemin des données
+  (donc le nom de compte Windows) tout en promettant « aucune donnée personnelle ». Les chemins sont
+  maintenant anonymisés (`%USERPROFILE%`, `%USER%`) — et le remplacement a lui-même été corrigé, car
+  masquer « User » corrompait le marqueur `%USERPROFILE%`. La promesse est désormais VRAIE.
+- Harnais **248/248** ; UITEST 45/45.
+
+## v15.57 — ROBUSTESSE : ONYX ne peut plus disparaître sans explication
+- **Le dernier point faible signalé par la revue de code indépendante est corrigé.** Le Copilote
+  appelait le routage **sans aucun filet** : un bug dans n'importe lequel des ~40 outils aurait fermé
+  toute l'application, sans un mot.
+- **Filet de sécurité GLOBAL** : toute erreur non gérée (interface ou tâche de fond) est désormais
+  écrite dans **bt-erreurs.txt** (daté, avec version et pile d'appels ; fichier auto-limité à 200 Ko)
+  et expliquée honnêtement à l'écran : ce qui s'est passé, **que le PC n'a subi aucune modification**,
+  et où c'est noté. Une erreur d'interface rattrapable **ne ferme plus l'application**.
+- **Copilote blindé** (`SafeAnswer`) : si un outil plante, il répond « j'ai buggé, ce n'est pas ta
+  faute, ton PC n'a rien subi, l'incident est noté — reformule » au lieu d'emporter l'app.
+- **Test de résistance ajouté au harnais** : 23 entrées hostiles envoyées au Copilote (texte vide, null,
+  20 000 caractères, octets nuls, balises `<script>`, injection SQL, traversée de chemin `..\\..\\`,
+  `%s%n`, caractères de contrôle, emoji, commandes tronquées « traduis en anglais », « distance entre
+  et », division par zéro, racine de −1…) → **0 plantage, 0 réponse vide**.
+- Harnais **243/243** ; UITEST 45/45.
+
+## v15.56 — La CHRONOLOGIE : quand ça a commencé, et ce qui a changé ce jour-là
+- Le médecin des journaux ne dit plus seulement CE QUI ne va pas, mais **QUAND ça a commencé** :
+  mini-graphe jour par jour des erreurs sérieuses (le bruit connu est exclu du compte), pic quotidien,
+  et détection du **jour de démarrage** de la crise.
+- **La corrélation qui donne la cause racine** : ONYX croise ce jour avec ses **photos quotidiennes du
+  système** (pilote GPU, Windows, démarrage, disque). Si quelque chose a changé ce jour-là ou la veille :
+  « 🔗 Or CE JOUR-LÀ, ton pilote GPU est passé de v551 à v560 — c'est le suspect n°1 : une panne qui
+  commence le jour d'un changement vient presque toujours de ce changement. »
+- Et quand rien n'avait changé, il le dit aussi — pas de fausse piste inventée pour faire savant.
+- Chronologie, détection du démarrage et corrélation **PURES et testées** (bruit exclu du compte, jour
+  de démarrage, corrélation présente/absente, cas vide). Vérifié en réel : 104 erreurs sérieuses
+  cartographiées du 20/07 au 01/08, pic à 38/jour. Harnais **239/239**.
+
+## v15.55 — LE MÉDECIN DES JOURNAUX WINDOWS : tout diagnostiquer à partir des logs
+- **Nouveau panneau** (⋯ → Check Up+ → Diagnostic des journaux Windows) et **commande chat** (« analyse
+  les logs », « diagnostique tout ») : ONYX lit les événements CRITIQUES et ERREURS des journaux
+  **Système + Application** (14 jours), les regroupe, et les **TRADUIT** — cause probable, gravité, et
+  quoi faire. Windows enregistre tout ; l'Observateur d'événements est illisible pour un joueur.
+- **Base de connaissances des événements Windows** qui comptent vraiment : arrêt brutal (Kernel-Power 41),
+  écran bleu, **erreurs matérielles WHEA** (corrigée / FATALE — l'un des signaux les plus sérieux et les
+  moins connus), secteurs défectueux et erreurs disque, corruption NTFS, **pilote GPU réinitialisé**
+  (Display 4101), pilote non chargé, crashs d'applications et .NET, services, DNS, TCP, Bluetooth,
+  échec de mise à jour…
+- **Le tri est classé en trois blocs — dont deux que personne ne fait** :
+  - 😌 **le BRUIT CONNU, sans conséquence** (DCOM 10010, CAPI2 513, traçage, synchro d'heure…) : le dire
+    évite la panique en ouvrant l'Observateur d'événements, et l'app déconseille explicitement les
+    « correctifs registre » des forums ;
+  - ❔ **les événements INCONNUS**, présentés comme tels : « je ne les interprète pas » plutôt qu'une
+    explication inventée.
+- Parseur XML, classement et mise en forme **PURS et testés** (regroupement, WHEA fatale en tête, bruit
+  relégué, bilan vide). Sonde `BT_LOGDOC=1`. Vérifié en réel sur cette machine, et la base a été
+  **enrichie à partir des vrais journaux** (DCOM 10010 ×253, .NET Runtime ×69, Bluetooth ×32…).
+  Harnais **235/235**.
+
+## v15.54 — Defender & tes jeux : supprimer les micro-freezes de l'antivirus (réversible)
+- **Nouvelle mesure** (« l'antivirus ralentit mes jeux », « exclusions Defender ») : la protection temps
+  réel analyse CHAQUE fichier lu — sur un jeu qui streame des Go de textures et de shaders, c'est une
+  cause connue de micro-saccades. ONYX compare les dossiers de jeux Steam aux exclusions actuelles et
+  liste ce qui manque, avec un bouton pour les exclure.
+- **Honnêteté sur le compromis, écrite noir sur blanc** : Defender reste **ACTIVÉ** partout ailleurs
+  (ONYX ne désactive JAMAIS un antivirus) ; seuls les dossiers de jeux issus d'une boutique officielle
+  sortent de l'analyse temps réel ; à n'accepter que si on n'y met pas de fichiers douteux.
+- **Retour arrière fourni d'office** : la réponse de confirmation porte elle-même le bouton « Annuler :
+  remettre ces dossiers sous analyse », et « annule les exclusions » marche à tout moment.
+- **Garde-fous** : si la protection temps réel est déjà désactivée → rien à faire (et aucun conseil de
+  désactivation) ; si les exclusions sont illisibles faute de droits → il le DIT au lieu de conclure à
+  tort ; un dossier déjà couvert par un parent exclu est reconnu comme protégé.
+- Comparaison des chemins PURE et testée (casse, barre finale, parent couvrant, droits manquants).
+  Sonde `BT_SHIELD=1`. Harnais **230/230**.
+
+## v15.53 — « Mes jeux sont-ils sur SSD ? » : le support décide des temps de chargement
+- **Nouvelle mesure** (« mes jeux sont sur ssd ? », « jeux sur hdd ») : ONYX relie chaque bibliothèque de
+  jeu à son **disque physique réel** (partition → disque → type) et classe : 🐌 **mécanique (HDD)**,
+  ✅ **SSD SATA**, ⚡ **SSD NVMe**, avec le modèle exact du disque et le nombre de jeux/Go par lecteur.
+- **Jeux sur disque mécanique** → il les liste (du plus gros au plus petit) et donne la solution
+  GRATUITE, sans re-téléchargement : Steam → clic droit → Propriétés → Fichiers installés →
+  « Déplacer le dossier d'installation ». Chargements 3 à 5× plus longs et micro-freezes d'ouverture de
+  zone : c'est LE réglage matériel que personne ne vérifie.
+- **Tout sur SSD ?** Il le dit franchement (« rien à faire ») et ajoute la nuance utile : un jeu sur SSD
+  SATA charge ~2× moins vite que sur NVMe — de quoi choisir où mettre SON jeu principal.
+- Regroupement PUR et testé (HDD signalé, solution proposée, tout-SSD = rien à faire, nettoyage exclu).
+  Vérifié en réel : **52 jeux sur 3 disques** — D: 974 Go (SATA), F: 765 Go (NVMe), E: 281 Go (SATA),
+  aucun sur mécanique. Harnais **226/226**.
+
+## v15.52 — « Où sont passés mes Go ? » : le classement des plus gros dossiers
+- **Nouvelle mesure** (« où sont passés mes go », « quel dossier prend de la place ») : ONYX parcourt
+  TOUS les disques fixes et classe les dossiers de premier niveau de plus de 5 Go. Contrairement au scan
+  Steam, il voit **tout** : jeux Battle.net / EA / Epic, installations manuelles à la racine d'un disque,
+  données Docker, dossiers de travail…
+- **Budget de temps STRICT et RÉPARTI par disque** : la première version consommait tout son temps sur
+  C: et n'atteignait jamais les autres disques — exactement là où sont les jeux. Corrigé : chaque disque
+  reçoit sa part, puis chaque dossier la sienne.
+- **Honnêteté sur l'incertitude** : un dossier non terminé dans le temps imparti est marqué
+  « (mesure partielle) » avec la mention « le vrai poids est PLUS élevé » — jamais un chiffre incomplet
+  présenté comme sûr. Les dossiers système sont exclus (hors-sujet et dangereux à suggérer).
+- ONYX ne supprime RIEN : il montre où sont les Go, la décision reste à l'utilisateur.
+- Mise en forme PURE et testée (classement, mention partielle, liste vide). Sonde `BT_BIG=1`.
+  Vérifié en réel : **1,5 To cartographié sur 4 disques** en 30 s. Harnais **222/222**.
+
+## v15.51 — « Les jeux qui dorment » : le vrai levier d'espace disque d'un joueur
+- Les manifestes Steam contiennent la date de dernière partie : ONYX s'en sert pour répondre à la
+  question qui vaut des centaines de Go — **« quels gros jeux ne joues-tu plus ? »**
+- **« quels jeux prennent de la place »**, « les jeux que je ne joue plus » → liste des jeux ≥ 5 Go
+  **jamais lancés ou inactifs depuis 4 mois**, triés du plus gros au plus petit, avec le TOTAL
+  récupérable et, pour chacun, « JAMAIS lancé » ou « dernière partie il y a N mois ».
+- Intégré au **grand bilan stockage** (« libère de la place ») : après les temporaires, l'hibernation
+  et WinSxS, c'est de loin le plus gros gisement chez un joueur.
+- Honnêteté : ONYX **ne désinstalle rien** et rappelle que la progression n'est pas perdue (sauvegardes
+  dans le cloud Steam) et que le jeu se réinstalle quand on veut. Les jeux < 5 Go sont ignorés (ça ne
+  vaut pas le clic), les jeux joués récemment aussi.
+- Tri PUR et testé (jamais lancé / inactif / joué hier / trop petit, total exact). Vérifié en réel sur
+  cette machine : **847 Go dormants** — Borderlands 3 (139 Go) et 4 (127 Go) jamais lancés, NARAKA
+  (89 Go) jamais lancé, Spider-Man (67 Go) inactif depuis 8 mois… Harnais **218/218**.
+
+## v15.50 — Vérifier les fichiers d'un jeu (Steam) : la vraie réparation, en 1 clic
+- **Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : ONYX liste **tes jeux Steam installés** —
+  toutes bibliothèques comprises, y compris celles posées sur d'autres disques — triés du plus gros au
+  plus petit, puis lance la **vérification OFFICIELLE des fichiers** du jeu choisi (`steam://validate`).
+- C'est LA solution quand un jeu plante au lancement, crashe en boucle, ou a subi un disque plein / une
+  coupure de courant — et personne ne sait où ça se trouve. Rien n'est supprimé : Steam re-télécharge
+  uniquement les fichiers abîmés, les sauvegardes ne sont pas touchées. Confirmation avant lancement,
+  et action journalisée.
+- Steam absent ? Il le dit et donne l'équivalent ailleurs (Epic → « Vérifier » ; Battle.net →
+  « Analyser et réparer »). Les composants techniques (redistributables, Proton…) sont exclus de la liste.
+- Parseurs `.acf` / `libraryfolders.vdf` PURS et testés. Sonde `BT_STEAM=1`. Vérifié en réel sur cette
+  machine : **52 jeux détectés sur 2 disques** (Call of Duty 175 Go, Black Ops 6 134 Go, Cyberpunk 91 Go…).
+  Harnais **214/214**.
+
+## v15.49 — « CPU ou GPU : qui me limite ? » — LA question de tout joueur, enfin tranchée
+- **Nouvelle mesure** (pastille du Copilote « CPU ou GPU : qui me limite ? », ou la question en toutes
+  lettres) : 20 secondes d'échantillonnage de la charge CPU et de l'utilisation GPU **pendant que le jeu
+  tourne**, puis un verdict clair et la marche à suivre :
+  - **GPU ≥ 93 %** → « ✅ c'est ton GPU qui travaille à fond, situation NORMALE » : baisser les réglages
+    coûteux pour gagner des FPS, et **changer de processeur n'apporterait presque rien** (l'erreur d'achat
+    la plus fréquente chez les joueurs) ;
+  - **CPU ≥ 70 % et GPU < 85 %** → « ⚠️ ton processeur bride ta carte graphique » : fermer le fond,
+    activer XMP/EXPO (le gain gratuit décisif dans ce cas), **monter** la résolution/les réglages pour
+    redonner le travail au GPU, baisser distance d'affichage / foule / ray tracing — le CPU en dernier ;
+  - **les deux bas** → ce n'est ni l'un ni l'autre : limite d'images / V-Sync (cause n°1), moteur du jeu,
+    disque, ou bridage thermique ;
+  - **au bureau** → il REFUSE de conclure : « lance ton jeu, sinon ces chiffres ne veulent rien dire ».
+- Détection du jeu par plein écran **ou** GPU réellement sollicité (les jeux en fenêtré sans bordure
+  échappaient au test plein écran).
+- Verdict PUR et testé (4 scénarios) ; sonde `BT_BOTTLE=1`. Vérifié en réel : au bureau, refus honnête
+  (CPU 35 %, GPU 18 %). Harnais **210/210** ; UITEST 45/45.
+
+## v15.48 — L'enquête dit enfin CE QUI A CHANGÉ (la cause n°1 d'un « ça marchait avant »)
+- **Nouvelle carte « Ce qui a changé »** dans l'enquête : elle compare la photo quotidienne du système
+  (pilote GPU, version de Windows, programmes au démarrage, espace disque) à l'état actuel et liste les
+  différences — « 🎞 pilote GPU changé : v551 → v560 », « 🚀 nouveau au démarrage : Wallpaper Engine »,
+  « 💽 espace disque : 28 → 12 Go ».
+- Volontairement **informative, sans aucun bouton** (impact 50) : ce n'est pas un défaut, c'est le
+  CONTEXTE qui explique le plus souvent qu'un PC se comporte autrement du jour au lendemain. Jusqu'ici
+  l'enquête listait des défauts sans jamais dire ce qui avait bougé.
+- **Audit de fond mené sur toutes les cartes de l'enquête** après la leçon des v15.46-47 : seule la
+  carte « crashs GPU » jugeait sur un cumul (corrigé) — écrans, disque, bibliothèques, réglages, uptime,
+  RAM, pilote, applications et démarrage mesurent bien l'état PRÉSENT. Rien d'autre à corriger.
+- Harnais **206/206** ; UITEST 45/45.
+
+## v15.47 — L'ENQUÊTE apprend aussi à ne pas crier au loup + Gardien en veille
+- **La même correction, propagée là où elle se voit le plus** : la carte « crashs GPU » de l'enquête
+  affichait « IMPACT 90 · CRITIQUE — 200 erreurs ces 14 derniers jours » et poussait un DDU, alors que
+  ces erreurs pouvaient dater d'une semaine. Elle juge maintenant sur les **2 DERNIERS JOURS** :
+  - ≥ 3 erreurs récentes → impact 90, DDU proposé (instable MAINTENANT) ;
+  - 1-2 erreurs → impact 45, surveiller ;
+  - beaucoup avant mais **plus rien depuis 2 jours** → impact 15, carte purement informative :
+    « la crise est passée, ne touche à rien » — **et aucun bouton de manipulation** ;
+  - rien → ligne verte « aucun crash récent du pilote GPU ».
+- **🔕 « Gardien : ne plus me prévenir 7 jours »** (clic droit sur l'icône) : la contrepartie honnête
+  d'un système d'alertes — il **continue de mesurer** (photo d'état, tendance santé) mais ne dérange
+  plus. Le menu affiche la date de fin et permet de le réveiller d'un clic. Mise en veille journalisée.
+- Règle d'impact PURE et testée (crise passée = 15, active = 90, 1 erreur = 45, résiduel ancien = 0),
+  veille/réveil testés. Harnais **203/203** ; UITEST 45/45.
+
+## v15.46 — Une crise PASSÉE n'est pas un problème actuel (correction de fond)
+- **Le bug que la machine de test a révélé** : le verdict criait « TRÈS INSTABLE — 200 erreurs en
+  14 jours » alors que le suivi disait « 199 → 1 cette semaine, −99 % ». L'app envoyait donc faire un
+  DDU **devenu inutile**. Un diagnostic qui ignore sa propre tendance est dangereux.
+- **Le verdict tient maintenant compte de la SEMAINE ÉCOULÉE** : si la semaine est calme (≤ 4 erreurs)
+  alors que la précédente était chargée (≥ 20), il conclut « ✅ la crise est PASSÉE » et dit
+  explicitement : **ne touche à rien**, refaire un DDU serait inutile et risqué — surveille, et on
+  n'agit que si le compteur hebdomadaire repasse au-dessus de 20.
+- **Le Gardien apprend la même leçon** : son alerte pilote GPU ne regarde plus 7 jours (où une crise
+  d'il y a une semaine sonnait encore l'alarme) mais **les 2 derniers jours** — « instable EN CE
+  MOMENT », sinon silence.
+- Compatibilité : sans information hebdomadaire, le verdict garde son comportement d'origine.
+  4 nouveaux cas au harnais (crise passée / toujours instable / info absente / petits chiffres).
+  Harnais **200/200** ; UITEST 45/45.
+
+## v15.45 — Le verdict GPU se SUIT dans le temps + plan d'action coché
+- **📉 SUIVI HEBDOMADAIRE** : le panneau compare la semaine écoulée à la précédente et le dit en clair —
+  « ✅ 199 → 1 erreur(s) (−99 %) : ça S'AMÉLIORE, tes manips ont payé », « 🚨 ça EMPIRE », ou « ➡️ stable,
+  pas d'amélioration nette ». Un diagnostic qui ne vérifie pas son propre traitement n'est qu'une opinion.
+- **🩺 PLAN D'ACTION COCHÉ** : les étapes (DDU, overclock coupé, alimentation/températures, réparation
+  Windows, retour à un pilote antérieur) deviennent des cases à cocher **datées et persistantes**
+  (bt-gpu-plan.txt). Au prochain passage, « Déjà fait : ✔ DDU (01/08) » — on ne refait pas deux fois la
+  même manip, et on sait où on en est. Chaque case cochée part aussi au journal de bord.
+- Calculs PURS et testés (100→20 = amélioration, 20→100 = dégradation, 0/0 = stable, cocher/décocher).
+  Harnais **196/196** ; UITEST 45/45.
+
+## v15.44 — « Mon pilote GPU est-il instable ? » : le verdict, et la marche à suivre
+- **🎯 Nouveau panneau** (⋯ → Check Up+ → Mesures & stress) : croise le NOMBRE d'erreurs pilote du
+  journal d'événements, l'ÂGE du pilote et les crashs d'applications, puis **conclut** — sain / à
+  surveiller / instable / très instable — et donne les étapes **dans l'ordre**, toutes gratuites :
+  - pilote RÉCENT qui plante → revenir à la version PRÉCÉDENTE (un pilote neuf n'est pas toujours
+    meilleur — personne ne dit jamais ça aux joueurs) ;
+  - réinstallation PROPRE avec DDU (cause n°1 des instabilités qui traînent) ;
+  - couper tout overclock GPU ; vérifier l'alimentation (12VHPWR sur les RTX 40) et les températures ;
+  - beaucoup de crashs d'applis en plus → « Réparer Windows » (les deux vont souvent ensemble).
+- **📄 « Exporter le diagnostic complet »** (⋯ → À propos) : UN fichier texte sur le Bureau avec tout
+  le contexte — infos de support, auto-diagnostic, stabilité GPU, santé SMART, ce qui a changé,
+  tendance santé, journal des actions. À joindre à un forum ou un SAV ; aucune donnée personnelle.
+- Verdict PUR et testé au harnais (200 erreurs → très instable + DDU ; pilote récent → retour arrière ;
+  0 erreur → aucune manip proposée). Sonde `BT_GPU=1`. Harnais **192/192**.
+
+## v15.43 — ONYX se diagnostique LUI-MÊME + infos de support en 1 clic
+- **🩹 « Vérifier mon installation »** (menu ⋯ → À propos) : ONYX contrôle SA PROPRE installation en
+  7 points et dit ce qui le limite — AVANT que tu te demandes pourquoi une fonction ne répond pas :
+  droits administrateur · dossier de données accessible en écriture (le piège « Program Files ») ·
+  WMI (matériel, SMART, pilote GPU) · journal d'événements (crashs, Gardien) · connexion internet ·
+  IA locale Ollama (optionnelle, et il le dit) · espace disque. Chaque point en échec explique quoi faire.
+- **📋 « Copier les infos de support »** : un clic → presse-papiers avec version ONYX, Windows, GPU +
+  âge du pilote, disque, uptime, crashs 14 j, résultat de l'auto-diagnostic. **Aucune donnée
+  personnelle** : ni nom d'utilisateur, ni adresse IP, ni chemin privé (vérifié au harnais).
+- Sonde console `BT_SELF=1`. Harnais **188/188** ; UITEST 45/45 formes.
+
+## v15.42 — « Quoi de neuf » après mise à jour + pastille rouge sur l'icône
+- **📰 ÉCRAN « QUOI DE NEUF »** : au premier lancement d'une NOUVELLE version, ONYX présente les
+  nouveautés — lues dans le **CHANGELOG embarqué dans l'exe** (zéro maintenance : le journal existe
+  déjà, il est désormais une ressource compilée). Une seule fois par version (bt-lastver.txt).
+  Jamais à la première installation (pas de leçon d'histoire à un nouveau venu), jamais en mode
+  « démarrage minimisé », jamais pendant les tests UI. Ça faisait des dizaines de versions livrées
+  que personne ne pouvait découvrir.
+- **🔴 PASTILLE D'ALERTE sur l'icône de zone de notification** : quand le Gardien signale quelque
+  chose (ou un SOS post-crash), l'icône porte un point rouge et l'info-bulle indique
+  « ONYX — N alerte(s) du Gardien ». La pastille disparaît dès l'ouverture de l'app. Indispensable
+  en mode démarrage minimisé : l'icône raconte l'état même quand la bulle a disparu.
+- Parseur du CHANGELOG PUR et testé (2 sections extraites, intro ignorée, entrée vide = vide).
+  Harnais **185/185** ; UITEST 45/45 formes.
+
+## v15.41 — Hors Copilote : « ONYX toujours là, jamais dans les pattes »
+- **⌨️ Ctrl+Alt+O (raccourci GLOBAL)** : fait apparaître ONYX au premier plan depuis n'importe où —
+  ou le range dans la zone de notification s'il est déjà visible. Même mécanique fiable que le
+  Ctrl+Alt+G du Mode Jeu.
+- **🔕 « Démarrer minimisé (zone de notification) »** (menu ⋯ → Système → ⭐ ONYX) : combiné à
+  « Démarrer ONYX avec Windows », l'app naît SANS fenêtre — et le Gardien surveille alors VRAIMENT
+  chaque jour (disque, SMART, crashs, photo d'état, tendance santé), sans jamais s'imposer.
+  Ctrl+Alt+O ou double-clic sur l'icône pour l'ouvrir.
+- **🛡 « Gardien : vérifier maintenant »** (clic droit sur l'icône de zone de notification) :
+  contrôle à la demande qui répond TOUJOURS — y compris « tout va bien » (le contrôle quotidien,
+  lui, reste muet quand tout est sain).
+- L'icône du tray affiche désormais le raccourci (« Ouvrir ONYX (Ctrl+Alt+O) »).
+- Harnais 183/183 ; UITEST 45/45 formes.
+
+## v15.40 — « ÇA MARCHAIT HIER ! » : ONYX sait ce qui a changé sur ton PC
+- LA phrase classique du joueur a enfin une vraie réponse. Le Gardien prend chaque jour une **photo de
+  l'état du système** (bt-etat\, 30 jours gardés) : version du pilote GPU, version/build de Windows,
+  programmes au démarrage, Go libres.
+- **« ça marchait hier »**, « qu'est-ce qui a changé sur mon PC ? » → comparaison photo d'avant ↔
+  maintenant, en FAITS :
+  - 🎞 « Pilote GPU CHANGÉ : v551.23 → v560.70 » (le suspect n°1 d'un comportement qui change) ;
+  - 🚀 « NOUVEAU au démarrage : Wallpaper Engine » (nommé, pas deviné) ;
+  - 🪟 build Windows, 💽 delta disque (seuil 5 Go).
+  Rien de notable ? Il le dit, et propose l'enquête classique.
+- Distinction nette : « qu'est-ce que **TU** as changé » → journal des actions d'ONYX ;
+  « qu'est-ce **qui** a changé » → ce que le SYSTÈME a fait dans ton dos.
+- Moteur de diff PUR et testé au harnais (pilote cité, ajout au démarrage nommé, identique = zéro).
+  Harnais **183/183**.
+
+## v15.39 — Tendance santé : le score du cockpit gagne une MÉMOIRE
+- **📈 « score de santé » / « tendance »** : le cockpit affichait « SANTÉ 56 % » puis l'oubliait.
+  Désormais le Gardien enregistre UNE mesure par jour (bt-sante.csv, ~13 mois d'historique) et le
+  Copilote montre l'ÉVOLUTION : score du jour, delta sur 7 j et 30 j (« ↗ +12 pt(s) »), et un
+  mini-graphe en barres (▁▃▅▇) des 14 derniers jours.
+- En baisse ? Il propose le bilan complet pour trouver ce qui a changé. En hausse ? La preuve
+  chiffrée qu'ONYX améliore la machine dans le temps — pas juste un chiffre du moment.
+- Dédupliqué par jour (re-mesure = remplace), trié, borné à 400 entrées. Le calcul des deltas est
+  vérifié au harnais (50 → 62 en 8 jours = « +12 » sur 7 j). Harnais **179/179**.
+
+## v15.38 — Carte blanche (suite) : SOS post-crash + le Copilote sait se présenter
+- **🆘 SOS POST-CRASH** : tu relances ONYX juste après qu'un jeu a planté ? Il le REMARQUE tout seul —
+  à chaque lancement, il regarde si une application a crashé il y a moins de 30 minutes (journal
+  d'événements) et t'accueille avec « bo6.exe a crashé il y a 4 min — clique : je te dis POURQUOI »
+  (notification cliquable → enquête sur la cause exacte). C'est souvent exactement pour ça qu'on
+  ouvre l'app ; maintenant elle le comprend sans qu'on lui dise. (ONYX s'ignore lui-même, évidemment.)
+- **🧭 « Que sais-tu faire ? »** : la réponse « aide » n'était qu'une phrase générique — c'est
+  maintenant le CATALOGUE complet, groupé comme l'accueil (jeu & perfs, PC & Windows, entretien,
+  profil, infos locales hors-ligne, outils monde gratuits), avec les commandes exactes à taper.
+  Avec 30+ outils, un assistant qui ne sait pas se présenter fait perdre ses fonctions.
+- Harnais **177/177** ; UITEST 45/45 formes.
+
+## v15.37 — Profil ONYX (réinstaller Windows sans rien perdre) + le Gardien voit les crashs
+- **📦 PROFIL ONYX** : « exporte mon profil » → UN zip sur le Bureau avec tout ce qui fait « ton » ONYX
+  (mémoire du Copilote, faits appris, journal de bord, réglages Discord/Gardien, documents bt-savoir).
+  Après une réinstallation de Windows : « importe mon profil » → tout revient. Filet : l'état actuel est
+  toujours sauvegardé dans bt-avant-import-<date> avant restauration ; protection anti zip-slip incluse.
+  Honnêteté : les optimisations SYSTÈME vivent dans Windows, elles — un clic « TOUT optimiser » les remet.
+- **🛡 Le Gardien voit maintenant les CRASHS** : pilote GPU instable (≥ 50 erreurs signalées en 7 jours)
+  et ≥ 2 crashs d'applications en 48 h déclenchent son alerte discrète, avec le chemin vers l'enquête.
+  Il t'aurait prévenu des ~200 erreurs GPU de la semaine dernière avant même que tu ouvres BO6.
+- Vérifié en réel : export zip OK ; Gardien 0 alerte aujourd'hui (les erreurs GPU datent de + de 7 jours —
+  il n'alerte que sur du récent, pas sur de l'histoire ancienne). Harnais **177/177**.
+
+## v15.36 — Carte blanche : le Gardien, la santé SMART des disques, le journal de bord
+Trois fonctions auxquelles on ne pense jamais… jusqu'au jour où on en a besoin :
+- **🛡 LE GARDIEN** : à chaque ouverture d'ONYX (1 fois par jour max), vérification SILENCIEUSE des
+  signaux vitaux — disque presque plein, santé SMART, redémarrage Windows en attente, uptime > 14 j.
+  S'il y a des alertes : UNE notification discrète (cliquable → Copilote). Si tout va bien : silence
+  total. Un gardien, pas une alarme de voiture. Commande « gardien » pour le résumé à la demande.
+- **💾 SANTÉ SMART DES DISQUES** : « état de mes disques » → chaque disque avec son verdict (sain /
+  avertissement pré-panne / DÉFAILLANT). Windows connaît cet état mais ne l'affiche jamais ; ONYX
+  prévient AVANT la panne et dit quand SAUVEGARDER. Vérifié en réel : 5 disques listés, tous sains.
+- **📓 JOURNAL DE BORD** : chaque bouton « changement » cliqué est tracé (date, heure, action) dans
+  bt-journal.txt. « Qu'est-ce que tu as changé ? » → l'historique daté. La confiance par la
+  transparence — et les mesures, elles, ne sont jamais journalisées (elles ne changent rien).
+- Sonde console `BT_GARDIEN=1`. Harnais **174/174** (détections + écriture/relecture du journal).
+
+## v15.35 — Présence Discord ACTIVABLE (App ID sans recompiler) + activités qui tournent
+- Constat honnête : la « Présence Discord » était **inerte depuis le début** — l'Application ID était un
+  placeholder de zéros compilé en dur, donc rien ne pouvait s'afficher.
+- **Activable sans recompiler** : menu ⋯ → Système → ⭐ ONYX → « Activer la présence Discord (coller
+  l'App ID)… » — colle l'ID (18-19 chiffres), c'est persisté (`bt-discord-appid.txt`) et la présence
+  démarre aussitôt (si Discord tourne).
+- **Activités VIVANTES** : le statut tourne toutes les 60 s — « Optimise son PC », « Traque les FPS
+  perdus », « 197 optimisations sous la main », « Consulte son Copilote IA » — avec la version d'ONYX
+  et le temps écoulé. Fini la phrase figée.
+- Vie privée inchangée : la présence parle au Discord installé sur CE PC (canal local nommé), rien ne
+  part sur internet depuis ONYX.
+- **Reste à faire côté Discord (2 min, seul le propriétaire du compte peut le faire)** :
+  discord.com/developers/applications → « New Application » nommée ONYX → copier l'APPLICATION ID →
+  le coller dans la boîte. Optionnel : Art Assets → logo nommé « logo ».
+- UITEST 45/45 formes ; harnais 170/170.
+
+## v15.34 — Le menu ⋯ trié aussi : sous-catégories avec en-têtes de section
+- Suite du tri : les 3 sous-menus les plus chargés du menu ⋯ sont rangés en sections (titres grisés) :
+  - **🩺 Check Up+** : « 🔎 Diagnostic » (santé, qui ralentit, réglages néfastes) → « 🌡 Mesures & stress »
+    (températures, moniteur, stabilité, stress CPU) → « 📋 Inventaire & entretien » (composants, rapport,
+    entretien 6 routines) ;
+  - **🧪 Laboratoire** : « 🎯 FPS » → « 🖥 Écran & bureau » → « ⏱ Latence » → « 📚 Guides » ;
+  - **⚙ Système** : « 🌐 Réseau » (Ma connexion & box en premier) → « 🖱 Périphériques » →
+    « 🚀 Démarrage & fond » → « 🪟 Windows » (licence, Smart App Control, redémarrer l'explorateur) →
+    « ⭐ ONYX » (démarrage auto, présence Discord, animations).
+- Zéro handler modifié : uniquement l'ordre + les en-têtes. UITEST 45/45 formes, harnais 170/170.
 
 ## v15.33 — Tous les outils du Copilote TRIÉS en 4 familles
 - L'accueil du Copilote n'est plus un vrac de 20 pastilles : elles sont **rangées sous 4 en-têtes dorés**,

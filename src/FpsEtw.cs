@@ -39,6 +39,10 @@ namespace BTOptimizer
             public double OnePctLowFps;   // 1% low : 1000 / moyenne du pire 1 % des frametimes
             public double TenthPctLowFps; // 0.1% low (les pires micro-saccades) — 0 tant que < 1000 frames
             public double WorstMs;        // pire frametime (fenêtre récente)
+            /// <summary>Durée RÉELLEMENT couverte par ces chiffres, en ms. Peut être inférieure à
+            /// la fenêtre demandée : l'historique de frametimes est borné en temps. Un appelant qui
+            /// annonce « benchmark d'une minute » doit dire ce qu'il a vraiment mesuré.</summary>
+            public double FenetreMs;
             public long Total;            // total d'images depuis le début / la remise à zéro
         }
 
@@ -54,7 +58,20 @@ namespace BTOptimizer
         private readonly object _lock = new object();
         private readonly Dictionary<int, Track> _tracks = new Dictionary<int, Track>();
         private readonly Dictionary<int, string> _names = new Dictionary<int, string>();
-        private double _nowMs;   // dernier horodatage vu (base de la fenêtre glissante)
+
+        /// <summary>Durée d'historique de frametimes conservée, en millisecondes. BORNÉE EN TEMPS,
+        /// pas en nombre d'images : à 60 fps, 12 000 images font plus de trois minutes — un « 1 %
+        /// low » calculé là-dessus décrit ce qui s'est passé il y a deux minutes, pas maintenant.</summary>
+        private const double MemoireMs = 20000;
+
+        // « Maintenant » NE PEUT PAS être l'horodatage du dernier événement : quand plus rien ne
+        // présente (jeu fermé, minimisé, figé), cet horodatage se fige aussi — la fenêtre glissante
+        // reste alors calée sur les dernières images vues et le compteur affiche indéfiniment le
+        // dernier FPS connu. Une horloge murale sert donc de référence, et l'heure ETW est
+        // extrapolée à partir du dernier événement reçu.
+        private readonly Stopwatch _horloge = Stopwatch.StartNew();
+        private double _tsDernierEvt = -1;   // horodatage ETW du dernier événement
+        private double _murAuDernierEvt;     // horloge murale au même instant
 
         public bool Start()
         {
@@ -110,7 +127,8 @@ namespace BTOptimizer
 
             lock (_lock)
             {
-                _nowMs = ts;
+                _tsDernierEvt = ts;
+                _murAuDernierEvt = _horloge.Elapsed.TotalMilliseconds;
                 Track t;
                 if (!_tracks.TryGetValue(pid, out t))
                 {
@@ -124,12 +142,7 @@ namespace BTOptimizer
                     {
                         t.Times.Add(ts);
                         t.Fts.Add(ft);
-                        // Fenêtre bornée : on garde ~20 s de frames (assez pour le 1% low).
-                        if (t.Times.Count > 12000)
-                        {
-                            t.Times.RemoveRange(0, 4000);
-                            t.Fts.RemoveRange(0, 4000);
-                        }
+                        Elague(t, ts);
                     }
                 }
                 t.LastTs = ts;
@@ -137,25 +150,79 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>Jette les images plus vieilles que <see cref="MemoireMs"/>. Le retrait se fait
+        /// par blocs (jamais image par image) : retirer en tête d'une liste coûte cher, et ce code
+        /// tourne sur CHAQUE image présentée — jusqu'à plusieurs centaines par seconde.</summary>
+        private static void Elague(Track t, double maintenant)
+        {
+            if (t.Times.Count < 256) return;
+            double limite = maintenant - MemoireMs;
+            if (t.Times[0] >= limite) return;
+            int coupe = PremierDansFenetre(t.Times, limite);
+            if (coupe <= 0) return;
+            t.Times.RemoveRange(0, coupe);
+            t.Fts.RemoveRange(0, coupe);
+        }
+
+        /// <summary>PUR : index de la première image dont l'horodatage dépasse <paramref name="borne"/>.
+        /// Rend Count si aucune ne la dépasse (fenêtre vide) — les horodatages sont croissants.</summary>
+        public static int PremierDansFenetre(List<double> times, double borne)
+        {
+            if (times == null || times.Count == 0) return 0;
+            int lo = 0, hi = times.Count;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (times[mid] > borne) hi = mid; else lo = mid + 1;
+            }
+            return lo;
+        }
+
+        /// <summary>PUR : images comptées sur une fenêtre de durée connue. La durée est celle qui
+        /// S'EST ÉCOULÉE, pas celle qui sépare la première et la dernière image — sans quoi un jeu
+        /// qui s'arrête de présenter continuerait d'afficher son dernier FPS.</summary>
+        public static double CalculeFps(int images, double fenetreMs)
+        {
+            if (images <= 0 || fenetreMs <= 0) return 0;
+            return images * 1000.0 / fenetreMs;
+        }
+
+        /// <summary>Heure ETW estimée à l'instant présent (appeler sous verrou).</summary>
+        private double Maintenant()
+        {
+            if (_tsDernierEvt < 0) return 0;
+            return _tsDernierEvt + (_horloge.Elapsed.TotalMilliseconds - _murAuDernierEvt);
+        }
+
         /// <summary>Statistiques par processus (trié FPS décroissant). windowMs : fenêtre du FPS instantané.</summary>
         public List<ProcStat> Snapshot(double windowMs)
         {
             var result = new List<ProcStat>();
+
+            // On ne peut pas compter sur des images qui n'existent plus. L'historique est borné à
+            // MemoireMs ; demander une fenêtre plus large ne fait pas apparaître d'images, mais le
+            // FPS était quand même divisé par la durée DEMANDÉE.
+            //
+            // Conséquence mesurée : un benchmark d'une minute annonçait le tiers du vrai FPS, deux
+            // minutes le sixième. Le compteur en direct (fenêtre de 2 s) était juste, si bien que
+            // l'utilisateur voyait 300 FPS pendant toute la capture puis lisait un résumé à 100.
+            //
+            // On borne donc la fenêtre à ce qui est réellement couvert. L'horloge murale reste la
+            // référence : un jeu qui cesse de présenter voit toujours son FPS retomber, puisque ses
+            // images vieillissent hors de la fenêtre au lieu d'être recomptées.
+            double fenetre = Math.Min(windowMs, MemoireMs);
+
             lock (_lock)
             {
+                double maintenant = Maintenant();
                 foreach (KeyValuePair<int, Track> kv in _tracks)
                 {
                     Track t = kv.Value;
                     if (t.Times.Count == 0) continue;
-                    double cutoff = _nowMs - windowMs;
-                    if (t.Times[t.Times.Count - 1] < _nowMs - 3000) continue;  // plus rien depuis 3 s : ignorer
+                    double cutoff = maintenant - fenetre;
+                    if (t.Times[t.Times.Count - 1] < maintenant - 3000) continue;  // plus rien depuis 3 s : ignorer
 
-                    int first = t.Times.Count;                 // 1re frame dans la fenêtre
-                    for (int i = t.Times.Count - 1; i >= 0; i--)
-                    {
-                        if (t.Times[i] < cutoff) break;
-                        first = i;
-                    }
+                    int first = PremierDansFenetre(t.Times, cutoff);
                     int n = t.Times.Count - first;
                     if (n <= 0) continue;
 
@@ -181,7 +248,8 @@ namespace BTOptimizer
                     {
                         Pid = kv.Key,
                         Name = NameOf(kv.Key),
-                        Fps = n * 1000.0 / windowMs,
+                        Fps = CalculeFps(n, fenetre),
+                        FenetreMs = fenetre,
                         AvgMs = sum / n,
                         OnePctLowFps = onePct,
                         TenthPctLowFps = tenthPct,
@@ -194,6 +262,104 @@ namespace BTOptimizer
             result.Sort((a, b) => b.Fps.CompareTo(a.Fps));
             return result;
         }
+
+        // ------------------------------------------------------------------ quel processus est LE JEU
+
+        /// <summary>
+        /// Applications qui présentent des images sans être un jeu. Un navigateur avec
+        /// l'accélération matérielle présente en continu, souvent PLUS VITE qu'un jeu synchronisé à
+        /// 60 Hz — prendre « celui qui a le plus de FPS » désigne alors Chrome, pas le jeu.
+        /// </summary>
+        private static readonly string[] PasDesJeux =
+        {
+            "chrome", "msedge", "firefox", "brave", "opera", "vivaldi", "iexplore",
+            "discord", "spotify", "steam", "steamwebhelper", "epicgameslauncher", "battle.net",
+            "explorer", "dwm", "searchhost", "startmenuexperiencehost", "shellexperiencehost",
+            "textinputhost", "widgets", "widgetboard", "applicationframehost", "systemsettings",
+            "teams", "slack", "code", "devenv", "windowsterminal", "powershell", "cmd",
+            "vlc", "mpc-hc64", "mpc-be64", "obs64", "obs32", "nvcontainer", "nvidia share",
+            "btoptimizer", "onyx"
+        };
+
+        /// <summary>PUR : ce nom de processus est-il connu pour ne PAS être un jeu ?</summary>
+        public static bool EstIgnore(string nom)
+        {
+            if (string.IsNullOrEmpty(nom)) return false;
+            string n = nom.ToLowerInvariant();
+            if (n.EndsWith(".exe")) n = n.Substring(0, n.Length - 4);
+            foreach (string s in PasDesJeux)
+                if (n == s) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// PUR : lequel de ces processus est le jeu ?
+        ///
+        /// L'ANCIENNE RÈGLE ÉTAIT « celui qui a le plus de FPS », et elle est fausse par
+        /// construction : un navigateur accéléré dépasse sans peine un jeu bridé à 60 Hz. Le
+        /// compteur affichait alors le débit d'images de Chrome pendant une partie.
+        ///
+        /// La règle est maintenant : ce que l'utilisateur REGARDE, c'est-à-dire la fenêtre au
+        /// premier plan. À défaut (premier plan inconnu, ou qui ne présente rien), on retombe sur le
+        /// plus rapide en excluant ce qui n'est pas un jeu. Et si tout est exclu, on rend null
+        /// plutôt qu'un mauvais candidat : « — » est une réponse honnête, un chiffre faux non.
+        /// </summary>
+        public static ProcStat ChoisirJeu(List<ProcStat> stats, int pidPremierPlan)
+        {
+            if (stats == null || stats.Count == 0) return null;
+
+            // Le processus au premier plan est le meilleur indice — MAIS il reste soumis à la
+            // liste d'exclusion. Sans cela, la fenêtre du compteur FPS elle-même, ou un navigateur
+            // qu'on vient de consulter, deviendrait « le jeu » du seul fait d'être devant.
+            if (pidPremierPlan > 0)
+                foreach (ProcStat p in stats)
+                    if (p.Pid == pidPremierPlan && p.Fps > 0 && !EstIgnore(p.Name)) return p;
+
+            // REPLI : personne au premier plan ne présente. On CHERCHE alors un jeu, et une
+            // recherche demande plus de preuves qu'une constatation.
+            //
+            // L'ancien code acceptait tout processus avec « Fps > 0 ». Sur une fenêtre d'une
+            // seconde, un processus qui a présenté UNE SEULE image donne exactement 1 FPS — et
+            // n'importe quelle fenêtre qui se repeint le fait : une notification, un lanceur, une
+            // boîte de dialogue, un installateur. L'overlay s'accrochait à ce bruit et affichait
+            // « 1 » alors qu'aucun jeu ne tournait.
+            //
+            // Au premier plan, on fait confiance quel que soit le débit : un jeu qui rame à 6 FPS,
+            // c'est précisément le moment où l'utilisateur veut voir le chiffre. Mais un processus
+            // que PERSONNE NE REGARDE et qui présente au compte-gouttes n'est pas un jeu qui
+            // souffre — c'est une fenêtre qui vit sa vie.
+            ProcStat meilleur = null;
+            foreach (ProcStat p in stats)
+            {
+                if (p.Fps < FpsPlancherRepli || EstIgnore(p.Name)) continue;
+                if (meilleur == null || p.Fps > meilleur.Fps) meilleur = p;
+            }
+            return meilleur;
+        }
+
+        /// <summary>Débit minimal pour qu'un processus HORS PREMIER PLAN soit pris pour un jeu.
+        /// En dessous, c'est du bruit d'interface — voir ChoisirJeu.</summary>
+        public const double FpsPlancherRepli = 20.0;
+
+        /// <summary>PID de la fenêtre au premier plan, 0 si indéterminé.</summary>
+        public static int PidPremierPlan()
+        {
+            try
+            {
+                IntPtr h = GetForegroundWindow();
+                if (h == IntPtr.Zero) return 0;
+                int pid;
+                GetWindowThreadProcessId(h, out pid);
+                return pid;
+            }
+            catch { return 0; }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int pid);
 
         /// <summary>Moyenne du pire k-ième des frametimes triés, convertie en FPS.</summary>
         private static double LowAvgFps(List<double> sorted, int k)

@@ -16,10 +16,24 @@ namespace BTOptimizer
         private static bool _timerWasActive;
 
         // Services sûrs à suspendre pendant une partie (tous relançables à la demande).
-        private static readonly string[] Suspendable =
+        private static readonly string[] Suspendable = Construit();
+
+        /// <summary>
+        /// Services suspendables = les services Windows d'arrière-plan, PLUS les services des
+        /// suites constructeur qui interrogent les capteurs (Corsair, Logitech, NVIDIA…).
+        ///
+        /// Ces derniers sont la première cause de latence différée sur une machine bien réglée :
+        /// lire une température passe par un bus lent et BLOQUANT. Le Mode Jeu les arrête le temps
+        /// d'une partie et les relance ensuite — exactement le traitement des autres, et rien n'est
+        /// désactivé durablement. Les APPLICATIONS visibles (iCUE, Afterburner…) ne sont PAS
+        /// touchées : les arrêter aurait des effets que l'utilisateur n'a pas demandés.
+        /// </summary>
+        private static string[] Construit()
         {
-            "SysMain", "WSearch", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice"
-        };
+            var l = new List<string> { "SysMain", "WSearch", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice" };
+            foreach (string s in SondesMaterielles.ServicesSondes) if (!l.Contains(s)) l.Add(s);
+            return l.ToArray();
+        }
 
         /// <summary>Liste des services que le Mode Jeu peut suspendre (pour l'écran d'exclusions).</summary>
         public static IReadOnlyList<string> SuspendableServices { get { return Suspendable; } }
@@ -43,7 +57,7 @@ namespace BTOptimizer
             }
         }
 
-        private static string ExclPath { get { return System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gamemode-excl.txt"); } }
+        private static string ExclPath { get { return AppPaths.File("bt-gamemode-excl.txt"); } }
 
         /// <summary>Services EXCLUS du Mode Jeu (laissés tourner) — choix persisté de l'utilisateur.</summary>
         public static HashSet<string> LoadExclusions()

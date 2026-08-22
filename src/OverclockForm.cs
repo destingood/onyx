@@ -115,15 +115,23 @@ namespace BTOptimizer
             _plBar = new TrackBar
             {
                 Location = new Point(150, y), Size = new Size(360, 40),
-                Minimum = 50, Maximum = 200, TickFrequency = 10, SmallChange = 5, LargeChange = 10
+                TickFrequency = 10, SmallChange = 5, LargeChange = 10
             };
             if (_gpu.Ok && _gpu.PowerDefault > 0)
             {
-                int maxPct = (int)Math.Round(100.0 * _gpu.PowerMax / _gpu.PowerDefault);
-                _plBar.Maximum = Math.Max(120, maxPct);
-                _plBar.Value = Math.Min(_plBar.Maximum, (int)Math.Round(100.0 * _gpu.PowerCur / _gpu.PowerDefault));
+                // Les bornes viennent de la CARTE. L'ancien code fixait un minimum à 50 % et ne
+                // bornait la valeur que par le haut : sur cette machine, le pilote descend à 47 %,
+                // et un utilisateur qui avait bridé sa carte au minimum voyait la fenêtre refuser
+                // de s'ouvrir — exception dans le constructeur, sans message. Voir BornesPuissance.
+                int minPct, maxPct, valPct;
+                BornesPuissance.Calcule(_gpu.PowerMin, _gpu.PowerDefault, _gpu.PowerMax, _gpu.PowerCur,
+                                        out minPct, out maxPct, out valPct);
+                // Maximum AVANT Minimum : le composant refuse un minimum supérieur au maximum courant.
+                _plBar.Maximum = maxPct;
+                _plBar.Minimum = minPct;
+                _plBar.Value = valPct;
             }
-            else { _plBar.Value = 100; _plBar.Enabled = false; }
+            else { _plBar.Minimum = 50; _plBar.Maximum = 200; _plBar.Value = 100; _plBar.Enabled = false; }
             _plBar.ValueChanged += (s, e) => UpdatePlLabel();
             Controls.Add(_plBar);
             _plVal = new Label { Location = new Point(520, y + 4), AutoSize = true, Font = new Font("Segoe UI Semibold", 10f) };
@@ -438,7 +446,7 @@ namespace BTOptimizer
 
         private void ApplyPreset(int pct)
         {
-            _plBar.Value = Math.Min(_plBar.Maximum, Math.Max(_plBar.Minimum, pct));
+            PoseCurseur(pct);
         }
 
         private void ApplyBalanced()
@@ -456,7 +464,23 @@ namespace BTOptimizer
         {
             int pl;
             if (Sys.LoadGpuOcConfig(out pl) && _gpu.Ok && _gpu.PowerDefault > 0 && pl > 0)
-                _plBar.Value = Math.Min(_plBar.Maximum, (int)Math.Round(100.0 * pl / _gpu.PowerDefault));
+                // Bornage DES DEUX CÔTÉS : cette ligne reproduisait à l'identique l'oubli qui
+                // empêchait la fenêtre de s'ouvrir. Un fichier de configuration contenant une
+                // valeur basse suffisait à la refaire tomber.
+                PoseCurseur((int)Math.Round(100.0 * pl / _gpu.PowerDefault));
+        }
+
+        /// <summary>Place le curseur sans jamais sortir de ses bornes — le composant lève sinon.</summary>
+        private void PoseCurseur(int pct)
+        {
+            _plBar.Value = Math.Min(_plBar.Maximum, Math.Max(_plBar.Minimum, pct));
+        }
+
+        /// <summary>Replace le curseur sur ce que la carte annonce réellement, après une écriture.</summary>
+        private void RecaleCurseur()
+        {
+            if (!_gpu.Ok || _gpu.PowerDefault <= 0 || _gpu.PowerCur <= 0) return;
+            PoseCurseur((int)Math.Round(100.0 * _gpu.PowerCur / _gpu.PowerDefault));
         }
 
         private void OnApplyGpu(object sender, EventArgs e)
@@ -470,21 +494,46 @@ namespace BTOptimizer
                     "Appliquer le power limit GPU", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
 
-            Sys.ApplyGpuOc(watts, _log);
-            Sys.SaveGpuOcConfig(watts);
+            bool acceptee = Sys.ApplyGpuOc(watts, _log);
             if (_chkPersist.Checked) Sys.SetOcGuard(true, Application.ExecutablePath, _log);
             else if (Sys.OcGuardExists()) Sys.SetOcGuard(false, Application.ExecutablePath, _log);
+
+            // On relit la carte AVANT de dire quoi que ce soit : c'est elle qui tranche, pas nous.
             _gpu = Sys.QueryGpuOc();
-            MessageBox.Show(this, "Power limit GPU appliqué (fréquences gérées par le pilote).",
-                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            double observes = _gpu.Ok ? _gpu.PowerCur : 0;
+            bool reussi = acceptee && observes > 0 && Math.Abs(observes - watts) <= BornesPuissance.ToleranceWatts;
+
+            // On n'enregistre le réglage que s'il a VRAIMENT pris : sinon la tâche de démarrage
+            // ré-appliquerait à chaque session une valeur que la carte refuse.
+            if (reussi) Sys.SaveGpuOcConfig(watts);
+
+            UpdatePlLabel();
+            MessageBox.Show(this, BornesPuissance.Confirmation(watts, observes, acceptee), "ONYX",
+                MessageBoxButtons.OK, reussi ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
 
         private void OnApplyNvidia(object sender, EventArgs e)
         {
+            // Le profil est choisi d'après la DERNIÈRE MESURE en jeu, pas appliqué à l'aveugle :
+            // « Ultra » n'est bénéfique que si la carte graphique travaille déjà à fond.
+            double cpuAvg, gpuAvg; DateTime quandMes;
+            bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quandMes);
+            if (!mesure) { cpuAvg = -1; gpuAvg = -1; }
+            NvProfile.Kind choix = NvProfile.Recommande(cpuAvg, gpuAvg);
+            string diag = mesure
+                ? "Ta dernière mesure en jeu : CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " %.\n"
+                  + (NvProfile.UltraNocif(cpuAvg, gpuAvg)
+                        ? "→ Ton PROCESSEUR limite : le mode « Ultra » te ferait PERDRE des images.\n\n"
+                        : "→ Profil retenu : " + NvProfile.Libelle(choix) + ".\n\n")
+                : "Aucune mesure en jeu n'a encore été faite : on applique le profil SÛR, jamais « Ultra » à l'aveugle.\n\n";
             if (MessageBox.Show(this,
-                    "Appliquer le profil pilote NVIDIA « faible latence » ?\n\n"
-                    + "• Ultra Low Latency = Ultra\n• Frames pré-rendues max = 1\n• Mode de gestion = Performances maximales\n\n"
-                    + "Via nvidiaProfileInspector (ton propre outil). Réversible dans le panneau NVIDIA ou en remettant les réglages par défaut du pilote.",
+                    diag
+                    + "Appliquer « " + NvProfile.Libelle(choix) + " » ?\n\n"
+                    + "• Le mode « Ultra » supprime la file d'attente de rendu (1 image pré-rendue). Ce tampon est ce qui "
+                    + "amortit les à-coups du processeur : sans lui, chaque pic CPU devient une image perdue. Il ne vaut "
+                    + "que sur une machine limitée par le GPU.\n"
+                    + "• Le profil sûr garde une latence réduite ET la stabilité.\n"
+                    + "• Via nvidiaProfileInspector. Retirable depuis ONYX (le diagnostic propose le retour au profil sûr).",
                     "Profil NVIDIA faible latence", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
             var btn = sender as Button;
@@ -505,14 +554,22 @@ namespace BTOptimizer
 
         private void OnResetGpu(object sender, EventArgs e)
         {
-            Sys.ResetGpuLocks(_log);
+            bool acceptee = Sys.ResetGpuLocks(_log);
             if (Sys.OcGuardExists()) Sys.SetOcGuard(false, Application.ExecutablePath, _log);
             try { if (System.IO.File.Exists(Sys.GpuOcConfigPath)) System.IO.File.Delete(Sys.GpuOcConfigPath); } catch { }
             _chkPersist.Checked = false;
+
+            // Même règle qu'à l'application : c'est la carte relue qui décide du message.
+            double defaut = _gpu.PowerDefault;
             _gpu = Sys.QueryGpuOc();
+            double observes = _gpu.Ok ? _gpu.PowerCur : 0;
+            if (_gpu.PowerDefault > 0) defaut = _gpu.PowerDefault;
+            bool reussi = acceptee && observes > 0 && Math.Abs(observes - defaut) <= BornesPuissance.ToleranceWatts;
+
+            RecaleCurseur();
             UpdatePlLabel();
-            MessageBox.Show(this, "GPU remis aux réglages par défaut du constructeur.",
-                "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, BornesPuissance.Confirmation((int)Math.Round(defaut), observes, acceptee),
+                "ONYX", MessageBoxButtons.OK, reussi ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
 
         protected override void Dispose(bool disposing)

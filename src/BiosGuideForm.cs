@@ -67,7 +67,19 @@ namespace BTOptimizer
             var bios = MakeBtn("⏻ Redémarrer dans le BIOS…", 200, DockStyle.Left);
             bios.Click += (s, e) => RebootToFirmware();
             var opti = MakeBtn("Ouvrir l'optimiseur (manips auto)", 220, DockStyle.Left);
-            opti.Click += (s, e) => { try { new MainForm().Show(); } catch { } };
+            // Cette fenêtre est ouverte en MODAL (OpenDialog → ShowDialog). Un Show() sans
+            // propriétaire créait une fenêtre modeless par-dessus une boucle modale : elle
+            // pouvait passer derrière sans qu'on puisse la rattraper, et son échec éventuel
+            // était avalé. On l'ouvre modale et on la libère, comme partout ailleurs.
+            opti.Click += (s, e) =>
+            {
+                try { using (var m = new MainForm()) m.ShowDialog(this); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Impossible d'ouvrir l'optimiseur : " + ex.Message,
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
             var close = MakeBtn("Fermer", 90, DockStyle.Right);
             close.Click += (s, e) => Close();
             bottom.Controls.Add(new Label { Dock = DockStyle.Fill });
@@ -93,8 +105,31 @@ namespace BTOptimizer
         }
 
         // Redémarrage direct dans le firmware UEFI (l'utilisateur confirme — ça REDÉMARRE le PC).
+        /// <summary>Vrai si Windows a démarré en UEFI. « /fw » n'existe que là : sur un firmware
+        /// hérité, la commande échoue et le PC ne redémarre même pas.</summary>
+        private static bool EstUefi()
+        {
+            try
+            {
+                string t = Environment.GetEnvironmentVariable("firmware_type");
+                return !string.IsNullOrEmpty(t) && t.IndexOf("UEFI", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch { return false; }
+        }
+
         private void RebootToFirmware()
         {
+            // Prévenir AVANT de faire peur : inutile de proposer un redémarrage qui échouera.
+            if (!EstUefi())
+            {
+                MessageBox.Show(this,
+                    "Ce PC a démarré en mode BIOS hérité (pas UEFI).\r\n\r\n"
+                    + "Windows ne sait pas y rediriger le démarrage vers le firmware : il faut appuyer sur la "
+                    + "touche du constructeur au démarrage (souvent Suppr, F2 ou F12).",
+                    "Redémarrer dans le BIOS", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (MessageBox.Show(this,
                     "Redémarrer MAINTENANT dans le BIOS/UEFI ?\r\n\r\nEnregistre ton travail : le PC va redémarrer "
                     + "immédiatement et ouvrir les réglages du firmware.",
@@ -102,9 +137,29 @@ namespace BTOptimizer
                 return;
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("shutdown.exe", "/r /fw /t 2")
-                { UseShellExecute = false, CreateNoWindow = true });
-                if (_log != null) _log("Redémarrage dans le BIOS demandé.", 0);
+                // ON LIT LE RÉSULTAT. L'ancien code lançait shutdown.exe sans fenêtre, sans jamais
+                // regarder son code de retour, puis journalisait « Redémarrage dans le BIOS
+                // demandé » quoi qu'il arrive. Or « /fw » est refusé par certains firmwares — et
+                // dans ce cas shutdown ne redémarre PAS. L'utilisateur validait donc un
+                // avertissement inquiétant, puis il ne se passait rien, sans la moindre
+                // explication.
+                //
+                // En cas de succès, la machine redémarre 5 secondes plus tard : le message
+                // d'échec ci-dessous ne peut apparaître que si l'échec est réel.
+                NativeResult r = Sys.Run(Sys.Sys32("shutdown.exe"), "/r /fw /t 5");
+                if (r.ExitCode == 0)
+                {
+                    if (_log != null) _log("Redémarrage dans le BIOS accepté : le PC redémarre dans 5 secondes.", 1);
+                    return;
+                }
+                string detail = (r.Output ?? "").Trim();
+                if (_log != null) _log("Redémarrage dans le BIOS REFUSÉ (code " + r.ExitCode + ") : " + detail, 3);
+                MessageBox.Show(this,
+                    "Windows a refusé de rediriger le démarrage vers le firmware (code " + r.ExitCode + ").\r\n\r\n"
+                    + (detail.Length > 0 ? detail + "\r\n\r\n" : "")
+                    + "Le PC n'a PAS redémarré. Redémarre-le toi-même en appuyant sur la touche du constructeur "
+                    + "(souvent Suppr, F2 ou F12).",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             catch (Exception ex) { MessageBox.Show(this, "Impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
@@ -135,8 +190,11 @@ namespace BTOptimizer
                 "Active « Resizable BAR » (Intel) ou « SAM » (AMD) si ton GPU le supporte : quelques % de FPS en plus, gratuit.");
             Add(bios, "Above 4G Decoding",
                 "Souvent requis pour activer le Resizable BAR — active-le d'abord si l'option ReBAR est grisée.");
-            Add(bios, "Mode XMP + fTPM (si micro-freezes AMD)",
-                "Sur certaines cartes AMD, le fTPM cause des micro-saccades : mets-le sur « Discrete » ou désactive-le si tu n'en as pas besoin (Bitlocker off d'abord).");
+            Add(bios, "fTPM (si micro-saccades AMD)",
+                "Bug connu des cartes AMD, CORRIGÉ par une mise à jour BIOS (AGESA 1.2.0.7 et suivantes) : commence par "
+                + "mettre à jour le BIOS, c'est la vraie réparation. Désactiver le fTPM n'est qu'un contournement — et il "
+                + "rend Windows 11 non supporté. Si tu y touches quand même : DÉSACTIVE BitLocker AVANT, sinon ton disque "
+                + "devient illisible sans la clé de récupération.");
 
             Add(manip, "Menu clic droit classique, barre des tâches, widgets, chat…",
                 "Déjà AUTOMATISÉ : bouton « Ouvrir l'optimiseur » → catégorie 🚀 Rapidité (menu classique, widgets off, chat off, recherche…).");

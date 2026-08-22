@@ -96,6 +96,16 @@ namespace BTOptimizer
             var btnExport = MakeBtn("Exporter le résumé…", 170);
             btnExport.Dock = DockStyle.Left;
             btnExport.Click += OnExport;
+
+            // ENQUÊTE : le reste de cette fenêtre montre des chiffres ; ces deux boutons les
+            // rendent exploitables. Voir EnqueteLatence pour pourquoi ni le pire temps ni le
+            // total ne se comparent d'un relevé à l'autre.
+            var btnRef = MakeBtn("Relevé de référence", 160);
+            btnRef.Dock = DockStyle.Left;
+            btnRef.Click += (s, e) => EnregistreReference();
+            var btnEnq = MakeBtn("Où va la latence ?", 155);
+            btnEnq.Dock = DockStyle.Left;
+            btnEnq.Click += (s, e) => MontreEnquete();
             // Cette fenêtre EST la mesure de latence intégrée (comme LatencyMon). Le bouton
             // n'est qu'un « aller plus loin » optionnel vers l'outil de bureau.
             var btnTool = MakeBtn("Aller plus loin : LatencyMon", 210);
@@ -114,6 +124,8 @@ namespace BTOptimizer
 
             bottom.Controls.Add(_footer);
             bottom.Controls.Add(btnTool);
+            bottom.Controls.Add(btnEnq);
+            bottom.Controls.Add(btnRef);
             bottom.Controls.Add(btnExport);
             bottom.Controls.Add(btnReset);
             bottom.Controls.Add(btnClose);
@@ -128,6 +140,178 @@ namespace BTOptimizer
             BuildTiles();
             Controls.Add(_verdict);
             Controls.Add(bottom);
+        }
+
+        // ==================================================================
+        //  ENQUÊTE DE LATENCE
+        // ==================================================================
+
+        private static string CheminReference { get { return AppPaths.File("bt-latence-reference.txt"); } }
+
+        /// <summary>Convertit le relevé ETW courant en relevé d'enquête (voir EnqueteLatence).</summary>
+        private EnqueteLatence.Releve ReleveCourant()
+        {
+            if (_etw == null) return null;
+            DpcIsrReport rep = _etw.Snapshot();
+            if (rep == null || rep.DurationSec <= 0) return null;
+            var r = new EnqueteLatence.Releve { Secondes = rep.DurationSec };
+            foreach (DriverStat d in rep.Drivers)
+            {
+                long ev = d.DpcCount + d.IsrCount;
+                if (ev <= 0) continue;
+                r.Pilotes.Add(new EnqueteLatence.Pilote
+                {
+                    Nom = d.Module,
+                    Evenements = ev,
+                    TotalMs = (d.DpcTotalUs + d.IsrTotalUs) / 1000.0,
+                    PireMs = d.WorstUs / 1000.0
+                });
+            }
+            return r.Pilotes.Count > 0 ? r : null;
+        }
+
+        /// <summary>
+        /// Enregistre l'état courant comme point de comparaison. La DURÉE et la CHARGE sont
+        /// gardées avec : sans elles, le relevé suivant ne pourra rien prouver.
+        /// </summary>
+        private void EnregistreReference()
+        {
+            EnqueteLatence.Releve r = ReleveCourant();
+            if (r == null)
+            {
+                MessageBox.Show(this, "Aucune mesure exploitable pour l'instant. Laisse tourner au moins "
+                    + "quelques secondes — idéalement 60, dans l'état que tu veux comparer.",
+                    "Relevé de référence", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (r.Secondes < 20)
+            {
+                if (MessageBox.Show(this,
+                        "La mesure ne dure que " + r.Secondes.ToString("0") + " secondes.\r\n\r\n"
+                        + "Un relevé court donne un « pire temps » artificiellement bas : moins d'événements, "
+                        + "moins de chances de tomber sur un cas extrême. Vise 60 secondes.\r\n\r\n"
+                        + "Enregistrer quand même ?",
+                        "Relevé court", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                    return;
+            }
+            try { System.IO.File.WriteAllText(CheminReference, EnqueteLatence.Serialise(r)); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Enregistrement impossible : " + ex.Message, "ONYX",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (_log != null) _log("Relevé de référence enregistré : " + r.EvenementsParSeconde.ToString("#,0")
+                + " événements/s, " + r.MicrosParEvenement.ToString("0.0") + " µs/événement.", 1);
+            MessageBox.Show(this,
+                "Référence enregistrée.\r\n\r\n"
+                + "   " + r.EvenementsParSeconde.ToString("#,0") + " événements/s\r\n"
+                + "   " + r.MicrosParEvenement.ToString("0.0") + " µs par événement\r\n"
+                + "   " + r.PourcentUnCoeur.ToString("0.00") + " % d'un cœur\r\n\r\n"
+                + "Change UN SEUL réglage, remets le compteur à zéro, laisse tourner la même durée "
+                + "DANS LE MÊME ÉTAT, puis clique « Où va la latence ? ».",
+                "Relevé de référence", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private static EnqueteLatence.Releve LitReference()
+        {
+            try
+            {
+                return System.IO.File.Exists(CheminReference)
+                    ? EnqueteLatence.Analyse(System.IO.File.ReadAllText(CheminReference)) : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Le rapport : d'où vient la latence, que faire, et — s'il y a une référence —
+        /// ce que le dernier changement a produit, ou pourquoi on refuse de le dire.</summary>
+        private void MontreEnquete()
+        {
+            EnqueteLatence.Releve r = ReleveCourant();
+            if (r == null)
+            {
+                MessageBox.Show(this, "Aucune mesure exploitable pour l'instant.", "Enquête",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("ÉTAT ACTUEL  —  " + r.Secondes.ToString("0") + " s de mesure");
+            sb.AppendLine("   " + r.EvenementsParSeconde.ToString("#,0") + " événements/s   ·   "
+                + r.MicrosParEvenement.ToString("0.0") + " µs/événement   ·   "
+                + r.PourcentUnCoeur.ToString("0.00") + " % d'un cœur");
+            sb.AppendLine();
+
+            sb.AppendLine("D'OÙ VIENT LE TEMPS");
+            int n = 0;
+            foreach (EnqueteLatence.Pilote p in EnqueteLatence.Coupables(r))
+            {
+                double part = EnqueteLatence.Part(p, r);
+                if (part < 1.0 || ++n > 6) break;
+                sb.AppendLine("   " + p.Nom.PadRight(16) + part.ToString("0.0").PadLeft(5) + " %   "
+                    + p.MicrosParEvenement.ToString("0.0").PadLeft(6) + " µs/évt"
+                    + (LeviersLatence.EstOutilDeMesure(p.Nom) ? "   ← l'outil de mesure lui-même" : ""));
+            }
+            int couvrent = EnqueteLatence.CombienCouvrent(r, 0.90);
+            sb.AppendLine("   → " + couvrent + " pilote(s) représentent 90 % du temps. "
+                + "Agir ailleurs ne peut rien rapporter de visible.");
+            sb.AppendLine();
+
+            sb.AppendLine("CE QU'ON PEUT TENTER");
+            foreach (string fam in LeviersLatence.Plan(r, 0.90))
+            {
+                foreach (LeviersLatence.Levier lv in LeviersLatence.PourFamille(fam))
+                {
+                    sb.AppendLine("   " + (lv.Reversible ? "•" : "⚠") + " " + lv.Titre);
+                    sb.AppendLine("        " + lv.Esperance);
+                    if (lv.Cout.Length > 0) sb.AppendLine("        COÛT : " + lv.Cout);
+                }
+            }
+            sb.AppendLine();
+
+            EnqueteLatence.Releve avant = LitReference();
+            if (avant == null)
+            {
+                sb.AppendLine("COMPARAISON");
+                sb.AppendLine("   Aucune référence enregistrée. Clique « Relevé de référence » AVANT de");
+                sb.AppendLine("   changer quoi que ce soit, sinon rien ne pourra être prouvé.");
+            }
+            else
+            {
+                sb.AppendLine("DEPUIS LE RELEVÉ DE RÉFÉRENCE (" + avant.Quand.ToString("dd/MM HH:mm") + ")");
+                sb.AppendLine();
+                sb.Append("   " + EnqueteLatence.Attribue(avant, r, "ton changement").Texte.Replace("\n", "\n   "));
+            }
+
+            AfficheRapport(sb.ToString());
+        }
+
+        private void AfficheRapport(string texte)
+        {
+            using (var f = new Form
+            {
+                Text = "ONYX — Enquête de latence",
+                ClientSize = new Size(760, 620),
+                StartPosition = FormStartPosition.CenterParent,
+                MinimizeBox = false, MaximizeBox = true
+            })
+            {
+                var box = new TextBox
+                {
+                    Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, WordWrap = true,
+                    ScrollBars = ScrollBars.Vertical, Font = new Font("Consolas", 9.5f),
+                    Text = texte, BackColor = Color.White
+                };
+                var bas = new Panel { Dock = DockStyle.Bottom, Height = 44, Padding = new Padding(12, 6, 12, 6) };
+                var copier = MakeBtn("Copier", 110); copier.Dock = DockStyle.Left;
+                copier.Click += (s, e) => { try { Clipboard.SetText(texte); } catch { } };
+                var fermer = MakeBtn("Fermer", 110); fermer.Dock = DockStyle.Right;
+                fermer.Click += (s, e) => f.Close();
+                bas.Controls.Add(copier); bas.Controls.Add(fermer);
+                f.Controls.Add(box); f.Controls.Add(bas);
+                try { Theme.Apply(f); } catch { }
+                f.ShowDialog(this);
+            }
         }
 
         private static Button MakeBtn(string text, int w)

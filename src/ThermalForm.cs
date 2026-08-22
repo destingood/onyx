@@ -120,16 +120,33 @@ namespace BTOptimizer
         }
 
         // ---- Raisons de bridage via nvidia-smi (best-effort, tolère les vieux pilotes) ----
-        private static bool ReasonActive(string field, string nvsmi)
+
+        // Famille de noms retenue une fois pour toutes : dès qu'on sait laquelle le pilote
+        // accepte, les cycles suivants ne coûtent plus qu'UN lancement de processus.
+        private static string _famille;
+
+        /// <summary>
+        /// Les trois raisons de bridage en un seul lancement (deux au premier passage sur un
+        /// vieux pilote). Rend null si nvidia-smi n'a rien d'exploitable à dire : le panneau
+        /// affichera « inconnu » plutôt que « pas de bridage », qui serait une affirmation.
+        /// </summary>
+        private static bool[] LitBridage(string nvsmi)
         {
-            try
+            string[] familles = _famille != null
+                ? new[] { _famille }
+                : new[] { "clocks_event_reasons", "clocks_throttle_reasons" };
+
+            foreach (string f in familles)
             {
-                NativeResult r = Sys.Run(nvsmi, "--query-gpu=" + field + " --format=csv,noheader");
-                if (r.ExitCode != 0) return false;
-                string o = (r.Output ?? "").Trim().ToLowerInvariant();
-                return o.Contains("active") && !o.Contains("not active");
+                try
+                {
+                    NativeResult r = Sys.Run(nvsmi, "--query-gpu=" + NvBridage.Requete(f) + " --format=csv,noheader");
+                    bool[] d = r.ExitCode == 0 ? NvBridage.Analyse(r.Output ?? "") : null;
+                    if (d != null) { _famille = f; return d; }
+                }
+                catch { }
             }
-            catch { return false; }
+            return null;
         }
 
         private static string NvSmi()
@@ -138,8 +155,9 @@ namespace BTOptimizer
             return System.IO.File.Exists(p) ? p : "nvidia-smi.exe";
         }
 
-        // Chaque tick : les mesures nvidia-smi (jusqu'à 6 lancements de process) tournent EN
-        // ARRIÈRE-PLAN — jamais sur le thread UI, sinon le panneau se fige toutes les 2 s.
+        // Chaque tick : les mesures nvidia-smi (un lancement de process, deux au premier passage
+        // sur un vieux pilote) tournent EN ARRIÈRE-PLAN — jamais sur le thread UI, sinon le
+        // panneau se fige toutes les 2 s.
         private void Refresh2()
         {
             if (_thBusy) return;
@@ -156,14 +174,11 @@ namespace BTOptimizer
                     bool thermal = false, powerBrake = false;
                     if (doReasons)
                     {
-                        string nv = NvSmi();
-                        bool hwTherm = ReasonActive("clocks_event_reasons.hw_thermal_slowdown", nv)
-                                    || ReasonActive("clocks_throttle_reasons.hw_thermal_slowdown", nv);
-                        bool swTherm = ReasonActive("clocks_event_reasons.sw_thermal_slowdown", nv)
-                                    || ReasonActive("clocks_throttle_reasons.sw_thermal_slowdown", nv);
-                        thermal = hwTherm || swTherm;
-                        powerBrake = ReasonActive("clocks_event_reasons.hw_power_brake_slowdown", nv)
-                                  || ReasonActive("clocks_throttle_reasons.hw_power_brake_slowdown", nv);
+                        bool[] d = LitBridage(NvSmi());
+                        // d == null : nvidia-smi n'a pas répondu. On ne prétend pas savoir.
+                        doReasons = d != null;
+                        thermal = NvBridage.Thermique(d);
+                        powerBrake = NvBridage.Puissance(d);
                     }
                     try { BeginInvoke((Action)(() => ApplySample(s, doReasons, thermal, powerBrake))); } catch { }
                 }

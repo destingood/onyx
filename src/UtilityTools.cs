@@ -658,6 +658,160 @@ namespace BTOptimizer
             return Regex.IsMatch(n, "(recommande|recommended)\\s*:\\s*(oui|yes)");
         }
 
+        // ---- SANTÉ DISQUES / JOURNAL / GARDIEN ----
+        /// <summary>« état de mes disques », « mon ssd est en bonne santé ? », « smart » → vrai.</summary>
+        internal static bool IsDiskHealth(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool disk = Regex.IsMatch(n, "\\b(ssd|disque|disques|hdd|nvme)\\b");
+            bool health = n.Contains("sante") || n.Contains("etat") || Regex.IsMatch(n, "\\bsmart\\b")
+                || n.Contains("va mourir") || n.Contains("mort") || n.Contains("fatigue") || n.Contains("usure");
+            return (disk && health) || n.Contains("smart de mes disques") || n.Contains("sante disque");
+        }
+
+        /// <summary>« qu'est-ce que tu as changé ? », « journal de bord », « historique des actions » → vrai.</summary>
+        internal static bool IsJournal(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("journal") || n.Contains("historique des actions") || n.Contains("historique des changements")
+                || (n.Contains("qu'est ce que tu as change") || n.Contains("qu est ce que tu as change")
+                    || n.Contains("qu'as tu change") || n.Contains("qu as tu change") || n.Contains("tu as change quoi"));
+        }
+
+        /// <summary>« gardien », « alertes », « tout va bien ? » → vrai.</summary>
+        internal static bool IsGuardian(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("gardien") || Regex.IsMatch(n, "\\balertes?\\b") || n.Contains("tout va bien");
+        }
+
+        // ---- PROFIL ONYX (export / restauration) ----
+        /// <summary>« exporte mon profil », « sauvegarde mes réglages ONYX » → vrai.</summary>
+        internal static bool IsExportProfile(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("exporte") || n.Contains("export") || n.Contains("sauvegarde"))
+                && (n.Contains("profil") || n.Contains("reglages onyx") || n.Contains("mes reglages"));
+        }
+
+        /// <summary>« importe mon profil », « restaure mon profil » → vrai (pas « point de restauration »).</summary>
+        internal static bool IsImportProfile(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("importe") || n.Contains("import") || n.Contains("restaure")) && n.Contains("profil");
+        }
+
+        // ---- TENDANCE SANTÉ ----
+        /// <summary>« score de santé », « tendance », « évolution de mon pc » → vrai.</summary>
+        internal static bool IsHealthTrend(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return n.Contains("score de sante") || n.Contains("tendance") || n.Contains("evolution de mon pc")
+                || n.Contains("historique de sante") || n.Contains("historique sante");
+        }
+
+        // ---- « ÇA MARCHAIT HIER » (diff d'état système) ----
+        /// <summary>« qu'est-ce qui a changé sur mon PC », « ça marchait hier » → vrai
+        /// (PAS « qu'est-ce que TU as changé » = journal des actions d'ONYX).</summary>
+        internal static bool IsWhatChanged(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("tu as") || n.Contains("t'as change") || n.Contains("t as change")) return false;   // → journal
+            if (n.Contains("marchait hier") || n.Contains("marchait avant") || n.Contains("fonctionnait hier")
+                || n.Contains("fonctionnait avant") || n.Contains("marchait tres bien")) return true;
+            return (n.Contains("qui a change") || n.Contains("quoi a change") || n.Contains("qu'est ce qui a change")
+                || n.Contains("qu est ce qui a change")) && Regex.IsMatch(n, "\\b(pc|ordi|ordinateur|systeme|windows)\\b");
+        }
+
+        // ---- GOULOT D'ÉTRANGLEMENT CPU / GPU ----
+        /// <summary>« c'est mon cpu ou mon gpu qui limite », « bottleneck », « goulot » → vrai.</summary>
+        internal static bool IsBottleneck(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("bottleneck") || n.Contains("goulot")) return true;
+            bool both = Regex.IsMatch(n, "\\bcpu\\b") && Regex.IsMatch(n, "\\bgpu\\b");
+            bool limit = n.Contains("limite") || n.Contains("bride") || n.Contains("brid")
+                || n.Contains("qui bloque") || n.Contains("le plus faible") || n.Contains("maillon");
+            return both && limit;
+        }
+
+        // ---- JEUX QUI DORMENT (espace disque) ----
+        /// <summary>« quels jeux prennent de la place », « jeux que je ne joue plus » → vrai.</summary>
+        internal static bool IsDormantGames(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool games = Regex.IsMatch(n, "\\b(jeux|jeu)\\b");
+            if (!games) return false;
+            return n.Contains("prennent de la place") || n.Contains("prend de la place") || n.Contains("plus gros jeux")
+                || n.Contains("je ne joue plus") || n.Contains("joue plus") || n.Contains("dorment")
+                || n.Contains("desinstaller") || n.Contains("inutiles") || (n.Contains("place") && n.Contains("libere"));
+        }
+
+        // ---- OÙ SONT PASSÉS MES GO ----
+        /// <summary>« où sont passés mes go », « quel dossier prend de la place » → vrai.</summary>
+        internal static bool IsBigFolders(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("ou sont passes") || n.Contains("ou est passe") || n.Contains("ou sont mes go")) return true;
+            bool folder = n.Contains("dossier") || n.Contains("repertoire") || n.Contains("gros fichiers");
+            return folder && (n.Contains("place") || n.Contains("lourd") || n.Contains("gros") || n.Contains("prend"));
+        }
+
+        // ---- MES JEUX SONT-ILS SUR SSD ? ----
+        /// <summary>« mes jeux sont sur ssd ? », « jeux sur hdd », « quel disque pour mes jeux » → vrai.</summary>
+        internal static bool IsGameStorage(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool games = Regex.IsMatch(n, "\\b(jeux|jeu)\\b");
+            bool storage = Regex.IsMatch(n, "\\b(ssd|hdd|nvme|disque|disques)\\b");
+            if (!games || !storage) return false;
+            // « mon jeu rame » + « disque plein » = autre sujet (nettoyage), pas l'emplacement.
+            if (n.Contains("plein") || n.Contains("libere") || n.Contains("place")) return false;
+            return true;
+        }
+
+        // ---- DEFENDER & JEUX ----
+        /// <summary>« antivirus ralentit mes jeux », « exclusions defender » → vrai.</summary>
+        internal static bool IsGameShield(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool av = n.Contains("defender") || n.Contains("antivirus") || n.Contains("anti virus") || n.Contains("exclusion");
+            if (!av) return false;
+            return Regex.IsMatch(n, "\\b(jeu|jeux|fps|ralentit|ralenti|saccade|freeze|performance|performances)\\b")
+                || n.Contains("exclusion");
+        }
+
+        /// <summary>« annule les exclusions de jeux » → vrai (retour arrière).</summary>
+        internal static bool IsShieldUndo(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            return (n.Contains("annule") || n.Contains("retire") || n.Contains("remets") || n.Contains("supprime"))
+                && n.Contains("exclusion");
+        }
+
+        // ---- MÉDECIN DES JOURNAUX WINDOWS ----
+        /// <summary>« analyse les logs », « journal d'événements », « diagnostique tout » → vrai.</summary>
+        internal static bool IsLogDoctor(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            if (n.Contains("journal de bord")) return false;                    // → journal des actions d'ONYX
+            if (Regex.IsMatch(n, "\\blogs?\\b") || n.Contains("observateur d'evenement") || n.Contains("observateur devenement")
+                || n.Contains("journal d'evenement") || n.Contains("journal devenement") || n.Contains("journaux windows")
+                || n.Contains("evenements windows")) return true;
+            return (n.Contains("diagnostique") || n.Contains("diagnostic")) && (n.Contains("tout") || n.Contains("complet") || n.Contains("windows"));
+        }
+
+        // ---- MISE À JOUR D'ONYX ----
+        /// <summary>« mets à jour onyx », « nouvelle version ? » → vrai (pas les MàJ Windows/pilotes).</summary>
+        internal static bool IsAppUpdate(string s)
+        {
+            string n = Deacc((s ?? "").ToLowerInvariant());
+            bool app = n.Contains("onyx") || n.Contains("l'appli") || n.Contains("l appli") || n.Contains("application") || n.Contains("le logiciel");
+            bool upd = n.Contains("mise a jour") || n.Contains("mets a jour") || n.Contains("mettre a jour")
+                || n.Contains("nouvelle version") || n.Contains("derniere version") || Regex.IsMatch(n, "\\bmaj\\b");
+            return app && upd;
+        }
+
         // ---- helpers ----
         internal static string Fmt(double v)
         {

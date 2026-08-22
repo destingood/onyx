@@ -270,6 +270,51 @@ namespace BTOptimizer
                         if (!StartShell("ms-settings:display-advanced", null))
                             StartShell("ms-settings:display", null);
                         break;
+
+                    case FixKind.BiosGuide:
+                        // XMP/EXPO se règle dans le firmware : rien à corriger depuis Windows,
+                        // mais on ne laisse pas l'utilisateur devant un constat sans issue.
+                        using (var bg = new BiosGuideForm(_log)) bg.ShowDialog(this);
+                        break;
+
+                    case FixKind.CleanJunk:
+                        FindJunk();
+                        break;
+
+                    case FixKind.ReapplyTweaks:
+                        ReapplyDrifted();
+                        break;
+
+                    case FixKind.DeviceManager:
+                        StartShell("devmgmt.msc", null);
+                        break;
+
+                    case FixKind.NvLatencySafe:
+                        NvLatencySafe();
+                        break;
+
+                    case FixKind.AudioPanel:
+                        // Ces réglages vivent dans des clés protégées par le système, et un format
+                        // audio malformé rend un périphérique muet : ONYX ouvre le panneau natif
+                        // plutôt que d'écrire à l'aveugle.
+                        StartShell("mmsys.cpl", null);
+                        break;
+
+                    case FixKind.CleanPowerPlans:
+                        CleanPowerPlans();
+                        break;
+
+                    case FixKind.CbsReport:
+                        ShowCbsReport();
+                        break;
+
+                    case FixKind.SettingsCrash:
+                        EnqueterPlantageParametres();
+                        break;
+
+                    case FixKind.HyperviseurInfo:
+                        ExpliquerHyperviseur();
+                        break;
                 }
             }
             catch (Exception ex) { if (_log != null) _log("Action impossible : " + ex.Message, 3); }
@@ -307,6 +352,363 @@ namespace BTOptimizer
             catch (Exception ex) { if (_log != null) _log("Impossible de lever le blocage : " + ex.Message, 3); }
             StartShell("SystemPropertiesProtection.exe", null);
             Reload();
+        }
+
+        /// <summary>
+        /// Explique le coût de l'hyperviseur et laisse l'arbitrage à l'utilisateur. ONYX ne coupe
+        /// RIEN ici : désactiver l'hyperviseur casse WSL2, Docker et les machines virtuelles. Un
+        /// optimiseur n'a pas à trancher ça pour quelqu'un — il doit donner les éléments.
+        /// </summary>
+        private void ExpliquerHyperviseur()
+        {
+            Hyperviseur.Etat hv;
+            try { hv = Hyperviseur.Lire(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append(Hyperviseur.Explique(hv)).Append("\n\n");
+            sb.Append("CE QUE TU PEUX FAIRE\n\n");
+            if (hv.VirtualisationUtilisee)
+            {
+                sb.Append("Tu utilises ").Append(hv.QuiLUtilise).Append(". Le désactiver le CASSERA — ")
+                  .Append("ce n'est pas un réglage cosmétique, c'est un arbitrage.\n\n")
+                  .Append("Dans une invite de commandes ADMINISTRATEUR :\n")
+                  .Append("    bcdedit /set hypervisorlaunchtype off\n\n")
+                  .Append("Puis redémarre. Pour revenir en arrière, la même commande avec « auto ».\n\n");
+            }
+            else
+            {
+                sb.Append("Aucun logiciel de virtualisation ne tourne actuellement. L'hyperviseur a ")
+                  .Append("probablement été activé par une fonctionnalité Windows installée puis oubliée ")
+                  .Append("(Plateforme de machine virtuelle, Bac à sable, Hyper-V).\n\n")
+                  .Append("Dans une invite de commandes ADMINISTRATEUR :\n")
+                  .Append("    bcdedit /set hypervisorlaunchtype off\n\n")
+                  .Append("Puis redémarre. Pour revenir en arrière, la même commande avec « auto ».\n\n");
+            }
+            sb.Append("ONYX ne le fait pas à ta place : cette commande touche au démarrage de Windows, ")
+              .Append("et le choix entre quelques FPS et tes outils de développement t'appartient.");
+
+            MessageBox.Show(this, sb.ToString(), "Hyperviseur actif",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Enquête sur une page des Paramètres qui plante : lit le vidage, nomme le réglage fautif,
+        /// et propose la réparation MINIMALE (service en Manuel, jamais en Automatique).
+        /// </summary>
+        private void EnqueterPlantageParametres()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                SettingsCrash.Rapport r = null;
+                List<SettingsCrash.Suspect> sus = new List<SettingsCrash.Suspect>();
+                try
+                {
+                    r = SettingsCrash.DernierRapport();
+                    if (r != null) sus = SettingsCrash.SuspectsMachine(r);
+                }
+                catch (Exception ex) { if (_log != null) _log("Enquête plantage : " + ex.Message, 3); }
+                SettingsCrash.Rapport rr = r; List<SettingsCrash.Suspect> ss = sus;
+                try { BeginInvoke((Action)(() => AfficherEnquete(rr, ss))); } catch { }
+            });
+        }
+
+        private void AfficherEnquete(SettingsCrash.Rapport r, List<SettingsCrash.Suspect> sus)
+        {
+            SetBusy(false);
+            string texte = SettingsCrash.Texte(r, sus);
+            if (r == null || sus == null || sus.Count == 0)
+            {
+                MessageBox.Show(this, texte, "Plantage des Paramètres Windows",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (MessageBox.Show(this,
+                    texte + "\n\nAppliquer cette réparation ?",
+                    "Plantage des Paramètres Windows",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = SettingsCrash.PasserEnManuel(sus, _log); }
+                catch (Exception ex) { if (_log != null) _log("Réparation : " + ex.Message, 3); }
+                int fait = n;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, fait + " service(s) repassé(s) en démarrage manuel.\n\n"
+                        + "Rouvre la page des Paramètres concernée pour vérifier. Si elle plante encore, "
+                        + "relance l'enquête après le prochain plantage : le rapport suivant désignera "
+                        + "un autre coupable.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
+        }
+
+        /// <summary>
+        /// Traduit le journal CBS : POURQUOI SFC a échoué, et quels fichiers il n'a pas pu réparer.
+        /// Lecture seule — ce bouton ne répare rien, il explique.
+        /// </summary>
+        private void ShowCbsReport()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                string texte;
+                try
+                {
+                    string contenu = CbsLog.Fin(CbsLog.CheminDefaut, 2 * 1024 * 1024);
+                    texte = CbsLog.Texte(CbsLog.Analyse(contenu), CbsLog.FichiersNonReparables(contenu, 12));
+                }
+                catch (Exception ex) { texte = "Lecture du journal impossible : " + ex.Message; }
+                string t = texte;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this,
+                        t + "\n\nMarche à suivre : répare d'abord l'IMAGE (menu Système → « Réparer Windows », qui "
+                          + "lance DISM), puis relance SFC. Dans cet ordre uniquement : SFC pioche ses fichiers de "
+                          + "remplacement dans le magasin de composants, donc il échoue tant que ce magasin est abîmé.",
+                        "Journal de réparation Windows (CBS)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); } catch { }
+            });
+        }
+
+        /// <summary>
+        /// Supprime les plans d'alimentation en double laissés par les scripts d'optimisation.
+        /// Le plan ACTIF et les plans intégrés de Windows ne sont jamais proposés.
+        /// </summary>
+        private void CleanPowerPlans()
+        {
+            List<PowerPlans.Plan> doublons;
+            try { doublons = PowerPlans.Doublons(PowerPlans.Lister()); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (doublons.Count == 0)
+            {
+                MessageBox.Show(this, "Aucun doublon : tes plans d'alimentation sont propres.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Reload();
+                return;
+            }
+
+            var liste = new System.Text.StringBuilder();
+            foreach (var p in doublons) liste.Append("• ").Append(p.Nom).Append("   (").Append(p.Guid).Append(")\n");
+            if (MessageBox.Show(this,
+                    "Supprimer ces " + doublons.Count + " plan(s) d'alimentation en double ?\n\n"
+                    + liste
+                    + "\n• Ce sont des copies laissées par des scripts « boost » : chaque exécution de "
+                    + "powercfg -duplicatescheme en crée une nouvelle, même nom, GUID différent.\n"
+                    + "• Ton plan ACTIF n'est pas dans la liste, ni les plans intégrés de Windows.\n"
+                    + "• Réversible : `powercfg -restoredefaultschemes` régénère les plans de Windows.",
+                    "Plans d'alimentation en double",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                int n = 0;
+                try { n = PowerPlans.Supprimer(doublons, _log); }
+                catch (Exception ex) { if (_log != null) _log("Nettoyage des plans : échec (" + ex.Message + ").", 3); }
+                int fait = n;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, fait + " plan(s) supprimé(s)"
+                        + (fait < doublons.Count ? ", " + (doublons.Count - fait) + " ont résisté (voir le journal)." : "."),
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
+        }
+
+        /// <summary>
+        /// Repasse le pilote NVIDIA sur le profil SÛR : latence toujours réduite, mais la file de
+        /// rendu est rendue au jeu — c'est elle qui amortit les à-coups du processeur.
+        /// </summary>
+        private void NvLatencySafe()
+        {
+            double cpuAvg, gpuAvg; DateTime quand;
+            bool mesure = Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand);
+            string constat = mesure
+                ? "Ta dernière mesure en jeu : CPU " + Math.Round(cpuAvg) + " %, GPU " + Math.Round(gpuAvg) + " %.\n\n"
+                : "";
+            if (MessageBox.Show(this,
+                    constat
+                    + "Remettre le pilote NVIDIA sur le profil SÛR ?\n\n"
+                    + "• Mode faible latence : « Activé » au lieu d'« Ultra ».\n"
+                    + "• Images pré-rendues : rendues au jeu (c'est ce tampon qui absorbe les à-coups du processeur).\n"
+                    + "• Performances maximales : conservé, il ne coûte aucune image.\n\n"
+                    + "Tu perds quelques millisecondes de latence de souris, tu récupères des images et surtout de la "
+                    + "STABILITÉ. Réversible : le bouton « Ultra » reste disponible dans Overclock & pilote.",
+                    "Profil pilote NVIDIA", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                bool ok = false;
+                try { ok = NvProfile.Applique(NvProfile.Kind.Sur, _log); }
+                catch (Exception ex) { if (_log != null) _log("Profil NVIDIA : échec (" + ex.Message + ").", 3); }
+                bool done = ok;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    MessageBox.Show(this, done
+                        ? "Profil sûr appliqué. Relance ton jeu : l'effet est visible dès le prochain lancement."
+                        : "Le profil n'a pas pu être appliqué (nvidiaProfileInspector introuvable ou refusé) — voir le journal.",
+                        "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
+        }
+
+        /// <summary>
+        /// Ré-applique les réglages que Windows a annulés. On repasse par le moteur habituel
+        /// (sauvegarde du registre comprise) : aucune écriture « à la main » qui contournerait le
+        /// filet de sécurité. La liste exacte est montrée avant d'agir.
+        /// </summary>
+        private void ReapplyDrifted()
+        {
+            List<TweakDrift.Drifted> drift;
+            try { drift = TweakDrift.Detect(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Lecture impossible : " + ex.Message, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (drift.Count == 0)
+            {
+                MessageBox.Show(this, "Plus aucune dérive : tous les réglages appliqués sont en place.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Reload();
+                return;
+            }
+
+            bool reboot = false;
+            foreach (var d in drift) if (d.Reboot) reboot = true;
+            if (MessageBox.Show(this,
+                    TweakDrift.Format(drift, 15) + "\n"
+                    + "Les ré-appliquer maintenant ?\n\n"
+                    + "• Ce sont des réglages que TU avais déjà appliqués : Windows les a remis par défaut de son côté.\n"
+                    + "• Une sauvegarde du registre est créée avant toute écriture, comme pour une application normale.\n"
+                    + (reboot ? "• Certains ne prendront effet qu'après un redémarrage.\n" : ""),
+                    "Réglages annulés par Windows",
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            var ids = new HashSet<string>(TweakDrift.Ids(drift), StringComparer.Ordinal);
+            var selection = new List<Tweak>();
+            try { foreach (var t in Catalog.All()) if (t != null && ids.Contains(t.Id)) selection.Add(t); }
+            catch { }
+            if (selection.Count == 0)
+            {
+                MessageBox.Show(this, "Aucun de ces réglages n'a été retrouvé dans le catalogue.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                EngineResult res = null;
+                try { res = Engine.Run(selection, true, true, false, _log ?? delegate { }); }
+                catch (Exception ex) { if (_log != null) _log("Ré-application : échec (" + ex.Message + ").", 3); }
+                EngineResult r = res;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    string msg = r == null
+                        ? "La ré-application a échoué — voir le journal."
+                        : r.Ok + " réglage(s) ré-appliqué(s)" + (r.Ko > 0 ? ", " + r.Ko + " échec(s)" : "") + "."
+                          + (r.RebootNeeded ? "\n\nUn redémarrage est nécessaire pour que tout prenne effet." : "");
+                    MessageBox.Show(this, msg, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
+        }
+
+        /// <summary>
+        /// Disque de données presque plein : avant de conseiller « désinstalle des jeux », on cherche
+        /// le poids mort — journaux partis en boucle, restes de téléchargements Steam abandonnés. Le
+        /// balayage est BORNÉ (8 s) et déporté hors du thread interface. Rien n'est supprimé sans que
+        /// l'utilisateur ait lu la liste exacte de ce qui va partir.
+        /// </summary>
+        private void FindJunk()
+        {
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                List<JunkScan.Item> items;
+                try { items = JunkScan.Scan(JunkScan.DefaultMinBytes, 8000, _log); }
+                catch (Exception ex)
+                {
+                    if (_log != null) _log("Recherche du poids mort : échec (" + ex.Message + ").", 3);
+                    items = new List<JunkScan.Item>();
+                }
+                try { BeginInvoke((Action)(() => ShowJunk(items))); } catch { }
+            });
+        }
+
+        private void ShowJunk(List<JunkScan.Item> items)
+        {
+            SetBusy(false);
+            if (items == null || items.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "Aucun poids mort trouvé : pas de journal obèse (≥ 1 Go) ni de téléchargement Steam abandonné.\n\n"
+                    + "L'espace est donc occupé par de vraies données. Le classement « Où sont passés mes Go ? » "
+                    + "te dira quels dossiers pèsent le plus.",
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show(this,
+                    JunkScan.Format(items, 12) + "\n"
+                    + "Supprimer définitivement ces éléments ?\n\n"
+                    + "• Journaux : de simples fichiers de trace, sans valeur une fois l'incident passé. Seuls ceux qui ne sont plus écrits depuis "
+                    + JunkScan.LogIdleDays + " jours sont listés (une appli vivante n'est jamais touchée).\n"
+                    + "• Restes Steam : morceaux d'un téléchargement figé depuis plus de " + JunkScan.DownloadIdleDays
+                    + " jours. Steam les retéléchargera tout seul si tu relances ce jeu.\n"
+                    + "• IRRÉVERSIBLE : ces éléments ne passent pas par la corbeille.\n"
+                    + "• Ferme Steam avant de valider si des restes Steam sont listés.",
+                    "Libérer " + SteamGames.Human(JunkScan.Total(items)),
+                    MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            SetBusy(true);
+            Task.Run(() =>
+            {
+                long freed = 0;
+                List<string> failed = new List<string>();
+                try { freed = JunkScan.Delete(items, out failed, _log); }
+                catch (Exception ex) { if (_log != null) _log("Suppression : échec (" + ex.Message + ").", 3); }
+                long f2 = freed;
+                List<string> ko = failed;
+                try { BeginInvoke((Action)(() =>
+                {
+                    SetBusy(false);
+                    string msg = SteamGames.Human(f2) + " libérés.";
+                    if (ko != null && ko.Count > 0)
+                        msg += "\n\n" + ko.Count + " élément(s) n'ont pas pu être supprimés (fichier en cours d'utilisation "
+                             + "— ferme l'application concernée, ou Steam, puis relance) :\n• " + string.Join("\n• ", ko.ToArray());
+                    MessageBox.Show(this, msg, "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Reload();
+                })); } catch { }
+            });
         }
 
         private void DisableCoreSync()

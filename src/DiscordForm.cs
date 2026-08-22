@@ -35,7 +35,7 @@ namespace BTOptimizer
         /// <summary>Sauvegarde de la ligne de commande de démarrage retirée (pour rétablir).</summary>
         private static string BackupPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-discord-backup.txt"); }
+            get { return AppPaths.File("bt-discord-backup.txt"); }
         }
 
         public DiscordForm(Action<string, int> log)

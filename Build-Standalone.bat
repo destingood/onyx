@@ -24,10 +24,10 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
-echo === 1/4  Fermeture de l'app si elle tourne ===
+echo === 1/5  Fermeture de l'app si elle tourne ===
 taskkill /IM BTOptimizer.exe /F >nul 2>&1
 
-echo === 2/4  Publication AUTONOME (.NET embarque, win-x64) ===
+echo === 2/5  Publication AUTONOME (.NET embarque, win-x64) ===
 rem Repart d'un dist propre : evite tout melange avec une publication dependante
 rem du runtime (sinon coreclr.dll resterait et fausserait la detection cote .iss).
 rem MAIS on PRESERVE les donnees utilisateur (tout ce qui commence par "bt-") :
@@ -51,7 +51,28 @@ rem  code applicatif vit dans la DLL.
 call "%~dp0Sign.bat" "dist\BTOptimizer.dll"
 call "%~dp0Sign.bat" "dist\BTOptimizer.exe"
 
-echo === 3/4  Recherche d'Inno Setup (ISCC.exe) ===
+echo === 3/5  Dossier de livraison (build\stage) ===
+rem ISCC ne compile PLUS depuis dist\ : c'est le dossier ou l'app est EXECUTEE, donc il
+rem bouge pendant la compilation (etat ecrit par l'app, analyse antivirus, seconde
+rem compilation lancee en parallele qui commence par vider dist). Inno liste les fichiers
+rem au debut puis les compresse ~40 s plus tard : si l'un disparait entre-temps, il s'arrete
+rem sur "Le fichier specifie est introuvable" -- a un endroit DIFFERENT a chaque fois.
+rem Ici on fige une copie propre que rien d'autre ne touche, et qui ne contient QUE ce qui
+rem doit etre livre (les donnees "bt-*" du developpeur ne sont meme pas copiees).
+if exist build\stage rd /s /q build\stage
+robocopy dist build\stage /E /NFL /NDL /NJH /NJS /NP /R:2 /W:1 ^
+    /XF bt-* *.pdb *.cs *.csproj *.sln *.etl *.log *.pfx *.tmp ^
+    /XD bt-* >nul
+if %errorlevel% geq 8 (
+    echo [X] Echec de la preparation du dossier de livraison.
+    pause & exit /b 1
+)
+if not exist "build\stage\BTOptimizer.exe" (
+    echo [X] build\stage\BTOptimizer.exe manquant : publication incomplete.
+    pause & exit /b 1
+)
+
+echo === 4/5  Recherche d'Inno Setup (ISCC.exe) ===
 set "ISCC="
 for %%P in (
     "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
@@ -85,15 +106,43 @@ if not defined ISCC (
     pause & exit /b 1
 )
 
-echo === 4/4  Compilation de l'installateur (mode autonome auto-detecte) ===
+echo === 5/5  Compilation de l'installateur (mode autonome auto-detecte) ===
 "%ISCC%" "installer\BTOptimizer.iss"
 if %errorlevel% neq 0 (
     echo [X] Echec de la compilation de l'installateur.
     pause & exit /b 1
 )
 
-rem Signature de l'installateur genere (sans effet si aucun certificat configure).
-for %%F in ("installer\Output\*.exe") do call "%~dp0Sign.bat" "%%~fF"
+rem Signature du SEUL installateur qui vient d'etre genere (le plus recent).
+rem Avant : "for %%F in (installer\Output\*.exe)" repassait sur TOUS les setups archives
+rem depuis la v7.7 -- 22 tentatives de signature et autant d'avertissements a chaque
+rem compilation, en retouchant des artefacts d'anciennes versions.
+for /f "delims=" %%F in ('dir /b /o-d "installer\Output\*.exe" 2^^>nul') do (
+    call "%~dp0Sign.bat" "installer\Output\%%F"
+    goto :signe
+
+rem --- Archive ZIP a cote de l installateur ------------------------------------
+rem  SmartScreen affiche "fichier peu telecharge" sur les .EXE qu il ne connait pas
+rem  encore. L installeur n etant pas signe, chaque nouvelle version repart avec zero
+rem  reputation et l avertissement revient a chaque fois.
+rem
+rem  Cet avertissement vise les EXECUTABLES : un .zip ne le declenche pas. On livre
+rem  donc les deux, et la page de telechargement met le .zip en avant.
+rem
+rem  A savoir : cela regle le TELECHARGEMENT, pas l ecran "Windows a protege votre
+rem  ordinateur" au lancement. Celui-la ne tombe qu avec un certificat de signature.
+set "SETUPEXE="
+for /f "delims=" %%F in ('dir /b /o-d "installer\Output\ONYX-Setup-*.exe" 2^>nul') do (
+    if not defined SETUPEXE set "SETUPEXE=%%F"
+)
+if defined SETUPEXE (
+    for %%N in ("!SETUPEXE!") do set "ZIPBASE=%%~nN"
+    set "ZIPBASE=!ZIPBASE:Setup-=!"
+    powershell -NoProfile -Command "Compress-Archive -Path 'installer\Output\!SETUPEXE!' -DestinationPath 'installer\Output\!ZIPBASE!.zip' -CompressionLevel Optimal -Force"
+    echo [OK] Archive : installer\Output\!ZIPBASE!.zip
+)
+)
+:signe
 
 echo.
 echo [OK] Installateur AUTONOME cree dans  installer\Output\

@@ -461,7 +461,7 @@ namespace BTOptimizer
         // (Économie d'énergie sur portable, plan OEM/perso…) et non un « Utilisation normale » imposé.
         private static string PrevPlanPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-prev-powerplan.txt"); }
+            get { return AppPaths.File("bt-prev-powerplan.txt"); }
         }
 
         private static string GetActiveSchemeGuid()
@@ -1029,7 +1029,7 @@ namespace BTOptimizer
             public string Path;
             public bool IsRecycleBin;
             public long SizeMB;
-            public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine)
+            public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine) | diag | ia (jamais automatique)
 
             /// <summary>Niveau de sûreté, utilisé par le centre de stockage pour faire la part des
             /// choses : 0 = superflu (aucune perte possible), 1 = à vérifier (régénérable mais
@@ -1060,12 +1060,17 @@ namespace BTOptimizer
                 // Cache de livraison des mises à jour (P2P) : se reconstitue tout seul.
                 new CleanTarget { Name = "Cache de livraison des MAJ (Delivery Optimization)", Path = Path.Combine(win, @"SoftwareDistribution\DeliveryOptimization") },
                 // Journaux d'installation de composants (souvent volumineux).
-                new CleanTarget { Name = "Journaux Windows (CBS)", Path = Path.Combine(win, @"Logs\CBS") },
+                // CBS.log est le SEUL endroit qui explique pourquoi un SFC a échoué. Le supprimer
+                // par réflexe, c'est jeter la preuve juste avant d'en avoir besoin. Il reste
+                // proposé (il grossit vite), mais classé "diag" : à ne cocher que si aucune
+                // réparation n'est en cours, et jamais par la routine d'entretien automatique.
+                new CleanTarget { Name = "Journaux de réparation Windows (CBS — utiles si SFC échoue)", Kind = "diag", Safety = 1, Path = Path.Combine(win, @"Logs\CBS") },
                 new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Safety = 1, Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
                 new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Safety = 1, Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
             AddGamingCaches(list, local);
             AddBrowserCaches(list, local);
+            AddAiCaches(list, local);
             // La corbeille contient des fichiers que l'utilisateur a VUS : niveau 1, jamais dans le
             // « superflu » automatique.
             list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin", Safety = 1 });
@@ -1178,6 +1183,41 @@ namespace BTOptimizer
             catch { return 0; }
         }
 
+        // Caches des fonctions IA de Windows 11 (Copilot, Recall). Rangés à part sous le
+        // genre "ia" parce qu'ils ne contiennent PAS des fichiers temporaires : c'est
+        // l'historique de ce que tu as fait sur la machine. Conséquences du genre "ia" :
+        // jamais balayé par l'entretien automatique ni par « libérer l'espace », jamais
+        // coché d'avance dans la fenêtre de nettoyage. Il faut le demander à la main.
+        private static void AddAiCaches(System.Collections.Generic.List<CleanTarget> list, string local)
+        {
+            try
+            {
+                // Journaux et modèles temporaires de Copilot : ça, ça se régénère tout seul.
+                string copilot = Path.Combine(local, @"Microsoft\WindowsCopilot");
+                if (Directory.Exists(copilot))
+                    list.Add(new CleanTarget { Name = "Cache local de Copilot (journaux, modèles temporaires)", Kind = "ia", Safety = 2, Path = copilot });
+
+                // Recall : on ne propose de purger les captures QUE si la capture est déjà
+                // coupée (tweak « recall_off », stratégie DisableAIDataAnalysis). Purger un
+                // Recall actif, c'est supprimer des fichiers pendant qu'il écrit dedans : les
+                // fichiers verrouillés survivraient et sa base resterait à moitié pleine.
+                // Ordre imposé, donc : on désactive d'abord, on purge ensuite.
+                if (!IntEquals(GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\WindowsAI", "DisableAIDataAnalysis"), 1)) return;
+
+                var recall = new[]
+                {
+                    // Emplacement réel sur les PC Copilot+ : base ukg.db + dossier ImageStore.
+                    new[] { "Captures et base de Windows Recall", Path.Combine(local, @"CoreAIPlatform.00\UKP") },
+                    // Emplacement cité par certains tutoriels : absent sur la plupart des PC.
+                    new[] { "Résidus de Windows Recall",          Path.Combine(local, @"Microsoft\Recall") },
+                };
+                foreach (string[] r in recall)
+                    if (Directory.Exists(r[1]))
+                        list.Add(new CleanTarget { Name = r[0] + " — Recall est bien désactivé", Kind = "ia", Safety = 2, Path = r[1] });
+            }
+            catch { }
+        }
+
         /// <summary>Vide une cible ; retourne le nombre d'éléments supprimés. Ignore les fichiers verrouillés.</summary>
         public static int CleanTargetNow(CleanTarget t, Action<string, int> log)
         {
@@ -1210,7 +1250,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string EulaPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-eula.txt"); }
+            get { return AppPaths.File("bt-eula.txt"); }
         }
 
         public static int EulaAcceptedVersion()
@@ -1234,7 +1274,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string AutoLevelPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-autolevel.txt"); }
+            get { return AppPaths.File("bt-autolevel.txt"); }
         }
 
         public static int LoadAutoLevel()
@@ -1259,7 +1299,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string RamCleanerPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-ramcleaner.txt"); }
+            get { return AppPaths.File("bt-ramcleaner.txt"); }
         }
 
         public static bool LoadRamCleaner(out int thresholdMB)
@@ -1320,7 +1360,7 @@ namespace BTOptimizer
             try { Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/setactive " + guid, UseShellExecute = false, CreateNoWindow = true }).WaitForExit(); } catch { }
         }
 
-        public static string GameAffinityPath { get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-game-affinity.txt"); } }
+        public static string GameAffinityPath { get { return AppPaths.File("bt-game-affinity.txt"); } }
 
         public static Dictionary<string, Tuple<string, long>> LoadGameAffinity()
         {
@@ -1359,7 +1399,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         public static string ProfilePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-profile.txt"); }
+            get { return AppPaths.File("bt-profile.txt"); }
         }
 
         public static void SaveProfile(List<string> tweakIds)
@@ -1642,6 +1682,9 @@ namespace BTOptimizer
             public bool Ok;
             public string Name = "-";
             public double PowerCur, PowerDefault, PowerMax;
+            /// <summary>Power limit minimal AUTORISE PAR LE PILOTE. Sans lui, le curseur
+            /// devinait un plancher a 50 %, ce qui le mettait en desaccord avec la carte.</summary>
+            public double PowerMin;
             public double MaxCoreMhz;
         }
 
@@ -1656,24 +1699,37 @@ namespace BTOptimizer
             var info = new GpuOcInfo();
             string smi = NvSmiPath();
             if (smi == null) return info;
-            NativeResult r = Run(smi,
-                "--query-gpu=name,power.limit,power.default_limit,power.max_limit,clocks.max.gr --format=csv,noheader,nounits");
-            if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) return info;
-            string[] p = r.Output.Split('\n')[0].Trim().Split(',');
-            if (p.Length < 5) return info;
+            // ATTENTION : nvidia-smi invalide la requête ENTIÈRE dès qu'un champ demandé lui est
+            // inconnu — et il le fait en rendant un CODE 0 avec un message d'erreur en guise de
+            // résultat. Ajouter naïvement power.min_limit ferait donc disparaître la carte tout
+            // entière sur un pilote qui ne connaît pas ce champ : « aucun GPU NVIDIA détecté ».
+            // On demande donc le champ récent d'abord, et on retombe sur la requête historique.
+            const string champsBase = "name,power.limit,power.default_limit,power.max_limit,clocks.max.gr";
+            string[] p = null;
+            foreach (string champs in new[] { champsBase + ",power.min_limit", champsBase })
+            {
+                NativeResult r = Run(smi, "--query-gpu=" + champs + " --format=csv,noheader,nounits");
+                if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) continue;
+                string[] c = r.Output.Split('\n')[0].Trim().Split(',');
+                if (c.Length >= 5) { p = c; break; }
+            }
+            if (p == null) return info;
             info.Name = p[0].Trim();
             double v;
             if (double.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerCur = v;
             if (double.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerDefault = v;
             if (double.TryParse(p[3].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerMax = v;
             if (double.TryParse(p[4].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.MaxCoreMhz = v;
+            // Absent sur les pilotes anciens (requête de repli) : reste à 0, et les bornes du
+            // curseur retombent alors sur une valeur prudente.
+            if (p.Length >= 6 && double.TryParse(p[5].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) info.PowerMin = v;
             info.Ok = true;
             return info;
         }
 
         public static string GpuOcConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-gpuoc.txt"); }
+            get { return AppPaths.File("bt-gpuoc.txt"); }
         }
 
         public static void SaveGpuOcConfig(int powerLimit)
@@ -1703,33 +1759,47 @@ namespace BTOptimizer
         /// figer le plancher de fréquence trop haut peut geler la machine (écran noir + reboot).
         /// Le GPU gère lui-même son boost dans sa courbe stable ; seul le budget de puissance change.
         /// </summary>
-        public static void ApplyGpuOc(int powerLimit, Action<string, int> log)
+        /// <summary>Applique le power limit. Rend VRAI seulement si nvidia-smi a accepté :
+        /// l'appelant affichait auparavant « appliqué » quelle que soit l'issue.</summary>
+        public static bool ApplyGpuOc(int powerLimit, Action<string, int> log)
         {
             string smi = NvSmiPath();
-            if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return; }
+            if (smi == null) { log("nvidia-smi introuvable : OC GPU indisponible.", 3); return false; }
             GpuOcInfo cur = QueryGpuOc();
-            if (powerLimit <= 0 || !cur.Ok) return;
+            if (powerLimit <= 0 || !cur.Ok) return false;
             int pl = powerLimit;
-            if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;                 // borne haute (pilote)
-            if (cur.PowerDefault > 0 && pl < (int)(cur.PowerDefault * 0.5)) pl = (int)(cur.PowerDefault * 0.5); // garde-fou bas
+            if (cur.PowerMax > 0 && pl > (int)cur.PowerMax) pl = (int)cur.PowerMax;   // borne haute (pilote)
+            // Borne basse : celle que la CARTE déclare. L'ancien garde-fou à 50 % du défaut était
+            // une supposition, et elle interdisait le vrai minimum du pilote — 150 W sur 320 W de
+            // défaut, soit 47 %, se retrouvaient remontés à 160 W sans que personne ne le dise.
+            int plancher = cur.PowerMin > 0 ? (int)Math.Ceiling(cur.PowerMin)
+                         : cur.PowerDefault > 0 ? (int)(cur.PowerDefault * 0.5) : 0;
+            if (plancher > 0 && pl < plancher) pl = plancher;
             NativeResult r = Run(smi, "-pl " + pl);
-            if (r.ExitCode == 0) log("Power limit GPU -> " + pl + " W (fréquences gérées par le pilote).", 1);
-            else log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            if (r.ExitCode == 0) { log("Power limit GPU -> " + pl + " W (fréquences gérées par le pilote).", 1); return true; }
+            log("Echec power limit (code " + r.ExitCode + ") : " + r.Output.Trim(), 3);
+            return false;
         }
 
-        public static void ResetGpuLocks(Action<string, int> log)
+        /// <summary>Remet le GPU au défaut constructeur. Rend VRAI seulement si le power limit
+        /// par défaut a effectivement pu être réécrit.</summary>
+        public static bool ResetGpuLocks(Action<string, int> log)
         {
             string smi = NvSmiPath();
-            if (smi == null) return;
+            if (smi == null) return false;
             GpuOcInfo cur = QueryGpuOc();
             NativeResult r = Run(smi, "-rgc");
             if (r.ExitCode == 0) log("Verrou de fréquences GPU retiré (gestion pilote).", 1);
             else log("Echec -rgc (code " + r.ExitCode + ").", 2);
-            if (cur.Ok && cur.PowerDefault > 0)
+            if (!cur.Ok || cur.PowerDefault <= 0) return false;
+            NativeResult rp = Run(smi, "-pl " + (int)cur.PowerDefault);
+            if (rp.ExitCode != 0)
             {
-                Run(smi, "-pl " + (int)cur.PowerDefault);
-                log("Power limit GPU remis au défaut constructeur (" + (int)cur.PowerDefault + " W).", 0);
+                log("Echec du retour au power limit par défaut (code " + rp.ExitCode + ") : " + (rp.Output ?? "").Trim(), 3);
+                return false;
             }
+            log("Power limit GPU remis au défaut constructeur (" + (int)cur.PowerDefault + " W).", 0);
+            return true;
         }
 
         private const string OcTask = "BTOptimizerOC";
@@ -1862,21 +1932,21 @@ namespace BTOptimizer
 
         public static bool NvpiAvailable() { return FindNvpi() != null; }
 
-        /// <summary>Applique le profil NVIDIA faible latence (Ultra Low Latency, 1 frame pré-rendue, perf max).</summary>
+        /// <summary>
+        /// Applique le profil NVIDIA faible latence ADAPTÉ à la machine.
+        ///
+        /// Avant, cette méthode imposait « Ultra Low Latency + 1 image pré-rendue » à TOUT LE MONDE.
+        /// Ces deux réglages suppriment la file d'attente de rendu, or c'est elle qui absorbe les
+        /// à-coups du processeur : sur une machine limitée par le CPU, l'app faisait donc PERDRE des
+        /// images en croyant en gagner (GPU à 40 % pendant que le CPU sature, chutes brutales à
+        /// chaque pic). On applique désormais le profil sûr par défaut, et Ultra uniquement quand la
+        /// mesure en jeu montre une carte graphique réellement à fond.
+        /// </summary>
         public static void ApplyNvidiaLowLatency(Action<string, int> log)
         {
-            string exe = FindNvpi();
-            if (exe == null)
-            {
-                log("nvidiaProfileInspector.exe introuvable (attendu dans tools\\npi\\). Impossible d'appliquer le profil NVIDIA.", 3);
-                return;
-            }
-            string nip = EnsureLowLatencyNip();
-            NativeResult r = Run(exe, "-silentImport \"" + nip + "\"");
-            if (r.ExitCode == 0)
-                log("Profil NVIDIA faible latence appliqué : Ultra Low Latency (Ultra), 1 frame pré-rendue, mode perf. max.", 1);
-            else
-                log("nvidiaProfileInspector a retourné le code " + r.ExitCode + ".", 2);
+            double cpuAvg, gpuAvg; DateTime quand;
+            if (!Bottleneck.LastMeasure(out cpuAvg, out gpuAvg, out quand)) { cpuAvg = -1; gpuAvg = -1; }
+            NvProfile.Applique(NvProfile.Recommande(cpuAvg, gpuAvg), log);
         }
 
         // ------------------------------------------------------------------
@@ -2063,6 +2133,19 @@ namespace BTOptimizer
         /// </summary>
         public static void RepairWindows(Action<string, int> log)
         {
+            // MESURER AVANT DE RÉPARER. /ScanHealth ne modifie RIEN : il analyse le magasin de
+            // composants et dit s'il est sain. Quand il l'est, les 10 à 20 minutes de
+            // /RestoreHealth ne servent à rien — autant l'annoncer plutôt que de faire patienter.
+            log("Analyse du magasin de composants (DISM /ScanHealth) — quelques minutes, aucune modification...", 0);
+            NativeResult scan = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /ScanHealth", LongRunTimeoutMs);
+            string sc = (scan.Output ?? "").ToLowerInvariant();
+            bool sain = sc.Contains("no component store corruption detected")
+                     || sc.Contains("aucune corruption du magasin de composants");
+            if (sain) log("DISM : magasin de composants SAIN — la réparation ne trouvera probablement rien à faire.", 1);
+            else if (sc.Contains("repairable") || sc.Contains("réparable"))
+                log("DISM : magasin de composants abîmé mais RÉPARABLE — la réparation qui suit a de bonnes chances d'aboutir.", 2);
+            else log("DISM : analyse terminée (code " + scan.ExitCode + ").", 0);
+
             log("Réparation de l'image Windows (DISM /RestoreHealth) — patiente, cela peut prendre 10-20 min...", 0);
             NativeResult dism = Run(Sys32("dism.exe"), "/Online /Cleanup-Image /RestoreHealth", LongRunTimeoutMs);
             string do_ = (dism.Output ?? "").ToLowerInvariant();

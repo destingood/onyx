@@ -99,7 +99,9 @@ namespace BTOptimizer
             long sum = 0;
             foreach (Sys.CleanTarget t in targets)
             {
-                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0);
+                // Les caches IA (Copilot, Recall) ne sont jamais cochés d'avance : ce sont
+                // des traces d'activité, et elles ne se régénèrent pas une fois effacées.
+                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && t.Kind != "ia");
                 sum += t.SizeMB;
             }
             _total.Text = string.Format("Total récupérable : {0:N0} Mo", sum);
@@ -113,9 +115,17 @@ namespace BTOptimizer
                 if (_list.GetItemChecked(i)) sel.Add(_targets[i]);
             if (sel.Count == 0) return;
 
+            // Un cache de navigateur qui repart de zéro, ce n'est rien. Un historique Copilot
+            // ou des captures Recall, c'est perdu pour de bon : on le dit avant, pas après.
+            bool ia = false;
+            foreach (Sys.CleanTarget t in sel) if (t.Kind == "ia") { ia = true; break; }
+
             if (MessageBox.Show(this,
                     "Supprimer définitivement le contenu des " + sel.Count + " emplacement(s) cochés ?\n"
-                    + "(Fichiers temporaires — cette action n'est pas réversible, mais ces dossiers se régénèrent.)",
+                    + "(Fichiers temporaires — cette action n'est pas réversible, mais ces dossiers se régénèrent.)"
+                    + (ia ? "\n\n⚠ Ta sélection contient l'historique local des fonctions IA de Windows "
+                          + "(Copilot / Recall). Celui-là ne se régénère pas : les captures et les "
+                          + "conversations passées seront perdues." : ""),
                     "Nettoyage disque", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
 
