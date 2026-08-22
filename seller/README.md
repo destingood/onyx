@@ -68,3 +68,30 @@ Test local seulement (auto-signé, non reconnu ailleurs) : `.\sign.ps1 -SelfSign
   DNS rapide & réglages réseau avancés.
 
 Pour changer ce partage : voir les appels `RequirePro(...)` dans `src\MainForm.cs`.
+
+## Ce que le générateur refuse de faire (et pourquoi)
+
+**Il ne livre plus une clé sans l'avoir relue.** Signer ne prouve rien : ce qui compte est que
+l'APPLICATION sache vérifier. Après avoir signé, le générateur revérifie la clé avec la moitié
+publique lue dans `src/License.cs`. Si les deux moitiés ne correspondent pas, rien n'est émis,
+rien n'est journalisé, rien n'est copié — et le bandeau du bas passe au rouge.
+
+Ce n'est pas théorique : le commit `ab25e7c` a remplacé la clé publique de l'application par celle
+d'une paire dont la moitié privée n'existe nulle part. Le générateur a continué de produire des
+clés impeccablement signées et systématiquement refusées. Sept licences vendues, aucune ne
+fonctionnait, et le message affiché au client parlait de copier-coller.
+
+**Le champ « ID du PC » doit rester VIDE.** L'application lie désormais la clé toute seule au
+premier PC où elle est activée. Remplir ce champ ne protège de rien de plus, et **tue la clé à la
+prochaine réinstallation de Windows** (le MachineGuid est régénéré). Il ne reste que pour les deux
+clés historiques déjà verrouillées — à réémettre sans verrou.
+
+**« Réémettre »** reprend le licencié et le type d'une ligne du journal et resigne. Le nom est dans
+la partie signée : le retaper à la main, c'est risquer une majuscule d'écart et livrer une licence
+à un autre nom. Un abonnement est réémis pour la durée RESTANTE, pas pour un an de plus.
+
+**Le journal est écrit avant la livraison.** Si le CSV ne peut pas s'écrire, la clé n'est ni
+affichée ni copiée : une licence sans trace ne se retrouve pas, ne se réémet pas, ne se conteste pas.
+
+> Le keygen en ligne de commande (`dotnet run --project keygen.csproj`) vérifie lui aussi la paire,
+> mais **n'écrit pas au journal**. Pour une vente, utilise le générateur graphique.

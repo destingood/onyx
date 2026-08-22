@@ -76,6 +76,8 @@ namespace BTOptimizer.Tests
             InventaireServicesTests.Tout();
             AutoJeuTests.Tout();
             ChaineEntreeTests.Tout();
+            LicenceCleTests.Tout();
+            LicenceLiaisonTests.Tout();
             return Banc.Bilan();
         }
     }

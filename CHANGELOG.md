@@ -151,6 +151,101 @@ L'auto-diagnostic affiche le compte, et les infos de support emportent les derni
 nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
 sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
 
+### Le générateur ne peut plus émettre une clé que l'application refuserait
+
+Le générateur signait, et s'arrêtait là. Signer ne prouve pourtant rien : ce qui compte est que
+l'**application** sache vérifier — et ça, le générateur ne peut pas le savoir en signant, il ne
+connaît que sa moitié privée. C'est par ce trou que sont passées sept licences mortes.
+
+Il **relit maintenant sa propre clé avant de la livrer**, avec la moitié publique lue dans
+`src/License.cs`. Si la signature ne passe pas : rien n'est émis, rien n'est journalisé, rien n'est
+copié, et la raison s'affiche en toutes lettres. Le bandeau du bas montre en permanence l'empreinte
+de la paire — vert si les deux moitiés correspondent, rouge si elles divergent (le bouton d'émission
+est alors désactivé), gris si `src/License.cs` est introuvable, parce que « je n'ai pas pu vérifier »
+n'est pas « c'est bon ». Le keygen en ligne de commande a reçu le même contrôle : la même erreur
+passait par les deux portes.
+
+**Le journal est écrit avant la livraison**, et plus après. Dans l'autre ordre, un CSV qui échoue à
+s'écrire laissait dans la nature une clé dont le vendeur n'avait aucune trace. Le keygen console, lui,
+n'écrit pas au journal du tout — il le dit désormais au lieu de laisser croire le contraire.
+
+**« Réémettre »** reprend le licencié et le type d'une ligne du journal et resigne. Le nom est dans
+la partie signée : le retaper à la main, c'est risquer une majuscule d'écart et livrer une licence à
+un autre nom, que l'app affichera tel quel. Un abonnement est réémis pour la durée **restante**.
+Usage immédiat : les deux clés verrouillées sur un PC, à réémettre sans verrou.
+
+Enfin le champ « ID du PC » est explicitement découragé — la liaison étant devenue automatique, le
+remplir n'ajoute rien et tue la clé à la prochaine réinstallation de Windows.
+
+### La clé se lie toute seule au PC, et ne se perd plus
+
+Deux demandes, dont une qui se heurte à un mur : *« la clé doit se lier automatiquement au PC »* et
+*« si la personne désinstalle ou réinstalle Windows, elle l'a encore »*.
+
+**La liaison est désormais automatique.** Jusqu'ici il fallait que le vendeur demande son
+identifiant au client et le grave dans la clé signée. Une clé sans identifiant se lie maintenant au
+premier PC où elle est activée, toute seule, et le statut l'affiche : *« liée à ce PC depuis le
+22/08/2026 »*. Les deux clés déjà verrouillées en dur (`DesTinGOOD`, `Nadian du 14 w`) continuent de
+fonctionner, mais elles **mourront à la prochaine réinstallation de Windows** : à réémettre en clés
+simples.
+
+**Elle survit à la désinstallation.** L'installeur supprime `{localappdata}\ONYX` — soit exactement
+l'endroit où vivait la clé. Elle est donc écrite dans **quatre** emplacements indépendants :
+`%LOCALAPPDATA%\ONYX`, `%PROGRAMDATA%\ONYX`, `HKLM\SOFTWARE\BTOptimizer`, et à côté de l'exe pour
+les versions antérieures. La lecture prend le premier survivant et **ressème les autres** : effacer
+un emplacement ne coûte plus rien, la licence se répare au lancement suivant. Vérifié en simulant la
+désinstallation réelle : la clé revient de `%PROGRAMDATA%`, et `%LOCALAPPDATA%` est recréé tout seul.
+
+**Et pour la réinstallation de Windows, il faut dire la vérité.** L'identifiant de machine vient du
+`MachineGuid`, que Windows **régénère** à chaque réinstallation. Hors ligne, « le client a réinstallé
+son PC » et « le client a donné sa clé à un ami » produisent donc exactement le même signal : même
+clé, identifiant différent. Le cas légitime EST le cas suspect, et aucun contrôle local ne peut les
+séparer.
+
+Il faut donc choisir quelle erreur commettre. Refuser, c'est bloquer quelqu'un qui a payé, le soir
+où il vient de passer trois heures à réinstaller sa machine. Accepter, c'est laisser passer un
+partage qu'un verrou hors ligne n'aurait de toute façon pas empêché — il suffit de ne jamais lancer
+l'app sur le premier PC. **ONYX accepte, et écrit l'histoire** : chaque PC vu est retenu dans
+l'enregistrement. Le vendeur qui voit une clé passée sur douze machines sait quoi faire au
+renouvellement ; le client qui a réinstallé, lui, ne s'aperçoit de rien. Prétendre verrouiller sans
+serveur serait un théâtre — celui-ci a déjà coûté deux clés à ce produit.
+
+La politique vit dans son propre fichier, sans accès disque, pour être rejouable au banc : liaison
+initiale, même PC, re-liaison, et l'ancien format d'enregistrement (un jeton tout seul) que
+contiennent toutes les installations existantes.
+
+### Les licences étaient toutes mortes, et le message d'erreur envoyait chercher ailleurs
+
+Bogue signalé : « la clé se désactive à chaque fois, et là elle ne marche plus ». Deux causes
+distinctes, aucune des deux visible depuis le code.
+
+**La clé publique avait changé.** Le commit `ab25e7c` (« Centre de stockage », v15.34) a remplacé
+la constante `PublicKeyXml` par le modulus d'une paire **dont la moitié privée n'existe nulle part
+dans le dépôt**. Son message ne mentionne pas les licences : la rotation est passée avec le reste.
+Effet immédiat et total — les **sept** licences de `seller/licences-emises.csv` sont devenues
+invalides, et le générateur, qui signe toujours avec `seller/private.xml`, **n'aurait pas pu en
+émettre une seule qui fonctionne**. Vérifié : la clé stockée sur la machine de référence est
+refusée par la clé embarquée et acceptée par l'ancienne. La constante est rétablie sur la paire du
+vendeur — la seule qui corresponde aux clés déjà vendues.
+
+**La clé était rangée à côté de l'exécutable.** `AppPaths` garde le dossier de l'exe tant qu'il est
+inscriptible, ce qui convient à un cache mais pas à une licence : une clé appartient à la machine,
+pas à une copie du binaire. Sur un poste de développement, `bin\Debug\`, `bin\Release\`, `dist\`
+et la version installée sont quatre dossiers inscriptibles, donc **quatre licences séparées** —
+d'où la clé qui « se désactive » à chaque compilation. Relevé ici : un seul `bt-license.txt`, dans
+`dist\`, et rien ailleurs. La clé vit désormais dans `%LOCALAPPDATA%\ONYX`, un seul endroit par
+utilisateur, et une activation déjà faite à côté d'un exe est **remontée** au premier lancement —
+personne ne doit ressaisir sa clé parce qu'on a corrigé notre rangement.
+
+**Et le message mentait par omission.** Un échec de signature s'affichait « Clé invalide. Vérifie
+qu'elle est collée en entier. » — soit exactement la mauvaise piste : la clé était lisible, entière,
+et c'est la signature qui était refusée. Il nomme maintenant la vraie cause.
+
+**Un garde-fou au banc d'essai** compare le modulus embarqué dans `src/License.cs` à celui de
+`seller/private.xml`. Aucune cryptographie, aucun effet de bord : deux chaînes dans deux fichiers.
+Rejoué sur `ab25e7c`, il tombe en rouge. Sur un poste sans les secrets de vente, il annonce qu'il
+n'a pas pu conclure au lieu de passer au vert.
+
 ### L'input lag : ONYX mesurait tous les maillons, et n'en additionnait aucun
 
 ONYX mesure très bien chaque maillon **séparément** — temps noyau par pilote, taux de rapport réel

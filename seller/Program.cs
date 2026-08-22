@@ -77,12 +77,89 @@ internal static class Keygen
                 HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             string payload = signedPayload + Sep + Convert.ToBase64String(sig);
             string token = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
+
+            // RELECTURE AVANT LIVRAISON — la même que dans le générateur graphique, parce que
+            // c'est la même erreur qui passe par les deux portes.
+            //
+            // Signer ne prouve rien : ce qui compte est que l'APPLICATION sache vérifier. Le
+            // commit ab25e7c a remplacé la clé publique de src/License.cs par celle d'une paire
+            // dont la moitié privée n'existe nulle part. Ce keygen a continué de produire des clés
+            // impeccablement signées et systématiquement refusées, sans que rien ne le signale.
+            string refus = Verifie(token, privPath);
+            if (refus != null)
+            {
+                Console.WriteLine();
+                Console.WriteLine("CLÉ NON ÉMISE — " + refus);
+                Console.WriteLine("Corrige la paire de clés avant d'émettre : une clé émise dans cet état");
+                Console.WriteLine("se vend, se colle, et ne marche pas.");
+                Environment.Exit(3);
+                return;
+            }
+
             Console.WriteLine();
             Console.WriteLine("Licence pour : " + name
                 + (expiry.HasValue ? " — expire le " + expiry.Value.ToString("dd/MM/yyyy") : " — À VIE")
                 + (machine != null ? " — LIÉE AU PC " + machine : " — utilisable sur tout PC"));
             Console.WriteLine("Clé (à envoyer au client) :");
             Console.WriteLine(token);
+
+            // CE KEYGEN N'ÉCRIT PAS AU JOURNAL. Le générateur graphique, lui, tient
+            // licences-emises.csv — c'est lui qui permet de retrouver ou de réémettre la clé d'un
+            // client des mois plus tard. Une licence émise ici et vendue n'existe nulle part.
+            Console.WriteLine();
+            Console.WriteLine("⚠  Cette clé n'a PAS été inscrite au journal (licences-emises.csv).");
+            Console.WriteLine("   Pour une vente, utilise le générateur graphique : il journalise et sait réémettre.");
         }
+    }
+
+    /// <summary>Refait le trajet de l'application sur la clé produite : décodage, séparation,
+    /// vérification avec la clé PUBLIQUE lue dans src/License.cs. Null si tout va bien, sinon la
+    /// raison. Ne conclut pas si les sources sont absentes — un poste de vente peut légitimement
+    /// ne pas les avoir, et bloquer là-dessus serait pire que le mal.</summary>
+    private static string Verifie(string token, string privPath)
+    {
+        string modApp = null, modPriv = null;
+        try
+        {
+            modPriv = Modulus(privPath);
+            string d = Path.GetDirectoryName(privPath);
+            for (int i = 0; i < 6 && d != null; i++)
+            {
+                string c = Path.Combine(d, "src", "License.cs");
+                if (File.Exists(c)) { modApp = Modulus(c); break; }
+                d = Path.GetDirectoryName(d);
+            }
+        }
+        catch { }
+        if (modApp == null || modPriv == null) return null;   // rien à comparer
+
+        try
+        {
+            string s = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+            int i = s.IndexOf(Sep);
+            if (i <= 0) return "la clé produite n'a pas la forme attendue.";
+            using (RSA v = RSA.Create())
+            {
+                v.FromXmlString("<RSAKeyValue><Modulus>" + modApp + "</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>");
+                if (!v.VerifyData(Encoding.UTF8.GetBytes(s.Substring(0, i)),
+                        Convert.FromBase64String(s.Substring(i + 1)),
+                        HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+                    return "la signature est refusée par la clé publique de l'application. "
+                         + "La clé privée utilisée ici n'est pas sa moitié.";
+            }
+            return null;
+        }
+        catch (Exception ex) { return "vérification impossible : " + ex.Message; }
+    }
+
+    private static string Modulus(string fichier)
+    {
+        try
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(
+                File.ReadAllText(fichier), "<Modulus>([^<]+)</Modulus>");
+            return m.Success ? m.Groups[1].Value.Trim() : null;
+        }
+        catch { return null; }
     }
 }

@@ -43,6 +43,9 @@
     <!-- La CHAÎNE d'entrée. Le relevé machine (ChaineEntreeReleve.cs) n'est pas compilé ici :
          les formules et le classement des leviers se vérifient sans écran ni souris. -->
     <Compile Include="..\src\ChaineEntree.cs" />
+    <!-- La POLITIQUE de liaison d'une licence. License.cs n'est pas compile ici : le toucher
+         lirait le registre et ecrirait quatre fichiers sur la machine de qui lance le banc. -->
+    <Compile Include="..\src\LicenceLiaison.cs" />
     <!-- Dépendance d'InventaireServices : la formule du pourcentage de processeur, écrite
          une seule fois. La recopier ici ferait diverger deux calculs censés dire la même chose. -->
     <Compile Include="..\src\SvcHost.cs" />

@@ -16,8 +16,27 @@ namespace BTOptimizer
     /// </summary>
     internal static class License
     {
+        /// <summary>
+        /// LA CLÉ PUBLIQUE DU VENDEUR. Elle doit correspondre à <c>seller/private.xml</c>, sinon
+        /// PLUS AUCUNE clé ne s'active — ni les anciennes, ni celles que le générateur produira.
+        ///
+        /// Ça s'est produit. Le commit ab25e7c (« Centre de stockage », v15.34) a remplacé cette
+        /// constante par le modulus d'une paire dont la moitié privée n'existe NULLE PART dans le
+        /// dépôt. Son message ne mentionne pas les licences : la rotation n'était pas voulue, elle
+        /// est passée avec le reste. Effet : les 7 licences de seller/licences-emises.csv sont
+        /// devenues invalides d'un coup, et le générateur — qui signe toujours avec l'ancienne clé
+        /// privée — n'aurait pas pu en émettre une seule qui fonctionne.
+        ///
+        /// Personne ne l'a vu tout de suite parce que l'échec de signature s'affiche « Clé
+        /// invalide. Vérifie qu'elle est collée en entier. » : le message envoie chercher une
+        /// faute de copier-coller. Il dit maintenant ce qui s'est réellement passé.
+        ///
+        /// RÈGLE : cette constante ne se modifie QUE si seller/private.xml est remplacé dans le
+        /// même geste, et si toutes les clés déjà émises sont réémises. Une rotation de clé n'est
+        /// pas un détail d'implémentation, c'est une invalidation de tout le parc.
+        /// </summary>
         private const string PublicKeyXml =
-            "<RSAKeyValue><Modulus>1XzTv8CXzv7j8Cotm/DN8KgAgHNBbUWZ4HEoTMaYgB6L938qDuCzlTVLBlPWfdiuvAJgAkxHIJCfCkP4MGTM4jllCbOfnUiYjUe329OOAHzKJyxexVTtFsp/spp5dC3Xw8F3j8wSt6kAYy4q3okt99qQzCOorSU+PBN8/kgm8FEMYtRnpST2tKx/GXhvErupQSaapszVLazM54/Fae3nBwRClNq0WAAS06mkNskUjtcYsUJ9EhZX+dClZKQLAzO5MXYwlTqGzCNOqmR2DcVTVo1C/acu8xhw7Kc4qtxZiM8rJHhofSYQjNEzBiTMYmMztq7MBtCmzpA88YlL91UYyQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+            "<RSAKeyValue><Modulus>wb0N0QieE+SPCM3Iu0xDQFG3TjN9dHuv7a4FIDknN5FMr9sSQ6hk8wEcODgtor22h9Go91vTzhs/FFUccSIwGrKlYqHvirMNiIaGXzEo688WBbLhLxegrWrf9uwN8I679rZK7JmjBAowawEjcV3SIGrapSeBQP2BoKWho2/6x6E3VWAXUSjgrxG2V//6QDGBFk9fuMTLrvAlMd6EyiGSTA0KfPrzx4vSm1pvCtvQAsHVnDC9aEm2Q1SWVjWbzu9h8epCt9Q6EiRiqw1NCJD0t6dOymsAqoyCcoZzbh9yNZyncH1hZ1HQUmqAGbnY0/KSZ/jzcRRcysYh5mEANZWktQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         private const char Sep = (char)0x1F; // séparateur d'unité entre le nom et la signature
         private const char DateSep = (char)0x1E; // sépare, DANS la partie signée, le nom de la date d'expiration
@@ -33,9 +52,131 @@ namespace BTOptimizer
         public static string ActivateError { get; private set; }
         private static DateTime? _expiredOn; // clé (stockée ou collée) refusée car expirée — pour Status()
 
+        /// <summary>
+        /// OÙ VIT LA CLÉ — ET POURQUOI PAS À CÔTÉ DE L'EXÉCUTABLE.
+        ///
+        /// <see cref="AppPaths"/> range les données dans le dossier de l'exe tant qu'il est
+        /// inscriptible. C'est raisonnable pour un journal ou un cache. Ça ne l'est pas pour une
+        /// licence : une clé appartient à la MACHINE et à la personne, pas à une copie du binaire.
+        ///
+        /// Conséquence constatée sur la machine de développement : <c>bin\Debug\</c>,
+        /// <c>bin\Release\</c>, <c>dist\</c> et la version installée sont quatre dossiers
+        /// inscriptibles, donc QUATRE licences séparées. Activer dans l'un laisse les trois autres
+        /// en édition gratuite — d'où la clé qui « se désactive » à chaque compilation. Relevé
+        /// ici : un seul bt-license.txt, dans dist\, et rien ailleurs.
+        ///
+        /// La clé quitte donc le dossier de l'exe. Elle est écrite dans PLUSIEURS emplacements
+        /// indépendants (voir Emplacements) et une activation déjà faite à côté d'un exe est
+        /// remontée au premier lancement : personne ne doit ressaisir sa clé parce qu'on a
+        /// corrigé notre rangement.
+        /// </summary>
         private static string StorePath
         {
-            get { return AppPaths.File("bt-license.txt"); }
+            get
+            {
+                try
+                {
+                    string dir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ONYX");
+                    Directory.CreateDirectory(dir);
+                    return Path.Combine(dir, "bt-license.txt");
+                }
+                catch
+                {
+                    // Profil illisible : on ne perd pas la licence pour autant, on retombe sur
+                    // l'ancien emplacement plutôt que de ne rien pouvoir lire.
+                    return AppPaths.File("bt-license.txt");
+                }
+            }
+        }
+
+        /// <summary>Nombre de PC distincts sur lesquels cette clé a été activée. 0 si inconnue.</summary>
+        public static int MachinesVues { get; private set; }
+
+        /// <summary>Date de la première activation de la clé, tous PC confondus.</summary>
+        public static DateTime? LieeDepuis { get; private set; }
+
+        /// <summary>Emplacement machine, hors du profil utilisateur.</summary>
+        private static string SharedStorePath
+        {
+            get
+            {
+                return Path.Combine(
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ONYX"),
+                    "bt-license.txt");
+            }
+        }
+
+        /// <summary>Ancien emplacement : à côté de l'exécutable. Encore lu, pour remonter une
+        /// activation faite avant la correction.</summary>
+        private static string LegacyStorePath { get { return AppPaths.File("bt-license.txt"); } }
+
+        private const string RegLicenseValue = "License";
+
+        /// <summary>
+        /// LES QUATRE ENDROITS OÙ LA LICENCE VIT, ET POURQUOI QUATRE.
+        ///
+        /// L'installeur supprime <c>{localappdata}\ONYX</c> à la désinstallation — ligne 190 de
+        /// BTOptimizer.iss. Une licence rangée là seule DISPARAÎT quand quelqu'un désinstalle puis
+        /// réinstalle, et il doit ressaisir sa clé alors qu'il n'a rien perdu d'autre.
+        ///
+        /// Elle est donc écrite aussi dans %PROGRAMDATA%\ONYX et dans HKLM — deux endroits que le
+        /// désinstalleur ne touche pas — et à côté de l'exe pour les versions antérieures. La
+        /// lecture prend le PREMIER survivant et RESSÈME les autres : effacer un emplacement ne
+        /// coûte donc plus rien, et la licence se répare toute seule au lancement suivant.
+        ///
+        /// Ce n'est pas une protection anti-copie — c'en serait une très mauvaise, tout est en
+        /// clair. C'est l'inverse : une assurance contre la perte d'une licence PAYÉE.
+        /// </summary>
+        private static string[] Emplacements()
+        {
+            return new[] { StorePath, SharedStorePath, LegacyStorePath };
+        }
+
+        /// <summary>Lit le premier emplacement survivant, puis ressème les autres. Null si aucun.</summary>
+        private static LicenceLiaison.Enregistrement ChargeEnregistrement()
+        {
+            LicenceLiaison.Enregistrement e = null;
+            foreach (string p in Emplacements())
+            {
+                try { if (File.Exists(p)) { e = LicenceLiaison.Lit(File.ReadAllText(p)); if (e != null) break; } }
+                catch { }
+            }
+            if (e == null)
+            {
+                try
+                {
+                    using (RegistryKey k = Registry.LocalMachine.OpenSubKey(TrialRegPath))
+                        if (k != null) e = LicenceLiaison.Lit(k.GetValue(RegLicenseValue) as string);
+                }
+                catch { }
+            }
+            if (e != null) Enregistre(e);   // ressème : la licence se répare d'elle-même
+            return e;
+        }
+
+        /// <summary>Écrit partout. Chaque emplacement est isolé : un dossier protégé ne doit pas
+        /// empêcher d'écrire les autres.</summary>
+        private static void Enregistre(LicenceLiaison.Enregistrement e)
+        {
+            if (e == null || string.IsNullOrEmpty(e.Token)) return;
+            string texte = LicenceLiaison.Rend(e);
+            foreach (string p in Emplacements())
+            {
+                try
+                {
+                    string d = Path.GetDirectoryName(p);
+                    if (!string.IsNullOrEmpty(d)) Directory.CreateDirectory(d);
+                    File.WriteAllText(p, texte);
+                }
+                catch { }
+            }
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.CreateSubKey(TrialRegPath))
+                    if (k != null) k.SetValue(RegLicenseValue, texte, RegistryValueKind.String);
+            }
+            catch { }
         }
 
         // ---- Essai gratuit ----
@@ -65,7 +206,13 @@ namespace BTOptimizer
         {
             Licensee = "";
             ActivateError = "";
-            try { if (File.Exists(StorePath)) Activate(File.ReadAllText(StorePath).Trim(), false); }
+            // Le chargement RELIE aussi : une clé déjà activée doit se lier au PC où elle
+            // tourne, même si elle a été saisie avant que la liaison automatique existe.
+            try
+            {
+                LicenceLiaison.Enregistrement e = ChargeEnregistrement();
+                if (e != null && Activate(e.Token, false)) AppliqueLiaison(e, false);
+            }
             catch { }
             LoadTrial();
         }
@@ -134,7 +281,18 @@ namespace BTOptimizer
                     rsa.FromXmlString(PublicKeyXml);
                     bool ok = rsa.VerifyData(Encoding.UTF8.GetBytes(signed), sig,
                         HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                    if (!ok) return false;
+                    if (!ok)
+                    {
+                        // La clé est bien formée, mais elle n'a pas été signée par la clé privée
+                        // que cette version connaît. Dire « vérifie ton copier-coller » enverrait
+                        // chercher pendant des heures une faute de frappe qui n'existe pas —
+                        // c'est exactement ce qui est arrivé après la rotation accidentelle.
+                        ActivateError = "Cette clé n'a pas été signée par la clé de cette version d'ONYX."
+                            + "\r\nLe copier-coller n'est pas en cause : la clé est lisible, "
+                            + "c'est la signature qui est refusée."
+                            + "\r\nDemande une clé réémise avec la version actuelle.";
+                        return false;
+                    }
                 }
                 // Partie signée : « Nom [␞AAAA-MM-JJ] [␝ID-MACHINE] ». Date ET ID machine sont
                 // DANS la signature RSA : impossible de les modifier sans la clé privée.
@@ -183,17 +341,47 @@ namespace BTOptimizer
                 Expiry = until;
                 BoundMachine = string.IsNullOrEmpty(machine) ? null : machine;
                 _expiredOn = null;
-                if (persist) { try { File.WriteAllText(StorePath, token.Trim()); } catch { } }
+                if (persist)
+                {
+                    // LIAISON AUTOMATIQUE : la clé se lie au PC dès qu'elle est saisie. Plus rien
+                    // à demander au vendeur, et plus d'identifiant à recopier à la main.
+                    LicenceLiaison.Enregistrement e = ChargeEnregistrement();
+                    if (e == null || !string.Equals(e.Token, token.Trim(), StringComparison.Ordinal))
+                        e = new LicenceLiaison.Enregistrement { Token = token.Trim() };
+                    AppliqueLiaison(e, true);
+                }
                 return true;
             }
             catch { return false; }
+        }
+
+        /// <summary>
+        /// Relie la clé à CE PC et publie ce qu'on en sait. <paramref name="ecrire"/> à faux
+        /// pendant le chargement : on ne réécrit pas les quatre emplacements à chaque lancement
+        /// tant que rien n'a changé.
+        /// </summary>
+        private static void AppliqueLiaison(LicenceLiaison.Enregistrement e, bool ecrire)
+        {
+            if (e == null) return;
+            string ici = MachineId.Current;
+            LicenceLiaison.Liaison d = LicenceLiaison.Decide(e, ici);
+            LicenceLiaison.Relie(e, ici, DateTime.Now);
+
+            MachinesVues = e.Machines.Count;
+            LieeDepuis = e.Depuis == DateTime.MinValue ? (DateTime?)null : e.Depuis;
+            if (BoundMachine == null) BoundMachine = e.Machine;   // liaison douce, pas le verrou signé
+
+            if (ecrire || d != LicenceLiaison.Liaison.Meme) Enregistre(e);
         }
 
         public static string Status()
         {
             if (IsPro)
                 return "Pro — licence : " + Licensee
-                     + (Expiry.HasValue ? " (jusqu'au " + Expiry.Value.ToString("dd/MM/yyyy") + ")" : "");
+                     + (Expiry.HasValue ? " (jusqu'au " + Expiry.Value.ToString("dd/MM/yyyy") + ")" : "")
+                     + (LieeDepuis.HasValue
+                        ? " — liée à ce PC depuis le " + LieeDepuis.Value.ToString("dd/MM/yyyy")
+                        : "");
             if (TrialActive) return "Essai Pro — " + TrialDaysLeft + " jour(s) restant(s)";
             if (_expiredOn.HasValue) return "Édition gratuite (licence expirée le " + _expiredOn.Value.ToString("dd/MM/yyyy") + ")";
             if (TrialUsed) return "Édition gratuite (essai Pro expiré)";
