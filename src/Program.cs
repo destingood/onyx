@@ -1880,6 +1880,7 @@ namespace BTOptimizer
                 case "DeviceManagerForm": return new DeviceManagerForm(log);
                 case "StartupForm": return new StartupForm(log);
                 case "ServicesForm": return new ServicesForm(log);
+                case "InventaireServicesForm": return new InventaireServicesForm(log);
                 case "RestoreForm": return new RestoreForm(log);
                 case "SmartAppControlForm": return new SmartAppControlForm(log);
                 case "MobileNetForm": return new MobileNetForm(log);

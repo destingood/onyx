@@ -82,6 +82,23 @@ namespace BTOptimizer
             }
         }
 
+        // RÉPARTITION PAR CŒUR — la colonne qu'ONYX allait encore lire dans LatencyMon, et la
+        // seule qui mesure l'effet du réglage « répartir les interruptions » qu'il applique
+        // lui-même. Deux tableaux plats : on y écrit depuis les rappels ETW, chemin le plus
+        // chaud du programme, où un index coûte moins qu'un hachage. Analyse : RepartitionCoeurs.
+        private readonly long[] _evtParCoeur = new long[RepartitionCoeurs.MaxCoeurs];
+        private readonly double[] _msParCoeur = new double[RepartitionCoeurs.MaxCoeurs];
+
+        /// <summary>Range un événement sur son cœur. Appelé SOUS le verrou. Un index hors bornes
+        /// est ignoré, jamais levé : l'exception remonterait hors du rappel ETW et arrêterait la
+        /// mesure sans un mot.</summary>
+        private void NoteCoeur(int coeur, double ms)
+        {
+            if (coeur < 0 || coeur >= RepartitionCoeurs.MaxCoeurs) return;
+            _evtParCoeur[coeur]++;
+            _msParCoeur[coeur] += ms;
+        }
+
         private void OnDpc(DPCTraceData d)
         {
             double us = d.ElapsedTimeMSec * 1000.0;
@@ -89,6 +106,7 @@ namespace BTOptimizer
             string module = KernelModules.Lookup(d.Routine);
             lock (_lock)
             {
+                NoteCoeur(d.ProcessorNumber, d.ElapsedTimeMSec);
                 DriverStat s = Get(module);
                 s.DpcCount++;
                 s.DpcTotalUs += (long)us;
@@ -107,6 +125,7 @@ namespace BTOptimizer
             string module = KernelModules.Lookup(d.Routine);
             lock (_lock)
             {
+                NoteCoeur(d.ProcessorNumber, d.ElapsedTimeMSec);
                 DriverStat s = Get(module);
                 s.IsrCount++;
                 s.IsrTotalUs += (long)us;
@@ -276,7 +295,32 @@ namespace BTOptimizer
                 _maxDpcModule = _maxIsrModule = "-";
                 _hfCount = 0; _hfWorstMs = 0; _hfWorstProc = "-";
                 _hfByPid.Clear();
+                // La répartition par cœur suit les autres compteurs. L'oublier laisserait le
+                // bouton « Réinitialiser » afficher un tableau d'avant la remise à zéro, à côté
+                // de chiffres neufs — exactement le genre de contradiction qu'on ne remarque pas.
+                Array.Clear(_evtParCoeur, 0, _evtParCoeur.Length);
+                Array.Clear(_msParCoeur, 0, _msParCoeur.Length);
                 _startedUtc = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Photo de la répartition par cœur.
+        ///
+        /// Rend des COPIES : les tableaux internes continuent d'être écrits par les rappels ETW
+        /// pendant que l'appelant lit les siens. Rendre les tableaux eux-mêmes donnerait des
+        /// totaux qui bougent entre deux lignes d'un même rapport.
+        /// </summary>
+        public RepartitionCoeurs.Etat RepartitionParCoeur(double secondes)
+        {
+            lock (_lock)
+            {
+                return new RepartitionCoeurs.Etat
+                {
+                    Evenements = (long[])_evtParCoeur.Clone(),
+                    Ms = (double[])_msParCoeur.Clone(),
+                    Secondes = secondes
+                };
             }
         }
 

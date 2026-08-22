@@ -549,6 +549,85 @@ namespace BTOptimizer
             return (double)hit / terms.Count;
         }
 
+        /// <summary>
+        /// Part des termes de la question qu'un extrait doit contenir pour être repêché SANS
+        /// index sémantique.
+        ///
+        /// Haut volontairement. En recherche lexicale pure, il n'y a plus de cosinus pour écarter
+        /// le hors-sujet : un seul mot commun suffirait à remonter n'importe quelle fiche, et une
+        /// base qui répond toujours quelque chose est pire qu'une base qui se tait.
+        /// </summary>
+        private const double SeuilLexical = 0.5;
+
+        /// <summary>
+        /// PUR : les meilleurs extraits pour cette question, par recouvrement de termes.
+        ///
+        /// C'est le chemin emprunté depuis le retrait de l'IA locale : sans serveur d'embeddings,
+        /// il n'y a plus d'index sémantique, et la base — 71 fiches écrites à la main — serait
+        /// devenue silencieuse alors que son CONTENU, lui, n'a jamais dépendu d'Ollama. Seule la
+        /// façon d'y retrouver quelque chose en dépendait.
+        ///
+        /// Ce que ce repli perd honnêtement : les reformulations. « ça rame » ne trouvera pas une
+        /// fiche qui parle de « saccades », là où le cosinus les rapprochait. Le dire vaut mieux
+        /// que laisser croire à une équivalence.
+        /// </summary>
+        /// <remarks>
+        /// Rend des INDEX, pas des extraits. Chunk est un type privé de cette classe : une
+        /// méthode qui le renverrait ne pourrait pas être plus accessible que lui, et resterait
+        /// donc invérifiable depuis le banc d'essai. Travailler sur des textes et rendre leurs
+        /// positions garde la décision — seuil, ordre, troncature — entièrement pure.
+        /// </remarks>
+        internal static List<int> ClasseLexical(string query, IList<string> textes, int k)
+        {
+            var gardes = new List<int>();
+            if (textes == null || string.IsNullOrEmpty(query) || k <= 0) return gardes;
+
+            var notes = new List<KeyValuePair<double, int>>();
+            for (int i = 0; i < textes.Count; i++)
+            {
+                if (string.IsNullOrEmpty(textes[i])) continue;
+                double s = LexicalScore(query, textes[i]);
+                if (s < SeuilLexical) continue;
+                notes.Add(new KeyValuePair<double, int>(s, i));
+            }
+            // À score égal, l'ordre de la source décide : les fiches intégrées passent avant les
+            // documents ajoutés, et deux exécutions rendent la même réponse.
+            notes.Sort(delegate (KeyValuePair<double, int> a, KeyValuePair<double, int> b)
+                       {
+                           int d = b.Key.CompareTo(a.Key);
+                           return d != 0 ? d : a.Value.CompareTo(b.Value);
+                       });
+
+            int n = Math.Min(k, notes.Count);
+            for (int i = 0; i < n; i++) gardes.Add(notes[i].Value);
+            return gardes;
+        }
+
+        /// <summary>Recherche sans index sémantique. Même format de sortie que Search : les
+        /// appelants ne doivent pas avoir à savoir par quel chemin l'extrait est arrivé.</summary>
+        internal static string SearchLexical(string query, int k)
+        {
+            try
+            {
+                List<Chunk> source = Collect();
+                var textes = new List<string>(source.Count);
+                foreach (Chunk c in source) textes.Add(c == null ? "" : c.Text);
+
+                List<int> gardes = ClasseLexical(query, textes, k);
+                if (gardes.Count == 0) return "";
+
+                var sb = new StringBuilder("Base de connaissances (extraits pertinents) :\n");
+                foreach (int i in gardes)
+                {
+                    Chunk c = source[i];
+                    sb.Append("- ").Append(c.Text).Append(" [").Append(c.Source)
+                      .Append(FreshTag(c.When)).Append("]\n");
+                }
+                return sb.ToString();
+            }
+            catch { return ""; }
+        }
+
         public static string Search(string query, int k)
         {
             try
@@ -556,9 +635,11 @@ namespace BTOptimizer
                 List<Chunk> idx;
                 lock (Gate) idx = _index;
                 if (idx == null) { EnsureIndex(); lock (Gate) idx = _index; }
-                if (idx == null || idx.Count == 0) return "";
+                // Pas d'index — c'est désormais le cas NORMAL, l'IA locale étant retirée. Rendre
+                // "" ici rendait la base muette alors que ses fiches sont toujours là.
+                if (idx == null || idx.Count == 0) return SearchLexical(query, k);
                 float[] q = LocalBrain.Embed(query, true);
-                if (q == null) return "";
+                if (q == null) return SearchLexical(query, k);
 
                 // 1) Récupération SÉMANTIQUE : cosinus, on garde ce qui passe le seuil de pertinence.
                 var cand = new List<KeyValuePair<double, Chunk>>();   // clé = score combiné (ré-ordonné)

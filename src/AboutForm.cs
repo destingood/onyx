@@ -58,7 +58,7 @@ namespace BTOptimizer
             };
             Controls.Add(body);
 
-            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 368), AutoSize = true };
+            var eula = new LinkLabel { Text = "Conditions d'utilisation", Location = new Point(20, 398), AutoSize = true };
             eula.LinkClicked += (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); };
             Controls.Add(eula);
 
@@ -111,15 +111,27 @@ namespace BTOptimizer
             };
             Controls.Add(expo);
 
+            // RAPPORT DE DIAGNOSTIC : le dossier complet, MONTRÉ avant tout envoi. Le bouton
+            // n'envoie rien lui-même — il ouvre l'écran où l'utilisateur lit ce qu'il transmet.
+            var rap = new Button
+            {
+                Text = "🧾 Rapport de diagnostic (voir, enregistrer, envoyer)", Width = 398,
+                Location = new Point(20, 356), Height = 26,
+                FlatStyle = FlatStyle.Flat, BackColor = Color.White
+            };
+            rap.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            rap.Click += (s, e) => { using (var f = new RapportDiagnosticForm()) f.ShowDialog(this); };
+            Controls.Add(rap);
+
             var close = new Button
             {
-                Text = "Fermer", Width = 100, Location = new Point(360, 360),
+                Text = "Fermer", Width = 100, Location = new Point(360, 392),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.White, DialogResult = DialogResult.OK
             };
             close.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             Controls.Add(close);
             AcceptButton = close;
-            ClientSize = new Size(480, 400);   // place pour les boutons diagnostic / support / export
+            ClientSize = new Size(480, 430);   // place pour diagnostic / support / export / rapport
             Theme.Apply(this);
         }
     }

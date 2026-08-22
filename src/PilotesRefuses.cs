@@ -25,7 +25,20 @@ namespace BTOptimizer
     ///   d'être chargeable du jour au lendemain. L'éditeur n'a rien fait. L'utilisateur non plus.
     ///   La machine a simplement reçu une mise à jour de stratégie.
     ///
-    ///   Le refus est journalisé — et NULLE PART AILLEURS. C'est là qu'on va le chercher.
+    ///   Windows AFFICHE bien une notification — « Ce pilote a été bloqué : rspLLL64.sys ne
+    ///   respecte pas la stratégie de… » — et il la réaffiche à chaque tentative. Il faut le
+    ///   dire, parce qu'une première version de ce module prétendait que le refus n'était
+    ///   visible nulle part, ce qui était faux.
+    ///
+    ///   Mais regarde ce que cette notification NE dit pas : quel logiciel a tenté de charger ce
+    ///   pilote, pourquoi il a été refusé, et si c'est réparable. Elle est tronquée, elle
+    ///   disparaît, et elle nomme un fichier .sys que personne ne peut relier à l'application
+    ///   qu'il fait vivre. L'utilisateur voit passer un avertissement obscur, hausse les épaules,
+    ///   et continue de croire que son outil de mesure fonctionne.
+    ///
+    ///   Le détail, lui, n'est QUE dans le journal d'intégrité du code : le nombre de refus,
+    ///   depuis quand, sous quelle stratégie. C'est là qu'on va le chercher, et c'est en le
+    ///   croisant avec le fichier lui-même qu'on peut enfin nommer le produit et la cause.
     ///
     /// POURQUOI ÇA NOUS REGARDE :
     ///
@@ -221,9 +234,10 @@ namespace BTOptimizer
 
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("PILOTES QUE WINDOWS REFUSE DE CHARGER");
-            sb.AppendLine("   Refus journalisés par l'intégrité du code, et visibles NULLE PART");
-            sb.AppendLine("   ailleurs : ni dans le Gestionnaire de périphériques, ni dans les");
-            sb.AppendLine("   Services. L'outil concerné s'installe et se lance — il ne mesure rien.");
+            sb.AppendLine("   Windows te l'annonce par une notification tronquée qui nomme un");
+            sb.AppendLine("   fichier .sys — sans dire quel logiciel s'en sert, ni pourquoi c'est");
+            sb.AppendLine("   refusé, ni si c'est réparable. Rien non plus dans le Gestionnaire de");
+            sb.AppendLine("   périphériques ni dans les Services. Voici ce qu'elle ne dit pas.");
             sb.AppendLine();
 
             foreach (Refus r in bloques)

@@ -174,12 +174,27 @@ namespace BTOptimizer
             return n ?? "(pilote inconnu)";
         }
 
-        private void Ajoute(ulong routine, double ms, bool estDpc)
+        // Répartition par cœur. Deux tableaux plats plutôt qu'un dictionnaire : on y écrit dans
+        // le rappel ETW, c'est-à-dire sur le chemin le plus chaud du programme, et un index de
+        // tableau y coûte moins qu'un hachage. Voir RepartitionCoeurs pour l'analyse.
+        private readonly long[] _evtParCoeur = new long[RepartitionCoeurs.MaxCoeurs];
+        private readonly double[] _msParCoeur = new double[RepartitionCoeurs.MaxCoeurs];
+
+        private void Ajoute(ulong routine, double ms, bool estDpc, int coeur)
         {
             if (ms < 0 || ms > 10000) return;   // valeur aberrante : on ne la compte pas
             string nom = NomDe(routine);
             lock (_lock)
             {
+                // Un index hors bornes est ignoré, jamais levé : l'exception remonterait hors du
+                // rappel ETW et arrêterait la mesure en silence — le défaut déjà rencontré avec
+                // « Collection was modified ».
+                if (coeur >= 0 && coeur < RepartitionCoeurs.MaxCoeurs)
+                {
+                    _evtParCoeur[coeur]++;
+                    _msParCoeur[coeur] += ms;
+                }
+
                 Pilote p;
                 if (!_pilotes.TryGetValue(nom, out p)) { p = new Pilote { Nom = nom }; _pilotes[nom] = p; }
                 if (estDpc) p.Dpc++; else p.Isr++;
@@ -216,10 +231,13 @@ namespace BTOptimizer
                 _session.Source.Kernel.ImageLoad += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.ImageLoadTraceData d) { NoteModule(d); };
                 _session.Source.Kernel.ImageDCStart += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.ImageLoadTraceData d) { NoteModule(d); };
 
-                _session.Source.Kernel.PerfInfoDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true); };
-                _session.Source.Kernel.PerfInfoThreadedDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true); };
-                _session.Source.Kernel.PerfInfoTimerDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true); };
-                _session.Source.Kernel.PerfInfoISR += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.ISRTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, false); };
+                // ProcessorNumber : le cœur sur lequel l'événement s'est exécuté. C'est la seule
+                // donnée qui manquait pour reproduire le tableau par cœur de LatencyMon — elle
+                // était disponible depuis le début sur chaque événement, sans coût de collecte.
+                _session.Source.Kernel.PerfInfoDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true, d.ProcessorNumber); };
+                _session.Source.Kernel.PerfInfoThreadedDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true, d.ProcessorNumber); };
+                _session.Source.Kernel.PerfInfoTimerDPC += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.DPCTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, true, d.ProcessorNumber); };
+                _session.Source.Kernel.PerfInfoISR += delegate (Microsoft.Diagnostics.Tracing.Parsers.Kernel.ISRTraceData d) { Ajoute((ulong)d.Routine, d.ElapsedTimeMSec, false, d.ProcessorNumber); };
 
                 _thread = new System.Threading.Thread(delegate () { try { _session.Source.Process(); } catch { } });
                 _thread.IsBackground = true;
@@ -271,6 +289,27 @@ namespace BTOptimizer
                         TotalMs = kv.Value.TotalMs, PireMs = kv.Value.PireMs,
                         PireDpcMs = kv.Value.PireDpcMs, PireIsrMs = kv.Value.PireIsrMs });
                 return Classement(copie);
+            }
+        }
+
+        /// <summary>
+        /// Photo de la répartition par cœur — la colonne qu'on allait chercher chez LatencyMon.
+        ///
+        /// Rend des COPIES : les tableaux internes continuent d'être écrits par les rappels ETW
+        /// pendant que l'appelant lit les siens. Rendre les tableaux eux-mêmes donnerait des
+        /// totaux incohérents entre deux lignes du même rapport.
+        /// </summary>
+        public RepartitionCoeurs.Etat RepartitionParCoeur(double secondes)
+        {
+            lock (_lock)
+            {
+                var e = new RepartitionCoeurs.Etat
+                {
+                    Evenements = (long[])_evtParCoeur.Clone(),
+                    Ms = (double[])_msParCoeur.Clone(),
+                    Secondes = secondes
+                };
+                return e;
             }
         }
 

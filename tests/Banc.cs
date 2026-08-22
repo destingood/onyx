@@ -71,6 +71,11 @@ namespace BTOptimizer.Tests
             PilotesRefusesTests.Tout();
             JournalTechniqueTests.Tout();
             CanauxWindowsTests.Tout();
+            RepartitionCoeursTests.Tout();
+            FormatDiagnosticTests.Tout();
+            InventaireServicesTests.Tout();
+            AutoJeuTests.Tout();
+            ChaineEntreeTests.Tout();
             return Banc.Bilan();
         }
     }

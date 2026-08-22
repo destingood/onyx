@@ -20,8 +20,6 @@ namespace BTOptimizer
         private CheckBox _chkTimer;
         private CheckBox _chkAutoTimer;
         private CheckBox _chkAutoBoost;
-        private bool _autoBoostEngaged;   // le MODE JEU a été enclenché automatiquement (à couper seul)
-        private bool _boostBusy;          // une (dé)activation est en cours
         private CheckBox _chkGuard;
         private bool _guardEventSuppressed;
         private RichTextBox _log;
@@ -252,6 +250,7 @@ namespace BTOptimizer
             mSys.DropDownItems.Add("Gestionnaire de périphériques (erreurs)...", null, open(() => new DeviceManagerForm(Log)));
             mSys.DropDownItems.Add("Programmes au démarrage...", null, open(() => new StartupForm(Log)));
             mSys.DropDownItems.Add("Services Windows...", null, open(() => new ServicesForm(Log)));
+            mSys.DropDownItems.Add("Inventaire des services (ce qui tourne ici, et ce que ça coûte)...", null, open(() => new InventaireServicesForm(Log)));
 
             // --- Mon profil ---
             var mProfile = group(" Mon profil d'optimisations");
@@ -435,7 +434,9 @@ namespace BTOptimizer
             _chkAutoBoost = new CheckBox();
             _chkAutoBoost.Text = "MODE JEU AUTO : active/coupe le mode jeu tout seul dès qu'un jeu est lancé (détection par jeu + plein écran)";
             _chkAutoBoost.SetBounds(16, 592, 868, 22);
-            _chkAutoBoost.Checked = false;   // opt-in : il suspend des services de fond
+            // Reflète le réglage PERSISTÉ : la case repartait à zéro à chaque lancement, donc
+            // « MODE JEU AUTO » se re-décochait tout seul entre deux sessions.
+            _chkAutoBoost.Checked = AutoJeu.Actif;   // opt-in : il suspend des services de fond
 
             // Boutons d'action
             _btnApply = MakeButton("APPLIQUER LA SÉLECTION", 16, 624, 268, 44, true);
@@ -1371,7 +1372,7 @@ namespace BTOptimizer
         private void OnBoostToggle(object sender, EventArgs e)
         {
             // Bascule MANUELLE : l'auto ne doit plus « posséder » cet état (ne pas le couper tout seul).
-            _autoBoostEngaged = false;
+            AutoJeu.Desapproprie();
             _btnBoost.Enabled = false;
             bool activating = !GameBoost.IsActive;
             Task.Run(() =>
@@ -1481,47 +1482,19 @@ namespace BTOptimizer
                 Log("Timer Windows rendu au système.", 0);
         }
 
-        private int _fsStableTicks;   // ticks consécutifs avec jeu plein écran (anti-clignotement)
-
         /// <summary>
-        /// MODE JEU AUTO : enclenche le mode jeu quand un jeu tient le plein écran depuis 2 ticks
-        /// (≈4 s) et le coupe seul au retour au bureau. Ne touche jamais à une activation MANUELLE.
+        /// MODE JEU AUTO. La décision vit désormais dans <see cref="AutoJeu"/> : partagée avec le
+        /// shell moderne — qui n'avait pas la fonction du tout — et vérifiable au banc d'essai sans
+        /// lancer de jeu. Cette fenêtre n'en garde que l'interrupteur et la remise à jour du bouton.
         /// </summary>
         private void UpdateAutoBoost()
         {
-            if (_chkAutoBoost == null || !_chkAutoBoost.Checked || _boostBusy) return;
-
-            // Détection PRÉCISE : un jeu connu qui tourne (immédiat, pas de faux positif sur une vidéo)
-            // OU, en repli, une appli plein écran stable (couvre les jeux non listés).
-            string game = GameScan.RunningKnownGame();
-            bool fullscreen = Native.IsGameFullscreen();
-            _fsStableTicks = fullscreen ? Math.Min(_fsStableTicks + 1, 10) : 0;
-            bool engage = game != null || _fsStableTicks >= 2;
-
-            if (engage && !GameBoost.IsActive)
+            if (_chkAutoBoost == null) return;
+            AutoJeu.Actif = _chkAutoBoost.Checked;
+            AutoJeu.Tick(Log, delegate
             {
-                string reason = game != null ? "jeu détecté (" + game + ")" : "jeu plein écran détecté";
-                _boostBusy = true;
-                Task.Run(() =>
-                {
-                    GameBoost.Activate(Log);
-                    try { BeginInvoke((Action)(() => { _autoBoostEngaged = true; _boostBusy = false; SyncBoostButton();
-                        Log("MODE JEU AUTO : " + reason + " → mode jeu activé.", 1); })); }
-                    catch { _boostBusy = false; }
-                });
-            }
-            // Coupe : plus aucun jeu (ni process connu, ni plein écran) ET c'est NOUS qui l'avions activé.
-            else if (game == null && !fullscreen && GameBoost.IsActive && _autoBoostEngaged)
-            {
-                _boostBusy = true;
-                Task.Run(() =>
-                {
-                    GameBoost.Deactivate(Log);
-                    try { BeginInvoke((Action)(() => { _autoBoostEngaged = false; _boostBusy = false; SyncBoostButton();
-                        Log("MODE JEU AUTO : retour au bureau → mode jeu coupé.", 0); })); }
-                    catch { _boostBusy = false; }
-                });
-            }
+                try { BeginInvoke((MethodInvoker)SyncBoostButton); } catch { }
+            });
         }
 
         /// <summary>Aligne le bouton MODE JEU sur l'état réel (après une bascule automatique).</summary>

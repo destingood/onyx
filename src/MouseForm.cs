@@ -25,6 +25,7 @@ namespace BTOptimizer
         private readonly System.Diagnostics.Stopwatch _sw = System.Diagnostics.Stopwatch.StartNew();
 
         private const int WM_INPUT = 0x00FF;
+        private int _mesureRetenue;   // dernière médiane calculée, gardée pour la chaîne d'entrée
         private const int RIDEV_INPUTSINK = 0x00000100;
         private const int RIM_TYPEMOUSE = 0;
 
@@ -170,6 +171,11 @@ namespace BTOptimizer
             // L'ecart entre les deux etait calcule puis jete : c'est lui qui revele un
             // taux de rapport annonce mais pas tenu.
             _verdict.Text = PollingVerdict.Verdict(hz, (int)_bestHz, FrameCap.FrequenceEcran());
+
+            // Le chiffre était affiché puis PERDU à la fermeture de la fenêtre. La chaîne
+            // d'entrée en a besoin pour son premier maillon : on le retient. C'est la médiane
+            // — ce que la souris tient vraiment — pas le meilleur palier atteint une fois.
+            _mesureRetenue = hz;
         }
 
 
@@ -177,6 +183,7 @@ namespace BTOptimizer
         {
             try { if (_refresh != null) { _refresh.Stop(); _refresh.Dispose(); } } catch { }
             if (_log != null && _bestHz > 0) _log("Souris : fréquence réelle mesurée ~" + (int)_bestHz + " Hz.", 0);
+            try { if (_mesureRetenue > 0) ChaineEntree.NoteSouris(_mesureRetenue); } catch { }
             base.OnFormClosed(e);
         }
     }

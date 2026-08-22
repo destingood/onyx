@@ -173,9 +173,11 @@ namespace BTOptimizer
                 new LibItem { Name = "ISLC — nettoyeur de liste de veille mémoire", WingetId = "Wagnardsoft.ISLC",
                     Why = "vide la « standby list » RAM automatiquement : remède connu aux micro-saccades (stutter) en session de jeu prolongée",
                     Installed = () => Uninstall("Intelligent standby") || WingetPkg("Wagnardsoft.ISLC") },
-                new LibItem { Name = "Ollama (IA locale du Copilote)", WingetId = "Ollama.Ollama",
-                    Why = "fait tourner un modèle d'IA GRATUIT 100 % sur ta machine — le cerveau étendu optionnel du Copilote (aucune donnée envoyée, aucun abonnement)",
-                    Installed = () => LocalBrain.OllamaExe() != null || Uninstall("Ollama") || WingetPkg("Ollama.Ollama") },
+                // Ollama a été RETIRÉ de cette liste avec l'IA locale (voir LocalBrain.Retiree).
+                // Sa seule justification ici était « le cerveau étendu du Copilote » : le
+                // proposer encore ferait installer un serveur résident dont ONYX ne se sert
+                // plus — et sur une machine dont tout le produit traque ce qui coûte des
+                // microsecondes, c'est le pire conseil possible.
 
                 // ---- Lanceurs de jeux (regroupe toute ta bibliothèque) ----
                 new LibItem { Name = "GOG Galaxy", WingetId = "GOG.Galaxy",

@@ -33,7 +33,19 @@
          diverge en silence et finit par tester du code que plus personne ne livre. -->
     <Compile Include="..\src\PilotesRefuses.cs" />
     <Compile Include="..\src\CanauxWindows.cs" />
+    <Compile Include="..\src\RepartitionCoeurs.cs" />
     <Compile Include="..\src\JournalTechnique.cs" />
+    <Compile Include="..\src\FormatDiagnostic.cs" />
+    <Compile Include="..\src\InventaireServices.cs" />
+    <!-- La DÉCISION du Mode Jeu auto. Le relevé machine vit dans AutoJeuVeille.cs et n'est
+         pas compilé ici : c'est tout l'intérêt de la coupure. -->
+    <Compile Include="..\src\AutoJeu.cs" />
+    <!-- La CHAÎNE d'entrée. Le relevé machine (ChaineEntreeReleve.cs) n'est pas compilé ici :
+         les formules et le classement des leviers se vérifient sans écran ni souris. -->
+    <Compile Include="..\src\ChaineEntree.cs" />
+    <!-- Dépendance d'InventaireServices : la formule du pourcentage de processeur, écrite
+         une seule fois. La recopier ici ferait diverger deux calculs censés dire la même chose. -->
+    <Compile Include="..\src\SvcHost.cs" />
     <!-- Dépendance de JournalTechnique : où vivent les données. Aucune autre classe d'ONYX. -->
     <Compile Include="..\src\AppPaths.cs" />
   </ItemGroup>

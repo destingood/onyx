@@ -16,6 +16,42 @@ namespace BTOptimizer
     /// </summary>
     internal static class LocalBrain
     {
+        /// <summary>
+        /// L'IA LOCALE EST RETIRÉE D'ONYX. Interrupteur unique, et volontairement unique.
+        ///
+        /// POURQUOI. Le cerveau local suppose un serveur Ollama RÉSIDENT : il tient sa mémoire et,
+        /// selon le modèle, la VRAM de la carte graphique, en permanence — sur une machine dont
+        /// tout le produit consiste à traquer ce qui vole des microsecondes au jeu. Le prix était
+        /// payé en continu pour une fonction utilisée par intermittence.
+        ///
+        /// CE QUE ÇA CHANGE VRAIMENT. La ligne qui compte est celle de ServerUp : ONYX ne
+        /// contacte plus jamais 127.0.0.1:11434. Plus de sonde, plus d'attente bornée, plus de
+        /// thread en vol. Le reste n'est que la conséquence logique de cette absence.
+        ///
+        /// CE QUE ÇA NE FAIT PAS. Ça n'arrête pas Ollama, qui est un programme séparé installé
+        /// à part : si le serveur tourne encore, il tient toujours sa mémoire. C'est à
+        /// désinstaller depuis Windows, et aucune ligne de code d'ONYX ne peut le faire à ta
+        /// place. Confondre les deux ferait croire le problème réglé alors qu'il ne l'est pas.
+        ///
+        /// POURQUOI UN INTERRUPTEUR PLUTÔT QUE LA SUPPRESSION. Les 104 appels répartis sur dix
+        /// fichiers prennent DÉJÀ tous une branche « IA absente » : c'est l'état d'une
+        /// installation neuve, où le fichier-drapeau n'existe pas. Couper à la frontière emprunte
+        /// donc un chemin que le produit exerce depuis toujours, au lieu d'ouvrir un chantier de
+        /// 104 modifications simultanées. La suppression physique du fichier et de ses appelants
+        /// vient ensuite, sous compilateur, fichier par fichier.
+        ///
+        /// POUR REVENIR EN ARRIÈRE : passer ce drapeau à false. Rien d'autre.
+        ///
+        /// POURQUOI static readonly ET NON const. Avec un const, le compilateur replie la
+        /// condition et déclare mort tout ce qui suit — deux CS0162, sur un projet qui tient à
+        /// zéro avertissement. Supprimer les corps devenus inatteignables ferait taire l'alerte
+        /// mais détruirait la seule chose qui rend ce retrait réversible en une ligne, et
+        /// transformerait l'interrupteur en suppression déguisée. Un booléen lu à l'exécution
+        /// coûte une comparaison par appel — c'est-à-dire rien — et garde le code honnête :
+        /// l'ancien chemin existe toujours, il n'est simplement plus emprunté.
+        /// </summary>
+        public static readonly bool Retiree = true;
+
         private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(75) };
         private const string Base = "http://127.0.0.1:11434";   // localhost UNIQUEMENT — jamais internet
 
@@ -32,10 +68,16 @@ namespace BTOptimizer
             get { return AppPaths.File("bt-ia-setup.txt"); }
         }
 
-        /// <summary>Vrai si le cerveau IA local est actif (fichier-drapeau).</summary>
+        /// <summary>Vrai si le cerveau IA local est actif (fichier-drapeau).
+        /// Toujours faux depuis le retrait : un fichier-drapeau laissé par une version
+        /// précédente ne doit pas ressusciter la fonction.</summary>
         public static bool Enabled
         {
-            get { try { return File.Exists(FlagPath); } catch { return false; } }
+            get
+            {
+                if (Retiree) return false;
+                try { return File.Exists(FlagPath); } catch { return false; }
+            }
         }
 
         /// <summary>Vrai si l'utilisateur a dit « désactive l'ia » : l'installation AUTOMATIQUE
@@ -154,6 +196,9 @@ namespace BTOptimizer
 
         public static void SetEnabled(bool on)
         {
+            // « active l'ia » ne doit pas pouvoir rallumer ce qui a été retiré. Écrire le
+            // fichier-drapeau sans effet laisserait en plus une trace qui ment sur l'état réel.
+            if (Retiree && on) return;
             try
             {
                 if (on)
@@ -319,9 +364,14 @@ namespace BTOptimizer
             try { File.WriteAllText(TriesPath, (Tries() + 1).ToString()); } catch { }
         }
 
-        /// <summary>Le serveur Ollama répond-il ? (borné, à appeler hors du fil d'interface)</summary>
+        /// <summary>Le serveur Ollama répond-il ? (borné, à appeler hors du fil d'interface)
+        ///
+        /// LA ligne du retrait. Sans elle, ONYX continuerait à sonder 127.0.0.1:11434 — donc à
+        /// payer une attente bornée, un socket et un thread — pour se faire répondre « non ».
+        /// Le court-circuit précède l'appel réseau, jamais l'inverse.</summary>
         public static bool ServerUp(int timeoutMs)
         {
+            if (Retiree) return false;
             try
             {
                 using (var cts = new System.Threading.CancellationTokenSource(timeoutMs))
@@ -514,7 +564,10 @@ namespace BTOptimizer
         }
 
         /// <summary>Vrai si Ollama est détecté sur la machine (installé), quel que soit l'emplacement.</summary>
-        public static bool Installed { get { return OllamaExe() != null; } }
+        /// <summary>Ollama est-il installé ? Toujours faux depuis le retrait : ONYX ne doit plus
+        /// proposer d'installer, de lancer ni de mettre à jour un serveur dont il ne se sert
+        /// plus — c'est la règle du bouton LatencyMon, appliquée à nous-mêmes.</summary>
+        public static bool Installed { get { return !Retiree && OllamaExe() != null; } }
 
         /// <summary>Pose la question au modèle local (sans mémoire). BLOQUANT (tâche de fond).</summary>
         public static string Ask(string question, string systemContext, string model)

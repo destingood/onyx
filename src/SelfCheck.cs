@@ -52,11 +52,14 @@ namespace BTOptimizer
             l.Add(new Line { Ok = net, What = "Connexion internet (outils web du Copilote)",
                 Detail = net ? "OK" : "absente — les outils locaux (heure, calcul, lune, nettoyage) marchent quand même" });
 
-            bool ia = false;
-            try { ia = LocalBrain.ServerUp(1200); } catch { }
-            l.Add(new Line { Ok = ia, What = "IA locale (Ollama, optionnelle)",
-                Detail = ia ? "en service — le Copilote reformule et raisonne"
-                            : "absente — le Copilote fonctionne quand même (mesures, outils, enquête) ; installable depuis Bibliothèques" });
+            // IA LOCALE RETIRÉE — voir LocalBrain.Retiree. Deux raisons de réécrire cette ligne
+            // plutôt que de la laisser : elle SONDAIT 127.0.0.1:11434 à chaque auto-diagnostic
+            // (1,2 s d'attente bornée pour une réponse désormais connue), et elle invitait à
+            // installer un serveur dont ONYX ne se sert plus. Recommander l'inutile est
+            // exactement le défaut corrigé sur le bouton LatencyMon.
+            l.Add(new Line { Ok = true, What = "Copilote",
+                Detail = "règles + base de connaissances locale — aucun serveur d'IA à installer, "
+                       + "rien ne tourne en arrière-plan" });
 
             double freeGb = -1;
             try { freeGb = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)).AvailableFreeSpace / 1073741824.0; } catch { }

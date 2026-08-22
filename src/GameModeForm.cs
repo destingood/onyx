@@ -14,7 +14,7 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private static readonly Color Accent = Theme.AccentColor;
         private CheckedListBox _list;
-        private readonly string[] _svcs;
+        private string[] _svcs;
 
         public GameModeForm(Action<string, int> log)
         {
@@ -61,6 +61,12 @@ namespace BTOptimizer
 
             var save = MakeBtn("Enregistrer", 18, 350, 160, 38, true);
             save.Click += (s, e) => Save();
+            // La liste ci-dessus est ÉCRITE EN DUR : elle ne connaît que Windows. Les services qui
+            // tournent vraiment pendant une partie sont ceux des suites constructeur et des
+            // logiciels installés ici, et eux ne se devinent pas. Ce bouton va les chercher.
+            var detect = MakeBtn("Détecter les services tiers", 190, 350, 250, 38, false);
+            detect.Click += (s, e) => Detecte();
+            Controls.Add(detect);
             var close = MakeBtn("Fermer", 452, 350, 90, 38, false);
             close.Click += (s, e) => Close();
             Controls.Add(save); Controls.Add(close);
@@ -84,6 +90,29 @@ namespace BTOptimizer
             _list.Items.Clear();
             foreach (string svc in _svcs)
                 _list.Items.Add(GameBoost.FriendlyName(svc), !excl.Contains(svc));   // coché = suspendu
+        }
+
+        /// <summary>
+        /// Cherche sur CETTE machine les services tiers suspendables et les ajoute à la liste.
+        /// Rien n'est suspendu ici : on ne fait qu'allonger la liste que l'utilisateur arbitre
+        /// juste au-dessus, et il peut décocher chaque ajout avant d'enregistrer.
+        /// </summary>
+        private void Detecte()
+        {
+            Cursor = Cursors.WaitCursor;
+            int neufs;
+            try { neufs = GameBoost.Decouvre(); }
+            finally { Cursor = Cursors.Default; }
+
+            _svcs = new List<string>(GameBoost.SuspendableServices).ToArray();
+            Populate();
+            if (_log != null) _log("Mode Jeu : " + neufs + " service(s) tiers détecté(s) sur cette machine.", 0);
+            MessageBox.Show(this, neufs == 0
+                ? "Aucun service tiers suspendable en plus de ceux déjà listés.\n\nC'est un bon résultat : "
+                  + "cette machine ne porte pas de suite constructeur qui tourne en fond."
+                : neufs + " service(s) tiers ajouté(s) à la liste.\n\nRelis-les : ils sont cochés, donc "
+                  + "suspendus pendant la partie. Décoche ceux que tu veux garder, puis Enregistre.",
+                "Mode Jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void Save()

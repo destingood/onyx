@@ -328,6 +328,20 @@ namespace BTOptimizer
                 sb.AppendLine();
             }
 
+            // OÙ TOMBENT LES INTERRUPTIONS : la dernière colonne qu'ONYX allait chercher dans
+            // LatencyMon, et la seule qui mesure l'effet du réglage « répartir les interruptions »
+            // qu'ONYX applique lui-même. Silencieux tant que le relevé est trop court pour que
+            // des pourcentages veuillent dire quelque chose.
+            try
+            {
+                if (_etw != null)
+                {
+                    string coeurs = RepartitionCoeurs.Rapport(_etw.RepartitionParCoeur(r.Secondes));
+                    if (coeurs.Length > 0) { sb.Append(coeurs); sb.AppendLine(); }
+                }
+            }
+            catch (Exception ex) { JournalTechnique.Echec("LiveMonForm.RepartitionCoeurs", ex); }
+
             // PILOTES REFUSÉS : ne change RIEN au relevé ci-dessus — ONYX mesure par session ETW
             // noyau, sans pilote, donc rien que Windows puisse refuser. Ce que ça change, c'est
             // ce vers quoi on enverrait l'utilisateur ensuite : un outil dont le pilote est

@@ -16,7 +16,83 @@ namespace BTOptimizer
         private static bool _timerWasActive;
 
         // Services sûrs à suspendre pendant une partie (tous relançables à la demande).
-        private static readonly string[] Suspendable = Construit();
+        private static readonly string[] Socle = Construit();
+
+        /// <summary>
+        /// Le socle écrit en dur, PLUS ce que l'inventaire a trouvé sur CETTE machine.
+        ///
+        /// Le socle ne connaît que sept noms Windows et une poignée de sondes. Il ignore par
+        /// construction les trente à soixante services que les logiciels tiers installent ici —
+        /// justement ceux qui tournent pendant la partie. <see cref="InventaireServices"/> les
+        /// énumère ; « Détecter » les ajoute, une fois, et le choix reste dans un fichier que
+        /// l'utilisateur peut vider.
+        /// </summary>
+        private static string[] Suspendable
+        {
+            get
+            {
+                var l = new List<string>(Socle);
+                foreach (string s in Decouverts()) if (!l.Contains(s)) l.Add(s);
+                return l.ToArray();
+            }
+        }
+
+        private static string CheminDecouverts { get { return AppPaths.File("bt-gamemode-tiers.txt"); } }
+
+        /// <summary>Services tiers retenus par la détection, sur cette machine.</summary>
+        public static List<string> Decouverts()
+        {
+            var l = new List<string>();
+            try
+            {
+                if (!System.IO.File.Exists(CheminDecouverts)) return l;
+                foreach (string ligne in System.IO.File.ReadAllLines(CheminDecouverts))
+                {
+                    string s = ligne.Trim();
+                    if (s.Length > 0 && !l.Contains(s)) l.Add(s);
+                }
+            }
+            catch (Exception ex) { JournalTechnique.Echec("GameBoost.Decouverts", ex); }
+            return l;
+        }
+
+        /// <summary>
+        /// Cherche sur cette machine les services TIERS que le Mode Jeu peut suspendre sans risque,
+        /// et les retient. Renvoie le nombre de nouveaux noms.
+        ///
+        /// Ne retient QUE ce que l'inventaire classe « suspendable » : ni vital, ni anticheat, ni
+        /// tiers inconnu. Un service qu'ONYX n'a pas su identifier n'entre pas dans une liste qui
+        /// s'appliquera ensuite automatiquement à chaque lancement de jeu.
+        /// </summary>
+        public static int Decouvre()
+        {
+            int neufs = 0;
+            try
+            {
+                // Le garde-fou d'abord : un service qu'ONYX répare à chaque lancement n'a rien à
+                // faire dans une liste qui l'arrêterait à chaque partie.
+                ActionsServices.Amorce();
+
+                List<string> deja = Decouverts();
+                var ajouts = new List<string>();
+                foreach (InventaireServices.Service s in InventaireServices.Analyse(0))
+                {
+                    if (s.Verdict != InventaireServices.Verdict.Suspendable) continue;
+                    if (!InventaireServices.EstTiers(s.Chemin)) continue;          // le socle couvre déjà Windows
+                    if (InventaireServices.EstVital(s.Nom, s.Libelle, s.Chemin)) continue;
+                    if (deja.Contains(s.Nom) || Array.IndexOf(Socle, s.Nom) >= 0) continue;
+                    ajouts.Add(s.Nom);
+                }
+                if (ajouts.Count > 0)
+                {
+                    deja.AddRange(ajouts);
+                    System.IO.File.WriteAllLines(CheminDecouverts, deja.ToArray());
+                    neufs = ajouts.Count;
+                }
+            }
+            catch (Exception ex) { JournalTechnique.Echec("GameBoost.Decouvre", ex); }
+            return neufs;
+        }
 
         /// <summary>
         /// Services suspendables = les services Windows d'arrière-plan, PLUS les services des
@@ -53,7 +129,9 @@ namespace BTOptimizer
                 case "WMPNetworkSvc": return "Partage réseau Windows Media";
                 case "MapsBroker": return "Cartes hors ligne (MapsBroker)";
                 case "dmwappushservice": return "WAP Push (télémétrie)";
-                default: return svc;
+                // Un nom détecté ici n'est pas dans le socle : le dire évite de faire passer un
+                // service que l'utilisateur a lui-même installé pour un service de Windows.
+                default: return Decouverts().Contains(svc) ? svc + " (détecté sur cette machine)" : svc;
             }
         }
 

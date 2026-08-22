@@ -151,6 +151,91 @@ L'auto-diagnostic affiche le compte, et les infos de support emportent les derni
 nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
 sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
 
+### Les services : ONYX n'en connaissait que seize, la machine en porte 318
+
+La fenêtre « Services Windows » listait **16 noms écrits en dur**, et le Mode Jeu en suspendait
+**7**. Relevé sur la machine de référence : **318 services installés, 128 en cours, dont 47 venus
+de logiciels tiers**. Les deux listes ne pouvaient pas connaître ces 47-là — ils dépendent de ce
+que la personne a installé, pas de ce que Windows livre. Or ce sont eux qui tournent pendant la
+partie : suites constructeur, mises à jour de navigateurs, sondes de capteurs, lanceurs de jeux.
+
+L'inventaire fait donc l'inverse d'une liste : il **énumère ce qui existe ici**, lit l'éditeur dans
+chaque binaire, **mesure** la mémoire et le processeur de chacun, et ne classe qu'ensuite. Trois
+règles, dont deux protègent la machine plutôt que de l'accélérer :
+
+**On ne touche jamais à un anticheat.** vgc (Vanguard), EasyAntiCheat, BattlEye, FACEIT : les
+arrêter empêche le jeu de démarrer, et manipuler un anticheat pendant qu'il tourne est exactement
+ce qu'il surveille. Un « boost » qui les coupe peut coûter un compte. Ils sont reconnus par leur
+nom, leur libellé **et** leur chemin — pour qu'un anticheat qu'aucune table ne connaît soit protégé
+lui aussi — et le filtre est réappliqué au moment d'agir, pas seulement à l'affichage. Même
+traitement pour les antivirus : la plate-forme de Defender vit hors de `system32` et arrivait en
+« tiers inconnu » ; couper l'antivirus rend la machine plus rapide et son propriétaire plus
+vulnérable, ce n'est pas un arbitrage qu'ONYX prend à sa place. Le service de **manette Xbox
+filaire**, le **Bluetooth** et le **son** sont dans le même sac : ils figurent dans toutes les
+listes de « services à couper », et on y perd son périphérique de jeu, pas de la latence.
+
+**On ne propose rien qui ne rapporte rien.** Un service en démarrage manuel et arrêté n'occupe ni
+mémoire ni processeur : le « désactiver » ne libère **rien**. C'est pourtant la moitié du contenu
+des tutoriels. Ici le coût est mesuré, et quand il est nul le tableau l'écrit au lieu de promettre
+un gain. Sur la machine de référence, sur 318 services, **trois** méritaient d'être cochés — pour
+168 Mo. Un svchost partagé ne se découpe pas : sa mémoire est divisée entre ses colocataires et
+annoncée comme une estimation, plutôt que d'afficher quatre fois 90 Mo pour 90 Mo réels.
+
+**On suspend plutôt qu'on désactive.** Arrêter un service le temps d'une partie rend le même gain
+qu'une désactivation permanente, sans laisser la machine amputée trois semaines plus tard devant
+une page de Paramètres vide — le dégât que le garde-fou des services répare déjà. « Désactiver
+définitivement » n'accepte donc que ce qui est catalogué inutile ici, jamais un service tiers non
+identifié, même coché. Et rien n'est fait sans avoir d'abord écrit **comment revenir en arrière** :
+un journal garde le type de démarrage et l'état de chaque service touché, et « Tout restaurer »
+remet exactement ce qui était là.
+
+**L'écran est écrit dans le langage visuel d'ONYX**, pas en WinForms d'origine : palette ivoire et
+or, cartes arrondies, verdicts en pastilles colorées, liseré de couleur à gauche de chaque ligne
+qui compte. Trois choses que 318 lignes exigent et qu'un tableau ne donne pas : une **recherche**
+qui porte aussi sur l'**éditeur** — on cherche « Corsair », pas `CorsairCpuIdService` —, des
+**filtres** dont « Arrêtables » veut dire *suspendable ET en train de consommer* (la règle 2 rendue
+cliquable), et le **gain écrit dans le bouton** : « Suspendre 4 service(s) · 203 Mo » au lieu d'un
+verbe seul. Les quatre chiffres du bandeau ne mettent en or que le dernier, le seul sur lequel on
+peut agir. Et la confirmation dit ce que suspendre **ne** fait **pas** : un service en démarrage
+automatique reviendra au prochain allumage — c'est voulu, et le taire ferait passer un
+comportement normal pour une panne.
+
+Le Mode Jeu profite du même travail : « Détecter les services tiers » va chercher sur cette machine
+les services suspendables que sa liste de sept ne pouvait pas connaître, et ne retient que ceux
+qu'ONYX sait identifier — un service inconnu n'entre pas dans une liste qui s'appliquera ensuite à
+chaque lancement de jeu.
+
+**Et ça se fait tout seul.** Un « MODE JEU AUTO » existait déjà — mais **uniquement dans l'ancienne
+fenêtre**, derrière une case à cocher, et **le shell actuel ne l'avait pas du tout** : qui utilise
+ONYX aujourd'hui n'avait simplement pas la fonction. Sa logique tenait dans une méthode de
+formulaire, donc invérifiable autrement qu'en lançant un jeu.
+
+Le défaut de fond était ailleurs. L'ancienne règle **enclenchait après deux relevés stables mais
+relâchait au premier relevé sans jeu**. Or « sans jeu » arrive en pleine partie : un alt-tab vers
+le bureau, un écran de chargement qui sort du plein écran, un menu en fenêtré. Résultat, le pire
+possible : tous les services **redémarraient au milieu du match**, puis se faisaient arrêter de
+nouveau deux secondes plus tard. Une indexation de disque relancée pendant une partie coûte
+exactement ce que le mode jeu prétendait faire gagner.
+
+Les deux seuils ne sont donc plus symétriques, et c'est délibéré : **4 s pour enclencher, 16 s pour
+relâcher**. Se tromper en tenant trop longtemps coûte quelques secondes de service suspendu devant
+un bureau ; se tromper en relâchant trop tôt coûte une saccade en plein jeu. Un jeu reconnu par son
+nom d'exécutable enclenche **immédiatement** — ces noms sont choisis distinctifs, aucun faux
+positif possible, et les premières secondes de chargement sont justement celles où le disque
+travaille le plus. Le plein écran, lui, peut être une vidéo : lui seul doit tenir deux relevés.
+
+La décision est désormais un module à part, **sans processus ni écran ni service** — c'est ce qui
+permet de rejouer un alt-tab de six secondes en trois appels au banc d'essai, au lieu de lancer un
+jeu vingt fois en espérant voir le défaut. L'automatique ne coupe **jamais** un Mode Jeu activé à
+la main : une bascule manuelle lui retire la propriété de l'état. Le réglage reste **opt-in et
+persistant** (l'ancienne case se re-décochait toute seule à chaque lancement), avec son
+interrupteur en haut de l'écran d'inventaire, qui écrit en toutes lettres ce qu'il fait quand il
+est éteint : *tout reste manuel, ONYX ne suspend rien tout seul*.
+
+Le banc d'essai vérifie surtout ce que le module **refuse** de faire : l'anticheat, le service
+audio et le service protégé par le garde-fou ne sont pas touchés alors qu'ils étaient dans le plan.
+Sur un faux exécutant, donc sans arrêter un seul service pour le prouver.
+
 ### L'overlay affichait 1 FPS quand aucun jeu ne tournait
 
 La sélection de repli acceptait tout processus au-dessus de 0 FPS. Or la fenêtre d'interrogation

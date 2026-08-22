@@ -282,6 +282,7 @@ namespace BTOptimizer
             sys.DropDownItems.Add(MenuHead("🚀 Démarrage & fond"));
             sys.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
             sys.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
+            sys.DropDownItems.Add("🔎 Inventaire des services (mesuré sur cette machine)", null, (s, e) => OpenDialog(new InventaireServicesForm(Log)));
             sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
             sys.DropDownItems.Add(new ToolStripSeparator());
@@ -1157,6 +1158,9 @@ namespace BTOptimizer
 
         private void ToggleBoost()
         {
+            // Bascule MANUELLE : l'automatique cesse d'être propriétaire de cet état et ne le
+            // coupera donc plus tout seul (voir AutoJeu.Desapproprie).
+            try { AutoJeu.Desapproprie(); } catch { }
             System.Threading.Tasks.Task.Run(() =>
             {
                 try { if (GameBoost.IsActive) GameBoost.Deactivate(Log); else GameBoost.Activate(Log); } catch { }
@@ -1205,6 +1209,11 @@ namespace BTOptimizer
                 try { AnimSettings.SetGameRunning(anyGame); } catch { }
 
                 // Viseur AUTO en jeu : affiché dès qu'un jeu tourne (jeu connu ou plein écran), retiré au bureau.
+                // MODE JEU AUTO : suspend les services de fond quand un jeu démarre, les relance
+                // quand il se ferme. Ce shell n'avait PAS la fonction — elle ne vivait que dans
+                // l'ancienne fenêtre, derrière une case à cocher que plus personne n'ouvrait.
+                try { AutoJeu.Tick(Log, null); } catch { }
+
                 if (Crosshair.AutoGameEnabled)
                     Crosshair.AutoTick(knownGame || wanted, knownGame || wanted);
             }

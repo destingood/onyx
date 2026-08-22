@@ -547,6 +547,8 @@ namespace BTOptimizer
         private void ToggleBoost()
         {
             _mode.Enabled = false;
+            // Bascule MANUELLE : l'automatique n'en est plus propriétaire (AutoJeu.Desapproprie).
+            try { AutoJeu.Desapproprie(); } catch { }
             bool activating = !GameBoost.IsActive;
             Task.Run(() =>
             {
