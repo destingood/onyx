@@ -300,6 +300,87 @@ donc vérifiables par de simples égalités. Le projet compile les fichiers du d
 pas des copies : une copie diverge en silence et finit par tester du code que plus personne ne
 livre. La partie qui lit la machine ne juge rien — sur un poste où aucun pilote n'est refusé, elle
 n'affiche rien, et c'est un résultat correct.
+## Intégration — 🎮 MODE JEU : fermer ce qui tourne pour rien (branche locale)
+- Le Mode Jeu savait suspendre les services de Windows. Sur une machine de travail, ce ne sont pas eux
+  qui pèsent : ce sont les **applications restées ouvertes**. Sur la machine de référence, le relevé
+  donne **52 processus et ~6,5 Go** — un éditeur et ses vingt auxiliaires, cinq agents IA, quatorze
+  processus Node, un Roblox Studio oublié, neuf gestionnaires Razer pour l'éclairage du clavier. Ce
+  n'est pas que de la RAM : chacun se réveille, prend son tour d'ordonnancement et rend la main un peu
+  trop tard — manette en main, ça s'appelle un micro-freeze.
+- **Cinq familles, cinq interrupteurs** (⚙ Configurer) : `Assistants IA` (Claude, Codex, Cursor, Ollama,
+  LM Studio) · `Outils de développement` (VS Code, Visual Studio, Docker, WSL, adb) · `Roblox`
+  (Studio et lanceurs en veille) · `Razer` (Synapse, Chroma et ses gestionnaires) · `Node.js`.
+  Réglage mémorisé dans `bt-gamemode-applis.txt`.
+- **AUCUN TRAVAIL N'EST PERDU, ET C'EST GARANTI PAR LA FORME DU CODE.** Une application qui a une
+  fenêtre reçoit la même demande qu'un clic sur la croix. Si elle affiche « enregistrer les
+  modifications ? », elle **reste ouverte** — et le journal la nomme, au lieu d'annoncer une mémoire
+  rendue qui ne l'a pas été. Aucune fenêtre n'est jamais tuée de force.
+- **La règle de famille**, trouvée en regardant une vraie machine et non le code : un éditeur moderne,
+  c'est UNE fenêtre et vingt processus auxiliaires qui n'en ont aucune. Les juger un par un revenait à
+  tuer les vingt pendant que la fenêtre demandait d'enregistrer. Dès qu'un membre d'une famille a une
+  fenêtre, **personne n'est tué** : on ferme la fenêtre, les auxiliaires s'en vont avec elle.
+- **Roblox lancé APRÈS l'optimisation n'est jamais touché**, et `RobloxPlayerBeta` rejoint les jeux
+  reconnus : le Mode Jeu automatique s'enclenche dessus, et le jeu qui déclenche est passé en argument
+  — sans quoi lancer Roblox aurait fait fermer Roblox. WSL n'est pas tué mais **éteint** (`wsl --shutdown`) :
+  sa mémoire virtuelle ne se libère pas autrement.
+- **ONYX ne se tire pas dans le pied** : il n'arrête jamais le processus dont il descend. Lancé depuis
+  le terminal d'un éditeur, tuer l'éditeur l'emporterait avec lui — et les services suspendus ne
+  seraient jamais relancés.
+- **Un Mode Jeu qui meurt ne laisse plus la machine amputée.** Les services suspendus sont écrits sur le
+  disque **avant** d'être arrêtés ; au lancement suivant, ONYX relit ce marqueur et relance ce qui
+  traînait. Jusqu'ici, un plantage en pleine partie laissait l'indexation, le spouleur et SysMain
+  arrêtés jusqu'au redémarrage — sans que rien ne le signale.
+- **Trois chiffres cessent de mentir.** `sc stop` était lancé sans jamais lire son code retour : un
+  service refusé (droits, dépendances) était compté comme suspendu. Les noms contenant des espaces
+  (« Razer Chroma SDK Service ») n'étaient même pas cités correctement, donc jamais arrêtés. Et la RAM
+  était mesurée **avant** les fermetures : elle est désormais mesurée après, et le vidage des working
+  sets **épargne le jeu** — le vider renvoyait ses pages vers le fichier d'échange, d'où elles
+  revenaient en défauts de page, c'est-à-dire exactement les saccades qu'on prétendait supprimer.
+- **Deux services quittent la liste des « sondes »** après vérification : `NvContainerLocalSystem`
+  n'interroge aucun capteur (il porte l'overlay, ShadowPlay et le panneau NVIDIA — le couper en pleine
+  partie arrête l'enregistrement) et le service de CCleaner n'appartient pas à une suite de capteurs.
+- Rien n'est désinstallé, rien n'est désactivé au démarrage. Les applications ne sont pas relancées au
+  retour sur le bureau : les rouvrir sans leurs fichiers ni leurs conversations ne rendrait rien.
+- Nouveau hook `BT_FOND=1` : affiche en console ce qui **serait** fermé (nom, PID, Mo, sort réservé)
+  sans rien fermer — c'est lui qui a révélé le défaut des auxiliaires.
+
+## Intégration — 💽 CENTRE DE STOCKAGE (branche locale, fusionné sur 15.73)
+- **Nouvelle page « Stockage »** dans la barre latérale. Onyx savait déjà nettoyer, mesurer le disque et
+  repérer les jeux oubliés — mais en pièces détachées. Tout est désormais réuni en trois zones :
+  - **Tes disques** : une jauge par disque, verdict en couleur, et la **part récupérable dessinée en vert
+    à la fin de la barre** (on voit où l'espace va revenir) ;
+  - **Libérer de l'espace** : une carte par module, chacune avec son interrupteur et son poids réel ;
+  - **Qui prend la place ?** : applications, jeux dormants, dossiers persos — montrés, jamais touchés.
+- **Trois niveaux de sûreté**, et c'est toi qui choisis ton cran (⚙ Configurer) :
+  `superflu` (temporaires, caches, shaders : aucune perte possible) · `à vérifier` (historique, corbeille,
+  veille prolongée, WinSxS) · `données perso` (**jamais** dans un lot, garanti au niveau du code : ces
+  éléments n'ont même pas d'action de suppression).
+- **📦 « Quelles applis prennent le plus de place ? »** — la question que Windows répond mal.
+  « Programmes et fonctionnalités » affiche la taille *déclarée* dans le registre, souvent absente ou
+  fausse ; ici les dossiers d'installation sont **mesurés** (et mis en cache). Nouvelle fenêtre triable,
+  et la désinstallation passe toujours par le désinstalleur **officiel** de l'application — jamais par une
+  suppression de dossier, qui laisserait une installation morte.
+- **🎬 Tous les domaines, pas que les applis** : trois nouveaux modules balayent les disques
+  (hors système, hors dossiers d'applications et de jeux — leurs fichiers leur appartiennent) :
+  **Vidéos & films**, **Archives & images disque** (zip, rar, 7z, iso, vhd…) et **Autres gros
+  fichiers** (installeurs, exports…). Fenêtre de gestion dédiée : tri par colonne, sélection
+  multiple, et la SEULE suppression proposée est la **corbeille Windows** — récupérable tant
+  qu'elle n'est pas vidée ; le gain annoncé n'est compté que sur les fichiers réellement partis.
+  Les fichiers OneDrive « en ligne seulement » sont exclus (leur taille ne vit pas sur le disque).
+- **Tout est modulable** (`bt-stockage.txt`) : modules analysés, cran de sûreté, **seuil « gros
+  fichier » réglable** (50 Mo → 4 Go), liste « ne plus me proposer », seuil d'alerte automatique.
+- **Nouvelles cibles de nettoyage** : shaders Steam, cache du launcher Epic, cache Discord, INetCache.
+  Le gain affiché après coup est **remesuré**, jamais estimé.
+- **Nouvelle catégorie d'optimisations « 💽 Stockage »** (197 → 199) : *libérer le stockage réservé de
+  Windows (~7 Go)* et *limiter les vidages mémoire aux minidumps* (un écran bleu peut sinon écrire un
+  fichier de la taille de ta RAM), rejointes par l'hibernation et l'Assistant Stockage.
+- **Copilote** : « quelles applications prennent le plus de place » et « quels sont mes plus gros
+  fichiers » compris, deux nouvelles pastilles d'accueil, et le grand bilan stockage intègre applis
+  lourdes + jeux dormants. Le seuil d'alerte proactive suit désormais ton réglage.
+- Gratuit : la vue d'ensemble et tout le nettoyage superflu. Pro : Windows en profondeur et l'inventaire
+  complet des applications.
+- Harnais **172/172** ; UITEST **9 pages** à 3 tailles et **48/48** formes, 0 erreur. Nouveau hook
+  `BT_STORAGE=1` (analyse réelle en console, lecture seule).
 
 ## v15.73 — Les quatorze outils du Laboratoire passés au banc d'essai
 

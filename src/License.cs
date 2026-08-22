@@ -17,7 +17,7 @@ namespace BTOptimizer
     internal static class License
     {
         private const string PublicKeyXml =
-            "<RSAKeyValue><Modulus>wb0N0QieE+SPCM3Iu0xDQFG3TjN9dHuv7a4FIDknN5FMr9sSQ6hk8wEcODgtor22h9Go91vTzhs/FFUccSIwGrKlYqHvirMNiIaGXzEo688WBbLhLxegrWrf9uwN8I679rZK7JmjBAowawEjcV3SIGrapSeBQP2BoKWho2/6x6E3VWAXUSjgrxG2V//6QDGBFk9fuMTLrvAlMd6EyiGSTA0KfPrzx4vSm1pvCtvQAsHVnDC9aEm2Q1SWVjWbzu9h8epCt9Q6EiRiqw1NCJD0t6dOymsAqoyCcoZzbh9yNZyncH1hZ1HQUmqAGbnY0/KSZ/jzcRRcysYh5mEANZWktQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+            "<RSAKeyValue><Modulus>1XzTv8CXzv7j8Cotm/DN8KgAgHNBbUWZ4HEoTMaYgB6L938qDuCzlTVLBlPWfdiuvAJgAkxHIJCfCkP4MGTM4jllCbOfnUiYjUe329OOAHzKJyxexVTtFsp/spp5dC3Xw8F3j8wSt6kAYy4q3okt99qQzCOorSU+PBN8/kgm8FEMYtRnpST2tKx/GXhvErupQSaapszVLazM54/Fae3nBwRClNq0WAAS06mkNskUjtcYsUJ9EhZX+dClZKQLAzO5MXYwlTqGzCNOqmR2DcVTVo1C/acu8xhw7Kc4qtxZiM8rJHhofSYQjNEzBiTMYmMztq7MBtCmzpA88YlL91UYyQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
         private const char Sep = (char)0x1F; // séparateur d'unité entre le nom et la signature
         private const char DateSep = (char)0x1E; // sépare, DANS la partie signée, le nom de la date d'expiration

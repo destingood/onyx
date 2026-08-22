@@ -12,6 +12,10 @@ namespace BTOptimizer
     /// </summary>
     internal static partial class AutoJeu
     {
+        /// <summary>Un geste est en cours. Le drapeau vit ICI, avec le seul code qui s'en sert :
+        /// déclaré du côté décision, il y devenait un champ inutilisé au banc d'essai.</summary>
+        private static bool _occupe;
+
         /// <summary>Vrai si c'est CE module qui a enclenché le Mode Jeu en cours.</summary>
         public static bool EngageParNous { get { return _etat.ParNous && GameBoost.IsActive; } }
 
@@ -49,7 +53,12 @@ namespace BTOptimizer
                 {
                     if (g == Geste.Engager)
                     {
-                        GameBoost.Activate(log);
+                        // LE NOM DU JEU EST PASSÉ, ET CE N'EST PAS UN DÉTAIL. Depuis que le Mode
+                        // Jeu ferme aussi des applications de fond, l'appeler sans dire QUI a
+                        // déclenché reviendrait à laisser ONYX fermer le jeu qu'il vient de
+                        // détecter. En plein écran sans processus reconnu, il n'y a rien à
+                        // protéger — et rien de listé ne ressemble à un jeu.
+                        GameBoost.Activate(log, nom);
                         _etat.ParNous = true;
                         if (log != null) log("MODE JEU AUTO : " + raison + " → services de fond suspendus.", 1);
                     }

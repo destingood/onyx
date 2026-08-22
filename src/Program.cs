@@ -282,6 +282,53 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_FOND=1 : ce que le MODE JEU FERMERAIT, sans rien fermer. Lecture seule, en console.
+            // Le seul moyen honnête de vérifier un périmètre : le montrer avant de s'en servir.
+            if (Environment.GetEnvironmentVariable("BT_FOND") == "1")
+            {
+                string jeuF = null;
+                try { jeuF = GameScan.RunningKnownGame(); } catch { }
+                var protegesF = ApplisDeFond.PidsProteges(jeuF);
+                Console.WriteLine("PROTÉGÉS (ONYX, ses ancêtres, la fenêtre au premier plan"
+                    + (jeuF != null ? ", le jeu " + jeuF : "") + ") : " + protegesF.Count + " PID");
+                foreach (int pidF in protegesF)
+                {
+                    string nomF = "?";
+                    try { nomF = System.Diagnostics.Process.GetProcessById(pidF).ProcessName; } catch { }
+                    Console.WriteLine("  • " + pidF + "  " + nomF);
+                }
+
+                var activesF = ApplisDeFond.Actives();
+                Console.WriteLine();
+                Console.WriteLine("CATÉGORIES ACTIVES : " + activesF.Count + " / " + ApplisDeFond.Catalogue.Length);
+                long totalF = 0; int nF = 0;
+                foreach (ApplisDeFond.Categorie catF in activesF)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("── " + catF.Libelle + " (" + catF.Cle + ")");
+                    long sousF = 0;
+                    var ciblesF = ApplisDeFond.Inspecter(new[] { catF }, protegesF);
+                    var polisF = ApplisDeFond.NomsPolis(ciblesF);
+                    foreach (ApplisDeFond.Cible cF in ciblesF)
+                    {
+                        bool poliF = polisF.Contains(cF.Nom);
+                        Console.WriteLine("  • " + cF.Nom + "  pid " + cF.Pid + "  " + cF.Mo + " Mo  "
+                            + (poliF
+                               ? (cF.Fenetre ? "[fenêtre → fermeture polie, jamais forcée]"
+                                             : "[auxiliaire d'une fenêtre → part avec elle, jamais tué]")
+                               : "[sans fenêtre → arrêté net]"));
+                        sousF += cF.Mo; nF++;
+                    }
+                    foreach (string svcF in ApplisDeFond.ServicesEnCours())
+                        if (ApplisDeFond.CorrespondService(catF, svcF)) Console.WriteLine("  • service " + svcF);
+                    if (sousF > 0) Console.WriteLine("  → " + sousF + " Mo");
+                    totalF += sousF;
+                }
+                Console.WriteLine();
+                Console.WriteLine("TOTAL : " + nF + " processus, ~" + totalF + " Mo (RIEN N'A ÉTÉ FERMÉ).");
+                Environment.Exit(0);
+            }
+
             // BT_DISK=1 : exécute le GRAND BILAN STOCKAGE en console (vraies mesures) et sort.
             if (Environment.GetEnvironmentVariable("BT_DISK") == "1")
             {
@@ -289,6 +336,38 @@ namespace BTOptimizer
                 var resD = actD.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
                 Console.WriteLine(resD != null ? resD.Text : "(aucune réponse)");
                 Console.WriteLine("BOUTON PROPOSÉ : " + (resD != null && resD.Action != null ? resD.Action.Label : "(aucun)"));
+                Environment.Exit(0);
+            }
+
+            // BT_STORAGE=1 : analyse RÉELLE du centre de stockage (module par module, vraies mesures)
+            // puis inventaire des applications les plus lourdes. Aucune suppression : lecture seule.
+            if (Environment.GetEnvironmentVariable("BT_STORAGE") == "1")
+            {
+                foreach (Storage.DriveView dv in Storage.Drives())
+                    Console.WriteLine("Disque " + dv.Letter + " : " + Storage.Human(dv.UsedMB) + " / " + Storage.Human(dv.TotalMB)
+                        + "  (" + dv.FreePct + " % libres, niveau " + dv.Level + ")" + (dv.IsSystem ? "  [systeme]" : ""));
+
+                var swS = System.Diagnostics.Stopwatch.StartNew();
+                System.Collections.Generic.List<Storage.Module> mods = Storage.ScanAll(StorageSettings.Load(),
+                    delegate (string lab, int done, int tot) { if (lab != null) Console.WriteLine("… " + lab + " (" + (done + 1) + "/" + tot + ")"); });
+                Console.WriteLine("\nMODULES (" + swS.ElapsedMilliseconds + " ms) :");
+                long recoverable = 0;
+                foreach (Storage.Module mo in mods)
+                {
+                    Console.WriteLine("  " + mo.Id.PadRight(9) + " " + Storage.Human(mo.SizeMB).PadLeft(10)
+                        + "  · " + mo.Items.Count + " element(s) · surete " + Storage.SafetyLabel(mo.Safety)
+                        + (mo.Browse ? " · presentation" : "") + (mo.HasActions ? " · nettoyable" : ""));
+                    foreach (Storage.StorageItem si in mo.Items)
+                        Console.WriteLine("        - " + si.Name + "  " + si.SizeText + (si.Free == null ? "  (informatif)" : ""));
+                    if (!mo.Browse) recoverable += mo.FreeableMB;
+                }
+                Console.WriteLine("\nRECUPERABLE (superflu seul) : " + Storage.Human(Storage.TotalRecoverableMB(Storage.SafeSuperflu)));
+                Console.WriteLine("RECUPERABLE (+ a verifier)   : " + Storage.Human(Storage.TotalRecoverableMB(Storage.SafeVerifier)));
+                Console.WriteLine("TOTAL MODULES NETTOYABLES    : " + Storage.Human(recoverable));
+
+                var actS = ChatActions.MeasureHeavyApps();
+                var resS = actS.Run(delegate (string m, int l) { Console.WriteLine("… " + m); });
+                Console.WriteLine("\n" + (resS != null ? resS.Text : "(aucune réponse)"));
                 Environment.Exit(0);
             }
 
@@ -782,6 +861,18 @@ namespace BTOptimizer
                 bool dk3 = UtilityTools.DismRecommended("Nettoyage du magasin de composants recommandé : Oui")
                     && UtilityTools.DismRecommended("Component Store Cleanup Recommended : Yes")
                     && !UtilityTools.DismRecommended("recommandé : Non") && !UtilityTools.DismRecommended(null); if (dk3) ok39++; Console.WriteLine((dk3 ? "OK  " : "FAIL") + "  DISM : parseur FR/EN, Non/null=false");
+                // v15.34 : centre de stockage — « quelles applis prennent de la place » ne doit pas
+                // manger « libérer de l'espace » (bilan global) ni « applications au démarrage ».
+                bool dk4 = UtilityTools.IsHeavyApps("quelles applications prennent le plus de place")
+                    && UtilityTools.IsHeavyApps("les logiciels les plus lourds") && UtilityTools.IsHeavyApps("quel programme pese le plus")
+                    && !UtilityTools.IsHeavyApps("libérer de l'espace disque") && !UtilityTools.IsHeavyApps("les applications au demarrage")
+                    && !UtilityTools.IsHeavyApps("bonjour"); if (dk4) ok39++; Console.WriteLine((dk4 ? "OK  " : "FAIL") + "  applis lourdes : detecte, bilan global et demarrage exclus");
+                // v15.34 : gros fichiers (videos/archives) — sans manger les applis lourdes ni le bilan.
+                bool dk5 = UtilityTools.IsBigFiles("quels sont mes plus gros fichiers")
+                    && UtilityTools.IsBigFiles("les grosses videos qui prennent de la place") && UtilityTools.IsBigFiles("mes fichiers zip volumineux")
+                    && !UtilityTools.IsBigFiles("quelles applications prennent le plus de place")
+                    && !UtilityTools.IsBigFiles("ouvre un fichier") && !UtilityTools.IsBigFiles("libérer de l'espace disque")
+                    && !UtilityTools.IsBigFiles("bonjour"); if (dk5) ok39++; Console.WriteLine((dk5 ? "OK  " : "FAIL") + "  gros fichiers : detecte, applis lourdes et bilan global exclus");
 
                 // v15.36 : Gardien + sante SMART des disques + journal de bord.
                 int ok40 = 0;
@@ -1491,16 +1582,102 @@ namespace BTOptimizer
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Rapport ERREUR : " + ex.Message); }
 
+            Console.WriteLine("Applications de fond (decisions PURES)...");
+            try
+            {
+                var catRazer = ApplisDeFond.ParCle("razer");
+                var catNode = ApplisDeFond.ParCle("node");
+                var catDev = ApplisDeFond.ParCle("dev");
+                if (catRazer == null || catNode == null || catDev == null) { errors++; Console.WriteLine("  categorie manquante"); }
+
+                // Reconnaissance : familles par prefixe, noms exacts, et surtout les NON-reponses.
+                if (!ApplisDeFond.Correspond(catRazer, "RzSDKService")) { errors++; Console.WriteLine("  RzSDKService non reconnu"); }
+                if (!ApplisDeFond.Correspond(catRazer, "Razer Synapse 3")) { errors++; Console.WriteLine("  Razer Synapse non reconnu"); }
+                if (!ApplisDeFond.Correspond(catNode, "node")) { errors++; Console.WriteLine("  node non reconnu"); }
+                if (ApplisDeFond.Correspond(catNode, "nodepad")) { errors++; Console.WriteLine("  faux positif sur nodepad"); }
+                if (ApplisDeFond.CategorieDe(ApplisDeFond.Catalogue, "Discord") != null) { errors++; Console.WriteLine("  Discord ne doit etre dans AUCUNE categorie"); }
+                if (ApplisDeFond.CategorieDe(ApplisDeFond.Catalogue, "explorer") != null) { errors++; Console.WriteLine("  explorer ne doit etre dans AUCUNE categorie"); }
+                if (!ApplisDeFond.CorrespondService(catRazer, "Razer Chroma SDK Service")) { errors++; Console.WriteLine("  service Chroma non reconnu"); }
+
+                // Le coeur de Windows n'est jamais une cible, meme si une categorie le reclamait.
+                if (!ApplisDeFond.EstVital("svchost") || !ApplisDeFond.EstVital("lsass")) { errors++; Console.WriteLine("  coeur de Windows non protege"); }
+                if (ApplisDeFond.EstVital("node")) { errors++; Console.WriteLine("  node classe vital a tort"); }
+
+                // ONYX ne se ferme pas lui-meme, ni son lanceur : sans ca, plus personne ne relance
+                // les services suspendus.
+                int self = System.Diagnostics.Process.GetCurrentProcess().Id;
+                var prot = ApplisDeFond.PidsProteges(null);
+                if (!prot.Contains(self)) { errors++; Console.WriteLine("  ONYX n est pas protege de lui-meme"); }
+                if (prot.Count < 2) { errors++; Console.WriteLine("  aucun ancetre protege (chaine parent introuvable)"); }
+                if (!ApplisDeFond.EstProtege("node", self, prot)) { errors++; Console.WriteLine("  EstProtege ignore la liste"); }
+                Console.WriteLine("  proteges=" + prot.Count + " PID (ONYX + ancetres + premier plan)");
+
+                // Le jeu passe en argument doit entrer dans la liste des proteges.
+                var protJeu = ApplisDeFond.PidsProteges("RobloxPlayerBeta");
+                Console.WriteLine("  avec jeu=" + protJeu.Count + " PID");
+                if (protJeu.Count < prot.Count) { errors++; Console.WriteLine("  le jeu a RETIRE des proteges"); }
+
+                // Roblox doit etre reconnu comme jeu EN COURS, sinon le mode auto le fermerait.
+                bool robloxConnu = false;
+                foreach (string exe in GameScan.PriorityExes())
+                    if (string.Equals(exe, "RobloxPlayerBeta.exe", StringComparison.OrdinalIgnoreCase)) robloxConnu = true;
+                if (!robloxConnu) { errors++; Console.WriteLine("  RobloxPlayerBeta absent de PriorityExes"); }
+
+                // LA REGLE DE FAMILLE : un auxiliaire sans fenetre ne doit jamais etre tue si un
+                // membre du meme nom a une fenetre -- sinon on detruit l appli pendant qu elle
+                // demande d enregistrer. C est le defaut qu a revele BT_FOND sur une vraie machine.
+                var troupeau = new System.Collections.Generic.List<ApplisDeFond.Cible>
+                {
+                    new ApplisDeFond.Cible { Nom = "Cursor", Pid = 1, Fenetre = true },
+                    new ApplisDeFond.Cible { Nom = "Cursor", Pid = 2, Fenetre = false },
+                    new ApplisDeFond.Cible { Nom = "node",   Pid = 3, Fenetre = false }
+                };
+                var polisT = ApplisDeFond.NomsPolis(troupeau);
+                if (!polisT.Contains("Cursor")) { errors++; Console.WriteLine("  l auxiliaire de Cursor serait tue"); }
+                if (polisT.Contains("node")) { errors++; Console.WriteLine("  node traite comme une fenetre"); }
+
+                // Le journal doit NOMMER ce qui a resiste : un refus silencieux fait croire au gain.
+                var faux = new ApplisDeFond.Bilan();
+                var bc = new ApplisDeFond.BilanCategorie { Cle = "ia", Libelle = "Assistants IA" };
+                bc.Refuses.Add("Cursor"); bc.Fermes = 2; bc.Noms.Add("claude"); bc.MoRendus = 900;
+                faux.Categories.Add(bc); faux.Total = 2; faux.MoRendus = 900;
+                string txt = ApplisDeFond.Texte(faux);
+                if (txt.IndexOf("Cursor", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait l appli qui a refuse"); }
+                if (txt.IndexOf("900", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait les Mo rendus"); }
+                Console.WriteLine("  bilan : " + txt);
+                if (ApplisDeFond.Texte(new ApplisDeFond.Bilan()).IndexOf("rien", StringComparison.OrdinalIgnoreCase) < 0)
+                { errors++; Console.WriteLine("  bilan vide mal formule"); }
+            }
+            catch (Exception ex) { errors++; Console.WriteLine("  Applications de fond ERREUR : " + ex.Message); }
+
             Console.WriteLine("Mode Jeu (Game Boost)...");
             try
             {
+                // BT_FOND_OFF : le test active le mode jeu POUR DE VRAI. Il suspend donc de vrais
+                // services -- mais il n a pas a fermer l editeur de celui qui compile.
+                Environment.SetEnvironmentVariable("BT_FOND_OFF", "1");
                 GameBoost.Activate(delegate(string m, int l) { Console.WriteLine("  " + m); });
                 Console.WriteLine("  actif=" + GameBoost.IsActive);
+
+                // Le marqueur de reprise doit exister PENDANT, et disparaitre APRES : c est lui qui
+                // repare une machine dont ONYX est mort en pleine partie.
+                string marq = AppPaths.File("bt-gamemode-etat.txt");
+                bool present = System.IO.File.Exists(marq);
+                Console.WriteLine("  marqueur pendant=" + present);
+
                 GameBoost.Deactivate(delegate(string m, int l) { Console.WriteLine("  " + m); });
                 if (GameBoost.IsActive) errors++;
+                if (System.IO.File.Exists(marq)) { errors++; Console.WriteLine("  marqueur non efface a la sortie"); }
                 Console.WriteLine("  apres off=" + GameBoost.IsActive);
+
+                // Reprise : un marqueur laisse par un plantage doit etre lu, puis efface.
+                System.IO.File.WriteAllLines(marq, new[] { "Spooler", "ServiceQuiNExistePas_ONYX" });
+                int soignes = GameBoost.Soigne(delegate(string m, int l) { Console.WriteLine("  " + m); });
+                Console.WriteLine("  reprise apres plantage : " + soignes + " service(s)");
+                if (System.IO.File.Exists(marq)) { errors++; Console.WriteLine("  Soigne n a pas efface le marqueur"); }
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Mode Jeu ERREUR : " + ex.Message); }
+            finally { Environment.SetEnvironmentVariable("BT_FOND_OFF", null); }
 
             Console.WriteLine("Nettoyage RAM...");
             try
@@ -1856,6 +2033,9 @@ namespace BTOptimizer
                 case "GameProfileForm": return new GameProfileForm(log);
                 case "NetworkForm": return new NetworkForm(log);
                 case "DiskForm": return new DiskForm(log);
+                case "StorageAppsForm": return new StorageAppsForm(log);
+                case "StorageConfigForm": return new StorageConfigForm(StorageSettings.Load());
+                case "StorageFilesForm": return new StorageFilesForm(log, new System.Collections.Generic.List<Storage.StorageItem>());
                 case "ShopFixForm": return new ShopFixForm(log);
                 case "LibsForm": return new LibsForm(log);
                 case "DefenderForm": return new DefenderForm(log);
@@ -1934,7 +2114,7 @@ namespace BTOptimizer
         private static void CaptureShellShots(string dir)
         {
             try { System.IO.Directory.CreateDirectory(dir); } catch { }
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme" };
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme", "Stockage" };
             var sizes = new System.Drawing.Size[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
             foreach (var sz in sizes)
             {
@@ -1944,10 +2124,12 @@ namespace BTOptimizer
                 dash.Show();
                 dash.ClientSize = sz;
                 Pump(450);
-                for (int p = 0; p < 8; p++)
+                for (int p = 0; p < names.Length; p++)
                 {
                     dash.Goto(p);
-                    Pump(names[p] == "Jeux" ? 3000 : 350);   // Jeux : laisse charger les jaquettes (cache Steam local)
+                    // Jeux : laisse charger les jaquettes (cache Steam local).
+                    // Stockage : laisse l'analyse des modules aboutir (mesures réelles, mises en cache).
+                    Pump(names[p] == "Jeux" ? 3000 : (names[p] == "Stockage" ? 25000 : 350));
                     try
                     {
                         using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
@@ -1988,6 +2170,29 @@ namespace BTOptimizer
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("  shot Collection-scrolled : " + ex.Message); }
+                // Stockage DÉFILÉ : la section « qui prend la place » est sous la ligne de flottaison.
+                try
+                {
+                    dash.Goto(8);
+                    var ps = dash.PageAt(8) as PageStorage;
+                    if (ps != null)
+                    {
+                        ps.ScrollTo(420);
+                        Pump(350);
+                        using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                        {
+                            using (var g = System.Drawing.Graphics.FromImage(bmp))
+                            {
+                                IntPtr hdc = g.GetHdc();
+                                try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                                finally { g.ReleaseHdc(hdc); }
+                            }
+                            bmp.Save(System.IO.Path.Combine(dir, "p8-Stockage-scrolled-" + sz.Width + "x" + sz.Height + ".png"),
+                                System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("  shot Stockage-scrolled : " + ex.Message); }
                 try { dash.Hide(); dash.Dispose(); } catch { }
                 Pump(120);
             }
@@ -2000,8 +2205,8 @@ namespace BTOptimizer
         /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
         private static void TestShellUi(ref int errors)
         {
-            Console.WriteLine("Shell le concurrent (dashboard + 8 pages, rendu hors-écran)...");
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système" };
+            Console.WriteLine("Shell le concurrent (dashboard + 9 pages, rendu hors-écran)...");
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage" };
             // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
             // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
             try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
@@ -2019,7 +2224,7 @@ namespace BTOptimizer
             foreach (var sz in sizes)
             {
                 dash.ClientSize = sz;
-                for (int p = 0; p < 8; p++)
+                for (int p = 0; p < names.Length; p++)
                 {
                     try
                     {
@@ -2037,7 +2242,7 @@ namespace BTOptimizer
                     }
                 }
             }
-            if (errors == 0) Console.WriteLine("  8 pages OK à 3 tailles (min / défaut / large), rail compris.");
+            if (errors == 0) Console.WriteLine("  " + names.Length + " pages OK à 3 tailles (min / défaut / large), rail compris.");
             try { dash.Dispose(); } catch { }
         }
 
@@ -2095,6 +2300,10 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("BenchmarkFpsForm", () => new BenchmarkFpsForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("GameModeForm", () => new GameModeForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("DiscordForm", () => new DiscordForm(log), true),
+                // Stockage : liste préchargée VIDE = construction pure, sans déclencher l'inventaire.
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageAppsForm", () => new StorageAppsForm(log, new System.Collections.Generic.List<Storage.AppEntry>()), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageConfigForm", () => new StorageConfigForm(StorageSettings.Load()), true),
+                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StorageFilesForm", () => new StorageFilesForm(log, new System.Collections.Generic.List<Storage.StorageItem>()), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("MainForm", () => new MainForm(), false),
             };
             int ok = 0;

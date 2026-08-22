@@ -122,7 +122,6 @@ namespace BTOptimizer
         // ==================================================================
 
         private static readonly Etat _etat = new Etat();
-        private static bool _occupe;
 
         /// <summary>État partagé par les deux shells : la bascule ne doit pas exister en double.</summary>
         public static Etat EtatCourant { get { return _etat; } }

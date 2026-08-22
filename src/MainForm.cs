@@ -236,6 +236,9 @@ namespace BTOptimizer
             mDisk.DropDownItems.Add("Jeux & disques (SSD/HDD, espace)...", null, open(() => new DiskForm(Log)));
             mDisk.DropDownItems.Add("Optimiser les lecteurs (TRIM SSD / défrag HDD)...", null, OnOptimizeDrives);
             mDisk.DropDownItems.Add("Nettoyage disque (temporaires, caches...)...", null, open(() => new CleanupForm(Log)));
+            mDisk.DropDownItems.Add("Applications les plus lourdes (poids reel sur le disque)...", null, open(() => new StorageAppsForm(Log)));
+            mDisk.DropDownItems.Add("Videos, archives et gros fichiers (corbeille en un clic)...", null, open(() => new StorageFilesForm(Log, null)));
+            mDisk.DropDownItems.Add("Reglages du stockage (ce qui est superflu ou non)...", null, open(() => new StorageConfigForm(StorageSettings.Load())));
             mDisk.DropDownItems.Add("Points de restauration (filet de sécurité)...", null, open(() => new RestoreForm(Log)));
             mDisk.DropDownItems.Add("Libérer la mémoire (RAM) maintenant", null, (s, e) =>
             {
@@ -714,9 +717,14 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void Log(string message, int level)
         {
+            // Une tâche de fond peut encore parler APRÈS la fermeture de la fenêtre : sans ce
+            // garde-fou, le message différé touchait un RichTextBox déjà libéré et remontait en
+            // ObjectDisposedException non gérée (crash visible pour l'utilisateur qui ferme
+            // l'optimiseur pendant une analyse).
+            if (IsDisposed || _log == null || _log.IsDisposed) return;
             if (InvokeRequired)
             {
-                BeginInvoke((Action)(() => Log(message, level)));
+                try { BeginInvoke((Action)(() => Log(message, level))); } catch { }
                 return;
             }
             Color c = ColInfo;

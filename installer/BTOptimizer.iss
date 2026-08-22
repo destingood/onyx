@@ -56,6 +56,12 @@
     #define SelfContained
   #endif
 #endif
+; Rappel a la compilation : on sait ainsi tout de suite quel type de setup on fabrique.
+#ifdef SelfContained
+  #pragma message "Mode AUTONOME detecte -> aucun runtime .NET exige du client."
+#else
+  #pragma message "Mode DEPENDANT DU RUNTIME -> le setup verifiera .NET Desktop 10 x64."
+#endif
 
 [Setup]
 AppId={{2B539D2F-3B49-466B-B095-FEB9A1123E65}
@@ -98,6 +104,29 @@ Name: "installia"; Description: "Installer le cerveau IA local (gratuit, ~2 Go) 
 [Components]
 Name: "app";    Description: "Application ONYX";                                        Types: full compact custom; Flags: fixed
 Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfileInspector)";     Types: full
+
+[InstallDelete]
+; ON NE POSE JAMAIS UNE VERSION SUR LES RESTES DE LA PRÉCÉDENTE.
+;
+; ONYX se livre sous deux formes : AUTONOME (le runtime .NET est copié dans le dossier de l'app)
+; et DÉPENDANT DU RUNTIME (l'app utilise le .NET installé sur la machine). Installer la seconde
+; par-dessus la première laissait un dossier hybride : le runtime complet de l'ancienne version
+; restait à côté du nouveau binaire.
+;
+; Et ce n'était pas un simple encombrement. « BTOptimizer.exe » cherche « hostfxr.dll » À CÔTÉ DE
+; LUI : s'il en trouve un, il se croit autonome et démarre avec le runtime du dossier — celui de
+; l'ancienne version. Le résultat était le pire possible pour l'utilisateur : Windows affichait
+; « You must install or update .NET to run this application » sur une machine où .NET était
+; PARFAITEMENT installé. Message insoluble : on peut réinstaller .NET dix fois, le fichier fautif
+; est dans le dossier de l'app.
+;
+; On efface donc les DLL et le dossier « runtimes » AVANT la copie ; [Files] repose aussitôt les
+; 27 DLL réellement nécessaires. Les données de l'utilisateur (bt-*.txt, licence Pro), le
+; désinstalleur (unins000.*) et les outils tiers (tools\) ne sont pas touchés : ils ne sont ni
+; des .dll à la racine, ni le dossier « runtimes ».
+Type: files;          Name: "{app}\*.dll"
+Type: filesandordirs; Name: "{app}\runtimes"
+Type: files;          Name: "{app}\createdump.exe"
 
 [Files]
 ; Binaires .NET 10 (produits par « dotnet publish -o dist »).
@@ -164,14 +193,16 @@ Type: filesandordirs; Name: "{localappdata}\ONYX"
 // La vérification du runtime .NET ne sert QUE pour une publication dépendante du runtime.
 // En mode AUTONOME (self-contained), tout est embarqué -> aucune vérification nécessaire.
 #ifndef SelfContained
-// Détecte un runtime .NET Desktop 10.x (x64) installé.
-function HasNet10Desktop(): Boolean;
+// Un dossier « Microsoft.WindowsDesktop.App » contient-il une version 10.x ?
+// Isolé de HasNet10Desktop pour pouvoir interroger PLUSIEURS emplacements : .NET ne s'installe
+// pas toujours dans « Program Files ». Un chemin vide n'est jamais interrogé (GetEnv rend '' quand
+// la variable n'existe pas, et FindFirst('\*') partirait explorer la racine du disque).
+function Dossier10x(Base: string): Boolean;
 var
-  Base: string;
   FR: TFindRec;
 begin
   Result := False;
-  Base := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  if Base = '' then Exit;
   if FindFirst(Base + '\*', FR) then
   try
     repeat
@@ -182,6 +213,30 @@ begin
   finally
     FindClose(FR);
   end;
+end;
+
+// Détecte un runtime .NET Desktop 10.x installé.
+//
+// UNE SEULE SOURCE NE SUFFIT PAS, et se tromper ici coûte cher : réclamer .NET à quelqu'un qui l'a
+// déjà, c'est l'envoyer réinstaller pour rien un runtime de 60 Mo — et lui donner l'impression que
+// le programme ne sait pas ce qu'il dit. On interroge donc, dans l'ordre :
+//   · Program Files 64 bits, puis celui de l'installation en cours ;
+//   · DOTNET_ROOT et ProgramW6432, pour les installations hors des chemins par défaut ;
+//   · le registre du programme d'installation de .NET, en vue 64 bits ET 32 bits.
+// Une seule réponse positive suffit ; aucune ne peut créer de faux négatif chez les autres.
+function HasNet10Desktop(): Boolean;
+var
+  Suffixe: string;
+begin
+  Suffixe := '\dotnet\shared\Microsoft.WindowsDesktop.App';
+  Result := Dossier10x(ExpandConstant('{commonpf}') + Suffixe);
+  if not Result then Result := Dossier10x(ExpandConstant('{commonpf64}') + Suffixe);
+  if not Result then Result := Dossier10x(ExpandConstant('{sd}') + '\Program Files' + Suffixe);
+  if not Result then Result := Dossier10x(GetEnv('ProgramW6432') + Suffixe);
+  if not Result then Result := Dossier10x(GetEnv('DOTNET_ROOT') + '\shared\Microsoft.WindowsDesktop.App');
+  if not Result then
+    Result := RegKeyExists(HKLM64, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App')
+           or RegKeyExists(HKLM, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App');
 end;
 
 // Consentement IA écrit APRÈS la copie des fichiers : selon la case « Installer le cerveau IA
@@ -214,21 +269,22 @@ begin
   if HasNet10Desktop() then
     Exit;
 
-  case MsgBox('Le .NET Desktop Runtime 10 (x64) est requis et ne semble pas installé.' + #13#10 +
-              'ONYX ne pourra pas démarrer sans lui.' + #13#10#13#10 +
-              '« Oui »  : ouvrir la page de téléchargement (rubrique « .NET Desktop Runtime »),' + #13#10 +
-              '             installe le runtime puis relance ce programme.' + #13#10 +
-              '« Non »  : installer quand même.' + #13#10 +
-              '« Annuler » : arrêter.',
-              mbConfirmation, MB_YESNOCANCEL) of
-    IDYES:
-      begin
-        ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0',
-                  '', '', SW_SHOW, ewNoWait, ErrorCode);
-        Result := False;
-      end;
-    IDCANCEL:
-      Result := False;
+  // NE JAMAIS BLOQUER SUR UN DOUTE. Cette détection lit des dossiers et des clés : elle peut se
+  // tromper (installation hors des chemins habituels, droits de lecture refusés), et se tromper
+  // dans ce sens-là arrêtait l'installation de quelqu'un qui avait pourtant .NET. L'inverse ne
+  // coûte rien : si le runtime manque VRAIMENT, Windows le dira lui-même au premier lancement,
+  // avec un message exact et un lien de téléchargement. « Continuer » est donc le bouton par
+  // défaut — appuyer sur Entrée installe.
+  if MsgBox('ONYX a besoin du .NET Desktop Runtime 10 (x64), et n''a pas réussi à le trouver sur ce PC.' + #13#10#13#10 +
+            'Ce n''est pas une certitude : si tu l''as installé ailleurs que dans « Program Files »,' + #13#10 +
+            'il est probablement là et tout ira bien.' + #13#10#13#10 +
+            '« Oui »  : continuer l''installation (recommandé).' + #13#10 +
+            '« Non »  : ouvrir la page de téléchargement et arrêter là.',
+            mbInformation, MB_YESNO) = IDNO then
+  begin
+    ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0',
+              '', '', SW_SHOW, ewNoWait, ErrorCode);
+    Result := False;
   end;
 end;
 #endif

@@ -526,7 +526,10 @@ namespace BTOptimizer
                 var di = new System.IO.DriveInfo(root);
                 double freeGb = di.AvailableFreeSpace / 1073741824.0;
                 int pct = di.TotalSize > 0 ? (int)Math.Round(di.AvailableFreeSpace * 100.0 / di.TotalSize) : 100;
-                if (pct < 12)
+                // Le seuil est celui que l'utilisateur a réglé dans Stockage → Configurer (0 = jamais).
+                int alert = 12;
+                try { alert = StorageSettings.Load().AlertPct; } catch { }
+                if (alert > 0 && pct < alert)
                 {
                     var fix = ChatActions.FixDisk();
                     return new DocAssistant.Reply
@@ -654,6 +657,8 @@ namespace BTOptimizer
                 ("Bilan complet du PC", "fais un bilan complet de mon pc"),
                 ("Bilan mises à jour", "fais le bilan des mises à jour"),
                 ("Libérer de l'espace", "libérer de l'espace disque"),
+                ("Applis les plus lourdes", "quelles applications prennent le plus de place"),
+                ("Mes plus gros fichiers", "quels sont mes plus gros fichiers"),
                 ("Hibernation : récupérer des Go", "désactive l'hibernation"),
                 ("Solutions gratuites", "trouve des solutions gratuites pour booster mon pc"),
             }),

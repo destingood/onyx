@@ -56,6 +56,8 @@ namespace BTOptimizer
 
                 new Entry("Entretien & sécurité", "PC lent à démarrer (trop de programmes au boot)", "Programmes au démarrage", () => new StartupForm(L)),
                 new Entry("Entretien & sécurité", "Libérer de l'espace disque", "Nettoyage disque", () => new CleanupForm(L)),
+                new Entry("Entretien & sécurité", "Quelles applications prennent le plus de place ?", "Applications les plus lourdes", () => new StorageAppsForm(L)),
+                new Entry("Entretien & sécurité", "Retrouver mes plus gros fichiers (vidéos, zip, rar…)", "Gros fichiers", () => new StorageFilesForm(L, null)),
                 new Entry("Entretien & sécurité", "Faire une sauvegarde avant de bidouiller", "Points de restauration", () => new RestoreForm(L)),
                 new Entry("Entretien & sécurité", "Windows refuse de lancer une application (« stratégie de contrôle d'application »)", "Smart App Control", () => new SmartAppControlForm(L)),
             };

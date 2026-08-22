@@ -901,10 +901,10 @@ namespace BTOptimizer
         public static void ConfigureService(string name, string startType, bool stopNow, bool startNow)
         {
             // startType : disabled | demand | auto | delayed-auto
-            RunThrow(Sys32("sc.exe"), "config " + name + " start= " + startType,
+            RunThrow(Sys32("sc.exe"), "config \"" + name + "\" start= " + startType,
                 "Configuration du service " + name);
-            if (stopNow) Run(Sys32("sc.exe"), "stop " + name);    // échec toléré (déjà arrêté)
-            if (startNow) Run(Sys32("sc.exe"), "start " + name);  // échec toléré (déjà démarré)
+            if (stopNow) StopService(name);    // échec toléré (déjà arrêté)
+            if (startNow) StartService(name);  // échec toléré (déjà démarré)
         }
 
         public static bool ServiceDisabled(string name)
@@ -922,12 +922,32 @@ namespace BTOptimizer
 
         public static bool IsServiceRunning(string name)
         {
-            NativeResult r = Run(Sys32("sc.exe"), "query " + name);
+            NativeResult r = Run(Sys32("sc.exe"), "query \"" + name + "\"");
             return r.ExitCode == 0 && r.Output.IndexOf("RUNNING", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        public static void StopService(string name) { Run(Sys32("sc.exe"), "stop " + name); }
-        public static void StartService(string name) { Run(Sys32("sc.exe"), "start " + name); }
+        /// <summary>
+        /// Arrête un service. Rend VRAI si l'ordre a été accepté (ou si le service était déjà à
+        /// l'arrêt), FAUX s'il a été refusé — droits insuffisants, service dont d'autres dépendent.
+        /// Sans ce retour, l'appelant enregistre comme « suspendu » un service qui tourne toujours,
+        /// et annonce un gain qu'il n'a pas obtenu.
+        /// Le nom est mis entre guillemets : plusieurs services en contiennent des espaces
+        /// (« Razer Chroma SDK Service »), et sc.exe les découperait en arguments.
+        /// </summary>
+        public static bool StopService(string name)
+        {
+            NativeResult r = Run(Sys32("sc.exe"), "stop \"" + name + "\"");
+            if (r.ExitCode == 0) return true;
+            return !IsServiceRunning(name);   // 1062 « service non démarré » : le résultat voulu est déjà là
+        }
+
+        /// <summary>Démarre un service. Rend VRAI si l'ordre a été accepté ou s'il tourne déjà.</summary>
+        public static bool StartService(string name)
+        {
+            NativeResult r = Run(Sys32("sc.exe"), "start \"" + name + "\"");
+            if (r.ExitCode == 0) return true;
+            return IsServiceRunning(name);    // 1056 « déjà en cours » : rien à faire
+        }
 
         /// <summary>Arrête puis redémarre un service (courte attente entre les deux). Utilisé pour
         /// les réparations « à chaud » (audio, etc.). Un service qui refuse de s'arrêter n'empêche
@@ -1030,6 +1050,11 @@ namespace BTOptimizer
             public bool IsRecycleBin;
             public long SizeMB;
             public string Kind = "temp";   // temp | gpu | history | bin (entretien par routine) | diag | ia (jamais automatique)
+
+            /// <summary>Niveau de sûreté, utilisé par le centre de stockage pour faire la part des
+            /// choses : 0 = superflu (aucune perte possible), 1 = à vérifier (régénérable mais
+            /// visible pour l'utilisateur : historique, corbeille). Voir <see cref="Storage"/>.</summary>
+            public int Safety;
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -1059,15 +1084,56 @@ namespace BTOptimizer
                 // par réflexe, c'est jeter la preuve juste avant d'en avoir besoin. Il reste
                 // proposé (il grossit vite), mais classé "diag" : à ne cocher que si aucune
                 // réparation n'est en cours, et jamais par la routine d'entretien automatique.
-                new CleanTarget { Name = "Journaux de réparation Windows (CBS — utiles si SFC échoue)", Kind = "diag", Path = Path.Combine(win, @"Logs\CBS") },
-                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
-                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
+                new CleanTarget { Name = "Journaux de réparation Windows (CBS — utiles si SFC échoue)", Kind = "diag", Safety = 1, Path = Path.Combine(win, @"Logs\CBS") },
+                new CleanTarget { Name = "Historique Explorateur : fichiers récents & Jump Lists", Kind = "history", Safety = 1, Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Recent") },
+                new CleanTarget { Name = "Cache des miniatures et icônes (Explorateur)", Kind = "history", Safety = 1, Path = Path.Combine(local, @"Microsoft\Windows\Explorer") },
             };
+            AddGamingCaches(list, local);
             AddBrowserCaches(list, local);
             AddAiCaches(list, local);
-            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin" });
-            foreach (CleanTarget t in list) t.SizeMB = MeasureTarget(t);
+            // La corbeille contient des fichiers que l'utilisateur a VUS : niveau 1, jamais dans le
+            // « superflu » automatique.
+            list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin", Safety = 1 });
+            foreach (CleanTarget t in list) t.SizeMB = MeasureCleanTarget(t);
             return list;
+        }
+
+        // Caches des plateformes de jeu et des applis de gaming : tous régénérés au prochain
+        // lancement. Les shaders Steam se recompilent (quelques saccades au premier lancement).
+        private static void AddGamingCaches(System.Collections.Generic.List<CleanTarget> list, string local)
+        {
+            try
+            {
+                string steam = GetUser(@"Software\Valve\Steam", "SteamPath") as string;
+                if (!string.IsNullOrEmpty(steam))
+                {
+                    string sc = Path.Combine(steam.Replace('/', '\\'), @"steamapps\shadercache");
+                    if (Directory.Exists(sc))
+                        list.Add(new CleanTarget { Name = "Shaders Steam (recompilés au prochain lancement)", Kind = "gpu", Path = sc });
+                }
+            }
+            catch { }
+            try
+            {
+                string epic = Path.Combine(local, @"EpicGamesLauncher\Saved\webcache");
+                if (Directory.Exists(epic))
+                    list.Add(new CleanTarget { Name = "Cache du launcher Epic Games", Path = epic });
+            }
+            catch { }
+            try
+            {
+                string disc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"discord\Cache");
+                if (Directory.Exists(disc))
+                    list.Add(new CleanTarget { Name = "Cache Discord", Path = disc });
+            }
+            catch { }
+            try
+            {
+                string inet = Path.Combine(local, @"Microsoft\Windows\INetCache");
+                if (Directory.Exists(inet))
+                    list.Add(new CleanTarget { Name = "Cache Internet Windows (INetCache)", Path = inet });
+            }
+            catch { }
         }
 
         // Caches des navigateurs (tous profils) : Chrome, Edge, Brave (dossier Cache) et Firefox (cache2).
@@ -1119,6 +1185,24 @@ namespace BTOptimizer
             return dirs;
         }
 
+        /// <summary>Mesure (ou re-mesure) une cible en Mo. Public : le centre de stockage s'en sert
+        /// pour calculer le gain RÉEL après nettoyage (taille avant − taille après).</summary>
+        public static long MeasureCleanTarget(CleanTarget t)
+        {
+            try
+            {
+                if (t.IsRecycleBin) { long b; return NativeRecycle.QueryBytes(out b) ? b / (1024 * 1024) : 0; }
+                if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
+                long sum = 0;
+                foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
+                {
+                    try { sum += new FileInfo(f).Length; } catch { }
+                }
+                return sum / (1024 * 1024);
+            }
+            catch { return 0; }
+        }
+
         // Caches des fonctions IA de Windows 11 (Copilot, Recall). Rangés à part sous le
         // genre "ia" parce qu'ils ne contiennent PAS des fichiers temporaires : c'est
         // l'historique de ce que tu as fait sur la machine. Conséquences du genre "ia" :
@@ -1131,7 +1215,7 @@ namespace BTOptimizer
                 // Journaux et modèles temporaires de Copilot : ça, ça se régénère tout seul.
                 string copilot = Path.Combine(local, @"Microsoft\WindowsCopilot");
                 if (Directory.Exists(copilot))
-                    list.Add(new CleanTarget { Name = "Cache local de Copilot (journaux, modèles temporaires)", Kind = "ia", Path = copilot });
+                    list.Add(new CleanTarget { Name = "Cache local de Copilot (journaux, modèles temporaires)", Kind = "ia", Safety = 2, Path = copilot });
 
                 // Recall : on ne propose de purger les captures QUE si la capture est déjà
                 // coupée (tweak « recall_off », stratégie DisableAIDataAnalysis). Purger un
@@ -1149,25 +1233,9 @@ namespace BTOptimizer
                 };
                 foreach (string[] r in recall)
                     if (Directory.Exists(r[1]))
-                        list.Add(new CleanTarget { Name = r[0] + " — Recall est bien désactivé", Kind = "ia", Path = r[1] });
+                        list.Add(new CleanTarget { Name = r[0] + " — Recall est bien désactivé", Kind = "ia", Safety = 2, Path = r[1] });
             }
             catch { }
-        }
-
-        private static long MeasureTarget(CleanTarget t)
-        {
-            try
-            {
-                if (t.IsRecycleBin) { long b; return NativeRecycle.QueryBytes(out b) ? b / (1024 * 1024) : 0; }
-                if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
-                long sum = 0;
-                foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
-                {
-                    try { sum += new FileInfo(f).Length; } catch { }
-                }
-                return sum / (1024 * 1024);
-            }
-            catch { return 0; }
         }
 
         /// <summary>Vide une cible ; retourne le nombre d'éléments supprimés. Ignore les fichiers verrouillés.</summary>
@@ -2156,10 +2224,14 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------
-        public static long CleanMemory(Action<string, int> log)
+        public static long CleanMemory(Action<string, int> log) { return CleanMemory(log, null); }
+
+        /// <summary>Nettoyage mémoire en épargnant les PID indiqués (le jeu, ONYX) : voir
+        /// NativeMem.EmptyAllWorkingSets.</summary>
+        public static long CleanMemory(Action<string, int> log, System.Collections.Generic.ICollection<int> epargner)
         {
             long before = NativeMem.UsedPhysMB();
-            int n = NativeMem.EmptyAllWorkingSets();
+            int n = NativeMem.EmptyAllWorkingSets(epargner);
             bool standby = NativeMem.PurgeStandby();
             System.Threading.Thread.Sleep(250);
             long after = NativeMem.UsedPhysMB();
