@@ -4,152 +4,9 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v15.74 — La latence : d'où elle vient, ce qui la fausse, et ce qu'ONYX y ajoutait
+## v15.75 — Ce qui tourne pour rien, ce que coûte chaque milliseconde, et sept licences mortes
 
-Une session entière de mesures a montré qu'on se trompe presque toujours de chiffre, et **toujours
-dans le sens qui flatte**. Cette version encode ce qu'on a appris — y compris les trois fois où le
-coupable était ONYX lui-même.
-
-### Deux fois où ONYX était le problème
-
-Le **profil NVIDIA « Sûr »** posait « performances maximales », avec ce commentaire dans le code :
-*« ne coûte aucune image »*. C'est vrai des FPS et faux de tout le reste. Le réglage **interdit à la
-carte de redescendre en fréquence** : elle reste en P0 en permanence, y compris devant un bureau
-vide. Mesuré le matin même sur la machine de référence : **2 625 MHz, 56 W, 45 °C sans rien à
-l'écran**, et un pilote graphique passé de 57 ms à **3 850 ms de temps noyau par minute — 67 fois
-plus**. L'utilisateur cherchait sa latence depuis des heures ; elle venait d'un réglage posé à 06:22.
-
-Plus grave : le retour aux réglages d'usine **n'annulait rien**. Il se contentait d'omettre la
-ligne, or `nvidiaProfileInspector` n'applique que ce qu'on lui donne — omettre ne rétablit pas. Qui
-demandait le retour d'usine gardait sa carte clouée en P0, définitivement, avec un message lui
-disant le contraire. « Sûr » ne pose plus ce réglage, « Ultra » le garde (c'est un choix explicite),
-et « Défaut » **remet** la valeur au lieu de l'oublier.
-
-**Répartir les interruptions** était annoncé sur des périphériques qui ne peuvent pas l'être. La
-politique étale *les messages* d'un périphérique sur plusieurs cœurs ; celui qui n'en expose qu'un
-seul n'a rien à étaler. Windows accepte la valeur, et il ne se passe rien. Relevé ici :
-
-| Périphérique | Vecteurs | Répartissable |
-|---|---|---|
-| Contrôleur USB 3.1 | non bornés | oui |
-| NVM Express (×2) | 2048 | oui |
-| AHCI SATA | 8 | oui |
-| TP-Link Wi-Fi 7 | **1** | **non** |
-| NVIDIA RTX 4080 SUPER | **1** | **non** |
-
-Les deux plus gros producteurs d'interruptions de la machine sont justement ceux qu'on ne peut pas
-répartir — d'où **92 % des DPC sur un seul cœur** malgré le réglage. ONYX n'est pas à l'origine de
-la limite (il n'écrit jamais `MessageNumberLimit`) : un vecteur unique est normal sur les GPU NVIDIA
-et beaucoup de cartes Wi-Fi. Le défaut était d'ignorer son existence. Ces périphériques sont
-désormais **signalés** plutôt que traités en silence.
-
-### Mesurer la latence sans se mentir
-
-Les trois colonnes de LatencyMon ont chacune leur piège. **« Pire temps » est un maximum sur un
-échantillon** : mesuré ici, 0,524 ms au repos contre **0,319 ms en jeu** — avec quarante fois plus
-d'événements. Le chiffre s'améliorait parce que la machine travaillait davantage. **« Temps total »
-suit l'activité** : 391 ms → 5 130 ms en lançant un jeu, treize fois « pire » sans rien de dégradé.
-Le prendre pour juge, c'est récompenser l'inactivité.
-
-Ce qu'ONYX mesure à la place : les **µs par événement** — le travail que coûte réellement un DPC,
-indépendant de l'activité — et le **% d'un cœur**. Et il **refuse de conclure** au-delà de 20 %
-d'écart de charge entre deux relevés.
-
-Deux boutons dans « Latence EN DIRECT » : **Relevé de référence** (qui prévient sous 20 s, un relevé
-court donnant un pire temps artificiellement bas) et **Où va la latence ?**, qui classe les pilotes,
-dit combien couvrent 90 % du temps, et liste les leviers de chacun **avec leur coût**. Aucun levier
-n'est présenté comme un gain acquis — seulement comme une espérance que la mesure tranchera.
-
-Un réglage d'ONYX qui coûte de la latence y figure comme les autres : `mpo_off`, du préréglage
-eSport, force le compositeur à passer par le chemin de rendu du GPU — sur trois écrans, c'est une
-charge réelle. **Le taire parce qu'il est de nous serait le pire des biais.**
-
-### Ce qui fausse un relevé, et que Windows n'affiche nulle part
-
-**L'installation graphique en deux temps.** Une restauration système ramène le registre et System32
-en arrière, mais le DriverStore est re-provisionné derrière. Constaté ici : **six INF NVIDIA dont
-cinq déposés en 43 secondes**, et l'INF lié au GPU plus ancien qu'un autre arrivé 20 secondes après.
-Rien de tout cela n'est visible dans Windows. ONYX compare les **versions**, pas les dates de
-fichier — un horodatage bouge pour une resignature — et ne parle que si le GPU domine réellement le
-relevé.
-
-**Les réglages qui pèsent.** Un CPU tombant à 5 % de sa fréquence au bureau rend le relevé au repos
-**pessimiste**. Une politique d'interruption sur un seul vecteur fait *migrer* l'interruption de
-cœur en cœur, chaque DPC arrivant sur un cache froid. Un hyperviseur actif sans aucun service de
-sécurité fait payer le coût pour un bénéfice nul.
-
-**Les polleurs de capteurs** — la seule cause qui produise un motif **répété**, et la seule qui
-n'apparaisse dans aucune colonne. Lire une température ou un état RGB passe par le SMBus ; sur la
-plupart des cartes mères ça déclenche un SMI, et le processeur **gèle tous les cœurs** en SMM.
-Windows ne compte pas ce temps et ne l'attribue à aucun pilote. ONYX **se dénonce en premier** dans
-la liste : il lit les capteurs pendant qu'il mesure.
-
-### Les pilotes que Windows refuse de charger
-
-Une boîte « Windows ne peut pas vérifier la signature numérique de ce fichier », et rien d'autre :
-Gestionnaire de périphériques vert, service présent, outil qui s'installe et se lance. Ce texte est
-mot pour mot l'événement 3004 du journal `CodeIntegrity/Operational` — **le seul endroit où Windows
-écrit qu'il a refusé un pilote**.
-
-Sur la machine de référence il nomme `rspLLL64.sys`, le pilote de **LatencyMon** : signé en
-**sha1RSA** avec un certificat **expiré le 27/05/2019**, refusé **7 fois depuis au moins le
-24/07/2026**, service à l'arrêt. ONYX proposait d'installer cet outil. Le bouton se coupe désormais
-tout seul et devient « LatencyMon : refusé par Windows » — recommander un outil dont le pilote ne
-peut pas se charger envoie quelqu'un réinstaller et redémarrer pour une cause qu'aucun de ces gestes
-ne touche.
-
-Trois distinctions que le module tient, chacune ayant produit un faux diagnostic avant d'être
-traitée : **audité n'est pas bloqué** (Windows tient des stratégies qui appliquent et d'autres qui
-observent — ici 7 et 7 sur le même fichier) ; **le journal est circulaire**, donc « au moins depuis »
-et jamais « depuis » ; **un certificat périmé est définitif**, et le dire évite une heure de
-réinstallations inutiles.
-
-ONYX **ne propose pas de contourner**. Désactiver l'intégrité du code affaiblirait toute la machine,
-durablement, pour un seul outil — et la mesure intégrée fait le même relevé par session ETW noyau,
-sans aucun pilote.
-
-### Les 139 journaux que personne n'ouvre
-
-Le point précédent traite **un** type de panne invisible. Restait la question générale : comment
-sait-on qu'il y en a d'autres ? Le « médecin des journaux » lisait **Système** et **Application** —
-les deux que tout le monde connaît, et les deux où les pannes modernes ne s'écrivent plus. Le refus
-de charger un pilote n'apparaît dans **ni l'un ni l'autre**.
-
-Relevé sur la machine de référence : **141 journaux non vides**, dont **139** hors des deux
-classiques, **25 portant des erreurs** sur sept jours — et un balayage complet en **1,2 seconde**.
-Le coût n'a donc jamais été la raison de ne pas le faire. ONYX les balaie désormais tous.
-
-Ce qui en sort ici : un **disque qui met trop longtemps à répondre** (60 événements — micro-blocages
-du système entier pendant que Windows attend), des **sessions ETW en échec**, c'est-à-dire le
-mécanisme même dont ONYX se sert pour mesurer la latence, et un **périphérique qui n'a pas pu
-démarrer** alors qu'il s'affiche normalement dans le Gestionnaire de périphériques.
-
-Trois refus assumés. **Ne pas interpréter l'inconnu** : un canal jamais vu est montré tel quel, avec
-son compte et sa date — inventer une cause plausible pour des centaines de sources produirait un
-faux diagnostic la plupart du temps, et un faux diagnostic coûte plus cher que pas de diagnostic.
-**Ne pas tout remonter** : 435 événements de bruit connu (tuiles du menu Démarrer, Store,
-notifications) noieraient le seul qui compte — ils sont comptés et résumés en une ligne, jamais
-détaillés. **Ne pas doubler l'existant** : Système et Application gardent leur base de connaissances
-dédiée.
-
-### ONYX note désormais ses propres échecs
-
-Le dépôt comptait **1318 blocs `catch { }` vides** répartis sur 185 fichiers. La règle qui les a
-produits est bonne — un module qui lit la machine n'a pas le droit de faire tomber la fenêtre — mais
-« ne pas lever » avait été confondu avec « ne rien dire ». Un module qui échouait rendait alors une
-liste vide **indistinguable** d'une machine où il n'y avait rien à trouver. C'est exactement le
-défaut qu'on venait de corriger chez Windows.
-
-Un journal technique note ce qui aurait dû marcher et n'a pas marché. Ce n'est **pas** une
-télémétrie : rien ne part, le fichier reste à côté de l'exécutable. Ce n'est **pas** un journal de
-débogage : on n'y écrit pas le déroulement normal — un journal qui grossit quand tout va bien ne se
-lit jamais. Et la répétition est **comptée, pas recopiée** : les dix premières occurrences puis les
-puissances de dix, de sorte que 100 000 échecs identiques tiennent en 14 lignes au lieu de remplir
-le disque.
-
-L'auto-diagnostic affiche le compte, et les infos de support emportent les derniers échecs — **après
-nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
-sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
+Un bogue signalé en passant — « la clé de mon pote se désactive » — a mis au jour le plus cher de cette version : **les sept licences vendues étaient invalides**, et rien nulle part ne pouvait le dire. Il ouvre donc le journal. Suivent les deux chantiers prévus : ce qui tourne pour rien sur cette machine, et ce que coûte chaque maillon entre le clic et le pixel.
 
 ### Le générateur ne peut plus émettre une clé que l'application refuserait
 
@@ -371,30 +228,6 @@ Le banc d'essai vérifie surtout ce que le module **refuse** de faire : l'antich
 audio et le service protégé par le garde-fou ne sont pas touchés alors qu'ils étaient dans le plan.
 Sur un faux exécutant, donc sans arrêter un seul service pour le prouver.
 
-### L'overlay affichait 1 FPS quand aucun jeu ne tournait
-
-La sélection de repli acceptait tout processus au-dessus de 0 FPS. Or la fenêtre d'interrogation
-dure une seconde, et une fenêtre qui se repeint **une fois** dans la seconde vaut exactement 1 :
-une notification, un lanceur, un installateur. L'overlay s'accrochait à ce bruit au lieu d'afficher
-« — ». Le repli exige désormais 20 FPS, tandis qu'un jeu **au premier plan** reste affiché quel que
-soit son débit — c'est précisément à 6 FPS qu'on veut voir le chiffre.
-
-### Téléchargement et distribution
-
-Les versions sont désormais livrées **aussi en `.zip`** : l'avertissement « fichier peu téléchargé »
-de SmartScreen vise les exécutables, pas les archives. Ce que ça règle : l'avertissement du
-navigateur. Ce que ça ne règle pas : l'écran « Windows a protégé votre ordinateur » au **lancement**,
-qui ne tombe qu'avec un certificat de signature — les notes de version l'écrivent noir sur blanc
-plutôt que de laisser croire le contraire. Le manifeste winget est publié avec son empreinte
-SHA-256, et son `ProductCode`, qui était inventé, a été corrigé.
-
-### Un banc d'essai dans le dépôt
-
-`tests/` — 30 assertions, sans framework : les modules d'analyse sont écrits pour être **purs**,
-donc vérifiables par de simples égalités. Le projet compile les fichiers du dépôt **tels quels**,
-pas des copies : une copie diverge en silence et finit par tester du code que plus personne ne
-livre. La partie qui lit la machine ne juge rien — sur un poste où aucun pilote n'est refusé, elle
-n'affiche rien, et c'est un résultat correct.
 ## Intégration — 🎮 MODE JEU : fermer ce qui tourne pour rien (branche locale)
 - Le Mode Jeu savait suspendre les services de Windows. Sur une machine de travail, ce ne sont pas eux
   qui pèsent : ce sont les **applications restées ouvertes**. Sur la machine de référence, le relevé
@@ -476,6 +309,178 @@ n'affiche rien, et c'est un résultat correct.
   complet des applications.
 - Harnais **172/172** ; UITEST **9 pages** à 3 tailles et **48/48** formes, 0 erreur. Nouveau hook
   `BT_STORAGE=1` (analyse réelle en console, lecture seule).
+
+## v15.74 — La latence : d'où elle vient, ce qui la fausse, et ce qu'ONYX y ajoutait
+
+Une session entière de mesures a montré qu'on se trompe presque toujours de chiffre, et **toujours
+dans le sens qui flatte**. Cette version encode ce qu'on a appris — y compris les trois fois où le
+coupable était ONYX lui-même.
+
+### Deux fois où ONYX était le problème
+
+Le **profil NVIDIA « Sûr »** posait « performances maximales », avec ce commentaire dans le code :
+*« ne coûte aucune image »*. C'est vrai des FPS et faux de tout le reste. Le réglage **interdit à la
+carte de redescendre en fréquence** : elle reste en P0 en permanence, y compris devant un bureau
+vide. Mesuré le matin même sur la machine de référence : **2 625 MHz, 56 W, 45 °C sans rien à
+l'écran**, et un pilote graphique passé de 57 ms à **3 850 ms de temps noyau par minute — 67 fois
+plus**. L'utilisateur cherchait sa latence depuis des heures ; elle venait d'un réglage posé à 06:22.
+
+Plus grave : le retour aux réglages d'usine **n'annulait rien**. Il se contentait d'omettre la
+ligne, or `nvidiaProfileInspector` n'applique que ce qu'on lui donne — omettre ne rétablit pas. Qui
+demandait le retour d'usine gardait sa carte clouée en P0, définitivement, avec un message lui
+disant le contraire. « Sûr » ne pose plus ce réglage, « Ultra » le garde (c'est un choix explicite),
+et « Défaut » **remet** la valeur au lieu de l'oublier.
+
+**Répartir les interruptions** était annoncé sur des périphériques qui ne peuvent pas l'être. La
+politique étale *les messages* d'un périphérique sur plusieurs cœurs ; celui qui n'en expose qu'un
+seul n'a rien à étaler. Windows accepte la valeur, et il ne se passe rien. Relevé ici :
+
+| Périphérique | Vecteurs | Répartissable |
+|---|---|---|
+| Contrôleur USB 3.1 | non bornés | oui |
+| NVM Express (×2) | 2048 | oui |
+| AHCI SATA | 8 | oui |
+| TP-Link Wi-Fi 7 | **1** | **non** |
+| NVIDIA RTX 4080 SUPER | **1** | **non** |
+
+Les deux plus gros producteurs d'interruptions de la machine sont justement ceux qu'on ne peut pas
+répartir — d'où **92 % des DPC sur un seul cœur** malgré le réglage. ONYX n'est pas à l'origine de
+la limite (il n'écrit jamais `MessageNumberLimit`) : un vecteur unique est normal sur les GPU NVIDIA
+et beaucoup de cartes Wi-Fi. Le défaut était d'ignorer son existence. Ces périphériques sont
+désormais **signalés** plutôt que traités en silence.
+
+### Mesurer la latence sans se mentir
+
+Les trois colonnes de LatencyMon ont chacune leur piège. **« Pire temps » est un maximum sur un
+échantillon** : mesuré ici, 0,524 ms au repos contre **0,319 ms en jeu** — avec quarante fois plus
+d'événements. Le chiffre s'améliorait parce que la machine travaillait davantage. **« Temps total »
+suit l'activité** : 391 ms → 5 130 ms en lançant un jeu, treize fois « pire » sans rien de dégradé.
+Le prendre pour juge, c'est récompenser l'inactivité.
+
+Ce qu'ONYX mesure à la place : les **µs par événement** — le travail que coûte réellement un DPC,
+indépendant de l'activité — et le **% d'un cœur**. Et il **refuse de conclure** au-delà de 20 %
+d'écart de charge entre deux relevés.
+
+Deux boutons dans « Latence EN DIRECT » : **Relevé de référence** (qui prévient sous 20 s, un relevé
+court donnant un pire temps artificiellement bas) et **Où va la latence ?**, qui classe les pilotes,
+dit combien couvrent 90 % du temps, et liste les leviers de chacun **avec leur coût**. Aucun levier
+n'est présenté comme un gain acquis — seulement comme une espérance que la mesure tranchera.
+
+Un réglage d'ONYX qui coûte de la latence y figure comme les autres : `mpo_off`, du préréglage
+eSport, force le compositeur à passer par le chemin de rendu du GPU — sur trois écrans, c'est une
+charge réelle. **Le taire parce qu'il est de nous serait le pire des biais.**
+
+### Ce qui fausse un relevé, et que Windows n'affiche nulle part
+
+**L'installation graphique en deux temps.** Une restauration système ramène le registre et System32
+en arrière, mais le DriverStore est re-provisionné derrière. Constaté ici : **six INF NVIDIA dont
+cinq déposés en 43 secondes**, et l'INF lié au GPU plus ancien qu'un autre arrivé 20 secondes après.
+Rien de tout cela n'est visible dans Windows. ONYX compare les **versions**, pas les dates de
+fichier — un horodatage bouge pour une resignature — et ne parle que si le GPU domine réellement le
+relevé.
+
+**Les réglages qui pèsent.** Un CPU tombant à 5 % de sa fréquence au bureau rend le relevé au repos
+**pessimiste**. Une politique d'interruption sur un seul vecteur fait *migrer* l'interruption de
+cœur en cœur, chaque DPC arrivant sur un cache froid. Un hyperviseur actif sans aucun service de
+sécurité fait payer le coût pour un bénéfice nul.
+
+**Les polleurs de capteurs** — la seule cause qui produise un motif **répété**, et la seule qui
+n'apparaisse dans aucune colonne. Lire une température ou un état RGB passe par le SMBus ; sur la
+plupart des cartes mères ça déclenche un SMI, et le processeur **gèle tous les cœurs** en SMM.
+Windows ne compte pas ce temps et ne l'attribue à aucun pilote. ONYX **se dénonce en premier** dans
+la liste : il lit les capteurs pendant qu'il mesure.
+
+### Les pilotes que Windows refuse de charger
+
+Une boîte « Windows ne peut pas vérifier la signature numérique de ce fichier », et rien d'autre :
+Gestionnaire de périphériques vert, service présent, outil qui s'installe et se lance. Ce texte est
+mot pour mot l'événement 3004 du journal `CodeIntegrity/Operational` — **le seul endroit où Windows
+écrit qu'il a refusé un pilote**.
+
+Sur la machine de référence il nomme `rspLLL64.sys`, le pilote de **LatencyMon** : signé en
+**sha1RSA** avec un certificat **expiré le 27/05/2019**, refusé **7 fois depuis au moins le
+24/07/2026**, service à l'arrêt. ONYX proposait d'installer cet outil. Le bouton se coupe désormais
+tout seul et devient « LatencyMon : refusé par Windows » — recommander un outil dont le pilote ne
+peut pas se charger envoie quelqu'un réinstaller et redémarrer pour une cause qu'aucun de ces gestes
+ne touche.
+
+Trois distinctions que le module tient, chacune ayant produit un faux diagnostic avant d'être
+traitée : **audité n'est pas bloqué** (Windows tient des stratégies qui appliquent et d'autres qui
+observent — ici 7 et 7 sur le même fichier) ; **le journal est circulaire**, donc « au moins depuis »
+et jamais « depuis » ; **un certificat périmé est définitif**, et le dire évite une heure de
+réinstallations inutiles.
+
+ONYX **ne propose pas de contourner**. Désactiver l'intégrité du code affaiblirait toute la machine,
+durablement, pour un seul outil — et la mesure intégrée fait le même relevé par session ETW noyau,
+sans aucun pilote.
+
+### Les 139 journaux que personne n'ouvre
+
+Le point précédent traite **un** type de panne invisible. Restait la question générale : comment
+sait-on qu'il y en a d'autres ? Le « médecin des journaux » lisait **Système** et **Application** —
+les deux que tout le monde connaît, et les deux où les pannes modernes ne s'écrivent plus. Le refus
+de charger un pilote n'apparaît dans **ni l'un ni l'autre**.
+
+Relevé sur la machine de référence : **141 journaux non vides**, dont **139** hors des deux
+classiques, **25 portant des erreurs** sur sept jours — et un balayage complet en **1,2 seconde**.
+Le coût n'a donc jamais été la raison de ne pas le faire. ONYX les balaie désormais tous.
+
+Ce qui en sort ici : un **disque qui met trop longtemps à répondre** (60 événements — micro-blocages
+du système entier pendant que Windows attend), des **sessions ETW en échec**, c'est-à-dire le
+mécanisme même dont ONYX se sert pour mesurer la latence, et un **périphérique qui n'a pas pu
+démarrer** alors qu'il s'affiche normalement dans le Gestionnaire de périphériques.
+
+Trois refus assumés. **Ne pas interpréter l'inconnu** : un canal jamais vu est montré tel quel, avec
+son compte et sa date — inventer une cause plausible pour des centaines de sources produirait un
+faux diagnostic la plupart du temps, et un faux diagnostic coûte plus cher que pas de diagnostic.
+**Ne pas tout remonter** : 435 événements de bruit connu (tuiles du menu Démarrer, Store,
+notifications) noieraient le seul qui compte — ils sont comptés et résumés en une ligne, jamais
+détaillés. **Ne pas doubler l'existant** : Système et Application gardent leur base de connaissances
+dédiée.
+
+### ONYX note désormais ses propres échecs
+
+Le dépôt comptait **1318 blocs `catch { }` vides** répartis sur 185 fichiers. La règle qui les a
+produits est bonne — un module qui lit la machine n'a pas le droit de faire tomber la fenêtre — mais
+« ne pas lever » avait été confondu avec « ne rien dire ». Un module qui échouait rendait alors une
+liste vide **indistinguable** d'une machine où il n'y avait rien à trouver. C'est exactement le
+défaut qu'on venait de corriger chez Windows.
+
+Un journal technique note ce qui aurait dû marcher et n'a pas marché. Ce n'est **pas** une
+télémétrie : rien ne part, le fichier reste à côté de l'exécutable. Ce n'est **pas** un journal de
+débogage : on n'y écrit pas le déroulement normal — un journal qui grossit quand tout va bien ne se
+lit jamais. Et la répétition est **comptée, pas recopiée** : les dix premières occurrences puis les
+puissances de dix, de sorte que 100 000 échecs identiques tiennent en 14 lignes au lieu de remplir
+le disque.
+
+L'auto-diagnostic affiche le compte, et les infos de support emportent les derniers échecs — **après
+nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
+sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
+
+### L'overlay affichait 1 FPS quand aucun jeu ne tournait
+
+La sélection de repli acceptait tout processus au-dessus de 0 FPS. Or la fenêtre d'interrogation
+dure une seconde, et une fenêtre qui se repeint **une fois** dans la seconde vaut exactement 1 :
+une notification, un lanceur, un installateur. L'overlay s'accrochait à ce bruit au lieu d'afficher
+« — ». Le repli exige désormais 20 FPS, tandis qu'un jeu **au premier plan** reste affiché quel que
+soit son débit — c'est précisément à 6 FPS qu'on veut voir le chiffre.
+
+### Téléchargement et distribution
+
+Les versions sont désormais livrées **aussi en `.zip`** : l'avertissement « fichier peu téléchargé »
+de SmartScreen vise les exécutables, pas les archives. Ce que ça règle : l'avertissement du
+navigateur. Ce que ça ne règle pas : l'écran « Windows a protégé votre ordinateur » au **lancement**,
+qui ne tombe qu'avec un certificat de signature — les notes de version l'écrivent noir sur blanc
+plutôt que de laisser croire le contraire. Le manifeste winget est publié avec son empreinte
+SHA-256, et son `ProductCode`, qui était inventé, a été corrigé.
+
+### Un banc d'essai dans le dépôt
+
+`tests/` — 30 assertions, sans framework : les modules d'analyse sont écrits pour être **purs**,
+donc vérifiables par de simples égalités. Le projet compile les fichiers du dépôt **tels quels**,
+pas des copies : une copie diverge en silence et finit par tester du code que plus personne ne
+livre. La partie qui lit la machine ne juge rien — sur un poste où aucun pilote n'est refusé, elle
+n'affiche rien, et c'est un résultat correct.
 
 ## v15.73 — Les quatorze outils du Laboratoire passés au banc d'essai
 
