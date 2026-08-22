@@ -272,6 +272,28 @@ namespace BTOptimizer
         /// <summary>PUR : budget moyen d'un relevé, sans passer par la chaîne.</summary>
         public static double Budget(Releve r) { return TotalMoyen(Construit(r)); }
 
+        /// <summary>Nombre de maillons qui PEUVENT porter une contribution moyenne : la souris,
+        /// la file de rendu, l'affichage. Le noyau est un pire cas et la dalle ne se mesure pas.</summary>
+        public const int MaillonsChiffrables = 3;
+
+        /// <summary>PUR : combien de ces trois-là ont réellement un chiffre.</summary>
+        public static int Chiffres(List<Maillon> chaine)
+        {
+            int n = 0;
+            if (chaine == null) return 0;
+            foreach (Maillon m in chaine) if (m != null && m.Ms.HasValue && m.Ms.Value > 0) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// PUR : ce budget mérite-t-il d'être annoncé comme un budget ?
+        ///
+        /// Un total bâti sur UN maillon sur trois se lit « ta latence vaut 1 ms » — flatteur, faux,
+        /// et exactement le genre de chiffre que ce module reproche aux autres. En dessous de deux
+        /// maillons chiffrés, le nombre existe toujours mais il ne doit pas être mis en avant.
+        /// </summary>
+        public static bool BudgetCredible(List<Maillon> chaine) { return Chiffres(chaine) >= 2; }
+
         // ==================================================================
         //  Les leviers — classés par ce qu'ils RENDENT, pas par leur réputation
         // ==================================================================
@@ -364,6 +386,10 @@ namespace BTOptimizer
 
             if (budget <= 0)
                 return "Rien de mesuré pour l'instant : la chaîne ne peut pas être chiffrée.";
+
+            if (!BudgetCredible(chaine))
+                return "Un seul maillon mesuré sur " + MaillonsChiffrables + " : il n'y a pas encore de budget. "
+                     + "Mesure le taux de rapport de la souris, et lis la file de rendu, avant de comparer quoi que ce soit.";
 
             string s = "Au minimum " + Nombre(budget) + " ms entre ton geste et l'image, sur les maillons mesurés";
             s += manquants > 0 ? " (" + manquants + " maillon(s) manquant(s), dont la dalle). " : ". ";

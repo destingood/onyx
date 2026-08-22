@@ -283,6 +283,7 @@ namespace BTOptimizer
             sys.DropDownItems.Add("Programmes au démarrage", null, (s, e) => OpenDialog(new StartupForm(Log)));
             sys.DropDownItems.Add("Services Windows", null, (s, e) => OpenDialog(new ServicesForm(Log)));
             sys.DropDownItems.Add("🔎 Inventaire des services (mesuré sur cette machine)", null, (s, e) => OpenDialog(new InventaireServicesForm(Log)));
+            sys.DropDownItems.Add("⏱ Chaîne d'entrée (du clic au pixel, en ms)", null, (s, e) => OpenDialog(new ChaineEntreeForm(Log)));
             sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
             sys.DropDownItems.Add(new ToolStripSeparator());

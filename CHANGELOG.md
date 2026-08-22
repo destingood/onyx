@@ -151,6 +151,46 @@ L'auto-diagnostic affiche le compte, et les infos de support emportent les derni
 nettoyage**. Un message d'exception cite très souvent `C:\Users\<prénom>\…`, et ce bloc promet noir
 sur blanc qu'il ne contient ni nom d'utilisateur ni chemin privé.
 
+### L'input lag : ONYX mesurait tous les maillons, et n'en additionnait aucun
+
+ONYX mesure très bien chaque maillon **séparément** — temps noyau par pilote, taux de rapport réel
+de la souris, retard du compositeur, plafond d'images. Ce qu'il ne faisait nulle part, c'est les
+**additionner**. Or c'est la seule question que se pose quelqu'un dont la visée est molle : combien
+de millisecondes entre mon geste et l'image, et **lequel des maillons en coûte le plus** ? Le
+« Guide latence » existant répondait à côté — une liste de cases à cocher, qui renvoyait même à des
+étapes hors de l'application. Une checklist ne hiérarchise rien.
+
+Et ici, les ordres de grandeur sont écrasants. Sur un écran 240 Hz, l'attente d'affichage vaut
+2,08 ms et une souris à 1000 Hz coûte 0,50 ms. Passer cette souris à **8000 Hz rapporte 0,44 ms**.
+Retirer **une** image en attente dans le pilote graphique en rapporte **4,17 ms** — neuf fois plus,
+sans rien acheter. Les forums vendent le premier et ignorent le second. Ces deux chiffres sont
+figés au banc d'essai : le jour où quelqu'un touche un coefficient, c'est ce test qui tombe.
+
+Les leviers sont donc classés par ce qu'ils **rendent ici**, jamais par leur réputation, et le gain
+de chacun est calculé en **rejouant le budget entier** sur un relevé modifié plutôt qu'avec une
+formule dédiée. Ce n'est pas une coquetterie : monter la fréquence de l'écran raccourcit aussi la
+période d'image, donc la file de rendu. Une formule par levier aurait manqué l'effet indirect ; la
+différence de deux budgets le compte sans qu'on ait à y penser.
+
+**Trois choses que ce module refuse d'inventer.** La **dalle** : le temps de réponse d'un écran ne
+se lit par aucune API, il n'est donc pas estimé mais déclaré non mesurable — le budget est un
+**plancher**, pas un total. La **moyenne et le pire cas** ne se mélangent pas : le temps noyau est
+un maximum observé, il a sa colonne et n'entre jamais dans le budget moyen. Et la **file de rendu**
+laissée au jeu n'est pas devinée à trois images parce que c'est le cas le plus fréquent : elle
+reste une piste, avec le seul chiffre qu'on ait le droit d'écrire — le coût d'**une** image.
+
+Deux défauts ont été trouvés en regardant l'écran tourner sur la machine de référence, et tous deux
+étaient des mensonges par flatterie. Le budget s'affichait **en gros et en doré** alors qu'un seul
+maillon sur trois était chiffré : « 1,00 ms » se lisait comme un excellent résultat. Et la liste
+des leviers annonçait *« aucun levier — c'est un bon résultat, pas une panne »*, ce qui fait passer
+une **absence de mesure** pour un bon score. L'or est maintenant réservé à un budget qui en est un,
+et l'écran écrit à la place : *ce n'est pas « rien à faire », c'est « rien de mesuré »*.
+
+Au passage, le testeur de souris **calculait sa médiane, l'affichait, puis la perdait** à la
+fermeture de la fenêtre — exactement le défaut que le verdict de polling reproche lui-même à
+l'ancienne version, un cran plus loin. Elle est désormais retenue, et c'est elle qui remplit le
+premier maillon de la chaîne.
+
 ### Les services : ONYX n'en connaissait que seize, la machine en porte 318
 
 La fenêtre « Services Windows » listait **16 noms écrits en dur**, et le Mode Jeu en suspendait

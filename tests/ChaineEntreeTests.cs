@@ -84,6 +84,20 @@ namespace BTOptimizer.Tests
             // La dalle n'est pas mesurable : elle doit être comptée comme manquante, pas oubliée.
             Banc.Verifie("la dalle est déclarée non mesurée", true, ChaineEntree.NonMesures(c) >= 1);
 
+            // Un budget bâti sur UN maillon sur trois ne doit pas s'annoncer comme un budget :
+            // constaté sur la machine de référence, où seul l'écran était lisible — « 1,00 ms »
+            // s'affichait en gros et en doré, comme un excellent résultat.
+            Banc.Verifie("trois maillons chiffrés font un budget crédible", true,
+                ChaineEntree.BudgetCredible(c));
+            var seul = new ChaineEntree.Releve { EcranHz = 500, EcranHzMax = 500 };
+            List<ChaineEntree.Maillon> cs = ChaineEntree.Construit(seul);
+            Banc.Verifie("un seul maillon chiffré n'en fait pas un", false,
+                ChaineEntree.BudgetCredible(cs));
+            Banc.Verifie("et le constat refuse d'annoncer un total", true,
+                ChaineEntree.Constat(seul).Contains("pas encore de budget"));
+            Banc.Verifie("le compte des maillons chiffrés est juste", true,
+                ChaineEntree.Chiffres(c) == 3 && ChaineEntree.Chiffres(cs) == 1);
+
             Banc.Verifie("un relevé nul ne produit aucun maillon, sans exception", true,
                 ChaineEntree.Construit(null).Count == 0);
             Banc.Verifie("et son budget vaut zéro", true, ChaineEntree.Budget(null) == 0);

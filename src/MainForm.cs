@@ -251,6 +251,7 @@ namespace BTOptimizer
             mSys.DropDownItems.Add("Programmes au démarrage...", null, open(() => new StartupForm(Log)));
             mSys.DropDownItems.Add("Services Windows...", null, open(() => new ServicesForm(Log)));
             mSys.DropDownItems.Add("Inventaire des services (ce qui tourne ici, et ce que ça coûte)...", null, open(() => new InventaireServicesForm(Log)));
+            mSys.DropDownItems.Add("Chaîne d'entrée (du clic au pixel, en millisecondes)...", null, open(() => new ChaineEntreeForm(Log)));
 
             // --- Mon profil ---
             var mProfile = group(" Mon profil d'optimisations");
