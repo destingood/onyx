@@ -901,10 +901,10 @@ namespace BTOptimizer
         public static void ConfigureService(string name, string startType, bool stopNow, bool startNow)
         {
             // startType : disabled | demand | auto | delayed-auto
-            RunThrow(Sys32("sc.exe"), "config " + name + " start= " + startType,
+            RunThrow(Sys32("sc.exe"), "config \"" + name + "\" start= " + startType,
                 "Configuration du service " + name);
-            if (stopNow) Run(Sys32("sc.exe"), "stop " + name);    // échec toléré (déjà arrêté)
-            if (startNow) Run(Sys32("sc.exe"), "start " + name);  // échec toléré (déjà démarré)
+            if (stopNow) StopService(name);    // échec toléré (déjà arrêté)
+            if (startNow) StartService(name);  // échec toléré (déjà démarré)
         }
 
         public static bool ServiceDisabled(string name)
@@ -922,12 +922,32 @@ namespace BTOptimizer
 
         public static bool IsServiceRunning(string name)
         {
-            NativeResult r = Run(Sys32("sc.exe"), "query " + name);
+            NativeResult r = Run(Sys32("sc.exe"), "query \"" + name + "\"");
             return r.ExitCode == 0 && r.Output.IndexOf("RUNNING", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        public static void StopService(string name) { Run(Sys32("sc.exe"), "stop " + name); }
-        public static void StartService(string name) { Run(Sys32("sc.exe"), "start " + name); }
+        /// <summary>
+        /// Arrête un service. Rend VRAI si l'ordre a été accepté (ou si le service était déjà à
+        /// l'arrêt), FAUX s'il a été refusé — droits insuffisants, service dont d'autres dépendent.
+        /// Sans ce retour, l'appelant enregistre comme « suspendu » un service qui tourne toujours,
+        /// et annonce un gain qu'il n'a pas obtenu.
+        /// Le nom est mis entre guillemets : plusieurs services en contiennent des espaces
+        /// (« Razer Chroma SDK Service »), et sc.exe les découperait en arguments.
+        /// </summary>
+        public static bool StopService(string name)
+        {
+            NativeResult r = Run(Sys32("sc.exe"), "stop \"" + name + "\"");
+            if (r.ExitCode == 0) return true;
+            return !IsServiceRunning(name);   // 1062 « service non démarré » : le résultat voulu est déjà là
+        }
+
+        /// <summary>Démarre un service. Rend VRAI si l'ordre a été accepté ou s'il tourne déjà.</summary>
+        public static bool StartService(string name)
+        {
+            NativeResult r = Run(Sys32("sc.exe"), "start \"" + name + "\"");
+            if (r.ExitCode == 0) return true;
+            return IsServiceRunning(name);    // 1056 « déjà en cours » : rien à faire
+        }
 
         /// <summary>Arrête puis redémarre un service (courte attente entre les deux). Utilisé pour
         /// les réparations « à chaud » (audio, etc.). Un service qui refuse de s'arrêter n'empêche
@@ -2204,10 +2224,14 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Nettoyage mémoire (RAM)
         // ------------------------------------------------------------------
-        public static long CleanMemory(Action<string, int> log)
+        public static long CleanMemory(Action<string, int> log) { return CleanMemory(log, null); }
+
+        /// <summary>Nettoyage mémoire en épargnant les PID indiqués (le jeu, ONYX) : voir
+        /// NativeMem.EmptyAllWorkingSets.</summary>
+        public static long CleanMemory(Action<string, int> log, System.Collections.Generic.ICollection<int> epargner)
         {
             long before = NativeMem.UsedPhysMB();
-            int n = NativeMem.EmptyAllWorkingSets();
+            int n = NativeMem.EmptyAllWorkingSets(epargner);
             bool standby = NativeMem.PurgeStandby();
             System.Threading.Thread.Sleep(250);
             long after = NativeMem.UsedPhysMB();

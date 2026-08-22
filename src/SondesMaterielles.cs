@@ -53,15 +53,22 @@ namespace BTOptimizer
             new Sonde { Processus = "ProcessGovernor", Libelle = "Process Governor (affinités)", Service = false },
         };
 
-        /// <summary>Services d'arrière-plan des mêmes suites : ceux-là peuvent être suspendus le
-        /// temps d'une partie et relancés ensuite, sans rien casser de visible.</summary>
+        /// <summary>
+        /// Services d'arrière-plan des mêmes suites : ceux-là peuvent être suspendus le temps d'une
+        /// partie et relancés ensuite, sans rien casser de visible.
+        ///
+        /// « Sans rien casser de VISIBLE » est la condition d'entrée, et deux services l'ont perdue
+        /// après vérification. NvContainerLocalSystem n'interroge aucun capteur : c'est le conteneur
+        /// NVIDIA qui porte l'overlay, ShadowPlay et le panneau de configuration — l'arrêter en
+        /// pleine partie coupe l'enregistrement, ce que personne n'a demandé. Et le service de
+        /// CCleaner n'appartient pas à une suite de capteurs. Les retirer, c'est refuser de payer
+        /// une fonction visible pour un gain qu'on n'a pas mesuré.
+        /// </summary>
         public static readonly string[] ServicesSondes =
         {
             "CorsairCpuIdService",   // relevés processeur pour iCUE
             "CorsairGamingAudioConfig",
             "LGHUBUpdaterService",
-            "NvContainerLocalSystem",
-            "CCleanerPerformanceOptimizerService",
             "MSIAfterburnerService",
         };
 

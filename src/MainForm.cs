@@ -1512,7 +1512,9 @@ namespace BTOptimizer
                 _boostBusy = true;
                 Task.Run(() =>
                 {
-                    GameBoost.Activate(Log);
+                    // Le jeu qui déclenche est passé en argument : c'est ce qui empêche ONYX de
+                    // fermer le jeu qu'on vient tout juste de lancer.
+                    GameBoost.Activate(Log, game);
                     try { BeginInvoke((Action)(() => { _autoBoostEngaged = true; _boostBusy = false; SyncBoostButton();
                         Log("MODE JEU AUTO : " + reason + " → mode jeu activé.", 1); })); }
                     catch { _boostBusy = false; }

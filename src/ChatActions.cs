@@ -653,15 +653,6 @@ namespace BTOptimizer
             return l != null && l.Count > 0 ? l[0] : null;
         }
 
-        // Processus qu'on ne liste JAMAIS comme « gourmands » : cœur de Windows (intouchable)
-        // — les fermer est impossible ou dangereux, donc les montrer n'aiderait personne.
-        private static readonly string[] CoreProc =
-        {
-            "idle", "system", "registry", "memory compression", "secure system", "vmmem",
-            "csrss", "smss", "wininit", "winlogon", "services", "lsass", "svchost",
-            "dwm", "fontdrvhost", "sihost", "audiodg", "wudfhost", "conhost"
-        };
-
         /// <summary>Top des processus par CPU mesuré sur 'intervalMs', agrégés PAR NOM (les 20
         /// processus d'un navigateur comptent ensemble), RAM incluse. Jeux connus et cœur de
         /// Windows exclus : on cherche ce qui vole des ressources, pas ce que tu utilises.</summary>
@@ -710,11 +701,11 @@ namespace BTOptimizer
             return result;
         }
 
-        private static bool IsCore(string name)
-        {
-            foreach (string c in CoreProc) if (string.Equals(name, c, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
-        }
+        // Processus qu'on ne liste JAMAIS comme « gourmands » : cœur de Windows (intouchable) — les
+        // fermer est impossible ou dangereux, donc les montrer n'aiderait personne. UNE SEULE liste
+        // pour tout ONYX (ApplisDeFond), sinon le Mode Jeu et le Copilote finissent par ne plus
+        // protéger les mêmes processus.
+        private static bool IsCore(string name) { return ApplisDeFond.EstVital(name); }
 
         // ==================================================================
         //  RÉPARATIONS — ce que le Copilote sait corriger LUI-MÊME (sur clic)

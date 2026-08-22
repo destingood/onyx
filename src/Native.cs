@@ -67,6 +67,21 @@ namespace BTOptimizer
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
 
+        /// <summary>PID du processus qui possède la fenêtre au premier plan (0 si indisponible).
+        /// Sert à épargner ce que l'utilisateur est en train de regarder.</summary>
+        public static int ForegroundPid()
+        {
+            try
+            {
+                IntPtr h = GetForegroundWindow();
+                if (h == IntPtr.Zero) return 0;
+                uint pid;
+                GetWindowThreadProcessId(h, out pid);
+                return (int)pid;
+            }
+            catch { return 0; }
+        }
+
         /// <summary>Vrai si la fenêtre au premier plan couvre tout son écran (jeu plein écran / borderless).</summary>
         public static bool IsGameFullscreen()
         {
@@ -158,12 +173,24 @@ namespace BTOptimizer
             return 0;
         }
 
-        public static int EmptyAllWorkingSets()
+        public static int EmptyAllWorkingSets() { return EmptyAllWorkingSets(null); }
+
+        /// <summary>
+        /// Vide les working sets, SAUF ceux des PID passés en argument. Cette exception n'est pas
+        /// un détail : vider le working set du jeu qu'on vient de détecter renvoie ses pages vers
+        /// le fichier d'échange, et elles reviennent une par une en défauts de page — c'est-à-dire
+        /// exactement les saccades qu'on cherche à supprimer.
+        /// </summary>
+        public static int EmptyAllWorkingSets(System.Collections.Generic.ICollection<int> ignorer)
         {
             int done = 0;
             foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcesses())
             {
-                try { if (EmptyWorkingSet(p.Handle)) done++; }
+                try
+                {
+                    if (ignorer != null && ignorer.Contains(p.Id)) continue;
+                    if (EmptyWorkingSet(p.Handle)) done++;
+                }
                 catch { }
                 finally { try { p.Dispose(); } catch { } }
             }

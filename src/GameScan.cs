@@ -68,7 +68,8 @@ namespace BTOptimizer
                 "FSD-Win64-Shipping.exe",                      // Deep Rock Galactic
                 "DeadByDaylight-Win64-Shipping.exe",           // Dead by Daylight
                 "b1-Win64-Shipping.exe",                       // Black Myth: Wukong
-                "FactoryGame-Win64-Shipping.exe"               // Satisfactory
+                "FactoryGame-Win64-Shipping.exe",              // Satisfactory
+                "RobloxPlayerBeta.exe"                        // Roblox (le JOUEUR ; jamais le Studio)
             };
         }
 

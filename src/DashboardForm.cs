@@ -646,6 +646,10 @@ namespace BTOptimizer
                     //    Dans cet etat la carte ne se reconnecte plus toute seule : un outil de
                     //    latence n'a pas le droit de laisser une machine comme ca.
                     try { WifiScan.Soigne(Log); } catch { }
+                    // 0 sexies) Mode Jeu interrompu par un plantage : les services de fond suspendus
+                    //    (indexation, spouleur, SysMain) restaient arretes jusqu au redemarrage, sans
+                    //    que rien ne le signale. Le marqueur laisse sur le disque nous dit lesquels.
+                    try { GameBoost.Soigne(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;

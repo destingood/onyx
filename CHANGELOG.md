@@ -4,6 +4,50 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Intégration — 🎮 MODE JEU : fermer ce qui tourne pour rien (branche locale)
+- Le Mode Jeu savait suspendre les services de Windows. Sur une machine de travail, ce ne sont pas eux
+  qui pèsent : ce sont les **applications restées ouvertes**. Sur la machine de référence, le relevé
+  donne **52 processus et ~6,5 Go** — un éditeur et ses vingt auxiliaires, cinq agents IA, quatorze
+  processus Node, un Roblox Studio oublié, neuf gestionnaires Razer pour l'éclairage du clavier. Ce
+  n'est pas que de la RAM : chacun se réveille, prend son tour d'ordonnancement et rend la main un peu
+  trop tard — manette en main, ça s'appelle un micro-freeze.
+- **Cinq familles, cinq interrupteurs** (⚙ Configurer) : `Assistants IA` (Claude, Codex, Cursor, Ollama,
+  LM Studio) · `Outils de développement` (VS Code, Visual Studio, Docker, WSL, adb) · `Roblox`
+  (Studio et lanceurs en veille) · `Razer` (Synapse, Chroma et ses gestionnaires) · `Node.js`.
+  Réglage mémorisé dans `bt-gamemode-applis.txt`.
+- **AUCUN TRAVAIL N'EST PERDU, ET C'EST GARANTI PAR LA FORME DU CODE.** Une application qui a une
+  fenêtre reçoit la même demande qu'un clic sur la croix. Si elle affiche « enregistrer les
+  modifications ? », elle **reste ouverte** — et le journal la nomme, au lieu d'annoncer une mémoire
+  rendue qui ne l'a pas été. Aucune fenêtre n'est jamais tuée de force.
+- **La règle de famille**, trouvée en regardant une vraie machine et non le code : un éditeur moderne,
+  c'est UNE fenêtre et vingt processus auxiliaires qui n'en ont aucune. Les juger un par un revenait à
+  tuer les vingt pendant que la fenêtre demandait d'enregistrer. Dès qu'un membre d'une famille a une
+  fenêtre, **personne n'est tué** : on ferme la fenêtre, les auxiliaires s'en vont avec elle.
+- **Roblox lancé APRÈS l'optimisation n'est jamais touché**, et `RobloxPlayerBeta` rejoint les jeux
+  reconnus : le Mode Jeu automatique s'enclenche dessus, et le jeu qui déclenche est passé en argument
+  — sans quoi lancer Roblox aurait fait fermer Roblox. WSL n'est pas tué mais **éteint** (`wsl --shutdown`) :
+  sa mémoire virtuelle ne se libère pas autrement.
+- **ONYX ne se tire pas dans le pied** : il n'arrête jamais le processus dont il descend. Lancé depuis
+  le terminal d'un éditeur, tuer l'éditeur l'emporterait avec lui — et les services suspendus ne
+  seraient jamais relancés.
+- **Un Mode Jeu qui meurt ne laisse plus la machine amputée.** Les services suspendus sont écrits sur le
+  disque **avant** d'être arrêtés ; au lancement suivant, ONYX relit ce marqueur et relance ce qui
+  traînait. Jusqu'ici, un plantage en pleine partie laissait l'indexation, le spouleur et SysMain
+  arrêtés jusqu'au redémarrage — sans que rien ne le signale.
+- **Trois chiffres cessent de mentir.** `sc stop` était lancé sans jamais lire son code retour : un
+  service refusé (droits, dépendances) était compté comme suspendu. Les noms contenant des espaces
+  (« Razer Chroma SDK Service ») n'étaient même pas cités correctement, donc jamais arrêtés. Et la RAM
+  était mesurée **avant** les fermetures : elle est désormais mesurée après, et le vidage des working
+  sets **épargne le jeu** — le vider renvoyait ses pages vers le fichier d'échange, d'où elles
+  revenaient en défauts de page, c'est-à-dire exactement les saccades qu'on prétendait supprimer.
+- **Deux services quittent la liste des « sondes »** après vérification : `NvContainerLocalSystem`
+  n'interroge aucun capteur (il porte l'overlay, ShadowPlay et le panneau NVIDIA — le couper en pleine
+  partie arrête l'enregistrement) et le service de CCleaner n'appartient pas à une suite de capteurs.
+- Rien n'est désinstallé, rien n'est désactivé au démarrage. Les applications ne sont pas relancées au
+  retour sur le bureau : les rouvrir sans leurs fichiers ni leurs conversations ne rendrait rien.
+- Nouveau hook `BT_FOND=1` : affiche en console ce qui **serait** fermé (nom, PID, Mo, sort réservé)
+  sans rien fermer — c'est lui qui a révélé le défaut des auxiliaires.
+
 ## Intégration — 💽 CENTRE DE STOCKAGE (branche locale, fusionné sur 15.73)
 - **Nouvelle page « Stockage »** dans la barre latérale. Onyx savait déjà nettoyer, mesurer le disque et
   repérer les jeux oubliés — mais en pièces détachées. Tout est désormais réuni en trois zones :

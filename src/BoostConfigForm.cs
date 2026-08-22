@@ -26,6 +26,7 @@ namespace BTOptimizer
 
         private readonly Action<string, int> _log;
         private readonly Dictionary<string, NeonSwitch> _sw = new Dictionary<string, NeonSwitch>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, NeonSwitch> _swApps = new Dictionary<string, NeonSwitch>(StringComparer.OrdinalIgnoreCase);
 
         public BoostConfigForm(Action<string, int> log)
         {
@@ -36,18 +37,19 @@ namespace BTOptimizer
 
         private void BuildUi()
         {
-            Text = "Mode jeu — services coupés & exclusions — ONYX";
-            ClientSize = new Size(560, 128 + GameBoost.AffectedServices.Length * 30);
+            Text = "Mode jeu — ce qui s'arrête pendant la partie — ONYX";
+            ClientSize = new Size(620, 190 + GameBoost.AffectedServices.Length * 30
+                                       + ApplisDeFond.Catalogue.Length * 46);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             Font = new Font("Segoe UI", 9f);
 
             var intro = new Label();
-            intro.SetBounds(16, 10, 528, 48);
+            intro.SetBounds(16, 10, 588, 48);
             intro.Text = "Pendant une partie, le MODE JEU suspend ces services de fond (ils sont relancés à la "
-                       + "sortie du jeu). Interrupteur OFF = exclu : le service n'est jamais touché. "
-                       + "Choix mémorisé, appliqué à la prochaine activation.";
+                       + "sortie du jeu) et ferme les applications listées plus bas. Interrupteur OFF = exclu : "
+                       + "jamais touché. Choix mémorisé, appliqué à la prochaine activation.";
             intro.ForeColor = Theme.InkDimColor;
 
             HashSet<string> excluded = GameBoost.LoadExclusions();
@@ -67,23 +69,75 @@ namespace BTOptimizer
                 name.Text = svc;
 
                 var desc = new Label();
-                desc.SetBounds(222, y + 2, 322, 20);
+                desc.SetBounds(222, y + 2, 382, 20);
                 desc.ForeColor = Theme.InkDimColor;
                 string d;
-                desc.Text = Explain.TryGetValue(svc, out d) ? d : "Service de fond";
+                desc.Text = Explain.TryGetValue(svc, out d) ? d : GameBoost.FriendlyName(svc);
 
                 Controls.AddRange(new Control[] { sw, name, desc });
                 y += 30;
             }
 
             var note = new Label();
-            note.SetBounds(16, y + 6, 528, 34);
+            note.SetBounds(16, y + 6, 588, 20);
             note.ForeColor = Theme.InkDimColor;
             note.Font = new Font("Segoe UI", 8f);
             note.Text = "Exemple : tu imprimes pendant que tu joues ? Mets « Spooler » sur OFF. "
                       + "Un service déjà désactivé par tes optimisations n'est de toute façon jamais touché.";
+            y += 32;
 
-            Controls.AddRange(new Control[] { intro, note });
+            // ---------------- Applications de fond ------------------------------------------
+            var titre = new Label();
+            titre.SetBounds(16, y, 588, 22);
+            titre.Font = new Font("Segoe UI Semibold", 10f);
+            titre.Text = "Applications fermées pendant la partie";
+            y += 24;
+
+            var sous = new Label();
+            sous.SetBounds(16, y, 588, 34);
+            sous.ForeColor = Theme.InkDimColor;
+            sous.Text = "Une fenêtre qui demande « enregistrer ? » n'est JAMAIS forcée : elle reste ouverte "
+                      + "et le journal te la nomme. Rien n'est désinstallé, rien n'est relancé tout seul au "
+                      + "retour sur le bureau.";
+            y += 38;
+
+            Controls.AddRange(new Control[] { intro, note, titre, sous });
+
+            HashSet<string> exclApps = ApplisDeFond.ExclusionsChargees();
+            foreach (ApplisDeFond.Categorie c in ApplisDeFond.Catalogue)
+            {
+                var swa = new NeonSwitch();
+                swa.SetBounds(16, y, 46, 22);
+                swa.SetCheckedSilent(!exclApps.Contains(c.Cle));   // ON = fermée pendant la partie
+                swa.Tag = c.Cle;
+                swa.CheckedChanged += (s, e) => SaveApps();
+                _swApps[c.Cle] = swa;
+
+                var nom = new Label();
+                nom.SetBounds(70, y + 1, 534, 20);
+                nom.Font = new Font("Segoe UI Semibold", 9f);
+                nom.Text = c.Libelle;
+
+                var pourquoi = new Label();
+                pourquoi.SetBounds(70, y + 20, 534, 26);
+                pourquoi.ForeColor = Theme.InkDimColor;
+                pourquoi.Font = new Font("Segoe UI", 8f);
+                pourquoi.Text = c.Pourquoi;
+
+                Controls.AddRange(new Control[] { swa, nom, pourquoi });
+                y += 46;
+            }
+        }
+
+        private void SaveApps()
+        {
+            var excluded = new List<string>();
+            foreach (KeyValuePair<string, NeonSwitch> kv in _swApps)
+                if (!kv.Value.Checked) excluded.Add(kv.Key);
+            ApplisDeFond.EnregistrerExclusions(excluded);
+            if (_log != null)
+                _log("Mode jeu : " + (ApplisDeFond.Catalogue.Length - excluded.Count)
+                     + " famille(s) d'applications fermée(s) pendant la partie (mémorisé).", 0);
         }
 
         private void SaveNow()
