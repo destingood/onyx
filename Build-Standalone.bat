@@ -31,8 +31,8 @@ echo === 2/5  Publication AUTONOME (.NET embarque, win-x64) ===
 rem Repart d'un dist propre : evite tout melange avec une publication dependante
 rem du runtime (sinon coreclr.dll resterait et fausserait la detection cote .iss).
 rem MAIS on PRESERVE les donnees utilisateur (tout ce qui commence par "bt-") :
-rem bt-license.txt (la cle Pro !), bt-trial.txt, bt-gamecache, reglages... Un rmdir
-rem brutal desactivait la licence a CHAQUE compilation.
+rem bt-gamecache, profils, reglages, memoire du Copilote... Un rmdir brutal
+rem les effacait a CHAQUE compilation.
 if exist dist (
     for /d %%D in (dist\*) do echo %%~nxD| findstr /b /i "bt-" >nul || rd /s /q "%%D"
     for %%F in (dist\*) do echo %%~nxF| findstr /b /i "bt-" >nul || del /q "%%F"

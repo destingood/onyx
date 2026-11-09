@@ -31,7 +31,6 @@ namespace BTOptimizer
         private Button _btnAuto, _btnBench, _btnMenu, _btnBoost, _btnLatMin, _btnFps500;
         private Button _btnOneClick;
         private ContextMenuStrip _menu;
-        private ToolStripMenuItem _miPro;
         private ToolStripMenuItem _miWatch;
         private HwMonitor _watchMon;
         private int _watchTick, _watchCooldown, _ramCleanCooldown, _nvlSeen = -1;
@@ -55,7 +54,6 @@ namespace BTOptimizer
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
 
-        private Panel _header;
         private readonly Font _fontBrand = new Font("Segoe UI Semibold", 16f);
         private readonly Font _fontTag = new Font("Segoe UI", 8.5f);
         private readonly Font _fontChip = new Font("Segoe UI Semibold", 7.5f);
@@ -77,8 +75,6 @@ namespace BTOptimizer
             _tweaks = Catalog.All();
             BuildUi();
             Log("Système : " + Sys.OsDescription(), 0);
-            Log("Édition : " + License.Status(), License.IsPro ? 1 : 0);
-            UpdateProUi();
             try { _hw = Hardware.Detect(); Log("Matériel : " + _hw.Summary(), 0); } catch { }
             if (!Sys.SameUser)
                 Log("Élévation via un autre compte détectée : les réglages utilisateur visent bien le profil connecté.", 2);
@@ -114,11 +110,6 @@ namespace BTOptimizer
                     RunOperation(sel, true);
                 }
             }
-            else if (choice == WelcomeForm.StartAction.StartTrial)
-            {
-                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
-                UpdateProUi();
-            }
         }
 
         // ------------------------------------------------------------------
@@ -135,11 +126,10 @@ namespace BTOptimizer
             BackColor = Color.FromArgb(245, 246, 248);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-            // En-tête : marque peinte (wordmark dégradé, puces version/édition, tagline).
+            // En-tête : marque peinte (wordmark dégradé, puce de version, tagline).
             var header = new Panel();
             header.SetBounds(0, 0, 900, 62);
             header.BackColor = HeaderBg;
-            _header = header;
             header.Paint += OnPaintHeader;
 
             _btnBoost = new Button();
@@ -280,12 +270,6 @@ namespace BTOptimizer
             // --- Application ---
             _menu.Items.Add("Guide de démarrage", null, (s, e) => ShowWelcome());
             _menu.Items.Add("À propos de ONYX", null, (s, e) => { using (var f = new AboutForm()) f.ShowDialog(this); });
-            _miPro = new ToolStripMenuItem("Activer la version Pro / entrer une clé", null, (s, e) =>
-            {
-                using (var f = new LicenseKeyForm("")) f.ShowDialog(this);
-                UpdateProUi();
-            });
-            _menu.Items.Add(_miPro);
             _menu.Items.Add("Conditions d'utilisation", null, (s, e) => { using (var f = new LicenseForm()) f.ShowDialog(this); });
             var miDark = new ToolStripMenuItem("Thème sombre", null, (s, e) =>
             {
@@ -473,12 +457,11 @@ namespace BTOptimizer
             logCard.Controls.Add(_log);
 
             _btnReco.Click += (s, e) => ApplyPreset(t => t.Recommended);
-            _btnEsport.Click += (s, e) => { if (RequirePro("Preset eSport")) ApplyPreset(t => t.Esport); };
+            _btnEsport.Click += (s, e) => ApplyPreset(t => t.Esport);
             _btnAll.Click += (s, e) => ApplyPreset(t => true);
             _btnNone.Click += (s, e) => ApplyPreset(t => false);
             _btnAuto.Click += (s, e) =>
             {
-                if (!RequirePro("Auto-tune")) return;
                 int last = Sys.LoadAutoLevel();
                 var m = new ContextMenuStrip();
                 string[] labels =
@@ -499,7 +482,6 @@ namespace BTOptimizer
             };
             _btnBench.Click += (s, e) =>
             {
-                if (!RequirePro("Preset Benchmark")) return;
                 var ids = Hardware.BenchmarkIds(_tweaks);
                 ApplyPreset(t => ids.Contains(t.Id));
                 Log("Preset Benchmark : tout sélectionné sauf les tweaks sécurité (Spectre, VBS).", 0);
@@ -513,8 +495,8 @@ namespace BTOptimizer
             _btnLatency.Click += OnLatencyClicked;
             _btnMonitor.Click += (s, e) => { using (var f = new MonitorForm()) f.ShowDialog(this); };
             _btnAutoCompare.Click += OnAutoCompareClicked;
-            _btnOverclock.Click += (s, e) => { if (RequirePro("Overclock")) using (var f = new OverclockForm(Log)) f.ShowDialog(this); };
-            _btnDns.Click += (s, e) => { if (RequirePro("DNS rapide")) using (var f = new DnsForm(Log)) f.ShowDialog(this); };
+            _btnOverclock.Click += (s, e) => { using (var f = new OverclockForm(Log)) f.ShowDialog(this); };
+            _btnDns.Click += (s, e) => { using (var f = new DnsForm(Log)) f.ShowDialog(this); };
             FormClosing += OnFormClosingCleanup;
             Resize += OnResizeToTray;
 
@@ -656,13 +638,9 @@ namespace BTOptimizer
 
             float wm = Theme.DrawWordmark(g, _fontBrand, x, y);
 
-            // Puces : version, puis édition (PRO / essai) si active.
+            // Puce de version.
             int cx = x + (int)wm + 14;
-            cx += DrawChip(g, cx, 13, "v" + AppVer, Color.FromArgb(0, 210, 130), false) + 6;
-            if (License.IsPro)
-                DrawChip(g, cx, 13, "PRO", Color.FromArgb(0, 190, 120), true);
-            else if (License.TrialActive)
-                DrawChip(g, cx, 13, "ESSAI " + License.TrialDaysLeft + " J", Color.FromArgb(235, 180, 60), false);
+            DrawChip(g, cx, 13, "v" + AppVer, Color.FromArgb(0, 210, 130), false);
 
             // Tagline bornée : la zone à droite appartient aux compteurs.
             TextRenderer.DrawText(g,
@@ -834,24 +812,6 @@ namespace BTOptimizer
                 return;
             Log("Application du pack 500 FPS (" + sel.Count + " optimisations)...", 0);
             RunOperation(sel, true);
-        }
-
-        /// <summary>Renvoie true si Pro (ou si l'utilisateur active une licence à l'instant), sinon false.</summary>
-        private bool RequirePro(string feature)
-        {
-            if (License.ProUnlocked) return true;
-            using (var f = new LicenseKeyForm(feature)) f.ShowDialog(this);
-            if (License.ProUnlocked) { UpdateProUi(); return true; }
-            return false;
-        }
-
-        private void UpdateProUi()
-        {
-            if (_header != null) _header.Invalidate();   // puce PRO / ESSAI de l'en-tête
-            if (_miPro == null) return;
-            if (License.IsPro) _miPro.Text = "Édition Pro active (" + License.Licensee + ")";
-            else if (License.TrialActive) _miPro.Text = "Essai Pro — " + License.TrialDaysLeft + " j restants · entrer une clé";
-            else _miPro.Text = "Activer la version Pro / essai gratuit";
         }
 
         private void OnAutoTune(int level)
@@ -1733,14 +1693,6 @@ namespace BTOptimizer
         private void OnGuardToggled(object sender, EventArgs e)
         {
             if (_guardEventSuppressed) return;
-            if (_chkGuard.Checked && !License.ProUnlocked)
-            {
-                if (!RequirePro("Gardien de démarrage"))
-                {
-                    _guardEventSuppressed = true; _chkGuard.Checked = false; _guardEventSuppressed = false;
-                    return;
-                }
-            }
             if (_chkGuard.Checked)
             {
                 List<Tweak> sel = Selection();

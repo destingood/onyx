@@ -8,7 +8,7 @@ namespace BTOptimizer
     /// <summary>Écran de démarrage rapide au premier lancement : oriente et propose une action immédiate.</summary>
     internal class WelcomeForm : Form
     {
-        public enum StartAction { Open, ApplyRecommended, StartTrial }
+        public enum StartAction { Open, ApplyRecommended }
         public StartAction Choice { get; private set; }
 
         private static string FlagPath { get { return AppPaths.File("bt-welcome.txt"); } }
@@ -58,20 +58,10 @@ namespace BTOptimizer
             Controls.Add(reco);
             Controls.Add(open);
 
-            if (License.CanStartTrial)
-            {
-                var trial = BigButton("★  Essai Pro gratuit de 7 jours",
-                    "Débloquer overclock, auto-tune, presets avancés et outils DNS.", 24, 324, false);
-                trial.Click += (s, e) => { Choice = StartAction.StartTrial; Close(); };
-                Controls.Add(trial);
-            }
-            else
-            {
-                var later = BigButton("Continuer", "", 24, 324, false);
-                later.Height = 40;
-                later.Click += (s, e) => { Choice = StartAction.Open; Close(); };
-                Controls.Add(later);
-            }
+            var later = BigButton("Continuer", "", 24, 324, false);
+            later.Height = 40;
+            later.Click += (s, e) => { Choice = StartAction.Open; Close(); };
+            Controls.Add(later);
 
             Theme.Apply(this);
         }

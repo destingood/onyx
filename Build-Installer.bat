@@ -25,7 +25,7 @@ echo === 2/5  Publication (.NET 10, dependant du runtime) ===
 rem Repart d'un dist propre : retire l'etat/symboles ET tout reste d'une publication
 rem AUTONOME precedente (coreclr.dll) qui ferait sauter a tort la verif .NET du .iss.
 rem MAIS on PRESERVE les donnees utilisateur (tout ce qui commence par "bt-") :
-rem bt-license.txt (la cle Pro !), bt-trial.txt, bt-gamecache, reglages...
+rem bt-gamecache, profils, reglages, memoire du Copilote...
 if exist dist (
     for /d %%D in (dist\*) do echo %%~nxD| findstr /b /i "bt-" >nul || rd /s /q "%%D"
     for %%F in (dist\*) do echo %%~nxF| findstr /b /i "bt-" >nul || del /q "%%F"
