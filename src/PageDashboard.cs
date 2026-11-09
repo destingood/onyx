@@ -17,6 +17,9 @@ namespace BTOptimizer
         private static readonly Color SerGpu = FpsUi.Gold;
         private static readonly Font GreetFont = Fonts.Make(Fonts.Marcellus, 19f, FontStyle.Regular, "Georgia");
 
+        /// <summary>Boutique — sert uniquement au bouton « Soutenir ONYX ».</summary>
+        internal const string SupportUrl = "https://fluide.gumroad.com";
+
         private readonly HwMonitor _mon = new HwMonitor();
         private readonly Timer _timer = new Timer();
         private readonly Queue<double> _cpu = new Queue<double>();
@@ -108,12 +111,23 @@ namespace BTOptimizer
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
-            var prem = FpsUi.GoldButton("◆  PASSER PRO");
+            // ONYX est gratuit : ce bouton est le seul lien vers la boutique, pour qui veut soutenir.
+            var prem = FpsUi.GoldButton("◆  SOUTENIR ONYX");
             prem.Name = "prem";
-            prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm(""));
+            prem.Click += (s, e) => OpenSupport();
             Controls.Add(prem);
 
             Resize += (s, e) => { DoLayout(); Invalidate(); };
+        }
+
+        private void OpenSupport()
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SupportUrl) { UseShellExecute = true }); }
+            catch
+            {
+                MessageBox.Show(FindForm(), "Ouvre cette adresse dans ton navigateur :\r\n" + SupportUrl,
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private Label MakeStat(int iconId, string label, string btn, Action click, int slot)
@@ -202,8 +216,7 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            string name = License.Licensee;
-            if (string.IsNullOrEmpty(name)) name = Environment.UserName;
+            string name = Environment.UserName;
             if (string.IsNullOrEmpty(name)) name = "joueur";
 
             // Le bonjour se grave en Marcellus : la page d'accueil porte la voix de la marque.

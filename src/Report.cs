@@ -44,7 +44,6 @@ namespace BTOptimizer
             var head = new StringBuilder();
             head.Append("<div class='cards'>");
             head.Append(Card("Optimisations actives", active + " / " + total));
-            head.Append(Card("Édition", Esc(License.Status())));
             head.Append(Card("Système", Esc(Sys.OsDescription())));
             head.Append(Card("Timer système", Native.CurrentTimerMs().ToString("0.0") + " ms"));
             if (hw != null)

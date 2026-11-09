@@ -211,7 +211,7 @@ namespace BTOptimizer
             foreach (Storage.Module m in _defs)
             {
                 string label = m.Glyph + "  " + m.Name + "   —   " + Storage.SafetyLabel(m.Safety)
-                             + (m.Pro ? "  ·  Pro" : "") + (m.Browse ? "  ·  présentation seule" : "");
+                             + (m.Browse ? "  ·  présentation seule" : "");
                 _modules.Items.Add(label, _st.IsEnabled(m.Id));
             }
 

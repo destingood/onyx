@@ -69,7 +69,6 @@ namespace BTOptimizer
             public string Id, Glyph, Name, Desc;
             public int Safety;
             public bool Browse;   // module de PRÉSENTATION : on montre, on ne nettoie jamais en lot
-            public bool Pro;      // réservé aux licences Pro
             public readonly List<StorageItem> Items = new List<StorageItem>();
 
             public long SizeMB
@@ -105,7 +104,7 @@ namespace BTOptimizer
                              Desc = "Fichiers récents, Jump Lists, miniatures. Rien de perdu, mais tes listes « récents » repartent à zéro." },
                 new Module { Id = "bin",     Glyph = "♻", Name = "Corbeille", Safety = SafeVerifier,
                              Desc = "Ce que tu as déjà supprimé. La vider rend la suppression définitive." },
-                new Module { Id = "winsys",  Glyph = "🪟", Name = "Windows en profondeur", Safety = SafeVerifier, Pro = true,
+                new Module { Id = "winsys",  Glyph = "🪟", Name = "Windows en profondeur", Safety = SafeVerifier,
                              Desc = "Veille prolongée, magasin de composants (WinSxS), ancienne installation, points de restauration." },
                 new Module { Id = "apps",    Glyph = "📦", Name = "Applications installées", Safety = SafePerso, Browse = true,
                              Desc = "Classées par poids réel sur le disque. Désinstallation par l'outil officiel de l'application." },
@@ -140,9 +139,6 @@ namespace BTOptimizer
                 Module m = mods[i];
                 if (progress != null) { try { progress(m.Name, i, total); } catch { } }
                 if (!st.IsEnabled(m.Id)) continue;
-                // Module réservé Pro : on ne l'analyse même pas (DISM coûte une minute) — la page
-                // affichera la carte verrouillée à partir de sa seule définition.
-                if (m.Pro && !License.ProUnlocked) continue;
                 try
                 {
                     switch (m.Id)

@@ -121,7 +121,7 @@ Name: "nvidia"; Description: "Profil pilote NVIDIA faible latence (nvidiaProfile
 ; est dans le dossier de l'app.
 ;
 ; On efface donc les DLL et le dossier « runtimes » AVANT la copie ; [Files] repose aussitôt les
-; 27 DLL réellement nécessaires. Les données de l'utilisateur (bt-*.txt, licence Pro), le
+; 27 DLL réellement nécessaires. Les données de l'utilisateur (bt-*.txt), le
 ; désinstalleur (unins000.*) et les outils tiers (tools\) ne sont pas touchés : ils ne sont ni
 ; des .dll à la racine, ni le dossier « runtimes ».
 Type: files;          Name: "{app}\*.dll"
@@ -137,7 +137,7 @@ Type: files;          Name: "{app}\createdump.exe"
 ; TOUS les utilisateurs. Le probe BT_RELEASE verifie ce dossier avant chaque publication.
 ; ANTI-FUITE — exclusion par PRÉFIXE, et non par extension.
 ; Le dossier de publication est aussi celui où le développeur SE SERT de l'app : s'y
-; accumulent la mémoire du Copilote, les faits appris, le journal, la licence, le jeton de
+; accumulent la mémoire du Copilote, les faits appris, le journal, le jeton de
 ; mise à jour. L'ancienne liste énumérait des extensions (« bt-*.txt, bt-*.csv, bt-*.md… ») :
 ; il suffisait qu'un nouveau fichier d'état apparaisse avec une extension non prévue pour
 ; qu'il parte chez TOUS les utilisateurs — c'est précisément ce qui était arrivé à
