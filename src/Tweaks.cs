@@ -1126,9 +1126,14 @@ namespace BTOptimizer
             // Stockage réservé : Windows met de côté ~7 Go en permanence pour ses mises à jour. Sur
             // un SSD de 256 Go c'est énorme. Le désactiver est OFFICIEL (DISM) et réversible ; les
             // mises à jour continuent, elles utilisent simplement l'espace libre du disque.
+            // IDENTIFIANT PROPRE. Ce réglage est arrivé avec le centre de stockage sous le même
+            // identifiant (et le même nom) que l'ancienne variante par registre, plus bas. Les deux
+            // cartes se partageaient alors une seule case dans les dictionnaires indexés par Id :
+            // l'état lu pour l'une s'affichait sur l'autre, et l'une des deux n'était jamais
+            // rafraîchie. L'ancienne garde « reserved_storage_off » (profils et journal existants).
             list.Add(new Tweak
             {
-                Id = "reserved_storage_off", Category = Cat.Stockage,
+                Id = "reserved_storage_dism", Category = Cat.Stockage,
                 Name = "Libérer le stockage réservé de Windows (~7 Go)",
                 Desc = "Windows garde en permanence plusieurs Go rien que pour ses mises à jour. Commande OFFICIELLE (DISM), réversible. Le gain apparaît après un redémarrage.",
                 Reboot = true,
@@ -1566,7 +1571,11 @@ namespace BTOptimizer
                 Id = "prefetch_off", Category = Cat.Systeme,
                 Name = "Désactiver Prefetch/Superfetch (registre) — SSD uniquement",
                 Desc = "Coupe le préchargement disque au niveau noyau. Sur SSD : moins d'écritures, aucun intérêt de préchargement. Sur disque mécanique : à ÉVITER. « Rétablir » remet la valeur 3.",
-                BackupKeys = new[] { MemMgmt + @"\PrefetchParameters" },
+                // « HKLM\ » obligatoire : MemMgmt est un chemin RELATIF à la ruche (ce qu'attend
+                // Sys.SetMachine), alors que reg.exe exige la ruche. Sans elle, l'export échouait,
+                // la vérification aussi, et le journal concluait « clé absente (rien à sauvegarder) » :
+                // ce réglage partait sans aucune sauvegarde, sans que rien ne le signale.
+                BackupKeys = new[] { @"HKLM\" + MemMgmt + @"\PrefetchParameters" },
                 Apply = () =>
                 {
                     Sys.SetMachine(MemMgmt + @"\PrefetchParameters", "EnablePrefetcher", 0, RegistryValueKind.DWord);
@@ -1741,8 +1750,8 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "reserved_storage_off", Category = Cat.Rapidite, Reboot = true,
-                Name = "Libérer le stockage réservé de Windows (~7 Go)",
-                Desc = "Indique à Windows de ne plus réserver d'espace disque pour les mises à jour (ShippedWithReserves=0). Effet complet après la prochaine mise à jour cumulative. « Rétablir » réactive la réserve.",
+                Name = "Ne plus réserver d'espace disque pour les mises à jour (registre)",
+                Desc = "Variante par registre (ShippedWithReserves=0) : indique à Windows de ne plus réserver d'espace disque pour ses mises à jour. Effet complet après la prochaine mise à jour cumulative. Pour agir par la commande officielle, sans attendre cette mise à jour, voir « Libérer le stockage réservé de Windows » dans la catégorie Stockage. « Rétablir » réactive la réserve.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" },
                 Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 1, RegistryValueKind.DWord),
