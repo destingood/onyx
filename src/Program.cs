@@ -1409,33 +1409,15 @@ namespace BTOptimizer
                 Console.WriteLine("  Profil/gardien ERREUR : " + ex.Message);
             }
 
-            Console.WriteLine("Commercial (EULA / licence / fenêtres)...");
+            Console.WriteLine("EULA / À propos (fenêtres)...");
             try
             {
                 Console.WriteLine("  EULA version acceptée : " + Sys.EulaAcceptedVersion());
-                string tok = Environment.GetEnvironmentVariable("BT_LICENSE");
-                if (!string.IsNullOrEmpty(tok))
-                {
-                    bool ok = License.Activate(tok, false);
-                    Console.WriteLine("  Activation clé test : " + (ok ? "VALIDE -> " + License.Status() : "REJETÉE"));
-                    if (!ok) errors++;
-                    // clé falsifiée : doit être rejetée
-                    bool bad = License.Activate("ZmFrZQ==", false);
-                }
-                Console.WriteLine("  Édition : " + License.Status());
-                if (License.CanStartTrial)
-                {
-                    License.StartTrial();
-                    Console.WriteLine("  Essai démarré : actif=" + License.TrialActive + " jours=" + License.TrialDaysLeft + " -> " + License.Status());
-                    if (!License.TrialActive || License.TrialDaysLeft != 7) errors++;
-                }
-                else Console.WriteLine("  Essai : " + (License.TrialUsed ? License.Status() : "non applicable (Pro)"));
                 using (var f = new LicenseForm()) { f.CreateControl(); }
                 using (var f = new AboutForm()) { f.CreateControl(); }
-                using (var f = new LicenseKeyForm("Test")) { f.CreateControl(); }
-                Console.WriteLine("  UI License/About/KeyForm : construites OK.");
+                Console.WriteLine("  UI EULA/About : construites OK.");
             }
-            catch (Exception ex) { errors++; Console.WriteLine("  Commercial ERREUR : " + ex.Message); }
+            catch (Exception ex) { errors++; Console.WriteLine("  EULA/About ERREUR : " + ex.Message); }
 
             Console.WriteLine("Détection des composants...");
             try
@@ -1508,7 +1490,7 @@ namespace BTOptimizer
                 Console.WriteLine("  UI AutoInstallForm : construite OK.");
                 using (var f = new BloatRemoveForm(delegate(string m, int l) { })) f.CreateControl();
                 Console.WriteLine("  UI BloatRemoveForm : construite OK (dé-bloatware).");
-                using (var f = new SimpleOptiForm(Catalog.All(), () => false, delegate(string m, int l) { })) f.CreateControl();
+                using (var f = new SimpleOptiForm(Catalog.All(), delegate(string m, int l) { })) f.CreateControl();
                 Console.WriteLine("  UI SimpleOptiForm : construite OK.");
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Fonctions portées ERREUR : " + ex.Message); }
@@ -2093,7 +2075,6 @@ namespace BTOptimizer
                 case "WindowLagForm": return new WindowLagForm(log);
                 case "HelpNavForm": return new HelpNavForm(log);
                 case "AboutForm": return new AboutForm();
-                case "LicenseKeyForm": return new LicenseKeyForm("");
                 case "SpeedTestForm": return new SpeedTestForm(log);
                 case "ControllerForm": return new ControllerForm(log);
                 case "StatsOverlayForm": return new StatsOverlayForm(log);
@@ -2316,7 +2297,6 @@ namespace BTOptimizer
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("WindowLagForm", () => new WindowLagForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("HelpNavForm", () => new HelpNavForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("AboutForm", () => new AboutForm(), true),
-                System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("LicenseKeyForm", () => new LicenseKeyForm(""), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("SpeedTestForm", () => new SpeedTestForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("ControllerForm", () => new ControllerForm(log), true),
                 System.Tuple.Create<string, Func<System.Windows.Forms.Form>, bool>("StatsOverlayForm", () => new StatsOverlayForm(log), true),

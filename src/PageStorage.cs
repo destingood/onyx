@@ -219,7 +219,7 @@ namespace BTOptimizer
             // Sélection par défaut : tout ce que le cran de sûreté configuré autorise.
             _selected.Clear();
             foreach (Storage.Module m in _modules)
-                if (!m.Browse && m.Safety <= _st.MaxSafety && m.HasActions && Allowed(m))
+                if (!m.Browse && m.Safety <= _st.MaxSafety && m.HasActions)
                     _selected.Add(m.Id);
 
             RebuildCards();
@@ -227,8 +227,6 @@ namespace BTOptimizer
             SetStatus(null);
             Invalidate();
         }
-
-        private bool Allowed(Storage.Module m) { return !m.Pro || License.ProUnlocked; }
 
         private void RebuildCards()
         {
@@ -244,7 +242,7 @@ namespace BTOptimizer
             {
                 if (!_st.IsEnabled(m.Id)) continue;
                 if (m.Browse) { browse.Add(m); continue; }
-                if (m.Items.Count == 0 && Allowed(m)) continue;   // rien à récupérer : on n'encombre pas
+                if (m.Items.Count == 0) continue;   // rien à récupérer : on n'encombre pas
                 clean.Add(m);
             }
 
@@ -273,13 +271,12 @@ namespace BTOptimizer
         // --- carte « module nettoyable » ---
         private Control MakeCleanCard(Storage.Module m)
         {
-            bool locked = !Allowed(m);
             var card = new Panel();
             card.BackColor = Color.Transparent;
             card.Tag = new CardTag { Section = "clean", Height = CardCleanH };
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
-            var glyph = FpsUi.Text(m.Glyph, FpsUi.GlyphL, locked ? FpsUi.Dim2 : FpsUi.Ink);
+            var glyph = FpsUi.Text(m.Glyph, FpsUi.GlyphL, FpsUi.Ink);
             glyph.AutoSize = false; glyph.SetBounds(14, 12, 48, 48);
             glyph.TextAlign = ContentAlignment.MiddleCenter;
             card.Controls.Add(glyph);
@@ -288,14 +285,12 @@ namespace BTOptimizer
             name.AutoSize = false; name.SetBounds(66, 16, 210, 34);
             card.Controls.Add(name);
 
-            bool big = !locked && m.FreeableMB > 0;
+            bool big = m.FreeableMB > 0;
             string sizeTxt;
-            // Pas d'emoji cadenas : la police des titres (Ubuntu) n'a pas de repli emoji (tofu).
-            if (locked) sizeTxt = "réservé à Pro";
-            else if (m.FreeableMB > 0) sizeTxt = Storage.Human(m.FreeableMB);
+            if (m.FreeableMB > 0) sizeTxt = Storage.Human(m.FreeableMB);
             else if (m.HasActions) sizeTxt = "gain mesuré après coup";
             else sizeTxt = "rien à récupérer";
-            var size = FpsUi.Text(sizeTxt, big ? FpsUi.Num : FpsUi.H3, locked ? FpsUi.Dim2 : FpsUi.Ink);
+            var size = FpsUi.Text(sizeTxt, big ? FpsUi.Num : FpsUi.H3, FpsUi.Ink);
             size.AutoSize = false; size.SetBounds(66, 50, 210, 30);
             card.Controls.Add(size);
 
@@ -319,20 +314,14 @@ namespace BTOptimizer
 
             var tog = new ToggleSwitch();
             tog.Location = new Point(CardW - 62, 18);
-            tog.Locked = locked || !m.HasActions;
-            tog.On = !locked && _selected.Contains(m.Id);
+            tog.Locked = !m.HasActions;
+            tog.On = _selected.Contains(m.Id);
             Storage.Module cap = m;
             tog.Toggled += delegate
             {
                 if (tog.On) _selected.Add(cap.Id); else _selected.Remove(cap.Id);
                 SetStatus(null);
             };
-            if (locked)
-            {
-                tog.Click += delegate { if (Pro("Windows en profondeur")) Scan(); };
-                var lockTip = new ToolTip();
-                lockTip.SetToolTip(tog, "Réservé à ONYX Pro");
-            }
             card.Controls.Add(tog);
             return card;
         }
@@ -408,7 +397,6 @@ namespace BTOptimizer
         {
             if (m.Id == "apps")
             {
-                if (!Pro("Inventaire complet des applications")) return;
                 var apps = new List<Storage.AppEntry>();
                 foreach (Storage.StorageItem it in m.Items) { var a = it.Tag as Storage.AppEntry; if (a != null) apps.Add(a); }
                 Host.OpenDialog(new StorageAppsForm(Host.Log, apps));
@@ -441,7 +429,7 @@ namespace BTOptimizer
             var list = new List<Storage.StorageItem>();
             foreach (Storage.Module m in _modules)
             {
-                if (m.Browse || !_selected.Contains(m.Id) || !Allowed(m)) continue;
+                if (m.Browse || !_selected.Contains(m.Id)) continue;
                 foreach (Storage.StorageItem it in m.Items)
                     if (it.Free != null && it.Safety <= Storage.SafeVerifier) list.Add(it);
             }
@@ -511,13 +499,6 @@ namespace BTOptimizer
             }
             _st = StorageSettings.Load();
             Scan();
-        }
-
-        private bool Pro(string feat)
-        {
-            if (License.ProUnlocked) return true;
-            using (var f = new LicenseKeyForm(feat)) f.ShowDialog(FindForm());
-            return License.ProUnlocked;
         }
 
         private void SetBusy(bool busy)
@@ -602,7 +583,7 @@ namespace BTOptimizer
         {
             long mb = 0;
             foreach (Storage.Module m in _modules)
-                if (!m.Browse && _selected.Contains(m.Id) && Allowed(m)) mb += m.FreeableMB;
+                if (!m.Browse && _selected.Contains(m.Id)) mb += m.FreeableMB;
             return mb;
         }
 

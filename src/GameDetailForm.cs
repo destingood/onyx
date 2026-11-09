@@ -14,8 +14,8 @@ namespace BTOptimizer
     /// <summary>
     /// Fiche détaillée d'un jeu (au clic depuis la page Jeux) : onglets, grande jaquette à droite,
     /// deux niveaux de boost avec leur compte RÉEL à gauche, priorité CPU dédiée (IFEO),
-    /// lancer / ouvrir le dossier. Le boost léger reste gratuit ; le complet (auto-tune matériel)
-    /// est une fonction Pro. Tout est confirmé, sauvegardé et réversible.
+    /// lancer / ouvrir le dossier. Boost léger (réglages recommandés) ou complet (auto-tune matériel).
+    /// Tout est confirmé, sauvegardé et réversible.
     /// </summary>
     internal class GameDetailForm : Form
     {
@@ -32,7 +32,7 @@ namespace BTOptimizer
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
             Text = "ONYX — " + g.Name;
             // Mise en page « fiche pleine largeur » : onglets en haut, optimisations à gauche,
-            // grande jaquette à droite, appel Pro en bas — comme une page, pas une boîte.
+            // grande jaquette à droite — comme une page, pas une boîte.
             ClientSize = new Size(1000, 620);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -66,7 +66,7 @@ namespace BTOptimizer
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
-        private Button _back, _mode, _launch, _folder, _pro, _close, _hide, _uninstall;
+        private Button _back, _mode, _launch, _folder, _close, _hide, _uninstall;
 
         private void BuildActions()
         {
@@ -99,13 +99,6 @@ namespace BTOptimizer
             Controls.Add(_folder);
 
             BuildBoosts();
-
-            if (!License.ProUnlocked)
-            {
-                _pro = FpsUi.GoldButton("◆  PASSER PRO");
-                _pro.Click += (s, e) => { using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this); };
-                Controls.Add(_pro);
-            }
 
             // Deux actions VOLONTAIREMENT distinctes : masquer ne touche à rien sur le disque,
             // désinstaller délègue au désinstalleur officiel. Ne jamais confondre les deux.
@@ -145,7 +138,6 @@ namespace BTOptimizer
             if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
             if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);
 
-            if (_pro != null) _pro.SetBounds(W - Pad - CoverW, H - 62, CoverW, 40);
             if (_close != null) _close.SetBounds(Pad, H - 62, 120, 40);
             if (_hide != null) _hide.SetBounds(Pad + 132, H - 62, 130, 40);
             if (_uninstall != null) _uninstall.SetBounds(Pad + 274, H - 62, 150, 40);
@@ -305,7 +297,6 @@ namespace BTOptimizer
                 {
                     if (_nLight != null) _nLight.Text = light.ToString();
                     if (_nFull != null) _nFull.Text = full.ToString();
-                    if (_btnFull != null && !License.ProUnlocked) _btnFull.Text = "🔒  BOOST COMPLET";
                 })); }
                 catch { }
             });
@@ -320,14 +311,6 @@ namespace BTOptimizer
 
         private void ApplyBoost(bool full)
         {
-            // Le boost complet, c'est l'auto-tune matériel : fonction Pro, comme ailleurs dans l'app.
-            if (full && !License.ProUnlocked)
-            {
-                using (var f = new LicenseKeyForm("Boost complet")) f.ShowDialog(this);
-                if (!License.ProUnlocked) return;
-                if (_btnFull != null) _btnFull.Text = "BOOST COMPLET";
-            }
-
             System.Collections.Generic.List<Tweak> list;
             try { list = full ? FullBoostList() : Catalog.All().Where(t => t.Recommended).ToList(); }
             catch { return; }

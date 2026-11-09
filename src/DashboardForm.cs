@@ -184,7 +184,7 @@ namespace BTOptimizer
 
             var opti = new ToolStripMenuItem("🚀  Optimisations");
             opti.DropDownItems.Add("🛠 Optimiseur complet (presets, auto-tune, gardien, sauvegarde…)", null, (s, e) => OpenDialog(new MainForm()));
-            opti.DropDownItems.Add("🎚 Mode SIMPLE (interrupteurs immédiats)", null, (s, e) => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log)));
+            opti.DropDownItems.Add("🎚 Mode SIMPLE (interrupteurs immédiats)", null, (s, e) => OpenDialog(new SimpleOptiForm(Catalog.All(), Log)));
             opti.DropDownItems.Add("⚡ Config auto adaptée à mon PC (+ preuve)", null, (s, e) => OpenDialog(new AutoConfigForm(Log)));
             opti.DropDownItems.Add(new ToolStripSeparator());
             opti.DropDownItems.Add("💾 Exporter mon profil…", null, (s, e) => ExportProfile());
@@ -346,7 +346,6 @@ namespace BTOptimizer
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("🔄  Vérifier les mises à jour d'ONYX", null, (s, e) => ShowUpdateCheck());
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
-            m.Add("🔑  Activer Pro / entrer une clé", null, (s, e) => OpenDialog(new LicenseKeyForm("")));
         }
 
         /// <summary>Vérification des mises à jour d'ONYX, à la demande. Si une version plus récente
@@ -1617,7 +1616,7 @@ namespace BTOptimizer
                 case 1: // Optimisations
                     p.SetTools(
                         Tool("🛠 Optimiseur complet", () => OpenDialog(new MainForm())),
-                        Tool("🎚 Mode SIMPLE", () => OpenDialog(new SimpleOptiForm(Catalog.All(), () => License.ProUnlocked, Log))),
+                        Tool("🎚 Mode SIMPLE", () => OpenDialog(new SimpleOptiForm(Catalog.All(), Log))),
                         Tool("⚡ Config auto", () => OpenDialog(new AutoConfigForm(Log))),
                         Tool("🔁 Restauration", () => OpenDialog(new RestoreForm(Log))));
                     break;

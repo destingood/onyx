@@ -38,6 +38,22 @@ correction est couverte par un test de logique. Ce qui demandait un essai réel 
   du plan dans les deux langues, bascule, tri des entrées d'un profil). Le harnais ne s'exécute que
   sous Windows : ici, il compile, et la même logique passe 16/16 dans un projet console.
 
+## Intégration — 🔓 Fin du système de clés : ONYX est entièrement gratuit (branche locale)
+- **Plus d'édition Pro, plus de clé, plus d'essai 7 jours.** Tout ce qui était verrouillé est ouvert à
+  tout le monde : ⚡ auto-tune adapté au matériel, presets eSport et Benchmark, boost complet par jeu,
+  overclock GPU, DNS rapide, gardien de démarrage, les optimisations eSport de la page Optimisations,
+  le module « Windows en profondeur » et l'inventaire complet des applications du centre de stockage.
+- **Retirés de l'app** : la vérification de licence (`License.cs`), la fenêtre d'activation, l'ID de
+  l'ordinateur (`MachineId.cs`), les cadenas, la puce PRO / ESSAI de l'en-tête, les entrées de menu
+  « Activer la version Pro », le bloc Licence de « Mon compte » et la ligne « Édition » du rapport HTML.
+- **Le bouton doré de l'accueil devient « ◆ SOUTENIR ONYX »** : il ouvre la boutique dans le
+  navigateur et ne débloque rien.
+- **Outils vendeur** : le générateur de clés (`seller/`, `Generateur-de-cles.bat`) est supprimé ;
+  `seller/sign.ps1` (signature du binaire) reste.
+- Les anciens fichiers `bt-license.txt` / `bt-trial.txt` éventuellement présents sont simplement ignorés.
+- Landing, site, `llms.txt`, plan de lancement et posts alignés : plus de grille tarifaire ni de FAQ
+  sur les clés.
+
 ## Intégration — 🎮 MODE JEU : fermer ce qui tourne pour rien (branche locale)
 - Le Mode Jeu savait suspendre les services de Windows. Sur une machine de travail, ce ne sont pas eux
   qui pèsent : ce sont les **applications restées ouvertes**. Sur la machine de référence, le relevé
