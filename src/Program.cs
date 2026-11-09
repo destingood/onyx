@@ -1220,9 +1220,34 @@ namespace BTOptimizer
                 string dirty2 = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe", "bt-memoire.txt", "BTOptimizer.pdb" }, out gr, out mi);
                 bool rg6 = gr == 1 && mi == 1 && dirty2.Contains("bt-memoire.txt"); if (rg6) ok63++; Console.WriteLine((rg6 ? "OK  " : "FAIL") + "  publication : melange -> 1 grave + 1 mineur, nommes");
 
+                // Catalogue et moteur : garde-fous des défauts trouvés à l'audit du moteur.
+                int ok64 = 0;
+                var catAll = Catalog.All();
+                var idsVus = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                string idDouble = null, cleSansRuche = null;
+                foreach (Tweak tw in catAll)
+                {
+                    if (!idsVus.Add(tw.Id ?? "")) idDouble = tw.Id;
+                    foreach (string bk in tw.BackupKeys)
+                        if (!bk.StartsWith("HKLM\\", StringComparison.OrdinalIgnoreCase) && !bk.StartsWith("HKCU\\", StringComparison.OrdinalIgnoreCase))
+                            cleSansRuche = tw.Id + " -> " + bk;
+                }
+                bool mo1 = idDouble == null; if (mo1) ok64++; Console.WriteLine((mo1 ? "OK  " : "FAIL") + "  catalogue : identifiants uniques" + (mo1 ? "" : " (en double : " + idDouble + ")"));
+                bool mo2 = cleSansRuche == null; if (mo2) ok64++; Console.WriteLine((mo2 ? "OK  " : "FAIL") + "  catalogue : chaque cle de sauvegarde nomme sa ruche" + (mo2 ? "" : " (" + cleSansRuche + ")"));
+                bool mo3 = Sys.ParseSchemeGuid("Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)") == "381b4222-f694-41f0-9685-ff5bb260df2e"
+                    && Sys.ParseSchemeGuid("GUID du mode de gestion de l'alimentation : 381B4222-F694-41F0-9685-FF5BB260DF2E  (Utilisation normale)") == "381b4222-f694-41f0-9685-ff5bb260df2e"
+                    && Sys.ParseSchemeGuid("") == null && Sys.ParseSchemeGuid(null) == null; if (mo3) ok64++; Console.WriteLine((mo3 ? "OK  " : "FAIL") + "  alimentation : plan actif lu quelle que soit la langue");
+                bool mo4 = Sys.IsPerfPlan(Sys.HighPerfGuid) && Sys.IsPerfPlan("E9A42B02-d5df-448d-aa00-03f14749eb61")
+                    && !Sys.IsPerfPlan("381b4222-f694-41f0-9685-ff5bb260df2e") && !Sys.IsPerfPlan(null)
+                    && !Sys.SetActivePowerProfile(null) && !Sys.SetActivePowerProfile("pas un guid"); if (mo4) ok64++; Console.WriteLine((mo4 ? "OK  " : "FAIL") + "  alimentation : pas de bascule inutile ni vers un plan invalide");
+                bool mo5 = Profile.SafeEntry("bt-memoire.txt") == "bt-memoire.txt" && Profile.SafeEntry("bt-savoir/doc.pdf") != null
+                    && Profile.SafeEntry("version.dll") == null && Profile.SafeEntry("BTOptimizer.runtimeconfig.json") == null
+                    && Profile.SafeEntry("../ailleurs/bt-a.txt") == null && Profile.SafeEntry("bt-savoir/../x.dll") == null
+                    && Profile.SafeEntry("C:/bt-a.txt") == null && Profile.SafeEntry("autre/bt-a.txt") == null; if (mo5) ok64++; Console.WriteLine((mo5 ? "OK  " : "FAIL") + "  profil : l'import ne restaure que ce qu'un export produit");
+
                 int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63;
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6 + 5;
+                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63 + ok64;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

@@ -468,8 +468,33 @@ namespace BTOptimizer
         {
             NativeResult r = Run(Sys32("powercfg.exe"), "/getactivescheme");
             if (r.ExitCode != 0) return null;
-            Match m = GuidRx.Match(r.Output ?? "");
-            return m.Success ? m.Value : null;
+            return ParseSchemeGuid(r.Output);
+        }
+
+        /// <summary>
+        /// Analyse PURE de la sortie de « powercfg /getactivescheme » : rend le GUID du plan, ou
+        /// null. On cherche le GUID lui-même et jamais le libellé qui le précède — ce libellé est
+        /// traduit (« Power Scheme GUID: » en anglais, « GUID du mode de gestion de
+        /// l'alimentation : » en français), le GUID ne l'est pas.
+        /// </summary>
+        public static string ParseSchemeGuid(string powercfgOutput)
+        {
+            Match m = GuidRx.Match(powercfgOutput ?? "");
+            return m.Success ? m.Value.ToLowerInvariant() : null;
+        }
+
+        /// <summary>Plan « Performances élevées » intégré à Windows (absent de certains PC récents).</summary>
+        public const string HighPerfGuid = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
+
+        /// <summary>Vrai si le plan est déjà « Performances élevées » ou « Performances ultimes »
+        /// (le plan intégré ou la copie à GUID fixe qu'ONYX en fait) : basculer dessus ne
+        /// rapporterait rien, et depuis « ultimes » ce serait même un recul. PUR.</summary>
+        public static bool IsPerfPlan(string guid)
+        {
+            if (string.IsNullOrEmpty(guid)) return false;
+            return guid.Equals(HighPerfGuid, StringComparison.OrdinalIgnoreCase)
+                || guid.Equals(UltimateSrc, StringComparison.OrdinalIgnoreCase)
+                || guid.Equals(UltimateClone, StringComparison.OrdinalIgnoreCase);
         }
 
         public static void EnableUltimatePlan()
@@ -1329,9 +1354,13 @@ namespace BTOptimizer
             {
                 if (!File.Exists(RamCleanerPath)) return false;
                 string[] lines = File.ReadAllLines(RamCleanerPath);
-                if (lines.Length > 0 && lines[0] == "1")
+                if (lines.Length > 0 && lines[0].Trim() == "1")
                 {
-                    if (lines.Length > 1) int.TryParse(lines[1], out thresholdMB);
+                    // int.TryParse met sa sortie à 0 quand il échoue : un seuil illisible devenait
+                    // « 0 Mo », et le nettoyeur, bien que coché, ne se déclenchait plus jamais
+                    // (la RAM libre n'est jamais inférieure à zéro). On garde alors le défaut.
+                    int lu;
+                    if (lines.Length > 1 && int.TryParse(lines[1].Trim(), out lu) && lu > 0) thresholdMB = lu;
                     return true;
                 }
             }
@@ -1361,23 +1390,25 @@ namespace BTOptimizer
             try { Process.GetProcessById(pid).PriorityClass = prio; } catch { }
         }
 
+        /// <summary>GUID du plan d'alimentation actif, ou null s'il est illisible.
+        /// L'ancienne version cherchait le texte « GUID de…: » dans la sortie de powercfg. Ce
+        /// libellé n'existe ni en anglais (« Power Scheme GUID: ») ni en français (« GUID du
+        /// mode… ») : elle rendait donc toujours null, et l'appelant — qui bascule le plan au
+        /// lancement d'un jeu — ne savait jamais quel plan remettre à la fermeture.</summary>
         public static string GetActivePowerProfile()
         {
-            try
-            {
-                var p = Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/getactivescheme", UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true });
-                string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit();
-                var m = Regex.Match(output, @"GUID de.*:\s*([0-9a-f\-]{36})", RegexOptions.IgnoreCase);
-                if (m.Success) return m.Groups[1].Value;
-            }
-            catch { }
-            return null;
+            try { return GetActiveSchemeGuid(); }
+            catch { return null; }
         }
 
-        public static void SetActivePowerProfile(string guid)
+        /// <summary>Active un plan d'alimentation. Rend VRAI seulement si powercfg l'a accepté :
+        /// un plan absent de la machine (« Performances élevées » n'existe pas sur tous les PC
+        /// récents) est refusé, et l'appelant ne doit pas annoncer une bascule qui n'a pas eu lieu.</summary>
+        public static bool SetActivePowerProfile(string guid)
         {
-            try { Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/setactive " + guid, UseShellExecute = false, CreateNoWindow = true }).WaitForExit(); } catch { }
+            if (string.IsNullOrEmpty(guid) || !GuidRx.IsMatch(guid)) return false;
+            try { return Run(Sys32("powercfg.exe"), "/setactive " + guid, 20000).ExitCode == 0; }
+            catch { return false; }
         }
 
         public static string GameAffinityPath { get { return AppPaths.File("bt-game-affinity.txt"); } }

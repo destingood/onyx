@@ -4,6 +4,40 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Intégration — 🔧 MOTEUR D'OPTIMISATIONS : cinq défauts trouvés à la lecture (branche locale)
+
+Audit fait sans machine Windows : chaque défaut ci-dessous se démontre par le code seul, et chaque
+correction est couverte par un test de logique. Ce qui demandait un essai réel n'a pas été touché.
+
+- **Le plan d'alimentation n'était jamais remis après la partie.** Quand un jeu à affinité réglée
+  démarrait, ONYX basculait sur « Performances élevées » après avoir noté le plan actif — par un motif
+  qui cherchait « GUID de…: » dans la sortie de `powercfg`. Ce libellé n'existe ni en anglais
+  (« Power Scheme GUID: ») ni en français (« GUID du mode… ») : le plan d'origine restait inconnu, et
+  le PC gardait « Performances élevées » pour de bon. Un utilisateur en « Performances ultimes » était
+  même rétrogradé. Le GUID est maintenant lu directement, quelle que soit la langue.
+- **Trois garde-fous autour de cette bascule.** Elle n'a plus lieu si le plan actif est illisible (on
+  ne saurait pas revenir) ni s'il est déjà « élevées » ou « ultimes ». Le journal n'annonce plus une
+  bascule que `powercfg` a refusée — le plan « Performances élevées » manque sur certains PC récents.
+  Et fermer l'optimiseur en pleine partie remet le plan d'origine, au lieu de l'oublier.
+- **Deux réglages différents portaient le même identifiant.** « Libérer le stockage réservé » existait
+  deux fois, sous le même nom : la commande DISM (Stockage) et l'ancienne variante par registre
+  (Rapidité). Les deux cartes se partageaient une seule case : l'état de l'une s'affichait sur
+  l'autre — DISM montré « actif » sans avoir été lancé — et l'autre carte n'était jamais rafraîchie.
+  La commande DISM reçoit son identifiant (`reserved_storage_dism`), la variante par registre garde le
+  sien et un nom qui dit ce qu'elle est.
+- **« Désactiver Prefetch » partait sans sauvegarde.** Sa clé de sauvegarde n'avait pas de ruche
+  (`SYSTEM\…` au lieu de `HKLM\SYSTEM\…`) : `reg export` la refusait, et le journal concluait
+  « clé absente (rien à sauvegarder) ».
+- **L'import de profil acceptait n'importe quel fichier.** Le zip était extrait tel quel dans le
+  dossier de l'application : un « profil » reçu d'un tiers pouvait y déposer une DLL, chargée ensuite
+  par une app lancée en administrateur. L'import ne restaure plus que ce qu'un export produit
+  (`bt-*.txt`, `bt-*.md`, `bt-savoir/…`).
+- **Le nettoyeur de RAM automatique pouvait rester coché sans jamais agir** : un seuil illisible dans
+  son fichier devenait 0 Mo. Le défaut (1024 Mo) est conservé.
+- Harnais : 5 vérifications ajoutées (identifiants uniques, ruche de chaque clé de sauvegarde, lecture
+  du plan dans les deux langues, bascule, tri des entrées d'un profil). Le harnais ne s'exécute que
+  sous Windows : ici, il compile, et la même logique passe 16/16 dans un projet console.
+
 ## Intégration — 🔓 Fin du système de clés : ONYX est entièrement gratuit (branche locale)
 - **Plus d'édition Pro, plus de clé, plus d'essai 7 jours.** Tout ce qui était verrouillé est ouvert à
   tout le monde : ⚡ auto-tune adapté au matériel, presets eSport et Benchmark, boost complet par jeu,

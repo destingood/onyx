@@ -536,6 +536,14 @@ namespace BTOptimizer
             // Arrêt du timer AVANT tout : plus aucun tick (auto-boost / gardien) pendant la fermeture.
             try { if (_uiTimer != null) { _uiTimer.Stop(); _uiTimer.Dispose(); _uiTimer = null; } } catch { }
             try { UnregisterHotKey(Handle, HotkeyBoostId); } catch { }
+            // Le plan d'alimentation basculé pour un jeu n'est remis que par le tick du gardien —
+            // qu'on vient d'arrêter. Fermer cette fenêtre en pleine partie laissait donc le PC en
+            // « Performances élevées » pour de bon. On le remet ici, tant qu'on sait encore lequel.
+            try
+            {
+                if (_originalPowerProfile != null) { Sys.SetActivePowerProfile(_originalPowerProfile); _originalPowerProfile = null; }
+            }
+            catch { }
             if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string m, int l) { });
             Native.SetTimer1ms(false);
             try { Crosshair.Hide(); } catch { }   // retire l'overlay viseur
@@ -1633,9 +1641,22 @@ namespace BTOptimizer
 
                             if (_originalPowerProfile == null)
                             {
-                                _originalPowerProfile = Sys.GetActivePowerProfile();
-                                Sys.SetActivePowerProfile("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"); // High Performance
-                                Log("Profil d'alimentation basculé sur Performances (Core Parking désactivé).", 1);
+                                // On ne bascule QUE si l'on saura revenir. Avant, le plan actif
+                                // était lu par un motif qui ne correspondait à aucune langue de
+                                // Windows : il restait inconnu, la bascule se faisait quand même,
+                                // et le PC gardait « Performances élevées » après la partie.
+                                string avant = Sys.GetActivePowerProfile();
+                                if (avant == null)
+                                    Log("Plan d'alimentation actif illisible : je ne le change pas (je ne saurais pas le remettre après la partie).", 2);
+                                else if (Sys.IsPerfPlan(avant))
+                                { /* déjà en performances élevées ou ultimes : rien à gagner, rien à remettre */ }
+                                else if (Sys.SetActivePowerProfile(Sys.HighPerfGuid))
+                                {
+                                    _originalPowerProfile = avant;
+                                    Log("Plan d'alimentation basculé sur « Performances élevées » le temps de la partie.", 1);
+                                }
+                                else
+                                    Log("Plan « Performances élevées » indisponible sur ce PC : plan d'alimentation laissé tel quel.", 2);
                             }
                         }
                     }
@@ -1645,9 +1666,11 @@ namespace BTOptimizer
                         _activeGameName = null;
                         if (_originalPowerProfile != null)
                         {
-                            Sys.SetActivePowerProfile(_originalPowerProfile);
+                            bool remis = Sys.SetActivePowerProfile(_originalPowerProfile);
                             _originalPowerProfile = null;
-                            Log("Profil d'alimentation restauré.", 0);
+                            Log(remis ? "Plan d'alimentation d'origine restauré."
+                                      : "Le plan d'alimentation d'origine n'a pas pu être remis : vérifie-le dans les options d'alimentation de Windows.",
+                                remis ? 0 : 2);
                         }
                     }
                     // ------------------------------------
