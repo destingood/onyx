@@ -47,6 +47,8 @@
     <Compile Include="..\src\Preuve.cs" />
     <!-- Topologie : choix des cœurs du jeu (pur). La lecture machine vit dans TopologieMachine.cs. -->
     <Compile Include="..\src\Topologie.cs" />
+    <!-- Profil par jeu : décision et état (pur). La machine vit dans ProfilJeuMachine.cs. -->
+    <Compile Include="..\src\ProfilJeu.cs" />
     <!-- Dépendance d'InventaireServices : la formule du pourcentage de processeur, écrite
          une seule fois. La recopier ici ferait diverger deux calculs censés dire la même chose. -->
     <Compile Include="..\src\SvcHost.cs" />

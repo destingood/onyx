@@ -78,6 +78,7 @@ namespace BTOptimizer.Tests
             ChaineEntreeTests.Tout();
             PreuveTests.Tout();
             TopologieTests.Tout();
+            ProfilJeuTests.Tout();
             return Banc.Bilan();
         }
     }
