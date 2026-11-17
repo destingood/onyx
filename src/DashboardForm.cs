@@ -673,9 +673,6 @@ namespace BTOptimizer
                     //    (indexation, spouleur, SysMain) restaient arretes jusqu au redemarrage, sans
                     //    que rien ne le signale. Le marqueur laisse sur le disque nous dit lesquels.
                     try { GameBoost.Soigne(Log); } catch { }
-                    // 0 septies) Profil de jeu resté actif (ONYX fermé pendant une partie) : plan
-                    //    d'alimentation d'origine rétabli.
-                    try { ProfilJeu.Soigne(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;
@@ -1296,6 +1293,8 @@ namespace BTOptimizer
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
+            // Plan d'alimentation d'origine rétabli tout de suite (sinon : au lancement suivant).
+            try { ProfilJeu.Arrete(null); } catch { }
             // La recherche de réseaux ne doit JAMAIS survivre à l'app : sans elle, la carte ne se
             // reconnecte pas toute seule. Rétabli ici, et de nouveau au lancement si on meurt avant.
             try { if (WifiScan.GeleeParNous() != null) WifiScan.Degeler(null); } catch { }

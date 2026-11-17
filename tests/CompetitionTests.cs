@@ -14,19 +14,19 @@ namespace BTOptimizer.Tests
             var plein = new Competition.Etat
             {
                 Active = new DateTime(2026, 11, 17, 20, 30, 0),
-                AutoJeuAvant = true,
+                ModeJeuPose = true,
                 PlafondAvant = 138,
-                Profils = new List<string> { "cs2", "Valorant" },
+                Profils = new List<string> { "cs2", "Warhammer 40,000: Space Marine 2" },
                 Reglages = new List<string> { "nagle_off", "mmcss_games" },
             };
             Competition.Etat r = Competition.Lit(Competition.Ecrit(plein));
-            Banc.Verifie("état plein relu", true, r != null && r.Active == plein.Active && r.AutoJeuAvant
-                && r.PlafondAvant == 138 && string.Join(",", r.Profils) == "cs2,Valorant"
+            Banc.Verifie("état plein relu", true, r != null && r.Active == plein.Active && r.ModeJeuPose
+                && r.PlafondAvant == 138 && r.Profils.Count == 2 && r.Profils[1] == "Warhammer 40,000: Space Marine 2"
                 && string.Join(",", r.Reglages) == "nagle_off,mmcss_games");
 
             Competition.Etat vide = Competition.Lit(Competition.Ecrit(new Competition.Etat { Active = new DateTime(2026, 11, 17) }));
             Banc.Verifie("état vide relu : listes vides, plafond non touché", true, vide != null && vide.Profils.Count == 0
-                && vide.Reglages.Count == 0 && vide.PlafondAvant == -1 && !vide.AutoJeuAvant);
+                && vide.Reglages.Count == 0 && vide.PlafondAvant == -1 && !vide.ModeJeuPose);
             Banc.Verifie("texte vide : pas d'état", true, Competition.Lit("") == null);
             Banc.Verifie("texte sans date d'activation : pas d'état", true, Competition.Lit("profils=cs2\n") == null);
 

@@ -1368,8 +1368,9 @@ namespace BTOptimizer
                 var p = Process.Start(new ProcessStartInfo { FileName = "powercfg", Arguments = "/getactivescheme", UseShellExecute = false, RedirectStandardOutput = true, CreateNoWindow = true });
                 string output = p.StandardOutput.ReadToEnd();
                 p.WaitForExit();
-                var m = Regex.Match(output, @"GUID de.*:\s*([0-9a-f\-]{36})", RegexOptions.IgnoreCase);
-                if (m.Success) return m.Groups[1].Value;
+                // Indépendant de la langue : « GUID du mode… » (fr), « Power Scheme GUID: » (en).
+                // L'ancienne expression « GUID de.*: » ne trouvait rien sur un Windows français.
+                return ProfilJeu.GuidPlan(output);
             }
             catch { }
             return null;

@@ -32,6 +32,35 @@ namespace BTOptimizer.Tests
             Banc.Verifie("plan illisible : pas de bascule", false, ProfilJeu.DoitBasculer(null));
             Banc.Verifie("plan Équilibré : bascule", true, ProfilJeu.DoitBasculer("381b4222-f694-41f0-9685-ff5bb260df2e"));
 
+            Banc.Verifie("« Performances optimales » (eb61) : pas de bascule", false, ProfilJeu.DoitBasculer("e9a42b02-d5df-448d-aa00-03f14749eb61"));
+            Banc.Verifie("« Performances optimales » (copie eb62) : pas de bascule", false, ProfilJeu.DoitBasculer("E9A42B02-D5DF-448D-AA00-03F14749EB62"));
+
+            Banc.Verifie("powercfg en français : GUID lu", true, ProfilJeu.GuidPlan(
+                "GUID du mode de gestion de l'alimentation : 381b4222-f694-41f0-9685-ff5bb260df2e  (Utilisation normale)")
+                == "381b4222-f694-41f0-9685-ff5bb260df2e");
+            Banc.Verifie("powercfg en anglais : GUID lu", true, ProfilJeu.GuidPlan(
+                "Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)") == ProfilJeu.PlanPerformances);
+            Banc.Verifie("powercfg illisible : null", true, ProfilJeu.GuidPlan("Paramètres non valides") == null && ProfilJeu.GuidPlan(null) == null);
+
+            var fichier = new ProfilJeu.Etat { Jeu = "cs2", PlanOrigine = "381b4222-f694-41f0-9685-ff5bb260df2e" };
+            Banc.Verifie("reprise : pas de fichier → rien", true, ProfilJeu.Reprise(null, "cs2") == ProfilJeu.Reprendre.Rien);
+            Banc.Verifie("reprise : ONYX relancé, même jeu en cours → adopter l'état (plan d'origine gardé)", true,
+                ProfilJeu.Reprise(fichier, "CS2") == ProfilJeu.Reprendre.Adopter);
+            Banc.Verifie("reprise : jeu fermé entre-temps → rétablir", true, ProfilJeu.Reprise(fichier, null) == ProfilJeu.Reprendre.Retablir);
+            Banc.Verifie("reprise : autre jeu en cours → rétablir", true, ProfilJeu.Reprise(fichier, "valorant") == ProfilJeu.Reprendre.Retablir);
+
+            var exes = new List<KeyValuePair<string, string[]>>
+            {
+                new KeyValuePair<string, string[]>("Apex", new[] { @"r5apex.exe" }),
+                new KeyValuePair<string, string[]>("cs2", new[] { "cs2.exe" }),
+                new KeyValuePair<string, string[]>("Valorant", null),
+            };
+            var noms = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "explorer", "CS2" };
+            Banc.Verifie("jeu détecté sur un seul relevé des processus (casse ignorée)", true, ProfilJeu.JeuDetecte(exes, noms) == "cs2");
+            noms.Add("r5apex");
+            Banc.Verifie("deux jeux : le premier profil l'emporte (ordre d'avant)", true, ProfilJeu.JeuDetecte(exes, noms) == "Apex");
+            Banc.Verifie("aucun jeu : null", true, ProfilJeu.JeuDetecte(exes, new HashSet<string>(StringComparer.OrdinalIgnoreCase)) == null);
+
             var e = new ProfilJeu.Etat { Jeu = "cs2", PlanOrigine = "381b4222-f694-41f0-9685-ff5bb260df2e" };
             ProfilJeu.Etat r = ProfilJeu.LitEtat(ProfilJeu.EcritEtat(e));
             Banc.Verifie("état relu", true, r != null && r.Jeu == "cs2" && r.PlanOrigine == e.PlanOrigine);

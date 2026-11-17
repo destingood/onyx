@@ -55,7 +55,7 @@ namespace BTOptimizer
                 Func<bool> stop = arret ?? (() => false);
 
                 // 1) L'état d'avant, avant tout changement.
-                var e = new Etat { Active = DateTime.Now, AutoJeuAvant = AutoJeu.Actif };
+                var e = new Etat { Active = DateTime.Now };
                 if (c.Plafond)
                 {
                     int pose = -1;
@@ -75,7 +75,8 @@ namespace BTOptimizer
                     List<GameScan.GameInfo> jeux = GameScan.Known();
                     GameScan.Detect(jeux);
                     Dictionary<string, Tuple<string, long>> profils = Sys.LoadGameAffinity();
-                    List<string> sans = JeuxSansProfil(jeux.Where(j => j.Detected).Select(j => j.Name), profils);
+                    // Sans exécutable connu, le profil ne pourrait jamais s'appliquer : on ne le pose pas.
+                    List<string> sans = JeuxSansProfil(jeux.Where(j => j.Detected && GameScan.ExesFor(j.Name) != null).Select(j => j.Name), profils);
                     int n = Math.Min(Environment.ProcessorCount, 63);
                     long masqueAuto = ((1L << n) - 1) & ~1L;   // même valeur que GameProfileForm ; ignorée en Auto
                     foreach (string j in sans) profils[j] = Tuple.Create("Auto", masqueAuto);
@@ -89,8 +90,15 @@ namespace BTOptimizer
                 // 4) Mode Jeu automatique.
                 if (c.ModeJeu && !stop())
                 {
-                    AutoJeu.Actif = true;
-                    log("Mode Jeu automatique activé.", 1);
+                    if (AutoJeu.Actif) log("Mode Jeu automatique : déjà activé par toi, la Compétition n'y touchera pas.", 0);
+                    else
+                    {
+                        // Noté AVANT d'allumer : seul ce que la Compétition a allumé sera éteint.
+                        e.ModeJeuPose = true;
+                        Enregistre(e);
+                        AutoJeu.Actif = true;
+                        log("Mode Jeu automatique activé.", 1);
+                    }
                 }
 
                 // 5) Plafond FPS recommandé pour l'écran principal.
@@ -160,8 +168,15 @@ namespace BTOptimizer
                     log("Profils retirés : " + string.Join(", ", retirer) + ".", 0);
                 }
 
-                // 3) Mode Jeu automatique tel qu'il était.
-                AutoJeu.Actif = e.AutoJeuAvant;
+                // 3) Mode Jeu automatique, seulement s'il a été allumé par la Compétition. Éteindre
+                //    la veille ne rend pas les services suspendus : on sort d'abord du Mode Jeu
+                //    qu'elle a engagé.
+                if (e.ModeJeuPose && AutoJeu.Actif)
+                {
+                    if (AutoJeu.EngageParNous) { try { GameBoost.Deactivate(log); } catch (Exception ex) { log("Sortie du Mode Jeu : " + ex.Message, 3); ok = false; } }
+                    AutoJeu.Actif = false;
+                    log("Mode Jeu automatique désactivé.", 0);
+                }
 
                 // 4) Plafond FPS d'avant (0 rend la main au pilote).
                 if (e.PlafondAvant >= 0 && !FrameCap.Applique(e.PlafondAvant, log))

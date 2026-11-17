@@ -12,23 +12,24 @@ namespace BTOptimizer
     /// dans ProfilJeu.cs (pure, testée au banc).
     ///
     /// Appelé par les deux fenêtres (tableau de bord et fenêtre principale) : l'état est statique,
-    /// protégé par un verrou, et un seul geste tourne à la fois.
+    /// protégé par un verrou, et un seul tour tourne à la fois.
     ///
-    /// L'état est écrit sur le disque AVANT de basculer le plan d'alimentation : si ONYX se ferme
-    /// ou plante pendant la partie, <see cref="Soigne"/> rétablit le plan d'origine au lancement
-    /// suivant au lieu de laisser la machine en Performances pour toujours.
+    /// L'état est écrit sur le disque AVANT de basculer le plan d'alimentation. Le PREMIER tour
+    /// après le lancement d'ONYX le relit : même jeu encore en cours → l'état est adopté tel quel
+    /// (plan d'origine compris) ; sinon le plan d'origine est rétabli. Fermer ONYX normalement
+    /// rétablit le plan tout de suite (<see cref="Arrete"/>).
     /// </summary>
     internal static partial class ProfilJeu
     {
         public const string FichierEtat = "bt-profiljeu-etat.txt";
 
         private static readonly object _verrou = new object();
-        private static bool _occupe;
+        private static bool _occupe, _repris;
         private static Etat _etat;   // jeu profilé en cours (null : aucun)
 
         private static string CheminEtat { get { return AppPaths.File(FichierEtat); } }
 
-        /// <summary>Non bloquant : sort tout de suite si un geste est en cours.</summary>
+        /// <summary>Non bloquant : sort tout de suite si un tour est en cours.</summary>
         public static void Tick(Action<string, int> log)
         {
             lock (_verrou)
@@ -36,50 +37,88 @@ namespace BTOptimizer
                 if (_occupe) return;
                 _occupe = true;
             }
+            Action<string, int> journal = Journal(log);
             Task.Run(delegate
             {
-                try { Tour(log); }
+                try { Tour(journal); }
                 catch (Exception ex) { JournalTechnique.Echec("ProfilJeu.Tick", ex); }
                 finally { lock (_verrou) _occupe = false; }
             });
         }
 
+        /// <summary>
+        /// Les avertissements et erreurs vont AUSSI au journal technique : le tableau de bord n'a
+        /// pas de journal à l'écran, et un refus d'anti-triche doit rester retrouvable.
+        /// </summary>
+        private static Action<string, int> Journal(Action<string, int> log)
+        {
+            return (m, niveau) =>
+            {
+                if (niveau >= 2) JournalTechnique.Echec("ProfilJeu", m);
+                if (log != null) { try { log(m, niveau); } catch { } }
+            };
+        }
+
         private static void Tour(Action<string, int> log)
         {
             Dictionary<string, Tuple<string, long>> profils = Sys.LoadGameAffinity();
-            string detecte = null;
-            List<Process> procs = null;
-            foreach (var kvp in profils)
-            {
-                List<Process> p = Processus(kvp.Key);
-                if (p.Count > 0) { detecte = kvp.Key; procs = p; break; }
-            }
+            var exes = new List<KeyValuePair<string, string[]>>();
+            foreach (string jeu in profils.Keys) exes.Add(new KeyValuePair<string, string[]>(jeu, GameScan.ExesFor(jeu)));
+            string detecte = JeuDetecte(exes, NomsProcessus());
+
+            if (!_repris) { _repris = true; Reprend(detecte, log); }
 
             string enCours;
             lock (_verrou) enCours = _etat == null ? null : _etat.Jeu;
 
             switch (Decide(enCours, detecte))
             {
-                case Geste.Appliquer: Applique(detecte, profils[detecte], procs, log); break;
+                case Geste.Appliquer: Applique(detecte, profils[detecte], log); break;
                 case Geste.Retirer: Retire(log); break;
             }
         }
 
-        /// <summary>Tous les processus vivants des exécutables du jeu (un lanceur + le jeu, par ex.).</summary>
-        private static List<Process> Processus(string jeu)
+        /// <summary>UN relevé des processus par tour (et non un par exécutable de chaque profil).</summary>
+        private static HashSet<string> NomsProcessus()
         {
-            var l = new List<Process>();
-            string[] exes = GameScan.ExesFor(jeu);
-            if (exes == null) return l;
-            foreach (string exe in exes)
+            var noms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            Process[] tous = new Process[0];
+            try { tous = Process.GetProcesses(); } catch { }
+            foreach (Process p in tous)
             {
-                try { l.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exe))); } catch { }
+                try { noms.Add(p.ProcessName); } catch { }
+                p.Dispose();
             }
-            return l;
+            return noms;
         }
 
-        private static void Applique(string jeu, Tuple<string, long> profil, List<Process> procs, Action<string, int> log)
+        private static void Reprend(string detecte, Action<string, int> log)
         {
+            Etat f = null;
+            try { if (File.Exists(CheminEtat)) f = LitEtat(File.ReadAllText(CheminEtat)); }
+            catch (Exception ex) { JournalTechnique.Echec("ProfilJeu.Reprend/lecture", ex); }
+
+            switch (Reprise(f, detecte))
+            {
+                case Reprendre.Adopter:
+                    // Les CPU Sets et la priorité vivent avec le processus : ils sont encore posés.
+                    lock (_verrou) _etat = f;
+                    log("Profil de " + f.Jeu + " repris après le redémarrage d'ONYX.", 0);
+                    break;
+                case Reprendre.Retablir:
+                    if (f.PlanOrigine != null)
+                    {
+                        Sys.SetActivePowerProfile(f.PlanOrigine);
+                        log("Profil de " + f.Jeu + " resté actif après une fermeture d'ONYX : plan d'alimentation d'origine rétabli.", 1);
+                    }
+                    EffaceFichier();
+                    break;
+            }
+        }
+
+        private static void Applique(string jeu, Tuple<string, long> profil, Action<string, int> log)
+        {
+            List<Process> procs = Processus(jeu);
             List<int> preferes = new List<int>();
             if (string.Equals(profil.Item1, "Auto", StringComparison.OrdinalIgnoreCase))
                 preferes = Topologie.Preferes(Topologie.Lit());
@@ -94,6 +133,7 @@ namespace BTOptimizer
                 if (cible == Mode.CpuSets) { if (Topologie.AppliqueCpuSets(pid, preferes, log)) poses++; }
                 else if (cible == Mode.Affinite) { Sys.SetProcessAffinity(pid, masque); poses++; }
                 Sys.SetProcessPriority(pid, ProcessPriorityClass.High);
+                p.Dispose();
             }
 
             // État écrit AVANT la bascule : un plantage entre les deux laisse au pire un fichier
@@ -113,16 +153,28 @@ namespace BTOptimizer
                     bascule = false;
                     e.PlanOrigine = null;
                     EcritFichier(e);
-                    if (log != null) log("Plan « Performances élevées » indisponible sur ce PC : plan d'alimentation inchangé.", 2);
+                    log("Plan « Performances élevées » indisponible sur ce PC : plan d'alimentation inchangé.", 2);
                 }
             }
 
             string coeurs = cible == Mode.CpuSets ? "cœurs préférés " + Topologie.Libelle(Topologie.Lit())
                           : cible == Mode.Affinite ? "affinité manuelle"
                           : "cœurs laissés à Windows";
-            if (log != null)
-                log(jeu + " détecté : " + coeurs + " (" + poses + "/" + procs.Count + " processus), priorité Haute"
-                    + (bascule ? ", plan Performances." : ", plan inchangé."), 1);
+            log(jeu + " détecté : " + coeurs + " (" + poses + "/" + procs.Count + " processus), priorité Haute"
+                + (bascule ? ", plan Performances." : ", plan inchangé."), 1);
+        }
+
+        /// <summary>Tous les processus vivants des exécutables du jeu (un lanceur + le jeu, par ex.).</summary>
+        private static List<Process> Processus(string jeu)
+        {
+            var l = new List<Process>();
+            string[] exes = GameScan.ExesFor(jeu);
+            if (exes == null) return l;
+            foreach (string exe in exes)
+            {
+                try { l.AddRange(Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exe))); } catch { }
+            }
+            return l;
         }
 
         private static void Retire(Action<string, int> log)
@@ -132,27 +184,17 @@ namespace BTOptimizer
             if (e == null) return;
             if (e.PlanOrigine != null) Sys.SetActivePowerProfile(e.PlanOrigine);
             EffaceFichier();
-            if (log != null)
-                log(e.Jeu + " fermé" + (e.PlanOrigine != null ? " : plan d'alimentation d'origine rétabli." : "."), 0);
+            log(e.Jeu + " fermé" + (e.PlanOrigine != null ? " : plan d'alimentation d'origine rétabli." : "."), 0);
         }
 
         /// <summary>
-        /// Au lancement : un état resté sur le disque veut dire qu'ONYX s'est fermé pendant une
-        /// partie. On rétablit le plan d'origine et on efface l'état ; si le jeu tourne encore,
-        /// le prochain Tick le reprofilera depuis un état propre.
+        /// Fermeture d'ONYX : rétablit le plan d'origine tout de suite, au lieu d'attendre le
+        /// lancement suivant. Synchrone (appelé pendant la fermeture de la fenêtre).
         /// </summary>
-        public static void Soigne(Action<string, int> log)
+        public static void Arrete(Action<string, int> log)
         {
-            Etat e = null;
-            try { if (File.Exists(CheminEtat)) e = LitEtat(File.ReadAllText(CheminEtat)); }
-            catch (Exception ex) { JournalTechnique.Echec("ProfilJeu.Soigne/lecture", ex); }
-            if (e != null && e.PlanOrigine != null)
-            {
-                Sys.SetActivePowerProfile(e.PlanOrigine);
-                if (log != null) log("Profil de " + e.Jeu + " resté actif après une fermeture d'ONYX : plan d'alimentation d'origine rétabli.", 1);
-            }
-            EffaceFichier();
-            lock (_verrou) _etat = null;
+            try { Retire(Journal(log)); }
+            catch (Exception ex) { JournalTechnique.Echec("ProfilJeu.Arrete", ex); }
         }
 
         private static void EcritFichier(Etat e)

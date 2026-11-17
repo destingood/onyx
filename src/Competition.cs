@@ -20,7 +20,7 @@ namespace BTOptimizer
         public sealed class Etat
         {
             public DateTime Active;
-            public bool AutoJeuAvant;
+            public bool ModeJeuPose;                           // Mode Jeu auto allumé PAR la Compétition
             public int PlafondAvant = -1;                       // -1 : plafond non touché
             public List<string> Profils = new List<string>();  // profils Auto posés par la Compétition
             public List<string> Reglages = new List<string>(); // réglages eSport gardés par la preuve
@@ -54,10 +54,12 @@ namespace BTOptimizer
         {
             var sb = new StringBuilder();
             sb.Append("active=").Append(e.Active.ToString("o", CultureInfo.InvariantCulture)).Append('\n');
-            sb.Append("autojeu=").Append(e.AutoJeuAvant ? "1" : "0").Append('\n');
+            sb.Append("modejeu=").Append(e.ModeJeuPose ? "1" : "0").Append('\n');
             sb.Append("plafond=").Append(e.PlafondAvant.ToString(CultureInfo.InvariantCulture)).Append('\n');
-            sb.Append("profils=").Append(string.Join(",", e.Profils)).Append('\n');
-            sb.Append("reglages=").Append(string.Join(",", e.Reglages)).Append('\n');
+            // « | » et non « , » : des noms de jeux portent une virgule (« Warhammer 40,000 »),
+            // et « | » est déjà le séparateur de bt-game-affinity.txt, donc absent des noms.
+            sb.Append("profils=").Append(string.Join("|", e.Profils)).Append('\n');
+            sb.Append("reglages=").Append(string.Join("|", e.Reglages)).Append('\n');
             return sb.ToString();
         }
 
@@ -78,7 +80,7 @@ namespace BTOptimizer
                     case "active":
                         date = DateTime.TryParse(val, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out e.Active);
                         break;
-                    case "autojeu": e.AutoJeuAvant = val == "1"; break;
+                    case "modejeu": e.ModeJeuPose = val == "1"; break;
                     case "plafond":
                         int p;
                         if (int.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out p)) e.PlafondAvant = p;
@@ -92,7 +94,7 @@ namespace BTOptimizer
 
         private static List<string> Liste(string val)
         {
-            return val.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            return val.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)
                       .Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
         }
     }

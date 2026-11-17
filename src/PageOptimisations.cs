@@ -275,14 +275,27 @@ namespace BTOptimizer
                 _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
                 _bAuto.Location = new Point(rx - _bAuto.Width, 22); rx -= _bAuto.Width + 8;
                 _bProve.Location = new Point(rx - _bProve.Width, 22); rx -= _bProve.Width + 8;
-                _bCompet.Location = new Point(rx - _bCompet.Width, 22);
-                // Six boutons ne laissent plus la place à la recherche sur la ligne du titre sous
-                // ~1 250 px : elle passe alors à droite, sous les boutons (avant les filtres, y = 90).
-                if (_search != null)
+                // Six boutons et la recherche ne tiennent pas tous sur la ligne du titre
+                // (« OPTIMISATIONS », x = 34) : ce qui déborde passe sur une deuxième ligne, alignée
+                // à droite (y = 58, avant les filtres à y = 90) — d'abord la recherche, puis
+                // Compétition. FinTitre : marge sûre après le titre.
+                const int FinTitre = 260, Rech = 220;
+                int xCompet = rx - _bCompet.Width;
+                int xRech2 = ClientSize.Width - 34 - Rech;
+                if (xCompet - 12 - Rech >= FinTitre)
                 {
-                    int sx = _bCompet.Left - 12 - 220;
-                    if (sx >= 180) _search.SetBounds(sx, 24, 220, 26);
-                    else _search.SetBounds(ClientSize.Width - 34 - 220, 58, 220, 26);
+                    _bCompet.Location = new Point(xCompet, 22);
+                    if (_search != null) _search.SetBounds(xCompet - 12 - Rech, 24, Rech, 26);
+                }
+                else if (xCompet >= FinTitre)
+                {
+                    _bCompet.Location = new Point(xCompet, 22);
+                    if (_search != null) _search.SetBounds(xRech2, 58, Rech, 26);
+                }
+                else
+                {
+                    _bCompet.Location = new Point(xRech2 - 12 - _bCompet.Width, 56);
+                    if (_search != null) _search.SetBounds(xRech2, 58, Rech, 26);
                 }
             }
         }

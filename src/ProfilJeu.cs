@@ -63,7 +63,57 @@ namespace BTOptimizer
         /// <summary>Faux si le plan est illisible ou déjà « Performances » : rien à rétablir ensuite.</summary>
         public static bool DoitBasculer(string planActif)
         {
-            return planActif != null && !string.Equals(planActif, PlanPerformances, StringComparison.OrdinalIgnoreCase);
+            if (planActif == null || string.Equals(planActif, PlanPerformances, StringComparison.OrdinalIgnoreCase)) return false;
+            // « Performances optimales » (modèle caché eb61 et la copie eb62 posée par le réglage
+            // eSport power_ultimate) va plus loin que « Performances élevées » : on n'y touche pas.
+            return !planActif.StartsWith(PrefixeOptimales, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private const string PrefixeOptimales = "e9a42b02-d5df-448d-aa00-03f14749eb6";
+
+        public enum Reprendre { Rien, Adopter, Retablir }
+
+        /// <summary>
+        /// Premier tour après le lancement d'ONYX, avec l'état resté sur le disque. Le même jeu
+        /// tourne encore (ONYX relancé en pleine partie) : on ADOPTE l'état, plan d'origine
+        /// compris — le réécrire ici le perdrait, puisque le plan actif est déjà Performances.
+        /// Sinon la partie est finie : on rétablit.
+        /// </summary>
+        public static Reprendre Reprise(Etat fichier, string jeuDetecte)
+        {
+            if (fichier == null) return Reprendre.Rien;
+            return jeuDetecte != null && string.Equals(fichier.Jeu, jeuDetecte, StringComparison.OrdinalIgnoreCase)
+                ? Reprendre.Adopter : Reprendre.Retablir;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex GuidRx = new System.Text.RegularExpressions.Regex(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+
+        /// <summary>GUID de la sortie de « powercfg /getactivescheme », quelle que soit la langue
+        /// de Windows (« GUID du mode… », « Power Scheme GUID: »). Null si absent.</summary>
+        public static string GuidPlan(string sortie)
+        {
+            if (string.IsNullOrEmpty(sortie)) return null;
+            var m = GuidRx.Match(sortie);
+            return m.Success ? m.Value.ToLowerInvariant() : null;
+        }
+
+        /// <summary>
+        /// Premier profil (dans l'ordre du fichier) dont un exécutable figure parmi les noms de
+        /// processus relevés. Un seul relevé des processus par tour, au lieu d'un par exécutable.
+        /// </summary>
+        public static string JeuDetecte(IEnumerable<KeyValuePair<string, string[]>> profilsExes, ISet<string> nomsProcessus)
+        {
+            foreach (var kv in profilsExes)
+            {
+                if (kv.Value == null) continue;
+                foreach (string exe in kv.Value)
+                {
+                    if (string.IsNullOrEmpty(exe)) continue;
+                    if (nomsProcessus.Contains(System.IO.Path.GetFileNameWithoutExtension(exe))) return kv.Key;
+                }
+            }
+            return null;
         }
 
         public static string EcritEtat(Etat e)
