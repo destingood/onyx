@@ -673,6 +673,9 @@ namespace BTOptimizer
                     //    (indexation, spouleur, SysMain) restaient arretes jusqu au redemarrage, sans
                     //    que rien ne le signale. Le marqueur laisse sur le disque nous dit lesquels.
                     try { GameBoost.Soigne(Log); } catch { }
+                    // 0 septies) Profil de jeu resté actif (ONYX fermé pendant une partie) : plan
+                    //    d'alimentation d'origine rétabli.
+                    try { ProfilJeu.Soigne(Log); } catch { }
                     // 1) SOS POST-CRASH : à CHAQUE lancement — si un jeu vient de planter (< 30 min),
                     //    on le remarque POUR l'utilisateur, c'est sûrement pour ça qu'il ouvre ONYX.
                     string sos = null;
@@ -1252,6 +1255,8 @@ namespace BTOptimizer
                 // quand il se ferme. Ce shell n'avait PAS la fonction — elle ne vivait que dans
                 // l'ancienne fenêtre, derrière une case à cocher que plus personne n'ouvrait.
                 try { AutoJeu.Tick(Log, null); } catch { }
+                // PROFIL PAR JEU : cœurs préférés, priorité Haute, plan Performances le temps de la partie.
+                try { ProfilJeu.Tick(Log); } catch { }
 
                 if (Crosshair.AutoGameEnabled)
                     Crosshair.AutoTick(knownGame || wanted, knownGame || wanted);

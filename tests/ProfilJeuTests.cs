@@ -23,6 +23,8 @@ namespace BTOptimizer.Tests
             Banc.Verifie("Auto + ancien masque, topologie inconnue : rien (masque ignoré)", true,
                 ProfilJeu.Cible("Auto", 0xFFFE, new List<int>(), out m) == ProfilJeu.Mode.Aucun);
             Banc.Verifie("Manuel : affinité stricte", true, ProfilJeu.Cible("Manuel", 0xF0, preferes, out m) == ProfilJeu.Mode.Affinite && m == 0xF0);
+            Banc.Verifie("« Manual » (valeur écrite par GameProfileForm) : affinité stricte", true,
+                ProfilJeu.Cible("Manual", 0xF0, preferes, out m) == ProfilJeu.Mode.Affinite && m == 0xF0);
             Banc.Verifie("Manuel sans cœur : rien", true, ProfilJeu.Cible("Manuel", 0, preferes, out m) == ProfilJeu.Mode.Aucun);
             Banc.Verifie("mode inconnu : rien", true, ProfilJeu.Cible("Désactivé", 0xF0, preferes, out m) == ProfilJeu.Mode.Aucun);
 

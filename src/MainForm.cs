@@ -32,8 +32,6 @@ namespace BTOptimizer
         private ToolStripMenuItem _miWatch;
         private HwMonitor _watchMon;
         private int _watchTick, _watchCooldown, _ramCleanCooldown, _nvlSeen = -1;
-        private string _activeGameName;
-        private string _originalPowerProfile;
         private volatile bool _guardBusy;
         private bool _offerHealthAfter;   // après ⚡ TOUT OPTIMISER : proposer le bilan Santé
         private TextBox _search;
@@ -1567,64 +1565,9 @@ namespace BTOptimizer
                     bool gaming = false;
                     try { gaming = GameScan.RunningKnownGame() != null || Native.IsGameFullscreen(); } catch { }
 
-                    // --- Dynamic Affinity & Priority ---
-                    var affinityDict = Sys.LoadGameAffinity();
-                    string detectedGameKey = null;
-                    System.Diagnostics.Process targetProcess = null;
-
-                    if (affinityDict.Count > 0)
-                    {
-                        foreach (var kvp in affinityDict)
-                        {
-                            string[] exes = GameScan.ExesFor(kvp.Key);
-                            if (exes == null) continue;
-                            foreach (string exe in exes)
-                            {
-                                string procName = System.IO.Path.GetFileNameWithoutExtension(exe);
-                                var procs = System.Diagnostics.Process.GetProcessesByName(procName);
-                                if (procs.Length > 0)
-                                {
-                                    targetProcess = procs[0];
-                                    detectedGameKey = kvp.Key;
-                                    break;
-                                }
-                            }
-                            if (targetProcess != null) break;
-                        }
-                    }
-
-                    if (targetProcess != null)
-                    {
-                        if (detectedGameKey != _activeGameName)
-                        {
-                            _activeGameName = detectedGameKey;
-                            
-                            string mode = affinityDict[detectedGameKey].Item1;
-                            long mask = affinityDict[detectedGameKey].Item2;
-                            Sys.SetProcessAffinity(targetProcess.Id, mask);
-                            Sys.SetProcessPriority(targetProcess.Id, System.Diagnostics.ProcessPriorityClass.High);
-                            Log(_activeGameName + " détecté : Affinité (" + mode + ") et Priorité Haute appliquées.", 1);
-
-                            if (_originalPowerProfile == null)
-                            {
-                                _originalPowerProfile = Sys.GetActivePowerProfile();
-                                Sys.SetActivePowerProfile("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"); // High Performance
-                                Log("Profil d'alimentation basculé sur Performances (Core Parking désactivé).", 1);
-                            }
-                        }
-                    }
-                    else if (_activeGameName != null)
-                    {
-                        Log(_activeGameName + " fermé. Restauration des paramètres...", 0);
-                        _activeGameName = null;
-                        if (_originalPowerProfile != null)
-                        {
-                            Sys.SetActivePowerProfile(_originalPowerProfile);
-                            _originalPowerProfile = null;
-                            Log("Profil d'alimentation restauré.", 0);
-                        }
-                    }
-                    // ------------------------------------
+                    // Profil par jeu (cœurs, priorité, plan d'alimentation) : appliqué UNE fois au
+                    // lancement du jeu, retiré à sa sortie. État commun avec le tableau de bord.
+                    try { ProfilJeu.Tick(Log); } catch { }
 
                     if (gaming)
                     {

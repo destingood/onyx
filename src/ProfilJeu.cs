@@ -48,7 +48,11 @@ namespace BTOptimizer
             masqueAffinite = 0;
             if (string.Equals(mode, "Auto", StringComparison.OrdinalIgnoreCase))
                 return preferes != null && preferes.Count > 0 ? Mode.CpuSets : Mode.Aucun;
-            if (string.Equals(mode, "Manuel", StringComparison.OrdinalIgnoreCase) && masque != 0)
+            // GameProfileForm écrit « Manual » ; « Manuel » est accepté pour le cas où le libellé
+            // français finirait un jour dans le fichier.
+            bool manuel = string.Equals(mode, "Manual", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(mode, "Manuel", StringComparison.OrdinalIgnoreCase);
+            if (manuel && masque != 0)
             {
                 masqueAffinite = masque;
                 return Mode.Affinite;

@@ -116,7 +116,7 @@ namespace BTOptimizer
             
             pnlSettings.Controls.Add(new Label { Text = "Mode d'affinité CPU :", Location = new Point(10, 10), AutoSize = true, Font = new Font("Segoe UI Semibold", 9f) });
             _cboMode = new ComboBox { Location = new Point(10, 30), Width = 300, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cboMode.Items.AddRange(new object[] { "Désactivé (Par défaut Windows)", "Automatique (Évite Core 0 / E-Cores)", "Manuel (Choix personnalisé)" });
+            _cboMode.Items.AddRange(new object[] { "Désactivé (Par défaut Windows)", "Automatique (cœurs P ou V-Cache, sinon hors cœur 0)", "Manuel (Choix personnalisé)" });
             _cboMode.SelectedIndex = 0;
             _cboMode.SelectedIndexChanged += OnModeChanged;
             pnlSettings.Controls.Add(_cboMode);
