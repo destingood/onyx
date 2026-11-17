@@ -766,7 +766,7 @@ namespace BTOptimizer
                 + sel.Count + " optimisations orientées input lag + performances :\n"
                 + "• souris/clavier en prise directe (accélération off, file d'attente)\n"
                 + "• timer 1 ms + tick fixe, priorité planificateur aux jeux\n"
-                + "• alimentation : plan « Performances ultimes » + bridage d'alim (throttling) coupé\n"
+                + "• alimentation : " + (sel.Any(t => t.Id == "power_ultimate") ? "plan « Performances ultimes » + " : "") + "bridage d'alim (throttling) coupé\n"
                 + "• GPU en mode MSI, HAGS, Game Mode, MPO off\n"
                 + "• réseau réactif (Nagle off, throttling off, RSC/QoS)\n\n"
                 + "Tout est réversible (sauvegarde .reg automatique)."

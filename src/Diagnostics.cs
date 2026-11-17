@@ -118,6 +118,30 @@ namespace BTOptimizer
                 if (retard != null) f.Add(new Finding(1, retard, FixKind.WindowsUpdate, "Windows Update"));
             }
             catch { }
+            // Ryzen X3D à deux CCD : ce qui empêche le pilote AMD de garer le CCD sans V-Cache.
+            try
+            {
+                string cpu = Sys.QueryCpu().Name;
+                if (ConstatsMateriel.X3DDeuxCcd(cpu))
+                {
+                    bool? pilote = null;
+                    try
+                    {
+                        using (var s = new ManagementObjectSearcher("SELECT Name FROM Win32_SystemDriver WHERE Name = 'amd3dvcache'"))
+                            pilote = s.Get().Count > 0;
+                    }
+                    catch { }
+                    string plan = null;
+                    if (Sys.UltimateActive()) plan = "Performances ultimes";
+                    else if (string.Equals(Sys.GetActiveSchemeGuid(), "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c", StringComparison.OrdinalIgnoreCase))
+                        plan = "Performances élevées";
+                    // Absent = mode Jeu actif (valeur par défaut de Windows 10 et 11).
+                    bool modeJeuCoupe = Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\GameBar", "AutoGameModeEnabled"), 0);
+                    string x3d = ConstatsMateriel.X3DSansParcage(cpu, pilote, plan, modeJeuCoupe);
+                    if (x3d != null) f.Add(new Finding(1, x3d));
+                }
+            }
+            catch { }
 
             // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
             // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service

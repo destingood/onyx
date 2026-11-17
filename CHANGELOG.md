@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — Ryzen X3D à deux CCD (7900X3D, 7950X3D, 9900X3D, 9950X3D)
+
+Le pilote AMD réserve au jeu le CCD à V-Cache en garant l'autre, avec le mode Jeu, et AMD
+recommande pour cela le plan Équilibré (sources : IDC d'après AMD, XDA ; pas de mesure
+indépendante publiée).
+
+- **Performances ultimes n'est plus coché d'office** sur ces processeurs : ni en Auto, ni par
+  ⚡ TOUT OPTIMISER, le préréglage eSport, Compétition ou la ligne de commande. La case reste
+  disponible à la main, avec l'explication dans sa description. Le contrôle Tournoi ne le
+  compte plus dans les « optimisations clés ».
+- **Nouveau constat** : pilote AMD 3D V-Cache absent, plan Performances ultimes ou élevées
+  actif, ou mode Jeu coupé. Rien n'est affirmé si le pilote n'a pas pu être lu.
+- Le déparquage des cœurs (`cpu_unpark_cores`) n'est **pas** écarté : il change la valeur de
+  base du plan, alors qu'AMD gare les cœurs dans le profil du mode Jeu, et cette valeur vaut
+  déjà 100 % par défaut sur certains PC (constaté sur un 9950X3D).
+
 ## Prochaine version — trois constats matériels dans le diagnostic
 
 Lecture seule : ces constats ne modifient rien. Chacun se tait quand la lecture échoue ou

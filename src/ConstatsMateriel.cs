@@ -72,5 +72,37 @@ namespace BTOptimizer
                  + "(d'origine dans la version 24H2, ou apportée par la mise à jour KB5041587 sur 22H2/23H2). "
                  + "Les tests publiés relèvent jusqu'à 10 % de FPS environ. Mets Windows à jour.";
         }
+
+        // Ryzen 9 7900X3D, 7950X3D, 9900X3D, 9950X3D : V-Cache sur un seul des deux CCD. Une
+        // variante au nom inconnu (suffixe après X3D) n'est pas reconnue : on n'extrapole pas.
+        private static readonly Regex X3D2Ccd = new Regex(@"Ryzen\s+9\s+(?:PRO\s+)?[79]9[05]0X3D\b", RegexOptions.IgnoreCase);
+
+        /// <summary>Ryzen X3D à deux CCD, où le pilote AMD gare pendant un jeu le CCD sans V-Cache.</summary>
+        public static bool X3DDeuxCcd(string cpu)
+        {
+            return cpu != null && X3D2Ccd.IsMatch(cpu);
+        }
+
+        /// <summary>Réglage qui empêche ce parcage (AMD recommande le plan Équilibré) : jamais coché
+        /// d'office sur ces processeurs, toujours cochable à la main. Le déparquage de base
+        /// (cpu_unpark_cores) n'y figure pas : AMD gare les cœurs dans le profil du mode Jeu, pas
+        /// par la valeur de base, qui vaut d'ailleurs déjà 100 % par défaut sur certains PC.</summary>
+        public static readonly string[] ConflitsX3D = { "power_ultimate" };
+
+        /// <summary>Ce qui empêche le pilote AMD de garer le CCD sans V-Cache pendant un jeu.
+        /// <paramref name="pilote"/> null = non lu ; <paramref name="planBloquant"/> = nom du plan
+        /// actif s'il est Performances ultimes ou élevées, sinon null.</summary>
+        public static string X3DSansParcage(string cpu, bool? pilote, string planBloquant, bool modeJeuCoupe)
+        {
+            if (!X3DDeuxCcd(cpu)) return null;
+            var causes = new System.Collections.Generic.List<string>();
+            if (pilote == false) causes.Add("le pilote AMD 3D V-Cache est absent (installe le pilote chipset AMD)");
+            if (planBloquant != null) causes.Add("le plan « " + planBloquant + " » est actif (AMD recommande le plan Équilibré)");
+            if (modeJeuCoupe) causes.Add("le mode Jeu de Windows est coupé");
+            if (causes.Count == 0) return null;
+            return "Ryzen X3D à deux CCD : le pilote AMD ne peut pas réserver le CCD à V-Cache au jeu, car "
+                 + string.Join(" ; ", causes) + ". Le jeu risque de s'étaler sur les deux CCD. "
+                 + "Un profil de jeu ONYX en mode Automatique place déjà le jeu sur le CCD V-Cache.";
+        }
     }
 }

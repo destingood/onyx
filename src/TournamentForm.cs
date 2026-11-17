@@ -178,6 +178,8 @@ namespace BTOptimizer
             catch { }
 
             string[] keyIds = { "power_ultimate", "sysresp", "netthrottle", "gamedvr_off", "game_mode" };
+            // Ryzen X3D à deux CCD : Performances ultimes y est volontairement écarté (voir Catalog).
+            try { if (ConstatsMateriel.X3DDeuxCcd(Sys.QueryCpu().Name)) keyIds = keyIds.Except(ConstatsMateriel.ConflitsX3D).ToArray(); } catch { }
             int applied = 0;
             try
             {

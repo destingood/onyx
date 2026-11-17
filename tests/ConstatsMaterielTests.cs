@@ -66,6 +66,36 @@ namespace BTOptimizer.Tests
             Banc.Verifie("Windows 10 : rien (pas une simple mise à jour)", true, ConstatsMateriel.WindowsEnRetard(R9950, 19045, 5000) == null);
             Banc.Verifie("build illisible : rien", true, ConstatsMateriel.WindowsEnRetard(R9950, 0, 0) == null);
             Banc.Verifie("Intel sur 23H2 ancien : rien", true, ConstatsMateriel.WindowsEnRetard("Intel(R) Core(TM) i7-14700K", 22631, 100) == null);
+
+            // ---- Ryzen X3D à deux CCD (V-Cache sur un seul des deux)
+            Banc.Verifie("9950X3D : deux CCD", true, ConstatsMateriel.X3DDeuxCcd(R9950));
+            Banc.Verifie("9900X3D : deux CCD", true, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 9 9900X3D 12-Core Processor"));
+            Banc.Verifie("7950X3D : deux CCD", true, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 9 7950X3D 16-Core Processor"));
+            Banc.Verifie("7900X3D : deux CCD", true, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 9 7900X3D 12-Core Processor"));
+            Banc.Verifie("9800X3D (un seul CCD) : non", false, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 7 9800X3D 8-Core Processor"));
+            Banc.Verifie("7800X3D (un seul CCD) : non", false, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 7 7800X3D 8-Core Processor"));
+            Banc.Verifie("9950X (sans V-Cache) : non", false, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 9 9950X 16-Core Processor"));
+            Banc.Verifie("variante inconnue (X3D2) : non, on n'extrapole pas", false, ConstatsMateriel.X3DDeuxCcd("AMD Ryzen 9 9950X3D2 16-Core Processor"));
+            Banc.Verifie("nom absent : non", false, ConstatsMateriel.X3DDeuxCcd(null));
+
+            // ---- Ce qui empêche le pilote AMD de garer le CCD sans V-Cache
+            // Seul le plan est écarté d'office : le déparquage de base (CPMINCORES) ne touche pas le
+            // profil du mode Jeu où AMD gare les cœurs ; il vaut 100 % par défaut sur certains PC.
+            Banc.Verifie("garde : seul Performances ultimes est écarté d'office", true,
+                string.Join(",", ConstatsMateriel.ConflitsX3D) == "power_ultimate");
+            Banc.Verifie("tout en ordre : rien", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, false) == null);
+            Banc.Verifie("pas un X3D à deux CCD : rien", true,
+                ConstatsMateriel.X3DSansParcage("AMD Ryzen 7 9800X3D 8-Core Processor", false, "Performances ultimes", true) == null);
+            string pil = ConstatsMateriel.X3DSansParcage(R9950, false, null, false);
+            Banc.Verifie("pilote absent : signalé, pilote chipset nommé", true, pil != null && pil.Contains("pilote chipset AMD"));
+            Banc.Verifie("pilote non lu : rien (pas d'affirmation sans lecture)", true, ConstatsMateriel.X3DSansParcage(R9950, null, null, false) == null);
+            string plan = ConstatsMateriel.X3DSansParcage(R9950, true, "Performances ultimes", false);
+            Banc.Verifie("plan Performances ultimes : signalé, plan nommé, Équilibré conseillé", true,
+                plan != null && plan.Contains("Performances ultimes") && plan.Contains("Équilibré"));
+            Banc.Verifie("mode Jeu coupé : signalé", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, true).Contains("mode Jeu"));
+            string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true);
+            Banc.Verifie("plusieurs causes : toutes citées dans un seul constat", true,
+                tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu"));
         }
     }
 }

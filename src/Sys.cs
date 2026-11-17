@@ -464,7 +464,7 @@ namespace BTOptimizer
             get { return AppPaths.File("bt-prev-powerplan.txt"); }
         }
 
-        private static string GetActiveSchemeGuid()
+        internal static string GetActiveSchemeGuid()
         {
             NativeResult r = Run(Sys32("powercfg.exe"), "/getactivescheme");
             if (r.ExitCode != 0) return null;

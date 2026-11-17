@@ -47,6 +47,16 @@ namespace BTOptimizer
             0x00,0x24,0x04,0x00,0x00,0x00,0x00,0x00, 0x00,0xFC,0x12,0x00,0x00,0x00,0x00,0x00,
             0x00,0xC0,0xBB,0x01,0x00,0x00,0x00,0x00 };
 
+        // Ryzen X3D à deux CCD : le pilote AMD gare le CCD sans V-Cache pendant un jeu, dans le
+        // plan Équilibré (recommandation AMD). Performances ultimes y perd ses marques
+        // Recommandé/eSport (donc toute sélection d'office), pas sa case.
+        private static readonly Lazy<bool> X3DDeuxCcd = new Lazy<bool>(() =>
+        {
+            try { return ConstatsMateriel.X3DDeuxCcd(Sys.QueryCpu().Name); } catch { return false; }
+        });
+
+        private const string NoteX3D = " Sur Ryzen X3D à deux CCD, non coché d'office : AMD recommande le plan Équilibré pour que son pilote réserve au jeu le CCD à V-Cache.";
+
         public static List<Tweak> All()
         {
             var list = new List<Tweak>();
@@ -328,9 +338,9 @@ namespace BTOptimizer
             // ================= ALIMENTATION & CPU =================
             list.Add(new Tweak
             {
-                Id = "power_ultimate", Category = Cat.Alim, Recommended = true, Esport = true,
+                Id = "power_ultimate", Category = Cat.Alim, Recommended = !X3DDeuxCcd.Value, Esport = !X3DDeuxCcd.Value,
                 Name = "Activer le plan d'alimentation Performances ultimes",
-                Desc = "Supprime les économies d'énergie qui endorment le CPU (latence de réveil des coeurs). Le plan est créé s'il n'existe pas.",
+                Desc = "Supprime les économies d'énergie qui endorment le CPU (latence de réveil des coeurs). Le plan est créé s'il n'existe pas." + (X3DDeuxCcd.Value ? NoteX3D : ""),
                 Apply = () => Sys.EnableUltimatePlan(),
                 Revert = () => Sys.RestoreBalancedPlan(),
                 Check = () => Sys.UltimateActive()

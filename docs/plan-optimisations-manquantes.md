@@ -35,7 +35,14 @@ d'écrire un chiffre dans l'application.
 ### Phase 1 — vérifications sans risque, gain mesuré
 
 **État au 17/11/2026** : ajouts 1, 3 et 4 codés (`src/ConstatsMateriel.cs`, branchés dans
-`src/Diagnostics.cs`, 40 tests). Ajout 2 en attente de la mesure sur le 9950X3D. Écart avec
+`src/Diagnostics.cs`, 40 tests). Ajout 2 codé sans mesure en jeu, sur la seule
+recommandation d'AMD rapportée par IDC et XDA : `power_ultimate` perd ses marques
+Recommandé/eSport sur X3D à deux CCD (`src/Tweaks.cs`), constat pilote / plan / mode Jeu.
+`cpu_unpark_cores` gardé : il règle la valeur de base du plan (100 % par défaut sur le
+9950X3D testé), pas le profil du mode Jeu où AMD gare les cœurs. `xbox_services_off` n'est
+dans aucune sélection d'office. Restent [VERIFICATION REQUIRED] : la page AMD d'origine ;
+l'effet de `gamedvr_off` et `gamedvr_policy_off` sur la détection des jeux par la Game Bar.
+La mesure en jeu (Équilibré contre Performances ultimes) reste utile pour confirmer. Écart avec
 le tableau : le constat HAGS renvoie vers Optimisations par son texte, sans bouton. Vérifié
 sur un seul PC (2 barrettes, HAGS actif, Windows 25H2), où aucun des trois ne s'affiche ; les
 cas positifs ne sont couverts que par les tests.
