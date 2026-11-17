@@ -10,6 +10,7 @@ namespace BTOptimizer
     /// Mode ligne de commande (sans interface) :
     ///   BTOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]
     ///   BTOptimizer.exe -revert profile|all
+    ///   BTOptimizer.exe -prove   (optimisation prouvée : lots mesurés, régressions annulées)
     /// Utilisé par le gardien de démarrage (tâche planifiée). Journal :
     /// bt-optimizer-log.txt à côté de l'exe. Code retour 0 = succès.
     /// </summary>
@@ -65,11 +66,21 @@ namespace BTOptimizer
                 return 0;
             }
 
+            if (string.Equals(args[0], "-prove", StringComparison.OrdinalIgnoreCase))
+            {
+                Sys.Init();
+                PreuveRun.Rapport pr = PreuveRun.Lance(Catalog.All(), log, null);
+                foreach (string l in pr.Texte().Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries))
+                    log(l, 0);
+                if (pr.Echec || pr.Erreur != null) return 4;
+                return pr.RedemarrageRequis ? 10 : 0;   // 10 : redémarrage à faire pour finir la preuve
+            }
+
             bool apply = string.Equals(args[0], "-apply", StringComparison.OrdinalIgnoreCase);
             bool revert = string.Equals(args[0], "-revert", StringComparison.OrdinalIgnoreCase);
             if (!apply && !revert)
             {
-                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert ou -gpuoc).", 3);
+                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove ou -gpuoc).", 3);
                 return 2;
             }
             string mode = args.Length > 1 ? args[1].ToLowerInvariant() : "profile";

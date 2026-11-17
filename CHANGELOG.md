@@ -18,6 +18,17 @@ gardien de démarrage, boost complet par jeu, mode SIMPLE complet, module de sto
   les boutons « Passer Pro » et le bouton d'essai de l'écran d'accueil sont retirés.
 - Les conditions d'utilisation (EULA) restent : elles ne dépendent d'aucune clé.
 
+### Optimiser et prouver
+
+Nouveau bouton « ✓ Optimiser et prouver » (page Optimisations) et commande `-prove` : ONYX
+mesure la latence du PC au repos (charge et pics DPC/ISR des pilotes en session ETW, précision
+de `Sleep(1)`), applique la sélection Auto par catégorie, re-mesure après chaque lot et annule
+ce qui dégrade la mesure — une régression est toujours confirmée par une seconde mesure, et une
+recherche par moitiés ne retire que le ou les réglages fautifs. Un réglage neutre est gardé :
+beaucoup n'agissent qu'en jeu. Les réglages qui demandent un redémarrage sont vérifiés au
+lancement suivant d'ONYX et annulés s'ils dégradent la mesure. Sauvegarde .reg et point de
+restauration avant tout changement.
+
 ## v15.75 — Ce qui tourne pour rien, ce que coûte chaque milliseconde, et sept licences mortes
 
 Un bogue signalé en passant — « la clé de mon pote se désactive » — a mis au jour le plus cher de cette version : **les sept licences vendues étaient invalides**, et rien nulle part ne pouvait le dire. Il ouvre donc le journal. Suivent les deux chantiers prévus : ce qui tourne pour rien sur cette machine, et ce que coûte chaque maillon entre le clic et le pixel.

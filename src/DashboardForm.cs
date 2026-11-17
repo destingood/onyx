@@ -142,6 +142,28 @@ namespace BTOptimizer
             };
 
 #if !BTTEST
+            // OPTIMISATION PROUVÉE : des réglages à redémarrage attendent leur verdict. On mesure
+            // hors du fil d'interface (PreuveRun attend que Windows ait fini de démarrer) et on
+            // montre le rapport seulement s'il y a eu quelque chose à juger.
+            if (PreuveRun.AttenteExiste() && Environment.GetEnvironmentVariable("BT_UITEST") != "1")
+                Shown += (s, e) => System.Threading.Tasks.Task.Run(() =>
+                {
+                    PreuveRun.Rapport r = null;
+                    try { r = PreuveRun.VerifieAttente(Catalog.All(), (m, l) => { }); } catch { }
+                    if (r == null) return;
+                    try
+                    {
+                        BeginInvoke((Action)(() =>
+                        {
+                            using (var f = new PreuveForm(Catalog.All(), r))
+                                if (Visible) f.ShowDialog(this); else f.ShowDialog();
+                        }));
+                    }
+                    catch { }
+                });
+#endif
+
+#if !BTTEST
             // Cerveau IA LOCAL : amorçage au démarrage (gratuit, 100 % sur la machine). Bootstrap
             // décide seul — activation silencieuse si déjà prêt, sinon UNE question « Oui/Non » puis
             // installation du modèle ADAPTÉ à cette machine. Différé de 20 s (ne pas gêner le

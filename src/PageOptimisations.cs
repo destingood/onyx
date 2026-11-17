@@ -69,7 +69,7 @@ namespace BTOptimizer
                 || (t.Category != null && t.Category.ToLowerInvariant().Contains(_query));
         }
 
-        private Button _bAuto, _bReco, _bEsport, _bReset;
+        private Button _bProve, _bAuto, _bReco, _bEsport, _bReset;
 
         private void BuildPresets()
         {
@@ -81,7 +81,15 @@ namespace BTOptimizer
             _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
             _bAuto = FpsUi.GoldButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
             _bAuto.Click += (s, e) => ApplyAuto();
-            Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+            // Optimisation PROUVÉE : applique par lots, mesure, annule ce qui dégrade (PreuveRun).
+            _bProve = FpsUi.GoldButton("✓ Optimiser et prouver"); _bProve.Height = 30; _bProve.Width = 172;
+            _bProve.Click += (s, e) =>
+            {
+                using (var f = new PreuveForm(_tweaks)) f.ShowDialog(FindForm());
+                try { AppStats.Invalidate(); } catch { }
+                RefreshStatesAsync();
+            };
+            Controls.Add(_bProve); Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
         }
 
         // Auto-tune : détecte le matériel et applique la sélection adaptée (niveau équilibré).
@@ -257,8 +265,9 @@ namespace BTOptimizer
                 _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
                 _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
                 _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
-                _bAuto.Location = new Point(rx - _bAuto.Width, 22);
-                if (_search != null) _search.SetBounds(Math.Max(180, _bAuto.Left - 12 - 220), 24, 220, 26);
+                _bAuto.Location = new Point(rx - _bAuto.Width, 22); rx -= _bAuto.Width + 8;
+                _bProve.Location = new Point(rx - _bProve.Width, 22);
+                if (_search != null) _search.SetBounds(Math.Max(180, _bProve.Left - 12 - 220), 24, 220, 26);
             }
         }
 

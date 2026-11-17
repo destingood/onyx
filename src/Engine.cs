@@ -11,6 +11,7 @@ namespace BTOptimizer
         public string BackupDir;
         public bool PrepFailed;
         public string PrepError;
+        public List<Tweak> Failed = new List<Tweak>();   // réglages dont Apply/Revert a levé une erreur
     }
 
     /// <summary>
@@ -76,6 +77,7 @@ namespace BTOptimizer
                 catch (Exception ex)
                 {
                     result.Ko++;
+                    result.Failed.Add(t);
                     log("ÉCHEC : " + t.Name + " -> " + ex.Message, 3);
                 }
             }
