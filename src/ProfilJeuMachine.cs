@@ -103,7 +103,19 @@ namespace BTOptimizer
             var e = new Etat { Jeu = jeu, PlanOrigine = bascule ? planActif : null };
             EcritFichier(e);
             lock (_verrou) _etat = e;
-            if (bascule) Sys.SetActivePowerProfile(PlanPerformances);
+            if (bascule)
+            {
+                Sys.SetActivePowerProfile(PlanPerformances);
+                // Le plan n'existe pas partout (portables en veille moderne) et powercfg échoue sans
+                // bruit : on relit pour ne pas annoncer une bascule qui n'a pas eu lieu.
+                if (!string.Equals(Sys.GetActivePowerProfile(), PlanPerformances, StringComparison.OrdinalIgnoreCase))
+                {
+                    bascule = false;
+                    e.PlanOrigine = null;
+                    EcritFichier(e);
+                    if (log != null) log("Plan « Performances élevées » indisponible sur ce PC : plan d'alimentation inchangé.", 2);
+                }
+            }
 
             string coeurs = cible == Mode.CpuSets ? "cœurs préférés " + Topologie.Libelle(Topologie.Lit())
                           : cible == Mode.Affinite ? "affinité manuelle"

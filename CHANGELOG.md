@@ -18,6 +18,33 @@ gardien de démarrage, boost complet par jeu, mode SIMPLE complet, module de sto
   les boutons « Passer Pro » et le bouton d'essai de l'écran d'accueil sont retirés.
 - Les conditions d'utilisation (EULA) restent : elles ne dépendent d'aucune clé.
 
+### Profil par jeu, cœurs choisis selon le processeur, et mode Compétition
+
+**Le profil par jeu fonctionne enfin dans la fenêtre principale.** Il n'était appliqué que par
+l'ancienne fenêtre, que plus personne n'ouvrait. Il s'applique maintenant UNE fois au lancement
+du jeu, sur tous ses processus (et plus seulement le premier trouvé), et se retire à sa sortie.
+Le plan d'alimentation « Performances élevées » n'est basculé que s'il n'est pas déjà actif ; le
+plan d'origine est noté sur le disque AVANT la bascule et rétabli au lancement suivant d'ONYX
+si ONYX s'est fermé pendant la partie.
+
+**Mode « Auto » selon le processeur.** Au lieu de « tous les cœurs sauf le cœur 0 », ONYX lit
+la topologie : cœurs P sur les Intel hybrides, CCD à V-Cache (plus grand cache L3) sur les Ryzen
+X3D à deux CCD, sinon tous les cœurs sauf le cœur physique 0. La préférence passe par les CPU
+Sets de Windows (souple : le jeu peut déborder si besoin) ; le mode Manuel garde l'affinité
+stricte. Refus d'accès (anti-triche, processus protégé) : une ligne au journal, rien d'autre.
+Commande `-topologie` pour voir le choix.
+
+**Bouton « 🏁 Compétition »** (page Optimisations) : profils Auto pour les jeux installés sans
+profil, Mode Jeu automatique, réglages eSport prouvés (appliqués par lots, annulés s'ils
+dégradent la latence mesurée) et, en option, le plafond FPS recommandé pour l'écran. « Annuler
+Compétition » retire exactement ce qu'elle a posé, sans toucher à ce que l'utilisateur a réglé
+entre-temps. Si la mesure en jeu confirme une baisse alors qu'une Compétition est active, ONYX
+propose de l'annuler en entier.
+
+**Mesure en jeu : le plafond FPS est noté.** Un plafond changé entre la mesure « avant » et la
+mesure « après » rend la comparaison impossible (un plafond baisse les FPS par construction) :
+ONYX le dit au lieu de conclure à une régression.
+
 ### Optimiser et prouver
 
 Nouveau bouton « ✓ Optimiser et prouver » (page Optimisations) et commande `-prove` : ONYX

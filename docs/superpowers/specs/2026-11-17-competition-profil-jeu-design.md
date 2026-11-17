@@ -220,3 +220,27 @@ Points soulevés par la relecture. Ce sont des choix du concepteur, que l'utilis
 - Le nom et le format clé=valeur des fichiers d'état (même style que `Preuve.Ecrit`).
 - L'ordre des appels Win32 et la gestion des machines à plus de 64 processeurs logiques
   (groupes) : au minimum, ne rien appliquer plutôt qu'appliquer un masque faux.
+
+## Réalisation
+
+- `src/Topologie.cs` (pur, `tests/TopologieTests.cs`) et `src/TopologieMachine.cs` (lecture
+  GLPIEx, CPU Sets) ; commande `-topologie` dans `src/Cli.cs`.
+- `src/ProfilJeu.cs` (pur, `tests/ProfilJeuTests.cs`) et `src/ProfilJeuMachine.cs` ; appelé par
+  `DashboardForm` (Tick toutes les 2 s, Soigne au lancement) et `MainForm` (minuteur de garde).
+- `src/Competition.cs` (pur, `tests/CompetitionTests.cs`), `src/CompetitionMachine.cs`,
+  `src/CompetitionForm.cs` ; bouton dans `src/PageOptimisations.cs` ; branche Régression de
+  `src/PreuveForm.cs` ; surcharge `PreuveRun.Lance(…, idsImposes)`.
+- `MesureJeu.Plafond` dans `src/Preuve.cs`, relevé dans `src/PreuveJeu.cs`.
+
+Écarts et choix du constructeur :
+- Le mode manuel est écrit « Manual » par `GameProfileForm` : `ProfilJeu.Cible` accepte
+  « Manual » et « Manuel » (le plan ne citait que « Manuel »).
+- L'état de la Compétition est réécrit après chaque étape, pas seulement au début et à la fin.
+- Plafond actuel illisible ou plafond recommandé impossible : le plafond n'est pas touché.
+- L'annulation supprime l'état même si des réglages n'ont pas pu être rétablis (message et
+  sauvegarde .reg, comme l'annulation de la preuve).
+- Bascule vers « Performances élevées » vérifiée par relecture ; plan absent → journal, plan
+  inchangé, rien à rétablir.
+- Page Optimisations : sous ~1 250 px de large, la recherche passe sous les boutons.
+- Non vérifié en direct (l'application exige les droits administrateur) : `-topologie`, le
+  profil appliqué en jeu, l'activation et l'annulation de la Compétition, la mise en page.
