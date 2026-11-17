@@ -80,6 +80,7 @@ namespace BTOptimizer.Tests
             TopologieTests.Tout();
             ProfilJeuTests.Tout();
             CompetitionTests.Tout();
+            CatalogueTests.Tout();
             return Banc.Bilan();
         }
     }

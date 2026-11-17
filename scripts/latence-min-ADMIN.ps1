@@ -107,10 +107,13 @@ function Plan {
     Write-Host "            Desactive, le compositeur fait tout passer par le GPU. Reduit le VOLUME"
     Write-Host "            de DPC graphiques, pas leur cout unitaire."
     Write-Host "            COUT : scintillements possibles sur certains ecrans. Redemarrage."
+    Write-Host "            ONYX : decoche « Desactiver le MultiPlane Overlay », sinon le preset eSport, la Competition ou"
+    Write-Host "            « Optimiser et prouver » le recoupent et la mesure ne vaut plus rien."
     Write-Host ""
     Write-Host "  -Etape 3  Desactiver HAGS"
     Write-Host "            Effet variable selon les machines - a mesurer, pas a croire."
     Write-Host "            COUT : aucun. Redemarrage."
+    Write-Host "            ONYX : decoche « Activer la planification GPU (HAGS) » (meme raison : ces boutons le reactivent)."
     Write-Host ""
     Write-Host "  Hyperviseur : PAS ici. Utilise scripts\boot-gaming-ADMIN.ps1 (choix au demarrage)."
     Write-Host ""
@@ -168,6 +171,8 @@ function Etape3 {
     }
     Set-ItemProperty -Path $CleGraph -Name HwSchMode -Value 1 -Type DWord
     Write-Host "[OK] HAGS desactive (HwSchMode = 1)." -ForegroundColor Green
+    Write-Host "Dans ONYX, decoche « Activer la planification GPU (HAGS) » : le preset eSport, la Competition et « Optimiser et prouver »" -ForegroundColor Yellow
+    Write-Host "le reactiveraient (HwSchMode = 2) et fausseraient la mesure." -ForegroundColor Yellow
     Write-Host "Redemarre, puis releve de MEME DUREE." -ForegroundColor Cyan
 }
 

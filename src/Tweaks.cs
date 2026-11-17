@@ -545,7 +545,7 @@ namespace BTOptimizer
             {
                 Id = "sysresp", Category = Cat.Systeme, Recommended = true, Esport = true,
                 Name = "SystemResponsiveness = 10 (priorité aux applications)",
-                Desc = "Réserve moins de CPU aux tâches multimédia de fond (20 % par défaut, 10 % ici).",
+                Desc = "Réserve moins de CPU aux tâches multimédia de fond (20 % par défaut, 10 % ici). Effet non démontré en jeu : ne joue que sur les fils inscrits au service multimédia (MMCSS). À garder si ta mesure avant/après le confirme.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" },
                 Apply = () => Sys.SetMachine(MMKey, "SystemResponsiveness", 10, RegistryValueKind.DWord),
                 Revert = () => Sys.SetMachine(MMKey, "SystemResponsiveness", 20, RegistryValueKind.DWord),
@@ -590,7 +590,7 @@ namespace BTOptimizer
             {
                 Id = "netthrottle", Category = Cat.Systeme, Esport = true,
                 Name = "Désactiver le NetworkThrottlingIndex (bridage réseau multimédia)",
-                Desc = "Supprime la limite de paquets réseau traités par milliseconde pendant la lecture multimédia.",
+                Desc = "Supprime la limite de paquets réseau traités par milliseconde pendant la lecture multimédia. Effet non démontré sur le ping : la limite ne s'applique que pendant une lecture multimédia. À garder si ta mesure avant/après le confirme.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" },
                 Apply = () => Sys.SetMachine(MMKey, "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), RegistryValueKind.DWord),
                 Revert = () => Sys.SetMachine(MMKey, "NetworkThrottlingIndex", 10, RegistryValueKind.DWord),
@@ -1133,7 +1133,14 @@ namespace BTOptimizer
                 Desc = "Windows garde en permanence plusieurs Go rien que pour ses mises à jour. Commande OFFICIELLE (DISM), réversible. Le gain apparaît après un redémarrage.",
                 Reboot = true,
                 Apply  = () => Sys.RunThrow(Sys.Sys32("Dism.exe"), "/Online /Set-ReservedStorageState /State:Disabled", "Désactivation du stockage réservé"),
-                Revert = () => Sys.RunThrow(Sys.Sys32("Dism.exe"), "/Online /Set-ReservedStorageState /State:Enabled", "Réactivation du stockage réservé"),
+                Revert = () =>
+                {
+                    Sys.RunThrow(Sys.Sys32("Dism.exe"), "/Online /Set-ReservedStorageState /State:Enabled", "Réactivation du stockage réservé");
+                    // Ancienne variante de ce réglage (même Id, retirée) : ShippedWithReserves = 0.
+                    // Remise à 1 pour que « Rétablir » couvre aussi ceux qui l'avaient appliquée.
+                    if (Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves"), 0))
+                        Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 1, RegistryValueKind.DWord);
+                },
                 // PassedPolicy passe à 0 quand la réservation est levée ; valeur absente = on ne sait pas.
                 Check  = () =>
                 {
@@ -1736,17 +1743,6 @@ namespace BTOptimizer
                     Sys.SetUser(@"Control Panel\Accessibility\ToggleKeys", "Flags", "62", RegistryValueKind.String);
                 },
                 Check = () => Sys.StrEquals(Sys.GetUser(@"Control Panel\Accessibility\Keyboard Response", "Flags"), "122")
-            });
-
-            list.Add(new Tweak
-            {
-                Id = "reserved_storage_off", Category = Cat.Rapidite, Reboot = true,
-                Name = "Libérer le stockage réservé de Windows (~7 Go)",
-                Desc = "Indique à Windows de ne plus réserver d'espace disque pour les mises à jour (ShippedWithReserves=0). Effet complet après la prochaine mise à jour cumulative. « Rétablir » réactive la réserve.",
-                BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" },
-                Apply  = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 0, RegistryValueKind.DWord),
-                Revert = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves", 1, RegistryValueKind.DWord),
-                Check  = () => Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager", "ShippedWithReserves"), 0)
             });
 
             list.Add(new Tweak
@@ -2936,7 +2932,7 @@ namespace BTOptimizer
             {
                 Id = "tcp_bbr2", Category = Cat.Reseau,
                 Name = "5G/4G : contrôle de congestion BBR2 (au lieu de CUBIC)",
-                Desc = "CUBIC, l'algorithme par défaut de Windows, interprète toute perte de paquet comme un embouteillage et casse son débit — or sur un lien RADIO, des paquets se perdent sans qu'il y ait le moindre embouteillage. BBR2 raisonne en débit et en temps de trajet plutôt qu'en pertes : sur une box 4G/5G, il tient un débit bien plus stable et remplit moins les files d'attente (donc moins de bufferbloat). Inutile sur fibre/ADSL, où CUBIC fait très bien l'affaire. Demande Windows 11 22H2 ou plus récent ; si ta version ne connaît pas BBR2, l'application échouera proprement sans rien casser. Remplace le réglage « CTCP » (même paramètre). « Rétablir » remet CUBIC.",
+                Desc = "CUBIC, l'algorithme par défaut de Windows, interprète toute perte de paquet comme un embouteillage et casse son débit — or sur un lien RADIO, des paquets se perdent sans qu'il y ait le moindre embouteillage. BBR2 raisonne en débit et en temps de trajet plutôt qu'en pertes : sur une box 4G/5G, il tient un débit bien plus stable et remplit moins les files d'attente (donc moins de bufferbloat). Inutile sur fibre/ADSL, où CUBIC fait très bien l'affaire. Demande Windows 11 22H2 ou plus récent ; si ta version ne connaît pas BBR2, l'application échouera proprement sans rien casser. Remplace le réglage « CTCP » (même paramètre). « Rétablir » remet CUBIC. Effet non démontré par une mesure d'ONYX : à garder si ton débit et ton ping, mesurés avant/après sur ta box, le confirment.",
                 Apply  = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=bbr2", "Activation de BBR2"),
                 Revert = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=cubic", "Retour à CUBIC"),
                 Check  = () => Sys.CongestionProviderIs("bbr2")

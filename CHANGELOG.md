@@ -63,6 +63,19 @@ baisse de 10 % du 1 % low ou de 7 % des FPS moyens est confirmée par une second
 ONYX propose d'annuler les réglages appliqués. Jeu différent ou mesure trop courte : rien
 n'est touché.
 
+### Nettoyage : plus de contradiction entre l'appli et les scripts
+
+- « Libérer le stockage réservé » existait en deux exemplaires sous le même identifiant. Seule
+  la version officielle (DISM) reste ; son « Rétablir » remet aussi la valeur posée par
+  l'ancienne version.
+- `SystemResponsiveness`, `NetworkThrottlingIndex` et BBR2 disent désormais que leur effet en
+  jeu n'est pas démontré : à garder seulement si ta mesure avant/après le confirme.
+- `scripts/latence-min-ADMIN.ps1` désactive HAGS et réactive le MPO alors que le preset eSport,
+  la Compétition et « Optimiser et prouver » font l'inverse : le script dit maintenant quelle
+  case décocher dans ONYX pour que la mesure reste valable.
+- `scripts/measure-dpc-after-ADMIN.ps1` trouve le projet là où il est (le chemin était écrit
+  en dur).
+
 ## v15.75 — Ce qui tourne pour rien, ce que coûte chaque milliseconde, et sept licences mortes
 
 Un bogue signalé en passant — « la clé de mon pote se désactive » — a mis au jour le plus cher de cette version : **les sept licences vendues étaient invalides**, et rien nulle part ne pouvait le dire. Il ouvre donc le journal. Suivent les deux chantiers prévus : ce qui tourne pour rien sur cette machine, et ce que coûte chaque maillon entre le clic et le pixel.

@@ -1,5 +1,5 @@
 # Capture DPC/ISR 30s + analyse xperf (methodologie identique a dpcisr-analysis.txt)
-$root  = "C:\Users\User\Desktop\bt"
+$root  = Split-Path -Parent $PSScriptRoot   # dossier du projet, ou qu'il soit
 $xperf = "C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\xperf.exe"
 $etl   = Join-Path $root "tools\trace-after.etl"
 $out   = Join-Path $root "tools\dpcisr-analysis-after.txt"
