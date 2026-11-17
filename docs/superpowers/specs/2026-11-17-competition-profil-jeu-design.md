@@ -226,7 +226,7 @@ Points soulevés par la relecture. Ce sont des choix du concepteur, que l'utilis
 - `src/Topologie.cs` (pur, `tests/TopologieTests.cs`) et `src/TopologieMachine.cs` (lecture
   GLPIEx, CPU Sets) ; commande `-topologie` dans `src/Cli.cs`.
 - `src/ProfilJeu.cs` (pur, `tests/ProfilJeuTests.cs`) et `src/ProfilJeuMachine.cs` ; appelé par
-  `DashboardForm` (Tick toutes les 2 s, Soigne au lancement) et `MainForm` (minuteur de garde).
+  `DashboardForm` (Tick toutes les 2 s, `Arrete` à la fermeture) et `MainForm` (minuteur de garde).
 - `src/Competition.cs` (pur, `tests/CompetitionTests.cs`), `src/CompetitionMachine.cs`,
   `src/CompetitionForm.cs` ; bouton dans `src/PageOptimisations.cs` ; branche Régression de
   `src/PreuveForm.cs` ; surcharge `PreuveRun.Lance(…, idsImposes)`.
@@ -241,6 +241,15 @@ Points soulevés par la relecture. Ce sont des choix du concepteur, que l'utilis
   sauvegarde .reg, comme l'annulation de la preuve).
 - Bascule vers « Performances élevées » vérifiée par relecture ; plan absent → journal, plan
   inchangé, rien à rétablir.
-- Page Optimisations : sous ~1 250 px de large, la recherche passe sous les boutons.
+- Page Optimisations : quand la place manque, la recherche puis le bouton Compétition passent
+  sur une deuxième ligne, alignés à droite.
+- Revue finale : pas de « Soigne » au lancement (il effaçait l'état d'une partie en cours).
+  Le premier tour relit l'état : même jeu en cours → état adopté, plan d'origine compris ;
+  sinon plan d'origine rétabli. Fermer ONYX rétablit le plan tout de suite.
+- GUID du plan lu par motif, indépendant de la langue de Windows. « Performances optimales »
+  n'est jamais remplacé par « Performances élevées ».
+- Compétition : `ModeJeuPose` (et non l'état d'avant) — l'annulation n'éteint que le Mode Jeu
+  qu'elle a allumé, après en être sortie. Profils posés seulement sur les jeux à exécutable
+  connu ; listes séparées par « | » (des noms de jeux contiennent une virgule).
 - Non vérifié en direct (l'application exige les droits administrateur) : `-topologie`, le
   profil appliqué en jeu, l'activation et l'annulation de la Compétition, la mise en page.
