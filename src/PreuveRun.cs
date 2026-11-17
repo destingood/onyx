@@ -143,13 +143,26 @@ namespace BTOptimizer
 
         public static Rapport Lance(List<Tweak> all, Action<string, int> log, Func<bool> arretDemande)
         {
+            return Lance(all, log, arretDemande, null);
+        }
+
+        /// <summary>
+        /// <paramref name="idsImposes"/> non null : cette sélection remplace celle du profil
+        /// matériel (le mode Compétition prouve SES réglages eSport, pas le profil équilibré).
+        /// </summary>
+        public static Rapport Lance(List<Tweak> all, Action<string, int> log, Func<bool> arretDemande, IList<string> idsImposes)
+        {
             var rap = new Rapport();
             DateTime debut = DateTime.Now;
             Func<bool> stop = arretDemande ?? (() => false);
 
             HashSet<string> ids;
-            try { ids = Hardware.AutoTuneIds(all, Hardware.Detect(), Hardware.LevelBalanced); }
-            catch (Exception ex) { rap.Echec = true; rap.Erreur = "détection du matériel impossible (" + ex.Message + ")"; return rap; }
+            if (idsImposes != null) ids = new HashSet<string>(idsImposes);
+            else
+            {
+                try { ids = Hardware.AutoTuneIds(all, Hardware.Detect(), Hardware.LevelBalanced); }
+                catch (Exception ex) { rap.Echec = true; rap.Erreur = "détection du matériel impossible (" + ex.Message + ")"; return rap; }
+            }
 
             var candidats = new List<Tweak>();
             foreach (Tweak t in all)
