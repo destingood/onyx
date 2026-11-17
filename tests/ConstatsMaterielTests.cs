@@ -81,21 +81,26 @@ namespace BTOptimizer.Tests
             // ---- Ce qui empêche le pilote AMD de garer le CCD sans V-Cache
             // Seul le plan est écarté d'office : le déparquage de base (CPMINCORES) ne touche pas le
             // profil du mode Jeu où AMD gare les cœurs ; il vaut 100 % par défaut sur certains PC.
-            Banc.Verifie("garde : seul Performances ultimes est écarté d'office", true,
-                string.Join(",", ConstatsMateriel.ConflitsX3D) == "power_ultimate");
-            Banc.Verifie("tout en ordre : rien", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, false) == null);
+            Banc.Verifie("garde : Performances ultimes et les deux coupures de Game DVR écartés d'office", true,
+                string.Join(",", ConstatsMateriel.ConflitsX3D) == "power_ultimate,gamedvr_off,gamedvr_policy_off");
+            Banc.Verifie("garde : le déparquage de base n'est pas écarté", false,
+                System.Array.IndexOf(ConstatsMateriel.ConflitsX3D, "cpu_unpark_cores") >= 0);
+            Banc.Verifie("tout en ordre : rien", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, false, false) == null);
             Banc.Verifie("pas un X3D à deux CCD : rien", true,
-                ConstatsMateriel.X3DSansParcage("AMD Ryzen 7 9800X3D 8-Core Processor", false, "Performances ultimes", true) == null);
-            string pil = ConstatsMateriel.X3DSansParcage(R9950, false, null, false);
+                ConstatsMateriel.X3DSansParcage("AMD Ryzen 7 9800X3D 8-Core Processor", false, "Performances ultimes", true, true) == null);
+            string pil = ConstatsMateriel.X3DSansParcage(R9950, false, null, false, false);
             Banc.Verifie("pilote absent : signalé, pilote chipset nommé", true, pil != null && pil.Contains("pilote chipset AMD"));
-            Banc.Verifie("pilote non lu : rien (pas d'affirmation sans lecture)", true, ConstatsMateriel.X3DSansParcage(R9950, null, null, false) == null);
-            string plan = ConstatsMateriel.X3DSansParcage(R9950, true, "Performances ultimes", false);
+            Banc.Verifie("pilote non lu : rien (pas d'affirmation sans lecture)", true, ConstatsMateriel.X3DSansParcage(R9950, null, null, false, false) == null);
+            string plan = ConstatsMateriel.X3DSansParcage(R9950, true, "Performances ultimes", false, false);
             Banc.Verifie("plan Performances ultimes : signalé, plan nommé, Équilibré conseillé", true,
                 plan != null && plan.Contains("Performances ultimes") && plan.Contains("Équilibré"));
-            Banc.Verifie("mode Jeu coupé : signalé", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, true).Contains("mode Jeu"));
-            string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true);
+            Banc.Verifie("mode Jeu coupé : signalé", true, ConstatsMateriel.X3DSansParcage(R9950, true, null, true, false).Contains("mode Jeu"));
+            string dvr = ConstatsMateriel.X3DSansParcage(R9950, true, null, false, true);
+            Banc.Verifie("Game DVR coupé par stratégie : signalé, Game Bar nommée", true,
+                dvr != null && dvr.Contains("Game DVR") && dvr.Contains("Game Bar"));
+            string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true, true);
             Banc.Verifie("plusieurs causes : toutes citées dans un seul constat", true,
-                tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu"));
+                tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu") && tout.Contains("Game DVR"));
         }
     }
 }

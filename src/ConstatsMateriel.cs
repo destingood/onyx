@@ -86,21 +86,25 @@ namespace BTOptimizer
         /// <summary>Réglage qui empêche ce parcage (AMD recommande le plan Équilibré) : jamais coché
         /// d'office sur ces processeurs, toujours cochable à la main. Le déparquage de base
         /// (cpu_unpark_cores) n'y figure pas : AMD gare les cœurs dans le profil du mode Jeu, pas
-        /// par la valeur de base, qui vaut d'ailleurs déjà 100 % par défaut sur certains PC.</summary>
-        public static readonly string[] ConflitsX3D = { "power_ultimate" };
+        /// par la valeur de base, qui vaut d'ailleurs déjà 100 % par défaut sur certains PC.
+        /// Les deux coupures de Game DVR y figurent : Windows reconnaît les jeux par la Game Bar,
+        /// et des possesseurs de X3D rapportent qu'en couper la capture casse le parcage
+        /// (sources secondaires, page AMD non retrouvée).</summary>
+        public static readonly string[] ConflitsX3D = { "power_ultimate", "gamedvr_off", "gamedvr_policy_off" };
 
         /// <summary>Ce qui empêche le pilote AMD de garer le CCD sans V-Cache pendant un jeu.
         /// <paramref name="pilote"/> null = non lu ; <paramref name="planBloquant"/> = nom du plan
         /// actif s'il est Performances ultimes ou élevées, sinon null.</summary>
-        public static string X3DSansParcage(string cpu, bool? pilote, string planBloquant, bool modeJeuCoupe)
+        public static string X3DSansParcage(string cpu, bool? pilote, string planBloquant, bool modeJeuCoupe, bool dvrCoupe)
         {
             if (!X3DDeuxCcd(cpu)) return null;
             var causes = new System.Collections.Generic.List<string>();
             if (pilote == false) causes.Add("le pilote AMD 3D V-Cache est absent (installe le pilote chipset AMD)");
             if (planBloquant != null) causes.Add("le plan « " + planBloquant + " » est actif (AMD recommande le plan Équilibré)");
             if (modeJeuCoupe) causes.Add("le mode Jeu de Windows est coupé");
+            if (dvrCoupe) causes.Add("Game DVR est coupé par stratégie, ce qui peut empêcher la Game Bar de reconnaître les jeux (bouton « Rétablir » de « Désactiver Game DVR » dans Optimisations)");
             if (causes.Count == 0) return null;
-            return "Ryzen X3D à deux CCD : le pilote AMD ne peut pas réserver le CCD à V-Cache au jeu, car "
+            return "Ryzen X3D à deux CCD : le pilote AMD risque de ne pas réserver au jeu le CCD à V-Cache, car "
                  + string.Join(" ; ", causes) + ". Le jeu risque de s'étaler sur les deux CCD. "
                  + "Un profil de jeu ONYX en mode Automatique place déjà le jeu sur le CCD V-Cache.";
         }

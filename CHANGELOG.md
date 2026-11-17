@@ -19,6 +19,11 @@ indépendante publiée).
 - Le déparquage des cœurs (`cpu_unpark_cores`) n'est **pas** écarté : il change la valeur de
   base du plan, alors qu'AMD gare les cœurs dans le profil du mode Jeu, et cette valeur vaut
   déjà 100 % par défaut sur certains PC (constaté sur un 9950X3D).
+- **Game DVR n'est plus coupé d'office** sur ces processeurs (`gamedvr_off`,
+  `gamedvr_policy_off`) : Windows reconnaît les jeux par la Game Bar, et des possesseurs de
+  X3D rapportent qu'en couper la capture casse le parcage (Notebookcheck et AMD cités par
+  Windows Forum, forum Overclockers UK ; page AMD non retrouvée). Le constat signale aussi
+  la stratégie « Game DVR coupé » déjà posée, avec le bouton à utiliser pour la lever.
 
 ## Prochaine version — trois constats matériels dans le diagnostic
 

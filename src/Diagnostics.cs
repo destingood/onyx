@@ -137,7 +137,10 @@ namespace BTOptimizer
                         plan = "Performances élevées";
                     // Absent = mode Jeu actif (valeur par défaut de Windows 10 et 11).
                     bool modeJeuCoupe = Sys.IntEquals(Sys.GetUser(@"Software\Microsoft\GameBar", "AutoGameModeEnabled"), 0);
-                    string x3d = ConstatsMateriel.X3DSansParcage(cpu, pilote, plan, modeJeuCoupe);
+                    // Stratégie posée par gamedvr_off ou gamedvr_policy_off : coupe la Game Bar
+                    // par laquelle Windows reconnaît les jeux pour le pilote AMD.
+                    bool dvrCoupe = Sys.IntEquals(Sys.GetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"), 0);
+                    string x3d = ConstatsMateriel.X3DSansParcage(cpu, pilote, plan, modeJeuCoupe, dvrCoupe);
                     if (x3d != null) f.Add(new Finding(1, x3d));
                 }
             }

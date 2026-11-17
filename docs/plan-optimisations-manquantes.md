@@ -40,9 +40,13 @@ recommandation d'AMD rapportée par IDC et XDA : `power_ultimate` perd ses marqu
 Recommandé/eSport sur X3D à deux CCD (`src/Tweaks.cs`), constat pilote / plan / mode Jeu.
 `cpu_unpark_cores` gardé : il règle la valeur de base du plan (100 % par défaut sur le
 9950X3D testé), pas le profil du mode Jeu où AMD gare les cœurs. `xbox_services_off` n'est
-dans aucune sélection d'office. Restent [VERIFICATION REQUIRED] : la page AMD d'origine ;
-l'effet de `gamedvr_off` et `gamedvr_policy_off` sur la détection des jeux par la Game Bar.
-La mesure en jeu (Équilibré contre Performances ultimes) reste utile pour confirmer. Écart avec
+dans aucune sélection d'office. `gamedvr_off` et `gamedvr_policy_off` écartés aussi sur ces
+processeurs (la détection des jeux passe par la Game Bar ; sources secondaires : Windows
+Forum citant Notebookcheck et AMD, forum Overclockers UK) ; le constat signale la stratégie
+`AllowGameDVR=0`, et s'affiche sur le 9950X3D testé, où elle était posée. Reste
+[VERIFICATION REQUIRED] : la page AMD d'origine (recherches sur amd.com sans résultat).
+La mesure en jeu (Équilibré contre Performances ultimes, Game DVR coupé ou non) reste utile
+pour confirmer. Écart avec
 le tableau : le constat HAGS renvoie vers Optimisations par son texte, sans bouton. Vérifié
 sur un seul PC (2 barrettes, HAGS actif, Windows 25H2), où aucun des trois ne s'affiche ; les
 cas positifs ne sont couverts que par les tests.

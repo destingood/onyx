@@ -56,6 +56,7 @@ namespace BTOptimizer
         });
 
         private const string NoteX3D = " Sur Ryzen X3D à deux CCD, non coché d'office : AMD recommande le plan Équilibré pour que son pilote réserve au jeu le CCD à V-Cache.";
+        private const string NoteX3DGameBar = " Sur Ryzen X3D à deux CCD, non coché d'office : Windows reconnaît les jeux par la Game Bar, et le pilote AMD s'en sert pour réserver au jeu le CCD à V-Cache.";
 
         public static List<Tweak> All()
         {
@@ -485,9 +486,9 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "gamedvr_off", Category = Cat.Gpu, Recommended = true, Esport = true,
+                Id = "gamedvr_off", Category = Cat.Gpu, Recommended = !X3DDeuxCcd.Value, Esport = !X3DDeuxCcd.Value,
                 Name = "Désactiver Game DVR / captures Xbox Game Bar",
-                Desc = "Supprime l'enregistrement d'écran en arrière-plan (source classique de stutter et de latence).",
+                Desc = "Supprime l'enregistrement d'écran en arrière-plan (source classique de stutter et de latence)." + (X3DDeuxCcd.Value ? NoteX3DGameBar : ""),
                 BackupKeys = new[] { @"HKCU\System\GameConfigStore",
                                      @"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR",
                                      @"HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" },
@@ -2477,9 +2478,9 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "gamedvr_policy_off", Category = Cat.Gpu, Esport = true,
+                Id = "gamedvr_policy_off", Category = Cat.Gpu, Esport = !X3DDeuxCcd.Value,
                 Name = "Désactiver GameDVR par stratégie (verrou machine)",
-                Desc = "Force GameDVR à OFF au niveau machine (stratégie), en plus du réglage utilisateur : certains jeux/MAJ réactivent GameDVR côté utilisateur, ceci l'empêche. Gain de FPS et moins d'overhead de capture. « Rétablir » lève la stratégie.",
+                Desc = "Force GameDVR à OFF au niveau machine (stratégie), en plus du réglage utilisateur : certains jeux/MAJ réactivent GameDVR côté utilisateur, ceci l'empêche. Gain de FPS et moins d'overhead de capture. « Rétablir » lève la stratégie." + (X3DDeuxCcd.Value ? NoteX3DGameBar : ""),
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" },
                 Apply  = () => Sys.SetMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SOFTWARE\Policies\Microsoft\Windows\GameDVR", "AllowGameDVR"),
