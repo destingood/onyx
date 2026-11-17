@@ -76,11 +76,21 @@ namespace BTOptimizer
                 return pr.RedemarrageRequis ? 10 : 0;   // 10 : redémarrage à faire pour finir la preuve
             }
 
+            if (string.Equals(args[0], "-topologie", StringComparison.OrdinalIgnoreCase))
+            {
+                List<Topologie.Proc> procs = Topologie.Lit();
+                log("Processeur : " + Topologie.Libelle(procs), 0);
+                log("Cœurs préférés pour le jeu : " + string.Join(",", Topologie.Preferes(procs)), 0);
+                foreach (Topologie.Proc p in procs)
+                    log("  logique " + p.Index + " : cœur " + p.Coeur + ", classe " + p.Efficacite + ", L3 n°" + p.L3 + " (" + (p.L3Octets / (1024 * 1024)) + " Mo)", 0);
+                return 0;
+            }
+
             bool apply = string.Equals(args[0], "-apply", StringComparison.OrdinalIgnoreCase);
             bool revert = string.Equals(args[0], "-revert", StringComparison.OrdinalIgnoreCase);
             if (!apply && !revert)
             {
-                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove ou -gpuoc).", 3);
+                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove, -topologie ou -gpuoc).", 3);
                 return 2;
             }
             string mode = args.Length > 1 ? args[1].ToLowerInvariant() : "profile";
