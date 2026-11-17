@@ -55,10 +55,24 @@ cas positifs ne sont couverts que par les tests.
 |---|---|---|---|---|
 | 1 | **RAM en simple canal** | TechSpot (déc. 2025, Ryzen 7 9700X + RTX 5090) : de 0 à −23 % de FPS selon le jeu, jusqu'à −33 % sur le 1 % low. [Source](https://www.techspot.com/article/3066-single-stick-vs-dual-channel-ram/), chiffres lus par extraction automatique | Constat dans le diagnostic quand une seule barrette est installée. Aujourd'hui : texte d'aide seulement (`src/KnowledgeBase.cs`) | Faible |
 | 2 | **Garde Ryzen X3D à deux CCD** (7900X3D, 7950X3D, 9900X3D, 9950X3D) | Pas de chiffre indépendant. Mécanisme : le pilote AMD gare le CCD sans V-Cache pendant un jeu, ce qui demande le mode Jeu, la Game Bar et le plan Équilibré. [VERIFICATION REQUIRED] : page d'aide AMD « 3D V-Cache Performance Optimizer » | Ne plus proposer d'office `cpu_unpark_cores`, `power_ultimate` et `xbox_services_off` sur ces processeurs ; constat si le pilote `amd3dvcache` manque. Aujourd'hui : aucune garde (`src/Hardware.cs`, `src/Tweaks.cs:1504`) | Moyen |
-| 3 | **Windows en retard sur Ryzen 7000/9000** | Hardware Unboxed (été 2024) : environ +10 % avec Windows 11 24H2. [Source secondaire](https://gazlog.jp/entry/windows11-24h2-ryzen-boost/) [VERIFICATION REQUIRED] | Constat si le build est antérieur à 24H2 sur ces processeurs et que la mise à jour KB5041587 manque (elle apporte l'optimisation à 22H2 et 23H2 ; seuil de révision 4112 [VERIFICATION REQUIRED] : page Microsoft de KB5041587) | Faible |
+| 3 | **Windows en retard sur Ryzen 7000/9000** | Hardware Unboxed (été 2024) : environ +10 % avec Windows 11 24H2. [Source secondaire](https://gazlog.jp/entry/windows11-24h2-ryzen-boost/) [VERIFICATION REQUIRED] | Constat si le build est antérieur à 24H2 sur ces processeurs et que la mise à jour KB5041587 manque (elle apporte l'optimisation à 22H2 et 23H2 ; seuil de révision 4112 vérifié : builds 22621.4112 et 22631.4112) | Faible |
 | 4 | **Planification GPU (HAGS) coupée sur RTX 40/50** | Pas un gain de FPS direct : la génération d'images DLSS ne fonctionne pas sans. [Source](https://support.cdprojektred.com/en/witcher-3/pc/sp-technical/issue/2278/dlss-frame-generation-how-to-enable-hardware-accelerated-gpu-scheduling) | Constat avec bouton vers le réglage `hags` existant | Faible |
 
 ### Phase 2 — table des problèmes connus
+
+**État au 17/11/2026** : seuil KB5041587 vérifié (builds 22621.4112 et 22631.4112, titre de
+la page Microsoft). Ajout 5 codé (`src/ProblemesConnus.cs`, une entrée : KB5066835, builds
+26100.6899 et 26200.6899, avec NVIDIA avant 581.94). Ajout 6 codé en conseil
+(`ConstatsMateriel.BiosAncienAm5`) : l'AGESA ne se lit pas de façon fiable depuis Windows
+(forum winraid), donc on utilise la date du BIOS, avec un seuil d'un an qui est un choix et
+non une mesure. Le test d'origine du +1 à +7 % est celui de Compusemble (9800X3D, AGESA
+1.2.0.2a contre 1.2.0.2b), relayé par gazlog ; PCGH relève environ +3 à +4 % sur
+9900X/9950X. Ajout 7 non codé : la page Intel (article 000095419) liste les 14e génération
+K/KF/HX et les Core Ultra 200S/200HX. APO tourne dans le pilote Intel DTT, activé dans le
+BIOS, mais ni le nom du paquet ni celui du service n'est vérifié ; impossible donc de
+détecter son absence sans risque de fausse alerte. Le +14 % reste un chiffre d'Intel, non
+reproduit. Vérifié sur un seul PC (pilote 621.01, BIOS de juin 2026) : aucun des deux
+constats ne s'y affiche, et les cas positifs ne sont couverts que par les tests.
 
 | # | Ajout | Gain publié | Ce qu'ONYX fait | Effort |
 |---|---|---|---|---|

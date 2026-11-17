@@ -98,6 +98,28 @@ namespace BTOptimizer.Tests
             string dvr = ConstatsMateriel.X3DSansParcage(R9950, true, null, false, true);
             Banc.Verifie("Game DVR coupé par stratégie : signalé, Game Bar nommée", true,
                 dvr != null && dvr.Contains("Game DVR") && dvr.Contains("Game Bar"));
+            // ---- BIOS de plus d'un an sur une plateforme AM5 (conseil, jamais de mise à jour)
+            Banc.Verifie("9950X3D : AM5", true, ConstatsMateriel.RyzenAm5(R9950));
+            Banc.Verifie("7600 : AM5", true, ConstatsMateriel.RyzenAm5("AMD Ryzen 5 7600 6-Core Processor"));
+            Banc.Verifie("7500F : AM5", true, ConstatsMateriel.RyzenAm5("AMD Ryzen 5 7500F 6-Core Processor"));
+            Banc.Verifie("8700G : AM5", true, ConstatsMateriel.RyzenAm5("AMD Ryzen 7 8700G w/ Radeon 780M Graphics"));
+            Banc.Verifie("PRO 8700GE : AM5", true, ConstatsMateriel.RyzenAm5("AMD Ryzen 7 PRO 8700GE"));
+            Banc.Verifie("7840HS (portable) : non", false, ConstatsMateriel.RyzenAm5("AMD Ryzen 7 7840HS w/ Radeon 780M Graphics"));
+            Banc.Verifie("9955HX (portable) : non", false, ConstatsMateriel.RyzenAm5("AMD Ryzen 9 9955HX"));
+            Banc.Verifie("5800X3D (AM4) : non", false, ConstatsMateriel.RyzenAm5("AMD Ryzen 7 5800X3D 8-Core Processor"));
+            Banc.Verifie("Intel : non", false, ConstatsMateriel.RyzenAm5("Intel(R) Core(TM) i7-14700K"));
+            var maintenant = new System.DateTime(2026, 11, 17);
+            string bios = ConstatsMateriel.BiosAncienAm5(R9950, new System.DateTime(2025, 6, 30), maintenant);
+            Banc.Verifie("BIOS de 2025 sur AM5 : signalé, date citée, pas de mise à jour automatique", true,
+                bios != null && bios.Contains("30/06/2025") && bios.Contains("ne met jamais"));
+            Banc.Verifie("BIOS de 4 mois : rien", true,
+                ConstatsMateriel.BiosAncienAm5(R9950, new System.DateTime(2026, 6, 30), maintenant) == null);
+            Banc.Verifie("BIOS d'un an tout juste : rien", true,
+                ConstatsMateriel.BiosAncienAm5(R9950, new System.DateTime(2025, 11, 18), maintenant) == null);
+            Banc.Verifie("date illisible : rien", true, ConstatsMateriel.BiosAncienAm5(R9950, null, maintenant) == null);
+            Banc.Verifie("portable avec vieux BIOS : rien", true,
+                ConstatsMateriel.BiosAncienAm5("AMD Ryzen 7 7840HS", new System.DateTime(2023, 1, 1), maintenant) == null);
+
             string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true, true);
             Banc.Verifie("plusieurs causes : toutes citées dans un seul constat", true,
                 tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu") && tout.Contains("Game DVR"));

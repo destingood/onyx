@@ -59,7 +59,7 @@ namespace BTOptimizer
 
         // Windows 11 24H2. L'optimisation de prédiction de branche des Ryzen y est d'origine.
         private const int Build24H2 = 26100;
-        // KB5041587 (août 2024) l'apporte à 22H2 (22621) et 23H2 (22631) à partir de la révision 4112.
+        // KB5041587 (27 août 2024, builds 22621.4112 et 22631.4112, page Microsoft) l'apporte à 22H2 et 23H2.
         private const int RevisionKb5041587 = 4112;
 
         /// <summary>Windows 11 sans l'optimisation des Ryzen 7000/9000. Windows 10 n'est pas
@@ -71,6 +71,28 @@ namespace BTOptimizer
             return "Ton Windows 11 n'a pas l'optimisation de prédiction de branche des Ryzen 7000/9000 "
                  + "(d'origine dans la version 24H2, ou apportée par la mise à jour KB5041587 sur 22H2/23H2). "
                  + "Les tests publiés relèvent jusqu'à 10 % de FPS environ. Mets Windows à jour.";
+        }
+
+        // Ryzen de bureau 7000, 8000G/F et 9000. Les suffixes de portable (HS, HX, U) sont exclus :
+        // leur BIOS vient du fabricant du portable, souvent sans AGESA récent.
+        private static readonly Regex RyzenBureauAm5 = new Regex(@"Ryzen\s+\d\s+(?:PRO\s+)?[789]\d\d\d(X3D|X|F|GE|G)?\b", RegexOptions.IgnoreCase);
+
+        /// <summary>Processeur de bureau sur socket AM5.</summary>
+        public static bool RyzenAm5(string cpu)
+        {
+            return cpu != null && RyzenBureauAm5.IsMatch(cpu);
+        }
+
+        /// <summary>BIOS de plus d'un an sur AM5. L'AGESA ne se lit pas de façon fiable depuis
+        /// Windows : seule la date du BIOS sert, et le seuil d'un an est un choix, pas une mesure.
+        /// Conseil seulement : ONYX ne touche jamais au BIOS.</summary>
+        public static string BiosAncienAm5(string cpu, System.DateTime? dateBios, System.DateTime maintenant)
+        {
+            if (dateBios == null || !RyzenAm5(cpu) || dateBios.Value.AddYears(1) >= maintenant) return null;
+            return "BIOS du " + dateBios.Value.ToString("dd/MM/yyyy") + " sur une carte AM5 : AMD améliore "
+                 + "régulièrement ses processeurs par le BIOS (AGESA), et des tests publiés relèvent quelques % "
+                 + "de FPS après certaines mises à jour sur Ryzen 9000. Regarde la page support de ta carte "
+                 + "mère. ONYX ne met jamais le BIOS à jour lui-même.";
         }
 
         // Ryzen 9 7900X3D, 7950X3D, 9900X3D, 9950X3D : V-Cache sur un seul des deux CCD. Une

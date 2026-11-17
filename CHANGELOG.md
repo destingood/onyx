@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — problèmes connus et BIOS ancien
+
+Lecture seule, comme les autres constats : rien n'est modifié.
+
+- **Table des problèmes connus** (`src/ProblemesConnus.cs`) : une mise à jour Windows précise
+  associée à un pilote trop ancien. Première entrée : la mise à jour d'octobre 2025
+  (KB5066835, builds 26100.6899 et 26200.6899) avec un pilote NVIDIA antérieur au 581.94,
+  qui fait chuter les FPS dans certains jeux (note du pilote correctif NVIDIA ; jusqu'à
+  −50 % relevé par Notebookcheck et TweakTown). Ajouter un cas = une ligne dans la table.
+- **BIOS de plus d'un an sur AM5** (Ryzen de bureau 7000, 8000G/F, 9000) : conseil d'aller
+  voir la page support de la carte mère. L'AGESA ne se lit pas de façon fiable depuis
+  Windows, donc seule la date du BIOS sert ; le seuil d'un an est un choix, pas une mesure.
+  ONYX ne touche jamais au BIOS.
+- **Intel APO** : pas ajouté. Rien ne permet encore de voir de façon fiable, depuis Windows,
+  s'il est absent ou coupé, et le gain annoncé (+14 %) vient d'Intel seul.
+
 ## Prochaine version — Ryzen X3D à deux CCD (7900X3D, 7950X3D, 9900X3D, 9950X3D)
 
 Le pilote AMD réserve au jeu le CCD à V-Cache en garant l'autre, avec le mode Jeu, et AMD

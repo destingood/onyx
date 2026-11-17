@@ -116,6 +116,11 @@ namespace BTOptimizer
                 string retard = ConstatsMateriel.WindowsEnRetard(Sys.QueryCpu().Name,
                     Environment.OSVersion.Version.Build, ubr == null ? 0 : Convert.ToInt32(ubr));
                 if (retard != null) f.Add(new Finding(1, retard, FixKind.WindowsUpdate, "Windows Update"));
+                // Problème connu : mise à jour Windows précise + pilote trop ancien.
+                GpuDrv gd = GpuDriver();
+                string connu = gd == null ? null : ProblemesConnus.Constat(Environment.OSVersion.Version.Build,
+                    ubr == null ? 0 : Convert.ToInt32(ubr), gd.Name, gd.Version);
+                if (connu != null) f.Add(new Finding(2, connu));
             }
             catch { }
             // Ryzen X3D à deux CCD : ce qui empêche le pilote AMD de garer le CCD sans V-Cache.
@@ -143,6 +148,24 @@ namespace BTOptimizer
                     string x3d = ConstatsMateriel.X3DSansParcage(cpu, pilote, plan, modeJeuCoupe, dvrCoupe);
                     if (x3d != null) f.Add(new Finding(1, x3d));
                 }
+            }
+            catch { }
+            // BIOS de plus d'un an sur AM5 : conseil seulement.
+            try
+            {
+                DateTime? dateBios = null;
+                using (var s = new ManagementObjectSearcher("SELECT ReleaseDate FROM Win32_BIOS"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string d = Convert.ToString(mo["ReleaseDate"]);
+                        DateTime lu;
+                        if (d != null && d.Length >= 8 && DateTime.TryParseExact(d.Substring(0, 8), "yyyyMMdd",
+                                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out lu))
+                            dateBios = lu;
+                        break;
+                    }
+                string bios = ConstatsMateriel.BiosAncienAm5(Sys.QueryCpu().Name, dateBios, DateTime.Now);
+                if (bios != null) f.Add(new Finding(0, bios));
             }
             catch { }
 

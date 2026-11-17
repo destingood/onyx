@@ -59,6 +59,7 @@
     <Compile Include="..\src\DiskWalk.cs" />
     <Compile Include="..\src\SuiviParallele.cs" />
     <Compile Include="..\src\ConstatsMateriel.cs" />
+    <Compile Include="..\src\ProblemesConnus.cs" />
   </ItemGroup>
 
   <ItemGroup>
