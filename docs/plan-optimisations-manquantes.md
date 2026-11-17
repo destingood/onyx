@@ -82,10 +82,26 @@ constats ne s'y affiche, et les cas positifs ne sont couverts que par les tests.
 
 ### Phase 3 — par jeu
 
+**État au 17/11/2026** : chiffres TechPowerUp relus à la source. Reflex : Overwatch en Epic,
+82,3 → 35,0 ms ; en Low, 13,3 ms dans les deux cas. ReBAR : +2 à +4 % en moyenne sur 22 jeux
+avec des RTX 30, jusqu'à 20 % dans Gears 5, recul dans Watch Dogs Legion en 1080p.
+
+- Ajout 8 codé pour Fortnite seul (`ConstatsMateriel.ReflexFortnite`). La clé
+  `LatencyTweak2` vaut 2 sur le PC de test, où Reflex est réglé sur activé + boost. Que 0
+  veuille dire coupé est une déduction de l'ordre des modes du SDK Reflex (off, on,
+  on + boost) [VERIFICATION REQUIRED] : régler Reflex sur « Désactivé » dans Fortnite et
+  relire la clé. Pas de second jeu : aucun autre n'est installé pour vérifier son fichier.
+  Anti-Lag 2 non traité.
+- Ajout 9 codé (`ConstatsMateriel.ReBarCoupe`) : BAR1 lue par `nvidia-smi -q -d MEMORY`,
+  coupé si elle fait 256 Mio ou moins (forums NVIDIA et Linux concordants, documentation
+  NVIDIA GPUDirect). Concerne les GeForce RTX 30, 40 et 50 seulement ; AMD non traité.
+- Vérifié sur un seul PC (Reflex activé + boost, BAR1 de 16 384 Mio) : les deux constats
+  s'y taisent, et les cas positifs ne sont couverts que par les tests.
+
 | # | Ajout | Gain publié | Ce qu'ONYX fait | Effort |
 |---|---|---|---|---|
-| 8 | **Reflex / Anti-Lag 2 coupé dans le jeu** | TechPowerUp : 82 → 35 ms sur Overwatch, quand la carte graphique est saturée ; aucun gain sinon. [Source](https://techpowerup.com/review/nvidia-reflex-review-test-ldat-v2/3.html) [VERIFICATION REQUIRED] | Lire le fichier de réglages des jeux compatibles (lecture seule) et signaler si l'option est coupée. Clés par jeu à établir [VERIFICATION REQUIRED] | Élevé |
-| 9 | **Resizable BAR coupé** | TechPowerUp (2021) : +2 à +4 % en moyenne, parfois négatif selon le jeu. [Source](https://techpowerup.com/review/nvidia-pci-express-resizable-bar-performance-test/27.html) [VERIFICATION REQUIRED] | Constat d'information + guide BIOS existant. Lecture fiable de l'état à confirmer [VERIFICATION REQUIRED] | Moyen |
+| 8 | **Reflex / Anti-Lag 2 coupé dans le jeu** | TechPowerUp : 82 → 35 ms sur Overwatch, quand la carte graphique est saturée ; aucun gain sinon. [Source](https://techpowerup.com/review/nvidia-reflex-review-test-ldat-v2/3.html) | Lire le fichier de réglages des jeux compatibles (lecture seule) et signaler si l'option est coupée. Fortnite fait (LatencyTweak2), autres jeux à établir | Élevé |
+| 9 | **Resizable BAR coupé** | TechPowerUp (2021) : +2 à +4 % en moyenne, parfois négatif selon le jeu. [Source](https://techpowerup.com/review/nvidia-pci-express-resizable-bar-performance-test/27.html) | Constat d'information + guide BIOS existant. Lu par nvidia-smi (BAR1) sur NVIDIA | Moyen |
 
 ## À ne pas ajouter
 

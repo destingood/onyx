@@ -73,6 +73,53 @@ namespace BTOptimizer
                  + "Les tests publiés relèvent jusqu'à 10 % de FPS environ. Mets Windows à jour.";
         }
 
+        private static readonly Regex Bar1Total = new Regex(@"BAR1 Memory Usage\s+Total\s*:\s*(\d+)\s*MiB", RegexOptions.IgnoreCase);
+
+        /// <summary>Taille de la fenêtre BAR1 dans « nvidia-smi -q -d MEMORY », en Mio. 256 =
+        /// Resizable BAR coupé ; à peu près la VRAM = actif. null si absente.</summary>
+        public static int? Bar1Mio(string sortieSmi)
+        {
+            if (sortieSmi == null) return null;
+            Match m = Bar1Total.Match(sortieSmi);
+            int v;
+            return m.Success && int.TryParse(m.Groups[1].Value, out v) ? v : (int?)null;
+        }
+
+        // GeForce RTX 30, 40 et 50 : les seules NVIDIA qui prennent en charge Resizable BAR.
+        private static readonly Regex RtxReBar = new Regex(@"\bRTX\s*[345]0[5-9]0\b", RegexOptions.IgnoreCase);
+
+        /// <summary>Resizable BAR coupé sur une carte qui le prend en charge. Information
+        /// seulement : le gain mesuré est faible, et négatif dans quelques jeux.</summary>
+        public static string ReBarCoupe(string gpu, int? bar1Mio)
+        {
+            if (bar1Mio == null || bar1Mio > 256 || gpu == null || !RtxReBar.IsMatch(gpu)) return null;
+            return "Resizable BAR est coupé sur ta " + gpu.Trim() + ". TechPowerUp mesure +2 à +4 % de FPS "
+                 + "en moyenne en l'activant (22 jeux, RTX 30), avec quelques jeux en recul ; NVIDIA ne s'en "
+                 + "sert que dans les jeux qu'il a validés. Il s'active dans le BIOS (Above 4G Decoding et "
+                 + "Re-Size BAR Support), si la carte mère et le processeur le prennent en charge.";
+        }
+
+        private static readonly Regex LatencyTweak2 = new Regex(@"^\s*LatencyTweak2\s*=\s*(\d+)", RegexOptions.Multiline);
+
+        /// <summary>Réglage Reflex de Fortnite (GameUserSettings.ini) : 0 coupé, 1 activé,
+        /// 2 activé + boost. null si le fichier ou la clé manque.</summary>
+        public static int? ReflexFortnite(string ini)
+        {
+            if (ini == null) return null;
+            Match m = LatencyTweak2.Match(ini);
+            int v;
+            return m.Success && int.TryParse(m.Groups[1].Value, out v) ? v : (int?)null;
+        }
+
+        /// <summary>Reflex coupé dans Fortnite avec une carte NVIDIA.</summary>
+        public static string ReflexCoupeFortnite(string gpu, int? valeur)
+        {
+            if (valeur != 0 || gpu == null || gpu.IndexOf("NVIDIA", System.StringComparison.OrdinalIgnoreCase) < 0) return null;
+            return "NVIDIA Reflex est coupé dans Fortnite. Quand la carte graphique est saturée, il réduit "
+                 + "nettement la latence (TechPowerUp : 82 → 35 ms dans Overwatch) ; sinon, il ne change "
+                 + "presque rien. Active-le dans les réglages vidéo de Fortnite (option « NVIDIA Reflex »).";
+        }
+
         // Ryzen de bureau 7000, 8000G/F et 9000. Les suffixes de portable (HS, HX, U) sont exclus :
         // leur BIOS vient du fabricant du portable, souvent sans AGESA récent.
         private static readonly Regex RyzenBureauAm5 = new Regex(@"Ryzen\s+\d\s+(?:PRO\s+)?[789]\d\d\d(X3D|X|F|GE|G)?\b", RegexOptions.IgnoreCase);

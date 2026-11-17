@@ -168,6 +168,32 @@ namespace BTOptimizer
                 if (bios != null) f.Add(new Finding(0, bios));
             }
             catch { }
+            // Carte NVIDIA : Resizable BAR (taille BAR1 lue par nvidia-smi) et Reflex dans Fortnite.
+            try
+            {
+                GpuDrv carte = GpuDriver();
+                if (carte != null && carte.Name.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    string smi = Sys.Sys32("nvidia-smi.exe");
+                    if (System.IO.File.Exists(smi))
+                    {
+                        string rebar = ConstatsMateriel.ReBarCoupe(carte.Name, ConstatsMateriel.Bar1Mio(Sys.Run(smi, "-q -d MEMORY", 5000).Output));
+                        if (rebar != null) f.Add(new Finding(0, rebar));
+                    }
+                    string ini = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        @"FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini");
+                    if (System.IO.File.Exists(ini))
+                    {
+                        string texte;
+                        using (var fs = new System.IO.FileStream(ini, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+                        using (var sr = new System.IO.StreamReader(fs))
+                            texte = sr.ReadToEnd();
+                        string reflex = ConstatsMateriel.ReflexCoupeFortnite(carte.Name, ConstatsMateriel.ReflexFortnite(texte));
+                        if (reflex != null) f.Add(new Finding(1, reflex));
+                    }
+                }
+            }
+            catch { }
 
             // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
             // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service

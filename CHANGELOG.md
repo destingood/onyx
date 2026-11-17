@@ -4,6 +4,19 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — Reflex dans Fortnite et Resizable BAR
+
+Lecture seule : rien n'est modifié, ni dans le jeu ni dans le BIOS.
+
+- **Reflex coupé dans Fortnite** (carte NVIDIA) : lu dans `GameUserSettings.ini`
+  (`LatencyTweak2` : 0 coupé, 1 activé, 2 activé + boost). TechPowerUp mesure 82 → 35 ms
+  dans Overwatch quand la carte graphique est saturée, et presque rien sinon ; le texte le
+  dit. Un seul jeu pour l'instant : aucun autre n'est installé sur le PC de test pour
+  vérifier son fichier.
+- **Resizable BAR coupé** (GeForce RTX 30, 40, 50) : lu par `nvidia-smi -q -d MEMORY`, où
+  une fenêtre BAR1 de 256 Mio signifie coupé. Information seulement : TechPowerUp mesure
+  +2 à +4 % en moyenne (22 jeux, RTX 30), avec des jeux en recul. Le texte renvoie au BIOS.
+
 ## Prochaine version — problèmes connus et BIOS ancien
 
 Lecture seule, comme les autres constats : rien n'est modifié.

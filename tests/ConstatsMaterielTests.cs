@@ -120,6 +120,38 @@ namespace BTOptimizer.Tests
             Banc.Verifie("portable avec vieux BIOS : rien", true,
                 ConstatsMateriel.BiosAncienAm5("AMD Ryzen 7 7840HS", new System.DateTime(2023, 1, 1), maintenant) == null);
 
+            // ---- Resizable BAR coupé (taille BAR1 lue par nvidia-smi : 256 Mio = coupé)
+            const string SmiOn = "    FB Memory Usage\r\n        Total                                          : 16376 MiB\r\n"
+                               + "    BAR1 Memory Usage\r\n        Total                                          : 16384 MiB\r\n        Used : 16355 MiB\r\n";
+            const string SmiOff = "    FB Memory Usage\n        Total : 8192 MiB\n    BAR1 Memory Usage\n        Total : 256 MiB\n        Used : 7 MiB\n";
+            Banc.Verifie("BAR1 lue (actif) : 16384", true, ConstatsMateriel.Bar1Mio(SmiOn) == 16384);
+            Banc.Verifie("BAR1 lue (coupé) : 256, pas le Total de la VRAM", true, ConstatsMateriel.Bar1Mio(SmiOff) == 256);
+            Banc.Verifie("sortie sans BAR1 : inconnu", true, ConstatsMateriel.Bar1Mio("NVIDIA-SMI has failed") == null);
+            Banc.Verifie("sortie absente : inconnu", true, ConstatsMateriel.Bar1Mio(null) == null);
+            string rebar = ConstatsMateriel.ReBarCoupe("NVIDIA GeForce RTX 3070", 256);
+            Banc.Verifie("RTX 3070 à 256 Mio : signalé, BIOS nommé", true, rebar != null && rebar.Contains("Resizable BAR") && rebar.Contains("BIOS"));
+            Banc.Verifie("RTX 4080 SUPER actif : rien", true, ConstatsMateriel.ReBarCoupe(Rtx4070, 16384) == null);
+            Banc.Verifie("RTX 2080 (pas de ReBAR chez NVIDIA) : rien", true, ConstatsMateriel.ReBarCoupe("NVIDIA GeForce RTX 2080", 256) == null);
+            Banc.Verifie("GTX 1650 : rien", true, ConstatsMateriel.ReBarCoupe("NVIDIA GeForce GTX 1650", 256) == null);
+            Banc.Verifie("BAR1 inconnue : rien", true, ConstatsMateriel.ReBarCoupe(Rtx4070, null) == null);
+
+            // ---- Reflex coupé dans Fortnite (LatencyTweak2 : 0 coupé, 1 activé, 2 activé + boost)
+            const string IniOn = "[/Script/FortniteGame.FortGameUserSettings]\r\nbShowFPS=True\r\nLatencyTweak2=2\r\n[DriverCache]\r\n";
+            const string IniOff = "[/Script/FortniteGame.FortGameUserSettings]\nLatencyTweak2=0\n";
+            Banc.Verifie("Fortnite : LatencyTweak2=2 lu", true, ConstatsMateriel.ReflexFortnite(IniOn) == 2);
+            Banc.Verifie("Fortnite : LatencyTweak2=0 lu", true, ConstatsMateriel.ReflexFortnite(IniOff) == 0);
+            Banc.Verifie("Fortnite : clé absente, inconnu", true, ConstatsMateriel.ReflexFortnite("[/Script/FortniteGame.FortGameUserSettings]\nbShowFPS=True\n") == null);
+            Banc.Verifie("Fortnite : fichier absent, inconnu", true, ConstatsMateriel.ReflexFortnite(null) == null);
+            Banc.Verifie("Fortnite : LatencyTweak2 ne se confond pas avec une autre clé", true,
+                ConstatsMateriel.ReflexFortnite("[x]\nOldLatencyTweak2=0\nLatencyTweak2=1\n") == 1);
+            string refl = ConstatsMateriel.ReflexCoupeFortnite(Rtx4070, 0);
+            Banc.Verifie("Reflex coupé + NVIDIA : signalé, mesure et limite citées", true,
+                refl != null && refl.Contains("Reflex") && refl.Contains("82") && refl.Contains("saturée"));
+            Banc.Verifie("Reflex activé : rien", true, ConstatsMateriel.ReflexCoupeFortnite(Rtx4070, 1) == null);
+            Banc.Verifie("Reflex activé + boost : rien", true, ConstatsMateriel.ReflexCoupeFortnite(Rtx4070, 2) == null);
+            Banc.Verifie("carte AMD : rien (Reflex est propre à NVIDIA)", true, ConstatsMateriel.ReflexCoupeFortnite("AMD Radeon RX 7900 XT", 0) == null);
+            Banc.Verifie("réglage inconnu : rien", true, ConstatsMateriel.ReflexCoupeFortnite(Rtx4070, null) == null);
+
             string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true, true);
             Banc.Verifie("plusieurs causes : toutes citées dans un seul constat", true,
                 tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu") && tout.Contains("Game DVR"));
