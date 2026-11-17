@@ -45,6 +45,8 @@
     <Compile Include="..\src\ChaineEntree.cs" />
     <!-- Optimisation prouvée : verdict, recherche du fautif, attente (logique pure). -->
     <Compile Include="..\src\Preuve.cs" />
+    <!-- Topologie : choix des cœurs du jeu (pur). La lecture machine vit dans TopologieMachine.cs. -->
+    <Compile Include="..\src\Topologie.cs" />
     <!-- Dépendance d'InventaireServices : la formule du pourcentage de processeur, écrite
          une seule fois. La recopier ici ferait diverger deux calculs censés dire la même chose. -->
     <Compile Include="..\src\SvcHost.cs" />
