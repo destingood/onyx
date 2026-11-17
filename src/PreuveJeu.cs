@@ -126,6 +126,7 @@ namespace BTOptimizer
                 }
 
                 Preuve.MesureJeu m = Preuve.CalculeJeu(jeu, fts);
+                try { m.Plafond = FrameCap.Pose(); } catch { m.Plafond = -1; }
                 log("Mesure en jeu : " + m.Resume(), 1);
                 if (!Preuve.JeuValide(m)) log("Trop peu d'images pour un 1 % low fiable (" + m.Images + ").", 2);
                 return m;

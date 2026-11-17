@@ -153,6 +153,19 @@ namespace BTOptimizer.Tests
                 && jr.Low1 == j.Low1 && jr.FpsMoy == j.FpsMoy && jr.Quand == j.Quand);
             Banc.Verifie("mesure en jeu abîmée = rien", true, Preuve.LitJeu("jeu=x\n") == null);
 
+            // Plafond FPS : -1 = inconnu ; deux plafonds connus et différents = non comparable.
+            Func<int, Preuve.MesureJeu> Jp = cap => { var m = J(144, 90); m.Plafond = cap; return m; };
+            Banc.Verifie("plafond par défaut inconnu", true, new Preuve.MesureJeu().Plafond == -1);
+            Banc.Verifie("plafond posé entre avant et après = non comparable", true, Preuve.JugeJeu(Jp(0), Jp(138)) == Preuve.Verdict.Incomparable);
+            var bruitCap = J(140, 85); bruitCap.Plafond = 138;
+            Banc.Verifie("plafond inconnu avant = jugé normalement", true, Preuve.JugeJeu(Jp(-1), bruitCap) == Preuve.Verdict.Neutre);
+            Banc.Verifie("même plafond = jugé normalement", true, Preuve.JugeJeu(Jp(138), bruitCap) == Preuve.Verdict.Neutre);
+            j.Plafond = 138;
+            Preuve.MesureJeu jcap = Preuve.LitJeu(Preuve.EcritJeu(j));
+            Banc.Verifie("plafond relu", true, jcap != null && jcap.Plafond == 138);
+            Banc.Verifie("ancien fichier sans plafond = inconnu", true,
+                Preuve.LitJeu("quand=2026-11-17T18:00:00.0000000+01:00\njeu=x.exe\n").Plafond == -1);
+
             var preuve = new Preuve.Attente { Applique = j.Quand.AddMinutes(10), Ids = new List<string> { "a" } };
             Banc.Verifie("preuve après la mesure : mesure APRÈS", true, Preuve.MesureApres(j, preuve));
             preuve.Applique = j.Quand.AddMinutes(-10);

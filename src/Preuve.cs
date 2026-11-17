@@ -178,6 +178,7 @@ namespace BTOptimizer
             public string Jeu = "";
             public double FpsMoy = -1, Low1 = -1, DureeS;
             public int Images;
+            public int Plafond = -1;   // plafond FPS posé par ONYX pendant la mesure ; -1 = inconnu
 
             public string Resume()
             {
@@ -226,11 +227,19 @@ namespace BTOptimizer
         {
             if (!JeuValide(avant) || !JeuValide(apres)) return Verdict.Incomparable;
             if (!string.Equals(avant.Jeu, apres.Jeu, StringComparison.OrdinalIgnoreCase)) return Verdict.Incomparable;
+            // Un plafond baisse les FPS par construction : changé entre les deux, rien n'est comparable.
+            if (PlafondChange(avant, apres)) return Verdict.Incomparable;
             double dLow = (apres.Low1 - avant.Low1) / avant.Low1;
             double dMoy = (apres.FpsMoy - avant.FpsMoy) / avant.FpsMoy;
             if (dLow <= -SeuilsJeu.Low1Rel || dMoy <= -SeuilsJeu.MoyRel) return Verdict.Regression;
             if (dLow >= SeuilsJeu.Low1Rel || dMoy >= SeuilsJeu.MoyRel) return Verdict.Gain;
             return Verdict.Neutre;
+        }
+
+        /// <summary>Vrai si les deux plafonds sont connus et différents.</summary>
+        public static bool PlafondChange(MesureJeu avant, MesureJeu apres)
+        {
+            return avant != null && apres != null && avant.Plafond >= 0 && apres.Plafond >= 0 && avant.Plafond != apres.Plafond;
         }
 
         public static string EcritJeu(MesureJeu m)
@@ -242,6 +251,7 @@ namespace BTOptimizer
             sb.Append("low1=").Append(m.Low1.ToString("R", Inv)).Append('\n');
             sb.Append("duree=").Append(m.DureeS.ToString("R", Inv)).Append('\n');
             sb.Append("images=").Append(m.Images.ToString(Inv)).Append('\n');
+            sb.Append("plafond=").Append(m.Plafond.ToString(Inv)).Append('\n');
             return sb.ToString();
         }
 
@@ -266,6 +276,7 @@ namespace BTOptimizer
                     case "low1": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.Low1 = d; break;
                     case "duree": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.DureeS = d; break;
                     case "images": if (int.TryParse(v, NumberStyles.Integer, Inv, out n)) m.Images = n; break;
+                    case "plafond": if (int.TryParse(v, NumberStyles.Integer, Inv, out n)) m.Plafond = n; break;
                 }
             }
             return date && m.Jeu.Length > 0 ? m : null;

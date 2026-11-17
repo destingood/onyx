@@ -216,6 +216,12 @@ namespace BTOptimizer
 
             _journal.AppendText("\r\n===== En jeu =====\r\nAvant : " + avant.Resume() + "\r\nAprès : " + m.Resume()
                 + "\r\nVerdict : " + Preuve.Libelle(v) + "\r\n");
+            if (v == Preuve.Verdict.Incomparable && Preuve.PlafondChange(avant, m))
+            {
+                Ajoute("Le plafond FPS a changé entre les deux mesures (" + avant.Plafond + " → " + m.Plafond
+                    + ") : comparaison impossible, un plafond baisse les FPS par construction. Rien n'est modifié.", 2);
+                return;
+            }
             if (v == Preuve.Verdict.Incomparable)
             {
                 Ajoute("Comparaison impossible (jeu différent, mesure interrompue ou trop courte) : rien n'est modifié, recommence la mesure « après ».", 2);
