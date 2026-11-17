@@ -18,6 +18,11 @@ Mesuré sur un PC à 4 disques (même machine, même analyse, hors droits admini
   personnels sont mesurés ensemble.
 - Résultats plus complets dans le même temps : le balayage n'est plus coupé avant la fin
   sur les gros disques (vidéos trouvées, dossiers personnels mesurés en entier).
+- Les cartes apparaissent au fil de l'analyse : les premiers modules sont visibles en
+  0,6 s, sans attendre le balayage des gros fichiers. Tes interrupteurs et ta position de
+  défilement ne bougent pas quand les cartes suivantes arrivent. Une analyse demandée
+  pendant qu'une autre tourne (après une désinstallation, par exemple) est relancée à la fin
+  au lieu d'être ignorée.
 - Les jonctions ne sont plus suivies dans la mesure des dossiers personnels et de
   Windows.old (risque de double comptage).
 - Tests : `DiskWalkTests` (arborescence réelle : fichiers cachés, jonction, profondeur,

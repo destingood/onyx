@@ -130,6 +130,14 @@ namespace BTOptimizer
         /// Bloquant : à appeler depuis une tâche de fond.</summary>
         public static List<Module> ScanAll(StorageSettings st, Action<string, int, int> progress)
         {
+            return ScanAll(st, progress, null);
+        }
+
+        /// <summary>Comme ci-dessus ; <paramref name="partiel"/> reçoit, à chaque module terminé, la
+        /// liste des modules prêts dans l'ordre d'affichage (appelé depuis un fil de fond : un module
+        /// reçu est terminé et n'est plus modifié).</summary>
+        public static List<Module> ScanAll(StorageSettings st, Action<string, int, int> progress, Action<List<Module>> partiel)
+        {
             if (st == null) st = StorageSettings.Load();
             List<Module> mods = Defs();
             int total = mods.Count;
@@ -140,8 +148,7 @@ namespace BTOptimizer
             // partagent un balayage l'attendent ensemble (Lazy : un seul calcul, thread-safe).
             var targets = new Lazy<List<Sys.CleanTarget>>(Sys.CleanTargets);
             var files = new Lazy<List<FileEntry>>(delegate { bool part; return ScanBigFiles(st.MinFileMB, AppRoots(), out part); });
-            var fini = new bool[total];
-            int faits = 0;
+            var suivi = new SuiviParallele<Module>(mods);
             object verrou = new object();
             var taches = new Task[total];
             for (int i = 0; i < total; i++)
@@ -151,14 +158,14 @@ namespace BTOptimizer
                 taches[i] = Task.Factory.StartNew(delegate
                 {
                     if (st.IsEnabled(m.Id)) { try { Fill(m, st, targets, files); } catch { } }
+                    // Sous verrou : les annonces partent dans l'ordre des fins, jamais un état plus
+                    // ancien après un plus récent.
                     lock (verrou)
                     {
-                        fini[idx] = true;
-                        faits++;
+                        SuiviParallele<Module>.Etat e = suivi.Fini(idx);
                         // On affiche le premier module encore en cours : c'est lui qu'on attend.
-                        string attente = null;
-                        for (int k = 0; k < total; k++) if (!fini[k]) { attente = mods[k].Name; break; }
-                        if (progress != null && attente != null) { try { progress(attente, faits, total); } catch { } }
+                        if (progress != null && e.Reste) { try { progress(e.EnAttente.Name, e.Faits, total); } catch { } }
+                        if (partiel != null) { try { partiel(e.Finis); } catch { } }
                     }
                 }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             }

@@ -35,6 +35,7 @@ namespace BTOptimizer
         private readonly List<Control> _cards = new List<Control>();
 
         private bool _scanned, _busy;
+        private bool _rescan;   // une analyse demandée pendant qu'une autre tourne : relancée à la fin
 
         private const int CardW = 356, CardCleanH = 152, CardBrowseH = 196, Gap = 16, PadX = 34;
 
@@ -140,6 +141,10 @@ namespace BTOptimizer
 
         /// <summary>Fait défiler le panneau (harnais de test visuel : vérifie que les cartes du bas
         /// restent solidaires de leur contenu en défilant).</summary>
+        internal int ScrollY { get { return _scroll == null ? 0 : -_scroll.AutoScrollPosition.Y; } }
+        internal int ModulesAffiches { get { return _modules.Count; } }
+        internal bool Occupe { get { return _busy; } }
+
         internal void ScrollTo(int y)
         {
             try { if (_scroll != null) _scroll.AutoScrollPosition = new Point(0, Math.Max(0, y)); } catch { }
@@ -181,11 +186,19 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void Scan()
         {
-            if (_busy) return;
+            // Une fenêtre (désinstallation, corbeille…) peut se fermer pendant l'analyse : ses
+            // changements seront pris en compte par une nouvelle analyse, juste après celle-ci.
+            if (_busy) { _rescan = true; return; }
+            _rescan = false;
             SetBusy(true);
             SetStatus("Analyse du stockage…");
             _scanned = true;
             StorageSettings st = _st;
+
+            // Les cartes arrivent module par module : on repart d'une page vide.
+            _modules = new List<Storage.Module>();
+            _selected.Clear();
+            RebuildCards();
 
             Task.Run(delegate
             {
@@ -205,6 +218,15 @@ namespace BTOptimizer
                             BeginInvoke((Action)(() => SetStatus("Analyse… " + label + "  (" + (done + 1) + " / " + total + ")")));
                         }
                         catch { }
+                    }, delegate (List<Storage.Module> prets)
+                    {
+                        // Chaque module prêt s'affiche aussitôt, sans attendre les plus lents.
+                        try
+                        {
+                            if (!IsHandleCreated) return;
+                            BeginInvoke((Action)(() => ShowModules(prets)));
+                        }
+                        catch { }
                     });
                 }
                 catch { }
@@ -214,17 +236,33 @@ namespace BTOptimizer
 
         private void Populate(List<Storage.Module> mods)
         {
-            _modules = mods ?? new List<Storage.Module>();
-
-            // Sélection par défaut : tout ce que le cran de sûreté configuré autorise.
-            _selected.Clear();
-            foreach (Storage.Module m in _modules)
-                if (!m.Browse && m.Safety <= _st.MaxSafety && m.HasActions)
-                    _selected.Add(m.Id);
-
-            RebuildCards();
+            ShowModules(mods ?? new List<Storage.Module>());
             SetBusy(false);
             SetStatus(null);
+            Invalidate();
+            if (_rescan) Scan();
+        }
+
+        /// <summary>Affiche les modules prêts (ordre d'affichage). Un module qui apparaît reçoit la
+        /// sélection par défaut ; ceux déjà là gardent ce que l'utilisateur a pu basculer entre-temps.</summary>
+        private void ShowModules(List<Storage.Module> prets)
+        {
+            var deja = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Storage.Module m in _modules) deja.Add(m.Id);
+
+            // Sélection par défaut : tout ce que le cran de sûreté configuré autorise.
+            foreach (Storage.Module m in prets)
+                if (!deja.Contains(m.Id) && !m.Browse && m.Safety <= _st.MaxSafety && m.HasActions)
+                    _selected.Add(m.Id);
+
+            _modules = new List<Storage.Module>(prets);
+
+            // La position de défilement survit à la reconstruction : une carte qui arrive ne fait
+            // pas sauter la page sous les yeux de l'utilisateur.
+            Point pos = _scroll != null ? _scroll.AutoScrollPosition : Point.Empty;
+            if (_scroll != null) _scroll.AutoScrollPosition = Point.Empty;
+            RebuildCards();
+            if (_scroll != null) _scroll.AutoScrollPosition = new Point(-pos.X, -pos.Y);
             Invalidate();
         }
 

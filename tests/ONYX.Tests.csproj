@@ -57,6 +57,7 @@
     <!-- Dépendance de JournalTechnique : où vivent les données. Aucune autre classe d'ONYX. -->
     <Compile Include="..\src\AppPaths.cs" />
     <Compile Include="..\src\DiskWalk.cs" />
+    <Compile Include="..\src\SuiviParallele.cs" />
   </ItemGroup>
 
   <ItemGroup>

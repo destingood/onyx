@@ -155,6 +155,17 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_STORAGESHOT=<dossier> : page Stockage hors écran, capturée PENDANT l'analyse (les
+            // modules doivent apparaître au fil de l'eau) puis à la fin ; vérifie que la position de
+            // défilement survit à l'arrivée des cartes suivantes.
+            string sshot = Environment.GetEnvironmentVariable("BT_STORAGESHOT");
+            if (!string.IsNullOrEmpty(sshot))
+            {
+                try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+                CaptureStorageProgress(sshot);
+                Environment.Exit(0);
+            }
+
             // BT_REPORT=<fichier> : génère le rapport de santé HTML et sort (vérif sans effet de bord).
             string repOut = Environment.GetEnvironmentVariable("BT_REPORT");
             if (!string.IsNullOrEmpty(repOut))
@@ -2087,6 +2098,67 @@ namespace BTOptimizer
             }
             catch (Exception ex) { Console.WriteLine("  formshot " + name + " ERREUR : " + ex.Message); }
             finally { try { f.Dispose(); } catch { } }
+        }
+
+        private static void CaptureStorageProgress(string dir)
+        {
+            try { System.IO.Directory.CreateDirectory(dir); } catch { }
+            var dash = new DashboardForm();
+            dash.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+            dash.Location = new System.Drawing.Point(-5000, -5000);
+            dash.Show();
+            dash.ClientSize = new System.Drawing.Size(1280, 800);
+            Pump(450);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            dash.Goto(8);
+            var ps = dash.PageAt(8) as PageStorage;
+            if (ps == null) { Console.WriteLine("page Stockage introuvable"); return; }
+
+            int premier = -1, defile = -1;
+            bool fini = false;
+            while (sw.ElapsedMilliseconds < 60000)
+            {
+                Pump(100);
+                int n = ps.ModulesAffiches;
+                if (premier < 0 && n > 0)
+                {
+                    premier = (int)sw.ElapsedMilliseconds;
+                    Console.WriteLine("1er module affiche a " + premier + " ms (" + n + " module(s))");
+                    ShotStorage(dash, dir, "1-premiers-modules");
+                }
+                // Dès qu'il y a de quoi défiler, on descend : les cartes suivantes ne doivent pas
+                // ramener la page en haut.
+                if (defile < 0 && !ps.Occupe) break;
+                if (defile < 0 && n >= 6) { ps.ScrollTo(300); Pump(150); defile = ps.ScrollY; Console.WriteLine("defile a " + defile + " px (" + n + " modules)"); }
+                if (!ps.Occupe) { fini = true; break; }
+            }
+            if (!fini) while (ps.Occupe && sw.ElapsedMilliseconds < 60000) Pump(100);
+            Console.WriteLine("analyse terminee a " + sw.ElapsedMilliseconds + " ms : " + ps.ModulesAffiches + " modules");
+            Pump(300);
+            Console.WriteLine("defilement apres la fin : " + ps.ScrollY + " px (avant : " + defile + ")"
+                + (defile > 0 && ps.ScrollY == defile ? "  [OK conserve]" : defile > 0 ? "  [KO perdu]" : "  [non teste : page trop courte]"));
+            ShotStorage(dash, dir, "2-fin-defilee");
+            ps.ScrollTo(0); Pump(300);
+            ShotStorage(dash, dir, "3-fin-haut");
+            try { dash.Hide(); dash.Dispose(); } catch { }
+        }
+
+        private static void ShotStorage(System.Windows.Forms.Form dash, string dir, string nom)
+        {
+            try
+            {
+                using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                {
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                        finally { g.ReleaseHdc(hdc); }
+                    }
+                    bmp.Save(System.IO.Path.Combine(dir, "stockage-" + nom + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("  capture " + nom + " : " + ex.Message); }
         }
 
         /// <summary>BT_UISHOT=&lt;dossier&gt; : montre le shell HORS de l'écran visible (-5000,-5000)
