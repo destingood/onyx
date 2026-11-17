@@ -108,11 +108,6 @@ namespace BTOptimizer
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
-            var prem = FpsUi.GoldButton("◆  PASSER PRO");
-            prem.Name = "prem";
-            prem.Click += (s, e) => Host.OpenDialog(new LicenseKeyForm(""));
-            Controls.Add(prem);
-
             Resize += (s, e) => { DoLayout(); Invalidate(); };
         }
 
@@ -178,11 +173,9 @@ namespace BTOptimizer
             }
             // Le graphe s'ÉTIRE : la page occupe toute la hauteur, plus de vide sous le bouton.
             int bottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
-            int premH = 46, graphY = top + 146;
-            int graphH = Math.Max(220, bottom - graphY - premH - 16);
+            int graphY = top + 146;
+            int graphH = Math.Max(220, bottom - graphY);
             if (_graph != null) _graph.SetBounds(L, graphY, statsW, graphH);
-            var prem = Controls["prem"];
-            if (prem != null) prem.SetBounds(L, graphY + graphH + 16, statsW, premH);
         }
 
         // Ajuste les enfants d'une carte stat à sa largeur réelle (évite tout débordement
@@ -202,8 +195,7 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            string name = License.Licensee;
-            if (string.IsNullOrEmpty(name)) name = Environment.UserName;
+            string name = Environment.UserName;
             if (string.IsNullOrEmpty(name)) name = "joueur";
 
             // Le bonjour se grave en Marcellus : la page d'accueil porte la voix de la marque.

@@ -17,7 +17,6 @@ namespace BTOptimizer
     internal class SimpleOptiForm : Form
     {
         private readonly Action<string, int> _log;
-        private readonly Func<bool> _requirePro;
         private readonly List<Tweak> _items;   // l'essentiel : Recommandé ∪ eSport
         private readonly Dictionary<string, NeonSwitch> _sw = new Dictionary<string, NeonSwitch>();
         private readonly Dictionary<string, Label> _lbl = new Dictionary<string, Label>();
@@ -29,10 +28,9 @@ namespace BTOptimizer
 
         private static Color OnColor { get { return Theme.OkColor; } }   // suit le thème (néon en sombre)
 
-        public SimpleOptiForm(List<Tweak> all, Func<bool> requirePro, Action<string, int> log)
+        public SimpleOptiForm(List<Tweak> all, Action<string, int> log)
         {
             _log = log;
-            _requirePro = requirePro;
             _items = all.Where(t => t.Recommended || t.Esport).ToList();
             BuildUi();
             Theme.Apply(this);
@@ -138,7 +136,6 @@ namespace BTOptimizer
         private void RunPreset(bool full)
         {
             if (_busy) return;
-            if (full && _requirePro != null && !_requirePro()) return;
             List<Tweak> targets = _items
                 .Where(t => (full || t.Recommended) && !_sw[t.Id].Checked)
                 .ToList();

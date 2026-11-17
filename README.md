@@ -2,13 +2,16 @@
 
 *(anciennement « BT Optimizer » → « DesTinGOOD » → « ONYX » — v14.54 : rebranding **ONYX**.
 Les fichiers techniques gardent leurs noms — `BTOptimizer.exe/.dll`, `Lancer-BTOptimizer.bat`,
-`bt-*.txt`, sauvegardes — pour que lanceurs, licences, profils et gardien continuent de
+`bt-*.txt`, sauvegardes — pour que lanceurs, profils et gardien continuent de
 fonctionner sans rien casser.)*
 
 Application Windows 10/11 pour le **gaming** : viser les **500 FPS**, réduire l'**input lag**
 et la **latence**, avec **cases à cocher** : chaque optimisation est optionnelle et
 réversible. Rien n'est modifié tant que tu ne cliques pas sur **Appliquer**. Thème
 sombre par défaut (basculable dans le menu ☰).
+
+**Gratuit et complet** : aucune clé, aucun essai, aucune fonction réservée — tout est
+déverrouillé pour tout le monde.
 
 ## En un coup d'œil
 

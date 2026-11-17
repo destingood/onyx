@@ -4,6 +4,20 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — ONYX devient gratuit et complet
+
+Le système de clé disparaît entièrement : plus de licence, plus d'essai de 7 jours, plus
+d'identifiant machine, plus de fonction réservée. Tout ce qui était verrouillé est ouvert à
+tous : presets eSport et Benchmark, auto-réglage adapté au matériel, overclock, DNS rapide,
+gardien de démarrage, boost complet par jeu, mode SIMPLE complet, module de stockage
+« Windows en profondeur » et inventaire complet des applications.
+
+- Supprimés : `License.cs`, `LicenceLiaison.cs`, `MachineId.cs`, `LicenseKeyForm.cs`, le
+  générateur de clés (`seller/`, `Generateur-de-cles.bat`) et leurs tests.
+- « Mon compte » ne montre plus que les statistiques du PC ; la puce PRO/ESSAI de l'en-tête,
+  les boutons « Passer Pro » et le bouton d'essai de l'écran d'accueil sont retirés.
+- Les conditions d'utilisation (EULA) restent : elles ne dépendent d'aucune clé.
+
 ## v15.75 — Ce qui tourne pour rien, ce que coûte chaque milliseconde, et sept licences mortes
 
 Un bogue signalé en passant — « la clé de mon pote se désactive » — a mis au jour le plus cher de cette version : **les sept licences vendues étaient invalides**, et rien nulle part ne pouvait le dire. Il ouvre donc le journal. Suivent les deux chantiers prévus : ce qui tourne pour rien sur cette machine, et ce que coûte chaque maillon entre le clic et le pixel.

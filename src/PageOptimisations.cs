@@ -76,7 +76,7 @@ namespace BTOptimizer
             _bReco = FpsUi.GoldButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
             _bReco.Click += (s, e) => Batch(t => t.Recommended, true, "Recommandé");
             _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Gold;
-            _bEsport.Click += (s, e) => { if (Pro("Preset eSport")) Batch(t => t.Esport, true, "eSport"); };
+            _bEsport.Click += (s, e) => Batch(t => t.Esport, true, "eSport");
             _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
             _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
             _bAuto = FpsUi.GoldButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
@@ -87,7 +87,6 @@ namespace BTOptimizer
         // Auto-tune : détecte le matériel et applique la sélection adaptée (niveau équilibré).
         private void ApplyAuto()
         {
-            if (!Pro("Auto-tune (adapté à ton PC)")) return;
             Cursor = Cursors.WaitCursor;
             Task.Run(() =>
             {
@@ -97,12 +96,6 @@ namespace BTOptimizer
             });
         }
 
-        private bool Pro(string feat)
-        {
-            if (License.ProUnlocked) return true;
-            using (var f = new LicenseKeyForm(feat)) f.ShowDialog(FindForm());
-            return License.ProUnlocked;
-        }
 
         private void Batch(Func<Tweak, bool> selector, bool apply, string label)
         {
@@ -207,8 +200,6 @@ namespace BTOptimizer
 
             var tog = new ToggleSwitch();
             tog.Location = new Point(288, 16);
-            bool locked = !License.ProUnlocked && t.Esport && !t.Recommended;
-            tog.Locked = locked;
             tog.Toggled += (s, e) => OnToggle(t, tog);
             _toggles[t.Id] = tog;
 
@@ -228,12 +219,6 @@ namespace BTOptimizer
 
         private void OnToggle(Tweak t, ToggleSwitch tog)
         {
-            if (tog.Locked) return;
-            if (!License.ProUnlocked && t.Esport && !t.Recommended)
-            {
-                using (var f = new LicenseKeyForm("Optimisation avancée")) f.ShowDialog(FindForm());
-                if (!License.ProUnlocked) { tog.On = false; return; }
-            }
             bool apply = tog.On;
             tog.Enabled = false;
             var list = new List<Tweak>(); list.Add(t);
