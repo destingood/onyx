@@ -4,6 +4,25 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — page Stockage beaucoup plus rapide
+
+Mesuré sur un PC à 4 disques (même machine, même analyse, hors droits administrateur) :
+44 s → 12,7 s quand les tailles sont déjà en cache, 99 s → 10,4 s sans cache des tailles.
+
+- Nouveau `DiskWalk.cs` : la taille, les attributs et la date de chaque fichier sont lus
+  dans la réponse de l'énumération, sans un appel système de plus par fichier (l'ancien
+  `new FileInfo(f).Length`). Applications : 33 s → 1,4 s ; jeux dormants : 20 s → 4,4 s
+  (sans cache), totaux identiques.
+- Les modules d'analyse tournent en même temps au lieu de s'attendre ; les disques sont
+  balayés en parallèle (un fil par disque, plafond de 12 s chacun) ; les cinq dossiers
+  personnels sont mesurés ensemble.
+- Résultats plus complets dans le même temps : le balayage n'est plus coupé avant la fin
+  sur les gros disques (vidéos trouvées, dossiers personnels mesurés en entier).
+- Les jonctions ne sont plus suivies dans la mesure des dossiers personnels et de
+  Windows.old (risque de double comptage).
+- Tests : `DiskWalkTests` (arborescence réelle : fichiers cachés, jonction, profondeur,
+  dossiers exclus, plafond de nombre).
+
 ## Prochaine version — ONYX devient gratuit et complet
 
 Le système de clé disparaît entièrement : plus de licence, plus d'essai de 7 jours, plus

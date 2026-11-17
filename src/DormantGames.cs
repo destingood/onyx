@@ -127,34 +127,11 @@ namespace BTOptimizer
                 }
             }
 
-            long bytes = DirBytes(dir, 0);
+            bool part;
+            long bytes = DiskWalk.Bytes(dir, 12, 0, out part);   // jonctions ignorées, profondeur ≤ 12
             long mb = bytes / 1048576;
             cache[dir] = stamp + "|" + mb.ToString(CultureInfo.InvariantCulture);
             return mb;
-        }
-
-        // Récursion bornée en profondeur : évite de partir en vrille sur un lien/point de jonction.
-        private static long DirBytes(string dir, int depth)
-        {
-            if (depth > 12) return 0;
-            long total = 0;
-            try
-            {
-                foreach (string f in Directory.GetFiles(dir))
-                    try { total += new FileInfo(f).Length; } catch { }
-                foreach (string d in Directory.GetDirectories(dir))
-                {
-                    try
-                    {
-                        var di = new DirectoryInfo(d);
-                        if ((di.Attributes & FileAttributes.ReparsePoint) != 0) continue;   // jonction : déjà comptée ailleurs
-                    }
-                    catch { }
-                    total += DirBytes(d, depth + 1);
-                }
-            }
-            catch { }
-            return total;
         }
 
         // ------------------------------------------------------------ cache disque

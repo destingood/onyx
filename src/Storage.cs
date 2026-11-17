@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 namespace BTOptimizer
@@ -130,42 +132,61 @@ namespace BTOptimizer
         {
             if (st == null) st = StorageSettings.Load();
             List<Module> mods = Defs();
-            List<Sys.CleanTarget> targets = null;
-            List<FileEntry> files = null;   // un seul balayage disque pour vidéos + archives + gros fichiers
             int total = mods.Count;
+            if (progress != null && total > 0) { try { progress(mods[0].Name, 0, total); } catch { } }
 
-            for (int i = 0; i < mods.Count; i++)
+            // Les modules sont indépendants (registre, disques, outils Windows) : ils tournent EN MÊME
+            // TEMPS, la durée totale devient celle du plus lent au lieu de leur somme. Ceux qui
+            // partagent un balayage l'attendent ensemble (Lazy : un seul calcul, thread-safe).
+            var targets = new Lazy<List<Sys.CleanTarget>>(Sys.CleanTargets);
+            var files = new Lazy<List<FileEntry>>(delegate { bool part; return ScanBigFiles(st.MinFileMB, AppRoots(), out part); });
+            var fini = new bool[total];
+            int faits = 0;
+            object verrou = new object();
+            var taches = new Task[total];
+            for (int i = 0; i < total; i++)
             {
                 Module m = mods[i];
-                if (progress != null) { try { progress(m.Name, i, total); } catch { } }
-                if (!st.IsEnabled(m.Id)) continue;
-                try
+                int idx = i;
+                taches[i] = Task.Factory.StartNew(delegate
                 {
-                    switch (m.Id)
+                    if (st.IsEnabled(m.Id)) { try { Fill(m, st, targets, files); } catch { } }
+                    lock (verrou)
                     {
-                        case "temp":
-                        case "gpu":
-                        case "history":
-                        case "bin":
-                            if (targets == null) targets = Sys.CleanTargets();
-                            FillFromTargets(m, targets, st);
-                            break;
-                        case "winsys": FillWindows(m, st); break;
-                        case "apps": FillApps(m, st, null); break;
-                        case "games": FillGames(m, st); break;
-                        case "videos":
-                        case "archives":
-                        case "bigfiles":
-                            if (files == null) { bool part; files = ScanBigFiles(st.MinFileMB, AppRoots(), out part); }
-                            FillFiles(m, files, st);
-                            break;
-                        case "folders": FillFolders(m, st); break;
+                        fini[idx] = true;
+                        faits++;
+                        // On affiche le premier module encore en cours : c'est lui qu'on attend.
+                        string attente = null;
+                        for (int k = 0; k < total; k++) if (!fini[k]) { attente = mods[k].Name; break; }
+                        if (progress != null && attente != null) { try { progress(attente, faits, total); } catch { } }
                     }
-                }
-                catch { }
+                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             }
+            try { Task.WaitAll(taches); } catch { }
             if (progress != null) { try { progress(null, total, total); } catch { } }
             return mods;
+        }
+
+        private static void Fill(Module m, StorageSettings st, Lazy<List<Sys.CleanTarget>> targets, Lazy<List<FileEntry>> files)
+        {
+            switch (m.Id)
+            {
+                case "temp":
+                case "gpu":
+                case "history":
+                case "bin":
+                    FillFromTargets(m, targets.Value, st);
+                    break;
+                case "winsys": FillWindows(m, st); break;
+                case "apps": FillApps(m, st, null); break;
+                case "games": FillGames(m, st); break;
+                case "videos":
+                case "archives":
+                case "bigfiles":
+                    FillFiles(m, files.Value, st);   // un seul balayage disque pour les trois
+                    break;
+                case "folders": FillFolders(m, st); break;
+            }
         }
 
         // --- modules adossés à Sys.CleanTargets (le nettoyeur historique) ---
@@ -364,10 +385,18 @@ namespace BTOptimizer
                 new[] { "Documents", Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) },
             };
 
-            foreach (string[] d in dirs)
+            // Les cinq dossiers sont mesurés en même temps (chacun plafonné à 4 s).
+            var tailles = new long[dirs.Count];
+            Parallel.For(0, dirs.Count, delegate (int i)
             {
-                if (string.IsNullOrEmpty(d[1]) || st.IsIgnored(d[1])) continue;
-                long mb = DirSizeCappedMb(d[1], 4000);
+                string p = dirs[i][1];
+                tailles[i] = string.IsNullOrEmpty(p) || st.IsIgnored(p) ? -1 : DirSizeCappedMb(p, 4000);
+            });
+
+            for (int i = 0; i < dirs.Count; i++)
+            {
+                string[] d = dirs[i];
+                long mb = tailles[i];
                 if (mb < 512) continue;
                 // Un dossier redirigé vers un autre disque ne libérera rien sur C: — on le dit.
                 bool other = false;
@@ -539,10 +568,6 @@ namespace BTOptimizer
             "node_modules"
         };
 
-        // Fichier OneDrive « en ligne seulement » : sa taille annoncée ne vit pas sur le disque —
-        // le proposer serait mentir sur le gain.
-        private const FileAttributes CloudRecall = (FileAttributes)0x400000;   // RECALL_ON_DATA_ACCESS
-
         /// <summary>Balaye tous les disques fixes à la recherche des fichiers ≥ <paramref name="minMB"/>,
         /// hors système, hors dossiers d'applications/jeux (<paramref name="excludeRoots"/> — leurs
         /// fichiers appartiennent à leur application, pas à un tri manuel). Largeur d'abord et borné
@@ -550,71 +575,42 @@ namespace BTOptimizer
         /// en premier. <paramref name="partial"/> = vrai si un cap a été atteint.</summary>
         public static List<FileEntry> ScanBigFiles(int minMB, List<string> excludeRoots, out bool partial)
         {
+            long minBytes = (long)Math.Max(1, minMB) * 1048576L;
+            List<DriveView> drives = Drives();
+            var parDisque = new List<DiskWalk.Fichier>[drives.Count];
+            var coupe = new bool[drives.Count];
+
+            // Un disque = un fil : les disques sont lus en même temps au lieu de s'attendre
+            // (chacun garde son plafond de 12 s et de 5 000 fichiers).
+            var taches = new Task[drives.Count];
+            for (int i = 0; i < drives.Count; i++)
+            {
+                int k = i;
+                taches[k] = Task.Factory.StartNew(delegate
+                {
+                    bool p;
+                    parDisque[k] = DiskWalk.GrosFichiers(drives[k].Letter + "\\", minBytes, SkipDirs, excludeRoots, 12000, 5000, out p);
+                    coupe[k] = p;
+                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }
+            try { Task.WaitAll(taches); } catch { }
+
             partial = false;
             var list = new List<FileEntry>();
-            long minBytes = (long)Math.Max(1, minMB) * 1048576L;
-
-            var roots = new List<string>();
-            if (excludeRoots != null)
-                foreach (string r in excludeRoots)
-                    if (!string.IsNullOrEmpty(r)) roots.Add(r.TrimEnd('\\') + "\\");
-
-            foreach (DriveView dv in Drives())
+            for (int i = 0; i < drives.Count; i++)
             {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                var queue = new Queue<string>();
-                queue.Enqueue(dv.Letter + "\\");
-                while (queue.Count > 0)
-                {
-                    if (sw.ElapsedMilliseconds > 12000 || list.Count >= 5000) { partial = true; break; }
-                    string dir = queue.Dequeue();
-                    try
+                if (coupe[i]) partial = true;
+                if (parDisque[i] == null) continue;
+                foreach (DiskWalk.Fichier f in parDisque[i])
+                    list.Add(new FileEntry
                     {
-                        foreach (string f in Directory.GetFiles(dir))
-                        {
-                            try
-                            {
-                                var fi = new FileInfo(f);
-                                if ((fi.Attributes & (FileAttributes.Hidden | FileAttributes.System
-                                                      | FileAttributes.Offline | CloudRecall)) != 0) continue;
-                                if (fi.Length < minBytes) continue;
-                                string ext = fi.Extension;
-                                list.Add(new FileEntry
-                                {
-                                    Path = f, Dir = dir.TrimEnd('\\'), Name = fi.Name, Ext = ext,
-                                    Cat = VideoExt.Contains(ext) ? "videos" : ArchiveExt.Contains(ext) ? "archives" : "bigfiles",
-                                    SizeMB = fi.Length / 1048576, Modified = fi.LastWriteTime
-                                });
-                            }
-                            catch { }
-                        }
-                        foreach (string d in Directory.GetDirectories(dir))
-                        {
-                            try
-                            {
-                                var di = new DirectoryInfo(d);
-                                if ((di.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                                string nm = di.Name;
-                                if (nm.Length == 0 || nm[0] == '.' || SkipDirs.Contains(nm)) continue;
-                                if (UnderAny(d, roots)) continue;
-                                queue.Enqueue(d);
-                            }
-                            catch { }
-                        }
-                    }
-                    catch { }
-                }
+                        Path = f.Path, Dir = f.Dir, Name = f.Name, Ext = f.Ext,
+                        Cat = VideoExt.Contains(f.Ext) ? "videos" : ArchiveExt.Contains(f.Ext) ? "archives" : "bigfiles",
+                        SizeMB = f.Bytes / 1048576, Modified = f.Modified
+                    });
             }
             list.Sort(delegate (FileEntry a, FileEntry b) { return b.SizeMB.CompareTo(a.SizeMB); });
             return list;
-        }
-
-        private static bool UnderAny(string dir, List<string> roots)
-        {
-            string probe = dir.TrimEnd('\\') + "\\";
-            foreach (string r in roots)
-                if (probe.StartsWith(r, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
         }
 
         internal static StorageItem FileToItem(FileEntry f)
@@ -950,33 +946,10 @@ namespace BTOptimizer
                 }
             }
 
-            long mb = DirBytes(dir, 0) / 1048576;
+            bool part;
+            long mb = DiskWalk.Bytes(dir, 12, 0, out part) / 1048576;   // jonctions ignorées, profondeur ≤ 12
             cache[dir] = stamp + "|" + mb.ToString(CultureInfo.InvariantCulture);
             return mb;
-        }
-
-        // Récursion bornée en profondeur, points de jonction ignorés (déjà comptés ailleurs).
-        private static long DirBytes(string dir, int depth)
-        {
-            if (depth > 12) return 0;
-            long total = 0;
-            try
-            {
-                foreach (string f in Directory.GetFiles(dir))
-                    try { total += new FileInfo(f).Length; } catch { }
-                foreach (string d in Directory.GetDirectories(dir))
-                {
-                    try
-                    {
-                        var di = new DirectoryInfo(d);
-                        if ((di.Attributes & FileAttributes.ReparsePoint) != 0) continue;
-                    }
-                    catch { }
-                    total += DirBytes(d, depth + 1);
-                }
-            }
-            catch { }
-            return total;
         }
 
         /// <summary>Taille en Mo PLAFONNÉE dans le temps : sur un dossier personnel de plusieurs
@@ -984,26 +957,9 @@ namespace BTOptimizer
         /// interface figée. −1 si le dossier n'existe pas.</summary>
         public static long DirSizeCappedMb(string path, int capMs)
         {
-            long bytes = 0;
-            try
-            {
-                if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return -1;
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                var stack = new Stack<string>();
-                stack.Push(path);
-                while (stack.Count > 0 && sw.ElapsedMilliseconds < capMs)
-                {
-                    string d = stack.Pop();
-                    try
-                    {
-                        foreach (string f in Directory.EnumerateFiles(d)) { try { bytes += new FileInfo(f).Length; } catch { } }
-                        foreach (string sub in Directory.EnumerateDirectories(d)) stack.Push(sub);
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-            return bytes / 1048576;
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return -1;
+            bool part;
+            return DiskWalk.Bytes(path, int.MaxValue, capMs, out part) / 1048576;
         }
 
         // ------------------------------------------------------------------

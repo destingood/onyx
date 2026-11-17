@@ -325,26 +325,7 @@ namespace BTOptimizer
         // Taille d'un dossier en Mo, PLAFONNÉE dans le temps (gros disques) — partielle si le cap est atteint.
         private static long DirSizeCappedMb(string path, int capMs)
         {
-            long bytes = 0;
-            try
-            {
-                if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return -1;
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                var stack = new System.Collections.Generic.Stack<string>();
-                stack.Push(path);
-                while (stack.Count > 0 && sw.ElapsedMilliseconds < capMs)
-                {
-                    string d = stack.Pop();
-                    try
-                    {
-                        foreach (var f in Directory.EnumerateFiles(d)) { try { bytes += new FileInfo(f).Length; } catch { } }
-                        foreach (var sub in Directory.EnumerateDirectories(d)) stack.Push(sub);
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-            return bytes / 1048576;
+            return Storage.DirSizeCappedMb(path, capMs);
         }
 
         /// <summary>Désactive l'hibernation (powercfg /h off) : hiberfil.sys disparaît, l'espace revient

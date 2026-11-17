@@ -56,6 +56,7 @@
     <Compile Include="..\src\SvcHost.cs" />
     <!-- Dépendance de JournalTechnique : où vivent les données. Aucune autre classe d'ONYX. -->
     <Compile Include="..\src\AppPaths.cs" />
+    <Compile Include="..\src\DiskWalk.cs" />
   </ItemGroup>
 
   <ItemGroup>
