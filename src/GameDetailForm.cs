@@ -14,8 +14,8 @@ namespace BTOptimizer
     /// <summary>
     /// Fiche détaillée d'un jeu (au clic depuis la page Jeux) : onglets, grande jaquette à droite,
     /// deux niveaux de boost avec leur compte RÉEL à gauche, priorité CPU dédiée (IFEO),
-    /// lancer / ouvrir le dossier. Le boost léger reste gratuit ; le complet (auto-tune matériel)
-    /// est une fonction Pro. Tout est confirmé, sauvegardé et réversible.
+    /// lancer / ouvrir le dossier. Boost léger (réglages recommandés) ou complet (auto-tune matériel).
+    /// Tout est confirmé, sauvegardé et réversible.
     /// </summary>
     internal class GameDetailForm : Form
     {
@@ -32,7 +32,7 @@ namespace BTOptimizer
             _g = g; _log = log; _exes = GameScan.ExesFor(g.Name);
             Text = "ONYX — " + g.Name;
             // Mise en page « fiche pleine largeur » : onglets en haut, optimisations à gauche,
-            // grande jaquette à droite, appel Pro en bas — comme une page, pas une boîte.
+            // grande jaquette à droite — comme une page, pas une boîte.
             ClientSize = new Size(1000, 620);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;

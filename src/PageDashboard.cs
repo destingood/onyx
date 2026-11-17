@@ -17,6 +17,9 @@ namespace BTOptimizer
         private static readonly Color SerGpu = FpsUi.Gold;
         private static readonly Font GreetFont = Fonts.Make(Fonts.Marcellus, 19f, FontStyle.Regular, "Georgia");
 
+        /// <summary>Boutique — sert uniquement au bouton « Soutenir ONYX ».</summary>
+        internal const string SupportUrl = "https://fluide.gumroad.com";
+
         private readonly HwMonitor _mon = new HwMonitor();
         private readonly Timer _timer = new Timer();
         private readonly Queue<double> _cpu = new Queue<double>();
@@ -108,7 +111,23 @@ namespace BTOptimizer
             _graph.Paint += PaintGraph;
             Controls.Add(_graph);
 
+            // ONYX est gratuit : ce bouton est le seul lien vers la boutique, pour qui veut soutenir.
+            var prem = FpsUi.GoldButton("◆  SOUTENIR ONYX");
+            prem.Name = "prem";
+            prem.Click += (s, e) => OpenSupport();
+            Controls.Add(prem);
+
             Resize += (s, e) => { DoLayout(); Invalidate(); };
+        }
+
+        private void OpenSupport()
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SupportUrl) { UseShellExecute = true }); }
+            catch
+            {
+                MessageBox.Show(FindForm(), "Ouvre cette adresse dans ton navigateur :\r\n" + SupportUrl,
+                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private Label MakeStat(int iconId, string label, string btn, Action click, int slot)
@@ -173,9 +192,11 @@ namespace BTOptimizer
             }
             // Le graphe s'ÉTIRE : la page occupe toute la hauteur, plus de vide sous le bouton.
             int bottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
-            int graphY = top + 146;
-            int graphH = Math.Max(220, bottom - graphY);
+            int premH = 46, graphY = top + 146;
+            int graphH = Math.Max(220, bottom - graphY - premH - 16);
             if (_graph != null) _graph.SetBounds(L, graphY, statsW, graphH);
+            var prem = Controls["prem"];
+            if (prem != null) prem.SetBounds(L, graphY + graphH + 16, statsW, premH);
         }
 
         // Ajuste les enfants d'une carte stat à sa largeur réelle (évite tout débordement

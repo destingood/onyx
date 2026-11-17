@@ -50,7 +50,6 @@ namespace BTOptimizer
         private static readonly Color ColWarn   = Color.FromArgb(200, 130, 0);
         private static readonly Color ColErr    = Color.FromArgb(200, 40, 40);
 
-        private Panel _header;
         private readonly Font _fontBrand = new Font("Segoe UI Semibold", 16f);
         private readonly Font _fontTag = new Font("Segoe UI", 8.5f);
         private readonly Font _fontChip = new Font("Segoe UI Semibold", 7.5f);
@@ -123,11 +122,10 @@ namespace BTOptimizer
             BackColor = Color.FromArgb(245, 246, 248);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-            // En-tête : marque peinte (wordmark dégradé, puces version/édition, tagline).
+            // En-tête : marque peinte (wordmark dégradé, puce de version, tagline).
             var header = new Panel();
             header.SetBounds(0, 0, 900, 62);
             header.BackColor = HeaderBg;
-            _header = header;
             header.Paint += OnPaintHeader;
 
             _btnBoost = new Button();

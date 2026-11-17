@@ -15,7 +15,11 @@ gardien de démarrage, boost complet par jeu, mode SIMPLE complet, module de sto
 - Supprimés : `License.cs`, `LicenceLiaison.cs`, `MachineId.cs`, `LicenseKeyForm.cs`, le
   générateur de clés (`seller/`, `Generateur-de-cles.bat`) et leurs tests.
 - « Mon compte » ne montre plus que les statistiques du PC ; la puce PRO/ESSAI de l'en-tête,
-  les boutons « Passer Pro » et le bouton d'essai de l'écran d'accueil sont retirés.
+  les boutons « Passer Pro » et le bouton d'essai sont retirés. Le bouton doré de l'accueil
+  devient « ◆ SOUTENIR ONYX » : il ouvre la boutique et ne débloque rien.
+- Landing, site, `llms.txt`, plan de lancement et posts alignés : plus de grille tarifaire ni
+  de FAQ sur les clés.
+- Les anciens fichiers `bt-license.txt` / `bt-trial.txt` éventuellement présents sont ignorés.
 - Les conditions d'utilisation (EULA) restent : elles ne dépendent d'aucune clé.
 
 ### Profil par jeu, cœurs choisis selon le processeur, et mode Compétition

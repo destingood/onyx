@@ -1,12 +1,12 @@
 # Kit de lancement — textes prêts à coller
 
 Tout est écrit pour être copié tel quel, puis ajusté à ta voix. Remplace `LANDING_URL`
-par l'adresse de ta landing (étape 5 du plan). Règle absolue : ne promets jamais un gain
+par l'adresse de ta landing (étape 4 du plan). Règle absolue : ne promets jamais un gain
 chiffré — montre la **mesure avant/après**, c'est ton arme.
 
 ---
 
-## 1. Fiches produit Gumroad
+## 1. Fiche produit Gumroad
 
 ### Produit « gratuit » (permalien `gratuit`, 0 € + pay-what-you-want)
 
@@ -25,79 +25,27 @@ chiffré — montre la **mesure avant/après**, c'est ton arme.
 > signée — la signature de code est en cours) : « Informations complémentaires » →
 > « Exécuter quand même ».
 >
-> L'édition Pro (49 €/an, ou 127 € une seule fois — 15 % sous les prix du marché)
-> ajoute le bouton ⚡ TOUT OPTIMISER, les presets eSport/Benchmark, le MODE JEU auto,
-> l'overclock GPU, le gardien en fond et les réglages réseau avancés — essai gratuit
-> de 7 jours inclus dans l'app.
+> Tout est inclus, gratuitement : le bouton ⚡ TOUT OPTIMISER, les presets
+> eSport/Benchmark, le MODE JEU auto, l'overclock GPU, le gardien en fond et les
+> réglages réseau avancés. Ni clé, ni version payante.
+>
+> Si l'app t'a servi, tu peux indiquer le montant de ton choix pour soutenir son
+> développement — ça ne débloque rien, tout est déjà là.
 
 **Fichiers** : `Fluide-Setup.exe` (autonome ~37 Mo) + version légère ~6 Mo.
 
-### Produit « annuel » (permalien `annuel`, 49 €/an — Membership Gumroad, facturation annuelle)
-
-**Titre** : Fluide Pro — abonnement annuel
-
-**Description** :
-
-> Tout Fluide, débloqué : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel), presets
-> eSport & Benchmark, MODE JEU automatique, overclock GPU + profil pilote NVIDIA,
-> gardien de démarrage & surveillance en fond, DNS rapide & réglages réseau avancés.
->
-> 4,08 €/mois, facturé 49 € par an — 15 % sous les prix du marché.
->
-> 📧 **Ta clé personnelle est envoyée par email sous 24 h** (signée à ton nom, valable
-> 1 an, renouvelée à chaque échéance tant que l'abonnement est actif). Colle-la dans
-> l'app : menu ☰ → « Activer la version Pro ». Essai gratuit de 7 jours inclus dans
-> l'app pour tester avant.
-
-### Produit « pro » (permalien `pro`, 127 €)
-
-**Titre** : Fluide Pro — licence à vie
-
-**Description** :
-
-> Tout Fluide, débloqué à vie : ⚡ TOUT OPTIMISER (1 clic adapté à ton matériel),
-> presets eSport & Benchmark, MODE JEU automatique, overclock GPU + profil pilote
-> NVIDIA, gardien de démarrage & surveillance en fond, DNS rapide & réglages réseau
-> avancés.
->
-> 📧 **Ta clé de licence personnelle est envoyée par email sous 24 h** (elle est signée
-> à ton nom). Colle-la dans l'app : menu ☰ → « Activer la version Pro ».
->
-> Licence à vie, mises à jour incluses. Pas convaincu ? L'app inclut un essai Pro
-> gratuit de 7 jours — teste avant d'acheter.
+Les produits `annuel` et `pro` n'existent plus (l'app n'a plus d'édition Pro ni de clé) :
+dépublie-les sur Gumroad s'ils ont été créés.
 
 ---
 
-## 2. Email de livraison de clé (réponse à chaque vente)
-
-**Objet** : Ta clé Fluide Pro 🔑
-
-> Salut {Prénom},
->
-> Merci pour ton achat ! Voici ta clé Pro, générée à ton nom
-> ({licence à vie / valable jusqu'au JJ/MM/AAAA — je t'enverrai la nouvelle clé à
-> chaque renouvellement de ton abonnement}) :
->
-> `{CLÉ}`
->
-> Pour l'activer : ouvre Fluide → menu ☰ (en haut à droite) → « Activer la
-> version Pro » → colle la clé → Activer. C'est tout.
->
-> Un souci, une question, une idée d'amélioration ? Réponds simplement à cet email,
-> c'est moi (le développeur) qui lis.
->
-> Bon jeu !
-> Lucas — Fluide
-
----
-
-## 3. Reddit EN — r/OptimizedGaming (J1)
+## 2. Reddit EN — r/OptimizedGaming (J1)
 
 ⚠️ Lis les règles du sub avant de poster (flair « Developer » si dispo, transparence
 obligatoire sur le fait que c'est ton app).
 
 **Titre** : I spent months building a Windows gaming optimizer that measures instead of
-promising — free edition, every tweak reversible, no injection (anticheat-safe)
+promising — free, every tweak reversible, no injection (anticheat-safe)
 
 **Corps** :
 
@@ -111,18 +59,17 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > panel that detects and **undoes the harmful tweaks** other "optimizers" leave behind
 > (forced HPET, disabled pagefile, TdrLevel=0…).
 >
-> The free edition includes all 176 tweaks + the full diagnostic suite. There's a paid
-> tier for the auto-tune stuff (yearly, or a one-time lifetime license if you hate
-> subscriptions — priced ~15% under the market), that's how I'm trying to make this
-> sustainable.
+> It's completely free: all 176 tweaks, the full diagnostic suite and the one-click
+> auto-tune. No license key, no account, no paid tier. There's an optional "support"
+> button if you want to help me keep working on it — it doesn't unlock anything.
 >
 > Windows will show "unknown publisher" — I'm a solo dev, code signing cert is on the
-> roadmap once this earns anything.
+> roadmap.
 >
 > Download: LANDING_URL — I'd genuinely love feedback, especially on tweaks you
 > disagree with.
 
-## 4. Forum jeuxvideo.com — Matériel & informatique (J2)
+## 3. Forum jeuxvideo.com — Matériel & informatique (J2)
 
 **Titre** : [Mon app] Optimiseur gaming FR qui mesure au lieu de promettre (gratuit, tout réversible)
 
@@ -138,17 +85,16 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 >   pagefile désactivé, etc.)
 > - Bonus confort : viseur (crosshair) et filtre couleur/vibrance intégrés
 >
-> L'édition gratuite contient tout ça. Il y a une version Pro (49 €/an, ou 127 € une
-> seule fois si tu détestes les abonnements — 15 % sous les prix du marché) pour
-> l'auto-optimisation en 1 clic — c'est ce qui me permet de continuer à le développer.
-> Essai Pro 7 jours inclus.
+> Tout ça est gratuit, auto-optimisation en 1 clic comprise : pas de version Pro, pas de
+> clé, pas de compte. Si l'app vous sert, un bouton « Soutenir » existe — il ne débloque
+> rien.
 >
 > LANDING_URL
 >
-> Franc jeu : Windows affichera « éditeur inconnu » (app non signée, certificat prévu
-> avec les premières ventes). Je prends toutes les critiques, surtout les techniques.
+> Franc jeu : Windows affichera « éditeur inconnu » (app non signée, signature de code
+> prévue). Je prends toutes les critiques, surtout les techniques.
 
-## 5. Thread X / Twitter (J1)
+## 4. Thread X / Twitter (J1)
 
 > 1/ J'ai passé des mois à construire un optimiseur gaming Windows qui fait l'inverse
 > des outils « boost FPS » : il ne promet rien, il MESURE. Score santé /100, FPS et
@@ -158,11 +104,11 @@ promising — free edition, every tweak reversible, no injection (anticheat-safe
 > qui détecte et répare les dégâts laissés par les faux optimiseurs (HPET forcé,
 > pagefile coupé…). Ton PC n'a probablement pas besoin de plus de hacks, mais de moins.
 >
-> 3/ L'édition gratuite : 176 optimisations + toute la suite de diagnostic. La Pro
-> (49 €/an ou 127 € à vie — 15 % sous le marché) ajoute le 1-clic adapté au matériel.
-> Essai 7 jours dans l'app. LANDING_URL — retours bienvenus, je réponds à tout.
+> 3/ Tout est gratuit : 176 optimisations, toute la suite de diagnostic et le 1-clic
+> adapté au matériel. Pas de version payante, pas de clé, pas de compte.
+> LANDING_URL — retours bienvenus, je réponds à tout.
 
-## 6. Scripts TikTok — 30 s, hook < 3 s (J1, J3, J5…)
+## 5. Scripts TikTok — 30 s, hook < 3 s (J1, J3, J5…)
 
 Format : capture d'écran de l'app plein cadre, voix off ou texte à l'écran, musique
 discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
@@ -184,26 +130,26 @@ discrète. Termine chaque clip par « Lien dans la bio » (bio → LANDING_URL).
 - Suite : panneau « Réglages néfastes » → détection (HPET forcé, pagefile coupé…) →
   réparation. « Mon app détecte les dégâts des faux optimiseurs. Et elle est gratuite. »
 
-## 7. Message Discord (salons projets/self-promo uniquement)
+## 6. Message Discord (salons projets/self-promo uniquement)
 
 > 🎮 Dév solo FR : je viens de sortir Fluide, un optimiseur gaming Windows honnête —
 > 176 réglages expliqués et réversibles, score santé /100, FPS/latence mesurés,
-> compatible anticheat (zéro injection). Édition gratuite complète : LANDING_URL
+> compatible anticheat (zéro injection). Entièrement gratuit : LANDING_URL
 > Retours très bienvenus, je réponds à tout 🙏
 
 **Clip 4 — le prix du marché**
 - Hook : « Des joueurs paient 59 € PAR AN pour optimiser leur PC. »
 - Suite : « Voici ce que la mienne fait gratuitement » → enchaînement rapide : 173
-  optimisations, score santé, FPS mesurés. « La version complète ? 15 % moins cher que
-  le marché : 49 € l'année, ou 127 € une seule fois — à vie. Lien dans la bio. »
+  optimisations, score santé, FPS mesurés. « Et la version complète ? C'est celle-là.
+  Gratuite, en entier. Lien dans la bio. »
 
-## 8. Si on te compare à FPSDoctor (ou à un autre optimiseur payant)
+## 7. Si on te compare à FPSDoctor (ou à un autre optimiseur payant)
 
 Réponse-type, factuelle, **jamais dénigrante** (à adapter) :
 
-> Bonne question ! Les différences principales : chez moi les 176 optimisations sont
-> gratuites (ailleurs, l'édition gratuite en a une dizaine), les prix sont ~15 % sous
-> le marché (49 €/an, ou 127 € une seule fois pour ne jamais payer d'abonnement),
+> Bonne question ! Les différences principales : chez moi tout est gratuit — les 176
+> optimisations comme l'automatisation en 1 clic (ailleurs, l'édition gratuite en a une
+> dizaine et le reste est payant),
 > chaque réglage est réversible avec sauvegarde automatique, zéro injection donc
 > compatible anticheat, et l'app **mesure** tes FPS et ta latence avant/après au lieu
 > d'afficher des promesses. Essaie les deux et garde ce qui marche le mieux sur TON
@@ -214,10 +160,10 @@ Réponse-type, factuelle, **jamais dénigrante** (à adapter) :
 ## Règles d'or de la distribution
 
 1. **Jamais de spam** : un post par communauté, puis tu réponds. C'est la conversation
-   qui vend, pas le post.
+   qui convainc, pas le post.
 2. Réponds à **100 %** des commentaires les 48 premières heures, même (surtout) les
    critiques — chaque réponse remonte le post.
 3. L'objection SmartScreen : réponse assumée, jamais esquivée (« app non signée, dev
    solo, certificat prévu — tout le code est réversible et sans injection »).
-4. Note ce qui marche (vues, clics, ventes par canal) → on double sur le canal gagnant
+4. Note ce qui marche (vues, clics, téléchargements par canal) → on double sur le canal gagnant
    à J7.
