@@ -83,6 +83,7 @@ namespace BTOptimizer.Tests
             CatalogueTests.Tout();
             DiskWalkTests.Tout();
             SuiviParalleleTests.Tout();
+            ConstatsMaterielTests.Tout();
             return Banc.Bilan();
         }
     }

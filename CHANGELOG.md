@@ -4,6 +4,23 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — trois constats matériels dans le diagnostic
+
+Lecture seule : ces constats ne modifient rien. Chacun se tait quand la lecture échoue ou
+quand le cas est ambigu. Sources et chiffres : `docs/plan-optimisations-manquantes.md`.
+
+- **RAM en simple canal** : signalée quand une seule barrette est installée (sauf carte à un
+  seul emplacement). Sur un portable, le texte prévient que la mémoire peut être soudée.
+  Deux barrettes dans les mauvais emplacements ne se lisent pas de façon fiable depuis
+  Windows : rien n'est affirmé.
+- **HAGS coupé sur GeForce RTX 40/50** : la génération d'images DLSS ne fonctionne pas sans
+  la planification GPU matérielle. Signalé seulement si le réglage est explicitement coupé.
+- **Windows 11 sans l'optimisation des Ryzen 7000/9000** : signalé avant la version 24H2
+  quand la mise à jour KB5041587 manque (22H2/23H2), avec le bouton Windows Update.
+  Windows 10 n'est pas signalé.
+- Nouveau `ConstatsMateriel.cs` (logique pure) et `ConstatsMaterielTests` (40 vérifications).
+  `Sys.QueryRam()` lit aussi le nombre d'emplacements mémoire.
+
 ## Prochaine version — page Stockage beaucoup plus rapide
 
 Mesuré sur un PC à 4 disques (même machine, même analyse, hors droits administrateur) :

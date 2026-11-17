@@ -283,6 +283,14 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_DIAG=1 : les constats du diagnostic en console (lecture seule) et sort.
+            if (Environment.GetEnvironmentVariable("BT_DIAG") == "1")
+            {
+                foreach (var d in Diagnostics.Run())
+                    Console.WriteLine("[" + d.Level + "] " + d.Text + (d.Fix != FixKind.None ? "   -> " + d.FixLabel : ""));
+                Environment.Exit(0);
+            }
+
             // BT_GARDIEN=1 : sante SMART + alertes du Gardien en console (vraies mesures) et sort.
             if (Environment.GetEnvironmentVariable("BT_GARDIEN") == "1")
             {

@@ -1853,6 +1853,7 @@ namespace BTOptimizer
             public long TotalMB;
             public int SpeedRated;      // MT/s annoncés (SPD/XMP max)
             public int SpeedRunning;    // MT/s configurés
+            public int Emplacements;    // emplacements mémoire de la carte mère, 0 = inconnu
         }
 
         public static RamInfo QueryRam()
@@ -1874,6 +1875,17 @@ namespace BTOptimizer
                         if (cc != null) ram.SpeedRunning = Math.Max(ram.SpeedRunning, Convert.ToInt32(cc));
                     }
                 }
+            }
+            catch { }
+            try
+            {
+                // Use = 3 : la mémoire système (pas la mémoire vidéo ni le cache).
+                using (var s = new ManagementObjectSearcher("SELECT MemoryDevices FROM Win32_PhysicalMemoryArray WHERE Use = 3"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        object n = mo["MemoryDevices"];
+                        if (n != null) ram.Emplacements += Convert.ToInt32(n);
+                    }
             }
             catch { }
             return ram;

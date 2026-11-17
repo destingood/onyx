@@ -87,6 +87,38 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // Constats matériels sans correction automatique (logique dans ConstatsMateriel).
+            try
+            {
+                var batterie = System.Windows.Forms.SystemInformation.PowerStatus.BatteryChargeStatus;
+                bool portable = (batterie & System.Windows.Forms.BatteryChargeStatus.NoSystemBattery) == 0
+                             && batterie != System.Windows.Forms.BatteryChargeStatus.Unknown;
+                string canal = ConstatsMateriel.SimpleCanal(ram.Modules, ram.Emplacements, portable);
+                if (canal != null) f.Add(new Finding(1, canal));
+            }
+            catch { }
+            try
+            {
+                // 2 = actif, 1 = coupé ; valeur absente = le pilote décide, on n'affirme rien.
+                object mode = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode");
+                bool? hags = Sys.IntEquals(mode, 2) ? true : Sys.IntEquals(mode, 1) ? false : (bool?)null;
+                using (var s = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string sansHags = ConstatsMateriel.HagsManquant(Convert.ToString(mo["Name"]), hags);
+                        if (sansHags != null) { f.Add(new Finding(1, sansHags)); break; }
+                    }
+            }
+            catch { }
+            try
+            {
+                object ubr = Sys.GetMachine(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "UBR");
+                string retard = ConstatsMateriel.WindowsEnRetard(Sys.QueryCpu().Name,
+                    Environment.OSVersion.Version.Build, ubr == null ? 0 : Convert.ToInt32(ubr));
+                if (retard != null) f.Add(new Finding(1, retard, FixKind.WindowsUpdate, "Windows Update"));
+            }
+            catch { }
+
             // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
             // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
             // qu'il héberge qui travaille.
