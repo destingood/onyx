@@ -116,6 +116,49 @@ namespace BTOptimizer.Tests
             Banc.Verifie("sans réglage = rien", true, Preuve.Lit("applique=2026-11-17T14:30:00\n") == null);
             Banc.Verifie("fin de ligne CRLF tolérée", true,
                 Preuve.Lit("applique=2026-11-17T14:30:00\r\nid=hpet_off\r\n") != null);
+
+            Banc.Titre("Preuve — validation en jeu");
+            // 6000 images à 10 ms (100 FPS) dont 60 à 40 ms : 1 % low = 1000 / 40 = 25 FPS.
+            var fts = new List<double>();
+            for (int i = 0; i < 5940; i++) fts.Add(10);
+            for (int i = 0; i < 60; i++) fts.Add(40);
+            Preuve.MesureJeu j = Preuve.CalculeJeu("jeu.exe", fts);
+            Banc.Verifie("images comptées", true, j.Images == 6000);
+            Banc.Verifie("durée = somme des frametimes", true, Math.Abs(j.DureeS - 61.8) < 1e-9);
+            Banc.Verifie("FPS moyen = images / temps", true, Math.Abs(j.FpsMoy - 6000 / 61.8) < 1e-9);
+            Banc.Verifie("1 % low = pire 1 %", true, Math.Abs(j.Low1 - 25) < 1e-9);
+            Banc.Verifie("frametimes nuls ou NaN ignorés", true,
+                Preuve.CalculeJeu("x", new List<double> { 10, 0, double.NaN, -3, 10 }).Images == 2);
+            Banc.Verifie("aucune image : invalide", false, Preuve.JeuValide(Preuve.CalculeJeu("x", new List<double>())));
+
+            Func<double, double, Preuve.MesureJeu> J = (moy, low) =>
+                new Preuve.MesureJeu { Jeu = "jeu.exe", FpsMoy = moy, Low1 = low, Images = 6000, DureeS = 60 };
+            var av = J(144, 90);
+            Banc.Verifie("jeu : « avant » sans 1 % low = incomparable", true, Preuve.JugeJeu(J(144, -1), J(144, 90)) == Preuve.Verdict.Incomparable);
+            Banc.Verifie("jeu : bruit = neutre", true, Preuve.JugeJeu(av, J(140, 85)) == Preuve.Verdict.Neutre);
+            Banc.Verifie("jeu : 1 % low −12 % = régression", true, Preuve.JugeJeu(av, J(144, 79)) == Preuve.Verdict.Regression);
+            Banc.Verifie("jeu : FPS moyen −8 % = régression", true, Preuve.JugeJeu(av, J(132, 90)) == Preuve.Verdict.Regression);
+            Banc.Verifie("jeu : 1 % low +15 % = gain", true, Preuve.JugeJeu(av, J(144, 104)) == Preuve.Verdict.Gain);
+            Banc.Verifie("jeu : gain moyen + chute du low = régression", true, Preuve.JugeJeu(av, J(170, 70)) == Preuve.Verdict.Regression);
+            var autre = J(144, 90); autre.Jeu = "autre.exe";
+            Banc.Verifie("jeu différent = non comparable", true, Preuve.JugeJeu(av, autre) == Preuve.Verdict.Incomparable);
+            var court = J(144, 90); court.DureeS = 20;
+            Banc.Verifie("mesure trop courte = non comparable", true, Preuve.JugeJeu(av, court) == Preuve.Verdict.Incomparable);
+            var peu = J(144, 90); peu.Images = 500;
+            Banc.Verifie("trop peu d'images = non comparable", true, Preuve.JugeJeu(av, peu) == Preuve.Verdict.Incomparable);
+
+            j.Quand = new DateTime(2026, 11, 17, 18, 0, 0, DateTimeKind.Local);
+            Preuve.MesureJeu jr = Preuve.LitJeu(Preuve.EcritJeu(j));
+            Banc.Verifie("mesure en jeu relue", true, jr != null && jr.Jeu == "jeu.exe" && jr.Images == 6000
+                && jr.Low1 == j.Low1 && jr.FpsMoy == j.FpsMoy && jr.Quand == j.Quand);
+            Banc.Verifie("mesure en jeu abîmée = rien", true, Preuve.LitJeu("jeu=x\n") == null);
+
+            var preuve = new Preuve.Attente { Applique = j.Quand.AddMinutes(10), Ids = new List<string> { "a" } };
+            Banc.Verifie("preuve après la mesure : mesure APRÈS", true, Preuve.MesureApres(j, preuve));
+            preuve.Applique = j.Quand.AddMinutes(-10);
+            Banc.Verifie("preuve avant la mesure : refaire AVANT", false, Preuve.MesureApres(j, preuve));
+            Banc.Verifie("pas de mesure avant : AVANT", false, Preuve.MesureApres(null, preuve));
+            Banc.Verifie("pas de preuve : AVANT", false, Preuve.MesureApres(j, null));
         }
     }
 }

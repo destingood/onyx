@@ -167,6 +167,117 @@ namespace BTOptimizer
             return date && a.Ids.Count > 0 ? a : null;
         }
 
+        // ------------------------------------------------------------------
+        //  Validation en jeu (phase C) : même partie, avant puis après la preuve
+        // ------------------------------------------------------------------
+
+        /// <summary>Une mesure en jeu : FPS moyen et 1 % low sur toutes les images captées.</summary>
+        public sealed class MesureJeu
+        {
+            public DateTime Quand;
+            public string Jeu = "";
+            public double FpsMoy = -1, Low1 = -1, DureeS;
+            public int Images;
+
+            public string Resume()
+            {
+                return Jeu + " : " + FpsMoy.ToString("0") + " FPS moyens, 1 % low " + Low1.ToString("0")
+                     + " FPS (" + Images + " images, " + DureeS.ToString("0") + " s)";
+            }
+        }
+
+        /// <summary>Seuils du jeu : une partie ne se rejoue jamais à l'identique, la marge est
+        /// donc plus large qu'au repos. [À calibrer sur machines réelles.]</summary>
+        public static class SeuilsJeu
+        {
+            public const double Low1Rel = 0.10;     // 1 % low : −10 %
+            public const double MoyRel = 0.07;      // FPS moyen : −7 %
+            public const int ImagesMin = 1000;      // en dessous, le 1 % low repose sur < 10 images
+            public const double DureeMinS = 30;
+        }
+
+        /// <summary>FPS moyen = images / temps total ; 1 % low = 1000 / moyenne du pire 1 % des frametimes.</summary>
+        public static MesureJeu CalculeJeu(string jeu, IList<double> frametimesMs)
+        {
+            var m = new MesureJeu { Quand = DateTime.Now, Jeu = jeu ?? "" };
+            if (frametimesMs == null || frametimesMs.Count == 0) return m;
+            var tri = new List<double>();
+            double total = 0;
+            foreach (double f in frametimesMs) if (f > 0 && !double.IsNaN(f)) { tri.Add(f); total += f; }
+            if (tri.Count == 0 || total <= 0) return m;
+            m.Images = tri.Count;
+            m.DureeS = total / 1000.0;
+            m.FpsMoy = tri.Count * 1000.0 / total;
+            tri.Sort();
+            int k = Math.Max(1, tri.Count / 100);
+            double pire = 0;
+            for (int i = tri.Count - k; i < tri.Count; i++) pire += tri[i];
+            m.Low1 = 1000.0 / (pire / k);
+            return m;
+        }
+
+        public static bool JeuValide(MesureJeu m)
+        {
+            return m != null && m.Images >= SeuilsJeu.ImagesMin && m.DureeS >= SeuilsJeu.DureeMinS && m.FpsMoy > 0 && m.Low1 > 0;
+        }
+
+        /// <summary>Plus haut = mieux. Régression si le 1 % low OU le FPS moyen baisse au-delà de sa marge.</summary>
+        public static Verdict JugeJeu(MesureJeu avant, MesureJeu apres)
+        {
+            if (!JeuValide(avant) || !JeuValide(apres)) return Verdict.Incomparable;
+            if (!string.Equals(avant.Jeu, apres.Jeu, StringComparison.OrdinalIgnoreCase)) return Verdict.Incomparable;
+            double dLow = (apres.Low1 - avant.Low1) / avant.Low1;
+            double dMoy = (apres.FpsMoy - avant.FpsMoy) / avant.FpsMoy;
+            if (dLow <= -SeuilsJeu.Low1Rel || dMoy <= -SeuilsJeu.MoyRel) return Verdict.Regression;
+            if (dLow >= SeuilsJeu.Low1Rel || dMoy >= SeuilsJeu.MoyRel) return Verdict.Gain;
+            return Verdict.Neutre;
+        }
+
+        public static string EcritJeu(MesureJeu m)
+        {
+            var sb = new StringBuilder();
+            sb.Append("quand=").Append(m.Quand.ToString("o", Inv)).Append('\n');
+            sb.Append("jeu=").Append((m.Jeu ?? "").Replace('\n', ' ').Replace('\r', ' ')).Append('\n');
+            sb.Append("fpsmoy=").Append(m.FpsMoy.ToString("R", Inv)).Append('\n');
+            sb.Append("low1=").Append(m.Low1.ToString("R", Inv)).Append('\n');
+            sb.Append("duree=").Append(m.DureeS.ToString("R", Inv)).Append('\n');
+            sb.Append("images=").Append(m.Images.ToString(Inv)).Append('\n');
+            return sb.ToString();
+        }
+
+        /// <summary>Rend null si le texte est vide, abîmé ou sans date ni jeu.</summary>
+        public static MesureJeu LitJeu(string texte)
+        {
+            if (string.IsNullOrWhiteSpace(texte)) return null;
+            var m = new MesureJeu();
+            bool date = false;
+            foreach (string brut in texte.Split('\n'))
+            {
+                string l = brut.Trim();
+                int i = l.IndexOf('=');
+                if (i <= 0) continue;
+                string k = l.Substring(0, i), v = l.Substring(i + 1);
+                double d; DateTime t; int n;
+                switch (k)
+                {
+                    case "quand": if (DateTime.TryParse(v, Inv, DateTimeStyles.RoundtripKind, out t)) { m.Quand = t; date = true; } break;
+                    case "jeu": m.Jeu = v; break;
+                    case "fpsmoy": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.FpsMoy = d; break;
+                    case "low1": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.Low1 = d; break;
+                    case "duree": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.DureeS = d; break;
+                    case "images": if (int.TryParse(v, NumberStyles.Integer, Inv, out n)) m.Images = n; break;
+                }
+            }
+            return date && m.Jeu.Length > 0 ? m : null;
+        }
+
+        /// <summary>Quelle mesure en jeu faire maintenant : « après » seulement si une preuve a eu lieu
+        /// APRÈS la mesure « avant » ; sinon (re)faire la mesure « avant ».</summary>
+        public static bool MesureApres(MesureJeu avant, Attente dernierePreuve)
+        {
+            return avant != null && dernierePreuve != null && dernierePreuve.Applique > avant.Quand;
+        }
+
         /// <summary>L'attente se juge seulement si Windows a redémarré APRÈS l'application.</summary>
         public static bool AttenteMesurable(Attente a, DateTime dernierDemarrage)
         {

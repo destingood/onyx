@@ -144,6 +144,7 @@ namespace BTOptimizer
         public static Rapport Lance(List<Tweak> all, Action<string, int> log, Func<bool> arretDemande)
         {
             var rap = new Rapport();
+            DateTime debut = DateTime.Now;
             Func<bool> stop = arretDemande ?? (() => false);
 
             HashSet<string> ids;
@@ -328,6 +329,8 @@ namespace BTOptimizer
                 if (!rap.Gardes.Contains(t) && !rap.Annules.Contains(t) && !rap.EnAttente.Contains(t)
                     && !rap.EchecsApplication.Contains(t) && !rap.EchecsAnnulation.Contains(t))
                     rap.NonFaits.Add(t);
+            // Pour la validation en jeu : ce que cette preuve a laissé appliqué.
+            try { PreuveJeu.EnregistreDernierePreuve(debut, rap.Gardes.Concat(rap.EnAttente)); } catch { }
             try { AppStats.Invalidate(); } catch { }
             return rap;
         }

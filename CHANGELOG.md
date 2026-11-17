@@ -29,6 +29,13 @@ beaucoup n'agissent qu'en jeu. Les réglages qui demandent un redémarrage sont 
 lancement suivant d'ONYX et annulés s'ils dégradent la mesure. Sauvegarde .reg et point de
 restauration avant tout changement.
 
+**Mesure en jeu (facultative).** Dans la même fenêtre, « 🎮 Mesure en jeu » enregistre 60 s
+de partie AVANT l'optimisation puis 60 s APRÈS, sur le même jeu (FPS moyens et 1 % low captés
+par ETW, uniquement quand le jeu est au premier plan ; un alt-tab met la mesure en pause). Une
+baisse de 10 % du 1 % low ou de 7 % des FPS moyens est confirmée par une seconde mesure, puis
+ONYX propose d'annuler les réglages appliqués. Jeu différent ou mesure trop courte : rien
+n'est touché.
+
 ## v15.75 — Ce qui tourne pour rien, ce que coûte chaque milliseconde, et sept licences mortes
 
 Un bogue signalé en passant — « la clé de mon pote se désactive » — a mis au jour le plus cher de cette version : **les sept licences vendues étaient invalides**, et rien nulle part ne pouvait le dire. Il ouvre donc le journal. Suivent les deux chantiers prévus : ce qui tourne pour rien sur cette machine, et ce que coûte chaque maillon entre le clic et le pixel.

@@ -78,7 +78,29 @@ Seuils exacts ajustables dans une seule classe ; durée de mesure (15 s) ; prés
   testable) ; 12 s de compteurs + ~1 s de test Sleep(1) par mesure ; sans ETW, la charge vient
   des compteurs « % DPC/Interrupt Time » et n'est jamais comparée à une mesure ETW.
 
-## Phase C (plus tard)
+## Phase C — validation en jeu (réalisée)
 
-Après A, bouton « Valider en jeu » : 60 s de jeu avant/après avec `FpsEtw` (1 % low), même règle
-d'annulation sur régression confirmée.
+Choix de l'utilisateur : mesure « jeu avant et après ».
+
+- Bouton « 🎮 Mesure en jeu » dans la fenêtre Optimiser et prouver. Étape « avant » tant
+  qu'aucune preuve n'a eu lieu depuis la dernière mesure « avant », sinon étape « APRÈS ».
+- Mesure (`src/PreuveJeu.cs`) : attend jusqu'à 5 min qu'un jeu (`FpsEtw.ChoisirJeu`) soit au
+  premier plan, puis compte 60 s **au premier plan avec images**. Pendant un alt-tab, la mesure
+  est en pause et les images sont jetées (`FpsEtw.NouvellesImages`, repère atomique). Abandon
+  si le jeu se ferme, après 15 min au total, ou sur Arrêter. À l'étape « après », seul le jeu
+  de la mesure « avant » est accepté.
+- Verdict (`Preuve.JugeJeu`, testé) :
+  - Incomparable si une mesure a moins de 1000 images ou moins de 30 s, ou si le jeu diffère ;
+  - Régression si le 1 % low baisse de 10 % ou plus, ou si les FPS moyens baissent de 7 % ou plus ;
+  - Gain si l'un des deux monte d'autant ;
+  - Neutre sinon.
+- Une régression est confirmée par une seconde mesure de 60 s. Si elle est confirmée, ONYX
+  propose d'annuler les réglages laissés appliqués par les preuves faites depuis la mesure
+  « avant » (`bt-preuve-derniere.txt`, cumulé si plusieurs preuves). Il ne rétablit que les
+  réglages encore actifs (`Check() != false`). Gain, neutre ou refus : les réglages sont gardés.
+  Dans tous ces cas, le cycle est clos (le fichier « avant » est supprimé).
+- Incomparable : rien n'est modifié et le fichier « avant » est conservé pour retenter la mesure.
+- Mesure « après » refusée tant qu'un réglage attend sa vérification après redémarrage.
+- Limite : les seuils sont des valeurs de départ, non calibrées sur machine réelle
+  [VERIFICATION REQUIRED]. Le bruit d'une scène de jeu dépend de l'utilisateur, d'où la
+  consigne « même jeu, même type de scène ».

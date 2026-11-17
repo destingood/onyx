@@ -53,6 +53,7 @@ namespace BTOptimizer
             public readonly List<double> Times = new List<double>(4096);  // horodatage de chaque frame
             public readonly List<double> Fts = new List<double>(4096);    // frametime associé (ms)
             public long Total;
+            public long Ajoutes;   // frametimes ajoutés à Fts depuis le début (élagage compris)
         }
 
         private readonly object _lock = new object();
@@ -142,6 +143,7 @@ namespace BTOptimizer
                     {
                         t.Times.Add(ts);
                         t.Fts.Add(ft);
+                        t.Ajoutes++;
                         Elague(t, ts);
                     }
                 }
@@ -369,6 +371,28 @@ namespace BTOptimizer
             for (int i = sorted.Count - k; i < sorted.Count; i++) s += sorted[i];
             double avgWorst = s / k;
             return avgWorst > 0 ? 1000.0 / avgWorst : 0;
+        }
+
+        /// <summary>
+        /// Frametimes arrivés depuis la dernière lecture, lus ET marqués lus sous le même verrou :
+        /// aucune image comptée deux fois ni perdue entre deux relevés (sauf au-delà de
+        /// l'historique de 20 s). <paramref name="vu"/> = -1 au départ : on ne prend alors rien,
+        /// on pose seulement le repère.
+        /// </summary>
+        public double[] NouvellesImages(int pid, ref long vu)
+        {
+            lock (_lock)
+            {
+                Track t;
+                if (!_tracks.TryGetValue(pid, out t)) return new double[0];
+                long n = t.Ajoutes - vu;
+                if (vu < 0 || n <= 0) { vu = t.Ajoutes; return new double[0]; }
+                int k = (int)Math.Min(n, t.Fts.Count);
+                var arr = new double[k];
+                t.Fts.CopyTo(t.Fts.Count - k, arr, 0, k);
+                vu = t.Ajoutes;
+                return arr;
+            }
         }
 
         /// <summary>Frametimes récents d'un PID (copie, pour le graphique).</summary>
