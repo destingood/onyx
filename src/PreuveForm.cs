@@ -229,6 +229,23 @@ namespace BTOptimizer
             }
             if (v == Preuve.Verdict.Regression)
             {
+                // Une Compétition est active : c'est ELLE qu'on propose de retirer en entier
+                // (profils, Mode Jeu, plafond, réglages eSport), pas sa seule liste de réglages.
+                Competition.Etat compet = null;
+                try { compet = Competition.Active(); } catch { }
+                if (compet != null)
+                {
+                    if (MessageBox.Show(this,
+                            "Baisse confirmée en jeu. Annuler Compétition (tout ce qu'elle a changé) ?",
+                            "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        AnnuleCompetition();
+                        return;
+                    }
+                    Ajoute("Compétition conservée malgré la baisse (ton choix).", 2);
+                    ClotureCycle();
+                    return;
+                }
                 Preuve.Attente derniere = PreuveJeu.DernierePreuve();
                 List<Tweak> lot = derniere == null ? new List<Tweak>()
                     : _all.Where(t => derniere.Ids.Contains(t.Id)).ToList();
@@ -271,6 +288,19 @@ namespace BTOptimizer
                     }));
                 }
                 catch { }
+            });
+        }
+
+        private void AnnuleCompetition()
+        {
+            Debut(_jeu);
+            _jeu.Enabled = false;   // une annulation ne s'interrompt pas
+            Task.Run(() =>
+            {
+                try { Competition.Annule(_all, Ajoute); }
+                catch (Exception ex) { Ajoute("Erreur pendant l'annulation : " + ex.Message, 3); }
+                try { AppStats.Invalidate(); } catch { }
+                try { BeginInvoke((Action)(() => { Fin(); ClotureCycle(); })); } catch { }
             });
         }
 

@@ -69,7 +69,7 @@ namespace BTOptimizer
                 || (t.Category != null && t.Category.ToLowerInvariant().Contains(_query));
         }
 
-        private Button _bProve, _bAuto, _bReco, _bEsport, _bReset;
+        private Button _bCompet, _bProve, _bAuto, _bReco, _bEsport, _bReset;
 
         private void BuildPresets()
         {
@@ -89,7 +89,15 @@ namespace BTOptimizer
                 try { AppStats.Invalidate(); } catch { }
                 RefreshStatesAsync();
             };
-            Controls.Add(_bProve); Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+            // Mode COMPÉTITION : profils, Mode Jeu auto, eSport prouvé, plafond — annulable d'un clic.
+            _bCompet = FpsUi.GhostButton("🏁 Compétition"); _bCompet.Height = 30; _bCompet.Width = 130; _bCompet.ForeColor = FpsUi.Gold;
+            _bCompet.Click += (s, e) =>
+            {
+                using (var f = new CompetitionForm(_tweaks)) f.ShowDialog(FindForm());
+                try { AppStats.Invalidate(); } catch { }
+                RefreshStatesAsync();
+            };
+            Controls.Add(_bCompet); Controls.Add(_bProve); Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
         }
 
         // Auto-tune : détecte le matériel et applique la sélection adaptée (niveau équilibré).
@@ -266,8 +274,16 @@ namespace BTOptimizer
                 _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
                 _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
                 _bAuto.Location = new Point(rx - _bAuto.Width, 22); rx -= _bAuto.Width + 8;
-                _bProve.Location = new Point(rx - _bProve.Width, 22);
-                if (_search != null) _search.SetBounds(Math.Max(180, _bProve.Left - 12 - 220), 24, 220, 26);
+                _bProve.Location = new Point(rx - _bProve.Width, 22); rx -= _bProve.Width + 8;
+                _bCompet.Location = new Point(rx - _bCompet.Width, 22);
+                // Six boutons ne laissent plus la place à la recherche sur la ligne du titre sous
+                // ~1 250 px : elle passe alors à droite, sous les boutons (avant les filtres, y = 90).
+                if (_search != null)
+                {
+                    int sx = _bCompet.Left - 12 - 220;
+                    if (sx >= 180) _search.SetBounds(sx, 24, 220, 26);
+                    else _search.SetBounds(ClientSize.Width - 34 - 220, 58, 220, 26);
+                }
             }
         }
 
