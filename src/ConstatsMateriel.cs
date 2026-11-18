@@ -9,6 +9,24 @@ namespace BTOptimizer
     /// </summary>
     internal static class ConstatsMateriel
     {
+        /// <summary>
+        /// Vitesse (MT/s) écrite dans la référence des barrettes, 0 si illisible. Windows ne
+        /// rapporte que la vitesse JEDEC : une RAM vendue 6000 avec EXPO y apparaît à 5600, et un
+        /// profil EXPO coupé (mise à jour du BIOS, par exemple) passait inaperçu.
+        /// </summary>
+        public static int VitesseAnnoncee(string reference)
+        {
+            if (string.IsNullOrWhiteSpace(reference)) return 0;
+            string r = reference.Trim().ToUpperInvariant();
+            Match m;
+            int v = 0;
+            if ((m = Regex.Match(r, @"^F[345]-(\d{4})")).Success) v = int.Parse(m.Groups[1].Value);                   // G.Skill
+            else if ((m = Regex.Match(r, @"^KF(\d{3})C\d{2}")).Success) v = 10 * int.Parse(m.Groups[1].Value);        // Kingston Fury
+            else if ((m = Regex.Match(r, @"^(?:CP|BL)\d+G(\d{2})C\d{2}")).Success) v = 100 * int.Parse(m.Groups[1].Value); // Crucial Pro, Ballistix
+            else if ((m = Regex.Match(r, @"(\d{4})(?:HC|CL|C)\d{2}")).Success) v = int.Parse(m.Groups[1].Value);      // Corsair, TeamGroup…
+            return v >= 1600 && v <= 10000 ? v : 0;
+        }
+
         /// <summary>Une seule barrette = simple canal, à coup sûr. Deux barrettes dans les mauvais
         /// emplacements ne se lisent pas de façon fiable depuis Windows : on n'en dit rien.
         /// <paramref name="emplacements"/> à 0 = inconnu ; à 1, il n'y a rien à corriger.</summary>

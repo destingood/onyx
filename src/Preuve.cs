@@ -116,6 +116,28 @@ namespace BTOptimizer
             public DateTime Applique;
             public Mesure Reference;
             public List<string> Ids = new List<string>();
+            /// <summary>Régressions déjà vues après ce redémarrage (vérifications précédentes).</summary>
+            public int Regressions;
+        }
+
+        /// <summary>
+        /// Délai minimal depuis le démarrage de Windows avant de juger les réglages à redémarrage.
+        /// Les 3 minutes d'avant ne suffisaient pas : mises à jour, antivirus et lanceurs (Epic,
+        /// EA, Steam) chargent encore, et la mesure sortait « en régression ».
+        /// </summary>
+        public const int CalmeApresDemarrageS = 600;
+
+        public enum Decision { Garder, Remesurer, Annuler }
+
+        /// <summary>
+        /// La référence date d'AVANT le redémarrage, la mesure d'APRÈS : deux états du système
+        /// différents. Une régression isolée ne suffit donc pas à annuler ; il en faut une
+        /// seconde, à une vérification suivante.
+        /// </summary>
+        public static Decision ApresRedemarrage(Verdict v, int regressionsPrecedentes)
+        {
+            if (v != Verdict.Regression) return Decision.Garder;
+            return regressionsPrecedentes >= 1 ? Decision.Annuler : Decision.Remesurer;
         }
 
         private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
@@ -131,6 +153,7 @@ namespace BTOptimizer
             sb.Append("sleepmoy=").Append(r.SleepMoyMs.ToString("R", Inv)).Append('\n');
             sb.Append("sleepmax=").Append(r.SleepMaxMs.ToString("R", Inv)).Append('\n');
             sb.Append("etw=").Append(r.Etw ? "1" : "0").Append('\n');
+            if (a.Regressions > 0) sb.Append("regressions=").Append(a.Regressions.ToString(Inv)).Append('\n');
             foreach (string id in a.Ids) sb.Append("id=").Append(id).Append('\n');
             return sb.ToString();
         }
@@ -162,6 +185,7 @@ namespace BTOptimizer
                     case "sleepmax": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) a.Reference.SleepMaxMs = d; break;
                     case "etw": a.Reference.Etw = v == "1"; break;
                     case "id": if (v.Length > 0) a.Ids.Add(v); break;
+                    case "regressions": { int n; if (int.TryParse(v, NumberStyles.Integer, Inv, out n) && n > 0) a.Regressions = n; } break;
                 }
             }
             return date && a.Ids.Count > 0 ? a : null;

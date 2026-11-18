@@ -2922,7 +2922,9 @@ namespace BTOptimizer
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\AutoLogger-Diagtrack-Listener" },
                 Apply  = () => Sys.SetMachine(DiagtrackAutologger, "Start", 0, RegistryValueKind.DWord),
                 Revert = () => Sys.SetMachine(DiagtrackAutologger, "Start", 1, RegistryValueKind.DWord),
-                Check  = () => Sys.IntEquals(Sys.GetMachine(DiagtrackAutologger, "Start"), 0)
+                // Clé absente (supprimée par Windows ou un autre outil) : la session ne démarre
+                // plus, le réglage est acquis. Avant, il ressortait « à appliquer » à chaque preuve.
+                Check  = () => EtatReglage.AutologgerCoupe(Sys.MachineKeyExists(DiagtrackAutologger), Sys.GetMachine(DiagtrackAutologger, "Start"))
             });
 
             list.Add(new Tweak

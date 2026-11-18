@@ -1862,7 +1862,7 @@ namespace BTOptimizer
             try
             {
                 using (var s = new ManagementObjectSearcher(
-                    "SELECT Capacity, Speed, ConfiguredClockSpeed FROM Win32_PhysicalMemory"))
+                    "SELECT Capacity, Speed, ConfiguredClockSpeed, PartNumber FROM Win32_PhysicalMemory"))
                 {
                     foreach (ManagementObject mo in s.Get())
                     {
@@ -1871,6 +1871,8 @@ namespace BTOptimizer
                         if (cap != null) ram.TotalMB += (long)(Convert.ToUInt64(cap) / (1024 * 1024));
                         object sp = mo["Speed"];
                         if (sp != null) ram.SpeedRated = Math.Max(ram.SpeedRated, Convert.ToInt32(sp));
+                        // « Speed » est la vitesse JEDEC : la référence porte celle du profil XMP/EXPO.
+                        ram.SpeedRated = Math.Max(ram.SpeedRated, ConstatsMateriel.VitesseAnnoncee(mo["PartNumber"] as string));
                         object cc = mo["ConfiguredClockSpeed"];
                         if (cc != null) ram.SpeedRunning = Math.Max(ram.SpeedRunning, Convert.ToInt32(cc));
                     }

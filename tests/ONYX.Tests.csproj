@@ -45,6 +45,7 @@
     <Compile Include="..\src\ChaineEntree.cs" />
     <!-- Optimisation prouvée : verdict, recherche du fautif, attente (logique pure). -->
     <Compile Include="..\src\Preuve.cs" />
+    <Compile Include="..\src\EtatReglage.cs" />
     <!-- Topologie : choix des cœurs du jeu (pur). La lecture machine vit dans TopologieMachine.cs. -->
     <Compile Include="..\src\Topologie.cs" />
     <!-- Profil par jeu : décision et état (pur). La machine vit dans ProfilJeuMachine.cs. -->

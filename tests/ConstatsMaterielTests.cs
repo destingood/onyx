@@ -11,6 +11,18 @@ namespace BTOptimizer.Tests
 
         public static void Tout()
         {
+            // Windows annonce la vitesse JEDEC (5600) : sans la référence, une RAM 6000 EXPO
+            // remise à 5600 par une mise à jour du BIOS passait pour « à sa vitesse nominale ».
+            Banc.Titre("Vitesse annoncée par la référence des barrettes");
+            Banc.Verifie("Crucial Pro CP16G60C36U5B", true, ConstatsMateriel.VitesseAnnoncee("CP16G60C36U5B.M8D3") == 6000);
+            Banc.Verifie("Corsair CMK32GX5M2B6000C36", true, ConstatsMateriel.VitesseAnnoncee("CMK32GX5M2B6000C36") == 6000);
+            Banc.Verifie("G.Skill F5-6400J3239G16G", true, ConstatsMateriel.VitesseAnnoncee("F5-6400J3239G16G") == 6400);
+            Banc.Verifie("G.Skill DDR4 F4-3600C16-8GTZNC", true, ConstatsMateriel.VitesseAnnoncee("F4-3600C16-8GTZNC") == 3600);
+            Banc.Verifie("Kingston Fury KF560C36-16", true, ConstatsMateriel.VitesseAnnoncee("KF560C36-16") == 5600);
+            Banc.Verifie("TeamGroup FF3D516G6000HC38A01", true, ConstatsMateriel.VitesseAnnoncee("FF3D516G6000HC38A01") == 6000);
+            Banc.Verifie("référence JEDEC sans vitesse lisible", true, ConstatsMateriel.VitesseAnnoncee("M425R2GA3BB0-CQKOD") == 0);
+            Banc.Verifie("référence vide", true, ConstatsMateriel.VitesseAnnoncee(null) == 0);
+
             Banc.Titre("Constats matériels (simple canal, HAGS, Windows et Ryzen)");
 
             // ---- RAM en simple canal

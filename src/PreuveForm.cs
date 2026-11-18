@@ -168,7 +168,7 @@ namespace BTOptimizer
             bool apres = PreuveJeu.EtapeApres();
             if (apres && PreuveRun.AttenteExiste())
             {
-                MessageBox.Show(this, "Des réglages à redémarrage attendent encore leur vérification : redémarre le PC et relance ONYX avant la mesure « après ».",
+                MessageBox.Show(this, "Des réglages à redémarrage attendent encore leur vérification : redémarre le PC si ce n'est pas fait, relance ONYX et laisse-le ouvert (il vérifie 10 minutes après le démarrage de Windows) avant la mesure « après ».",
                     "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }

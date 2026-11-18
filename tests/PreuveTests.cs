@@ -172,6 +172,27 @@ namespace BTOptimizer.Tests
             Banc.Verifie("preuve avant la mesure : refaire AVANT", false, Preuve.MesureApres(j, preuve));
             Banc.Verifie("pas de mesure avant : AVANT", false, Preuve.MesureApres(null, preuve));
             Banc.Verifie("pas de preuve : AVANT", false, Preuve.MesureApres(j, null));
+
+            // Juste après un redémarrage, Windows et les lanceurs (Epic, EA, Steam) chargent :
+            // une « régression » contre la référence d'avant le redémarrage peut être ce bruit.
+            // Une seule ne suffit plus à annuler : il en faut deux, sur deux vérifications.
+            Banc.Titre("Preuve — verdict après redémarrage");
+            Banc.Verifie("1re régression : remesurer", true, Preuve.ApresRedemarrage(Preuve.Verdict.Regression, 0) == Preuve.Decision.Remesurer);
+            Banc.Verifie("2e régression : annuler", true, Preuve.ApresRedemarrage(Preuve.Verdict.Regression, 1) == Preuve.Decision.Annuler);
+            Banc.Verifie("neutre après une régression : garder", true, Preuve.ApresRedemarrage(Preuve.Verdict.Neutre, 1) == Preuve.Decision.Garder);
+            Banc.Verifie("gain : garder", true, Preuve.ApresRedemarrage(Preuve.Verdict.Gain, 0) == Preuve.Decision.Garder);
+            var ar = new Preuve.Attente { Applique = new DateTime(2026, 11, 18, 4, 45, 0), Reference = M(1000, 400, 1.05, 2.0), Regressions = 1 };
+            ar.Ids.Add("nic_latency");
+            Banc.Verifie("compteur de régressions conservé", true, Preuve.Lit(Preuve.Ecrit(ar)).Regressions == 1);
+            Banc.Verifie("ancien fichier sans compteur : 0", true, Preuve.Lit("applique=2026-11-18T04:45:00\nid=nic_latency\n").Regressions == 0);
+            Banc.Verifie("mesure après au moins 10 min de démarrage", true, Preuve.CalmeApresDemarrageS >= 600);
+
+            // Clé AutoLogger absente : Windows ne lance pas la session, le réglage est acquis.
+            Banc.Titre("Télémétrie ETW — état");
+            Banc.Verifie("clé absente = coupé", true, EtatReglage.AutologgerCoupe(false, null));
+            Banc.Verifie("Start=0 = coupé", true, EtatReglage.AutologgerCoupe(true, 0));
+            Banc.Verifie("Start=1 = actif", false, EtatReglage.AutologgerCoupe(true, 1));
+            Banc.Verifie("valeur absente = actif (défaut Windows)", false, EtatReglage.AutologgerCoupe(true, null));
         }
     }
 }

@@ -410,9 +410,9 @@ namespace BTOptimizer
             if (a == null) { try { if (File.Exists(chemin)) File.Delete(chemin); } catch { } return null; }
             if (!Preuve.AttenteMesurable(a, DernierDemarrage())) return null;
 
-            // Le démarrage de Windows est bruyant (mises à jour, analyse antivirus) : on laisse
-            // passer les 3 premières minutes avant de mesurer.
-            double reste = 180 - TimeSpan.FromMilliseconds(Environment.TickCount64).TotalSeconds;
+            // Le démarrage de Windows est bruyant (mises à jour, antivirus, lanceurs de jeux) : on
+            // laisse passer les premières minutes avant de mesurer.
+            double reste = Preuve.CalmeApresDemarrageS - TimeSpan.FromMilliseconds(Environment.TickCount64).TotalSeconds;
             if (reste > 0) Thread.Sleep(TimeSpan.FromSeconds(reste));
 
             var lot = all.Where(t => a.Ids.Contains(t.Id)).ToList();
@@ -426,7 +426,18 @@ namespace BTOptimizer
                     Preuve.Mesure m;
                     Preuve.Verdict v = JugeConfirme(a.Reference, etw, etwOk, log, out m);
                     rap.Fin = m;
-                    if (v == Preuve.Verdict.Regression)
+                    Preuve.Decision d = Preuve.ApresRedemarrage(v, a.Regressions);
+                    if (d == Preuve.Decision.Remesurer)
+                    {
+                        // Rien n'est annulé sur une seule mesure faite dans un autre état du
+                        // système que la référence : on revérifie au prochain lancement d'ONYX.
+                        a.Regressions++;
+                        File.WriteAllText(chemin, Preuve.Ecrit(a), new UTF8Encoding(false));
+                        rap.RedemarrageRequis = false;
+                        rap.Lignes.Add("Réglages à redémarrage : baisse possible, non confirmée (rien n'est annulé). Nouvelle vérification au prochain lancement d'ONYX.");
+                        return rap;
+                    }
+                    if (d == Preuve.Decision.Annuler)
                     {
                         log("Réglages à redémarrage : régression confirmée, annulation.", 2);
                         EngineResult r = Engine.Run(lot, false, false, false, log);

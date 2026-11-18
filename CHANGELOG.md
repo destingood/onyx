@@ -4,6 +4,22 @@ Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (co
 anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
 (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — l'optimisation prouvée garde ses réglages à redémarrage
+
+- **Réglages à redémarrage annulés à tort** : après le redémarrage, ONYX mesurait au bout
+  de 3 minutes, pendant que Windows et les lanceurs (Epic, EA, Steam) chargeaient encore.
+  Il comparait cette mesure à celle d'avant le redémarrage, concluait à une régression et
+  annulait tout. Constaté deux fois de suite sur le PC de test. Désormais : mesure au plus tôt
+  10 minutes après le démarrage, et une baisse isolée n'annule rien. Il faut une seconde
+  baisse, au lancement suivant d'ONYX.
+- **Télémétrie ETW (AutoLogger Diagtrack)** : quand Windows ou un autre outil a supprimé la
+  clé, la session ne démarre plus, mais le réglage ressortait « à appliquer » à chaque preuve.
+  Il est maintenant compté comme acquis.
+- **RAM sous sa vitesse (XMP/EXPO)** : Windows ne donne que la vitesse JEDEC, si bien qu'une
+  RAM 6000 EXPO remise à 5600 (par une mise à jour du BIOS, par exemple) passait pour « à sa
+  vitesse nominale ». La vitesse est maintenant lue aussi dans la référence des barrettes :
+  Crucial Pro, Ballistix, Corsair, G.Skill, Kingston Fury et TeamGroup.
+
 ## Prochaine version — Reflex dans Fortnite et Resizable BAR
 
 Lecture seule : rien n'est modifié, ni dans le jeu ni dans le BIOS.
