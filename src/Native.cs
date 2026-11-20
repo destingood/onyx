@@ -22,6 +22,7 @@ namespace BTOptimizer
         /// <summary>Applique [seuil1, seuil2, accélération] immédiatement dans la session.</summary>
         public static void SetMouseParams(int threshold1, int threshold2, int acceleration)
         {
+            EtatOrigineMachine.NonCouvert("paramètres souris de session");
             SystemParametersInfo(SPI_SETMOUSE, 0,
                 new int[] { threshold1, threshold2, acceleration },
                 SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
@@ -37,6 +38,7 @@ namespace BTOptimizer
         /// aux autres valeurs Windows multiplie le déplacement et saute ou duplique des pixels.</summary>
         public static void SetMouseSpeed(int speed)
         {
+            EtatOrigineMachine.NonCouvert("vitesse du pointeur de session");
             if (speed < 1) speed = 1;
             if (speed > 20) speed = 20;
             SystemParametersInfo(SPI_SETMOUSESPEED, 0, new IntPtr(speed), SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
@@ -114,6 +116,7 @@ namespace BTOptimizer
         /// <summary>Force la résolution du timer Windows à 1 ms tant que l'app tourne.</summary>
         public static void SetTimer1ms(bool enable)
         {
+            EtatOrigineMachine.NonCouvert("résolution du timer système");
             if (enable && !_timerActive)
             {
                 timeBeginPeriod(1);
@@ -183,6 +186,7 @@ namespace BTOptimizer
         /// </summary>
         public static int EmptyAllWorkingSets(System.Collections.Generic.ICollection<int> ignorer)
         {
+            EtatOrigineMachine.NonCouvert("vidage des working sets");
             int done = 0;
             foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcesses())
             {
@@ -199,6 +203,7 @@ namespace BTOptimizer
 
         public static bool PurgeStandby()
         {
+            EtatOrigineMachine.NonCouvert("purge de la mémoire en attente");
             try
             {
                 if (!EnablePrivilege("SeProfileSingleProcessPrivilege")) return false;
@@ -242,6 +247,7 @@ namespace BTOptimizer
 
         public static void Empty()
         {
+            EtatOrigineMachine.NonCouvert("vidage de la corbeille");
             SHEmptyRecycleBin(IntPtr.Zero, null, 7); // NOCONFIRMATION|NOPROGRESSUI|NOSOUND
         }
     }
