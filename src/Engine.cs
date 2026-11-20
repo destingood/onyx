@@ -67,12 +67,15 @@ namespace BTOptimizer
             {
                 try
                 {
-                    if (apply) EtatOrigineMachine.Applique(t);
-                    else EtatOrigineMachine.Retablit(t);
+                    // remarque : avertissement d'Applique (origine non enregistrée), ou « maintenu par … »
+                    // de Retablit (rien remis : d'autres réglages appliqués tiennent ces valeurs).
+                    string remarque = apply ? EtatOrigineMachine.Applique(t) : EtatOrigineMachine.Retablit(t);
                     result.Ok++;
                     if (!string.IsNullOrEmpty(t.Id)) done.Add(t.Id);
                     if (t.Reboot) result.RebootNeeded = true;
-                    log(verb + " : " + t.Name, 1);
+                    if (remarque == null) log(verb + " : " + t.Name, 1);
+                    else if (apply) log(verb + " : " + t.Name + " — attention, " + remarque, 2);
+                    else log(t.Name + " : " + remarque + " (rien à remettre)", 1);
                 }
                 catch (Exception ex)
                 {

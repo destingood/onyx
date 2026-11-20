@@ -50,9 +50,29 @@ namespace BTOptimizer
 
         private static string Teste(Tweak t)
         {
-            EtatOrigineMachine.Applique(t);
-            EtatOrigine.Entree entree = EtatOrigineMachine.EntreeDe(t.Id);
-            if (entree == null)
+            EtatOrigine.Entree entree;
+            try
+            {
+                EtatOrigineMachine.Applique(t);
+                entree = EtatOrigineMachine.EntreeDe(t.Id);
+            }
+            catch (Exception ex)
+            {
+                // Apply a pu écrire une partie avant de lever : on rétablit quand même, sans masquer l'échec.
+                string retab;
+                try
+                {
+                    EtatOrigineMachine.Retablit(t);
+                    retab = "OK";
+                }
+                catch (Exception ex2)
+                {
+                    retab = ex2.Message;
+                }
+                return "ÉCHEC : " + ex.Message + " ; rétablissement : " + retab;
+            }
+            // Pas d'entrée (déjà en place, ou déjà appliqué) ou entrée vide (Apply n'a rien écrit).
+            if (entree == null || (entree.Items.Count == 0 && entree.Complet))
             {
                 EtatOrigineMachine.Retablit(t);
                 return "NON CAPTURÉ";

@@ -46,9 +46,12 @@ namespace BTOptimizer.Tests
         private static void Regles()
         {
             Banc.Titre("État d'origine : règles");
-            Banc.Verifie("ancienne version d'ONYX : pas de capture", false, EtatOrigine.DoitCapturer(false, true));
-            Banc.Verifie("premier passage : capture", true, EtatOrigine.DoitCapturer(false, false));
-            Banc.Verifie("entrée existante : on la complète", true, EtatOrigine.DoitCapturer(true, true));
+            Banc.Verifie("ancienne version d'ONYX : pas de capture", false, EtatOrigine.DoitCapturer(false, true, false));
+            Banc.Verifie("premier passage : capture", true, EtatOrigine.DoitCapturer(false, false, false));
+            Banc.Verifie("entrée existante : on la complète", true, EtatOrigine.DoitCapturer(true, true, false));
+            Banc.Verifie("entrée existante, déjà en place : on la complète", true, EtatOrigine.DoitCapturer(true, false, true));
+            Banc.Verifie("pas d'entrée, absent de bt-appliques, déjà en place : pas de capture", false, EtatOrigine.DoitCapturer(false, false, true));
+            Banc.Verifie("pas d'entrée, dans bt-appliques et déjà en place : pas de capture", false, EtatOrigine.DoitCapturer(false, true, true));
 
             EtatOrigine.Item R(string v) => new EtatOrigine.Item { Genre = "reg", Cible = "HKEY_LOCAL_MACHINE\\K", Nom = "x", Existe = v != null, Kind = "DWord", Valeur = v };
             // Réapplication : l'origine ne bouge pas
@@ -116,6 +119,89 @@ namespace BTOptimizer.Tests
             Banc.Verifie("HP réel", false, EtatOrigine.EstMachineDeTest("HP", "OMEN by HP Laptop 16"));
             Banc.Verifie("valeurs nulles : refus", false, EtatOrigine.EstMachineDeTest(null, null));
             Banc.Verifie("valeurs vides : refus", false, EtatOrigine.EstMachineDeTest("", ""));
+            Correctifs();
+        }
+
+        /// <summary>Revue finale : drapeau RevertRequis, entrée vide conservée, identité alim par plan, mineurs.</summary>
+        private static void Correctifs()
+        {
+            Banc.Titre("État d'origine : correctifs de la revue finale");
+            // RevertRequis : sérialisé, absent des anciens journaux = faux
+            var j = new EtatOrigine.Journal();
+            j.Entrees.Add(new EtatOrigine.Entree { Id = "windowed_flip", Date = "2026-11-20", RevertRequis = true });
+            Banc.Verifie("RevertRequis relu", true, EtatOrigine.Lire(EtatOrigine.Ecrire(j)).Entrees[0].RevertRequis);
+            var ancien = EtatOrigine.Lire("{\"Version\":1,\"Prochain\":3,\"Entrees\":[{\"Id\":\"x\",\"Date\":\"2026-11-20\",\"Complet\":true,\"NonCouvert\":[],\"Items\":[]}]}");
+            Banc.Verifie("ancien journal sans RevertRequis : faux, Complet gardé", true,
+                !ancien.Corrompu && ancien.Entrees.Count == 1 && !ancien.Entrees[0].RevertRequis && ancien.Entrees[0].Complet);
+            Banc.Verifie("Ouvre ne remet pas RevertRequis à faux", true,
+                EtatOrigine.Ouvre(j, "windowed_flip", new DateTime(2026, 11, 21)).RevertRequis);
+
+            // Ancien Revert() avant le journal : seulement si non couvert ou RevertRequis
+            Banc.Verifie("entrée vide complète : pas d'ancien Revert", false, EtatOrigine.AncienRevertDabord(new EtatOrigine.Entree()));
+            Banc.Verifie("entrée non couverte : ancien Revert d'abord", true, EtatOrigine.AncienRevertDabord(new EtatOrigine.Entree { Complet = false }));
+            Banc.Verifie("RevertRequis : ancien Revert d'abord", true, EtatOrigine.AncienRevertDabord(new EtatOrigine.Entree { RevertRequis = true }));
+
+            // Entrée vide conservée (marqueur) : Retire la retire sans rien à restaurer
+            var v = new EtatOrigine.Journal();
+            EtatOrigine.Ouvre(v, "vide", new DateTime(2026, 11, 20));
+            var v2 = EtatOrigine.Retire(v, "vide", out var rv, out var hv);
+            Banc.Verifie("entrée vide : rien à restaurer, aucun héritier, entrée retirée", true, rv.Count == 0 && hv.Count == 0 && v2.Entrees.Count == 0);
+
+            // m1 : un journal marqué Corrompu ne se retire jamais en silence
+            bool leve = false;
+            try { EtatOrigine.Retire(new EtatOrigine.Journal { Corrompu = true }, "x", out _, out _); }
+            catch (InvalidOperationException) { leve = true; }
+            Banc.Verifie("Retire sur un journal corrompu : lève", true, leve);
+
+            // m3 : héritiers exposés quand rien n'est restauré
+            EtatOrigine.Item R(string val) => new EtatOrigine.Item { Genre = "reg", Cible = "HKEY_LOCAL_MACHINE\\K", Nom = "x", Existe = true, Kind = "DWord", Valeur = val };
+            var h = new EtatOrigine.Journal();
+            EtatOrigine.Note(h, EtatOrigine.Ouvre(h, "A", new DateTime(2026, 11, 20)), R("0"));
+            EtatOrigine.Note(h, EtatOrigine.Ouvre(h, "B", new DateTime(2026, 11, 20)), R("1"));
+            EtatOrigine.Note(h, EtatOrigine.Ouvre(h, "C", new DateTime(2026, 11, 20)), R("1"));
+            EtatOrigine.Retire(h, "A", out var rh, out var heritiers);
+            Banc.Verifie("A retiré : rien à restaurer, héritier B seul (le plus ancien)", true, rh.Count == 0 && heritiers.SequenceEqual(new[] { "B" }));
+            Banc.Egal("message « maintenu par »", "maintenu par B, C", EtatOrigine.MaintenuPar(new() { "B", "C" }));
+            EtatOrigine.Retire(h, "C", out var rc, out var hc);
+            Banc.Verifie("C retiré (dernier) : on restaure, aucun héritier", true, rc.Count == 1 && hc.Count == 0);
+
+            // I4 : identité alim par plan
+            const string planA = "381b4222-f694-41f0-9685-ff5bb260df2e", planB = "e9a42b02-d5df-448d-aa00-03f14749eb62";
+            const string sous = "54533251-82be-4824-96c1-47b60b740d00", param = "0cc5b647-c1df-4637-891a-dec35c318583";
+            Banc.Verifie("cible alim : relue", true, EtatOrigine.LitCibleAlim(EtatOrigine.CibleAlim(planA, sous), out var pl, out var sg) && pl == planA && sg == sous);
+            Banc.Verifie("cible alim sans plan (ancien journal) : refusée", false, EtatOrigine.LitCibleAlim(sous, out _, out _));
+            var p = new EtatOrigine.Journal();
+            var pe = EtatOrigine.Ouvre(p, "cpu_unpark_cores", new DateTime(2026, 11, 20));
+            EtatOrigine.Note(p, pe, new EtatOrigine.Item { Genre = "alim", Cible = EtatOrigine.CibleAlim(planA, sous), Nom = param, Existe = true, Valeur = EtatOrigine.ValeurAlim(0, 0, planA) });
+            EtatOrigine.Note(p, pe, new EtatOrigine.Item { Genre = "alim", Cible = EtatOrigine.CibleAlim(planB, sous), Nom = param, Existe = true, Valeur = EtatOrigine.ValeurAlim(5, 5, planB) });
+            Banc.Verifie("même paramètre sous deux plans : deux éléments", true, pe.Items.Count == 2);
+
+            // m2 : types de valeur restaurables
+            Banc.Verifie("types restaurables", true, new[] { RegistryValueKind.DWord, RegistryValueKind.QWord, RegistryValueKind.String,
+                RegistryValueKind.ExpandString, RegistryValueKind.MultiString, RegistryValueKind.Binary, RegistryValueKind.None }.All(EtatOrigine.KindRestaurable));
+            Banc.Verifie("type Unknown non restaurable", false, EtatOrigine.KindRestaurable(RegistryValueKind.Unknown));
+
+            // m6 : « différé » n'a de sens que pour Start = 2
+            Banc.Egal("service : différé ignoré hors automatique", "4;0;0", EtatOrigine.ValeurService(4, true, false));
+            Banc.Egal("service : différé gardé en automatique", "2;1;1", EtatOrigine.ValeurService(2, true, true));
+            EtatOrigine.Item S(string val) => new EtatOrigine.Item { Genre = "service", Cible = "DiagTrack", Nom = "", Existe = true, Valeur = val };
+            Banc.Verifie("service : différé hors Start=2 ignoré à la comparaison", true, EtatOrigine.Ecarts(new() { S("4;1;0") }, new() { S("4;0;0") }).Count == 0);
+            Banc.Verifie("service : différé en Start=2 comparé", true, EtatOrigine.Ecarts(new() { S("2;1;0") }, new() { S("2;0;0") }).Count == 1);
+
+            // I1 : relance sur erreur d'entrée/sortie
+            int essais = 0;
+            int r = EtatOrigine.Reessaie(() => { if (++essais < 3) throw new System.IO.IOException("verrouillé"); return 42; }, 3, TimeSpan.Zero);
+            Banc.Verifie("relance : réussit au 3e essai", true, r == 42 && essais == 3);
+            essais = 0;
+            bool io = false;
+            try { EtatOrigine.Reessaie<int>(() => { essais++; throw new System.IO.IOException("verrouillé"); }, 3, TimeSpan.Zero); }
+            catch (System.IO.IOException) { io = true; }
+            Banc.Verifie("relance : 3 essais puis l'erreur remonte", true, io && essais == 3);
+            essais = 0;
+            bool autre = false;
+            try { EtatOrigine.Reessaie<int>(() => { essais++; throw new ArgumentException("x"); }, 3, TimeSpan.Zero); }
+            catch (ArgumentException) { autre = true; }
+            Banc.Verifie("relance : autre erreur non relancée", true, autre && essais == 1);
         }
     }
 }

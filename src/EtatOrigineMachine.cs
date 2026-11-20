@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 using Microsoft.Win32;
 
 namespace BTOptimizer
@@ -34,7 +36,17 @@ namespace BTOptimizer
         public static void AvantValeur(RegistryKey cle, string nom)
         {
             if (_entree == null || cle == null) return;
-            EtatOrigine.Note(_journal, _entree, LitValeur(cle, cle.Name, nom));
+            EtatOrigine.Item avant = LitValeur(cle, cle.Name, nom);
+            string id = EtatOrigine.Identite(avant);
+            if (_entree.Items.Exists(x => EtatOrigine.Identite(x) == id)) return;
+            // Type que SetValue ne sait pas réécrire (Unknown : REG_RESOURCE_LIST…) : le restaurer en
+            // Binary changerait son type. Pas d'origine notée, l'ancien Revert() servira.
+            if (avant.Existe && !EtatOrigine.KindRestaurable(Enum.Parse<RegistryValueKind>(avant.Kind)))
+            {
+                NonCouvert("valeur " + cle.Name + "\\" + (nom ?? "") + " de type " + avant.Kind);
+                return;
+            }
+            EtatOrigine.Note(_journal, _entree, avant);
         }
 
         /// <summary>
@@ -68,11 +80,26 @@ namespace BTOptimizer
                 });
         }
 
-        /// <summary>À appeler avant de modifier un paramètre d'alimentation du plan actif. Illisible : NonCouvert.</summary>
+        /// <summary>
+        /// À appeler avant de modifier un paramètre d'alimentation du plan actif. Le plan actif est lu
+        /// AVANT le test de doublon : il fait partie de l'identité (même paramètre, autre plan = autre
+        /// élément). Plan ou valeur illisible : NonCouvert.
+        /// </summary>
         public static void AvantAlim(string sousGroupe, string parametre)
         {
             if (_entree == null) return;
-            Capture(new EtatOrigine.Item { Genre = "alim", Cible = sousGroupe, Nom = parametre }, "alimentation " + parametre);
+            string plan;
+            try
+            {
+                using (Couvert()) plan = PlanActif();
+            }
+            catch (Exception)
+            {
+                plan = null;
+            }
+            if (plan == null) { NonCouvert("alimentation " + parametre); return; }
+            Capture(new EtatOrigine.Item { Genre = "alim", Cible = EtatOrigine.CibleAlim(plan, sousGroupe), Nom = parametre },
+                "alimentation " + parametre);
         }
 
         /// <summary>À appeler avant de modifier le démarrage ou l'état d'un service. Un service absent est noté tel quel.</summary>
@@ -121,6 +148,17 @@ namespace BTOptimizer
             if (!_entree.NonCouvert.Contains(quoi)) _entree.NonCouvert.Add(quoi);
         }
 
+        /// <summary>
+        /// Réglage dont « Rétablir » doit lancer l'ancien Revert() avant de rejouer le journal, sans
+        /// le déclarer non couvert (il reste « Sûr ») : jeton DirectX partagé entre deux réglages,
+        /// démarrage rapide qui exige la veille prolongée. Ne fait rien hors capture.
+        /// </summary>
+        public static void RevertRequis()
+        {
+            if (_entree == null) return;
+            _entree.RevertRequis = true;
+        }
+
         /// <summary>Bloc dont les écritures sont déjà capturées par la primitive appelante (NonCouvert y est sans effet).</summary>
         public static IDisposable Couvert()
         {
@@ -167,16 +205,20 @@ namespace BTOptimizer
                 }
                 case "alim":
                 {
-                    // Le plan visé : celui de l'origine si modele en porte un (relecture), sinon le plan actif (capture).
-                    uint acO, dcO;
-                    string plan;
-                    if (!EtatOrigine.LitAlim(modele.Valeur, out acO, out dcO, out plan)) plan = PlanActif();
+                    // Le plan visé : celui de l'identité (Cible = "plan\sous-groupe") ; ancien journal sans
+                    // plan dans Cible : celui de la valeur, sinon le plan actif.
+                    string plan, sousGroupe;
+                    if (!EtatOrigine.LitCibleAlim(modele.Cible, out plan, out sousGroupe))
+                    {
+                        uint acO, dcO;
+                        if (!EtatOrigine.LitAlim(modele.Valeur, out acO, out dcO, out plan)) plan = PlanActif();
+                    }
                     int[] v = null;
                     if (plan != null)
                     {
                         // /query n'affiche pas les paramètres masqués (CPMINCORES, PERFBOOSTMODE… par défaut) :
                         // on retente avec /qh, même sortie, masqués compris. Toujours illisible → Existe = false.
-                        string ids = " " + plan + " " + modele.Cible + " " + modele.Nom;
+                        string ids = " " + plan + " " + sousGroupe + " " + modele.Nom;
                         NativeResult r = Sys.Run(Sys.Sys32("powercfg.exe"), "/query" + ids);
                         v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
                         if (v == null)
@@ -195,7 +237,15 @@ namespace BTOptimizer
                 {
                     int start = Sys.GetServiceStart(modele.Cible);
                     bool differe = Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\" + modele.Cible, "DelayedAutostart"), 1);
-                    bool enMarche = start != -1 && Sys.IsServiceRunning(modele.Cible);
+                    bool enMarche = false;
+                    if (start != -1)
+                    {
+                        // État de marche illisible : on lève (à la capture → NonCouvert) plutôt que de
+                        // noter « arrêté » et faire arrêter un service qui tournait au rétablissement.
+                        bool? m = EnMarche(modele.Cible);
+                        if (m == null) throw new InvalidOperationException("État du service " + modele.Cible + " illisible (sc query).");
+                        enMarche = m.Value;
+                    }
                     return new EtatOrigine.Item
                     {
                         Genre = "service", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = start != -1,
@@ -256,11 +306,13 @@ namespace BTOptimizer
                 case "alim":
                 {
                     uint ac, dc;
-                    string plan;
-                    if (!EtatOrigine.LitAlim(origine.Valeur, out ac, out dc, out plan))
+                    string plan, planValeur, sousGroupe;
+                    if (!EtatOrigine.LitAlim(origine.Valeur, out ac, out dc, out planValeur))
                         throw new FormatException("Valeur d'alimentation illisible : " + origine.Valeur);
+                    // Le plan de l'identité ; ancien journal (Cible = sous-groupe seul) : celui de la valeur.
+                    if (!EtatOrigine.LitCibleAlim(origine.Cible, out plan, out sousGroupe)) plan = planValeur;
                     // Écrit dans le plan capturé, même s'il n'est plus actif ; plan supprimé → RunThrow lève, journal intact.
-                    string ids = plan + " " + origine.Cible + " " + origine.Nom + " ";
+                    string ids = plan + " " + sousGroupe + " " + origine.Nom + " ";
                     Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setacvalueindex " + ids + ac.ToString(CultureInfo.InvariantCulture),
                         "Rétablissement alimentation (secteur)");
                     Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setdcvalueindex " + ids + dc.ToString(CultureInfo.InvariantCulture),
@@ -317,6 +369,16 @@ namespace BTOptimizer
             return r.ExitCode == 0 ? EtatOrigine.LitPlanActif(r.Output) : null;
         }
 
+        /// <summary>sc query : vrai si RUNNING, faux sinon ; null si la commande échoue (état inconnu).</summary>
+        private static bool? EnMarche(string nom)
+        {
+            NativeResult r;
+            using (Couvert())   // lecture seule : jamais « non couvert »
+                r = Sys.Run(Sys.Sys32("sc.exe"), "query \"" + nom + "\"");
+            if (r.ExitCode != 0 || string.IsNullOrEmpty(r.Output)) return null;
+            return r.Output.IndexOf("RUNNING", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private static EtatOrigine.Item LitValeur(RegistryKey k, string cible, string nom)
         {
             nom = nom ?? "";
@@ -326,7 +388,8 @@ namespace BTOptimizer
             RegistryValueKind kind = k.GetValueKind(nom);
             item.Existe = true;
             item.Kind = kind.ToString();
-            item.Valeur = EtatOrigine.EncodeValeur(v, kind);
+            // Type non restaurable : pas d'encodage (l'appelant le déclare non couvert).
+            item.Valeur = EtatOrigine.KindRestaurable(kind) ? EtatOrigine.EncodeValeur(v, kind) : null;
             return item;
         }
 
@@ -364,49 +427,89 @@ namespace BTOptimizer
         //  Branchement sur Engine
         // ------------------------------------------------------------------
 
-        /// <summary>Applique le réglage en capturant l'état d'origine de ce qu'il écrit.</summary>
-        public static void Applique(Tweak t)
+        /// <summary>
+        /// Applique le réglage en capturant l'état d'origine de ce qu'il écrit. Rend null, ou un
+        /// avertissement à afficher (l'application a réussi mais l'origine n'a pas pu être enregistrée).
+        /// </summary>
+        public static string Applique(Tweak t)
         {
             lock (Verrou)
+            using (VerrouPartage.Prend())
             {
-                if (string.IsNullOrEmpty(t.Id)) { t.Apply(); return; }
+                if (string.IsNullOrEmpty(t.Id)) { t.Apply(); return null; }
                 EtatOrigine.Journal j = Charge();
                 bool entreeExiste = j.Entrees.Exists(e => e.Id == t.Id);
-                if (!EtatOrigine.DoitCapturer(entreeExiste, DejaApplique(t.Id))) { t.Apply(); return; }
+                bool dejaApplique = !entreeExiste && DejaApplique(t.Id);
+                bool dejaEnPlace = !entreeExiste && !dejaApplique && DejaEnPlace(t);
+                if (!EtatOrigine.DoitCapturer(entreeExiste, dejaApplique, dejaEnPlace)) { t.Apply(); return null; }
 
+                // Rien de capté (Apply n'a rien écrit) : l'entrée vide reste, comme marqueur, pour qu'un
+                // Apply réel plus tard soit capturé dedans (sinon bt-appliques.txt l'en empêcherait).
                 EtatOrigine.Entree entree = EtatOrigine.Ouvre(j, t.Id, DateTime.Now);
                 _journal = j;
                 _entree = entree;
+                Exception erreurApply = null;
                 try
                 {
                     t.Apply();
                 }
+                catch (Exception ex)
+                {
+                    erreurApply = ex;
+                }
                 finally
                 {
-                    // Même si Apply a levé : les écritures déjà faites doivent rester annulables.
                     _journal = null;
                     _entree = null;
-                    // Rien de capté : pas d'entrée vide, « Rétablir » garde l'ancien Revert().
-                    if (entree.Items.Count == 0 && entree.NonCouvert.Count == 0) j.Entrees.Remove(entree);
+                }
+
+                // Même si Apply a levé : les écritures déjà faites doivent rester annulables.
+                string avertissement = null;
+                try
+                {
                     Sauve(j);
                 }
+                catch (Exception exSauve)
+                {
+                    JournalTechnique.Echec("EtatOrigine.Sauve", exSauve);
+                    if (erreurApply == null)
+                    {
+                        // Apply a réussi mais son origine est perdue : le noter appliqué TOUT DE SUITE, sinon
+                        // le prochain Apply (gardien d'ouverture de session) capturerait les valeurs d'ONYX
+                        // comme « origine ». « Rétablir » prendra l'ancien Revert().
+                        TweakDrift.Record(new[] { t.Id });
+                        avertissement = "état d'origine non enregistré (" + exSauve.Message
+                            + ") : « Rétablir » utilisera l'ancienne méthode d'annulation";
+                    }
+                }
+                // L'erreur d'Apply, pas celle du fichier : c'est elle qui explique l'échec.
+                if (erreurApply != null) ExceptionDispatchInfo.Capture(erreurApply).Throw();
+                return avertissement;
             }
         }
 
-        /// <summary>Rétablit le réglage : rejoue l'état d'origine capturé, sinon l'ancien Revert().</summary>
-        public static void Retablit(Tweak t)
+        /// <summary>
+        /// Rétablit le réglage : rejoue l'état d'origine capturé, sinon l'ancien Revert(). Rend null, ou
+        /// « maintenu par &lt;id&gt; » quand rien n'a été remis parce que d'autres réglages appliqués
+        /// tiennent encore les mêmes valeurs.
+        /// </summary>
+        public static string Retablit(Tweak t)
         {
             lock (Verrou)
+            using (VerrouPartage.Prend())
             {
                 EtatOrigine.Journal j = string.IsNullOrEmpty(t.Id) ? null : Charge();
                 EtatOrigine.Entree entree = j == null ? null : j.Entrees.Find(e => e.Id == t.Id);
-                if (entree == null) { t.Revert(); return; }
+                if (entree == null) { t.Revert(); return null; }
 
-                // Une partie des écritures n'a pas été capturée : l'ancien Revert() d'abord, puis l'origine connue.
-                if (!entree.Complet) t.Revert();
+                // Écritures non capturées, ou réglage qui le demande (RevertRequis) : l'ancien Revert()
+                // d'abord, puis l'origine connue. Entrée vide et complète : rien du tout.
+                bool ancienRevert = EtatOrigine.AncienRevertDabord(entree);
+                if (ancienRevert) t.Revert();
 
                 List<EtatOrigine.Item> aRestaurer;
-                EtatOrigine.Journal nouveau = EtatOrigine.Retire(j, t.Id, out aRestaurer);
+                List<string> heritiers;
+                EtatOrigine.Journal nouveau = EtatOrigine.Retire(j, t.Id, out aRestaurer, out heritiers);
                 var echecs = new List<string>();
                 foreach (EtatOrigine.Item item in aRestaurer)
                 {
@@ -416,7 +519,17 @@ namespace BTOptimizer
                 // Échec partiel : journal intact, un second « Rétablir » pourra finir le travail.
                 if (echecs.Count > 0)
                     throw new InvalidOperationException("Rétablissement incomplet, élément(s) en échec : " + string.Join(" ; ", echecs));
-                Sauve(nouveau);
+                try
+                {
+                    Sauve(nouveau);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    // Restauration faite, journal inchangé : un second « Rétablir » la rejoue à l'identique.
+                    throw new InvalidOperationException("État d'origine remis, mais le journal " + Path.GetFileName(Chemin)
+                        + " n'a pas pu être mis à jour (" + ex.Message + ") : relance « Rétablir » plus tard.", ex);
+                }
+                return !ancienRevert && aRestaurer.Count == 0 && heritiers.Count > 0 ? EtatOrigine.MaintenuPar(heritiers) : null;
             }
         }
 
@@ -424,13 +537,89 @@ namespace BTOptimizer
         internal static EtatOrigine.Entree EntreeDe(string id)
         {
             lock (Verrou)
+            using (VerrouPartage.Prend())
             {
                 EtatOrigine.Entree e = Charge().Entrees.Find(x => x.Id == id);
                 if (e == null) return null;
-                var copie = new EtatOrigine.Entree { Id = e.Id, Date = e.Date, Complet = e.Complet, NonCouvert = new List<string>(e.NonCouvert) };
+                var copie = new EtatOrigine.Entree
+                {
+                    Id = e.Id, Date = e.Date, Complet = e.Complet, RevertRequis = e.RevertRequis, NonCouvert = new List<string>(e.NonCouvert)
+                };
                 foreach (EtatOrigine.Item i in e.Items)
                     copie.Items.Add(new EtatOrigine.Item { Genre = i.Genre, Cible = i.Cible, Nom = i.Nom, Existe = i.Existe, Kind = i.Kind, Valeur = i.Valeur, Seq = i.Seq });
                 return copie;
+            }
+        }
+
+        /// <summary>Check() vrai avant l'Apply : la valeur visée est déjà là. Pas de Check, null ou exception : faux (on capture).</summary>
+        private static bool DejaEnPlace(Tweak t)
+        {
+            if (t.Check == null) return false;
+            try
+            {
+                return t.Check() == true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        //  Verrou entre processus (interface et gardien d'ouverture de session)
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Mutex nommé autour de chargement → Apply/Restaure → sauvegarde : l'interface et le gardien
+        /// (« -apply » à l'ouverture de session) sont deux processus, le lock seul ne les sépare pas.
+        /// Global\ (toutes sessions), Local\ si l'accès est refusé. Attente max 60 s, puis erreur.
+        /// </summary>
+        private sealed class VerrouPartage : IDisposable
+        {
+            private Mutex _mutex;
+
+            public static VerrouPartage Prend()
+            {
+                Mutex m;
+                try
+                {
+                    m = new Mutex(false, @"Global\ONYX-EtatOrigine");
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    m = new Mutex(false, @"Local\ONYX-EtatOrigine");
+                }
+                bool acquis;
+                try
+                {
+                    acquis = m.WaitOne(TimeSpan.FromSeconds(60));
+                }
+                catch (AbandonedMutexException)
+                {
+                    acquis = true;   // l'autre processus s'est arrêté en le tenant : il est à nous
+                }
+                if (!acquis)
+                {
+                    m.Dispose();
+                    throw new InvalidOperationException("Une autre fenêtre ou tâche d'ONYX modifie le journal d'état d'origine depuis plus "
+                        + "de 60 secondes : rien n'a été modifié pour ce réglage. Réessaie dans un instant.");
+                }
+                return new VerrouPartage { _mutex = m };
+            }
+
+            /// <summary>Libéré sur le même thread que Prend() (bloc using).</summary>
+            public void Dispose()
+            {
+                if (_mutex == null) return;
+                try
+                {
+                    _mutex.ReleaseMutex();
+                }
+                finally
+                {
+                    _mutex.Dispose();
+                    _mutex = null;
+                }
             }
         }
 
@@ -438,30 +627,63 @@ namespace BTOptimizer
         //  Fichiers
         // ------------------------------------------------------------------
 
+        /// <summary>Fichier verrouillé un instant (autre processus, antivirus) : 3 essais à 100 ms.</summary>
+        private const int Essais = 3;
+        private static readonly TimeSpan Pause = TimeSpan.FromMilliseconds(100);
+
+        /// <summary>Texte du fichier, null s'il n'existe pas ; relancé sur IOException.</summary>
+        private static string LitFichier(string chemin)
+        {
+            return EtatOrigine.Reessaie(() => File.Exists(chemin) ? File.ReadAllText(chemin) : null, Essais, Pause);
+        }
+
         private static bool DejaApplique(string id)
         {
             string chemin = TweakDrift.JournalPath;
-            if (!File.Exists(chemin)) return false;
-            return TweakDrift.Parse(File.ReadAllText(chemin)).Exists(e => e.Id == id);
+            string texte;
+            try
+            {
+                texte = LitFichier(chemin);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                throw new InvalidOperationException("Liste des réglages appliqués (" + Path.GetFileName(chemin)
+                    + ") illisible : " + ex.Message + ". Rien n'a été modifié pour ce réglage.", ex);
+            }
+            return texte != null && TweakDrift.Parse(texte).Exists(e => e.Id == id);
         }
 
-        /// <summary>Journal du disque ; illisible : mis de côté (.corrompu-AAAAMMJJ-HHmmss) et remplacé par un journal vide.</summary>
+        /// <summary>
+        /// Journal du disque ; illisible (JSON) : mis de côté (.corrompu-AAAAMMJJ-HHmmss) et remplacé par
+        /// un journal vide. Fichier inaccessible (verrouillé, accès refusé) : erreur claire, rien n'est modifié.
+        /// </summary>
         private static EtatOrigine.Journal Charge()
         {
             string chemin = Chemin;
-            if (!File.Exists(chemin)) return new EtatOrigine.Journal();
-            EtatOrigine.Journal j = EtatOrigine.Lire(File.ReadAllText(chemin));
-            if (!j.Corrompu) return j;
-            File.Move(chemin, chemin + ".corrompu-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
-            return new EtatOrigine.Journal();
+            try
+            {
+                string texte = LitFichier(chemin);
+                if (texte == null) return new EtatOrigine.Journal();
+                EtatOrigine.Journal j = EtatOrigine.Lire(texte);
+                if (!j.Corrompu) return j;
+                string aCote = chemin + ".corrompu-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                EtatOrigine.Reessaie(() => { File.Move(chemin, aCote); return true; }, Essais, Pause);
+                return new EtatOrigine.Journal();
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                throw new InvalidOperationException("Journal d'état d'origine (" + Path.GetFileName(chemin)
+                    + ") inaccessible : " + ex.Message + ". Rien n'a été modifié pour ce réglage.", ex);
+            }
         }
 
         private static void Sauve(EtatOrigine.Journal j)
         {
             string chemin = Chemin;
             string tmp = chemin + ".tmp";
-            File.WriteAllText(tmp, EtatOrigine.Ecrire(j));
-            File.Move(tmp, chemin, true);
+            string texte = EtatOrigine.Ecrire(j);
+            EtatOrigine.Reessaie(() => { File.WriteAllText(tmp, texte); return true; }, Essais, Pause);
+            EtatOrigine.Reessaie(() => { File.Move(tmp, chemin, true); return true; }, Essais, Pause);
         }
     }
 }

@@ -19,7 +19,7 @@ namespace BTOptimizer
         /// Un élément capturé. Genre : "reg", "cle", "alim", "service" ou "tache".
         /// reg : Cible = chemin complet (RegistryKey.Name), Nom = valeur ("" = par défaut), Kind = RegistryValueKind, Valeur encodée.
         /// cle : Cible = chemin complet, Existe = la clé existait.
-        /// alim : Cible = GUID du sous-groupe, Nom = GUID du paramètre, Valeur = "ac;dc;plan" (décimal ; plan = GUID du plan actif à la capture).
+        /// alim : Cible = "plan\sous-groupe" (GUID du plan actif à la capture, voir CibleAlim), Nom = GUID du paramètre, Valeur = "ac;dc;plan" (décimal).
         /// service : Cible = nom du service, Valeur = "start;delayed;running" (start = -1 si absent ; delayed, running = 0/1).
         /// tache : Cible = chemin de la tâche, Valeur = "active", "inactive" ou "inconnue".
         /// </summary>
@@ -40,6 +40,8 @@ namespace BTOptimizer
             public string Id;
             public string Date;
             public bool Complet = true;
+            /// <summary>« Rétablir » lance l'ancien Revert() avant le journal (sans toucher à Complet). Absent des anciens journaux : faux.</summary>
+            public bool RevertRequis;
             public List<string> NonCouvert = new List<string>();
             public List<Item> Items = new List<Item>();
         }
@@ -139,10 +141,85 @@ namespace BTOptimizer
             return JsonSerializer.Serialize(j, Options);
         }
 
-        /// <summary>Capturer si l'entrée existe déjà (on la complète) ou si le réglage n'était pas encore appliqué (premier passage).</summary>
-        public static bool DoitCapturer(bool entreeExiste, bool dejaDansAppliques)
+        /// <summary>
+        /// Capturer si l'entrée existe déjà (on la complète). Sinon, ne pas capturer si le réglage est
+        /// dans bt-appliques.txt (ancienne version d'ONYX) ou déjà en place avant l'Apply (Check() vrai) :
+        /// « l'origine » serait la valeur d'ONYX, et l'ancien Revert() sert à « Rétablir ».
+        /// </summary>
+        public static bool DoitCapturer(bool entreeExiste, bool dejaDansAppliques, bool dejaEnPlace)
         {
-            return entreeExiste || !dejaDansAppliques;
+            return entreeExiste || (!dejaDansAppliques && !dejaEnPlace);
+        }
+
+        /// <summary>
+        /// « Rétablir » lance l'ancien Revert() avant de rejouer le journal : écritures non capturées
+        /// (non Complet) ou réglage qui le demande (RevertRequis, ex. jeton DirectX partagé). Une
+        /// entrée vide et complète ne rejoue rien et ne lance pas Revert().
+        /// </summary>
+        public static bool AncienRevertDabord(Entree e)
+        {
+            return e != null && (!e.Complet || e.RevertRequis);
+        }
+
+        /// <summary>Ligne de journal quand rien n'a été remis : d'autres réglages appliqués tiennent encore ces valeurs.</summary>
+        public static string MaintenuPar(List<string> ids)
+        {
+            return "maintenu par " + string.Join(", ", ids);
+        }
+
+        /// <summary>Cible d'un item alim : "plan\sous-groupe". Le plan fait partie de l'identité (un même paramètre par plan).</summary>
+        public static string CibleAlim(string plan, string sousGroupe)
+        {
+            return plan + "\\" + sousGroupe;
+        }
+
+        /// <summary>Relit "plan\sous-groupe". false si le plan n'est pas un GUID (ancien journal : sous-groupe seul).</summary>
+        public static bool LitCibleAlim(string cible, out string plan, out string sousGroupe)
+        {
+            plan = null; sousGroupe = cible;
+            int p = (cible ?? "").IndexOf('\\');
+            if (p <= 0 || p == cible.Length - 1 || !GuidSeulRx.IsMatch(cible.Substring(0, p))) return false;
+            plan = cible.Substring(0, p);
+            sousGroupe = cible.Substring(p + 1);
+            return true;
+        }
+
+        /// <summary>Types que RegistryKey.SetValue sait réécrire tels quels. Unknown (REG_RESOURCE_LIST…) : non restaurable.</summary>
+        public static bool KindRestaurable(RegistryValueKind kind)
+        {
+            switch (kind)
+            {
+                case RegistryValueKind.DWord:
+                case RegistryValueKind.QWord:
+                case RegistryValueKind.String:
+                case RegistryValueKind.ExpandString:
+                case RegistryValueKind.MultiString:
+                case RegistryValueKind.Binary:
+                case RegistryValueKind.None:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Lance action jusqu'à essais fois tant qu'elle lève une IOException (fichier verrouillé un
+        /// instant par l'autre processus d'ONYX, un antivirus…), avec une pause entre deux essais.
+        /// La dernière IOException remonte ; toute autre exception remonte tout de suite.
+        /// </summary>
+        public static T Reessaie<T>(Func<T> action, int essais, TimeSpan pause)
+        {
+            for (int n = 1; ; n++)
+            {
+                try
+                {
+                    return action();
+                }
+                catch (System.IO.IOException) when (n < essais)
+                {
+                    if (pause > TimeSpan.Zero) System.Threading.Thread.Sleep(pause);
+                }
+            }
         }
 
         /// <summary>L'entrée existante pour ce réglage, sinon une nouvelle ajoutée au journal.</summary>
@@ -170,8 +247,21 @@ namespace BTOptimizer
         /// </summary>
         public static Journal Retire(Journal j, string id, out List<Item> aRestaurer)
         {
+            return Retire(j, id, out aRestaurer, out _);
+        }
+
+        /// <summary>
+        /// Comme Retire, et heritiers = Id des entrées qui ont hérité d'au moins une origine (sans
+        /// doublon, dans l'ordre de rencontre). Journal corrompu, ou copie profonde illisible : lève,
+        /// plutôt que de rendre un journal vide que l'appelant sauvegarderait par-dessus le vrai.
+        /// </summary>
+        public static Journal Retire(Journal j, string id, out List<Item> aRestaurer, out List<string> heritiers)
+        {
+            if (j.Corrompu) throw new InvalidOperationException("Journal d'état d'origine corrompu : rien n'est retiré.");
             var copie = Lire(Ecrire(j));
+            if (copie.Corrompu) throw new InvalidOperationException("Copie du journal d'état d'origine illisible : rien n'est retiré.");
             aRestaurer = new List<Item>();
+            heritiers = new List<string>();
             var retiree = copie.Entrees.Find(e => e.Id == id);
             if (retiree == null) return copie;
             copie.Entrees.Remove(retiree);
@@ -179,14 +269,19 @@ namespace BTOptimizer
             {
                 string cle = Identite(x);
                 Item heritier = null;
+                Entree entreeHeritiere = null;
                 foreach (var e in copie.Entrees)
                     foreach (var y in e.Items)
                         if (y.Seq > x.Seq && Identite(y) == cle && (heritier == null || y.Seq < heritier.Seq))
+                        {
                             heritier = y;
+                            entreeHeritiere = e;
+                        }
                 if (heritier == null) { aRestaurer.Add(x); continue; }
                 heritier.Existe = x.Existe;
                 heritier.Kind = x.Kind;
                 heritier.Valeur = x.Valeur;
+                if (!heritiers.Contains(entreeHeritiere.Id)) heritiers.Add(entreeHeritiere.Id);
             }
             aRestaurer.Sort((p, q) => q.Seq.CompareTo(p.Seq));
             return copie;
@@ -243,10 +338,11 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>"start;delayed" comparé ; delayed n'a de sens que pour Start = 2 (sinon Windows le garde sans l'utiliser).</summary>
         private static string ChampsService(string valeur)
         {
             var p = (valeur ?? "").Split(';');
-            return p[0] + ";" + (p.Length > 1 ? p[1] : "");
+            return p[0] + ";" + (p[0] == "2" && p.Length > 1 ? p[1] : "0");
         }
 
         private static string Decrit(Item i)
@@ -287,10 +383,14 @@ namespace BTOptimizer
             return m.Success ? m.Value : null;
         }
 
-        /// <summary>Valeur d'un item service : "start;delayed;running" (start = -1 si le service est absent).</summary>
+        /// <summary>
+        /// Valeur d'un item service : "start;delayed;running" (start = -1 si le service est absent).
+        /// delayed n'est noté que pour Start = 2 : DelayedAutostart reste souvent à 1 sur un service
+        /// désactivé ou manuel, et sc config ne le remet pas (faux écart au test aller-retour).
+        /// </summary>
         public static string ValeurService(int start, bool differe, bool enMarche)
         {
-            return start.ToString(CultureInfo.InvariantCulture) + ";" + (differe ? "1" : "0") + ";" + (enMarche ? "1" : "0");
+            return start.ToString(CultureInfo.InvariantCulture) + ";" + (start == 2 && differe ? "1" : "0") + ";" + (enMarche ? "1" : "0");
         }
 
         /// <summary>Relit "start;delayed;running". false si le texte est mal formé.</summary>
