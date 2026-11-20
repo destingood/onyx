@@ -65,6 +65,8 @@
     <Compile Include="..\src\MsiConditionnel.cs" />
     <!-- Mode Efficacité du Mode Jeu : journal, décisions et texte (pur). La machine vit dans ApplisDeFond. -->
     <Compile Include="..\src\Efficacite.cs" />
+    <!-- Mode de présentation du jeu (direct ou composé par Windows) : classement et constat (pur). La session ETW vit dans ModePresentationEtw.cs. -->
+    <Compile Include="..\src\ModePresentation.cs" />
     <!-- Modèle du catalogue (Tweak, Cat, Risque, NiveauPreuve) : la règle « Sûr » se teste sur le vrai type. -->
     <Compile Include="..\src\Model.cs" />
   </ItemGroup>

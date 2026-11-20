@@ -74,6 +74,7 @@ namespace BTOptimizer
                     ? "Lance ton jeu et mets-toi en partie : la mesure démarre dès qu'il est au premier plan."
                     : "Lance " + jeuAttendu + " et mets-toi en partie, dans une scène comparable à la mesure « avant ».", 0);
 
+                using var pres = new Presentation();
                 var fts = new List<double>();
                 string jeu = null;
                 int pid = 0;
@@ -104,6 +105,7 @@ namespace BTOptimizer
                         }
                         jeu = p.Name; pid = p.Pid;
                         fps.NouvellesImages(pid, ref vu);   // pose le repère : on compte à partir d'ici
+                        pres.Demarre(pid, log);
                         log("Jeu détecté : " + jeu + ". Joue normalement pendant " + SecondesJeu + " s.", 1);
                         continue;
                     }
@@ -116,20 +118,97 @@ namespace BTOptimizer
                     if (premierPlan != pid)
                     {
                         if (!enPause) { log("Jeu hors du premier plan : mesure en pause.", 2); enPause = true; }
+                        pres.HorsPremierPlan();
                         continue;
                     }
                     if (enPause) { log("Reprise de la mesure.", 0); enPause = false; }
                     if (nouvelles.Length == 0) continue;   // jeu figé ou en chargement : seconde non comptée
                     fts.AddRange(nouvelles);
                     secondes++;
+                    pres.SecondeComptee(jeu, log);
                     if (secondes % 15 == 0) log(secondes + " / " + SecondesJeu + " s mesurées.", 0);
                 }
 
                 Preuve.MesureJeu m = Preuve.CalculeJeu(jeu, fts);
                 try { m.Plafond = FrameCap.Pose(); } catch { m.Plafond = -1; }
+                m.Presentation = pres.Mode;
                 log("Mesure en jeu : " + m.Resume(), 1);
                 if (!Preuve.JeuValide(m)) log("Trop peu d'images pour un 1 % low fiable (" + m.Images + ").", 2);
                 return m;
+            }
+        }
+
+        /// <summary>
+        /// Relevé du mode de présentation pendant la mesure (session ETW à part, lecture seule).
+        /// Libérée par « using » même si la mesure sort tôt. Ne touche pas aux FPS.
+        /// </summary>
+        private sealed class Presentation : IDisposable
+        {
+            private const int SecondesReleve = 5;
+            private ModePresentationEtw _etw;
+            private int _consecutives;
+            private bool _fait;
+            public ModePresentation.ModeImage Mode = ModePresentation.ModeImage.Inconnu;
+
+            public void Demarre(int pid, Action<string, int> log)
+            {
+                try
+                {
+                    var e = new ModePresentationEtw();
+                    if (e.Start(pid)) { _etw = e; return; }
+                    log("Mode de présentation non relevé : " + e.LastError, 0);
+                    e.Dispose();
+                }
+                catch (Exception ex) { log("Mode de présentation non relevé : " + ex.Message, 0); }
+                _fait = true;
+            }
+
+            public void HorsPremierPlan()
+            {
+                _consecutives = 0;
+                if (_etw != null) _etw.Reinitialise();
+            }
+
+            public void SecondeComptee(string jeu, Action<string, int> log)
+            {
+                if (_fait || _etw == null) return;
+                if (++_consecutives < SecondesReleve) return;
+                _fait = true;
+                try
+                {
+                    Mode = ModePresentation.Classe(_etw.Releve());
+                    _etw.Dispose();
+                    _etw = null;
+                    log("Mode de présentation : " + ModePresentation.Libelle(Mode), 0);
+                    string constat = ModePresentation.Constat(Mode, jeu, HzPrincipal(), WindowedFlipActif());
+                    if (constat != null) log(constat, 2);
+                }
+                catch (Exception ex) { log("Mode de présentation non relevé : " + ex.Message, 0); }
+            }
+
+            private static int HzPrincipal()
+            {
+                try
+                {
+                    var ecran = DisplayInfo.Query().Find(d => d.Primary);
+                    return ecran == null ? 0 : ecran.CurrentHz;
+                }
+                catch { return 0; }
+            }
+
+            private static bool WindowedFlipActif()
+            {
+                try
+                {
+                    Tweak t = Catalog.All().Find(x => x.Id == "windowed_flip");
+                    return t != null && t.Check != null && t.Check() == true;
+                }
+                catch { return false; }
+            }
+
+            public void Dispose()
+            {
+                if (_etw != null) { try { _etw.Dispose(); } catch { } _etw = null; }
             }
         }
     }

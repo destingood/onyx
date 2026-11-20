@@ -31,6 +31,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   Docker ne sont plus éteints, et les services Razer ne sont plus arrêtés (leur arrêt fermait
   Synapse et ses gestionnaires). Les autres services de fond restent suspendus puis relancés comme
   avant. Effet sur les FPS non mesuré : à vérifier avec la mesure en jeu.
+- **Mesure en jeu : mode de présentation de l'image.** ONYX relève si l'image du jeu passe
+  directement à l'écran ou par le compositeur de Windows (environ un rafraîchissement de latence
+  en plus, calcul non mesuré) et propose, à la fin de la mesure « après », le réglage pour les
+  jeux en fenêtré s'il manque. Règles inspirées de PresentMon (Intel, MIT).
 
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 

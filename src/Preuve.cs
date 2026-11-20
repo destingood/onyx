@@ -203,6 +203,8 @@ namespace BTOptimizer
             public double FpsMoy = -1, Low1 = -1, P99Ms = -1, DureeS;
             public int Images;
             public int Plafond = -1;   // plafond FPS posé par ONYX pendant la mesure ; -1 = inconnu
+            /// <summary>Mode de présentation relevé pendant la mesure. NON persisté (EcritJeu/LitJeu l'ignorent).</summary>
+            public ModePresentation.ModeImage Presentation = ModePresentation.ModeImage.Inconnu;
             public double Regularite { get { return FpsMoy > 0 && Low1 > 0 ? Low1 / FpsMoy : -1; } }
 
             public string Resume()

@@ -214,6 +214,8 @@ namespace BTOptimizer
                 try { PreuveJeu.EnregistreAvant(m); }
                 catch (Exception ex) { Ajoute("Mesure « avant » non enregistrée : " + ex.Message, 3); return; }
                 Ajoute("Mesure « avant » enregistrée. Reviens ici et clique « Démarrer ».", 1);
+                if (m.Presentation == ModePresentation.ModeImage.Compose || m.Presentation == ModePresentation.ModeImage.CopieComposee)
+                    Ajoute("Le réglage te sera proposé à la fin de la mesure « après », pour ne pas fausser la comparaison.", 0);
                 LibelleJeu();
                 return;
             }
@@ -265,6 +267,52 @@ namespace BTOptimizer
             }
             else Ajoute("Pas de baisse en jeu : réglages conservés.", 1);
             ClotureCycle();
+            ProposeFenetre(m);
+        }
+
+        /// <summary>
+        /// Image du jeu composée par Windows et réglage « jeux en fenêtré » absent : le proposer,
+        /// APRÈS la comparaison pour ne pas la fausser. Rien ne s'applique sans clic.
+        /// </summary>
+        private void ProposeFenetre(Preuve.MesureJeu m)
+        {
+            if (m == null || (m.Presentation != ModePresentation.ModeImage.Compose
+                              && m.Presentation != ModePresentation.ModeImage.CopieComposee)) return;
+            Tweak t = _all.Find(x => x.Id == "windowed_flip");
+            if (t == null) return;
+            bool actif;
+            try { actif = t.Check != null && t.Check() == true; } catch { actif = false; }
+            if (actif) return;
+            int hz = 0;
+            try { var ecran = DisplayInfo.Query().Find(d => d.Primary); if (ecran != null) hz = ecran.CurrentHz; } catch { }
+            string constat = ModePresentation.Constat(m.Presentation, m.Jeu, hz, false);
+            if (constat == null) return;
+            if (MessageBox.Show(this, constat + "\n\nActiver ce réglage maintenant ? Il est réversible (« Rétablir »). "
+                    + "Refais ensuite une mesure avant/après pour en voir l'effet.",
+                    "Mode de présentation", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+            Debut(_jeu);
+            _jeu.Enabled = false;
+            Task.Run(() =>
+            {
+                EngineResult res = null;
+                try { res = Engine.Run(new List<Tweak> { t }, true, true, false, Ajoute); }
+                catch (Exception ex) { Ajoute("Erreur pendant l'application : " + ex.Message, 3); }
+                try { AppStats.Invalidate(); } catch { }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Fin();
+                        bool ok = res != null && !res.PrepFailed && res.Ok > 0 && res.Ko == 0;
+                        if (ok) Ajoute("Réglage « jeux en fenêtré » activé. Refais une mesure avant/après pour en voir l'effet.", 1);
+                        else Ajoute("Le réglage « jeux en fenêtré » n'a pas pu être activé (voir le journal)."
+                            + (res != null && res.PrepFailed && !string.IsNullOrEmpty(res.PrepError) ? " " + res.PrepError : ""), 3);
+                        if (res != null && res.RebootNeeded) Ajoute("Redémarre le PC pour finir l'application.", 2);
+                    }));
+                }
+                catch { }
+            });
         }
 
         private void Annule(List<Tweak> lot)
