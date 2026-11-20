@@ -5,7 +5,9 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## Prochaine version — « Rétablir » remet l'état d'origine exact
+## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
+
+### « Rétablir » remet l'état d'origine exact
 
 - **État d'origine noté à la première application** : avant d'écrire, ONYX note la valeur
   exacte de chaque réglage (registre, alimentation, services, tâches planifiées) dans
@@ -23,7 +25,7 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 - **Réglages appliqués avant cette version** ou déjà en place avant ONYX : rien n'est noté,
   « Rétablir » garde l'ancienne annulation.
 
-## Prochaine version — l'optimisation prouvée garde ses réglages à redémarrage
+### L'optimisation prouvée garde ses réglages à redémarrage
 
 - **Réglages à redémarrage annulés à tort** : après le redémarrage, ONYX mesurait au bout
   de 3 minutes, pendant que Windows et les lanceurs (Epic, EA, Steam) chargeaient encore.
@@ -39,7 +41,9 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   vitesse nominale ». La vitesse est maintenant lue aussi dans la référence des barrettes :
   Crucial Pro, Ballistix, Corsair, G.Skill, Kingston Fury et TeamGroup.
 
-## Prochaine version — Reflex dans Fortnite et Resizable BAR
+## v15.76 — Diagnostic matériel étendu (Reflex, ReBAR, X3D, BIOS AM5)
+
+### Reflex dans Fortnite et Resizable BAR
 
 Lecture seule : rien n'est modifié, ni dans le jeu ni dans le BIOS.
 
@@ -52,7 +56,7 @@ Lecture seule : rien n'est modifié, ni dans le jeu ni dans le BIOS.
   une fenêtre BAR1 de 256 Mio signifie coupé. Information seulement : TechPowerUp mesure
   +2 à +4 % en moyenne (22 jeux, RTX 30), avec des jeux en recul. Le texte renvoie au BIOS.
 
-## Prochaine version — problèmes connus et BIOS ancien
+### Problèmes connus et BIOS ancien
 
 Lecture seule, comme les autres constats : rien n'est modifié.
 
@@ -68,7 +72,7 @@ Lecture seule, comme les autres constats : rien n'est modifié.
 - **Intel APO** : pas ajouté. Rien ne permet encore de voir de façon fiable, depuis Windows,
   s'il est absent ou coupé, et le gain annoncé (+14 %) vient d'Intel seul.
 
-## Prochaine version — Ryzen X3D à deux CCD (7900X3D, 7950X3D, 9900X3D, 9950X3D)
+### Ryzen X3D à deux CCD (7900X3D, 7950X3D, 9900X3D, 9950X3D)
 
 Le pilote AMD réserve au jeu le CCD à V-Cache en garant l'autre, avec le mode Jeu, et AMD
 recommande pour cela le plan Équilibré (sources : IDC d'après AMD, XDA ; pas de mesure
@@ -89,7 +93,7 @@ indépendante publiée).
   Windows Forum, forum Overclockers UK ; page AMD non retrouvée). Le constat signale aussi
   la stratégie « Game DVR coupé » déjà posée, avec le bouton à utiliser pour la lever.
 
-## Prochaine version — trois constats matériels dans le diagnostic
+### Trois constats matériels dans le diagnostic
 
 Lecture seule : ces constats ne modifient rien. Chacun se tait quand la lecture échoue ou
 quand le cas est ambigu. Sources et chiffres : `docs/plan-optimisations-manquantes.md`.
@@ -106,7 +110,7 @@ quand le cas est ambigu. Sources et chiffres : `docs/plan-optimisations-manquant
 - Nouveau `ConstatsMateriel.cs` (logique pure) et `ConstatsMaterielTests` (40 vérifications).
   `Sys.QueryRam()` lit aussi le nombre d'emplacements mémoire.
 
-## Prochaine version — page Stockage beaucoup plus rapide
+### Page Stockage beaucoup plus rapide
 
 Mesuré sur un PC à 4 disques (même machine, même analyse, hors droits administrateur) :
 44 s → 12,7 s quand les tailles sont déjà en cache, 99 s → 10,4 s sans cache des tailles.
@@ -130,7 +134,7 @@ Mesuré sur un PC à 4 disques (même machine, même analyse, hors droits admini
 - Tests : `DiskWalkTests` (arborescence réelle : fichiers cachés, jonction, profondeur,
   dossiers exclus, plafond de nombre).
 
-## Prochaine version — ONYX devient gratuit et complet
+### ONYX devient gratuit et complet
 
 Le système de clé disparaît entièrement : plus de licence, plus d'essai de 7 jours, plus
 d'identifiant machine, plus de fonction réservée. Tout ce qui était verrouillé est ouvert à
