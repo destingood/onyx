@@ -74,6 +74,36 @@ namespace BTOptimizer.Tests
                         Regex.IsMatch(bloc, @"Risque = Risque\.(Securite|Fonction|AnnulationNonGarantie)"));
             }
             Banc.Verifie("filet : 210 blocs lus", true, vus >= 210);
+
+            ListeSure(src);
+        }
+
+        /// <summary>
+        /// Liste « Sûr » figée : un réglage qui y entre ou en sort doit faire échouer le banc (décision
+        /// à prendre exprès). Recalculée depuis le source comme Model.Sur : risque Aucun et preuve autre
+        /// que NonMesure, avec la règle de fin de Catalog.All() (Confidentialité, Souris → SansObjet).
+        /// </summary>
+        private static void ListeSure(string src)
+        {
+            var sur = new List<string>();
+            foreach (var (id, bloc) in Blocs(src))
+            {
+                Match r = Regex.Match(bloc, @"\bRisque = Risque\.(\w+)");
+                if (r.Success && r.Groups[1].Value != "Aucun") continue;
+                Match p = Regex.Match(bloc, @"\bPreuve = NiveauPreuve\.(\w+)");
+                string preuve = p.Success ? p.Groups[1].Value : "NonMesure";
+                Match c = Regex.Match(bloc, @"\bCategory = Cat\.(\w+)");
+                if (preuve == "NonMesure" && c.Success && (c.Groups[1].Value == "Privacy" || c.Groups[1].Value == "Souris"))
+                    preuve = "SansObjet";
+                if (preuve != "NonMesure") sur.Add(id);
+            }
+            sur.Sort(StringComparer.Ordinal);
+            const string attendu = "advertising_id_off consumer_features_off etw_diagtrack_off explorer_ads_off feedback_off "
+                + "filter_toggle_keys_off gpu_msi inking_personalization_off input_queues keyboard_delay lang_list_access_off "
+                + "lockscreen_tips_off mouse_markc_curve msi_network msi_usb search_highlights_off search_history_off "
+                + "sticky_keys_off suggested_content_off tailored_experiences_off telemetry_policy typing_insights_off "
+                + "usb_device_power windowed_flip";
+            Banc.Egal("liste « Sûr » figée (24 réglages)", attendu, string.Join(" ", sur));
         }
 
         /// <summary>Texte d'un réglage : de « Id = "&lt;id&gt;" » jusqu'au « }); » suivant.</summary>
