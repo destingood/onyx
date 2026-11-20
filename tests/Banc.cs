@@ -85,6 +85,7 @@ namespace BTOptimizer.Tests
             SuiviParalleleTests.Tout();
             ConstatsMaterielTests.Tout();
             ProblemesConnusTests.Tout();
+            EtatOrigineTests.Tout();
             return Banc.Bilan();
         }
     }
