@@ -96,8 +96,12 @@ namespace BTOptimizer
 
         public static void SetUser(string sub, string name, object val, RegistryValueKind kind)
         {
+            EtatOrigineMachine.AvantCle(UserBase(), UserPrefix() + sub);
             using (RegistryKey k = UserBase().CreateSubKey(UserPrefix() + sub))
+            {
+                EtatOrigineMachine.AvantValeur(k, name);
                 k.SetValue(name, val, kind);
+            }
         }
 
         /// <summary>Variable d'environnement UTILISATEUR persistante (survit au redémarrage) :
@@ -106,10 +110,12 @@ namespace BTOptimizer
         {
             try
             {
+                EtatOrigineMachine.AvantCle(UserBase(), UserPrefix() + "Environment");
                 using (RegistryKey k = UserBase().CreateSubKey(UserPrefix() + "Environment"))
                 {
                     object cur = k.GetValue(name);
                     if (cur is string && string.Equals((string)cur, value, StringComparison.Ordinal)) return;
+                    EtatOrigineMachine.AvantValeur(k, name);
                     k.SetValue(name, value, RegistryValueKind.String);
                 }
                 try { Environment.SetEnvironmentVariable(name, value); } catch { }
@@ -126,13 +132,21 @@ namespace BTOptimizer
         public static void DelUser(string sub, string name)
         {
             using (RegistryKey k = UserBase().OpenSubKey(UserPrefix() + sub, true))
-                if (k != null) k.DeleteValue(name, false);
+                if (k != null)
+                {
+                    EtatOrigineMachine.AvantValeur(k, name);
+                    k.DeleteValue(name, false);
+                }
         }
 
         public static void SetMachine(string sub, string name, object val, RegistryValueKind kind)
         {
+            EtatOrigineMachine.AvantCle(Registry.LocalMachine, sub);
             using (RegistryKey k = Registry.LocalMachine.CreateSubKey(sub))
+            {
+                EtatOrigineMachine.AvantValeur(k, name);
                 k.SetValue(name, val, kind);
+            }
         }
 
         public static object GetMachine(string sub, string name)
@@ -144,12 +158,17 @@ namespace BTOptimizer
         public static void DelMachine(string sub, string name)
         {
             using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sub, true))
-                if (k != null) k.DeleteValue(name, false);
+                if (k != null)
+                {
+                    EtatOrigineMachine.AvantValeur(k, name);
+                    k.DeleteValue(name, false);
+                }
         }
 
         /// <summary>Supprime une sous-clé utilisateur et toute sa descendance (rétablissement « clé entière »).</summary>
         public static void DelUserSubKeyTree(string sub)
         {
+            EtatOrigineMachine.NonCouvert("suppression d'arborescence " + sub);
             try { UserBase().DeleteSubKeyTree(UserPrefix() + sub, false); } catch { }
         }
 
@@ -239,6 +258,7 @@ namespace BTOptimizer
                     using (RegistryKey ik = rk.OpenSubKey(c, true))
                     {
                         if (ik == null || !IsAmdDisplaySubKey(ik)) continue;
+                        EtatOrigineMachine.AvantValeur(ik, "EnableUlps");
                         ik.SetValue("EnableUlps", disable ? 0 : 1, RegistryValueKind.DWord);
                     }
                 }
@@ -304,7 +324,11 @@ namespace BTOptimizer
                     try
                     {
                         using (RegistryKey k = root.OpenSubKey(sub, true))
-                            if (k != null) k.SetValue("NetbiosOptions", disable ? 2 : 0, RegistryValueKind.DWord);
+                            if (k != null)
+                            {
+                                EtatOrigineMachine.AvantValeur(k, "NetbiosOptions");
+                                k.SetValue("NetbiosOptions", disable ? 2 : 0, RegistryValueKind.DWord);
+                            }
                     }
                     catch { }
                 }
@@ -629,12 +653,16 @@ namespace BTOptimizer
                         if (ik == null) continue;
                         if (disable)
                         {
+                            EtatOrigineMachine.AvantValeur(ik, "TcpAckFrequency");
                             ik.SetValue("TcpAckFrequency", 1, RegistryValueKind.DWord);
+                            EtatOrigineMachine.AvantValeur(ik, "TCPNoDelay");
                             ik.SetValue("TCPNoDelay", 1, RegistryValueKind.DWord);
                         }
                         else
                         {
+                            EtatOrigineMachine.AvantValeur(ik, "TcpAckFrequency");
                             ik.DeleteValue("TcpAckFrequency", false);
+                            EtatOrigineMachine.AvantValeur(ik, "TCPNoDelay");
                             ik.DeleteValue("TCPNoDelay", false);
                         }
                     }
@@ -664,6 +692,7 @@ namespace BTOptimizer
                         {
                             if (ik == null) continue;
                             if (ik.GetValue("NetCfgInstanceId") == null) continue; // pas un adaptateur
+                            EtatOrigineMachine.AvantValeur(ik, "PnPCapabilities");
                             if (disable)
                                 ik.SetValue("PnPCapabilities", 0x18, RegistryValueKind.DWord);
                             else
@@ -716,13 +745,21 @@ namespace BTOptimizer
                                 {
                                     if (enable)
                                     {
+                                        EtatOrigineMachine.AvantCle(Registry.LocalMachine, msiPath);
                                         using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
+                                        {
+                                            EtatOrigineMachine.AvantValeur(m, "MSISupported");
                                             m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
+                                        }
                                     }
                                     else
                                     {
                                         using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
-                                            if (m != null) m.DeleteValue("MSISupported", false);
+                                            if (m != null)
+                                            {
+                                                EtatOrigineMachine.AvantValeur(m, "MSISupported");
+                                                m.DeleteValue("MSISupported", false);
+                                            }
                                     }
                                     count++;
                                 }
@@ -795,13 +832,21 @@ namespace BTOptimizer
                                 {
                                     if (enable)
                                     {
+                                        EtatOrigineMachine.AvantCle(Registry.LocalMachine, msiPath);
                                         using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
+                                        {
+                                            EtatOrigineMachine.AvantValeur(m, "MSISupported");
                                             m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
+                                        }
                                     }
                                     else
                                     {
                                         using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
-                                            if (m != null) m.DeleteValue("MSISupported", false);
+                                            if (m != null)
+                                            {
+                                                EtatOrigineMachine.AvantValeur(m, "MSISupported");
+                                                m.DeleteValue("MSISupported", false);
+                                            }
                                     }
                                     count++;
                                 }
@@ -1032,10 +1077,12 @@ namespace BTOptimizer
         public static void SetStartupEnabled(StartupEntry e, bool enable)
         {
             RegistryKey root = e.Machine ? Registry.LocalMachine : Registry.CurrentUser;
+            EtatOrigineMachine.AvantCle(root, ApprovedKey);
             using (RegistryKey appr = root.CreateSubKey(ApprovedKey))
             {
                 var v = new byte[12];
                 v[0] = (byte)(enable ? 0x02 : 0x03);
+                EtatOrigineMachine.AvantValeur(appr, e.Name);
                 appr.SetValue(e.Name, v, RegistryValueKind.Binary);
             }
         }

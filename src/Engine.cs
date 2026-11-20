@@ -67,8 +67,8 @@ namespace BTOptimizer
             {
                 try
                 {
-                    if (apply) t.Apply();
-                    else t.Revert();
+                    if (apply) EtatOrigineMachine.Applique(t);
+                    else EtatOrigineMachine.Retablit(t);
                     result.Ok++;
                     if (!string.IsNullOrEmpty(t.Id)) done.Add(t.Id);
                     if (t.Reboot) result.RebootNeeded = true;
