@@ -53,7 +53,12 @@ namespace BTOptimizer.Tests
             foreach (string id in new[] { "audio_msi", "windowed_flip", "frame_cap" })
                 Banc.Verifie(id + " : gain mesuré", true, BlocDe(src, id).Contains("Preuve = NiveauPreuve.Mesure"));
             foreach (string id in new[] { "gpu_msi", "msi_usb", "msi_storage", "msi_network" })
+            {
                 Banc.Verifie(id + " : dépend du PC", true, BlocDe(src, id).Contains("Preuve = NiveauPreuve.DependDuPc"));
+                // Sans journal, l'origine est inconnue : « Rétablir » ne doit pas supprimer la valeur du pilote.
+                Banc.Verifie(id + " : Rétablir sans journal ne supprime rien", true,
+                    BlocDe(src, id).Contains("Revert = () => { }") && !BlocDe(src, id).Contains("false, null)"));
+            }
             foreach (string id in new[] { "timer_global", "distribuer_minuteurs", "irq_priorite_gpu", "w32ps", "fso_disable",
                                           "nagle", "netthrottle", "sysresp", "tcp_bbr2" })
                 Banc.Verifie(id + " : non mesuré explicite", true, BlocDe(src, id).Contains("Preuve = NiveauPreuve.NonMesure"));

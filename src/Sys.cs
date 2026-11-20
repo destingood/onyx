@@ -738,9 +738,9 @@ namespace BTOptimizer
             return false;
         }
 
-        public static void SetGpuMsi(bool enable, Action<string, int> log)
+        public static void SetGpuMsi(Action<string, int> log)
         {
-            int count = 0;
+            int count = 0, deja = 0;
             using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
             {
                 if (pci == null) { if (log != null) log("Enum PCI introuvable.", 2); return; }
@@ -756,26 +756,11 @@ namespace BTOptimizer
                                 if (ik == null || !IsGpuDevice(ik)) continue;
                                 string msiPath = @"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
                                     @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties";
+                                // Déjà en MSI (cas normal d'un pilote récent) : rien à écrire.
+                                if (MsiConditionnel.DejaEnMsi(GetMachine(msiPath, "MSISupported"))) { deja++; continue; }
                                 try
                                 {
-                                    if (enable)
-                                    {
-                                        EtatOrigineMachine.AvantCle(Registry.LocalMachine, msiPath);
-                                        using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
-                                        {
-                                            EtatOrigineMachine.AvantValeur(m, "MSISupported");
-                                            m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
-                                            if (m != null)
-                                            {
-                                                EtatOrigineMachine.AvantValeur(m, "MSISupported");
-                                                m.DeleteValue("MSISupported", false);
-                                            }
-                                    }
+                                    EcritMsi(msiPath);
                                     count++;
                                 }
                                 catch (Exception ex) { if (log != null) log("MSI GPU (" + devId + ") : " + ex.Message, 2); }
@@ -784,13 +769,14 @@ namespace BTOptimizer
                     }
                 }
             }
-            if (log != null)
-                log("MSI mode GPU " + (enable ? "activé" : "retiré (défaut pilote)") + " sur " + count + " périphérique(s). Redémarrage requis.", count > 0 ? 1 : 2);
-            if (count == 0) throw new Exception("Aucun GPU trouvé pour le MSI mode.");
+            if (log != null) log("GPU — " + MsiConditionnel.Bilan(count, deja), count + deja > 0 ? 1 : 2);
+            if (count + deja == 0) throw new Exception("Aucun GPU trouvé pour le MSI mode.");
         }
 
+        /// <summary>Tous les GPU (intégré compris) en MSI ; avant, seul le premier trouvé comptait.</summary>
         public static bool? GpuMsiActive()
         {
+            var valeurs = new List<object>();
             using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
             {
                 if (pci == null) return null;
@@ -804,28 +790,27 @@ namespace BTOptimizer
                             using (RegistryKey ik = dev.OpenSubKey(inst))
                             {
                                 if (ik == null || !IsGpuDevice(ik)) continue;
-                                object v = GetMachine(@"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
-                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties", "MSISupported");
-                                return IntEquals(v, 1);
+                                valeurs.Add(GetMachine(@"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
+                                    @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties", "MSISupported"));
                             }
                         }
                     }
                 }
             }
-            return null;
+            return MsiConditionnel.TousEnMsi(valeurs);
         }
 
         // ------------------------------------------------------------------
         //  Mode MSI générique par classe de périphérique PCI (USB, stockage, réseau)
-        //  Même mécanisme que le GPU : MSISupported=1. Réversible (retrait de la valeur).
+        //  Même mécanisme que le GPU : MSISupported=1, seulement là où il manque. Retrait : par le journal.
         // ------------------------------------------------------------------
         public const string MsiUsbClass     = "{36fc9e60-c465-11cf-8056-444553540000}";
         public const string MsiStorageClass = "{4d36e97b-e325-11ce-bfc1-08002be10318}";
         public const string MsiNetClass     = "{4d36e972-e325-11ce-bfc1-08002be10318}";
 
-        public static int SetMsiForClass(string classGuid, bool enable, Action<string, int> log)
+        public static int SetMsiForClass(string classGuid, Action<string, int> log)
         {
-            int count = 0;
+            int count = 0, deja = 0;
             using (RegistryKey pci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\PCI"))
             {
                 if (pci == null) { if (log != null) log("Enum PCI introuvable.", 2); return 0; }
@@ -843,26 +828,11 @@ namespace BTOptimizer
                                 if (cls == null || !cls.Equals(classGuid, StringComparison.OrdinalIgnoreCase)) continue;
                                 string msiPath = @"SYSTEM\CurrentControlSet\Enum\PCI\" + devId + "\\" + inst +
                                     @"\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties";
+                                // Déjà en MSI (cas normal d'un pilote récent) : rien à écrire.
+                                if (MsiConditionnel.DejaEnMsi(GetMachine(msiPath, "MSISupported"))) { deja++; continue; }
                                 try
                                 {
-                                    if (enable)
-                                    {
-                                        EtatOrigineMachine.AvantCle(Registry.LocalMachine, msiPath);
-                                        using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
-                                        {
-                                            EtatOrigineMachine.AvantValeur(m, "MSISupported");
-                                            m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        using (RegistryKey m = Registry.LocalMachine.OpenSubKey(msiPath, true))
-                                            if (m != null)
-                                            {
-                                                EtatOrigineMachine.AvantValeur(m, "MSISupported");
-                                                m.DeleteValue("MSISupported", false);
-                                            }
-                                    }
+                                    EcritMsi(msiPath);
                                     count++;
                                 }
                                 catch (Exception ex) { if (log != null) log("MSI (" + devId + ") : " + ex.Message, 2); }
@@ -871,9 +841,19 @@ namespace BTOptimizer
                     }
                 }
             }
-            if (log != null)
-                log("MSI mode " + (enable ? "activé" : "retiré") + " sur " + count + " périphérique(s). Redémarrage requis.", count > 0 ? 1 : 2);
+            if (log != null) log(MsiConditionnel.Bilan(count, deja), count + deja > 0 ? 1 : 2);
             return count;
+        }
+
+        /// <summary>MSISupported=1, origine notée au journal (clé et valeur) : « Rétablir » la remet à l'identique.</summary>
+        private static void EcritMsi(string msiPath)
+        {
+            EtatOrigineMachine.AvantCle(Registry.LocalMachine, msiPath);
+            using (RegistryKey m = Registry.LocalMachine.CreateSubKey(msiPath))
+            {
+                EtatOrigineMachine.AvantValeur(m, "MSISupported");
+                m.SetValue("MSISupported", 1, RegistryValueKind.DWord);
+            }
         }
 
         /// <summary>true = tous les périphériques de la classe ont MSI, false = au moins un sans, null = aucun trouvé.</summary>

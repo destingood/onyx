@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version — le mode MSI n'écrit plus rien quand il est déjà actif
+
+- **Déjà en MSI : rien d'écrit.** Sur un PC récent, le pilote met déjà la carte graphique,
+  l'USB, le NVMe et le réseau en interruptions par message (MSI) ; un test publié (RigPolice,
+  19/09/2026) le constate, et c'est le cas sur le PC de test. Les quatre réglages MSI ne
+  touchent plus à ces périphériques et ne passent que ceux qui ne le sont pas.
+- **« Rétablir » ne supprime plus le MSI du pilote.** Quand rien n'a été noté avant
+  l'application (MSI déjà en place, ou réglage appliqué par une version antérieure à 15.77),
+  « Rétablir » laisse la valeur telle quelle. Avant, il la supprimait : une carte graphique
+  passée en interruptions à ligne voit ses DPC monter de 8,5 à 116 µs (même test).
+- **État affiché juste avec deux cartes graphiques** : le MSI était jugé actif d'après la
+  première trouvée (souvent la puce intégrée). Toutes sont maintenant prises en compte.
+
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 
 ### « Rétablir » remet l'état d'origine exact

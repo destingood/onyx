@@ -1582,10 +1582,12 @@ namespace BTOptimizer
                 Id = "gpu_msi", Category = Cat.Gpu, Esport = true, Reboot = true,
                 Preuve = NiveauPreuve.DependDuPc,
                 Name = "Activer le MSI mode sur le GPU (interruptions par message)",
-                Desc = "Le GPU utilise des interruptions modernes (MSI) au lieu des IRQ à ligne : réduit la latence et le stutter d'interruption. Standard sur GPU récents. « Rétablir » remet le défaut du pilote.",
+                Desc = "Le GPU utilise des interruptions modernes (MSI) au lieu des IRQ à ligne : réduit la latence et le stutter d'interruption. Standard sur GPU récents : déjà en MSI, ONYX n'écrit rien. « Rétablir » remet la valeur notée avant l'application ; il ne supprime jamais une valeur qu'ONYX n'a pas notée (celle du pilote).",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
-                Apply  = () => Sys.SetGpuMsi(true, null),
-                Revert = () => Sys.SetGpuMsi(false, null),
+                Apply  = () => Sys.SetGpuMsi(null),
+                // Sans entrée au journal, l'origine est inconnue : supprimer MSISupported ferait repasser
+                // un GPU que le pilote avait mis en MSI en IRQ à ligne (DPC p99 8,5 → 116 µs, RigPolice).
+                Revert = () => { },
                 Check  = () => Sys.GpuMsiActive()
             });
 
@@ -2174,10 +2176,10 @@ namespace BTOptimizer
                 Id = "msi_usb", Category = Cat.Souris, Esport = true, Reboot = true,
                 Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les contrôleurs USB (latence souris/clavier)",
-                Desc = "Passe les contrôleurs USB en interruptions par message (MSI) au lieu des IRQ classiques : traitement plus direct des périphériques USB, dont ta souris et ton clavier. Réduit la latence et le jitter d'entrée. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                Desc = "Passe les contrôleurs USB en interruptions par message (MSI) au lieu des IRQ classiques : traitement plus direct des périphériques USB, dont ta souris et ton clavier. Réduit la latence et le jitter d'entrée. Contrôleur déjà en MSI (cas normal) : ONYX n'écrit rien. « Rétablir » remet la valeur notée avant l'application, sans jamais supprimer celle du pilote. Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
-                Apply  = () => Sys.SetMsiForClass(Sys.MsiUsbClass, true, null),
-                Revert = () => Sys.SetMsiForClass(Sys.MsiUsbClass, false, null),
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiUsbClass, null),
+                Revert = () => { },   // voir gpu_msi : sans journal, ne rien supprimer
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiUsbClass)
             });
 
@@ -2186,10 +2188,10 @@ namespace BTOptimizer
                 Id = "msi_network", Category = Cat.Reseau, Reboot = true,
                 Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les cartes réseau (latence réseau)",
-                Desc = "Passe les cartes réseau en interruptions par message (MSI) : traitement des paquets plus direct, moins de DPC réseau. « Rétablir » remet le mode par défaut. Redémarrage requis.",
+                Desc = "Passe les cartes réseau en interruptions par message (MSI) : traitement des paquets plus direct, moins de DPC réseau. Carte déjà en MSI (cas normal) : ONYX n'écrit rien. « Rétablir » remet la valeur notée avant l'application, sans jamais supprimer celle du pilote. Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
-                Apply  = () => Sys.SetMsiForClass(Sys.MsiNetClass, true, null),
-                Revert = () => Sys.SetMsiForClass(Sys.MsiNetClass, false, null),
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiNetClass, null),
+                Revert = () => { },   // voir gpu_msi : sans journal, ne rien supprimer
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiNetClass)
             });
 
@@ -2199,10 +2201,10 @@ namespace BTOptimizer
                 Risque = Risque.Fonction,
                 Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les contrôleurs de stockage (avancé)",
-                Desc = "Passe les contrôleurs NVMe/SATA en interruptions par message (MSI) : moins de latence disque sous charge. AVANCÉ : sur de rares configurations, un contrôleur gère mal le MSI — teste au redémarrage ; si souci, « Rétablir » depuis l'app (ou Mode sans échec). Redémarrage requis.",
+                Desc = "Passe les contrôleurs NVMe/SATA en interruptions par message (MSI) : moins de latence disque sous charge. AVANCÉ : sur de rares configurations, un contrôleur gère mal le MSI — teste au redémarrage ; si souci, « Rétablir » depuis l'app (ou Mode sans échec) remet la valeur notée avant l'application ; un réglage appliqué par une version antérieure à 15.77 n'a pas de valeur notée et reste en place. Contrôleur déjà en MSI (cas normal d'un NVMe) : ONYX n'écrit rien. « Rétablir » remet la valeur notée avant l'application, sans jamais supprimer celle du pilote. Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
-                Apply  = () => Sys.SetMsiForClass(Sys.MsiStorageClass, true, null),
-                Revert = () => Sys.SetMsiForClass(Sys.MsiStorageClass, false, null),
+                Apply  = () => Sys.SetMsiForClass(Sys.MsiStorageClass, null),
+                Revert = () => { },   // voir gpu_msi : sans journal, ne rien supprimer
                 Check  = () => Sys.MsiActiveForClass(Sys.MsiStorageClass)
             });
 
