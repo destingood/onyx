@@ -192,6 +192,26 @@ namespace BTOptimizer
             return copie;
         }
 
+        /// <summary>
+        /// Vrai si le fabricant ou le modèle (WMI Win32_ComputerSystem) désigne une machine virtuelle :
+        /// VMware, VirtualBox, QEMU, KVM, Xen, Parallels (casse ignorée), ou Hyper-V / Windows Sandbox
+        /// (fabricant « Microsoft Corporation » ET modèle « Virtual Machine » ; une Surface reste réelle).
+        /// Valeurs nulles ou vides : faux (le test aller-retour applique tous les réglages pour de vrai).
+        /// </summary>
+        public static bool EstMachineDeTest(string fabricant, string modele)
+        {
+            if (string.IsNullOrEmpty(fabricant) && string.IsNullOrEmpty(modele)) return false;
+            fabricant = fabricant ?? "";
+            modele = modele ?? "";
+            foreach (string marque in new[] { "VMware", "VirtualBox", "QEMU", "KVM", "Xen", "Parallels" })
+            {
+                if (fabricant.IndexOf(marque, StringComparison.OrdinalIgnoreCase) >= 0
+                    || modele.IndexOf(marque, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            }
+            return fabricant.IndexOf("Microsoft Corporation", StringComparison.OrdinalIgnoreCase) >= 0
+                && modele.IndexOf("Virtual Machine", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         /// <summary>Une ligne lisible par item dont l'état actuel diffère de l'origine.</summary>
         public static List<string> Ecarts(List<Item> origine, List<Item> actuel)
         {

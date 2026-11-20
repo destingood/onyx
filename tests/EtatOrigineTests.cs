@@ -99,6 +99,23 @@ namespace BTOptimizer.Tests
             Banc.Egal("sc : manuel", "demand", EtatOrigine.TypeDemarrage(3, true));
             Banc.Egal("sc : désactivé", "disabled", EtatOrigine.TypeDemarrage(4, false));
             Banc.Verifie("sc : boot, system et absent non restaurables", true, EtatOrigine.TypeDemarrage(0, false) == null && EtatOrigine.TypeDemarrage(1, false) == null && EtatOrigine.TypeDemarrage(-1, false) == null);
+            // Machine de test (le test aller-retour applique 210 réglages pour de vrai : refus hors VM)
+            Banc.Verifie("Hyper-V", true, EtatOrigine.EstMachineDeTest("Microsoft Corporation", "Virtual Machine"));
+            Banc.Verifie("VMware", true, EtatOrigine.EstMachineDeTest("VMware, Inc.", "VMware20,1"));
+            Banc.Verifie("VirtualBox", true, EtatOrigine.EstMachineDeTest("innotek GmbH", "VirtualBox"));
+            Banc.Verifie("QEMU, casse ignorée", true, EtatOrigine.EstMachineDeTest("qemu", "Standard PC (Q35 + ICH9, 2009)"));
+            Banc.Verifie("KVM", true, EtatOrigine.EstMachineDeTest("Red Hat", "KVM"));
+            Banc.Verifie("Xen", true, EtatOrigine.EstMachineDeTest("Xen", "HVM domU"));
+            Banc.Verifie("Parallels", true, EtatOrigine.EstMachineDeTest("Parallels Software International Inc.", "Parallels Virtual Platform"));
+            Banc.Verifie("PC réel", false, EtatOrigine.EstMachineDeTest("Micro-Star International Co., Ltd.", "MS-7E12"));
+            Banc.Verifie("Surface (Microsoft mais réel)", false, EtatOrigine.EstMachineDeTest("Microsoft Corporation", "Surface Laptop 7"));
+            Banc.Verifie("Dell réel", false, EtatOrigine.EstMachineDeTest("Dell Inc.", "XPS 15 9530"));
+            Banc.Verifie("Lenovo réel", false, EtatOrigine.EstMachineDeTest("LENOVO", "21KC0001FR"));
+            Banc.Verifie("ASUS réel", false, EtatOrigine.EstMachineDeTest("ASUSTeK COMPUTER INC.", "ROG Strix G16"));
+            Banc.Verifie("Gigabyte réel", false, EtatOrigine.EstMachineDeTest("Gigabyte Technology Co., Ltd.", "B650 AORUS ELITE AX"));
+            Banc.Verifie("HP réel", false, EtatOrigine.EstMachineDeTest("HP", "OMEN by HP Laptop 16"));
+            Banc.Verifie("valeurs nulles : refus", false, EtatOrigine.EstMachineDeTest(null, null));
+            Banc.Verifie("valeurs vides : refus", false, EtatOrigine.EstMachineDeTest("", ""));
         }
     }
 }

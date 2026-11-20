@@ -420,6 +420,20 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>Copie profonde de l'entrée du journal pour ce réglage ; null s'il n'y en a pas (test aller-retour).</summary>
+        internal static EtatOrigine.Entree EntreeDe(string id)
+        {
+            lock (Verrou)
+            {
+                EtatOrigine.Entree e = Charge().Entrees.Find(x => x.Id == id);
+                if (e == null) return null;
+                var copie = new EtatOrigine.Entree { Id = e.Id, Date = e.Date, Complet = e.Complet, NonCouvert = new List<string>(e.NonCouvert) };
+                foreach (EtatOrigine.Item i in e.Items)
+                    copie.Items.Add(new EtatOrigine.Item { Genre = i.Genre, Cible = i.Cible, Nom = i.Nom, Existe = i.Existe, Kind = i.Kind, Valeur = i.Valeur, Seq = i.Seq });
+                return copie;
+            }
+        }
+
         // ------------------------------------------------------------------
         //  Fichiers
         // ------------------------------------------------------------------
