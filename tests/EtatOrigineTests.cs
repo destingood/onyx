@@ -78,10 +78,17 @@ namespace BTOptimizer.Tests
             Banc.Egal("powercfg : AC et DC", "100;10", string.Join(";", EtatOrigine.LitPowercfg(sortie)));
             Banc.Verifie("powercfg : sortie vide", true, EtatOrigine.LitPowercfg("") == null);
             // Valeurs alim et service
-            Banc.Egal("alim : encodage décimal", "100;10", EtatOrigine.ValeurAlim(100, 10));
-            Banc.Egal("alim : 0xFFFFFFFF non signé", "4294967295;0", EtatOrigine.ValeurAlim(-1, 0));
-            Banc.Verifie("alim : relecture", true, EtatOrigine.LitAlim("4294967295;10", out var ac, out var dc) && ac == 4294967295u && dc == 10u);
-            Banc.Verifie("alim : texte mal formé refusé", false, EtatOrigine.LitAlim("100", out _, out _) || EtatOrigine.LitAlim("-1;2", out _, out _) || EtatOrigine.LitAlim(null, out _, out _));
+            const string plan = "381b4222-f694-41f0-9685-ff5bb260df2e";
+            Banc.Egal("alim : encodage décimal et plan", "100;10;" + plan, EtatOrigine.ValeurAlim(100, 10, plan));
+            Banc.Egal("alim : 0xFFFFFFFF non signé", "4294967295;0;" + plan, EtatOrigine.ValeurAlim(-1, 0, plan));
+            Banc.Verifie("alim : relecture", true, EtatOrigine.LitAlim("4294967295;10;" + plan, out var ac, out var dc, out var pl) && ac == 4294967295u && dc == 10u && pl == plan);
+            Banc.Verifie("alim : texte mal formé refusé", false, EtatOrigine.LitAlim("100;10", out _, out _, out _) || EtatOrigine.LitAlim("-1;2;" + plan, out _, out _, out _) || EtatOrigine.LitAlim(null, out _, out _, out _));
+            Banc.Verifie("alim : plan qui n'est pas un GUID refusé", false, EtatOrigine.LitAlim("1;1;SCHEME_CURRENT", out _, out _, out _) || EtatOrigine.LitAlim("1;1;x" + plan, out _, out _, out _) || EtatOrigine.LitAlim("1;1;", out _, out _, out _));
+            Banc.Egal("plan actif : sortie française", "e9a42b02-d5df-448d-aa00-03f14749eb62",
+                EtatOrigine.LitPlanActif("GUID du mode de gestion de l'alimentation : e9a42b02-d5df-448d-aa00-03f14749eb62  (Performances optimales)"));
+            Banc.Egal("plan actif : sortie anglaise", plan,
+                EtatOrigine.LitPlanActif("Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)\r\n"));
+            Banc.Verifie("plan actif : sortie vide", true, EtatOrigine.LitPlanActif("") == null && EtatOrigine.LitPlanActif(null) == null);
             Banc.Egal("service : encodage", "2;1;0", EtatOrigine.ValeurService(2, true, false));
             Banc.Egal("service : absent", "-1;0;0", EtatOrigine.ValeurService(-1, false, false));
             Banc.Verifie("service : relecture", true, EtatOrigine.LitService("4;0;1", out var st, out var dif, out var run) && st == 4 && !dif && run);

@@ -167,20 +167,28 @@ namespace BTOptimizer
                 }
                 case "alim":
                 {
-                    // /query n'affiche pas les paramètres masqués (CPMINCORES, PERFBOOSTMODE… par défaut) :
-                    // on retente avec /qh, même sortie, masqués compris. Toujours illisible → Existe = false.
-                    string ids = " SCHEME_CURRENT " + modele.Cible + " " + modele.Nom;
-                    NativeResult r = Sys.Run(Sys.Sys32("powercfg.exe"), "/query" + ids);
-                    int[] v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
-                    if (v == null)
+                    // Le plan visé : celui de l'origine si modele en porte un (relecture), sinon le plan actif (capture).
+                    uint acO, dcO;
+                    string plan;
+                    if (!EtatOrigine.LitAlim(modele.Valeur, out acO, out dcO, out plan)) plan = PlanActif();
+                    int[] v = null;
+                    if (plan != null)
                     {
-                        r = Sys.Run(Sys.Sys32("powercfg.exe"), "/qh" + ids);
+                        // /query n'affiche pas les paramètres masqués (CPMINCORES, PERFBOOSTMODE… par défaut) :
+                        // on retente avec /qh, même sortie, masqués compris. Toujours illisible → Existe = false.
+                        string ids = " " + plan + " " + modele.Cible + " " + modele.Nom;
+                        NativeResult r = Sys.Run(Sys.Sys32("powercfg.exe"), "/query" + ids);
                         v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
+                        if (v == null)
+                        {
+                            r = Sys.Run(Sys.Sys32("powercfg.exe"), "/qh" + ids);
+                            v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
+                        }
                     }
                     return new EtatOrigine.Item
                     {
                         Genre = "alim", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = v != null,
-                        Valeur = v == null ? null : EtatOrigine.ValeurAlim(v[0], v[1])
+                        Valeur = v == null ? null : EtatOrigine.ValeurAlim(v[0], v[1], plan)
                     };
                 }
                 case "service":
@@ -211,8 +219,8 @@ namespace BTOptimizer
         /// <summary>
         /// reg : réécrit la valeur avec son type, ou la supprime si elle n'existait pas.
         /// cle : si elle n'existait pas, la supprime seulement si elle n'a plus ni valeur ni sous-clé.
-        /// alim : index AC puis DC du plan actif, puis /setactive.
-        /// service : type de démarrage (sc config), puis démarrage ou arrêt selon l'état d'origine.
+        /// alim : index AC puis DC du plan capturé, puis /setactive s'il est le plan actif.
+        /// service : type de démarrage (sc config), puis démarrage (refus = erreur) ou arrêt (refus toléré).
         /// tache : réactivée ou désactivée, puis relue.
         /// </summary>
         public static void Restaure(EtatOrigine.Item origine)
@@ -248,14 +256,18 @@ namespace BTOptimizer
                 case "alim":
                 {
                     uint ac, dc;
-                    if (!EtatOrigine.LitAlim(origine.Valeur, out ac, out dc))
+                    string plan;
+                    if (!EtatOrigine.LitAlim(origine.Valeur, out ac, out dc, out plan))
                         throw new FormatException("Valeur d'alimentation illisible : " + origine.Valeur);
-                    string ids = origine.Cible + " " + origine.Nom + " ";
-                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setacvalueindex SCHEME_CURRENT " + ids + ac.ToString(CultureInfo.InvariantCulture),
+                    // Écrit dans le plan capturé, même s'il n'est plus actif ; plan supprimé → RunThrow lève, journal intact.
+                    string ids = plan + " " + origine.Cible + " " + origine.Nom + " ";
+                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setacvalueindex " + ids + ac.ToString(CultureInfo.InvariantCulture),
                         "Rétablissement alimentation (secteur)");
-                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setdcvalueindex SCHEME_CURRENT " + ids + dc.ToString(CultureInfo.InvariantCulture),
+                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setdcvalueindex " + ids + dc.ToString(CultureInfo.InvariantCulture),
                         "Rétablissement alimentation (batterie)");
-                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+                    // Réactiver seulement s'il est le plan actif : sinon /setactive changerait de plan.
+                    if (string.Equals(PlanActif(), plan, StringComparison.OrdinalIgnoreCase))
+                        Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setactive " + plan, "Application du plan");
                     return;
                 }
                 case "service":
@@ -268,7 +280,19 @@ namespace BTOptimizer
                     if (type == null)
                         throw new NotSupportedException("Démarrage " + start + " du service " + origine.Cible
                             + " (pilote boot/system) non restaurable par sc config.");
-                    Sys.ConfigureService(origine.Cible, type, !enMarche, enMarche);
+                    Sys.ConfigureService(origine.Cible, type, false, false);
+                    if (enMarche)
+                    {
+                        // Refus de démarrer : on lève, le journal reste intact et un second « Rétablir » réessaie.
+                        if (!Sys.StartService(origine.Cible))
+                            throw new InvalidOperationException("Le service " + origine.Cible + " n'a pas pu être redémarré.");
+                    }
+                    else
+                    {
+                        // Refus d'arrêter toléré : un arrêt bloqué par des services dépendants bloquerait
+                        // l'entrée pour toujours. Le type de démarrage, lui, est bien remis.
+                        Sys.StopService(origine.Cible);
+                    }
                     return;
                 }
                 case "tache":
@@ -284,6 +308,13 @@ namespace BTOptimizer
                 default:
                     throw new NotSupportedException("Genre non pris en charge : " + origine.Genre);
             }
+        }
+
+        /// <summary>GUID du plan d'alimentation actif (powercfg /getactivescheme) ; null si illisible.</summary>
+        private static string PlanActif()
+        {
+            NativeResult r = Sys.Run(Sys.Sys32("powercfg.exe"), "/getactivescheme");
+            return r.ExitCode == 0 ? EtatOrigine.LitPlanActif(r.Output) : null;
         }
 
         private static EtatOrigine.Item LitValeur(RegistryKey k, string cible, string nom)

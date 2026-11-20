@@ -19,7 +19,7 @@ namespace BTOptimizer
         /// Un élément capturé. Genre : "reg", "cle", "alim", "service" ou "tache".
         /// reg : Cible = chemin complet (RegistryKey.Name), Nom = valeur ("" = par défaut), Kind = RegistryValueKind, Valeur encodée.
         /// cle : Cible = chemin complet, Existe = la clé existait.
-        /// alim : Cible = GUID du sous-groupe, Nom = GUID du paramètre, Valeur = "ac;dc" en décimal.
+        /// alim : Cible = GUID du sous-groupe, Nom = GUID du paramètre, Valeur = "ac;dc;plan" (décimal ; plan = GUID du plan actif à la capture).
         /// service : Cible = nom du service, Valeur = "start;delayed;running" (start = -1 si absent ; delayed, running = 0/1).
         /// tache : Cible = chemin de la tâche, Valeur = "active", "inactive" ou "inconnue".
         /// </summary>
@@ -236,21 +236,35 @@ namespace BTOptimizer
             return i.Valeur ?? "(vide)";
         }
 
-        /// <summary>Valeur d'un item alim : "ac;dc" en décimal non signé.</summary>
-        public static string ValeurAlim(int ac, int dc)
+        /// <summary>Valeur d'un item alim : "ac;dc;plan" (décimal non signé ; plan = GUID du plan actif à la capture).</summary>
+        public static string ValeurAlim(int ac, int dc, string plan)
         {
             return unchecked((uint)ac).ToString(CultureInfo.InvariantCulture) + ";"
-                 + unchecked((uint)dc).ToString(CultureInfo.InvariantCulture);
+                 + unchecked((uint)dc).ToString(CultureInfo.InvariantCulture) + ";" + plan;
         }
 
-        /// <summary>Relit "ac;dc". false si le texte est mal formé.</summary>
-        public static bool LitAlim(string valeur, out uint ac, out uint dc)
+        /// <summary>Relit "ac;dc;plan". false si le texte est mal formé ou si le plan n'est pas un GUID.</summary>
+        public static bool LitAlim(string valeur, out uint ac, out uint dc, out string plan)
         {
-            ac = 0; dc = 0;
+            ac = 0; dc = 0; plan = null;
             var p = (valeur ?? "").Split(';');
-            return p.Length == 2
-                && uint.TryParse(p[0], NumberStyles.None, CultureInfo.InvariantCulture, out ac)
-                && uint.TryParse(p[1], NumberStyles.None, CultureInfo.InvariantCulture, out dc);
+            if (p.Length != 3
+                || !uint.TryParse(p[0], NumberStyles.None, CultureInfo.InvariantCulture, out ac)
+                || !uint.TryParse(p[1], NumberStyles.None, CultureInfo.InvariantCulture, out dc)
+                || !GuidSeulRx.IsMatch(p[2])) return false;
+            plan = p[2];
+            return true;
+        }
+
+        private const string GuidMotif = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+        private static readonly System.Text.RegularExpressions.Regex GuidRx = new System.Text.RegularExpressions.Regex(GuidMotif);
+        private static readonly System.Text.RegularExpressions.Regex GuidSeulRx = new System.Text.RegularExpressions.Regex("^" + GuidMotif + "$");
+
+        /// <summary>GUID du plan actif d'après « powercfg /getactivescheme » (premier GUID, indépendant de la langue) ; null s'il n'y en a pas.</summary>
+        public static string LitPlanActif(string sortie)
+        {
+            var m = GuidRx.Match(sortie ?? "");
+            return m.Success ? m.Value : null;
         }
 
         /// <summary>Valeur d'un item service : "start;delayed;running" (start = -1 si le service est absent).</summary>
