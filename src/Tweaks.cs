@@ -762,7 +762,13 @@ namespace BTOptimizer
                 Name = "Désactiver le démarrage rapide (Fast Startup)",
                 Desc = "Le démarrage rapide peut laisser pilotes/services dans un état dégradé au fil des arrêts. Boot un peu plus long mais plus « propre ». Optionnel.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" },
-                Apply = () => Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, RegistryValueKind.DWord),
+                Apply = () =>
+                {
+                    // « Rétablir » passe par le Revert() ci-dessous avant le journal : il réactive la
+                    // veille prolongée avant HiberbootEnabled=1 (sinon la page Marche/Arrêt peut planter).
+                    EtatOrigineMachine.RevertRequis();
+                    Sys.SetMachine(@"SYSTEM\CurrentControlSet\Control\Session Manager\Power", "HiberbootEnabled", 0, RegistryValueKind.DWord);
+                },
                 Revert = () =>
                 {
                     // Le démarrage rapide REPOSE sur la veille prolongée : il range la session

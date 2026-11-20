@@ -625,6 +625,10 @@ namespace BTOptimizer
 
         public static void SetDxToken(string token, string value)
         {
+            // windowed_flip et dx_vrr partagent cette chaîne : rejouer l'origine de l'un ne retire pas
+            // son jeton si l'autre, appliqué après, en a hérité. « Rétablir » lance donc l'ancien
+            // Revert() (qui ôte le seul jeton) avant le journal. Sans effet hors capture.
+            EtatOrigineMachine.RevertRequis();
             object cur = GetUser(DxSub, DxName);
             string s = (cur is string) ? (string)cur : "";
             var parts = new List<string>();
