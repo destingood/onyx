@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Microsoft.Win32;
 
 namespace BTOptimizer.Tests
@@ -38,6 +40,43 @@ namespace BTOptimizer.Tests
             Banc.Verifie("identité insensible à la casse", true,
                 EtatOrigine.Identite(new EtatOrigine.Item { Genre = "reg", Cible = "HKEY_LOCAL_MACHINE\\A", Nom = "x" })
              == EtatOrigine.Identite(new EtatOrigine.Item { Genre = "reg", Cible = "hkey_local_machine\\a", Nom = "X" }));
+            Regles();
+        }
+
+        private static void Regles()
+        {
+            Banc.Titre("État d'origine : règles");
+            Banc.Verifie("ancienne version d'ONYX : pas de capture", false, EtatOrigine.DoitCapturer(false, true));
+            Banc.Verifie("premier passage : capture", true, EtatOrigine.DoitCapturer(false, false));
+            Banc.Verifie("entrée existante : on la complète", true, EtatOrigine.DoitCapturer(true, true));
+
+            EtatOrigine.Item R(string v) => new EtatOrigine.Item { Genre = "reg", Cible = "HKEY_LOCAL_MACHINE\\K", Nom = "x", Existe = v != null, Kind = "DWord", Valeur = v };
+            // Réapplication : l'origine ne bouge pas
+            var j = new EtatOrigine.Journal();
+            var a = EtatOrigine.Ouvre(j, "A", new DateTime(2026, 11, 20));
+            EtatOrigine.Note(j, a, R("0"));
+            EtatOrigine.Note(j, a, R("1"));
+            Banc.Egal("réapplication : origine conservée", "0", a.Items.Single().Valeur);
+            // Même valeur, A puis B ; retrait de A d'abord
+            var b = EtatOrigine.Ouvre(j, "B", new DateTime(2026, 11, 20));
+            EtatOrigine.Note(j, b, R("1"));                       // B voit la valeur écrite par A
+            var j2 = EtatOrigine.Retire(j, "A", out var r1);
+            Banc.Verifie("A retiré pendant que B tient la valeur : rien à restaurer", true, r1.Count == 0);
+            Banc.Egal("B hérite de l'origine de A", "0", j2.Entrees.Single().Items.Single().Valeur);
+            var j3 = EtatOrigine.Retire(j2, "B", out var r2);
+            Banc.Egal("puis B retiré : on restaure l'origine", "0", r2.Single().Valeur);
+            // Même valeur, retrait de B d'abord
+            var j4 = EtatOrigine.Retire(j, "B", out var r3);
+            Banc.Egal("B retiré d'abord : on remet la valeur de A", "1", r3.Single().Valeur);
+            // Pureté
+            Banc.Verifie("Retire ne modifie pas le journal d'entrée", true, j.Entrees.Count == 2 && j.Entrees[1].Items[0].Valeur == "1");
+            // Valeur absente à l'origine
+            Banc.Verifie("origine absente vs actuel présent = écart", true, EtatOrigine.Ecarts(new() { R(null) }, new() { R("1") }).Count == 1);
+            Banc.Verifie("identiques = aucun écart", true, EtatOrigine.Ecarts(new() { R("0") }, new() { R("0") }).Count == 0);
+            // powercfg
+            string sortie = "  Paramètre minimal possible : 0x00000000\r\n  Paramètre maximal possible : 0x00000064\r\n  Index AC actuel : 0x00000064\r\n  Index DC actuel : 0x0000000a\r\n";
+            Banc.Egal("powercfg : AC et DC", "100;10", string.Join(";", EtatOrigine.LitPowercfg(sortie)));
+            Banc.Verifie("powercfg : sortie vide", true, EtatOrigine.LitPowercfg("") == null);
         }
     }
 }

@@ -138,5 +138,118 @@ namespace BTOptimizer
         {
             return JsonSerializer.Serialize(j, Options);
         }
+
+        /// <summary>Capturer si l'entrée existe déjà (on la complète) ou si le réglage n'était pas encore appliqué (premier passage).</summary>
+        public static bool DoitCapturer(bool entreeExiste, bool dejaDansAppliques)
+        {
+            return entreeExiste || !dejaDansAppliques;
+        }
+
+        /// <summary>L'entrée existante pour ce réglage, sinon une nouvelle ajoutée au journal.</summary>
+        public static Entree Ouvre(Journal j, string id, DateTime quand)
+        {
+            var e = j.Entrees.Find(x => x.Id == id);
+            if (e != null) return e;
+            e = new Entree { Id = id, Date = quand.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) };
+            j.Entrees.Add(e);
+            return e;
+        }
+
+        /// <summary>Ajoute l'état « avant » s'il n'est pas déjà noté : une réapplication ne déplace pas l'origine.</summary>
+        public static void Note(Journal j, Entree e, Item avant)
+        {
+            string id = Identite(avant);
+            if (e.Items.Exists(x => Identite(x) == id)) return;
+            avant.Seq = j.Prochain++;
+            e.Items.Add(avant);
+        }
+
+        /// <summary>
+        /// Journal SANS l'entrée id (j n'est pas modifié). Un item que d'autres entrées postérieures
+        /// ont écrasé n'est pas restauré : la plus ancienne d'entre elles hérite de son origine.
+        /// </summary>
+        public static Journal Retire(Journal j, string id, out List<Item> aRestaurer)
+        {
+            var copie = Lire(Ecrire(j));
+            aRestaurer = new List<Item>();
+            var retiree = copie.Entrees.Find(e => e.Id == id);
+            if (retiree == null) return copie;
+            copie.Entrees.Remove(retiree);
+            foreach (var x in retiree.Items)
+            {
+                string cle = Identite(x);
+                Item heritier = null;
+                foreach (var e in copie.Entrees)
+                    foreach (var y in e.Items)
+                        if (y.Seq > x.Seq && Identite(y) == cle && (heritier == null || y.Seq < heritier.Seq))
+                            heritier = y;
+                if (heritier == null) { aRestaurer.Add(x); continue; }
+                heritier.Existe = x.Existe;
+                heritier.Kind = x.Kind;
+                heritier.Valeur = x.Valeur;
+            }
+            aRestaurer.Sort((p, q) => q.Seq.CompareTo(p.Seq));
+            return copie;
+        }
+
+        /// <summary>Une ligne lisible par item dont l'état actuel diffère de l'origine.</summary>
+        public static List<string> Ecarts(List<Item> origine, List<Item> actuel)
+        {
+            var lignes = new List<string>();
+            var parId = new Dictionary<string, Item>();
+            foreach (var a in actuel) parId[Identite(a)] = a;
+            foreach (var o in origine)
+            {
+                string nom = o.Genre + " " + o.Cible + (string.IsNullOrEmpty(o.Nom) ? "" : "\\" + o.Nom);
+                if (!parId.TryGetValue(Identite(o), out var a)) { lignes.Add(nom + " : non relu"); continue; }
+                if (!Pareil(o, a)) lignes.Add(nom + " : origine " + Decrit(o) + ", actuel " + Decrit(a));
+            }
+            return lignes;
+        }
+
+        private static bool Pareil(Item o, Item a)
+        {
+            switch (o.Genre)
+            {
+                case "reg":
+                    if (o.Existe != a.Existe) return false;
+                    return !o.Existe || (o.Kind == a.Kind && o.Valeur == a.Valeur);
+                case "cle":
+                    return o.Existe == a.Existe;
+                case "service": // "start;delayed;running" : running est ignoré
+                    return ChampsService(o.Valeur) == ChampsService(a.Valeur);
+                default: // alim, tache
+                    return o.Valeur == a.Valeur;
+            }
+        }
+
+        private static string ChampsService(string valeur)
+        {
+            var p = (valeur ?? "").Split(';');
+            return p[0] + ";" + (p.Length > 1 ? p[1] : "");
+        }
+
+        private static string Decrit(Item i)
+        {
+            if ((i.Genre == "reg" || i.Genre == "cle") && !i.Existe) return "absent";
+            if (i.Genre == "cle") return "présente";
+            return i.Valeur ?? "(vide)";
+        }
+
+        /// <summary>
+        /// [ac, dc] d'après la sortie de « powercfg /query » : les deux DERNIÈRES lignes « …: 0x&lt;hex&gt; »
+        /// (indépendant de la langue). null s'il y en a moins de deux.
+        /// </summary>
+        public static int[] LitPowercfg(string sortie)
+        {
+            if (string.IsNullOrEmpty(sortie)) return null;
+            var m = System.Text.RegularExpressions.Regex.Matches(sortie, @":\s*0x([0-9a-fA-F]+)\s*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+            if (m.Count < 2) return null;
+            return new[]
+            {
+                (int)uint.Parse(m[m.Count - 2].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                (int)uint.Parse(m[m.Count - 1].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)
+            };
+        }
     }
 }
