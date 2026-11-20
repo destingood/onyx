@@ -301,7 +301,7 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
-            // BT_FOND=1 : ce que le MODE JEU FERMERAIT, sans rien fermer. Lecture seule, en console.
+            // BT_FOND=1 : ce que le MODE JEU METTRAIT EN EFFICACITÉ, sans rien modifier. Lecture seule, en console.
             // Le seul moyen honnête de vérifier un périmètre : le montrer avant de s'en servir.
             if (Environment.GetEnvironmentVariable("BT_FOND") == "1")
             {
@@ -332,10 +332,8 @@ namespace BTOptimizer
                     {
                         bool poliF = polisF.Contains(cF.Nom);
                         Console.WriteLine("  • " + cF.Nom + "  pid " + cF.Pid + "  " + cF.Mo + " Mo  "
-                            + (poliF
-                               ? (cF.Fenetre ? "[fenêtre → fermeture polie, jamais forcée]"
-                                             : "[auxiliaire d'une fenêtre → part avec elle, jamais tué]")
-                               : "[sans fenêtre → arrêté net]"));
+                            + "[→ mode Efficacité, rétabli à la sortie]"
+                            + (poliF ? (cF.Fenetre ? " (fenêtre)" : " (auxiliaire d'une fenêtre)") : ""));
                         sousF += cF.Mo; nF++;
                     }
                     foreach (string svcF in ApplisDeFond.ServicesEnCours())
@@ -344,7 +342,7 @@ namespace BTOptimizer
                     totalF += sousF;
                 }
                 Console.WriteLine();
-                Console.WriteLine("TOTAL : " + nF + " processus, ~" + totalF + " Mo (RIEN N'A ÉTÉ FERMÉ).");
+                Console.WriteLine("TOTAL : " + nF + " processus, ~" + totalF + " Mo (RIEN N'A ÉTÉ MODIFIÉ).");
                 Environment.Exit(0);
             }
 
@@ -1599,7 +1597,8 @@ namespace BTOptimizer
                 if (ApplisDeFond.Correspond(catNode, "nodepad")) { errors++; Console.WriteLine("  faux positif sur nodepad"); }
                 if (ApplisDeFond.CategorieDe(ApplisDeFond.Catalogue, "Discord") != null) { errors++; Console.WriteLine("  Discord ne doit etre dans AUCUNE categorie"); }
                 if (ApplisDeFond.CategorieDe(ApplisDeFond.Catalogue, "explorer") != null) { errors++; Console.WriteLine("  explorer ne doit etre dans AUCUNE categorie"); }
-                if (!ApplisDeFond.CorrespondService(catRazer, "Razer Chroma SDK Service")) { errors++; Console.WriteLine("  service Chroma non reconnu"); }
+                // Le service Chroma n'est plus visé : l'arreter fermait Synapse et ses gestionnaires.
+                if (ApplisDeFond.CorrespondService(catRazer, "Razer Chroma SDK Service")) { errors++; Console.WriteLine("  service Chroma encore vise (son arret ferme Synapse)"); }
 
                 // Le coeur de Windows n'est jamais une cible, meme si une categorie le reclamait.
                 if (!ApplisDeFond.EstVital("svchost") || !ApplisDeFond.EstVital("lsass")) { errors++; Console.WriteLine("  coeur de Windows non protege"); }
@@ -1619,7 +1618,7 @@ namespace BTOptimizer
                 Console.WriteLine("  avec jeu=" + protJeu.Count + " PID");
                 if (protJeu.Count < prot.Count) { errors++; Console.WriteLine("  le jeu a RETIRE des proteges"); }
 
-                // Roblox doit etre reconnu comme jeu EN COURS, sinon le mode auto le fermerait.
+                // Roblox doit etre reconnu comme jeu EN COURS, sinon le mode auto le mettrait en Efficacite.
                 bool robloxConnu = false;
                 foreach (string exe in GameScan.PriorityExes())
                     if (string.Equals(exe, "RobloxPlayerBeta.exe", StringComparison.OrdinalIgnoreCase)) robloxConnu = true;
@@ -1638,16 +1637,12 @@ namespace BTOptimizer
                 if (!polisT.Contains("Cursor")) { errors++; Console.WriteLine("  l auxiliaire de Cursor serait tue"); }
                 if (polisT.Contains("node")) { errors++; Console.WriteLine("  node traite comme une fenetre"); }
 
-                // Le journal doit NOMMER ce qui a resiste : un refus silencieux fait croire au gain.
-                var faux = new ApplisDeFond.Bilan();
-                var bc = new ApplisDeFond.BilanCategorie { Cle = "ia", Libelle = "Assistants IA" };
-                bc.Refuses.Add("Cursor"); bc.Fermes = 2; bc.Noms.Add("claude"); bc.MoRendus = 900;
-                faux.Categories.Add(bc); faux.Total = 2; faux.MoRendus = 900;
-                string txt = ApplisDeFond.Texte(faux);
-                if (txt.IndexOf("Cursor", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait l appli qui a refuse"); }
-                if (txt.IndexOf("900", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait les Mo rendus"); }
+                // Le journal doit NOMMER ce qui a ete refuse : un refus silencieux fait croire au gain.
+                string txt = Efficacite.Texte(2, 1, 1, 0);
+                if (txt.IndexOf("2 processus", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait le nombre de processus"); }
+                if (txt.IndexOf("refus", StringComparison.Ordinal) < 0) { errors++; Console.WriteLine("  le bilan tait les refus"); }
                 Console.WriteLine("  bilan : " + txt);
-                if (ApplisDeFond.Texte(new ApplisDeFond.Bilan()).IndexOf("rien", StringComparison.OrdinalIgnoreCase) < 0)
+                if (Efficacite.Texte(0, 0, 0, 0).IndexOf("rien", StringComparison.OrdinalIgnoreCase) < 0)
                 { errors++; Console.WriteLine("  bilan vide mal formule"); }
             }
             catch (Exception ex) { errors++; Console.WriteLine("  Applications de fond ERREUR : " + ex.Message); }
@@ -1656,7 +1651,7 @@ namespace BTOptimizer
             try
             {
                 // BT_FOND_OFF : le test active le mode jeu POUR DE VRAI. Il suspend donc de vrais
-                // services -- mais il n a pas a fermer l editeur de celui qui compile.
+                // services -- mais il n a pas a ralentir l editeur de celui qui compile.
                 Environment.SetEnvironmentVariable("BT_FOND_OFF", "1");
                 GameBoost.Activate(delegate(string m, int l) { Console.WriteLine("  " + m); });
                 Console.WriteLine("  actif=" + GameBoost.IsActive);

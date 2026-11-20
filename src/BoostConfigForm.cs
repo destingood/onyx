@@ -48,7 +48,7 @@ namespace BTOptimizer
             var intro = new Label();
             intro.SetBounds(16, 10, 588, 48);
             intro.Text = "Pendant une partie, le MODE JEU suspend ces services de fond (ils sont relancés à la "
-                       + "sortie du jeu) et ferme les applications listées plus bas. Interrupteur OFF = exclu : "
+                       + "sortie du jeu) et met en mode Efficacité les applications listées plus bas. Interrupteur OFF = exclu : "
                        + "jamais touché. Choix mémorisé, appliqué à la prochaine activation.";
             intro.ForeColor = Theme.InkDimColor;
 
@@ -90,15 +90,15 @@ namespace BTOptimizer
             var titre = new Label();
             titre.SetBounds(16, y, 588, 22);
             titre.Font = new Font("Segoe UI Semibold", 10f);
-            titre.Text = "Applications fermées pendant la partie";
+            titre.Text = "Applications mises en mode Efficacité pendant la partie";
             y += 24;
 
             var sous = new Label();
             sous.SetBounds(16, y, 588, 34);
             sous.ForeColor = Theme.InkDimColor;
-            sous.Text = "Une fenêtre qui demande « enregistrer ? » n'est JAMAIS forcée : elle reste ouverte "
-                      + "et le journal te la nomme. Rien n'est désinstallé, rien n'est relancé tout seul au "
-                      + "retour sur le bureau.";
+            sous.Text = "Rien n'est fermé : ces applications passent en priorité basse (mode Efficacité, comme "
+                      + "dans le Gestionnaire des tâches) et retrouvent leur priorité d'origine à la sortie "
+                      + "du jeu. Rien n'est désinstallé.";
             y += 38;
 
             Controls.AddRange(new Control[] { intro, note, titre, sous });
@@ -108,7 +108,7 @@ namespace BTOptimizer
             {
                 var swa = new NeonSwitch();
                 swa.SetBounds(16, y, 46, 22);
-                swa.SetCheckedSilent(!exclApps.Contains(c.Cle));   // ON = fermée pendant la partie
+                swa.SetCheckedSilent(!exclApps.Contains(c.Cle));   // ON = mise en Efficacité pendant la partie
                 swa.Tag = c.Cle;
                 swa.CheckedChanged += (s, e) => SaveApps();
                 _swApps[c.Cle] = swa;
@@ -137,7 +137,7 @@ namespace BTOptimizer
             ApplisDeFond.EnregistrerExclusions(excluded);
             if (_log != null)
                 _log("Mode jeu : " + (ApplisDeFond.Catalogue.Length - excluded.Count)
-                     + " famille(s) d'applications fermée(s) pendant la partie (mémorisé).", 0);
+                     + " famille(s) d'applications en mode Efficacité pendant la partie (mémorisé).", 0);
         }
 
         private void SaveNow()

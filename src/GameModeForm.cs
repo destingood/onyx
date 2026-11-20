@@ -47,8 +47,8 @@ namespace BTOptimizer
             Controls.Add(new Label
             {
                 Text = "Le Mode Jeu (Ctrl+Alt+G) libère la RAM, force le timer 1 ms, suspend TEMPORAIREMENT ces "
-                     + "services de fond (relancés à la désactivation) et ferme les familles d'applications cochées "
-                     + "(jamais de force : une fenêtre qui demande à enregistrer reste ouverte). Décoche ce que tu "
+                     + "services de fond (relancés à la désactivation) et passe en mode Efficacité les familles d'applications cochées "
+                     + "(rien n'est fermé, la priorité d'origine est rendue à la sortie). Décoche ce que tu "
                      + "veux GARDER. Ton choix est mémorisé.",
                 Location = new Point(18, 60), Size = new Size(524, 58), ForeColor = Color.FromArgb(60, 64, 72)
             });
@@ -137,7 +137,7 @@ namespace BTOptimizer
                                  + " famille(s) d'applications exclu(s) de la suspension.", 0);
             MessageBox.Show(this, "Réglages enregistrés.\n\n"
                 + (_svcs.Length - excluded.Count) + " service(s) seront suspendus, " + excluded.Count + " gardé(s).\n"
-                + (ApplisDeFond.Catalogue.Length - exclApps.Count) + " famille(s) d'applications seront fermées.",
+                + (ApplisDeFond.Catalogue.Length - exclApps.Count) + " famille(s) d'applications seront passées en mode Efficacité (rien n'est fermé).",
                 "Mode Jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }

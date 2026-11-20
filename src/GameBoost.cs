@@ -6,18 +6,19 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Mode Jeu : un interrupteur temporaire qui suspend (arrête, sans désactiver) les services de
-    /// fond non essentiels, FERME LES APPLICATIONS qui n'ont rien à faire là pendant une partie
-    /// (voir ApplisDeFond), nettoie la RAM et force le timer 1 ms.
+    /// fond non essentiels, met en mode Efficacité (priorité Idle + EcoQoS, comme le Gestionnaire
+    /// des tâches) les processus des applications qui n'ont rien à faire là pendant une partie
+    /// (voir ApplisDeFond — AUCUN n'est fermé), nettoie la RAM et force le timer 1 ms.
     ///
-    /// « Désactiver » restaure l'état des SERVICES et rend le timer. Les applications, elles, ne
-    /// sont pas relancées : les rouvrir vides de leurs fichiers et de leurs conversations ne
-    /// rendrait rien à personne.
+    /// « Désactiver » rétablit TOUT : les services sont relancés, chaque processus retrouve sa
+    /// priorité et son état EcoQoS d'origine, le timer est rendu.
     ///
-    /// UN MODE JEU QUI MEURT NE DOIT PAS LAISSER LA MACHINE AMPUTÉE. Les services suspendus sont
-    /// écrits dans un marqueur sur le disque AVANT d'être arrêtés : si ONYX est tué en cours de
-    /// partie, le lancement suivant lit ce marqueur et relance ce qui traînait (Soigne). Sans ça,
-    /// un plantage laissait l'indexation et le spouleur arrêtés jusqu'au prochain redémarrage —
-    /// sans que rien ne le signale.
+    /// UN MODE JEU QUI MEURT NE DOIT PAS LAISSER LA MACHINE AMPUTÉE. Les services suspendus
+    /// (bt-gamemode-etat.txt) et l'état d'origine des processus (bt-gamemode-eco.txt) sont écrits
+    /// sur le disque AVANT d'être modifiés : si ONYX est tué en cours de partie, le lancement
+    /// suivant relit ces marqueurs et remet les choses en place (Soigne). Sans ça, un plantage
+    /// laissait l'indexation et le spouleur arrêtés jusqu'au prochain redémarrage — sans que rien
+    /// ne le signale.
     /// </summary>
     internal static class GameBoost
     {
@@ -26,6 +27,7 @@ namespace BTOptimizer
         private static readonly object _verrou = new object();
         private static readonly List<string> _stopped = new List<string>();
         private static bool _timerWasActive;
+        private static readonly List<Efficacite.Entree> _eco = new List<Efficacite.Entree>();   // état d'origine des processus mis en Efficacité
 
         // Services sûrs à suspendre pendant une partie (tous relançables à la demande).
         private static readonly string[] Socle = Construit();
@@ -160,6 +162,9 @@ namespace BTOptimizer
         // Marqueur de reprise : la liste des services que NOUS avons arrêtés, sur le disque.
         private static string MarqueurPath { get { return AppPaths.File("bt-gamemode-etat.txt"); } }
 
+        // Journal de rétablissement des processus : pid|début|priorité|contrôle|état|nom (voir Efficacite).
+        private static string EcoPath { get { return AppPaths.File("bt-gamemode-eco.txt"); } }
+
         /// <summary>Services EXCLUS du Mode Jeu (laissés tourner) — choix persisté de l'utilisateur.</summary>
         public static HashSet<string> LoadExclusions()
         {
@@ -178,8 +183,8 @@ namespace BTOptimizer
 
         /// <summary>
         /// Active le Mode Jeu. <paramref name="jeuProtege"/> = nom du processus du jeu qui a
-        /// déclenché le mode automatique : il ne sera ni fermé, ni vidé de sa mémoire. Sans lui,
-        /// lancer Roblox reviendrait à faire fermer Roblox par ONYX.
+        /// déclenché le mode automatique : il ne sera ni mis en Efficacité, ni vidé de sa mémoire.
+        /// Sans lui, lancer Roblox reviendrait à ralentir Roblox.
         /// </summary>
         public static void Activate(Action<string, int> log, string jeuProtege)
         {
@@ -210,21 +215,38 @@ namespace BTOptimizer
                 }
 
                 // --- 2. Applications de fond -----------------------------------------------
-                // AVANT le nettoyage mémoire : fermer trois gigaoctets d'éditeur puis mesurer, c'est
-                // annoncer un gain réel. L'inverse annonçait un chiffre qui ne comptait rien de tout ça.
+                // Rien n'est fermé : les processus passent en mode Efficacité, leur état d'origine est
+                // noté sur le disque AVANT chaque changement (comme le marqueur des services).
                 HashSet<int> proteges = ApplisDeFond.PidsProteges(jeuProtege);
-                ApplisDeFond.Bilan bilan = null;
+                ApplisDeFond.Resultat res = null;
                 var tentes = new List<string>();
+                // Un journal laissé par un plantage est REPRIS, pas écrasé : ces processus sont encore en
+                // Efficacité, la passe suivante les verra « déjà en Efficacité » et ne les noterait plus.
+                _eco.Clear();
+                try { if (File.Exists(EcoPath)) _eco.AddRange(Efficacite.Lit(File.ReadAllText(EcoPath))); } catch { }
                 try
                 {
                     // Le marqueur est écrit AVANT chaque arrêt (Retenir), pas après : c'est la seule
                     // façon qu'un plantage entre les deux ne laisse pas un service orphelin.
-                    bilan = ApplisDeFond.Fermer(ApplisDeFond.Actives(), proteges, log,
+                    res = ApplisDeFond.MettreEnEfficacite(ApplisDeFond.Actives(), proteges, log,
+                        delegate(Efficacite.Entree e)
+                        {
+                            _eco.Add(e);
+                            if (EcrireEco()) return true;
+                            _eco.Remove(e);   // pas noté sur le disque : le processus ne sera pas touché
+                            return false;
+                        },
                         delegate(string svc) { tentes.Add(svc); Retenir(svc); });
+                    // Journalisés puis refusés par Windows : rien n'a changé, ils sortent du journal.
+                    if (res.Annules.Count > 0)
+                    {
+                        foreach (Efficacite.Entree e in res.Annules) _eco.Remove(e);
+                        EcrireEco();
+                    }
                     // Ce qui a été refusé (droits, dépendances) sort du marqueur : on ne s'attribue
                     // pas l'arrêt d'un service qui tourne toujours.
                     foreach (string svc in tentes)
-                        if (!bilan.ServicesArretes.Contains(svc)) Oublier(svc);
+                        if (!res.ServicesArretes.Contains(svc)) Oublier(svc);
                 }
                 catch (Exception ex)
                 {
@@ -232,7 +254,10 @@ namespace BTOptimizer
                 }
 
                 // --- 3. Mémoire, en épargnant le jeu ---------------------------------------
-                long freed = Sys.CleanMemory(log, proteges);
+                // Isolé : une exception ici laisserait IsActive à faux, et Deactivate ne rétablirait
+                // plus les processus déjà mis en Efficacité.
+                long freed = 0;
+                try { freed = Sys.CleanMemory(log, proteges); } catch { }
 
                 IsActive = true;
                 try { BadgeStore.MarkBoostUsed(); BadgeCatalog.EvaluateEvents(); } catch { }   // badge « Mode Jeu » (+ toast)
@@ -241,7 +266,8 @@ namespace BTOptimizer
                 {
                     log("Mode Jeu ACTIVÉ : timer 1 ms, ~" + Math.Max(0, freed) + " Mo RAM libérés, "
                         + _stopped.Count + " service(s) de fond suspendu(s).", 1);
-                    if (bilan != null) log(ApplisDeFond.Texte(bilan), bilan.TousLesRefus().Count > 0 ? 2 : 1);
+                    if (res != null)
+                        log(Efficacite.Texte(res.Mis, res.Deja, res.Refus, res.ServicesArretes.Count), res.Refus > 0 ? 2 : 1);
                 }
             }
         }
@@ -266,6 +292,48 @@ namespace BTOptimizer
         {
             _stopped.Remove(svc);
             EcrireMarqueur();
+        }
+
+        /// <summary>Réécrit le journal des processus. Écriture dans un fichier temporaire puis
+        /// remplacement : un plantage en pleine écriture laisse l'ancien journal entier, jamais un
+        /// journal tronqué. Rend false si le disque a refusé.</summary>
+        private static bool EcrireEco()
+        {
+            try
+            {
+                if (_eco.Count == 0) { if (File.Exists(EcoPath)) File.Delete(EcoPath); return true; }
+                string tmp = EcoPath + ".tmp";
+                File.WriteAllText(tmp, Efficacite.Ecrit(_eco));
+                File.Move(tmp, EcoPath, true);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>Remet chaque processus noté à sa priorité et à son EcoQoS d'origine. Un processus
+        /// disparu est ignoré, et un PID réutilisé aussi (l'heure de début ne correspond plus).
+        /// Rend le nombre de processus rétablis.</summary>
+        private static int Retablit(IEnumerable<Efficacite.Entree> entrees)
+        {
+            int n = 0;
+            if (entrees == null) return 0;
+            foreach (Efficacite.Entree e in entrees)
+            {
+                try
+                {
+                    if (e == null) continue;
+                    using (System.Diagnostics.Process p = System.Diagnostics.Process.GetProcessById(e.Pid))
+                    {
+                        if (!Efficacite.MemeProcessus(e, p.Id, p.StartTime.ToUniversalTime().Ticks)) continue;
+                        bool ok = false;
+                        try { p.PriorityClass = (System.Diagnostics.ProcessPriorityClass)e.Priorite; ok = true; } catch { }
+                        if (Native.EcritEco(e.Pid, e.Controle, e.Etat)) ok = true;
+                        if (ok) n++;
+                    }
+                }
+                catch { }
+            }
+            return n;
         }
 
         private static void EcrireMarqueur()
@@ -295,34 +363,41 @@ namespace BTOptimizer
                 _stopped.Clear();
                 try { if (File.Exists(MarqueurPath)) File.Delete(MarqueurPath); } catch { }
 
+                int rendus = Retablit(_eco);
+                _eco.Clear();
+                try { if (File.Exists(EcoPath)) File.Delete(EcoPath); } catch { }
+
                 try { if (!_timerWasActive) Native.SetTimer1ms(false); } catch { }
 
                 IsActive = false;
                 if (log != null)
                     log("Mode Jeu désactivé : " + restored + " service(s) relancé(s)"
                         + (rates > 0 ? ", " + rates + " n'ont pas redémarré (ils repartiront à la demande)" : "")
+                        + ", " + rendus + " processus rendus à leur priorité d'origine"
                         + ", timer rendu au système.", rates > 0 ? 2 : 0);
             }
         }
 
         /// <summary>
         /// AU LANCEMENT : si un marqueur traîne, c'est qu'ONYX a été fermé sans sortir du Mode Jeu.
-        /// On relance ce qui avait été suspendu. Rend le nombre de services réparés.
-        /// Comme WifiScan, il ne touche JAMAIS un service qu'il n'a pas lui-même arrêté.
+        /// On relance les services suspendus et on rend leur priorité d'origine aux processus mis en
+        /// Efficacité. Rend le nombre de services relancés PLUS le nombre de processus rétablis.
+        /// Comme WifiScan, il ne touche JAMAIS un service ni un processus qu'il n'a pas lui-même modifié.
         /// </summary>
         public static int Soigne(Action<string, int> log)
         {
             if (IsActive) return 0;
+            int ok = 0, rendus = 0;
+
+            // --- Services
             var noms = new List<string>();
             try
             {
-                if (!File.Exists(MarqueurPath)) return 0;
-                foreach (string l in File.ReadAllLines(MarqueurPath))
-                { string s = l.Trim(); if (s.Length > 0 && !noms.Contains(s)) noms.Add(s); }
+                if (File.Exists(MarqueurPath))
+                    foreach (string l in File.ReadAllLines(MarqueurPath))
+                    { string s = l.Trim(); if (s.Length > 0 && !noms.Contains(s)) noms.Add(s); }
             }
-            catch { return 0; }
-
-            int ok = 0;
+            catch { }
             foreach (string svc in noms)
             {
                 try
@@ -333,11 +408,25 @@ namespace BTOptimizer
                 }
                 catch { }
             }
-            try { File.Delete(MarqueurPath); } catch { }
+            try { if (File.Exists(MarqueurPath)) File.Delete(MarqueurPath); } catch { }
 
-            if (ok > 0 && log != null)
-                log("Mode Jeu interrompu la dernière fois : " + ok + " service(s) de fond relancé(s).", 1);
-            return ok;
+            // --- Processus mis en Efficacité
+            try
+            {
+                if (File.Exists(EcoPath))
+                    rendus = Retablit(Efficacite.Lit(File.ReadAllText(EcoPath)));
+            }
+            catch { }
+            try { if (File.Exists(EcoPath)) File.Delete(EcoPath); } catch { }
+
+            if (log != null)
+            {
+                if (ok > 0)
+                    log("Mode Jeu interrompu la dernière fois : " + ok + " service(s) de fond relancé(s).", 1);
+                if (rendus > 0)
+                    log("Mode Jeu interrompu la dernière fois : " + rendus + " processus rendus à leur priorité d'origine.", 1);
+            }
+            return ok + rendus;
         }
     }
 }

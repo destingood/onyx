@@ -24,6 +24,13 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   « après » concordent entre elles (écart sous les seuils : 10 % sur le 1 % low, 7 % sur les
   FPS moyens) et restent en baisse ; ONYX retire alors les réglages concernés (ou Compétition)
   sans demander. Si les deux mesures divergent, rien n'est touché. Tout se réapplique ensuite.
+- **Mode Jeu : plus aucune application fermée.** Les applications de fond (assistants IA, outils
+  de développement, Roblox, Razer, Node) passent en mode Efficacité, comme dans le Gestionnaire
+  des tâches (priorité basse et EcoQoS). Leur état d'origine est noté avant, rendu à l'identique à
+  la sortie du Mode Jeu, et au lancement suivant si ONYX s'est arrêté en pleine partie. WSL et
+  Docker ne sont plus éteints, et les services Razer ne sont plus arrêtés (leur arrêt fermait
+  Synapse et ses gestionnaires). Les autres services de fond restent suspendus puis relancés comme
+  avant. Effet sur les FPS non mesuré : à vérifier avec la mesure en jeu.
 
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 

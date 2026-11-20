@@ -87,6 +87,7 @@ namespace BTOptimizer.Tests
             ProblemesConnusTests.Tout();
             EtatOrigineTests.Tout();
             MsiConditionnelTests.Tout();
+            EfficaciteTests.Tout();
             return Banc.Bilan();
         }
     }

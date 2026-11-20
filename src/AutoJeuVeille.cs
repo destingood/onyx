@@ -54,8 +54,8 @@ namespace BTOptimizer
                     if (g == Geste.Engager)
                     {
                         // LE NOM DU JEU EST PASSÉ, ET CE N'EST PAS UN DÉTAIL. Depuis que le Mode
-                        // Jeu ferme aussi des applications de fond, l'appeler sans dire QUI a
-                        // déclenché reviendrait à laisser ONYX fermer le jeu qu'il vient de
+                        // Jeu ralentit aussi des applications de fond, l'appeler sans dire QUI a
+                        // déclenché reviendrait à laisser ONYX ralentir le jeu qu'il vient de
                         // détecter. En plein écran sans processus reconnu, il n'y a rien à
                         // protéger — et rien de listé ne ressemble à un jeu.
                         GameBoost.Activate(log, nom);

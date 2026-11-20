@@ -84,6 +84,59 @@ namespace BTOptimizer
             catch { return 0; }
         }
 
+        // ---- Mode Efficacité (EcoQoS) : PROCESS_POWER_THROTTLING_STATE ------------------------
+        // ControlMask=1,StateMask=1 : EcoQoS · ControlMask=1,StateMask=0 : HighQoS · 0/0 : géré par le système.
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr h);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetProcessInformation(IntPtr h, int cls, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetProcessInformation(IntPtr h, int cls, ref PROCESS_POWER_THROTTLING_STATE info, int size);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PROCESS_POWER_THROTTLING_STATE { public uint Version; public uint ControlMask; public uint StateMask; }
+
+        private const int ProcessPowerThrottling = 4;
+        private const uint EcoVersion = 1;
+        private const uint ProcessQueryLimitedInformation = 0x1000;
+        private const uint ProcessSetInformation = 0x0200;
+
+        /// <summary>Lit l'état EcoQoS d'un processus. Jamais d'exception : false si Windows refuse.</summary>
+        public static bool LitEco(int pid, out uint controle, out uint etat)
+        {
+            controle = 0; etat = 0;
+            IntPtr h = IntPtr.Zero;
+            try
+            {
+                h = OpenProcess(ProcessQueryLimitedInformation, false, pid);
+                if (h == IntPtr.Zero) return false;
+                var s = new PROCESS_POWER_THROTTLING_STATE { Version = EcoVersion };
+                if (!GetProcessInformation(h, ProcessPowerThrottling, ref s, Marshal.SizeOf(typeof(PROCESS_POWER_THROTTLING_STATE))))
+                    return false;
+                controle = s.ControlMask; etat = s.StateMask;
+                return true;
+            }
+            catch { return false; }
+            finally { if (h != IntPtr.Zero) { try { CloseHandle(h); } catch { } } }
+        }
+
+        /// <summary>Écrit l'état EcoQoS d'un processus. Jamais d'exception : false si Windows refuse.</summary>
+        public static bool EcritEco(int pid, uint controle, uint etat)
+        {
+            IntPtr h = IntPtr.Zero;
+            try
+            {
+                h = OpenProcess(ProcessSetInformation, false, pid);
+                if (h == IntPtr.Zero) return false;
+                var s = new PROCESS_POWER_THROTTLING_STATE { Version = EcoVersion, ControlMask = controle, StateMask = etat };
+                return SetProcessInformation(h, ProcessPowerThrottling, ref s, Marshal.SizeOf(typeof(PROCESS_POWER_THROTTLING_STATE)));
+            }
+            catch { return false; }
+            finally { if (h != IntPtr.Zero) { try { CloseHandle(h); } catch { } } }
+        }
+
         /// <summary>Vrai si la fenêtre au premier plan couvre tout son écran (jeu plein écran / borderless).</summary>
         public static bool IsGameFullscreen()
         {
