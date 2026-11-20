@@ -1,8 +1,27 @@
 # Journal des versions — ONYX
 
-Toutes les optimisations sont **réversibles**, aucune n'utilise d'injection (compatible
-anticheat), et rien n'est modifié sans ton action. Les versions suivent l'assembly
-(`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
+Toutes les optimisations ont un bouton **« Rétablir »** ; la plupart reviennent à l'identique,
+celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'utilise
+d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
+l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
+
+## Prochaine version — « Rétablir » remet l'état d'origine exact
+
+- **État d'origine noté à la première application** : avant d'écrire, ONYX note la valeur
+  exacte de chaque réglage (registre, alimentation, services, tâches planifiées) dans
+  `bt-etat-origine.json`. « Rétablir » remet ces valeurs-là, et non plus une valeur par défaut
+  de Windows qui n'était pas forcément la tienne. Si deux optimisations touchent la même
+  valeur, le retrait de l'une laisse en place ce dont l'autre a besoin.
+- **Bouton « Sûr »** : il ne coche que les optimisations qui s'annulent à l'identique, sans
+  effet de bord, et dont le gain est mesuré ou qui ne touchent pas aux performances
+  (confidentialité, confort de saisie).
+- **« Annulation non garantie »** : les optimisations dont une partie passe par une commande
+  système, le profil NVIDIA ou le plafond d'images ne peuvent pas être notées à l'identique.
+  Elles sont marquées « annulation non garantie » dans le catalogue (ou classées pour un autre
+  risque : sécurité, fonction coupée) et n'entrent jamais dans « Sûr ». « Rétablir » y applique
+  l'ancienne annulation, puis remet ce qui a été noté.
+- **Réglages appliqués avant cette version** ou déjà en place avant ONYX : rien n'est noté,
+  « Rétablir » garde l'ancienne annulation.
 
 ## Prochaine version — l'optimisation prouvée garde ses réglages à redémarrage
 
