@@ -428,6 +428,9 @@ namespace BTOptimizer
 
         public static NativeResult Run(string exe, string args, int timeoutMs)
         {
+            // Commande externe pendant un Apply : effet non capturable (sans effet sous Couvert() ou hors capture).
+            // RunThrow passe aussi par ici.
+            EtatOrigineMachine.NonCouvert(Path.GetFileName(exe) + " " + args);
             ProcessStartInfo psi = new ProcessStartInfo();
             psi.FileName = exe;
             psi.Arguments = args;
@@ -570,10 +573,14 @@ namespace BTOptimizer
         public static void SetUsbSuspend(bool disable)
         {
             string v = disable ? "0" : "1";
-            string ids = "2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 ";
-            RunThrow(Sys32("powercfg.exe"), "/setacvalueindex SCHEME_CURRENT " + ids + v, "Réglage USB (secteur)");
-            RunThrow(Sys32("powercfg.exe"), "/setdcvalueindex SCHEME_CURRENT " + ids + v, "Réglage USB (batterie)");
-            RunThrow(Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+            EtatOrigineMachine.AvantAlim("2a737441-1930-4402-8d77-b2bebba308a3", "48e6b7a6-50f5-4782-a5d4-53bb8f07e226");
+            using (EtatOrigineMachine.Couvert())
+            {
+                string ids = "2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 ";
+                RunThrow(Sys32("powercfg.exe"), "/setacvalueindex SCHEME_CURRENT " + ids + v, "Réglage USB (secteur)");
+                RunThrow(Sys32("powercfg.exe"), "/setdcvalueindex SCHEME_CURRENT " + ids + v, "Réglage USB (batterie)");
+                RunThrow(Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+            }
         }
 
         /// <summary>Index AC courant d'un paramètre d'alimentation du plan actif (lecture registre, indépendante de la langue).</summary>
@@ -596,13 +603,17 @@ namespace BTOptimizer
         /// <summary>Écrit une valeur AC/DC d'un paramètre caché ou visible du plan actif.</summary>
         public static void SetPowerValue(string subGuid, string settingGuid, int ac, int dc)
         {
-            RunThrow(Sys32("powercfg.exe"),
-                "/setacvalueindex SCHEME_CURRENT " + subGuid + " " + settingGuid + " " + ac,
-                "Réglage alimentation (secteur)");
-            RunThrow(Sys32("powercfg.exe"),
-                "/setdcvalueindex SCHEME_CURRENT " + subGuid + " " + settingGuid + " " + dc,
-                "Réglage alimentation (batterie)");
-            RunThrow(Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+            EtatOrigineMachine.AvantAlim(subGuid, settingGuid);
+            using (EtatOrigineMachine.Couvert())
+            {
+                RunThrow(Sys32("powercfg.exe"),
+                    "/setacvalueindex SCHEME_CURRENT " + subGuid + " " + settingGuid + " " + ac,
+                    "Réglage alimentation (secteur)");
+                RunThrow(Sys32("powercfg.exe"),
+                    "/setdcvalueindex SCHEME_CURRENT " + subGuid + " " + settingGuid + " " + dc,
+                    "Réglage alimentation (batterie)");
+                RunThrow(Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+            }
         }
 
         // ------------------------------------------------------------------
@@ -946,10 +957,14 @@ namespace BTOptimizer
         public static void ConfigureService(string name, string startType, bool stopNow, bool startNow)
         {
             // startType : disabled | demand | auto | delayed-auto
-            RunThrow(Sys32("sc.exe"), "config \"" + name + "\" start= " + startType,
-                "Configuration du service " + name);
-            if (stopNow) StopService(name);    // échec toléré (déjà arrêté)
-            if (startNow) StartService(name);  // échec toléré (déjà démarré)
+            EtatOrigineMachine.AvantService(name);
+            using (EtatOrigineMachine.Couvert())
+            {
+                RunThrow(Sys32("sc.exe"), "config \"" + name + "\" start= " + startType,
+                    "Configuration du service " + name);
+                if (stopNow) StopService(name);    // échec toléré (déjà arrêté)
+                if (startNow) StartService(name);  // échec toléré (déjà démarré)
+            }
         }
 
         public static bool ServiceDisabled(string name)
@@ -967,7 +982,9 @@ namespace BTOptimizer
 
         public static bool IsServiceRunning(string name)
         {
-            NativeResult r = Run(Sys32("sc.exe"), "query \"" + name + "\"");
+            NativeResult r;
+            using (EtatOrigineMachine.Couvert())   // lecture seule : jamais « non couvert »
+                r = Run(Sys32("sc.exe"), "query \"" + name + "\"");
             return r.ExitCode == 0 && r.Output.IndexOf("RUNNING", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
@@ -1006,12 +1023,16 @@ namespace BTOptimizer
 
         public static void SetScheduledTask(string taskPath, bool enable)
         {
-            Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));
+            EtatOrigineMachine.AvantTache(taskPath);
+            using (EtatOrigineMachine.Couvert())
+                Run(Sys32("schtasks.exe"), "/change /tn \"" + taskPath + "\" /" + (enable ? "enable" : "disable"));
         }
 
         public static bool? ScheduledTaskDisabled(string taskPath)
         {
-            NativeResult r = Run(Sys32("schtasks.exe"), "/query /tn \"" + taskPath + "\" /fo LIST");
+            NativeResult r;
+            using (EtatOrigineMachine.Couvert())   // lecture seule : jamais « non couvert »
+                r = Run(Sys32("schtasks.exe"), "/query /tn \"" + taskPath + "\" /fo LIST");
             if (r.ExitCode != 0) return null;
             // "Status"/"État" ... "Disabled"/"Désactivé" — on cherche le token désactivé.
             string o = r.Output.ToLowerInvariant();

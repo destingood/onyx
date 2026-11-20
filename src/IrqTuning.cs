@@ -270,9 +270,11 @@ namespace BTOptimizer
                 r.Total++;
                 try
                 {
+                    EtatOrigineMachine.AvantCle(Registry.LocalMachine, EnumBase + p.InstanceId + sousCle);
                     using (RegistryKey k = Registry.LocalMachine.CreateSubKey(EnumBase + p.InstanceId + sousCle, true))
                     {
                         if (k == null) { r.Refuse++; continue; }
+                        EtatOrigineMachine.AvantValeur(k, nom);
                         if (valeur.HasValue) k.SetValue(nom, valeur.Value, RegistryValueKind.DWord);
                         else { try { k.DeleteValue(nom, false); } catch { } }
                         r.Ok++;

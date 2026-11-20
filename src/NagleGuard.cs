@@ -103,7 +103,9 @@ namespace BTOptimizer
                             using (RegistryKey ik = rk.OpenSubKey(enfant, true))
                             {
                                 if (ik == null) continue;
+                                EtatOrigineMachine.AvantValeur(ik, "TcpAckFrequency");
                                 ik.SetValue("TcpAckFrequency", 1, RegistryValueKind.DWord);
+                                EtatOrigineMachine.AvantValeur(ik, "TCPNoDelay");
                                 ik.SetValue("TCPNoDelay", 1, RegistryValueKind.DWord);
                                 faites++;
                             }

@@ -150,20 +150,21 @@ namespace BTOptimizer
                 if (nom.Length == 0) continue;
                 try
                 {
+                    EtatOrigineMachine.AvantCle(Registry.LocalMachine, Racine + "\\" + nom);
                     using (RegistryKey k = Registry.LocalMachine.CreateSubKey(Racine + "\\" + nom))
                     {
                         if (k == null) continue;
-                        k.SetValue("Version", "1.0", RegistryValueKind.String);
-                        k.SetValue("Application Name", Path.GetFileName(exe), RegistryValueKind.String);
-                        k.SetValue("Protocol", "*", RegistryValueKind.String);
-                        k.SetValue("Local Port", "*", RegistryValueKind.String);
-                        k.SetValue("Local IP", "*", RegistryValueKind.String);
-                        k.SetValue("Local IP Prefix Length", "*", RegistryValueKind.String);
-                        k.SetValue("Remote Port", "*", RegistryValueKind.String);
-                        k.SetValue("Remote IP", "*", RegistryValueKind.String);
-                        k.SetValue("Remote IP Prefix Length", "*", RegistryValueKind.String);
-                        k.SetValue("DSCP Value", Dscp.ToString(), RegistryValueKind.String);
-                        k.SetValue("Throttle Rate", "-1", RegistryValueKind.String);   // aucune limite de débit
+                        Pose(k, "Version", "1.0");
+                        Pose(k, "Application Name", Path.GetFileName(exe));
+                        Pose(k, "Protocol", "*");
+                        Pose(k, "Local Port", "*");
+                        Pose(k, "Local IP", "*");
+                        Pose(k, "Local IP Prefix Length", "*");
+                        Pose(k, "Remote Port", "*");
+                        Pose(k, "Remote IP", "*");
+                        Pose(k, "Remote IP Prefix Length", "*");
+                        Pose(k, "DSCP Value", Dscp.ToString());
+                        Pose(k, "Throttle Rate", "-1");   // aucune limite de débit
                         n++;
                     }
                 }
@@ -173,8 +174,9 @@ namespace BTOptimizer
             // Sans ça, la politique existe et ne s'applique jamais sur une connexion domestique.
             try
             {
+                EtatOrigineMachine.AvantCle(Registry.LocalMachine, CleNla);
                 using (RegistryKey k = Registry.LocalMachine.CreateSubKey(CleNla))
-                    if (k != null) k.SetValue("Do not use NLA", "1", RegistryValueKind.String);
+                    if (k != null) Pose(k, "Do not use NLA", "1");
             }
             catch { }
 
@@ -186,9 +188,17 @@ namespace BTOptimizer
             return n;
         }
 
+        /// <summary>Valeur chaîne, état d'origine capturé juste avant.</summary>
+        private static void Pose(RegistryKey k, string nom, string valeur)
+        {
+            EtatOrigineMachine.AvantValeur(k, nom);
+            k.SetValue(nom, valeur, RegistryValueKind.String);
+        }
+
         /// <summary>Retire les politiques d'ONYX — et elles seules.</summary>
         public static int Retirer(Action<string, int> log)
         {
+            EtatOrigineMachine.NonCouvert("suppression des politiques QoS");
             int n = 0;
             try
             {

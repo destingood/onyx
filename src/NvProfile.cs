@@ -190,6 +190,7 @@ namespace BTOptimizer
         /// pilote l'a accepté.</summary>
         public static bool Applique(Kind kind, Action<string, int> log)
         {
+            EtatOrigineMachine.NonCouvert("profil NVIDIA");
             string exe = Sys.FindNvpi();
             if (exe == null)
             {

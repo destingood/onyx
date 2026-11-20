@@ -173,6 +173,7 @@ namespace BTOptimizer
         /// <summary>Pose le plafond via l'outil officiel du pilote. fps = 0 rend la main au pilote.</summary>
         public static bool Applique(int fps, Action<string, int> log)
         {
+            EtatOrigineMachine.NonCouvert("plafond d'images NVIDIA");
             if (fps != 0 && Valeur(fps) == 0)
             {
                 if (log != null) log("Plafond de " + fps + " images/s hors bornes (1 à " + MasqueFps

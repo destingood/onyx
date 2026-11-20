@@ -173,6 +173,7 @@ namespace BTOptimizer
                                 {
                                     if (!AEcrire(r.Actuel, r.Optimal)) continue;
                                     if (!sauv.ContainsKey(id)) sauv[id] = r.Actuel;   // valeur d'origine
+                                    EtatOrigineMachine.AvantValeur(k, r.Cle);
                                     k.SetValue(r.Cle, r.Optimal, RegistryValueKind.String);
                                     n++;
                                 }
@@ -180,6 +181,7 @@ namespace BTOptimizer
                                 {
                                     string orig;
                                     if (!sauv.TryGetValue(id, out orig)) continue;
+                                    EtatOrigineMachine.AvantValeur(k, r.Cle);
                                     k.SetValue(r.Cle, orig, RegistryValueKind.String);
                                     sauv.Remove(id);
                                     n++;

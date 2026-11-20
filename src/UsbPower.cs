@@ -80,12 +80,17 @@ namespace BTOptimizer
                            EnumBase + instanceId + @"\Device Parameters", true))
                 {
                     if (k == null) return false;
+                    EtatOrigineMachine.AvantValeur(k, "EnhancedPowerManagementEnabled");
                     k.SetValue("EnhancedPowerManagementEnabled", value, RegistryValueKind.DWord);
+                    EtatOrigineMachine.AvantValeur(k, "SelectiveSuspendEnabled");
                     k.SetValue("SelectiveSuspendEnabled", value, RegistryValueKind.DWord);
                     // AllowIdleIrpInD3 n'existe que sur certains pilotes : on ne le CRÉE pas,
                     // on le corrige seulement s'il est déjà là (sinon on invente un réglage).
                     if (k.GetValue("AllowIdleIrpInD3") != null)
+                    {
+                        EtatOrigineMachine.AvantValeur(k, "AllowIdleIrpInD3");
                         k.SetValue("AllowIdleIrpInD3", value, RegistryValueKind.DWord);
+                    }
                     return true;
                 }
             }

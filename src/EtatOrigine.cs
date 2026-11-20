@@ -236,6 +236,56 @@ namespace BTOptimizer
             return i.Valeur ?? "(vide)";
         }
 
+        /// <summary>Valeur d'un item alim : "ac;dc" en décimal non signé.</summary>
+        public static string ValeurAlim(int ac, int dc)
+        {
+            return unchecked((uint)ac).ToString(CultureInfo.InvariantCulture) + ";"
+                 + unchecked((uint)dc).ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>Relit "ac;dc". false si le texte est mal formé.</summary>
+        public static bool LitAlim(string valeur, out uint ac, out uint dc)
+        {
+            ac = 0; dc = 0;
+            var p = (valeur ?? "").Split(';');
+            return p.Length == 2
+                && uint.TryParse(p[0], NumberStyles.None, CultureInfo.InvariantCulture, out ac)
+                && uint.TryParse(p[1], NumberStyles.None, CultureInfo.InvariantCulture, out dc);
+        }
+
+        /// <summary>Valeur d'un item service : "start;delayed;running" (start = -1 si le service est absent).</summary>
+        public static string ValeurService(int start, bool differe, bool enMarche)
+        {
+            return start.ToString(CultureInfo.InvariantCulture) + ";" + (differe ? "1" : "0") + ";" + (enMarche ? "1" : "0");
+        }
+
+        /// <summary>Relit "start;delayed;running". false si le texte est mal formé.</summary>
+        public static bool LitService(string valeur, out int start, out bool differe, out bool enMarche)
+        {
+            start = -1; differe = false; enMarche = false;
+            var p = (valeur ?? "").Split(';');
+            if (p.Length != 3 || !int.TryParse(p[0], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out start)) return false;
+            if ((p[1] != "0" && p[1] != "1") || (p[2] != "0" && p[2] != "1")) return false;
+            differe = p[1] == "1";
+            enMarche = p[2] == "1";
+            return true;
+        }
+
+        /// <summary>
+        /// Mot clé de « sc config start= » pour une valeur Start : 2 (+ différé) → delayed-auto, 2 → auto,
+        /// 3 → demand, 4 → disabled. null pour 0 (boot), 1 (system), -1 (absent) ou autre : non restaurable.
+        /// </summary>
+        public static string TypeDemarrage(int start, bool differe)
+        {
+            switch (start)
+            {
+                case 2: return differe ? "delayed-auto" : "auto";
+                case 3: return "demand";
+                case 4: return "disabled";
+                default: return null;
+            }
+        }
+
         /// <summary>
         /// [ac, dc] d'après la sortie de « powercfg /query » : les deux DERNIÈRES lignes « …: 0x&lt;hex&gt; »
         /// (indépendant de la langue). null s'il y en a moins de deux.

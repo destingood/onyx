@@ -10,7 +10,8 @@ namespace BTOptimizer
     /// Côté MACHINE du journal d'état d'origine (la logique pure est dans EtatOrigine.cs) :
     /// capture de l'état « avant » par les primitives d'écriture de Sys pendant l'Apply d'un
     /// réglage, restauration de cet état par « Rétablir », lecture et sauvegarde du fichier.
-    /// Registre seulement pour l'instant. Non compilé par le banc (accès registre et disque).
+    /// Registre, paramètres d'alimentation, services et tâches planifiées. Non compilé par le banc
+    /// (accès registre, disque et commandes système).
     /// </summary>
     internal static class EtatOrigineMachine
     {
@@ -67,6 +68,51 @@ namespace BTOptimizer
                 });
         }
 
+        /// <summary>À appeler avant de modifier un paramètre d'alimentation du plan actif. Illisible : NonCouvert.</summary>
+        public static void AvantAlim(string sousGroupe, string parametre)
+        {
+            if (_entree == null) return;
+            Capture(new EtatOrigine.Item { Genre = "alim", Cible = sousGroupe, Nom = parametre }, "alimentation " + parametre);
+        }
+
+        /// <summary>À appeler avant de modifier le démarrage ou l'état d'un service. Un service absent est noté tel quel.</summary>
+        public static void AvantService(string nom)
+        {
+            if (_entree == null) return;
+            Capture(new EtatOrigine.Item { Genre = "service", Cible = nom, Nom = "" }, "service " + nom);
+        }
+
+        /// <summary>À appeler avant d'activer ou désactiver une tâche planifiée. État illisible : NonCouvert.</summary>
+        public static void AvantTache(string chemin)
+        {
+            if (_entree == null) return;
+            Capture(new EtatOrigine.Item { Genre = "tache", Cible = chemin, Nom = "" }, "tâche " + chemin);
+        }
+
+        /// <summary>
+        /// Lit l'état actuel de modele et le note, sauf s'il l'est déjà (réapplication). Les lectures
+        /// (powercfg /query, sc query, schtasks /query) passent par Sys.Run : sous Couvert(), sinon
+        /// chaque capture se marquerait elle-même non couverte. Lecture impossible : NonCouvert(quoi).
+        /// </summary>
+        private static void Capture(EtatOrigine.Item modele, string quoi)
+        {
+            string id = EtatOrigine.Identite(modele);
+            if (_entree.Items.Exists(x => EtatOrigine.Identite(x) == id)) return;
+            EtatOrigine.Item avant;
+            try
+            {
+                using (Couvert()) avant = Lit(modele);
+            }
+            catch (Exception)
+            {
+                avant = null;
+            }
+            // Service absent (Existe = false) : noté, il n'y aura rien à remettre.
+            bool lisible = avant != null && (avant.Existe || avant.Genre == "service");
+            if (!lisible) { NonCouvert(quoi); return; }
+            EtatOrigine.Note(_journal, _entree, avant);
+        }
+
         /// <summary>Écriture que les primitives ne savent pas capturer : le réglage n'est plus annulable à l'identique.</summary>
         public static void NonCouvert(string quoi)
         {
@@ -119,6 +165,44 @@ namespace BTOptimizer
                     RegistryKey racine = Racine(modele.Cible, out sous);
                     return new EtatOrigine.Item { Genre = "cle", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = CleExiste(racine, sous) };
                 }
+                case "alim":
+                {
+                    // /query n'affiche pas les paramètres masqués (CPMINCORES, PERFBOOSTMODE… par défaut) :
+                    // on retente avec /qh, même sortie, masqués compris. Toujours illisible → Existe = false.
+                    string ids = " SCHEME_CURRENT " + modele.Cible + " " + modele.Nom;
+                    NativeResult r = Sys.Run(Sys.Sys32("powercfg.exe"), "/query" + ids);
+                    int[] v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
+                    if (v == null)
+                    {
+                        r = Sys.Run(Sys.Sys32("powercfg.exe"), "/qh" + ids);
+                        v = r.ExitCode == 0 ? EtatOrigine.LitPowercfg(r.Output) : null;
+                    }
+                    return new EtatOrigine.Item
+                    {
+                        Genre = "alim", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = v != null,
+                        Valeur = v == null ? null : EtatOrigine.ValeurAlim(v[0], v[1])
+                    };
+                }
+                case "service":
+                {
+                    int start = Sys.GetServiceStart(modele.Cible);
+                    bool differe = Sys.IntEquals(Sys.GetMachine(@"SYSTEM\CurrentControlSet\Services\" + modele.Cible, "DelayedAutostart"), 1);
+                    bool enMarche = start != -1 && Sys.IsServiceRunning(modele.Cible);
+                    return new EtatOrigine.Item
+                    {
+                        Genre = "service", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = start != -1,
+                        Valeur = EtatOrigine.ValeurService(start, differe, enMarche)
+                    };
+                }
+                case "tache":
+                {
+                    bool? inactive = Sys.ScheduledTaskDisabled(modele.Cible);
+                    return new EtatOrigine.Item
+                    {
+                        Genre = "tache", Cible = modele.Cible, Nom = modele.Nom ?? "", Existe = inactive.HasValue,
+                        Valeur = inactive == null ? "inconnue" : inactive.Value ? "inactive" : "active"
+                    };
+                }
                 default:
                     throw new NotSupportedException("Genre non pris en charge : " + modele.Genre);
             }
@@ -127,6 +211,9 @@ namespace BTOptimizer
         /// <summary>
         /// reg : réécrit la valeur avec son type, ou la supprime si elle n'existait pas.
         /// cle : si elle n'existait pas, la supprime seulement si elle n'a plus ni valeur ni sous-clé.
+        /// alim : index AC puis DC du plan actif, puis /setactive.
+        /// service : type de démarrage (sc config), puis démarrage ou arrêt selon l'état d'origine.
+        /// tache : réactivée ou désactivée, puis relue.
         /// </summary>
         public static void Restaure(EtatOrigine.Item origine)
         {
@@ -158,6 +245,42 @@ namespace BTOptimizer
                     }
                     racine.DeleteSubKey(sous, false);
                     return;
+                case "alim":
+                {
+                    uint ac, dc;
+                    if (!EtatOrigine.LitAlim(origine.Valeur, out ac, out dc))
+                        throw new FormatException("Valeur d'alimentation illisible : " + origine.Valeur);
+                    string ids = origine.Cible + " " + origine.Nom + " ";
+                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setacvalueindex SCHEME_CURRENT " + ids + ac.ToString(CultureInfo.InvariantCulture),
+                        "Rétablissement alimentation (secteur)");
+                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setdcvalueindex SCHEME_CURRENT " + ids + dc.ToString(CultureInfo.InvariantCulture),
+                        "Rétablissement alimentation (batterie)");
+                    Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/setactive SCHEME_CURRENT", "Application du plan");
+                    return;
+                }
+                case "service":
+                {
+                    int start; bool differe, enMarche;
+                    if (!EtatOrigine.LitService(origine.Valeur, out start, out differe, out enMarche))
+                        throw new FormatException("Valeur de service illisible : " + origine.Valeur);
+                    if (start == -1) return;   // absent à l'origine : rien à remettre
+                    string type = EtatOrigine.TypeDemarrage(start, differe);
+                    if (type == null)
+                        throw new NotSupportedException("Démarrage " + start + " du service " + origine.Cible
+                            + " (pilote boot/system) non restaurable par sc config.");
+                    Sys.ConfigureService(origine.Cible, type, !enMarche, enMarche);
+                    return;
+                }
+                case "tache":
+                {
+                    if (origine.Valeur != "active" && origine.Valeur != "inactive") return;   // inconnue : jamais notée
+                    bool active = origine.Valeur == "active";
+                    Sys.SetScheduledTask(origine.Cible, active);
+                    // schtasks /change ne lève pas : on relit pour qu'un refus garde le journal intact.
+                    if (Sys.ScheduledTaskDisabled(origine.Cible) == active)
+                        throw new InvalidOperationException("Tâche " + origine.Cible + " : " + (active ? "réactivation" : "désactivation") + " refusée.");
+                    return;
+                }
                 default:
                     throw new NotSupportedException("Genre non pris en charge : " + origine.Genre);
             }

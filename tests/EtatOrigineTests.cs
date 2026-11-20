@@ -77,6 +77,21 @@ namespace BTOptimizer.Tests
             string sortie = "  Paramètre minimal possible : 0x00000000\r\n  Paramètre maximal possible : 0x00000064\r\n  Index AC actuel : 0x00000064\r\n  Index DC actuel : 0x0000000a\r\n";
             Banc.Egal("powercfg : AC et DC", "100;10", string.Join(";", EtatOrigine.LitPowercfg(sortie)));
             Banc.Verifie("powercfg : sortie vide", true, EtatOrigine.LitPowercfg("") == null);
+            // Valeurs alim et service
+            Banc.Egal("alim : encodage décimal", "100;10", EtatOrigine.ValeurAlim(100, 10));
+            Banc.Egal("alim : 0xFFFFFFFF non signé", "4294967295;0", EtatOrigine.ValeurAlim(-1, 0));
+            Banc.Verifie("alim : relecture", true, EtatOrigine.LitAlim("4294967295;10", out var ac, out var dc) && ac == 4294967295u && dc == 10u);
+            Banc.Verifie("alim : texte mal formé refusé", false, EtatOrigine.LitAlim("100", out _, out _) || EtatOrigine.LitAlim("-1;2", out _, out _) || EtatOrigine.LitAlim(null, out _, out _));
+            Banc.Egal("service : encodage", "2;1;0", EtatOrigine.ValeurService(2, true, false));
+            Banc.Egal("service : absent", "-1;0;0", EtatOrigine.ValeurService(-1, false, false));
+            Banc.Verifie("service : relecture", true, EtatOrigine.LitService("4;0;1", out var st, out var dif, out var run) && st == 4 && !dif && run);
+            Banc.Verifie("service : relecture de l'absent", true, EtatOrigine.LitService("-1;0;0", out st, out _, out _) && st == -1);
+            Banc.Verifie("service : texte mal formé refusé", false, EtatOrigine.LitService("2;1", out _, out _, out _) || EtatOrigine.LitService("2;x;0", out _, out _, out _) || EtatOrigine.LitService(null, out _, out _, out _));
+            Banc.Egal("sc : automatique différé", "delayed-auto", EtatOrigine.TypeDemarrage(2, true));
+            Banc.Egal("sc : automatique", "auto", EtatOrigine.TypeDemarrage(2, false));
+            Banc.Egal("sc : manuel", "demand", EtatOrigine.TypeDemarrage(3, true));
+            Banc.Egal("sc : désactivé", "disabled", EtatOrigine.TypeDemarrage(4, false));
+            Banc.Verifie("sc : boot, system et absent non restaurables", true, EtatOrigine.TypeDemarrage(0, false) == null && EtatOrigine.TypeDemarrage(1, false) == null && EtatOrigine.TypeDemarrage(-1, false) == null);
         }
     }
 }
