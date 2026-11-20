@@ -113,12 +113,25 @@ namespace BTOptimizer
             if (string.IsNullOrWhiteSpace(json)) return new Journal();
             try
             {
-                return JsonSerializer.Deserialize<Journal>(json, Options) ?? new Journal { Corrompu = true };
+                var j = JsonSerializer.Deserialize<Journal>(json, Options);
+                return j == null ? new Journal { Corrompu = true } : Normalise(j);
             }
             catch (Exception)
             {
                 return new Journal { Corrompu = true };
             }
+        }
+
+        /// <summary>JSON valide mais collections nulles ou éléments nuls : le code appelant ne voit jamais de null.</summary>
+        private static Journal Normalise(Journal j)
+        {
+            j.Entrees = (j.Entrees ?? new List<Entree>()).FindAll(e => e != null);
+            foreach (var e in j.Entrees)
+            {
+                e.NonCouvert = e.NonCouvert ?? new List<string>();
+                e.Items = (e.Items ?? new List<Item>()).FindAll(i => i != null);
+            }
+            return j;
         }
 
         public static string Ecrire(Journal j)

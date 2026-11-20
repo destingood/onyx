@@ -24,6 +24,17 @@ namespace BTOptimizer.Tests
             Banc.Verifie("relecture : non corrompu", false, relu.Corrompu);
             Banc.Verifie("texte vide = journal vide, non corrompu", true, EtatOrigine.Lire("").Entrees.Count == 0 && !EtatOrigine.Lire("").Corrompu);
             Banc.Verifie("texte illisible = journal vide marqué corrompu", true, EtatOrigine.Lire("{tronqu").Corrompu);
+            // JSON valide mais collections nulles : normalisé, jamais de null pour le code appelant
+            var n1 = EtatOrigine.Lire("{\"Entrees\":null}");
+            Banc.Verifie("Entrees null = liste vide, non corrompu", true, n1.Entrees != null && n1.Entrees.Count == 0 && !n1.Corrompu);
+            var n2 = EtatOrigine.Lire("{\"Entrees\":[{\"Items\":null,\"NonCouvert\":null}]}");
+            Banc.Verifie("Items et NonCouvert null = listes vides", true,
+                n2.Entrees.Count == 1 && n2.Entrees[0].Items != null && n2.Entrees[0].Items.Count == 0
+                && n2.Entrees[0].NonCouvert != null && n2.Entrees[0].NonCouvert.Count == 0 && !n2.Corrompu);
+            var n3 = EtatOrigine.Lire("{\"Entrees\":[null]}");
+            Banc.Verifie("entrée null écartée", true, n3.Entrees.Count == 0 && !n3.Corrompu);
+            var n4 = EtatOrigine.Lire("{\"Entrees\":[{\"Id\":\"x\",\"Items\":[null]}]}");
+            Banc.Verifie("item null écarté, entrée gardée", true, n4.Entrees.Count == 1 && n4.Entrees[0].Id == "x" && n4.Entrees[0].Items.Count == 0);
             Banc.Verifie("identité insensible à la casse", true,
                 EtatOrigine.Identite(new EtatOrigine.Item { Genre = "reg", Cible = "HKEY_LOCAL_MACHINE\\A", Nom = "x" })
              == EtatOrigine.Identite(new EtatOrigine.Item { Genre = "reg", Cible = "hkey_local_machine\\a", Nom = "X" }));
