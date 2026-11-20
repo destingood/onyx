@@ -69,12 +69,17 @@ namespace BTOptimizer
                 || (t.Category != null && t.Category.ToLowerInvariant().Contains(_query));
         }
 
-        private Button _bCompet, _bProve, _bAuto, _bReco, _bEsport, _bReset;
+        private Button _bCompet, _bProve, _bAuto, _bReco, _bSur, _bEsport, _bReset;
+        private readonly ToolTip _tip = new ToolTip { AutoPopDelay = 15000, InitialDelay = 300 };
 
         private void BuildPresets()
         {
             _bReco = FpsUi.GoldButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
             _bReco.Click += (s, e) => Batch(t => t.Recommended, true, "Recommandé");
+            // « Sûr » : seulement ce qui s'annule à l'identique, sans effet de bord, au gain mesuré ou sans enjeu de performance.
+            _bSur = FpsUi.GhostButton("Sûr"); _bSur.Height = 30; _bSur.Width = 70; _bSur.ForeColor = FpsUi.Gold;
+            _bSur.Click += (s, e) => Batch(t => t.Sur, true, "Sûr — annulable à l'identique");
+            _tip.SetToolTip(_bSur, "Seulement des réglages sans effet de bord, annulables à l'identique, au gain mesuré ou sans enjeu de performance.");
             _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Gold;
             _bEsport.Click += (s, e) => Batch(t => t.Esport, true, "eSport");
             _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
@@ -97,7 +102,7 @@ namespace BTOptimizer
                 try { AppStats.Invalidate(); } catch { }
                 RefreshStatesAsync();
             };
-            Controls.Add(_bCompet); Controls.Add(_bProve); Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bEsport); Controls.Add(_bReset);
+            Controls.Add(_bCompet); Controls.Add(_bProve); Controls.Add(_bAuto); Controls.Add(_bReco); Controls.Add(_bSur); Controls.Add(_bEsport); Controls.Add(_bReset);
         }
 
         // Auto-tune : détecte le matériel et applique la sélection adaptée (niveau équilibré).
@@ -120,12 +125,12 @@ namespace BTOptimizer
             if (list.Count == 0) return;
             if (MessageBox.Show(FindForm(), (apply ? "Appliquer" : "Rétablir") + " " + list.Count + " optimisation(s) — " + label + " ?",
                 "ONYX", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
-            _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
+            _bAuto.Enabled = _bReco.Enabled = _bSur.Enabled = _bEsport.Enabled = _bReset.Enabled = false;
             Task.Run(() =>
             {
                 try { Engine.Run(list, apply, apply, false, Host.Log); } catch { }  // backup .reg oui, point de restauration non (trop lent)
                 try { AppStats.Invalidate(); } catch { }  // l'état opti a changé : dashboard/collection recalculeront
-                try { BeginInvoke((Action)(() => { _bAuto.Enabled = _bReco.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
+                try { BeginInvoke((Action)(() => { _bAuto.Enabled = _bReco.Enabled = _bSur.Enabled = _bEsport.Enabled = _bReset.Enabled = true; RefreshStatesAsync(); })); } catch { }
             });
         }
 
@@ -273,9 +278,10 @@ namespace BTOptimizer
                 _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
                 _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
                 _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
+                _bSur.Location = new Point(rx - _bSur.Width, 22); rx -= _bSur.Width + 8;
                 _bAuto.Location = new Point(rx - _bAuto.Width, 22); rx -= _bAuto.Width + 8;
                 _bProve.Location = new Point(rx - _bProve.Width, 22); rx -= _bProve.Width + 8;
-                // Six boutons et la recherche ne tiennent pas tous sur la ligne du titre
+                // Sept boutons et la recherche ne tiennent pas tous sur la ligne du titre
                 // (« OPTIMISATIONS », x = 34) : ce qui déborde passe sur une deuxième ligne, alignée
                 // à droite (y = 58, avant les filtres à y = 90) — d'abord la recherche, puis
                 // Compétition. FinTitre : marge sûre après le titre.

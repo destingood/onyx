@@ -62,6 +62,8 @@
     <Compile Include="..\src\ConstatsMateriel.cs" />
     <Compile Include="..\src\ProblemesConnus.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />
+    <!-- Modèle du catalogue (Tweak, Cat, Risque, NiveauPreuve) : la règle « Sûr » se teste sur le vrai type. -->
+    <Compile Include="..\src\Model.cs" />
   </ItemGroup>
 
   <ItemGroup>

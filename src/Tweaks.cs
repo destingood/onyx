@@ -66,6 +66,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "mouse_accel", Category = Cat.Souris, Recommended = true, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver l'accélération de la souris (précision du pointeur)",
                 Desc = "Déplacement 1:1 de la souris, indispensable pour la visée. Ne touche pas au curseur de vitesse. Effet immédiat.",
                 BackupKeys = new[] { @"HKCU\Control Panel\Mouse" },
@@ -145,6 +146,7 @@ namespace BTOptimizer
                 // Restent les interruptions de MINUTEUR, qui sont la majorité sur une machine au
                 // minuteur fin — 53 % du total mesuré. Elles se répartissent par un autre chemin.
                 Id = "distribuer_minuteurs", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Répartir l'expiration des minuteurs sur tous les cœurs",
                 Desc = "Les deux réglages de répartition d'interruptions ne touchent que les PÉRIPHÉRIQUES. "
                      + "Or sur une machine au minuteur fin, ce sont les MINUTEURS qui dominent : mesuré à "
@@ -171,6 +173,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "irq_priorite_gpu", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Servir les interruptions de la carte graphique en priorité",
                 Desc = "Répartir les interruptions dit à Windows OÙ les traiter ; ce réglage-ci dit QUAND, "
                      + "lorsque plusieurs se présentent en même temps. La carte graphique passe en tête de file : "
@@ -195,6 +198,8 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "audio_msi", Category = Cat.Audio, Reboot = true,
+                Risque = Risque.Fonction,
+                Preuve = NiveauPreuve.Mesure,
                 Name = "⚠ Interruptions audio par message (MSI) — RISQUE de perte de son",
                 Desc = "Fait passer les contrôleurs audio des interruptions par ligne (ancien mécanisme, qui se "
                      + "concentre sur le cœur 0) aux interruptions par message. Gain de latence supérieur à la simple "
@@ -218,6 +223,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "gpu_kboost", Category = Cat.Gpu,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "⚡ Verrouiller les fréquences GPU au maximum (façon K-Boost)",
                 Desc = "Empêche la carte de faire redescendre sa fréquence entre deux scènes : plus de montées ni de "
                      + "descentes, donc des creux d'images plus réguliers. Ce n'est PAS un gain de FPS moyen — une "
@@ -240,6 +246,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "mouse_pointer_speed", Category = Cat.Souris, Recommended = true, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Vitesse du pointeur au 6ᵉ cran (rapport 1:1, sans perte de pixels)",
                 Desc = "Met le curseur de vitesse de la souris exactement au milieu (valeur 10). C'est le seul cran où "
                      + "Windows ne multiplie pas ton déplacement : au-dessus il saute des pixels, en dessous il en duplique. "
@@ -340,6 +347,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "power_ultimate", Category = Cat.Alim, Recommended = !X3DDeuxCcd.Value, Esport = !X3DDeuxCcd.Value,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Activer le plan d'alimentation Performances ultimes",
                 Desc = "Supprime les économies d'énergie qui endorment le CPU (latence de réveil des coeurs). Le plan est créé s'il n'existe pas." + (X3DDeuxCcd.Value ? NoteX3D : ""),
                 Apply = () => Sys.EnableUltimatePlan(),
@@ -361,6 +369,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "usb_suspend", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la suspension sélective USB (plan actif)",
                 Desc = "Évite que la souris/le clavier USB soient mis en veille par Windows. À appliquer après le plan Performances ultimes.",
                 Apply = () => Sys.SetUsbSuspend(true),
@@ -371,6 +380,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "hibernate_off", Category = Cat.Stockage,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la veille prolongée (libère hiberfil.sys)",
                 Desc = "Supprime l'hibernation ET le démarrage rapide : libère plusieurs Go sur le disque, arrêts 100 % « propres ». Optionnel.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("powercfg.exe"), "/hibernate off", "Désactivation de la veille prolongée"),
@@ -381,6 +391,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "pcie_aspm_off", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver l'économie d'énergie PCI Express (ASPM)",
                 Desc = "Les liens PCIe (GPU, SSD NVMe, carte réseau) restent à pleine vitesse au lieu de se rendormir : supprime des micro-latences de réveil. « Rétablir » remet le niveau Modéré.",
                 Apply = () => Sys.SetPowerValue("501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b-b6da-e5fa1a576df5", 0, 0),
@@ -408,6 +419,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "nv_latency_profile", Category = Cat.Gpu, Recommended = true, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Profil pilote NVIDIA à faible latence (adapté à ta machine)",
                 Desc = "Réduit la latence côté pilote sans assécher la file de rendu : « Mode faible latence = Activé » "
                      + "et images pré-rendues laissées au jeu. Le mode « Ultra » n'est retenu QUE si la mesure « qui me "
@@ -445,6 +457,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "fso_disable", Category = Cat.Gpu, Recommended = true, Esport = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Désactiver les optimisations plein écran (vrai plein écran exclusif)",
                 Desc = "Force le comportement plein écran classique : moins de latence de présentation dans les jeux plein écran.",
                 BackupKeys = new[] { @"HKCU\System\GameConfigStore" },
@@ -487,6 +500,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "gamedvr_off", Category = Cat.Gpu, Recommended = !X3DDeuxCcd.Value, Esport = !X3DDeuxCcd.Value,
+                Risque = Risque.Fonction,
                 Name = "Désactiver Game DVR / captures Xbox Game Bar",
                 Desc = "Supprime l'enregistrement d'écran en arrière-plan (source classique de stutter et de latence)." + (X3DDeuxCcd.Value ? NoteX3DGameBar : ""),
                 BackupKeys = new[] { @"HKCU\System\GameConfigStore",
@@ -524,6 +538,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "gamebar_popup", Category = Cat.Gpu, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'ouverture de la Xbox Game Bar (Win+G / bouton manette)",
                 Desc = "La Game Bar ne s'ouvre plus par-dessus le jeu (touche Win+G ou bouton Xbox de la manette).",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\GameBar" },
@@ -543,6 +558,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "windowed_flip", Category = Cat.Gpu, Esport = true,
+                Preuve = NiveauPreuve.Mesure,
                 Name = "Optimisations pour les jeux en fenêtré (modèle flip, Windows 11)",
                 Desc = "Active le nouveau modèle de présentation pour les jeux en fenêtré/borderless : latence proche du plein écran exclusif. Sans effet sur Windows 10.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\DirectX\UserGpuPreferences" },
@@ -555,6 +571,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "sysresp", Category = Cat.Systeme, Recommended = true, Esport = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "SystemResponsiveness = 10 (priorité aux applications)",
                 Desc = "Réserve moins de CPU aux tâches multimédia de fond (20 % par défaut, 10 % ici). Effet non démontré en jeu : ne joue que sur les fils inscrits au service multimédia (MMCSS). À garder si ta mesure avant/après le confirme.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" },
@@ -566,6 +583,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "w32ps", Category = Cat.Systeme, Esport = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Win32PrioritySeparation = 38 (quanta courts, priorité premier plan)",
                 Desc = "Le planificateur CPU réagit plus vite pour l'application au premier plan. Valeur prisée des joueurs (défaut Windows : 2).",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" },
@@ -600,6 +618,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "netthrottle", Category = Cat.Systeme, Esport = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Désactiver le NetworkThrottlingIndex (bridage réseau multimédia)",
                 Desc = "Supprime la limite de paquets réseau traités par milliseconde pendant la lecture multimédia. Effet non démontré sur le ping : la limite ne s'applique que pendant une lecture multimédia. À garder si ta mesure avant/après le confirme.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" },
@@ -616,6 +635,7 @@ namespace BTOptimizer
                 // — il AUGMENTE les interruptions de 40 % sur une machine 16 threads, alors que le
                 // préréglage eSport est censé réduire la latence. Il reste offert et explicité.
                 Id = "dynamic_tick", Category = Cat.Systeme, Reboot = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le tick dynamique du noyau (bcdedit) — EXPÉRIMENTAL",
                 Desc = "Timer noyau à cadence fixe : chaque cœur reçoit un tick régulier au lieu de rester silencieux quand il est inactif. Peut lisser la latence sur certaines machines. LE COÛT EST MESURABLE ET IL EST GROS : sur une machine 16 threads avec un minuteur à 0,5 ms, forcer le tick constant fait passer les interruptions de ~34 000 à ~48 000 par seconde, soit +40 %. Chacune préempte le cœur où elle tombe. Si ton objectif est de RÉDUIRE les préemptions, laisse ce réglage éteint : il fait l'inverse. Il ne se justifie que si tu constates, mesure à l'appui, une latence plus régulière avec. À tester, réversible.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("bcdedit.exe"), "/set disabledynamictick yes", "bcdedit disabledynamictick"),
@@ -636,6 +656,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "timer_global", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Timer haute résolution GLOBAL (Windows 11)",
                 Desc = "Depuis Windows 10 2004, une demande de minuteur fin ne s'applique QU'AU PROCESSUS qui la fait. Ce réglage restaure l'ancien comportement : la demande la plus fine s'impose à toute la machine. LE COÛT, MESURÉ : un seul logiciel demandant 0,5 ms fait ticker tous les cœurs actifs à 2 000 Hz. Sur une machine 16 threads, cela représentait 18 000 interruptions par seconde, soit 53 % de TOUTES les interruptions de la machine — plus que la carte graphique, le réseau et le stockage réunis. En échange, l'ordonnanceur est plus réactif partout, pas seulement dans le jeu. C'est un arbitrage, pas une évidence : mesure les deux avant de trancher. Complète la case « Timer 1 ms » de cette app.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" },
@@ -658,6 +679,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "hpet_cleanup", Category = Cat.Systeme, Esport = true, Reboot = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Nettoyage : retirer useplatformclock / useplatformtick (HPET forcé)",
                 Desc = "D'anciens guides forçaient l'HPET, ce qui DÉGRADE la latence sur les PC modernes. Ce nettoyage supprime ces réglages s'ils existent. « Rétablir » n'a rien à faire : leur absence EST le défaut Windows.",
                 Apply = () =>
@@ -736,6 +758,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "fastboot_off", Category = Cat.Rapidite, Reboot = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le démarrage rapide (Fast Startup)",
                 Desc = "Le démarrage rapide peut laisser pilotes/services dans un état dégradé au fil des arrêts. Boot un peu plus long mais plus « propre ». Optionnel.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" },
@@ -787,6 +810,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "widgets_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les Widgets (Windows 11) / Actualités (Windows 10)",
                 Desc = "Supprime le processus Widgets/Actualités qui tourne en permanence en arrière-plan. Plein effet à la prochaine session.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Dsh" },
@@ -798,6 +822,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "search_bing_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Recherche du menu Démarrer 100 % locale (sans Bing)",
                 Desc = "Le menu Démarrer ne consulte plus le web à chaque frappe : résultats instantanés et moins de réseau en fond.",
                 BackupKeys = new[] { @"HKCU\Software\Policies\Microsoft\Windows\Explorer" },
@@ -809,6 +834,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "fast_shutdown", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Arrêt / redémarrage du PC plus rapide",
                 Desc = "Réduit le délai d'attente des services à l'arrêt (5 s -> 2 s) et ferme automatiquement les applications qui bloquent. (Valeur d'origine : 5000, rétablie par le bouton Rétablir.)",
                 BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
@@ -842,6 +868,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "ntfs_memoryusage", Category = Cat.Rapidite, Reboot = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Augmenter le cache NTFS (NtfsMemoryUsage = 2)",
                 Desc = "Windows garde plus de métadonnées de fichiers en RAM : navigation disque plus rapide. Conseillé avec 16 Go de RAM ou plus.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" },
@@ -853,6 +880,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "ntfs_83_off", Category = Cat.Rapidite,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver les noms courts 8.3 (NTFS)",
                 Desc = "Supprime la génération des noms de fichiers hérités du DOS : créations/listages plus rapides dans les gros dossiers. Seuls de très vieux logiciels 16 bits en dépendent.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" },
@@ -865,6 +893,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "bg_apps", Category = Cat.Services, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les applications en arrière-plan (UWP)",
                 Desc = "Empêche les applications du Store de tourner en fond. Peut retarder certaines notifications d'applis du Store. Si un jeu Store/Game Pass a une boutique qui charge à l'infini, rétablis ce réglage (ou menu ☰ → Boutiques en jeu).",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" },
@@ -876,6 +905,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "sysmain_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver SysMain / Superfetch (recommandé seulement sur SSD)",
                 Desc = "Supprime le préchargement en fond. Sur SSD : libère CPU/disque. Sur disque dur mécanique : à ÉVITER (ralentit les chargements).",
                 Apply = () => Sys.ConfigureService("SysMain", "disabled", true, false),
@@ -886,6 +916,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "diagtrack_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la télémétrie (service DiagTrack)",
                 Desc = "Arrête le service « Expériences utilisateur connectées et télémétrie » : moins d'activité disque/réseau en fond.",
                 Apply = () => Sys.ConfigureService("DiagTrack", "disabled", true, false),
@@ -896,6 +927,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wsearch_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'indexation de la recherche (service Windows Search)",
                 Desc = "Supprime l'activité disque/CPU de l'indexeur. CONTREPARTIE : la recherche de fichiers dans l'Explorateur devient lente. À réserver aux PC 100 % jeu.",
                 Apply = () => Sys.ConfigureService("WSearch", "disabled", true, false),
@@ -954,6 +986,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "nagle", Category = Cat.Reseau, Esport = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Désactiver l'algorithme de Nagle (TcpAckFrequency / TCPNoDelay)",
                 Desc = "Envoi TCP immédiat sans regroupement de paquets : utile pour les jeux en ligne TCP. Sans effet sur les jeux en UDP.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" },
@@ -965,6 +998,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "rsc_off", Category = Cat.Reseau, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la coalescence de segments réseau (RSC)",
                 Desc = "Les paquets reçus sont traités immédiatement au lieu d'être regroupés : latence réseau réduite de quelques ms, léger surcoût CPU.",
                 Apply = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set global rsc=disabled", "Désactivation du RSC"),
@@ -992,6 +1026,8 @@ namespace BTOptimizer
                 // automatique reviendrait à parier sur l'écran de l'utilisateur, et à faire perdre
                 // des images à la moitié d'entre eux. Il reste offert, expliqué, et choisi.
                 Id = "frame_cap", Category = Cat.Gpu,
+                Risque = Risque.AnnulationNonGarantie,
+                Preuve = NiveauPreuve.Mesure,
                 Name = "Plafonner les images juste sous la fréquence de l'écran",
                 Desc = "La réponse SANS INJECTION au problème que résout le « Scanline Sync » de RTSS. Sur un écran à fréquence variable (G-Sync / FreeSync), la recette de référence est de garder la synchronisation adaptative ACTIVE et de plafonner les images juste en dessous de la fréquence maximale : le plafond empêche le jeu d'atteindre le haut de la plage, là où l'écran retombe en V-Sync classique et où la latence saute d'un coup. Image sans déchirure, et sans l'attente de la V-Sync. Le plafond est calculé pour TON écran (fréquence moins Hz²/3600 — la règle qui redonne 138 à 144 Hz et 224 à 240 Hz) et posé par le pilote lui-même, sans rien injecter dans le jeu. À SAVOIR : sur un écran SANS fréquence variable, le plafond régularise les images mais ne supprime pas la déchirure. « Rétablir » rend la main au pilote.",
                 Apply  = () => FrameCap.Applique(FrameCap.Recommande(FrameCap.FrequenceEcran()), null),
@@ -1012,6 +1048,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "qos_dscp_jeux", Category = Cat.Reseau, Recommended = true, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Marquer les paquets de tes jeux comme prioritaires (DSCP 46)",
                 Desc = "Pose la marque « urgent » (Expedited Forwarding) sur les paquets sortants de tes jeux INSTALLÉS — pas sur tous les programmes. C'est la différence qui compte : la recette qui circule vise « *.exe », donc navigateur et téléchargements compris, et une priorité que tout le monde a n'est plus une priorité. ONYX écrit aussi le réglage documenté par Microsoft sans lequel Windows ignore purement et simplement ces politiques hors réseau d'entreprise — l'oubli qui rend la manœuvre inerte chez soi. HONNÊTETÉ : la marque est une demande, pas un ordre. Beaucoup de box l'ignorent et les opérateurs la réécrivent souvent en sortie. Le gain est réel sur un routeur qui en tient compte, nul ailleurs, jamais négatif — et ça ne remplace pas un routeur qui gère sa file d'attente (SQM). Effet au redémarrage. « Rétablir » retire les politiques d'ONYX, et elles seules.",
                 Reboot = true,
@@ -1096,6 +1133,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "hung_timeout", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Fermer plus vite les applications qui ne répondent pas",
                 Desc = "Réduit les délais avant que Windows considère une appli figée (HungAppTimeout, WaitToKillAppTimeout). Récupération plus rapide en cas de blocage.",
                 BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
@@ -1140,6 +1178,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "reserved_storage_off", Category = Cat.Stockage,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Libérer le stockage réservé de Windows (~7 Go)",
                 Desc = "Windows garde en permanence plusieurs Go rien que pour ses mises à jour. Commande OFFICIELLE (DISM), réversible. Le gain apparaît après un redémarrage.",
                 Reboot = true,
@@ -1179,6 +1218,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wu_reboot_off", Category = Cat.Systeme,
+                Risque = Risque.Securite,
                 Name = "Empêcher le redémarrage auto de Windows Update en session",
                 Desc = "Windows ne redémarre plus tout seul pour les mises à jour tant qu'un utilisateur est connecté (fini le reboot en pleine partie).",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" },
@@ -1190,6 +1230,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "ceip_off", Category = Cat.Privacy, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le programme d'amélioration (CEIP) et ses tâches",
                 Desc = "Coupe la collecte « expérience utilisateur » et ses tâches planifiées en arrière-plan.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\SQMClient\Windows" },
@@ -1213,6 +1254,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "app_tracking_off", Category = Cat.Privacy, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Ne plus suivre les applications lancées",
                 Desc = "Windows n'enregistre plus quelles applis tu ouvres pour « personnaliser » Démarrer. Menu Démarrer plus léger.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
@@ -1334,6 +1376,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wu_driver_exclude", Category = Cat.Systeme, Esport = true,
+                Risque = Risque.Securite,
                 Name = "Empêcher Windows Update de remplacer tes pilotes",
                 Desc = "Windows Update n'installe plus de pilotes (GPU, etc.) par-dessus les tiens : fini les régressions de pilote NVIDIA/AMD après une mise à jour.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" },
@@ -1387,6 +1430,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "audio_bt_absolute_volume_off", Category = Cat.Audio, Reboot = true,
+                Risque = Risque.Fonction,
                 Name = "Bluetooth : désactiver le « volume absolu » (contrôle fin du casque)",
                 Desc = "Sépare le volume Windows de celui du casque Bluetooth. Utile si ton casque BT saute directement de trop bas à trop fort, ou si le réglage est trop grossier. Sans effet si tu n'utilises pas d'audio Bluetooth.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Bluetooth\Audio\AVRCP\CT" },
@@ -1420,6 +1464,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "quick_access_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Explorateur : ne plus lister les fichiers récents/fréquents",
                 Desc = "Accès rapide plus léger et plus privé : Windows n'affiche/n'enregistre plus les fichiers et dossiers récemment ouverts.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" },
@@ -1439,6 +1484,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "auto_maintenance_off", Category = Cat.Systeme,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la maintenance automatique de Windows",
                 Desc = "Windows ne lance plus ses tâches de maintenance (défrag, analyses…) en arrière-plan de façon imprévisible. À relancer manuellement au besoin.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" },
@@ -1479,6 +1525,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "proc_min_100", Category = Cat.Alim,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "État minimal du processeur à 100 % (pas de sous-cadençage)",
                 Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 100),
@@ -1489,6 +1536,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cpu_idle_disable", Category = Cat.Alim,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver les états de repos du CPU (C-States) — EXPÉRIMENTAL",
                 Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
@@ -1503,6 +1551,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cpu_boost_aggressive", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Turbo boost CPU en mode Agressif (montée immédiate en fréquence)",
                 Desc = "Windows demande d'emblée le boost maximal du CPU dès qu'une charge arrive, au lieu d'une montée progressive économe : fréquences turbo tenues plus tôt et plus souvent en jeu. « Rétablir » remet le mode efficace de Windows.",
                 Apply  = () => Sys.SetPowerValue(SubProc, PerfBoostMode, 2, 2),
@@ -1513,6 +1562,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cpu_unpark_cores", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Déparquer tous les cœurs CPU (core parking off)",
                 Desc = "Tous les cœurs restent actifs au lieu d'être « garés » puis réveillés à la demande : supprime la latence de réveil des cœurs sous charge irrégulière (typique des jeux). « Rétablir » remet la valeur d'origine de Windows (10 %).",
                 Apply  = () => Sys.SetPowerValue(SubProc, CpMinCores, 100, 100),
@@ -1524,6 +1574,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "gpu_msi", Category = Cat.Gpu, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.DependDuPc,
                 Name = "Activer le MSI mode sur le GPU (interruptions par message)",
                 Desc = "Le GPU utilise des interruptions modernes (MSI) au lieu des IRQ à ligne : réduit la latence et le stutter d'interruption. Standard sur GPU récents. « Rétablir » remet le défaut du pilote.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
@@ -1536,6 +1587,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "spectre_off", Category = Cat.Systeme, Reboot = true,
+                Risque = Risque.Securite,
                 Name = "Désactiver les mitigations Spectre/Meltdown — EXPÉRIMENTAL / SÉCURITÉ",
                 Desc = "Gros gain CPU sur les processeurs anciens (ex : 9900K), MAIS réduit la protection contre les failles Spectre/Meltdown. À n'activer qu'en connaissance de cause. Entièrement réversible.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" },
@@ -1555,6 +1607,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "vbs_off", Category = Cat.Systeme, Reboot = true,
+                Risque = Risque.Securite,
                 Name = "Désactiver VBS / Intégrité de la mémoire (HVCI) — SÉCURITÉ",
                 Desc = "La sécurité basée sur la virtualisation coûte des performances en jeu (elle génère des DPC hyperviseur, visibles dans l'analyse de latence). La désactiver les récupère, au prix d'une protection noyau réduite. Réversible.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" },
@@ -1601,6 +1654,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "lastaccess_off", Category = Cat.Systeme,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver l'horodatage « dernier accès » NTFS",
                 Desc = "Windows n'écrit plus la date de dernier accès à chaque lecture de fichier : moins d'écritures disque. « Rétablir » remet le mode géré par le système.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" },
@@ -1639,6 +1693,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "activity_history_off", Category = Cat.Privacy, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'historique d'activité / Timeline",
                 Desc = "Windows n'enregistre ni n'envoie plus l'historique de tes activités.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
@@ -1660,6 +1715,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "location_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service de localisation",
                 Desc = "Bloque l'accès à la localisation pour le système et les applications.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" },
@@ -1682,6 +1738,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cortana_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver Cortana",
                 Desc = "Désactive l'assistant Cortana au niveau stratégie.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" },
@@ -1694,6 +1751,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "xbox_services_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les services Xbox (si tu ne joues pas à des jeux Xbox/PC Game Pass)",
                 Desc = "Arrête les services Xbox Live/Game Save. À ÉVITER si tu utilises le Game Pass ou des jeux du Microsoft Store. Réversible.",
                 Apply = () =>
@@ -1716,6 +1774,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "mapsbroker_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service des cartes hors ligne (MapsBroker)",
                 Desc = "Coupe le téléchargement/mise à jour des cartes hors ligne en arrière-plan. Sans effet si tu n'utilises pas l'appli Cartes.",
                 Apply  = () => Sys.ConfigureService("MapsBroker", "disabled", true, false),
@@ -1726,6 +1785,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "remote_registry_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le Registre à distance (surface d'attaque)",
                 Desc = "Empêche la modification du registre depuis le réseau. Recommandé pour un PC personnel.",
                 Apply  = () => Sys.ConfigureService("RemoteRegistry", "disabled", true, false),
@@ -1770,6 +1830,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "online_speech_off", Category = Cat.Privacy, Recommended = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la reconnaissance vocale en ligne",
                 Desc = "Empêche l'envoi de ta voix aux services cloud Microsoft pour la reconnaissance vocale. La dictée hors-ligne reste possible. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy" },
@@ -1804,6 +1865,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "recent_docs_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Ne pas mémoriser les documents/fichiers récents",
                 Desc = "Empêche Windows de tenir l'historique des fichiers récemment ouverts (Explorateur, menu Démarrer). « Rétablir » réactive l'historique.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" },
@@ -1815,6 +1877,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "store_auto_update_off", Category = Cat.Services,
+                Risque = Risque.Securite,
                 Name = "Désactiver les mises à jour automatiques du Microsoft Store",
                 Desc = "Le Store ne télécharge plus les apps en arrière-plan (moins d'E/S disque et réseau surprises). Tu peux toujours mettre à jour à la main. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\WindowsStore" },
@@ -1837,6 +1900,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "spooler_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le spouleur d'impression (si aucune imprimante)",
                 Desc = "Arrête le service d'impression : moins de fond et surface d'attaque réduite. À N'ACTIVER QUE si tu n'imprimes pas. « Rétablir » relance l'impression.",
                 Apply  = () => Sys.ConfigureService("Spooler", "disabled", true, false),
@@ -1847,6 +1911,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "tablet_service_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service clavier tactile / manuscrit (PC sans tactile)",
                 Desc = "Arrête TabletInputService (clavier tactile, saisie manuscrite), inutile sur un PC de bureau sans écran tactile. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("TabletInputService", "disabled", true, false),
@@ -1861,6 +1926,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "disk_timeout_off", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Ne jamais mettre les disques en veille (pas de micro-freeze au réveil)",
                 Desc = "Empêche l'arrêt automatique des disques : supprime le petit gel quand un disque « se réveille ». « Rétablir » remet 20 min (défaut).",
                 Apply  = () => Sys.SetPowerValue(SubDisk, DiskIdle, 0, 0),
@@ -1871,6 +1937,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "llmnr_off", Category = Cat.Reseau, Recommended = true,
+                Risque = Risque.Securite,
                 Name = "Désactiver LLMNR (résolution multicast) — sécurité + latence",
                 Desc = "Coupe la résolution de noms multicast LLMNR : réduit une surface d'attaque connue et évite des requêtes réseau inutiles. Le DNS classique reste intact. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" },
@@ -1904,6 +1971,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "low_disk_warning_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'avertissement « disque presque plein »",
                 Desc = "Supprime la bulle d'avertissement d'espace disque faible. « Rétablir » la réactive.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" },
@@ -1926,6 +1994,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "find_my_device_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver « Localiser mon appareil »",
                 Desc = "Windows ne synchronise plus la position de l'appareil pour la localisation à distance. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Settings\FindMyDevice" },
@@ -1937,6 +2006,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wersvc_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le service Rapport d'erreurs Windows (WerSvc)",
                 Desc = "Arrête l'envoi automatique des rapports de plantage à Microsoft (moins de fond). « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("WerSvc", "disabled", true, false),
@@ -1947,6 +2017,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "retail_demo_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le service Mode Démo magasin (RetailDemo)",
                 Desc = "Coupe un service destiné aux PC de démonstration en magasin, inutile sur un PC personnel. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("RetailDemo", "disabled", true, false),
@@ -1981,6 +2052,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "auto_end_tasks", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Fermer automatiquement les applis figées à l'arrêt (arrêt plus rapide)",
                 Desc = "À l'extinction/redémarrage, Windows ne bloque plus sur une appli qui ne répond pas : il la ferme tout seul. « Rétablir » remet la demande de confirmation.",
                 BackupKeys = new[] { @"HKCU\Control Panel\Desktop" },
@@ -2003,6 +2075,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "voice_activation_off", Category = Cat.Privacy, Recommended = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'activation vocale des applis (micro en écoute)",
                 Desc = "Empêche les applis de rester à l'écoute du micro pour un mot-clé vocal. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" },
@@ -2014,6 +2087,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "clipboard_cloud_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le presse-papiers cloud (synchronisation entre appareils)",
                 Desc = "Ce que tu copies ne part plus dans le cloud Microsoft pour être partagé entre appareils. Le presse-papiers local reste normal. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
@@ -2025,6 +2099,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "dmwappush_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le service de routage WAP Push (dmwappushservice)",
                 Desc = "Coupe un service lié à la télémétrie/messages WAP, inutile pour un usage bureautique/jeu. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("dmwappushservice", "disabled", true, false),
@@ -2035,6 +2110,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "phone_service_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service Téléphone (PhoneSvc)",
                 Desc = "Arrête le service de gestion de téléphonie, inutile si tu ne relies pas de téléphone à Windows. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("PhoneSvc", "disabled", true, false),
@@ -2045,6 +2121,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "printnotify_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les notifications d'imprimante (PrintNotify)",
                 Desc = "Coupe le service de notifications d'impression. À laisser actif si tu imprimes régulièrement. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("PrintNotify", "disabled", true, false),
@@ -2089,6 +2166,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "msi_usb", Category = Cat.Souris, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les contrôleurs USB (latence souris/clavier)",
                 Desc = "Passe les contrôleurs USB en interruptions par message (MSI) au lieu des IRQ classiques : traitement plus direct des périphériques USB, dont ta souris et ton clavier. Réduit la latence et le jitter d'entrée. « Rétablir » remet le mode par défaut. Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
@@ -2100,6 +2178,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "msi_network", Category = Cat.Reseau, Reboot = true,
+                Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les cartes réseau (latence réseau)",
                 Desc = "Passe les cartes réseau en interruptions par message (MSI) : traitement des paquets plus direct, moins de DPC réseau. « Rétablir » remet le mode par défaut. Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
@@ -2111,6 +2190,8 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "msi_storage", Category = Cat.Systeme, Reboot = true,
+                Risque = Risque.Fonction,
+                Preuve = NiveauPreuve.DependDuPc,
                 Name = "Mode MSI sur les contrôleurs de stockage (avancé)",
                 Desc = "Passe les contrôleurs NVMe/SATA en interruptions par message (MSI) : moins de latence disque sous charge. AVANCÉ : sur de rares configurations, un contrôleur gère mal le MSI — teste au redémarrage ; si souci, « Rétablir » depuis l'app (ou Mode sans échec). Redémarrage requis.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Enum\PCI" },
@@ -2135,6 +2216,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "copilot_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver Windows Copilot",
                 Desc = "Retire l'assistant Copilot (bouton barre des tâches + processus de fond). « Rétablir » le réactive.",
                 BackupKeys = new[] { @"HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" },
@@ -2146,6 +2228,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "chat_taskbar_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Retirer l'icône Chat (Teams) de la barre des tâches",
                 Desc = "Enlève le bouton Chat/Teams de la barre des tâches. « Rétablir » le remet.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
@@ -2157,6 +2240,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "taskbar_search_hide", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Masquer la barre de recherche de la barre des tâches",
                 Desc = "Retire la zone de recherche (gain de place, moins de suggestions web/télémétrie). La recherche reste accessible via le menu Démarrer. « Rétablir » la réaffiche.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Search" },
@@ -2179,6 +2263,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wisvc_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le service Windows Insider (wisvc)",
                 Desc = "Coupe le service du programme Windows Insider, inutile si tu n'es pas dans les préversions. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("wisvc", "disabled", true, false),
@@ -2189,6 +2274,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wmp_network_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le partage réseau Windows Media Player",
                 Desc = "Coupe WMPNetworkSvc (partage de médias en réseau), inutile pour la plupart. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("WMPNetworkSvc", "disabled", true, false),
@@ -2199,6 +2285,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "smartcard_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service Carte à puce (si non utilisé)",
                 Desc = "Coupe SCardSvr, inutile sans lecteur de carte à puce. À laisser actif en entreprise. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("SCardSvr", "disabled", true, false),
@@ -2209,6 +2296,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "geo_service_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service de géolocalisation (lfsvc)",
                 Desc = "Coupe le service de localisation Windows. Les applis météo/carte ne connaîtront plus ta position. « Rétablir » le remet à la demande. Optionnel.",
                 Apply  = () => Sys.ConfigureService("lfsvc", "disabled", true, false),
@@ -2221,6 +2309,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cpu_perf_boost_aggressive", Category = Cat.Alim, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Turbo processeur agressif (Perf Boost = Aggressive)",
                 Desc = "Le CPU monte en turbo plus tôt et plus fort au lieu d'attendre. Gagne en réactivité/FPS, consomme un peu plus. « Rétablir » remet le mode par défaut.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "be337238-0d82-4146-a960-4f3749d470c7", 2, 2),
@@ -2231,6 +2320,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "no_lock_screen", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Passer l'écran de verrouillage (connexion plus directe)",
                 Desc = "Va directement à la saisie du mot de passe sans l'écran de verrouillage intermédiaire. « Rétablir » le remet.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\Personalization" },
@@ -2242,6 +2332,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "clipboard_history_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'historique du presse-papiers",
                 Desc = "Windows ne garde plus l'historique (Win+V) de ce que tu copies. « Rétablir » le réactive. Optionnel — pratique pour certains.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\System" },
@@ -2253,6 +2344,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "lmhosts_off", Category = Cat.Reseau, Reboot = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la recherche LMHOSTS (NetBIOS hérité)",
                 Desc = "Coupe la résolution de noms via le fichier LMHOSTS, héritage inutile aujourd'hui : petite réduction de surface et de requêtes. « Rétablir » la réactive.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" },
@@ -2264,6 +2356,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "ajrouter_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le routeur AllJoyn (AJRouter)",
                 Desc = "Coupe un service d'objets connectés (IoT AllJoyn) inutile sur un PC de jeu/bureautique. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("AJRouter", "disabled", true, false),
@@ -2274,6 +2367,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "fax_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service Fax",
                 Desc = "Coupe le service de télécopie, inutile pour la quasi-totalité des usages. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("Fax", "disabled", true, false),
@@ -2284,6 +2378,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wallet_service_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service Portefeuille (WalletService)",
                 Desc = "Coupe le service Portefeuille Windows, rarement utilisé. « Rétablir » le remet à la demande. Optionnel.",
                 Apply  = () => Sys.ConfigureService("WalletService", "disabled", true, false),
@@ -2298,6 +2393,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wake_timers_off", Category = Cat.Alim,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Interdire les minuteries de réveil (pas de réveil surprise)",
                 Desc = "Empêche Windows de sortir le PC de veille tout seul (tâches planifiées, mises à jour). « Rétablir » les réautorise.",
                 Apply  = () => Sys.SetPowerValue(SubSleep, WakeTimer, 0, 0),
@@ -2308,6 +2404,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "settings_sync_off", Category = Cat.Privacy,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la synchronisation des paramètres (cloud)",
                 Desc = "Tes paramètres Windows (thème, mots de passe, préférences) ne sont plus synchronisés vers le cloud Microsoft. « Rétablir » réactive.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync" },
@@ -2319,6 +2416,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "nvidia_telemetry_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la télémétrie NVIDIA (NvTelemetryContainer)",
                 Desc = "Coupe le service de télémétrie du pilote NVIDIA, sans effet sur les jeux ni les performances. Sans effet si tu n'as pas de GPU NVIDIA. « Rétablir » le remet.",
                 Apply  = () => Sys.ConfigureService("NvTelemetryContainer", "disabled", true, false),
@@ -2329,6 +2427,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "ssdp_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver la découverte SSDP/UPnP",
                 Desc = "Coupe SSDPSRV (découverte de périphériques UPnP sur le réseau). Peut gêner le partage média/DLNA — optionnel. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("SSDPSRV", "disabled", true, false),
@@ -2339,6 +2438,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "trkwks_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le suivi de liens distribués (TrkWks)",
                 Desc = "Coupe le service qui suit les fichiers liés déplacés sur le réseau NTFS, rarement utile en usage personnel. « Rétablir » le remet en automatique.",
                 Apply  = () => Sys.ConfigureService("TrkWks", "disabled", true, false),
@@ -2349,6 +2449,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "icssvc_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le point d'accès mobile (icssvc)",
                 Desc = "Coupe le service de partage de connexion (hotspot Windows). À laisser actif si tu partages ta connexion. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("icssvc", "disabled", true, false),
@@ -2359,6 +2460,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "semgr_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le gestionnaire de paiements/NFC (SEMgrSvc)",
                 Desc = "Coupe le service de paiements sans contact et éléments sécurisés, inutile sur un PC de bureau. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("SEMgrSvc", "disabled", true, false),
@@ -2369,6 +2471,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "sensor_service_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Mettre le service de capteurs en veille (PC sans capteur)",
                 // DÉSACTIVÉ, ce service FAIT PLANTER une page de Windows. Constaté et prouvé par
                 // bissection sur une machine réelle : Paramètres → Système → Marche/Arrêt s'ouvre
@@ -2395,6 +2498,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "hybrid_sleep_off", Category = Cat.Alim,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la veille hybride (mise en veille plus rapide)",
                 Desc = "La veille hybride écrit la RAM sur le disque à chaque mise en veille (lent, usure SSD). La désactiver rend la veille immédiate. « Rétablir » la réactive.",
                 Apply  = () => Sys.SetPowerValue(SubSleep, "94ac6d29-73ce-41a6-809f-6363ba21b47e", 0, 0),
@@ -2416,6 +2520,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "snap_assist_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les suggestions d'ancrage de fenêtres (Snap flyout)",
                 Desc = "Retire le petit menu de dispositions qui apparaît au survol du bouton agrandir. « Rétablir » le remet.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
@@ -2427,6 +2532,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wcncsvc_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver Windows Connect Now (wcncsvc)",
                 Desc = "Coupe un service de configuration sans fil hérité (WPS), rarement utile. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("wcncsvc", "disabled", true, false),
@@ -2437,6 +2543,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "dot3svc_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'authentification filaire 802.1X (dot3svc)",
                 Desc = "Coupe le service d'authentification réseau filaire (802.1X), inutile hors entreprise. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("dot3svc", "disabled", true, false),
@@ -2447,6 +2554,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "wfds_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les services Wi-Fi Direct (WFDSConMgrSvc)",
                 Desc = "Coupe le gestionnaire Wi-Fi Direct (partage sans fil pair-à-pair). À laisser si tu utilises Miracast/impression Wi-Fi Direct. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("WFDSConMgrSvc", "disabled", true, false),
@@ -2457,6 +2565,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "diag_collector_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver le collecteur de diagnostics Microsoft",
                 Desc = "Coupe diagnosticshub.standardcollector.service (collecte de traces de diagnostic). « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("diagnosticshub.standardcollector.service", "disabled", true, false),
@@ -2467,6 +2576,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "displayenhancement_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Désactiver le service d'amélioration d'affichage (PC fixe)",
                 Desc = "Coupe DisplayEnhancementService (luminosité adaptative / veilleuse). À laisser actif sur un portable. « Rétablir » le remet à la demande.",
                 Apply  = () => Sys.ConfigureService("DisplayEnhancementService", "disabled", true, false),
@@ -2479,6 +2589,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "gamedvr_policy_off", Category = Cat.Gpu, Esport = !X3DDeuxCcd.Value,
+                Risque = Risque.Fonction,
                 Name = "Désactiver GameDVR par stratégie (verrou machine)",
                 Desc = "Force GameDVR à OFF au niveau machine (stratégie), en plus du réglage utilisateur : certains jeux/MAJ réactivent GameDVR côté utilisateur, ceci l'empêche. Gain de FPS et moins d'overhead de capture. « Rétablir » lève la stratégie." + (X3DDeuxCcd.Value ? NoteX3DGameBar : ""),
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" },
@@ -2524,6 +2635,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "remote_assistance_off", Category = Cat.Services, Recommended = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver l'Assistance à distance (surface d'attaque)",
                 Desc = "Empêche les invitations d'assistance à distance entrantes. Recommandé pour un PC personnel. « Rétablir » la réautorise.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance" },
@@ -2586,6 +2698,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "telemetry_tasks_off", Category = Cat.Services, Recommended = true, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver les tâches planifiées de télémétrie (Compatibility Appraiser…)",
                 Desc = "Coupe les tâches Windows qui analysent le PC en arrière-plan (Microsoft Compatibility Appraiser, CEIP, DiskDiagnostic) : gros pics disque/CPU au repos en moins. « Rétablir » les réactive.",
                 Apply = () => { foreach (string t in TelemetryTasks) Sys.SetScheduledTask(t, false); },
@@ -2607,6 +2720,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "recall_off", Category = Cat.Privacy, Recommended = true, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver Windows Recall / analyse IA des captures (Windows 11 24H2+)",
                 Desc = "Empêche Recall de capturer et d'analyser l'écran en continu (disque, CPU et confidentialité). Sans effet si Recall est absent du PC. « Rétablir » retire la politique.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" },
@@ -2629,6 +2743,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "onedrive_autostart_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "Empêcher OneDrive de démarrer avec Windows (si tu ne t'en sers pas)",
                 Desc = "Retire OneDrive du démarrage automatique : RAM et réseau libérés. Ne désinstalle rien — OneDrive reste lançable à la main ; la synchro ne tourne plus en fond. « Rétablir » remet le démarrage automatique.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Run" },
@@ -2646,6 +2761,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "pca_off", Category = Cat.Services,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver l'Assistant Compatibilité des programmes (PcaSvc)",
                 Desc = "Coupe le service qui surveille chaque lancement d'application pour détecter les problèmes de compatibilité. Un service de fond en moins ; à éviter si tu installes souvent de très vieux logiciels. Réversible.",
                 Apply  = () => Sys.ConfigureService("PcaSvc", "disabled", true, false),
@@ -2656,6 +2772,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "toast_notifications_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Désactiver les notifications (bulles) — plus d'interruptions en jeu",
                 Desc = "Coupe les notifications « toast » de Windows : plus de bulle qui vole le focus ou provoque une micro-saccade en pleine partie. « Rétablir » les réactive. (Les notifications restent visibles dans le centre de notifications.)",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\PushNotifications" },
@@ -2669,6 +2786,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "classic_context_menu", Category = Cat.Rapidite, Recommended = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Menu clic droit classique (fin de « Afficher plus d'options »)",
                 Desc = "Restaure le menu contextuel COMPLET de Windows 10 au clic droit : toutes les entrées "
                      + "directement, sans passer par « Afficher plus d'options ». Prend effet après un "
@@ -2699,6 +2817,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "start_recommendations_off", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Masquer les recommandations du menu Démarrer (fichiers/applis suggérés)",
                 Desc = "Retire la section « Recommandé » du menu Démarrer de Windows 11 (fichiers récents et applications suggérées) : menu plus net qui s'ouvre sans fouiller ton historique. « Rétablir » remet l'affichage par défaut.",
                 BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" },
@@ -2729,6 +2848,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "tcp_ctcp", Category = Cat.Reseau, Esport = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Contrôle de congestion TCP « CTCP » (montée en débit plus rapide)",
                 Desc = "Remplace l'algorithme de congestion du profil Internet par CTCP : le débit remonte plus vite après une perte de paquets — téléchargements et jeux TCP plus réactifs sur connexion chargée. « Rétablir » remet CUBIC, l'algorithme par défaut de Windows.",
                 Apply  = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=ctcp", "Activation de CTCP"),
@@ -2750,6 +2870,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "fast_close", Category = Cat.Rapidite,
+                Risque = Risque.Fonction,
                 Name = "Fermetures et menus plus rapides (délais Windows raccourcis)",
                 Desc = "Menus plus vifs (8 ms au lieu de 400) et arrêt du PC plus rapide : les applis qui ne répondent "
                      + "pas sont fermées après 1-2 s au lieu de 5-20. ATTENTION : à l'arrêt, Windows peut fermer d'office "
@@ -2780,6 +2901,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "driver_search_off", Category = Cat.Gpu,
+                Risque = Risque.Securite,
                 Name = "Empêcher Windows Update d'écraser tes pilotes",
                 Desc = "Windows Update remplace parfois ton pilote GPU fraîchement installé par une version à lui (souvent "
                      + "plus vieille) — la cause classique du pilote qui « revient tout seul » après un nettoyage DDU. Ce "
@@ -2808,6 +2930,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "dps_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "⚠ Désactiver le service Diagnostic Policy (DPS)",
                 Desc = "RISQUÉ : coupe le service de diagnostic Windows. Un service de fond en moins, MAIS le "
                      + "dépannage réseau automatique de Windows cesse de fonctionner. À éviter si tu utilises "
@@ -2820,6 +2943,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "rmsvc_off", Category = Cat.Services,
+                Risque = Risque.Fonction,
                 Name = "⚠ Désactiver le service Radio Management (RmSvc)",
                 Desc = "RISQUÉ : coupe la gestion des radios. Sur un PORTABLE, peut casser le Wi-Fi, le Bluetooth "
                      + "ou le mode Avion. À n'activer que sur un PC fixe sans Wi-Fi/BT. « Rétablir » le remet en "
@@ -2833,6 +2957,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "background_apps_policy", Category = Cat.Services, Recommended = true, Esport = true,
+                Risque = Risque.Fonction,
                 Name = "Forcer l'arrêt des applications en arrière-plan (stratégie Windows 11)",
                 Desc = "Complète « applications en arrière-plan » par la stratégie MACHINE de Windows 11 "
                      + "(LetAppsRunInBackground) + le nouvel interrupteur de recherche : les applis du Store ne "
@@ -2897,6 +3022,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "netbios_off", Category = Cat.Reseau, Esport = true, Reboot = true,
+                Risque = Risque.Fonction,
                 Name = "Désactiver NetBIOS sur TCP/IP (diffusions parasites en moins)",
                 Desc = "NetBIOS est un mécanisme de nommage des années 90 que Windows garde actif : il envoie régulièrement des diffusions sur le réseau local et expose un service de plus. Le couper allège le trafic local et réduit la surface d'attaque. À laisser actif si tu utilises des partages de fichiers très anciens (NAS ou imprimante d'avant Windows 7) qui refusent de s'afficher sans lui. « Rétablir » remet le réglage par défaut (décidé par le DHCP).",
                 Apply  = () => Sys.SetNetbios(true),
@@ -2907,6 +3033,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "mem_compression_off", Category = Cat.Systeme, Reboot = true,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "Désactiver la compression mémoire (PC avec beaucoup de RAM)",
                 Desc = "Windows compresse les pages mémoire inactives pour éviter d'écrire sur le disque : c'est un excellent compromis… quand la RAM manque. Avec 16 Go ou plus, cette compression coûte du CPU (pics pendant les chargements) pour un bénéfice quasi nul. À ÉVITER en dessous de 16 Go : sans elle, Windows ira écrire sur le disque, ce qui est bien plus lent. Hors presets : à cocher en connaissance de cause. « Rétablir » réactive la compression.",
                 Apply  = () => Sys.SetMemoryCompression(false),
@@ -2944,6 +3071,8 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "tcp_bbr2", Category = Cat.Reseau,
+                Risque = Risque.AnnulationNonGarantie,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "5G/4G : contrôle de congestion BBR2 (au lieu de CUBIC)",
                 Desc = "CUBIC, l'algorithme par défaut de Windows, interprète toute perte de paquet comme un embouteillage et casse son débit — or sur un lien RADIO, des paquets se perdent sans qu'il y ait le moindre embouteillage. BBR2 raisonne en débit et en temps de trajet plutôt qu'en pertes : sur une box 4G/5G, il tient un débit bien plus stable et remplit moins les files d'attente (donc moins de bufferbloat). Inutile sur fibre/ADSL, où CUBIC fait très bien l'affaire. Demande Windows 11 22H2 ou plus récent ; si ta version ne connaît pas BBR2, l'application échouera proprement sans rien casser. Remplace le réglage « CTCP » (même paramètre). « Rétablir » remet CUBIC. Effet non démontré par une mesure d'ONYX : à garder si ton débit et ton ping, mesurés avant/après sur ta box, le confirment.",
                 Apply  = () => Sys.RunThrow(Sys.Sys32("netsh.exe"), "interface tcp set supplemental template=internet congestionprovider=bbr2", "Activation de BBR2"),
@@ -2966,6 +3095,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "teredo_client", Category = Cat.Reseau,
+                Risque = Risque.AnnulationNonGarantie,
                 Name = "CGNAT : activer Teredo (NAT Xbox / multijoueur derrière IPv4 partagée)",
                 Desc = "Les jeux Xbox / PC Game Pass et le multijoueur Microsoft passent par Teredo pour se connecter quand l'adresse IPv4 est partagée. Derrière le CGNAT d'une box 4G/5G, sans Teredo le NAT est annoncé « strict » ou « Teredo impossible » et les parties en groupe échouent. Ceci le remet en mode client. Ne sert à rien sur fibre avec une IPv4 à toi. Inverse exact de l'optimisation « tunnels IPv6 coupés » : les deux ne peuvent pas être actives ensemble. « Rétablir » remet Teredo à l'état par défaut de Windows.",
                 Apply  = () => Sys.SetTeredo("client"),
@@ -2976,6 +3106,7 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "do_bg_bandwidth", Category = Cat.Reseau, Recommended = true,
+                Risque = Risque.Securite,
                 Name = "Brider les téléchargements Windows en arrière-plan (10 % du débit)",
                 Desc = "Windows Update et le Store téléchargent en arrière-plan à pleine vitesse : sur une box 4G/5G — dont la file d'attente sature très vite — cela suffit à faire exploser le ping de toute la maison en pleine partie. Cette stratégie officielle (Delivery Optimization) leur laisse 10 % du débit en arrière-plan : les mises à jour se font quand même, sans écraser le jeu. Utile aussi en ADSL et sur toute connexion partagée à plusieurs. « Rétablir » retire la limite.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" },
@@ -2983,6 +3114,13 @@ namespace BTOptimizer
                 Revert = () => Sys.DelMachine(DoPolicyKey, "DOPercentageMaxBackgroundBandwidth"),
                 Check  = () => Sys.IntEquals(Sys.GetMachine(DoPolicyKey, "DOPercentageMaxBackgroundBandwidth"), 10)
             });
+
+            // Règle de fin : Confidentialité et Souris ne sont pas des réglages de performance, leur
+            // preuve est « sans objet ». Ne remplace que NonMesure : une preuve posée plus haut
+            // (msi_usb : dépend du PC) reste telle quelle.
+            foreach (Tweak t in list)
+                if (t.Preuve == NiveauPreuve.NonMesure && (t.Category == Cat.Privacy || t.Category == Cat.Souris))
+                    t.Preuve = NiveauPreuve.SansObjet;
 
             return list;
         }
