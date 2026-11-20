@@ -127,8 +127,22 @@ namespace BTOptimizer.Tests
             Banc.Verifie("durée = somme des frametimes", true, Math.Abs(j.DureeS - 61.8) < 1e-9);
             Banc.Verifie("FPS moyen = images / temps", true, Math.Abs(j.FpsMoy - 6000 / 61.8) < 1e-9);
             Banc.Verifie("1 % low = pire 1 %", true, Math.Abs(j.Low1 - 25) < 1e-9);
-            Banc.Verifie("frametimes nuls ou NaN ignorés", true,
-                Preuve.CalculeJeu("x", new List<double> { 10, 0, double.NaN, -3, 10 }).Images == 2);
+            Banc.Verifie("P99 = centième centile", true, Math.Abs(j.P99Ms - 10) < 1e-9);
+            Banc.Verifie("régularité = low / moyenne", true, Math.Abs(j.Regularite - j.Low1 / j.FpsMoy) < 1e-12);
+            Banc.Verifie("frametimes nuls, non finis ou négatifs ignorés", true,
+                Preuve.CalculeJeu("x", new List<double> { 10, 0, double.NaN, double.PositiveInfinity, double.NegativeInfinity, -3, 10 }).Images == 2);
+            string resumeNonFini = new Preuve.MesureJeu
+            {
+                Jeu = "x", FpsMoy = double.PositiveInfinity, Low1 = double.PositiveInfinity,
+                P99Ms = double.PositiveInfinity, Images = 1, DureeS = 1
+            }.Resume();
+            Banc.Verifie("résumé masque les métriques non finies", true,
+                !resumeNonFini.Contains("Infinity") && resumeNonFini.Contains("FPS moyens, 1 % low — FPS")
+                && resumeNonFini.Contains("P99 —"));
+            Banc.Verifie("rapport sans P99 historique : pas de variation fictive", true,
+                !Preuve.RapportJeu(Preuve.LitJeu("quand=2026-11-17T18:00:00.0000000+01:00\njeu=x.exe\nfpsmoy=144\nlow1=90\n"),
+                    new Preuve.MesureJeu { Jeu = "x.exe", FpsMoy = 144, Low1 = 90, P99Ms = 0, Images = 6000, DureeS = 60 })
+                    .Contains("Frametime P99 : — → 0.00 ms ("));
             Banc.Verifie("aucune image : invalide", false, Preuve.JeuValide(Preuve.CalculeJeu("x", new List<double>())));
 
             Func<double, double, Preuve.MesureJeu> J = (moy, low) =>
@@ -142,6 +156,10 @@ namespace BTOptimizer.Tests
             Banc.Verifie("jeu : gain moyen + chute du low = régression", true, Preuve.JugeJeu(av, J(170, 70)) == Preuve.Verdict.Regression);
             var autre = J(144, 90); autre.Jeu = "autre.exe";
             Banc.Verifie("jeu différent = non comparable", true, Preuve.JugeJeu(av, autre) == Preuve.Verdict.Incomparable);
+            Banc.Verifie("même état répété = concordant", true, Preuve.Repetable(J(144, 90), J(140, 85)));
+            Banc.Verifie("mesures discordantes = non répétables", false, Preuve.Repetable(J(144, 90), J(144, 79)));
+            var autreJeu = J(144, 90); autreJeu.Jeu = "autre.exe";
+            Banc.Verifie("jeu différent = non répétable", false, Preuve.Repetable(J(144, 90), autreJeu));
             var court = J(144, 90); court.DureeS = 20;
             Banc.Verifie("mesure trop courte = non comparable", true, Preuve.JugeJeu(av, court) == Preuve.Verdict.Incomparable);
             var peu = J(144, 90); peu.Images = 500;
@@ -150,8 +168,15 @@ namespace BTOptimizer.Tests
             j.Quand = new DateTime(2026, 11, 17, 18, 0, 0, DateTimeKind.Local);
             Preuve.MesureJeu jr = Preuve.LitJeu(Preuve.EcritJeu(j));
             Banc.Verifie("mesure en jeu relue", true, jr != null && jr.Jeu == "jeu.exe" && jr.Images == 6000
-                && jr.Low1 == j.Low1 && jr.FpsMoy == j.FpsMoy && jr.Quand == j.Quand);
+                && jr.Low1 == j.Low1 && jr.FpsMoy == j.FpsMoy && jr.P99Ms == j.P99Ms && jr.Quand == j.Quand);
             Banc.Verifie("mesure en jeu abîmée = rien", true, Preuve.LitJeu("jeu=x\n") == null);
+            var ancienJeu = Preuve.LitJeu("quand=2026-11-17T18:00:00.0000000+01:00\njeu=x.exe\nfpsmoy=144\nlow1=90\n");
+            Banc.Verifie("ancien fichier sans P99 lisible", true, ancienJeu != null && ancienJeu.P99Ms == -1);
+            var rapport = Preuve.RapportJeu(J(144, 90), J(132, 81));
+            Banc.Verifie("rapport avant/après : FPS, low, régularité et P99", true,
+                rapport.Contains("FPS moyens") && rapport.Contains("1 % low")
+                && rapport.Contains("Régularité low/moyenne : 62.50 % → 61.36 % (-1.8 %)")
+                && rapport.Contains("Frametime P99"));
 
             // Plafond FPS : -1 = inconnu ; deux plafonds connus et différents = non comparable.
             Func<int, Preuve.MesureJeu> Jp = cap => { var m = J(144, 90); m.Plafond = cap; return m; };

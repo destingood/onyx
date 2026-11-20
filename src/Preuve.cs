@@ -195,20 +195,26 @@ namespace BTOptimizer
         //  Validation en jeu (phase C) : même partie, avant puis après la preuve
         // ------------------------------------------------------------------
 
-        /// <summary>Une mesure en jeu : FPS moyen et 1 % low sur toutes les images captées.</summary>
+        /// <summary>Une mesure en jeu : FPS moyen, 1 % low, régularité et frametime P99.</summary>
         public sealed class MesureJeu
         {
             public DateTime Quand;
             public string Jeu = "";
-            public double FpsMoy = -1, Low1 = -1, DureeS;
+            public double FpsMoy = -1, Low1 = -1, P99Ms = -1, DureeS;
             public int Images;
             public int Plafond = -1;   // plafond FPS posé par ONYX pendant la mesure ; -1 = inconnu
+            public double Regularite { get { return FpsMoy > 0 && Low1 > 0 ? Low1 / FpsMoy : -1; } }
 
             public string Resume()
             {
-                return Jeu + " : " + FpsMoy.ToString("0") + " FPS moyens, 1 % low " + Low1.ToString("0")
-                     + " FPS (" + Images + " images, " + DureeS.ToString("0") + " s)";
+                return Jeu + " : " + (Valide(FpsMoy) ? FpsMoy.ToString("0") : "—")
+                     + " FPS moyens, 1 % low " + (Valide(Low1) ? Low1.ToString("0") : "—")
+                     + " FPS, régularité " + (Valide(Regularite) ? (Regularite * 100).ToString("0") + " %" : "—")
+                     + ", P99 " + (Valide(P99Ms) ? P99Ms.ToString("0.00") + " ms" : "—")
+                     + " (" + Images + " images, " + DureeS.ToString("0") + " s)";
             }
+
+            private static bool Valide(double valeur) { return valeur >= 0 && !double.IsNaN(valeur) && !double.IsInfinity(valeur); }
         }
 
         /// <summary>Seuils du jeu : une partie ne se rejoue jamais à l'identique, la marge est
@@ -221,14 +227,14 @@ namespace BTOptimizer
             public const double DureeMinS = 30;
         }
 
-        /// <summary>FPS moyen = images / temps total ; 1 % low = 1000 / moyenne du pire 1 % des frametimes.</summary>
+        /// <summary>FPS moyen = images / temps total ; 1 % low = 1000 / moyenne du pire 1 % ; P99 = nearest-rank (rang supérieur).</summary>
         public static MesureJeu CalculeJeu(string jeu, IList<double> frametimesMs)
         {
             var m = new MesureJeu { Quand = DateTime.Now, Jeu = jeu ?? "" };
             if (frametimesMs == null || frametimesMs.Count == 0) return m;
             var tri = new List<double>();
             double total = 0;
-            foreach (double f in frametimesMs) if (f > 0 && !double.IsNaN(f)) { tri.Add(f); total += f; }
+            foreach (double f in frametimesMs) if (f > 0 && !double.IsNaN(f) && !double.IsInfinity(f)) { tri.Add(f); total += f; }
             if (tri.Count == 0 || total <= 0) return m;
             m.Images = tri.Count;
             m.DureeS = total / 1000.0;
@@ -238,12 +244,24 @@ namespace BTOptimizer
             double pire = 0;
             for (int i = tri.Count - k; i < tri.Count; i++) pire += tri[i];
             m.Low1 = 1000.0 / (pire / k);
+            int p99Rank = Math.Max(1, (int)Math.Ceiling(tri.Count * 0.99));
+            m.P99Ms = tri[p99Rank - 1];
             return m;
         }
 
         public static bool JeuValide(MesureJeu m)
         {
             return m != null && m.Images >= SeuilsJeu.ImagesMin && m.DureeS >= SeuilsJeu.DureeMinS && m.FpsMoy > 0 && m.Low1 > 0;
+        }
+
+        /// <summary>Deux mesures du même jeu et plafond, dont les FPS diffèrent de moins que les seuils de jugement.</summary>
+        public static bool Repetable(MesureJeu a, MesureJeu b)
+        {
+            if (!JeuValide(a) || !JeuValide(b)
+                || !string.Equals(a.Jeu, b.Jeu, StringComparison.OrdinalIgnoreCase)
+                || PlafondChange(a, b)) return false;
+            return Math.Abs((b.Low1 - a.Low1) / a.Low1) < SeuilsJeu.Low1Rel
+                && Math.Abs((b.FpsMoy - a.FpsMoy) / a.FpsMoy) < SeuilsJeu.MoyRel;
         }
 
         /// <summary>Plus haut = mieux. Régression si le 1 % low OU le FPS moyen baisse au-delà de sa marge.</summary>
@@ -260,6 +278,29 @@ namespace BTOptimizer
             return Verdict.Neutre;
         }
 
+        /// <summary>Rapport avant/après des FPS moyens, du 1 % low, de sa régularité et du P99.</summary>
+        public static string RapportJeu(MesureJeu avant, MesureJeu apres)
+        {
+            if (avant == null || apres == null) return "Rapport en jeu indisponible.";
+            var sb = new StringBuilder("Rapport avant/après :");
+            AjouteEcart(sb, "FPS moyens", avant.FpsMoy, apres.FpsMoy, " FPS");
+            AjouteEcart(sb, "1 % low", avant.Low1, apres.Low1, " FPS");
+            AjouteEcart(sb, "Régularité low/moyenne", avant.Regularite * 100, apres.Regularite * 100, " %");
+            AjouteEcart(sb, "Frametime P99", avant.P99Ms, apres.P99Ms, " ms");
+            return sb.ToString();
+        }
+
+        private static void AjouteEcart(StringBuilder sb, string nom, double avant, double apres, string unite)
+        {
+            bool avantValide = avant >= 0 && !double.IsNaN(avant) && !double.IsInfinity(avant);
+            bool apresValide = apres >= 0 && !double.IsNaN(apres) && !double.IsInfinity(apres);
+            sb.Append("\r\n").Append(nom).Append(" : ")
+                .Append(avantValide ? avant.ToString("0.00", Inv) : "—").Append(unite)
+                .Append(" → ").Append(apresValide ? apres.ToString("0.00", Inv) : "—").Append(unite);
+            if (avantValide && apresValide && avant > 0)
+                sb.Append(" (").Append(((apres - avant) / avant * 100).ToString("+0.0;-0.0;0.0", Inv)).Append(" %)");
+        }
+
         /// <summary>Vrai si les deux plafonds sont connus et différents.</summary>
         public static bool PlafondChange(MesureJeu avant, MesureJeu apres)
         {
@@ -273,6 +314,7 @@ namespace BTOptimizer
             sb.Append("jeu=").Append((m.Jeu ?? "").Replace('\n', ' ').Replace('\r', ' ')).Append('\n');
             sb.Append("fpsmoy=").Append(m.FpsMoy.ToString("R", Inv)).Append('\n');
             sb.Append("low1=").Append(m.Low1.ToString("R", Inv)).Append('\n');
+            sb.Append("p99=").Append(m.P99Ms.ToString("R", Inv)).Append('\n');
             sb.Append("duree=").Append(m.DureeS.ToString("R", Inv)).Append('\n');
             sb.Append("images=").Append(m.Images.ToString(Inv)).Append('\n');
             sb.Append("plafond=").Append(m.Plafond.ToString(Inv)).Append('\n');
@@ -298,6 +340,7 @@ namespace BTOptimizer
                     case "jeu": m.Jeu = v; break;
                     case "fpsmoy": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.FpsMoy = d; break;
                     case "low1": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.Low1 = d; break;
+                    case "p99": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.P99Ms = d; break;
                     case "duree": if (double.TryParse(v, NumberStyles.Float, Inv, out d)) m.DureeS = d; break;
                     case "images": if (int.TryParse(v, NumberStyles.Integer, Inv, out n)) m.Images = n; break;
                     case "plafond": if (int.TryParse(v, NumberStyles.Integer, Inv, out n)) m.Plafond = n; break;

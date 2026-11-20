@@ -17,6 +17,13 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   passée en interruptions à ligne voit ses DPC monter de 8,5 à 116 µs (même test).
 - **État affiché juste avec deux cartes graphiques** : le MSI était jugé actif d'après la
   première trouvée (souvent la puce intégrée). Toutes sont maintenant prises en compte.
+- **Mesure en jeu : régularité et frametime P99.** Le relevé affiche, en plus des FPS moyens et
+  du 1 % low, la régularité (1 % low / FPS moyens) et le temps d'image au 99e centile, avec un
+  rapport avant/après en %.
+- **Baisse confirmée = annulation automatique.** Une baisse n'est retenue que si deux mesures
+  « après » concordent entre elles (écart sous les seuils : 10 % sur le 1 % low, 7 % sur les
+  FPS moyens) et restent en baisse ; ONYX retire alors les réglages concernés (ou Compétition)
+  sans demander. Si les deux mesures divergent, rien n'est touché. Tout se réapplique ensuite.
 
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 

@@ -177,7 +177,7 @@ namespace BTOptimizer
             Ajoute(apres ? "Mesure en jeu APRÈS (référence : " + avant.Resume() + ")." : "Mesure en jeu AVANT l'optimisation.", 0);
             Task.Run(() =>
             {
-                Preuve.MesureJeu m = null;
+                Preuve.MesureJeu m = null, premiereApres = null;
                 Preuve.Verdict v = Preuve.Verdict.Incomparable;
                 try
                 {
@@ -189,23 +189,27 @@ namespace BTOptimizer
                         else if (v == Preuve.Verdict.Regression)
                         {
                             Ajoute("Baisse possible : seconde mesure de " + PreuveJeu.SecondesJeu + " s pour confirmer, continue à jouer.", 2);
+                            Preuve.MesureJeu premiere = m;
                             Preuve.MesureJeu m2 = PreuveJeu.Mesure(Ajoute, () => _stop, avant.Jeu);
-                            if (m2 == null) v = Preuve.Verdict.Incomparable;   // non confirmée : on ne touche à rien
-                            else { m = m2; v = Preuve.JugeJeu(avant, m2); }
+                            premiereApres = premiere;
+                            m = m2;
+                            if (m2 == null || _stop || !Preuve.Repetable(premiere, m2)) v = Preuve.Verdict.Incomparable;
+                            else v = Preuve.JugeJeu(avant, m2);
                         }
                     }
                 }
                 catch (Exception ex) { Ajoute("Erreur : " + ex.Message, 3); m = null; }
-                try { BeginInvoke((Action)(() => FiniJeu(apres, avant, m, v))); } catch { }
+                try { BeginInvoke((Action)(() => FiniJeu(apres, avant, m, v, premiereApres))); } catch { }
             });
         }
 
-        private void FiniJeu(bool apres, Preuve.MesureJeu avant, Preuve.MesureJeu m, Preuve.Verdict v)
+        private void FiniJeu(bool apres, Preuve.MesureJeu avant, Preuve.MesureJeu m, Preuve.Verdict v,
+            Preuve.MesureJeu premiereApres = null)
         {
             Fin();
-            if (m == null) return;
             if (!apres)
             {
+                if (m == null) return;
                 if (!Preuve.JeuValide(m)) { Ajoute("Mesure « avant » non retenue : trop courte ou trop peu d'images. Recommence.", 2); return; }
                 try { PreuveJeu.EnregistreAvant(m); }
                 catch (Exception ex) { Ajoute("Mesure « avant » non enregistrée : " + ex.Message, 3); return; }
@@ -214,8 +218,16 @@ namespace BTOptimizer
                 return;
             }
 
-            _journal.AppendText("\r\n===== En jeu =====\r\nAvant : " + avant.Resume() + "\r\nAprès : " + m.Resume()
+            _journal.AppendText("\r\n===== En jeu =====\r\nAvant : " + avant.Resume()
+                + (premiereApres != null ? "\r\nAprès (mesure 1) : " + premiereApres.Resume() : "")
+                + "\r\nAprès : " + (m == null ? "mesure interrompue ou indisponible" : m.Resume())
+                + (m != null ? "\r\n" + Preuve.RapportJeu(avant, m) : "")
                 + "\r\nVerdict : " + Preuve.Libelle(v) + "\r\n");
+            if (m == null)
+            {
+                Ajoute("Mesure en jeu interrompue ou indisponible : résultat non comparable, rien n'est modifié.", 2);
+                return;
+            }
             if (v == Preuve.Verdict.Incomparable && Preuve.PlafondChange(avant, m))
             {
                 Ajoute("Le plafond FPS a changé entre les deux mesures (" + avant.Plafond + " → " + m.Plafond
@@ -224,39 +236,32 @@ namespace BTOptimizer
             }
             if (v == Preuve.Verdict.Incomparable)
             {
-                Ajoute("Comparaison impossible (jeu différent, mesure interrompue ou trop courte) : rien n'est modifié, recommence la mesure « après ».", 2);
+                Ajoute(premiereApres != null && m != null && !Preuve.Repetable(premiereApres, m)
+                    ? "Les deux mesures « après » ne concordent pas dans les seuils choisis : résultat non comparable, rien n'est modifié. Recommence la mesure."
+                    : "Comparaison impossible (jeu différent, mesure interrompue ou trop courte) : rien n'est modifié, recommence la mesure « après ».", 2);
                 return;
             }
             if (v == Preuve.Verdict.Regression)
             {
-                // Une Compétition est active : c'est ELLE qu'on propose de retirer en entier
-                // (profils, Mode Jeu, plafond, réglages eSport), pas sa seule liste de réglages.
+                Ajoute("Régression confirmée par deux mesures concordantes : annulation automatique des réglages concernés.", 2);
+                // Une Compétition est active : l'annuler en entier, y compris profils, Mode Jeu,
+                // plafond et réglages eSport, plutôt que de ne retirer que sa liste de réglages.
                 Competition.Etat compet = null;
                 try { compet = Competition.Active(); } catch { }
                 if (compet != null)
                 {
-                    if (MessageBox.Show(this,
-                            "Baisse confirmée en jeu. Annuler Compétition (tout ce qu'elle a changé) ?",
-                            "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                    {
-                        AnnuleCompetition();
-                        return;
-                    }
-                    Ajoute("Compétition conservée malgré la baisse (ton choix).", 2);
-                    ClotureCycle();
+                    AnnuleCompetition();
                     return;
                 }
                 Preuve.Attente derniere = PreuveJeu.DernierePreuve();
                 List<Tweak> lot = derniere == null ? new List<Tweak>()
                     : _all.Where(t => derniere.Ids.Contains(t.Id)).ToList();
-                if (lot.Count > 0 && MessageBox.Show(this,
-                        "Baisse confirmée en jeu. Annuler les " + lot.Count + " réglage(s) appliqués par l'optimisation prouvée ?",
-                        "ONYX", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                if (lot.Count > 0)
                 {
                     Annule(lot);
                     return;
                 }
-                Ajoute("Réglages conservés malgré la baisse (ton choix).", 2);
+                Ajoute("Aucun lot d'optimisation associé à cette mesure : annulation automatique impossible.", 2);
             }
             else Ajoute("Pas de baisse en jeu : réglages conservés.", 1);
             ClotureCycle();
