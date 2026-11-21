@@ -72,6 +72,12 @@ namespace BTOptimizer.Tests
             Banc.Verifie("gog : page suivante", true, gogPage2.Offres.Count >= 10);
             Banc.Verifie("recherche par nom (GOG, CheapShark)", true, OffresReseau.PromosStore("gog", "witcher", 0, null).GetAwaiter().GetResult().Offres.Count >= 1
                 && OffresReseau.PromosStore("cheapshark", "batman", 0, tousCs).GetAwaiter().GetResult().Offres.Count >= 1);
+
+            // Comparateur : le même jeu dans plusieurs stores officiels (Elden Ring par AppID, puis par titre exact).
+            var cmp = OffresReseau.Comparaison(new Offre { Source = "steam", Id = "1245620", Nom = "ELDEN RING", SteamAppId = 1245620 }).GetAwaiter().GetResult();
+            Banc.Verifie("comparateur : 3 stores ou plus (" + cmp.Count + "), Steam compris, triés, liens sûrs", true, cmp.Count >= 3 && cmp.Any(x => x.Store == "Steam")
+                && cmp.Zip(cmp.Skip(1), (a, b) => a.PrixCts <= b.PrixCts).All(x => x) && cmp.TrueForAll(x => Offres.LienSur(x.Url)));
+            Banc.Verifie("comparateur : par titre exact", true, OffresReseau.Comparaison(new Offre { Source = "epic", Id = "x", Nom = "ELDEN RING" }).GetAwaiter().GetResult().Count >= 1);
         }
     }
 }

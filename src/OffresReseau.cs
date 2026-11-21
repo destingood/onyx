@@ -154,6 +154,34 @@ namespace BTOptimizer
             catch { Erreurs[source ?? ""] = true; res.Echec = true; return res; }
         }
 
+        /// <summary>
+        /// Prix du jeu dans les stores officiels (CheapShark, dollars US), du moins cher au plus cher :
+        /// par AppID Steam, puis par titre exact si l'AppID ne donne rien. Échec réseau → liste vide.
+        /// </summary>
+        public static async Task<List<OffresSources.PrixCompare>> Comparaison(Offre o)
+        {
+            var res = new List<OffresSources.PrixCompare>();
+            if (o == null) return res;
+            try
+            {
+                string url = OffresSources.UrlComparaison(o.SteamAppId, o.Nom);
+                if (url == null) return res;
+                var r = await Lit(url, 30).ConfigureAwait(false);
+                if (r.Texte != null) res = OffresSources.PrixCompares(r.Texte);
+                if (res.Count == 0 && o.SteamAppId > 0)
+                {
+                    string parTitre = OffresSources.UrlComparaison(0, o.Nom);
+                    if (parTitre != null)
+                    {
+                        r = await Lit(parTitre, 30).ConfigureAwait(false);
+                        if (r.Texte != null) res = OffresSources.PrixCompares(r.Texte);
+                    }
+                }
+            }
+            catch { }
+            return res;
+        }
+
         /// <summary>Titres des sites d'actus et des flux Steam des 10 premiers jeux suivis (Source = nom du jeu).</summary>
         public static async Task<List<Actu>> Actualites(IEnumerable<JeuSuivi> suivis)
         {

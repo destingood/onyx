@@ -709,6 +709,71 @@ namespace BTOptimizer
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url.Trim()) { UseShellExecute = true }); } catch { }
         }
 
+        // ------------------------------------------------------------------ comparateur
+
+        /// <summary>
+        /// Menu « Comparer » d'une carte : prix du jeu dans les stores officiels (CheapShark, chargés à l'ouverture)
+        /// puis liens de recherche chez les revendeurs de clés, ouverts dans le navigateur (aucun prix lu chez eux).
+        /// </summary>
+        internal void MenuComparer(Offre o, Control ancre, Point ou)
+        {
+            if (o == null || ancre == null || ancre.IsDisposed) return;
+            ContextMenuStrip menu = Comparateur(o);
+            menu.Closed += (s, e) => { try { BeginInvoke((Action)menu.Dispose); } catch { } };
+            menu.Show(ancre, ou);
+        }
+
+        private static readonly Font Gras = new Font(FpsUi.Small, FontStyle.Bold);
+
+        /// <summary>Menu du comparateur (thème clair, comme « Stores ») : revendeurs tout de suite, prix des stores dès qu'ils arrivent.</summary>
+        internal static ContextMenuStrip Comparateur(Offre o)
+        {
+            var menu = new ContextMenuStrip { ShowImageMargin = false, Font = FpsUi.Small };
+            menu.Items.Add(new ToolStripLabel("Stores officiels — prix US") { Font = Gras });
+            var attente = new ToolStripLabel("Chargement…") { ForeColor = SystemColors.GrayText };
+            menu.Items.Add(attente);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripLabel("Revendeurs de clés") { Font = Gras });
+            menu.Items.Add(new ToolStripLabel("Places de marché : vendeurs tiers, regarde la note du vendeur.") { ForeColor = SystemColors.GrayText });
+            foreach (OffresSources.Revendeur r in OffresSources.Revendeurs)
+            {
+                string url = OffresSources.UrlRevendeur(r, o.Nom);
+                if (url == null) continue;
+                var it = new ToolStripMenuItem(r.Nom + (r.PlaceDeMarche ? "  ·  place de marché" : "") + "  ↗");
+                it.Click += (s, e) => Ouvre(url);
+                menu.Items.Add(it);
+            }
+            RemplitComparaison(menu, attente, o);
+            return menu;
+        }
+
+        private static async void RemplitComparaison(ContextMenuStrip menu, ToolStripItem attente, Offre o)
+        {
+            List<OffresSources.PrixCompare> prix;
+            try { prix = await OffresReseau.Comparaison(o); }
+            catch { prix = new List<OffresSources.PrixCompare>(); }
+            if (menu.IsDisposed || !menu.Items.Contains(attente)) return;
+            int place = menu.Items.IndexOf(attente);
+            menu.SuspendLayout();
+            menu.Items.Remove(attente);
+            attente.Dispose();
+            if (prix.Count == 0)
+                menu.Items.Insert(place, new ToolStripLabel("Aucun prix trouvé pour ce jeu.") { ForeColor = SystemColors.GrayText });
+            for (int i = 0; i < prix.Count; i++)
+            {
+                OffresSources.PrixCompare p = prix[i];
+                string texte = p.Store + "  —  " + Offres.PrixDe(new Offre { PrixCts = p.PrixCts, Devise = "USD" }) + " US"
+                    + (p.Remise > 0 ? "  (−" + p.Remise.ToString(CultureInfo.InvariantCulture) + " %)" : "") + (i == 0 && prix.Count > 1 ? "  · le moins cher" : "") + "  ↗";
+                var it = new ToolStripMenuItem(texte);
+                if (i == 0) it.Font = Gras;
+                string url = p.Url;
+                it.Click += (s, e) => Ouvre(url);
+                menu.Items.Insert(place + i, it);
+            }
+            menu.ResumeLayout();
+            menu.PerformLayout();
+        }
+
         // ------------------------------------------------------------------ rendu
 
         private void VideCartes()
@@ -774,7 +839,7 @@ namespace BTOptimizer
             }
         }
 
-        /// <summary>Une carte de jeu : jaquette, nom, remise, prix (US s'il est en dollars), store, fin d'offre, ☆ et 🔔.</summary>
+        /// <summary>Une carte de jeu : jaquette, nom, remise, prix (US s'il est en dollars), store, fin d'offre, ⚖ (comparer), ☆ et 🔔.</summary>
         private sealed class Carte : Control
         {
             private const int L = 300, H = 128;
@@ -786,6 +851,7 @@ namespace BTOptimizer
 
             private static readonly Rectangle REtoile = new Rectangle(L - 62, H - 34, 26, 26);
             private static readonly Rectangle RCloche = new Rectangle(L - 34, H - 34, 26, 26);
+            private static readonly Rectangle RComparer = new Rectangle(L - 90, H - 34, 26, 26);
 
             public Carte(PageBonsPlans page, Offre o)
             {
@@ -804,6 +870,7 @@ namespace BTOptimizer
                 base.OnMouseClick(e);
                 if (e.Button != MouseButtons.Left) return;
                 if (REtoile.Contains(e.Location)) { _page.BasculeFavori(_o); if (!IsDisposed) Invalidate(); return; }
+                if (RComparer.Contains(e.Location)) { _page.MenuComparer(_o, this, new Point(RComparer.Left, RComparer.Bottom)); return; }
                 if (_o.SteamAppId > 0 && RCloche.Contains(e.Location)) { _page.BasculeSuivi(_o); if (!IsDisposed) Invalidate(); return; }
                 Ouvre(_o.Url);
             }
@@ -918,7 +985,7 @@ namespace BTOptimizer
                 // Store en pastille colorée, puis plateformes (offres gratuites) et fin de l'offre.
                 string store = OffresSources.NomBoutique(_o.Source);
                 Color cs = CouleurStore(_o.Source);
-                int sw = Math.Min(TextRenderer.MeasureText(store, FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width + 14, L - tx - 70);
+                int sw = Math.Min(TextRenderer.MeasureText(store, FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width + 14, L - tx - 98);
                 var rs = new Rectangle(tx, 82, sw, 18);
                 using (var p = FpsUi.Round(rs, 9f))
                 using (var br = new SolidBrush(Color.FromArgb(46, cs))) g.FillPath(br, p);
@@ -930,10 +997,12 @@ namespace BTOptimizer
                 bool urgent;
                 string fin = Fin(out urgent);
                 if (fin != null) details.Add(fin);
-                else if (_o.Sortie.HasValue) details.Add("sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
-                TextRenderer.DrawText(g, string.Join(" · ", details), FpsUi.Tiny, new Rectangle(tx, 104, L - tx - 70, 18), urgent ? FpsUi.Warn : FpsUi.Dim,
+                else if (_o.Sortie.HasValue) details.Add("sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy", CultureInfo.InvariantCulture));
+                TextRenderer.DrawText(g, string.Join(" · ", details), FpsUi.Tiny, new Rectangle(tx, 104, L - tx - 98, 18), urgent ? FpsUi.Warn : FpsUi.Dim,
                     TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
 
+                TextRenderer.DrawText(g, "⚖", Emoji, RComparer, FpsUi.Dim,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                 bool fav = _page.EstFavori(_o);
                 TextRenderer.DrawText(g, fav ? "★" : "☆", FpsUi.H2, REtoile, fav ? FpsUi.Gold : FpsUi.Dim,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);

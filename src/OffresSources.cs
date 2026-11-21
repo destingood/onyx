@@ -626,6 +626,98 @@ namespace BTOptimizer
             return res;
         }
 
+        // ---------------------------------------------------------------- comparateur
+
+        /// <summary>Prix d'un jeu dans un store officiel (CheapShark, dollars US).</summary>
+        public sealed class PrixCompare { public string Store, Url; public int PrixCts, PrixOrigineCts, Remise; }
+
+        /// <summary>Tous les stores d'un jeu, du moins cher au plus cher : par AppID Steam, sinon par titre exact.</summary>
+        public static string UrlComparaison(int steamAppId, string nom)
+        {
+            const string fin = "&pageSize=30&sortBy=Price";
+            if (steamAppId > 0) return "https://www.cheapshark.com/api/1.0/deals?steamAppID=" + steamAppId.ToString(CultureInfo.InvariantCulture) + fin;
+            if (string.IsNullOrWhiteSpace(nom)) return null;
+            return "https://www.cheapshark.com/api/1.0/deals?title=" + Uri.EscapeDataString(nom.Trim()) + "&exact=1" + fin;
+        }
+
+        /// <summary>Nom d'un store CheapShark : ceux du menu, plus Steam (1) et GOG (7) lus ailleurs à la source.</summary>
+        private static string StoreCheapShark(long id)
+        {
+            if (id == 1) return "Steam";
+            if (id == 7) return "GOG";
+            Boutique b = Array.Find(Boutiques, x => x.CheapShark > 0 && x.CheapShark == id);
+            return b == null ? null : b.Nom;
+        }
+
+        /// <summary>Un prix par store connu (le moins cher), triés par prix puis par nom.</summary>
+        public static List<PrixCompare> PrixCompares(string json)
+        {
+            var parStore = new Dictionary<string, PrixCompare>();
+            JsonDocument doc = Ouvre(json);
+            if (doc == null) return new List<PrixCompare>();
+            using (doc)
+            {
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) return new List<PrixCompare>();
+                foreach (var g in doc.RootElement.EnumerateArray())
+                {
+                    string store = StoreCheapShark(Entier(g, "storeID", 0)), deal = Chaine(g, "dealID");
+                    if (store == null || deal == null || !DealSur.IsMatch(deal)) continue;
+                    int cts = Montant(Chaine(g, "salePrice")), origine = Montant(Chaine(g, "normalPrice"));
+                    if (cts < 0) continue;
+                    PrixCompare deja;
+                    if (parStore.TryGetValue(store, out deja) && deja.PrixCts <= cts) continue;
+                    decimal eco;
+                    int remise = decimal.TryParse(Chaine(g, "savings"), NumberStyles.Number, CultureInfo.InvariantCulture, out eco)
+                        ? (int)Math.Max(0, Math.Min(100, Math.Round(eco))) : RemiseDe(cts, origine);
+                    parStore[store] = new PrixCompare { Store = store, PrixCts = cts, PrixOrigineCts = origine, Remise = remise, Url = "https://www.cheapshark.com/redirect?dealID=" + deal };
+                }
+            }
+            var res = new List<PrixCompare>(parStore.Values);
+            res.Sort((a, b) => a.PrixCts != b.PrixCts ? a.PrixCts.CompareTo(b.PrixCts) : string.CompareOrdinal(a.Store, b.Store));
+            return res;
+        }
+
+        /// <summary>Revendeur de clés : lien de recherche seulement ({0} = nom échappé). Place de marché = vendeurs tiers.</summary>
+        public sealed class Revendeur
+        {
+            public readonly string Nom, Modele;
+            public readonly bool PlaceDeMarche, EspacePlus;
+            public Revendeur(string nom, string modele, bool placeDeMarche, bool espacePlus = false) { Nom = nom; Modele = modele; PlaceDeMarche = placeDeMarche; EspacePlus = espacePlus; }
+        }
+
+        /// <summary>Adresses de recherche vérifiées le 21/11/2026. gg.deals écarté : défi Cloudflare.</summary>
+        public static readonly Revendeur[] Revendeurs =
+        {
+            new Revendeur("Instant Gaming", "https://www.instant-gaming.com/fr/rechercher/?q={0}", false),
+            new Revendeur("G2A", "https://www.g2a.com/fr/search?query={0}", true),
+            new Revendeur("Eneba", "https://www.eneba.com/fr/store/all?text={0}", true),
+            new Revendeur("Kinguin", "https://www.kinguin.net/listing?phrase={0}", true),
+            new Revendeur("Gamivo", "https://www.gamivo.com/search/{0}", true),
+            new Revendeur("AllKeyShop", "https://www.allkeyshop.com/blog/catalogue/search-{0}/", false, true),
+        };
+
+        /// <summary>
+        /// Lien de recherche du jeu chez un revendeur. Le nom ne garde que lettres, chiffres, apostrophes, tirets
+        /// et points collés à un mot (™, ®, « : », / … deviennent des espaces) ; vide → null.
+        /// </summary>
+        public static string UrlRevendeur(Revendeur r, string nom)
+        {
+            if (r == null || nom == null) return null;
+            var sb = new StringBuilder();
+            char avant = ' ';
+            foreach (char c0 in nom)
+            {
+                char c = c0 == '’' ? '\'' : c0;
+                bool garde = char.IsLetterOrDigit(c) || ((c == '\'' || c == '-' || c == '.') && char.IsLetterOrDigit(avant));
+                sb.Append(garde ? c : ' ');
+                avant = garde ? c : ' ';
+            }
+            string[] mots = sb.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (mots.Length == 0) return null;
+            string q = string.Join(r.EspacePlus ? "+" : "%20", Array.ConvertAll(mots, Uri.EscapeDataString));
+            return string.Format(CultureInfo.InvariantCulture, r.Modele, q);
+        }
+
         // ---------------------------------------------------------------- Nintendo eShop (euros)
 
         public const int ParPageNintendo = 48;
