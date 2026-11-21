@@ -629,7 +629,7 @@ namespace BTOptimizer
         // ---------------------------------------------------------------- comparateur
 
         /// <summary>Prix d'un jeu dans un store officiel (CheapShark, dollars US).</summary>
-        public sealed class PrixCompare { public string Store, Url; public int PrixCts, PrixOrigineCts, Remise; }
+        public sealed class PrixCompare { public string Store, Url; public int PrixCts, PrixOrigineCts, Remise; public long Jeu; }
 
         /// <summary>Tous les stores d'un jeu, du moins cher au plus cher : par AppID Steam, sinon par titre exact.</summary>
         public static string UrlComparaison(int steamAppId, string nom)
@@ -669,11 +669,109 @@ namespace BTOptimizer
                     decimal eco;
                     int remise = decimal.TryParse(Chaine(g, "savings"), NumberStyles.Number, CultureInfo.InvariantCulture, out eco)
                         ? (int)Math.Max(0, Math.Min(100, Math.Round(eco))) : RemiseDe(cts, origine);
-                    parStore[store] = new PrixCompare { Store = store, PrixCts = cts, PrixOrigineCts = origine, Remise = remise, Url = "https://www.cheapshark.com/redirect?dealID=" + deal };
+                    parStore[store] = new PrixCompare { Store = store, PrixCts = cts, PrixOrigineCts = origine, Remise = remise, Jeu = Entier(g, "gameID", 0), Url = "https://www.cheapshark.com/redirect?dealID=" + deal };
                 }
             }
             var res = new List<PrixCompare>(parStore.Values);
             res.Sort((a, b) => a.PrixCts != b.PrixCts ? a.PrixCts.CompareTo(b.PrixCts) : string.CompareOrdinal(a.Store, b.Store));
+            return res;
+        }
+
+        /// <summary>Plus bas prix jamais relevé par CheapShark (dollars US) ; -1 si inconnu.</summary>
+        public sealed class HistoriquePrix { public int PlusBasCts = -1; public DateTime? PlusBasLe; }
+
+        public static string UrlJeuCheapShark(long jeu)
+        {
+            return jeu > 0 ? "https://www.cheapshark.com/api/1.0/games?id=" + jeu.ToString(CultureInfo.InvariantCulture) : null;
+        }
+
+        public static HistoriquePrix Historique(string json)
+        {
+            var h = new HistoriquePrix();
+            JsonDocument doc = Ouvre(json);
+            if (doc == null) return h;
+            using (doc)
+            {
+                JsonElement bas;
+                if (doc.RootElement.ValueKind != JsonValueKind.Object || !Prop(doc.RootElement, "cheapestPriceEver", out bas) || bas.ValueKind != JsonValueKind.Object) return h;
+                h.PlusBasCts = Montant(Chaine(bas, "price"));
+                if (h.PlusBasCts >= 0) h.PlusBasLe = DepuisUnix(Entier(bas, "date", 0));
+            }
+            return h;
+        }
+
+        /// <summary>Taux de la BCE : dollars pour 1 euro (0 si absent ou invalide), et le jour de la cotation.</summary>
+        public static decimal TauxUsd(string xml, out DateTime jour)
+        {
+            jour = DateTime.MinValue;
+            if (string.IsNullOrWhiteSpace(xml)) return 0m;
+            try
+            {
+                var reglages = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
+                decimal taux = 0m;
+                using (var sr = new StringReader(xml))
+                using (var r = XmlReader.Create(sr, reglages))
+                {
+                    while (r.Read())
+                    {
+                        if (r.NodeType != XmlNodeType.Element || r.LocalName != "Cube") continue;
+                        DateTime d;
+                        string t = r.GetAttribute("time");
+                        if (t != null && DateTime.TryParseExact(t, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) jour = d;
+                        decimal v;
+                        if (r.GetAttribute("currency") == "USD" && decimal.TryParse(r.GetAttribute("rate"), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out v)
+                            && v > 0.1m && v < 10m) taux = v;
+                    }
+                }
+                return taux;
+            }
+            catch { jour = DateTime.MinValue; return 0m; }
+        }
+
+        /// <summary>Centimes de dollar → centimes d'euro au taux de la BCE ; -1 si impossible.</summary>
+        public static int EnEuros(int centimesUsd, decimal tauxUsd)
+        {
+            if (centimesUsd < 0 || tauxUsd <= 0m) return -1;
+            return (int)Math.Round(centimesUsd / tauxUsd, MidpointRounding.AwayFromZero);
+        }
+
+        /// <summary>
+        /// Acheter ou attendre, d'après le plus bas historique. niveau : 2 au plus bas, 1 proche (moins de 10 % au-dessus), 0 attendre.
+        /// </summary>
+        public static string Verdict(int meilleurCts, int plusBasCts, out int niveau)
+        {
+            niveau = 0;
+            if (meilleurCts < 0 || plusBasCts < 0) return null;
+            if (meilleurCts <= plusBasCts) { niveau = 2; return "Prix le plus bas jamais vu"; }
+            int ecart = (int)Math.Round((meilleurCts - plusBasCts) * 100m / Math.Max(1, plusBasCts));
+            if (ecart < 10) { niveau = 1; return "Proche du plus bas historique (+" + Math.Max(1, ecart).ToString(CultureInfo.InvariantCulture) + " %)"; }
+            int moins = (int)Math.Round((meilleurCts - plusBasCts) * 100m / meilleurCts);
+            return "Déjà vu " + moins.ToString(CultureInfo.InvariantCulture) + " % moins cher : une promo reviendra sans doute";
+        }
+
+        /// <summary>Une ligne du comparatif : prix d'un store, sa valeur en euros (-1 si inconnue), et si c'est l'offre de la carte.</summary>
+        public sealed class Ligne { public string Store, Devise, Url; public int Cts, OrigineCts, Remise, EurCts; public bool DeLaCarte; }
+
+        /// <summary>
+        /// Prix des stores (dollars, convertis au taux BCE) et prix de la carte s'il est en euros (« Steam (France) »),
+        /// triés en euros ; sans taux, les prix en euros d'abord, puis les dollars entre eux.
+        /// </summary>
+        public static List<Ligne> Lignes(Offre carte, List<PrixCompare> prix, decimal tauxUsd)
+        {
+            var res = new List<Ligne>();
+            string storeCarte = carte == null ? null : NomBoutique(carte.Source);
+            if (prix != null)
+                foreach (PrixCompare p in prix)
+                    res.Add(new Ligne { Store = p.Store, Devise = "USD", Url = p.Url, Cts = p.PrixCts, OrigineCts = p.PrixOrigineCts, Remise = p.Remise, EurCts = EnEuros(p.PrixCts, tauxUsd),
+                        DeLaCarte = carte != null && carte.Devise == "USD" && (p.Url == carte.Url || p.Store == storeCarte) });
+            if (carte != null && carte.Devise == "EUR" && carte.PrixCts >= 0)
+                res.Add(new Ligne { Store = storeCarte + " (France)", Devise = "EUR", Url = carte.Url, Cts = carte.PrixCts, OrigineCts = carte.PrixOrigineCts, Remise = carte.Remise, EurCts = carte.PrixCts, DeLaCarte = true });
+            res.Sort((a, b) =>
+            {
+                if ((a.EurCts >= 0) != (b.EurCts >= 0)) return a.EurCts >= 0 ? -1 : 1;
+                int c = a.EurCts >= 0 ? a.EurCts.CompareTo(b.EurCts) : a.Cts.CompareTo(b.Cts);
+                return c != 0 ? c : string.CompareOrdinal(a.Store, b.Store);
+            });
             return res;
         }
 
@@ -695,6 +793,14 @@ namespace BTOptimizer
             new Revendeur("Gamivo", "https://www.gamivo.com/search/{0}", true),
             new Revendeur("AllKeyShop", "https://www.allkeyshop.com/blog/catalogue/search-{0}/", false, true),
         };
+
+        /// <summary>Historique complet des prix (sites tiers, ouverts dans le navigateur) : IsThereAnyDeal par nom, SteamDB par AppID.</summary>
+        public static readonly Revendeur Itad = new Revendeur("IsThereAnyDeal", "https://isthereanydeal.com/search/?q={0}", false);
+
+        public static string UrlSteamDb(int steamAppId)
+        {
+            return steamAppId > 0 ? "https://steamdb.info/app/" + steamAppId.ToString(CultureInfo.InvariantCulture) + "/" : null;
+        }
 
         /// <summary>
         /// Lien de recherche du jeu chez un revendeur. Le nom ne garde que lettres, chiffres, apostrophes, tirets

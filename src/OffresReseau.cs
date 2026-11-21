@@ -182,6 +182,39 @@ namespace BTOptimizer
             return res;
         }
 
+        /// <summary>Tout le comparatif d'un jeu : prix des stores, plus bas historique, taux du dollar (BCE).</summary>
+        public sealed class ComparatifJeu
+        {
+            public List<OffresSources.PrixCompare> Prix = new List<OffresSources.PrixCompare>();
+            public OffresSources.HistoriquePrix Histo = new OffresSources.HistoriquePrix();
+            public decimal Taux;          // dollars pour 1 euro ; 0 = inconnu
+            public DateTime JourTaux;
+        }
+
+        public const string UrlBce = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+
+        public static async Task<ComparatifJeu> Comparatif(Offre o)
+        {
+            var res = new ComparatifJeu();
+            try
+            {
+                Task<string> bce = Texte(UrlBce, 12 * 60);
+                res.Prix = await Comparaison(o).ConfigureAwait(false);
+                long jeu = res.Prix.Count > 0 ? res.Prix[0].Jeu : 0;
+                string url = OffresSources.UrlJeuCheapShark(jeu);
+                if (url != null)
+                {
+                    string json = await Texte(url, 30).ConfigureAwait(false);
+                    if (json != null) res.Histo = OffresSources.Historique(json);
+                }
+                DateTime jour;
+                res.Taux = OffresSources.TauxUsd(await bce.ConfigureAwait(false), out jour);
+                res.JourTaux = jour;
+            }
+            catch { }
+            return res;
+        }
+
         /// <summary>Titres des sites d'actus et des flux Steam des 10 premiers jeux suivis (Source = nom du jeu).</summary>
         public static async Task<List<Actu>> Actualites(IEnumerable<JeuSuivi> suivis)
         {

@@ -77,6 +77,9 @@ namespace BTOptimizer.Tests
             var cmp = OffresReseau.Comparaison(new Offre { Source = "steam", Id = "1245620", Nom = "ELDEN RING", SteamAppId = 1245620 }).GetAwaiter().GetResult();
             Banc.Verifie("comparateur : 3 stores ou plus (" + cmp.Count + "), Steam compris, triés, liens sûrs", true, cmp.Count >= 3 && cmp.Any(x => x.Store == "Steam")
                 && cmp.Zip(cmp.Skip(1), (a, b) => a.PrixCts <= b.PrixCts).All(x => x) && cmp.TrueForAll(x => Offres.LienSur(x.Url)));
+            var cf = OffresReseau.Comparatif(new Offre { Source = "steam", Id = "1245620", Nom = "ELDEN RING", SteamAppId = 1245620 }).GetAwaiter().GetResult();
+            Banc.Verifie("comparatif : prix, plus bas historique, taux BCE (" + cf.Taux + ")", true, cf.Prix.Count >= 3 && cf.Histo.PlusBasCts > 0 && cf.Histo.PlusBasCts <= cf.Prix[0].PrixCts
+                && cf.Taux > 0.5m && cf.Taux < 2m && cf.JourTaux > System.DateTime.UtcNow.AddDays(-10));
             Banc.Verifie("comparateur : par titre exact", true, OffresReseau.Comparaison(new Offre { Source = "epic", Id = "x", Nom = "ELDEN RING" }).GetAwaiter().GetResult().Count >= 1);
         }
     }
