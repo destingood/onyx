@@ -95,6 +95,7 @@ namespace BTOptimizer.Tests
             ModePresentationTests.Tout();
             OffresTests.Tout();
             OffresSourcesTests.Tout();
+            SuiviTests.Tout();
             return Banc.Bilan();
         }
     }

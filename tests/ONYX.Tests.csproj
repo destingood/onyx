@@ -76,6 +76,7 @@
     <!-- Bons plans et Actus : modèle, sources, suivi, flux (purs). Le réseau vit dans OffresReseau.cs. -->
     <Compile Include="..\src\Offres.cs" />
     <Compile Include="..\src\OffresSources.cs" />
+    <Compile Include="..\src\Suivi.cs" />
   </ItemGroup>
 
   <ItemGroup>
