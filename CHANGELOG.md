@@ -5,6 +5,17 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.86 — Plus rien sur le Bureau
+
+- **Plus rien sur le Bureau.** Les sauvegardes faites avant chaque application de réglages,
+  l'historique des mesures et la sauvegarde avant Smart App Control vont maintenant dans
+  Documents\ONYX\Sauvegardes. Ce dossier reste même si tu désinstalles ONYX.
+- **Ton Bureau est rangé.** Au premier lancement, les dossiers « bt-optimizer-backup-… »
+  laissés par les versions d'avant sont déplacés dans ce dossier. Rien n'est effacé.
+- « Ouvrir le dossier des sauvegardes » et « Restaurer » ouvrent le nouveau dossier.
+  Les exports que tu demandes (rapport, profil, relevés) restent sur le Bureau.
+- **Page Stockage modernisée** (thème carbone et or).
+
 ## v15.85 — Copilote sans IA locale, réglages en un clic
 
 - **IA locale retirée.** Le Copilote ne télécharge plus de modèle d'IA. Au premier lancement
