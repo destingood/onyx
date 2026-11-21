@@ -5,6 +5,24 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.80 — Interface modernisée, Actus et Bons plans en images
+
+- **Interface modernisée.** Palette carbone et or plus lisible (fonds neutres, textes secondaires
+  plus contrastés), police Segoe UI ; tableau de bord, Optimisations, CheckUp et Laboratoire
+  retravaillés, et le détail d'une optimisation se déplie dans sa carte.
+- **Actus en images.** La page n'affichait que des lignes de texte. Le titre le plus récent est
+  maintenant « à la une », en grand sur son image ; les autres forment une grille de cartes
+  illustrées (vignette donnée par le site, sinon la jaquette du jeu suivi), avec la source en
+  couleur, l'âge du titre, une pastille « NOUVEAU » sous 3 h et un zoom au survol.
+- **Une image pour chaque jeu dans Bons plans.** Les jeux Steam récents n'avaient plus de jaquette
+  (Steam a changé l'adresse de ses images) et les offres Epic et GamerPower n'en avaient aucune.
+  Chaque carte a désormais son image, recadrée sans déformation. Les pages Jeux et Détail
+  retrouvent aussi les jaquettes des jeux récents.
+- **Bons plans plus fiables.** Une page de portail Wi-Fi ou d'erreur n'est plus prise pour une
+  réponse valide ni gardée en cache ; « Suivre mes jeux installés » ne déclenche plus une rafale
+  de notifications pour les promos déjà en cours ; « Suivant » reste disponible après une erreur
+  réseau ; le plafond « Gratuit » choisi dans Nouveautés ne reste plus collé aux Promos.
+
 ## v15.79 — Bons plans et Actus
 
 - **Nouvelle page Bons plans.** Les promos Steam en euros, les jeux gratuits de toutes les
