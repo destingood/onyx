@@ -5,6 +5,12 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.88 — Logo Discord, pour de bon
+
+- **Logo Discord, pour de bon.** La 15.87 n'a pas suffi : le statut « avec ONYX » montrait
+  encore une page blanche. Le logo ONYX est maintenant une vraie image de l'application
+  Discord, en haute définition.
+
 ## v15.87 — Logo Discord visible
 
 - **Logo visible dans le statut Discord.** Le statut « avec ONYX » affichait une image
