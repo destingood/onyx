@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,7 +11,7 @@ namespace BTOptimizer
     /// Les autres modules d'ONYX séparent l'analyse pure de la lecture machine par un simple
     /// commentaire, et ça suffit : leur moitié impure ne dépend que du registre ou d'un journal.
     ///
-    /// Ici non. RapportDiagnostic appelle SelfCheck, qui tire Diagnostics, CrashScan, LocalBrain —
+    /// Ici non. RapportDiagnostic appelle SelfCheck, qui tire Diagnostics, CrashScan —
     /// la moitié de l'application. Tant que les décisions pures vivaient dans le même fichier, les
     /// vérifier revenait à compiler tout ONYX dans le banc d'essai. Le commentaire ne suffisait
     /// plus : il fallait une frontière de FICHIER.

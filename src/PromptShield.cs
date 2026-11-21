@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 
 namespace BTOptimizer
@@ -9,7 +9,7 @@ namespace BTOptimizer
     ///  1) repérer une tentative DIRECTE de l'utilisateur (« ignore tes règles », « change de rôle »,
     ///     « montre ton prompt système »…) → le Copilote garde fermement son rôle ;
     ///  2) la vraie menace : l'injection INDIRECTE via du contenu récupéré (page web, résultats de
-    ///     recherche) — traitée par un cadrage défensif dans le prompt web (voir LocalBrain.AskWeb).
+    ///     recherche) — traitée par un cadrage défensif dans le prompt web (voir WebSearch).
     /// </summary>
     internal static class PromptShield
     {

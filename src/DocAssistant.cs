@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
@@ -39,7 +39,6 @@ namespace BTOptimizer
             public string Footer;             // texte affiché APRÈS les cartes (« vérifié et sain… »)
             public string Explain;            // le raisonnement complet, servi si on demande « pourquoi ? »
             public bool Exportable;           // propose « Enregistrer ce diagnostic » (.txt sur le Bureau)
-            public bool Dynamic;              // accroche PURE (sans donnée) → l'IA la reformule à chaque fois
         }
 
         /// <summary>Une cause rendue en CARTE dans le chat : pastille d'impact colorée
@@ -51,21 +50,22 @@ namespace BTOptimizer
             public ChatAction Fix;
         }
 
+        // Réponse unique à toute demande portant sur l'IA locale.
+        // Catalogue des réglages, construit une fois (les actions en un clic s'y réfèrent).
+        private static readonly Lazy<List<Tweak>> Catalogue = new Lazy<List<Tweak>>(Catalog.All);
+
+        private const string IaRetiree = "L'IA locale a été retirée d'ONYX : le Copilote répond avec ses règles, ta configuration réelle, la base de connaissances et la recherche web.";
+
         public static Reply Intro(BadgeCatalog.Stats st)
         {
             string h = st != null ? "  Santé actuelle de ton PC : " + st.Health + " %." : "";
-            string ia = LocalBrain.SetupStatus;
-            string brain = ia != null
-                ? "\n🧠 Mon cerveau IA local s'installe en arrière-plan (" + ia + ") — gratuit, 100 % sur ta machine. « désactive l'ia » pour annuler."
-                : LocalBrain.Enabled ? "\n🧠 IA locale active : je réponds aussi à tout le reste."
-                : "";
             return new Reply
             {
                 Text = "Bonjour, je suis le Copilote — l'assistant de ton PC." + h +
                        "\nDis-moi ce qui cloche — je dépanne ton PC quel que soit le souci : jeux qui rament, plus de "
                      + "son, plus d'internet, Windows corrompu, écran noir, ça crash… je mesure, je répare (gratuitement, "
                      + "avec ton accord), et pour ce que le logiciel ne peut pas faire seul, je te guide pas à pas. "
-                     + "Je réponds aussi aux questions : « c'est quoi le DLSS ? »…" + brain,
+                     + "Je réponds aussi aux questions : « c'est quoi le DLSS ? »…",
                 ShowStarters = true
             };
         }
@@ -116,7 +116,7 @@ namespace BTOptimizer
         public static Reply Answer(string q, BadgeCatalog.Stats st, Action<string, int> log, Reply last = null)
         {
             var entries = HelpCatalog.Entries(log);
-            string s = Expand(Norm(q));   // accents à plat + abréviations texto développées
+            string s = CopiloteTexte.Prepare(q);   // accents à plat, apostrophes, texto développé
             if (s.Length == 0) return Intro(st);
 
             // --- Suivi de conversation : « oui » / « non » répond à la DERNIÈRE proposition ---
@@ -138,27 +138,26 @@ namespace BTOptimizer
             // Salutation SEULE (≤ 3 mots) → on salue. Sinon (« salut j'ai un souci… ») c'est juste
             // un préambule : on ignore la politesse et on traite le vrai message plus bas.
             if (SplitWords(s).Length <= 3 && Has(s, "bonjour", "salut", "coucou", "hello", "hey", "bonsoir", "bonne nuit"))
-                return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true, Dynamic = true };
+                return new Reply { Text = "Salut ! Décris ton souci et j'ouvre le bon outil. Ou choisis ci-dessous.", ShowStarters = true };
             // « ça va PAS » (négatif) : on ne répond pas « ça va ! », on demande ce qui cloche.
             if (Has(s, "ca va pas", "ca va plus", "sa va pas", "ca marche pas") && SplitWords(s).Length <= 5)
-                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true, Dynamic = true };
+                return new Reply { Text = "Ah, qu'est-ce qui ne va pas ? Dis-moi ce qui se passe (ça rame, ça crash, plus de son, plus d'internet…) et je m'en occupe.", ShowStarters = true };
             // « ça va ? » et ses formes familières (cava, sava, cv…). Messages COURTS seulement :
             // « comment va mon pc » doit rester une question de santé, pas de la politesse.
             if (SplitWords(s).Length <= 4 && !Has(s, "pc", "jeu")
                 && Has(s, "ca va", "ca roule", "ca gaze", "quoi de neuf", "tu vas bien", "comment vas tu", "bien et toi"))
-                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true, Dynamic = true };
+                return new Reply { Text = "Ça va, merci 🙂 Et toi ? Je suis prêt : dis-moi ce qui cloche sur ton PC, ou pose-moi n'importe quelle question.", ShowStarters = true };
             if (Has(s, "au revoir", "a plus", "bye", "ciao", "a bientot", "bonne journee", "bonne soiree"))
-                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false, Dynamic = true };
+                return new Reply { Text = "À bientôt ! Reviens dès que ton PC fait des siennes. 👋", ShowStarters = false };
             if (Has(s, "merci", "thanks", "top", "parfait", "genial", "super", "nickel", "cool"))
-                return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true, Dynamic = true };
+                return new Reply { Text = "Avec plaisir ! Autre chose à diagnostiquer ?", ShowStarters = true };
             if (Has(s, "qui es tu", "tu es qui", "c'est quoi ce chat", "tu es un robot", "tu es une ia", "es tu une ia", "es tu humain"))
-                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne sur TA machine. Je mesure, je répare, je conseille — et avec mon cerveau IA local, je réponds à tout. Par défaut tout reste local ; si tu actives la recherche web, je vais aussi chercher l'info à jour en ligne (désactivable). Alors, on regarde quoi ?", ShowStarters = true };
+                return new Reply { Text = "Je suis le Copilote de ton PC : un assistant qui tourne sur TA machine. Je mesure, je répare, je conseille, et je réponds avec mes règles, ta configuration réelle et ma base de connaissances. Par défaut tout reste local ; si tu actives la recherche web, je vais aussi chercher l'info à jour en ligne (désactivable). Alors, on regarde quoi ?", ShowStarters = true };
 
             // --- Oubli contextuel (technique anti-hallucination : réduire la fenêtre pour ne pas
             //     être influencé par les échanges précédents). « nouveau sujet », « oublie »… ---
             if (IsForget(s))
             {
-                try { LocalBrain.ResetHistory(); } catch { }
                 return new Reply { Text = "Contexte oublié — on repart de zéro. 🧹 Pose ta nouvelle question !", ShowStarters = true };
             }
 
@@ -182,22 +181,22 @@ namespace BTOptimizer
             //     l'ancien refus honnête. Nécessite internet ; l'heure, elle, marche hors-ligne. ---
             if (IsWeather(s))
             {
-                if (LocalBrain.WebOff())
+                if (WebPrefs.WebOff())
                     return new Reply { Text = "Pour la météo j'ai besoin d'internet (actuellement coupé). Dis « active internet », "
                         + "ou ouvre ton appli Météo. (L'heure, je la donne hors-ligne : demande « quelle heure est-il ».)", ShowStarters = true };
-                return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st), Dynamic = true };
+                return new Reply { Text = "Je regarde la météo en direct…", Action = ChatActions.WeatherAction(q, st) };
             }
 
             // --- MISE À JOUR D'ONYX LUI-MÊME (avant le bilan Windows : « mets à jour ONYX » est plus précis) ---
             if (UtilityTools.IsAppUpdate(s))
                 return new Reply { Text = "Je regarde s'il existe une version plus récente d'ONYX…",
-                    Action = ChatActions.UpdateCheckAction(), Dynamic = true };
+                    Action = ChatActions.UpdateCheckAction() };
 
             // --- BILAN MISES À JOUR : il MESURE (100 % local), puis propose — OU NON — d'installer.
             //     Jamais d'installation automatique : le bouton ouvre la page officielle, l'utilisateur décide. ---
             if (UtilityTools.IsUpdateCheck(s))
                 return new Reply { Text = "Je fais le bilan des mises à jour (pilote GPU, Windows, disque)…",
-                    Action = ChatActions.UpdatesCheckAction(), Dynamic = true };
+                    Action = ChatActions.UpdatesCheckAction() };
 
             // --- BATTERIE (mesure locale instantanée ; conseil jeu : jouer sur batterie = perfs bridées) ---
             if (UtilityTools.IsBattery(s))
@@ -268,7 +267,7 @@ namespace BTOptimizer
             // --- MÉDECIN DES JOURNAUX WINDOWS : tout ce que Windows a noté, traduit en diagnostic ---
             if (UtilityTools.IsLogDoctor(s))
                 return new Reply { Text = "Je lis les journaux Windows (Système + Application) des 14 derniers jours et "
-                    + "je traduis ce qu'ils disent…", Action = ChatActions.LogDoctorAction(14), Dynamic = true };
+                    + "je traduis ce qu'ils disent…", Action = ChatActions.LogDoctorAction(14) };
 
             // --- DEFENDER & JEUX : exclure les dossiers de jeux de l'analyse temps réel (réversible) ---
             if (UtilityTools.IsShieldUndo(s))
@@ -305,7 +304,7 @@ namespace BTOptimizer
             // --- OÙ SONT PASSÉS MES GO : classement des plus gros dossiers (voit aussi les jeux hors Steam) ---
             if (UtilityTools.IsBigFolders(s))
                 return new Reply { Text = "J'analyse tes disques et je classe les plus gros dossiers (30 secondes max)…",
-                    Action = ChatActions.BigFoldersAction(), Dynamic = true };
+                    Action = ChatActions.BigFoldersAction() };
 
             // --- JEUX QUI DORMENT : le plus gros levier d'espace disque chez un joueur ---
             if (UtilityTools.IsDormantGames(s))
@@ -321,7 +320,7 @@ namespace BTOptimizer
             if (UtilityTools.IsBottleneck(s))
                 return new Reply { Text = "Je mesure la charge CPU et l'utilisation GPU pendant 20 secondes. "
                     + "Idéalement, laisse ton JEU tourner en pleine action pendant la mesure — au bureau, les chiffres ne "
-                    + "veulent rien dire (je te le dirai si c'est le cas).", Action = ChatActions.BottleneckAction(), Dynamic = true };
+                    + "veulent rien dire (je te le dirai si c'est le cas).", Action = ChatActions.BottleneckAction() };
 
             // --- SANTÉ SMART des disques (local, lecture seule) : prévenir AVANT la panne ---
             if (UtilityTools.IsDiskHealth(s))
@@ -351,7 +350,7 @@ namespace BTOptimizer
                 foreach (var x in al) gsb.Append("• ").Append(x).Append('\n');
                 bool disk = false; foreach (var x in al) if (x.Contains("Disque système")) disk = true;
                 return new Reply { Text = gsb.ToString().TrimEnd(),
-                    Action = disk ? ChatActions.StorageAuditAction() : null, Dynamic = false };
+                    Action = disk ? ChatActions.StorageAuditAction() : null };
             }
 
             // --- UTILITAIRES « pour plein de choses » (public-apis) ---
@@ -370,87 +369,87 @@ namespace BTOptimizer
                 UtilityTools.Triple cur = UtilityTools.Currency(q);
                 if (cur != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le taux de change j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                    return new Reply { Text = "Je regarde le taux…", Action = ChatActions.CurrencyAction(cur.Amount, cur.A, cur.B, st), Dynamic = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour le taux de change j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le taux…", Action = ChatActions.CurrencyAction(cur.Amount, cur.A, cur.B, st) };
                 }
             }
             {
                 string coin = UtilityTools.CryptoId(s);
                 if (coin != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le cours j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                    return new Reply { Text = "Je regarde le cours…", Action = ChatActions.CryptoAction(coin, st), Dynamic = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour le cours j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le cours…", Action = ChatActions.CryptoAction(coin, st) };
                 }
             }
             if (UtilityTools.IsHoliday(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les jours fériés j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour les jours fériés j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                 UtilityTools.CountryHit ch = UtilityTools.HolidayCountryQuery(s);
                 if (ch != null && ch.Iso != "FR")
-                    return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysCountryAction(ch.Iso, ch.Name, st), Dynamic = true };
-                return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysAction(st), Dynamic = true };
+                    return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysCountryAction(ch.Iso, ch.Name, st) };
+                return new Reply { Text = "Je regarde les jours fériés…", Action = ChatActions.HolidaysAction(st) };
             }
-            // 5) TRADUCTION (MyMemory) — si web actif ; sinon on laisse l'IA locale traduire (hors-ligne).
-            if (!LocalBrain.WebOff())
+            // 5) TRADUCTION (MyMemory) — si web actif ; sinon la traduction n'est pas disponible.
+            if (!WebPrefs.WebOff())
             {
                 UtilityTools.TransJob tj = UtilityTools.TranslateJob(q);
                 if (tj != null)
                 {
                     Reply pb = PiiBlock(tj.Text); if (pb != null) return pb;
-                    return new Reply { Text = "Je traduis…", Action = ChatActions.TranslateAction(tj.Text, tj.From, tj.To, st), Dynamic = true };
+                    return new Reply { Text = "Je traduis…", Action = ChatActions.TranslateAction(tj.Text, tj.From, tj.To, st) };
                 }
             }
             // 6) MON IP publique (ipwho.is), 7) LEVER/COUCHER DU SOLEIL (Open-Meteo) — réseau.
             if (UtilityTools.IsMyIp(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour ton IP PUBLIQUE j'ai besoin d'internet (coupé). Ton IP LOCALE se voit avec « ipconfig ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde ton IP…", Action = ChatActions.MyIpAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour ton IP PUBLIQUE j'ai besoin d'internet (coupé). Ton IP LOCALE se voit avec « ipconfig ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde ton IP…", Action = ChatActions.MyIpAction(st) };
             }
             if (UtilityTools.IsSun(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les horaires du soleil j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde le soleil…", Action = ChatActions.SunAction(q, st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour les horaires du soleil j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde le soleil…", Action = ChatActions.SunAction(q, st) };
             }
             // 8) PRODUIT / NUTRITION (Open Food Facts), 9) CODE POSTAL → VILLE (Zippopotam) — réseau.
             {
                 string prod = UtilityTools.FoodQuery(q);
                 if (prod != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour les infos produit j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour les infos produit j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je cherche le produit…", Action = ChatActions.FoodAction(prod, st), Dynamic = true };
+                    return new Reply { Text = "Je cherche le produit…", Action = ChatActions.FoodAction(prod, st) };
                 }
             }
             {
                 string cp = UtilityTools.PostalQuery(s);
                 if (cp != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la ville d'un code postal j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                    return new Reply { Text = "Je regarde le code postal…", Action = ChatActions.PostalAction(cp, st), Dynamic = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour la ville d'un code postal j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le code postal…", Action = ChatActions.PostalAction(cp, st) };
                 }
             }
             // 10) AVIONS EN VOL (OpenSky), 11) PHOTO ASTRO DU JOUR (NASA APOD) — réseau, sans clé.
             if (UtilityTools.IsFlights(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les avions en vol j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde le ciel…", Action = ChatActions.FlightsAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour les avions en vol j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde le ciel…", Action = ChatActions.FlightsAction(st) };
             }
             if (UtilityTools.IsApod(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la photo astro du jour j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde la photo du jour de la NASA…", Action = ChatActions.ApodAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour la photo astro du jour j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la photo du jour de la NASA…", Action = ChatActions.ApodAction(st) };
             }
             // 12) DETTE PUBLIQUE DE LA FRANCE en direct (dettedelafrance.fr) — réseau, sans clé.
             if (UtilityTools.IsDebt(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la dette de la France en direct j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde la dette en direct…", Action = ChatActions.DebtAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour la dette de la France en direct j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la dette en direct…", Action = ChatActions.DebtAction(st) };
             }
             // 13) QUALITÉ DE L'AIR (Open-Meteo) — réseau, sans clé.
             if (UtilityTools.IsAir(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la qualité de l'air j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde la qualité de l'air…", Action = ChatActions.AirAction(q, st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour la qualité de l'air j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde la qualité de l'air…", Action = ChatActions.AirAction(q, st) };
             }
             // 14) PHASE DE LA LUNE : calcul LOCAL, hors-ligne (comme l'heure) — réponse immédiate.
             if (UtilityTools.IsMoon(s)) return new Reply { Text = LiveData.MoonPhase(), ShowStarters = true };
@@ -459,29 +458,29 @@ namespace BTOptimizer
                 UtilityTools.Pair pr = UtilityTools.DistanceQuery(q);
                 if (pr != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la distance entre 2 villes j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour la distance entre 2 villes j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je calcule la distance…", Action = ChatActions.DistanceAction(pr.A, pr.B, st), Dynamic = true };
+                    return new Reply { Text = "Je calcule la distance…", Action = ChatActions.DistanceAction(pr.A, pr.B, st) };
                 }
             }
             if (UtilityTools.IsQuake(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour les séismes récents j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je regarde les séismes récents…", Action = ChatActions.QuakesAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour les séismes récents j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je regarde les séismes récents…", Action = ChatActions.QuakesAction(st) };
             }
             if (UtilityTools.IsIss(s))
             {
-                if (LocalBrain.WebOff()) return new Reply { Text = "Pour la position de l'ISS j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                return new Reply { Text = "Je localise l'ISS…", Action = ChatActions.IssAction(st), Dynamic = true };
+                if (WebPrefs.WebOff()) return new Reply { Text = "Pour la position de l'ISS j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                return new Reply { Text = "Je localise l'ISS…", Action = ChatActions.IssAction(st) };
             }
             // 18) ACTUALITÉS (Google Actualités RSS FR) — réseau, sans clé. "" = à la une, sinon recherche.
             {
                 string news = UtilityTools.NewsQuery(q);
                 if (news != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour les actualités j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour les actualités j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je regarde les actualités…", Action = ChatActions.NewsAction(news, st), Dynamic = true };
+                    return new Reply { Text = "Je regarde les actualités…", Action = ChatActions.NewsAction(news, st) };
                 }
             }
             // 19) JEUX GRATUITS PC (FreeToGame) — réseau, sans clé. "" = tous, sinon par genre.
@@ -489,8 +488,8 @@ namespace BTOptimizer
                 string genre = UtilityTools.FreeGamesQuery(q);
                 if (genre != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour la liste des jeux gratuits j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                    return new Reply { Text = "Je cherche des jeux gratuits…", Action = ChatActions.FreeGamesAction(genre, st), Dynamic = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour la liste des jeux gratuits j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je cherche des jeux gratuits…", Action = ChatActions.FreeGamesAction(genre, st) };
                 }
             }
             // 20) LIVRES (Open Library) — réseau, sans clé.
@@ -498,9 +497,9 @@ namespace BTOptimizer
                 string book = UtilityTools.BookQuery(q);
                 if (book != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour chercher un livre j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour chercher un livre j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je cherche le livre…", Action = ChatActions.BookAction(book, st), Dynamic = true };
+                    return new Reply { Text = "Je cherche le livre…", Action = ChatActions.BookAction(book, st) };
                 }
             }
             // 21) POKÉMON (PokéAPI), 22) SÉRIES TV (TVMaze), 23) PRIX NOBEL — réseau, sans clé.
@@ -508,26 +507,26 @@ namespace BTOptimizer
                 string poke = UtilityTools.PokemonQuery(q);
                 if (poke != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche Pokémon j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour une fiche Pokémon j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je regarde le Pokédex…", Action = ChatActions.PokemonAction(poke, st), Dynamic = true };
+                    return new Reply { Text = "Je regarde le Pokédex…", Action = ChatActions.PokemonAction(poke, st) };
                 }
             }
             {
                 string show = UtilityTools.ShowQuery(q);
                 if (show != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une fiche série j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour une fiche série j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je cherche la série…", Action = ChatActions.ShowAction(show, st), Dynamic = true };
+                    return new Reply { Text = "Je cherche la série…", Action = ChatActions.ShowAction(show, st) };
                 }
             }
             {
                 UtilityTools.NobelHit nob = UtilityTools.NobelQuery(s);
                 if (nob != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour le prix Nobel j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
-                    return new Reply { Text = "Je regarde le prix Nobel…", Action = ChatActions.NobelAction(nob.Cat, nob.CatFr, nob.Year, st), Dynamic = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour le prix Nobel j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    return new Reply { Text = "Je regarde le prix Nobel…", Action = ChatActions.NobelAction(nob.Cat, nob.CatFr, nob.Year, st) };
                 }
             }
 
@@ -560,9 +559,9 @@ namespace BTOptimizer
                 string def = UtilityTools.DefineQuery(q);
                 if (def != null)
                 {
-                    if (LocalBrain.WebOff()) return new Reply { Text = "Pour une définition j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
+                    if (WebPrefs.WebOff()) return new Reply { Text = "Pour une définition j'ai besoin d'internet (coupé). Dis « active internet ».", ShowStarters = true };
                     Reply pb = PiiBlock(q); if (pb != null) return pb;
-                    return new Reply { Text = "Je cherche la définition…", Action = ChatActions.DefineAction(def, st), Dynamic = true };
+                    return new Reply { Text = "Je cherche la définition…", Action = ChatActions.DefineAction(def, st) };
                 }
             }
 
@@ -590,24 +589,24 @@ namespace BTOptimizer
             // « désactive » AVANT « active » (l'un contient l'autre).
             if (Has(s, "desactive l'ia", "desactiver l'ia", "coupe l'ia", "coupe ton ia", "sans ia"))
             {
-                LocalBrain.SetEnabled(false); LocalBrain.ResetHistory();
-                return new Reply { Text = "IA locale désactivée — je reste sur mes règles (toujours 100 % local). Dis « active l'ia » pour la rallumer.", ShowStarters = true };
+                return new Reply { Text = IaRetiree, ShowStarters = true };
             }
             // Repartir de zéro dans la conversation IA (oublie le contexte précédent).
             if (Has(s, "nouvelle conversation", "oublie tout", "oublie la conversation", "on repart de zero", "reset la conversation", "efface la conversation"))
             {
-                LocalBrain.ResetHistory();
                 return new Reply { Text = "C'est oublié — on repart sur une page blanche. Qu'est-ce que je peux faire pour toi ?", ShowStarters = true };
             }
             // Activer / couper la recherche internet (« coupe » testé avant « active »).
-            if (Has(s, "coupe internet", "coupe la recherche", "sans internet", "reste hors ligne", "mode hors ligne", "desactive internet"))
+            // « coupe la recherche bing » vise le menu Démarrer (réglage du catalogue), pas la recherche du Copilote.
+            if (Has(s, "coupe internet", "coupe la recherche", "sans internet", "reste hors ligne", "mode hors ligne", "desactive internet")
+                && !s.Contains("bing"))
             {
-                LocalBrain.SetWebEnabled(false);
-                return new Reply { Text = "Recherche internet coupée — je reste 100 % hors-ligne (mesures, réparations, IA locale sur ce PC). Dis « active internet » pour la rétablir.", ShowStarters = true };
+                WebPrefs.SetWebEnabled(false);
+                return new Reply { Text = "Recherche internet coupée — je reste 100 % hors-ligne (mesures, réparations, base de connaissances). Dis « active internet » pour la rétablir.", ShowStarters = true };
             }
             if (Has(s, "active internet", "activer internet", "connecte toi", "connexion internet", "va sur internet", "acces internet"))
             {
-                LocalBrain.SetWebEnabled(true);
+                WebPrefs.SetWebEnabled(true);
                 return new Reply { Text = "Recherche internet activée : pour l'actualité et le temps réel (résultats de match, météo, prix…), je vais chercher en ligne puis je te réponds. Vas-y, demande !", ShowStarters = true };
             }
             // --- MÉMOIRE : le Copilote retient pour être plus précis d'une fois sur l'autre ---
@@ -632,40 +631,18 @@ namespace BTOptimizer
                        "vide ta memoire", "oublie ce que tu as appris", "efface ce que tu as appris"))
             {
                 Memory.Clear();
-                LocalBrain.ForgetLearned();   // efface aussi les faits appris/vérifiés persistants
-                return new Reply { Text = "Voilà, j'ai tout oublié (matériel, préférences, notes, et les faits que j'avais appris/vérifiés). On repart de zéro.", ShowStarters = true };
-            }
-
-            // --- LIRE / RÉSUMER une page web dont l'URL est donnée ---
-            {
-                string url = FindUrl(q);
-                if (url != null && LocalBrain.Enabled && !LocalBrain.WebOff())
-                {
-                    string focus = Has(s, "resume", "resumer", "resume moi") ? "Résume cette page en français, points clés."
-                                 : (Has(s, "lis", "lire", "ouvre", "regarde") ? "" : "");
-                    return new Reply { Text = "Je vais lire cette page pour toi…", Action = ChatActions.ReadUrl(url, focus, st) };
-                }
+                return new Reply { Text = "Voilà, j'ai tout oublié (matériel, préférences, notes). On repart de zéro.", ShowStarters = true };
             }
 
             // --- BASE DE CONNAISSANCES (RAG) : gestion ---
             if (Has(s, "recharge mon savoir", "reconstruis ta base", "recharge ta base", "j'ai ajoute des documents",
                        "actualise ta base", "reindexe"))
             {
-                KnowledgeBase.Invalidate();
-                System.Threading.Tasks.Task.Run(() => { try { KnowledgeBase.EnsureIndex(); } catch { } });
-                return new Reply { Text = "Je relis ta base de connaissances (dossier bt-savoir) et je ré-indexe en fond. Tes documents seront pris en compte dès ta prochaine question.", ShowStarters = false };
+                return new Reply { Text = "Ta base de connaissances (dossier bt-savoir) est relue à chaque question : tes documents seront pris en compte dès la prochaine.", ShowStarters = false };
             }
             if (Has(s, "que contient ta base", "ta base de connaissances", "que sais tu faire de ta base", "contenu de ta base", "tes documents"))
                 return new Reply { Text = "Ma base de connaissances contient :\n\n" + KnowledgeBase.Describe()
                     + "\n\nPour l'enrichir, dépose des .txt/.md dans le dossier bt-savoir (dis « ou mettre mes documents ») puis « recharge mon savoir ».", ShowStarters = false };
-            if (Has(s, "installe bge", "meilleur modele de recherche", "ameliore ta base", "ameliore la recherche",
-                       "modele plus precis", "bge-m3", "bge m3"))
-                return new Reply
-                {
-                    Text = "Je télécharge un modèle de recherche plus précis (bge-m3, ~1,2 Go, meilleur en français) puis "
-                         + "je ré-indexe ta base avec — un clic :",
-                    Action = ChatActions.UpgradeEmbed()
-                };
             if (Has(s, "ou mettre mes documents", "ou ajouter des documents", "ou deposer mes fiches", "dossier savoir", "ajouter un document"))
             {
                 string folder = KnowledgeBase.FolderPath();
@@ -676,23 +653,22 @@ namespace BTOptimizer
             // Recherche web EXPLICITE : « cherche sur internet X », « google X »…
             if (Has(s, "cherche sur internet", "cherche sur le web", "recherche internet", "google", "sur internet", "sur le web", "recherche web"))
                 return new Reply { Text = "Je cherche ça sur le web…", Action = ChatActions.WebAnswer(q.Trim(), st) };
-            // Questions d'ACTUALITÉ / TEMPS RÉEL que l'IA locale ne peut pas connaître → recherche web.
-            {
-                Reply web = MaybeWeb(s, q, st);
-                if (web != null) return web;
-            }
             if (Has(s, "active l'ia", "activer l'ia", "active ton ia", "ia locale", "mon ia", "cerveau ia", "ollama", "intelligence artificielle"))
-                return new Reply
-                {
-                    Text = "Je vérifie l'état de mon cerveau IA local (gratuit, 100 % sur ta machine)…",
-                    Action = ChatActions.SetupBrain()
-                };
+                return new Reply { Text = IaRetiree, ShowStarters = true };
             if (iReport)
                 return new Reply
                 {
                     Text = "Je te prépare l'audit complet — un clic, rien n'est modifié au système :",
                     Action = ChatActions.MakeReport()
                 };
+
+            // --- ACTION EN UN CLIC sur un réglage du catalogue : « désactive la transparence »,
+            //     « active le mode jeu », « remets les widgets »… Il faut un verbe d'action et un
+            //     réglage qui ressort seul ; sinon on continue le routage normal. ---
+            {
+                CopiloteReglages.Choix choix = CopiloteReglages.Trouve(s, Catalogue.Value);
+                if (choix != null) return ChatActions.ReglageReply(choix);
+            }
 
             // --- DÉPANNAGE PC (au-delà du gaming) : les grandes réparations gratuites, et des
             //     guides sûrs pour ce que le logiciel ne peut pas faire seul. ---
@@ -779,7 +755,7 @@ namespace BTOptimizer
                 {
                     Text = "Tu décris plusieurs pistes à la fois — je préfère tout vérifier d'un coup. "
                          + "Enquête complète (une quinzaine de mesures, adaptées à ta plainte). Quelques secondes…",
-                    Action = Investigator.Action(q.Trim(), st), Dynamic = true
+                    Action = Investigator.Action(q.Trim(), st)
                 };
             // Demandes précises et fortes : leur mesure dédiée, même au milieu d'un symptôme large.
             if (iNet)
@@ -830,7 +806,7 @@ namespace BTOptimizer
                     Text = "Je lance l'enquête complète : écrans, capteurs, connexion, processus en fond, disque, "
                          + "bibliothèques, réglages néfastes, crashs pilote, RAM/XMP, pilote graphique, démarrage, "
                          + "redémarrage en retard… Les mesures s'adaptent à ta plainte. Quelques secondes…",
-                    Action = Investigator.Action(q.Trim(), st), Dynamic = true
+                    Action = Investigator.Action(q.Trim(), st)
                 };
 
             // --- CONSEILLER D'OUTILS : pour un BESOIN précis (récupérer un fichier, tester la
@@ -852,39 +828,18 @@ namespace BTOptimizer
             HelpCatalog.Entry best = null; int bestScore = 0;
             foreach (var e in entries) { int sc = Score(s, e); if (sc > bestScore) { bestScore = sc; best = e; } }
             if (best != null && bestScore >= 2)
-                return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best, Dynamic = true };
+                return new Reply { Text = "Pour « " + best.Symptom + " », le bon outil est « " + best.Tool + " ». Je l'ouvre ?", Tool = best };
 
-            // --- CERVEAU IA LOCAL (gratuit) : dès qu'il est prêt, il répond à TOUT ce que les
-            //     règles ne traitent pas avec certitude — y compris un signal PC faible (bestScore
-            //     == 1), où il vaut mieux une vraie réponse qu'un « tu veux dire… ? ». ---
-            if (LocalBrain.Enabled)
-                return new Reply
-                {
-                    Text = best != null && bestScore == 1
-                        ? "Je regarde ça pour toi…"
-                        : "Bonne question — je réfléchis…",
-                    Action = ChatActions.AskBrain(q.Trim(), st)
-                };
-            // Signal FAIBLE sans IA : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
+            // Signal FAIBLE : plutôt que de balayer d'un « pas compris », on vérifie l'intention.
             if (best != null && bestScore == 1)
                 return new Reply
                 {
-                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule, "
-                         + "ou dis « active l'ia » pour que je réponde à tout.",
+                    Text = "Tu veux dire « " + best.Symptom + " » ? Si oui, j'ouvre « " + best.Tool + " » — sinon reformule.",
                     Tool = best, ShowStarters = true
                 };
-            if (LocalBrain.SetupStatus != null)
-                return new Reply
-                {
-                    Text = "Mon cerveau IA local s'installe encore en arrière-plan (" + LocalBrain.SetupStatus
-                         + ") — repose-moi cette question dans quelques minutes, ou choisis un souci PC :",
-                    ShowStarters = true
-                };
-
             return new Reply
             {
-                Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, choisis un souci courant — "
-                     + "ou dis « active l'ia » : un cerveau IA local (gratuit, 100 % sur ta machine) qui répond à tout.",
+                Text = "Pas sûr d'avoir bien compris 🤔. Reformule en quelques mots, ou choisis un souci courant :",
                 ShowStarters = true
             };
         }
@@ -971,9 +926,6 @@ namespace BTOptimizer
             return null;
         }
 
-        /// <summary>Détecte une question d'ACTUALITÉ / temps réel (résultat, météo, prix, news,
-        /// date récente…) que le modèle local ne peut pas connaître → recherche web. Renvoie null
-        /// si ce n'est pas ce cas (ou si l'IA/web sont indisponibles : on laisse le routage normal).</summary>
         /// <summary>L'utilisateur demande-t-il d'oublier le contexte / repartir de zéro ?
         /// (oubli contextuel = technique anti-hallucination reconnue).</summary>
         internal static bool IsForget(string s)
@@ -1020,37 +972,6 @@ namespace BTOptimizer
                           "c'est errone", "c'est erroné", "c'est pas exact");
         }
 
-        private static Reply MaybeWeb(string s, string q, BadgeCatalog.Stats st)
-        {
-            if (!LocalBrain.Enabled || LocalBrain.WebOff()) return null;
-
-            // Question sur SA machine (« mon GPU plante », « ma config rame ») → local (mesures/
-            // réparations), jamais le web. On distingue le personnel du général.
-            bool personal = Has(s, "mon pc", "ma config", "ma machine", "chez moi", "mon ordi", "mon setup")
-                         || (Has(s, "mon", "ma", "mes") && Has(s, "plante", "crash", "rame", "lag", "bug", "freeze",
-                                 "souci", "probleme", "marche pas", "demarre pas", "chauffe", "gele", "fige"));
-            if (personal) return null;
-
-            // Signaux « il faut aller chercher » : récence, produits, prix, comparatifs, actualité,
-            // culture générale factuelle. Le modèle répond souvent avec assurance MAIS périmé/faux
-            // là-dessus → on vérifie sur le web d'emblée.
-            bool needsWeb = Has(s,
-                // récence / produits / prix / comparatifs
-                "dernier", "derniere", "recent", "recente", "actuel", "actuelle", "nouveau", "nouvelle",
-                "meilleur", "meilleure", "top ", "prix", "coute", "combien coute", "vaut le coup", "vaut il",
-                "comparer", "comparatif", "versus", "sortie", "date de sortie", "quand sort", "quand sortira",
-                "2024", "2025", "2026", "classement", "qui a gagne", "qui gagne", "resultat", "score", "match",
-                "meteo", "actualite", "actu", "news", "president", "elu", "vainqueur", "champion", "film", "serie",
-                "cours de", "bourse", "cotation", "population de", "capitale de", "combien de", "record du",
-                // recherche d'ENTITÉ (personne, marque, groupe…) — évite les inventions de l'IA
-                "c'est qui", "cest qui", "qui est", "qui sont", "info sur", "infos sur", "info", "infos",
-                "renseignement", "biographie", "parle moi de", "parle-moi de", "presente moi", "présente moi",
-                "c'est quoi comme", "definition de");
-            if (!needsWeb) return null;
-
-            return new Reply { Text = "Je vérifie l'info sur le web plutôt que de deviner…", Action = ChatActions.WebAnswer(q.Trim(), st) };
-        }
-
         /// <summary>Texte qui suit le premier marqueur trouvé, sur la question ORIGINALE (accents
         /// et casse gardés pour la mémoire). Ex. « Retiens que je joue à Valorant » → « je joue à Valorant ».</summary>
         private static string ExtractAfter(string original, string[] markers)
@@ -1084,19 +1005,6 @@ namespace BTOptimizer
             return null;
         }
 
-        /// <summary>Repère une URL (http(s):// ou www.…) dans le message, ou null.</summary>
-        private static string FindUrl(string text)
-        {
-            try
-            {
-                var m = System.Text.RegularExpressions.Regex.Match(text,
-                    @"((https?://|www\.)[^\s]+\.[^\s]{2,})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                if (m.Success) return m.Value.TrimEnd('.', ',', ')', ']', '"', '»');
-            }
-            catch { }
-            return null;
-        }
-
         // Nom lisible d'un outil du catalogue à partir de son id winget (pour le bouton).
         private static string ToolName(string wingetId)
         {
@@ -1117,7 +1025,6 @@ namespace BTOptimizer
         {
             Reply r = WithTool(entries, toolName, text);
             r.Action = action;
-            r.Dynamic = true;   // « je teste… », « je regarde… » : accroche reformulable (aucune donnée)
             return r;
         }
 
@@ -1157,7 +1064,6 @@ namespace BTOptimizer
             new[] { "markc", "Le « MarkC fix » est la méthode historique pour désactiver TOTALEMENT l'accélération de la souris (déplacement 1:1). L'optimisation souris de l'app fait l'équivalent proprement — et c'est réversible.", "Fréquence de la souris" },
             new[] { "sharpness;nettete;sharpen", "Le filtre de netteté NVIDIA (sharpen) redonne du piqué à l'image, utile avec DLSS/upscaling. L'app propose le réglage communautaire qui ramène l'ANCIEN filtre par jeu (EnableGR535), réversible, dans Optimisations → GPU.", null },
             new[] { "wub;update blocker", "Windows Update Blocker (Wub) coupe le service de mise à jour : plus AUCUN correctif, même de sécurité — le PC accumule des failles connues. L'app le détecte dans « Réglages néfastes » et le répare en un clic.", "Réglages néfastes" },
-            new[] { "ollama;ia locale", "Ollama fait tourner des modèles d'IA GRATUITS et open source directement sur ta machine (ta carte graphique fait le travail) : rien n'est envoyé sur internet, aucun abonnement. C'est le cerveau étendu optionnel du Copilote — dis « active l'ia ».", null },
         };
 
         /// <summary>« C'est quoi X ? » (ou juste « X ? ») → définition claire + l'outil lié.
@@ -1242,200 +1148,14 @@ namespace BTOptimizer
             switch (w) { case "mon": case "mes": case "pour": case "avec": case "dans": case "tout": case "tous": case "peut": case "être": case "sont": case "cette": case "quand": return true; default: return false; }
         }
 
-        // --- Correspondance TOLÉRANTE AUX FAUTES DE FRAPPE --------------------------------------
-        //  D'abord la sous-chaîne exacte (comme avant), sinon mot à mot avec une distance
-        //  d'édition bornée : « ecrqn » → « ecran », « grqtuit » → « gratuit », « conexion » →
-        //  « connexion ». Mots courts (< 5 lettres) : exact seulement, pour éviter les contresens.
-        private static bool Has(string s, params string[] ks)
-        {
-            string[] w = null;
-            foreach (var k in ks)
-            {
-                if (k.IndexOf(' ') >= 0)
-                {
-                    // Phrase : sous-chaîne exacte, sinon tous les mots présents (ordre libre).
-                    if (s.Contains(k)) return true;
-                    if (w == null) w = SplitWords(s);
-                    if (FuzzyKey(w, k)) return true;
-                    continue;
-                }
-                // Mot simple : JAMAIS de sous-chaîne globale — « blague » contiendrait « lag ».
-                if (w == null) w = SplitWords(s);
-                if (FuzzyWord(w, k)) return true;
-            }
-            return false;
-        }
-
-        private static string[] SplitWords(string s)
-        {
-            return s.Split(new[] { ' ', '\'', '-', ',', '.', ';', ':', '!', '?', '(', ')', '"', '/', '\n', '\r', '\t' },
-                           StringSplitOptions.RemoveEmptyEntries);
-        }
-
-        /// <summary>Clé simple → un mot du message ressemble ; clé à plusieurs mots → chaque mot
-        /// de la clé est présent (peu importe l'ordre : « plein disque » vaut « disque plein »).</summary>
-        private static bool FuzzyKey(string[] words, string key)
-        {
-            if (key.IndexOf(' ') < 0) return FuzzyWord(words, key);
-            foreach (var part in key.Split(' '))
-                if (part.Length > 0 && !FuzzyWord(words, part)) return false;
-            return true;
-        }
-
-        private static bool FuzzyWord(string[] words, string k)
-        {
-            int tol = k.Length >= 8 ? 2 : k.Length >= 5 ? 1 : 0;
-            foreach (var w in words)
-            {
-                if (w == k) return true;
-                // Sous-chaîne INTERNE réservée aux clés longues (« surchauffe » ⊃ « chauffe ») :
-                // sur les clés courtes elle créait des contresens (« blague » ⊃ « lag »).
-                if (k.Length >= 5 && w.Length > k.Length && w.Contains(k)) return true;
-                if (k.Length >= 3 && k.Length <= 4 && w.Length > k.Length && w.StartsWith(k, StringComparison.Ordinal)) return true; // « lags », « dlls »
-                if (UnitHit(w, k)) return true;                                       // « 60hz », « 144fps », « 1000hz »
-                if (tol > 0 && Math.Abs(w.Length - k.Length) <= tol && Lev(w, k, tol) <= tol) return true;
-            }
-            return false;
-        }
-
-        // Nombre collé à son unité : « 60hz » pour la clé « hz », « 240fps » pour « fps ».
-        private static bool UnitHit(string w, string k)
-        {
-            if (k.Length > 3 || w.Length <= k.Length || !w.EndsWith(k, StringComparison.Ordinal)) return false;
-            for (int i = 0; i < w.Length - k.Length; i++) if (!char.IsDigit(w[i])) return false;
-            return true;
-        }
-
-        /// <summary>Distance d'édition (Levenshtein) avec sortie anticipée au-delà de 'max'.</summary>
-        private static int Lev(string a, string b, int max)
-        {
-            int n = a.Length, m = b.Length;
-            var prev = new int[m + 1]; var cur = new int[m + 1];
-            for (int j = 0; j <= m; j++) prev[j] = j;
-            for (int i = 1; i <= n; i++)
-            {
-                cur[0] = i; int best = cur[0];
-                for (int j = 1; j <= m; j++)
-                {
-                    int cost = a[i - 1] == b[j - 1] ? 0 : 1;
-                    int v = Math.Min(Math.Min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
-                    cur[j] = v; if (v < best) best = v;
-                }
-                if (best > max) return max + 1;
-                var t = prev; prev = cur; cur = t;
-            }
-            return prev[m];
-        }
-
-        // --- « oui » / « non » : formes courtes uniquement, comparées lettres seules (« Vas-y ! »,
-        //     « d'accord », « ok stp »…). Une vraie phrase ne matche pas et suit le routage normal. ---
-        private static string Squash(string s)
-        {
-            var sb = new StringBuilder(s.Length);
-            foreach (char c in s) if (char.IsLetter(c)) sb.Append(c);
-            return sb.ToString();
-        }
-
-        private static readonly System.Text.RegularExpressions.Regex YesRx = new System.Text.RegularExpressions.Regex(
-            "^(oui|ouais|ouaip|yes|yep|yeah|ok|okay|oki|daccord|dacc|vasy|go|fonce|lance|faisle|fais|ouvre|carrement|volontiers|banco|camarche|cestparti|allonsy|allezy|allez|montre|montremoi|jeveuxbien|pourquoipas|evidemment|grave)"
-          + "(oui|ouais|ok|vasy|go|lance|faisle|fais|ouvre|montre|stp|silteplait|svp|merci|le|la|ca|moi|donc|maintenant|toutdesuite)*$");
-        private static readonly System.Text.RegularExpressions.Regex NoRx = new System.Text.RegularExpressions.Regex(
-            "^(non|nan|nope|no|pasmaintenant|pastoutdesuite|pasencore|plustard|laisse|laissetomber|annule|annuler|stop|arrete|surtoutpas)"
-          + "(non|nan|laisse|laissetomber|tomber|merci|stp|silteplait|svp)*$");
-
-        private static bool IsYes(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && YesRx.IsMatch(x); }
-        private static bool IsNo(string s) { string x = Squash(s); return x.Length > 0 && x.Length <= 40 && NoRx.IsMatch(x); }
-
-        // --- Développement du langage « texto » : chaque abréviation courante → sa forme pleine,
-        //     AVANT tout le routage (les règles, le lexique et les conseils en profitent tous).
-        //     Ne remplace QUE des tokens entiers, connus et non ambigus dans un contexte d'aide PC.
-        private static readonly System.Collections.Generic.Dictionary<string, string> Abbr =
-            new System.Collections.Generic.Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            // politesse / salutations
-            {"slt","salut"},{"cc","coucou"},{"bjr","bonjour"},{"bsr","bonsoir"},{"wsh","salut"},{"yo","salut"},
-            {"stp","s'il te plait"},{"svp","s'il te plait"},{"mrc","merci"},{"dsl","desole"},{"bnj","bonjour"},
-            // oui / non
-            {"wi","oui"},{"ui","oui"},{"ouai","oui"},{"ouais","oui"},{"nn","non"},{"nan","non"},{"vi","oui"},
-            // mots interrogatifs
-            {"pk","pourquoi"},{"pq","pourquoi"},{"pkoi","pourquoi"},{"prq","pourquoi"},{"koi","quoi"},{"kwa","quoi"},
-            {"ki","qui"},{"kan","quand"},{"kand","quand"},{"cmt","comment"},{"comen","comment"},{"komen","comment"},
-            {"komin","comment"},{"cb","combien"},{"cbien","combien"},
-            // pronoms / verbes fréquents
-            {"g","j'ai"},{"jai","j'ai"},{"j","je"},{"chui","je suis"},{"chuis","je suis"},{"shui","je suis"},
-            {"ta","tu as"},{"tas","tu as"},{"ya","il y a"},{"yaa","il y a"},{"jv","je vais"},{"jvai","je vais"},
-            {"jvais","je vais"},{"jpe","je peux"},{"jsp","je sais pas"},{"jpp","je n'en peux plus"},{"ta's","tu as"},
-            // abréviations courantes
-            {"bcp","beaucoup"},{"tjs","toujours"},{"tjr","toujours"},{"tjrs","toujours"},{"tt","tout"},
-            {"mtn","maintenant"},{"ct","c'etait"},{"tkt","t'inquiete"},{"askip","a ce qu'il parait"},
-            {"qqch","quelque chose"},{"qqn","quelqu'un"},{"qd","quand"},{"ms","mais"},{"pcq","parce que"},
-            {"pck","parce que"},{"prkoi","pourquoi"},{"tmp","temps"},{"bg","beau gosse"},
-            // problème / négations / tech
-            {"pb","probleme"},{"pbm","probleme"},{"pblm","probleme"},{"prob","probleme"},{"probl","probleme"},
-            {"souci","souci"},{"ordi","pc"},{"ordinateur","pc"},{"pc","pc"},{"maj","mise a jour"},
-            {"dl","telechargement"},{"tel","telecharger"},{"pa","pas"},{"pö","pas"},{"po","pas"},{"pu","plus"},
-            {"plu","plus"},{"rien","rien"},{"marche","marche"},{"fonctionne","fonctionne"},
-            // ça va & co (renforce la politesse, même isolé)
-            {"cava","ca va"},{"sava","ca va"},{"cv","ca va"},{"savapa","ca va pas"},{"cvpa","ca va pas"},
-            // --- 2e vague : adverbes, temps, accords ---
-            {"vrmt","vraiment"},{"vrm","vraiment"},{"vraimen","vraiment"},{"grv","grave"},{"tro","trop"},
-            {"tr","trop"},{"jms","jamais"},{"jame","jamais"},{"tjt","toujours"},{"auj","aujourd'hui"},
-            {"ajd","aujourd'hui"},{"dmain","demain"},{"enfait","en fait"},{"enfai","en fait"},{"anfin","enfin"},
-            {"fo","faut"},{"fau","faut"},{"vazy","vas y"},{"vazi","vas y"},{"jariv","j'arrive"},
-            {"psk","parce que"},{"pask","parce que"},{"parceke","parce que"},{"tfk","tu fais"},{"tufe","tu fais"},
-            {"jte","je te"},{"jtai","je t'ai"},{"cetai","c'etait"},{"quand","quand"},{"dak","ok"},{"dac","ok"},
-            {"dacc","ok"},{"okey","ok"},{"okay","ok"},{"oke","ok"},{"nikel","nickel"},{"trkl","tranquille"},
-            {"pfff","bof"},{"bref","bref"},
-            // --- 3e vague : vocabulaire panne (variantes de saisie → mot canonique) ---
-            {"lague","lag"},{"laggue","lag"},{"lagge","lag"},{"laggs","lag"},{"lagg","lag"},{"laag","lag"},
-            {"freez","freeze"},{"frize","freeze"},{"frise","freeze"},{"fige","freeze"},{"gele","freeze"},
-            {"bugg","bug"},{"buggue","bug"},{"bugue","bug"},{"boggue","bug"},{"boque","bug"},{"beug","bug"},
-            {"plante","plante"},{"plente","plante"},{"crash","crash"},{"krash","crash"},{"crache","crash"},
-            {"mouline","rame"},{"patine","rame"},{"ramme","rame"},{"ramette","rame"},
-            {"saccade","saccade"},{"sacade","saccade"},{"stotter","stutter"},{"stutt","stutter"},
-            {"reboot","redemarre"},{"restart","redemarre"},{"redemare","redemarre"},{"bloque","bloque"},
-            {"lenteur","lent"},{"lag","lag"},{"co","connexion"},{"deco","deconnecte"},{"deconecte","deconnecte"},
-            {"chaud","chaud"},{"brulant","chaud"},{"cramme","chaud"},{"fournaise","chaud"},{"bruyant","bruyant"},
-            {"ventilo","ventilateur"},{"ventilos","ventilateur"},{"screen","ecran"},{"moniteur","ecran"},
-            {"ecran","ecran"},{"clavié","clavier"},{"souri","souris"},{"soury","souris"},{"micro","micro"},
-            {"manette","manette"},{"drivers","pilotes"},{"driver","pilote"},
-        };
-
-        private static string Expand(string s)
-        {
-            if (string.IsNullOrEmpty(s) || s.IndexOf(' ') < 0 && s.Length > 12) return s;
-            string[] w = s.Split(' ');
-            var sb = new StringBuilder(s.Length + 16);
-            for (int i = 0; i < w.Length; i++)
-            {
-                if (w[i].Length == 0) continue;
-                string rep;
-                if (sb.Length > 0) sb.Append(' ');
-                sb.Append(Abbr.TryGetValue(w[i], out rep) ? rep : w[i]);
-            }
-            return sb.ToString();
-        }
-
-        // minuscule + sans accents (l'utilisateur tape souvent sans accents).
-        private static string Norm(string x)
-        {
-            if (string.IsNullOrEmpty(x)) return "";
-            var sb = new StringBuilder(x.Length);
-            foreach (char c0 in x.ToLowerInvariant().Trim())
-            {
-                char c = c0;
-                switch (c)
-                {
-                    case 'é': case 'è': case 'ê': case 'ë': c = 'e'; break;
-                    case 'à': case 'â': case 'ä': c = 'a'; break;
-                    case 'î': case 'ï': c = 'i'; break;
-                    case 'ô': case 'ö': c = 'o'; break;
-                    case 'û': case 'ü': case 'ù': c = 'u'; break;
-                    case 'ç': c = 'c'; break;
-                }
-                sb.Append(c);
-            }
-            return sb.ToString();
-        }
+        // Compréhension du texte (normalisation, texto, fautes de frappe) : CopiloteTexte, testé.
+        private static bool Has(string s, params string[] ks) { return CopiloteTexte.Has(s, ks); }
+        private static string[] SplitWords(string s) { return CopiloteTexte.SplitWords(s); }
+        private static bool FuzzyWord(string[] words, string k) { return CopiloteTexte.FuzzyWord(words, k); }
+        private static bool FuzzyKey(string[] words, string key) { return CopiloteTexte.FuzzyKey(words, key); }
+        private static int Lev(string a, string b, int max) { return CopiloteTexte.Lev(a, b, max); }
+        private static bool IsYes(string s) { return CopiloteTexte.IsYes(s); }
+        private static bool IsNo(string s) { return CopiloteTexte.IsNo(s); }
+        private static string Norm(string x) { return CopiloteTexte.Norm(x); }
     }
 }

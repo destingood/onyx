@@ -78,6 +78,10 @@
     <Compile Include="..\src\OffresSources.cs" />
     <!-- Page Jeux : tri jeu / application, jaquettes Epic, fusion multi-plateforme (pur). -->
     <Compile Include="..\src\BibliothequeJeux.cs" />
+    <Compile Include="..\src\RetraitIaLocale.cs" />
+    <!-- Copilote : compréhension du texte (normalisation, texto, fautes de frappe), pur. -->
+    <Compile Include="..\src\CopiloteTexte.cs" />
+    <Compile Include="..\src\CopiloteReglages.cs" />
     <Compile Include="..\src\Suivi.cs" />
     <Compile Include="..\src\Actus.cs" />
     <!-- Machine (HTTP, cache) : compilé pour le test réseau à la demande seulement (argument « reseau »). -->

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -1023,236 +1023,8 @@ namespace BTOptimizer
         }
 
         // ------------------------------------------------------------------
-        //  Cerveau IA LOCAL (optionnel, gratuit) — « il répond à tout »
-        // ------------------------------------------------------------------
-        /// <summary>Inspecte l'état (Ollama installé ? serveur ? modèle ?) et propose la BONNE
-        /// prochaine étape — active le cerveau dès que tout est prêt.</summary>
-        public static DocAssistant.ChatAction SetupBrain()
-        {
-            var a = new DocAssistant.ChatAction();
-            a.Label = "État de l'IA locale"; a.AutoRun = true; a.IsChange = false;
-            a.Run = delegate (Action<string, int> log)
-            {
-                LocalBrain.ClearOptOut();   // demande explicite : elle annule un « désactive » passé
-                if (LocalBrain.ServerUp(1500))
-                {
-                    string m = LocalBrain.BestModel();
-                    if (m != null)
-                    {
-                        LocalBrain.SetEnabled(true);
-                        return Say("🧠 IA locale ACTIVÉE (" + m + ") — gratuite, 100 % sur ta machine, rien ne sort du PC.\n"
-                                 + "Désormais, tout ce que mes règles ne comprennent pas, je le lui demande — pose-moi "
-                                 + "n'importe quelle question ! (« désactive l'ia » pour couper.)");
-                    }
-                    LocalBrain.ModelPick pk = LocalBrain.ChooseModel();
-                    var r0 = Say("Ollama tourne, mais aucun modèle n'est téléchargé. J'ai choisi celui qui convient le "
-                               + "mieux à ta machine : " + pk.Human + " — gratuit, une seule fois, il tourne ensuite hors-ligne :");
-                    r0.Action = PullModel();
-                    return r0;
-                }
-                if (LocalBrain.Installed)
-                    return Say("✅ Ollama est bien installé, mais son moteur ne tourne pas à l'instant. Lance « Ollama » "
-                             + "depuis le menu Démarrer (il se met dans la zone de notification), puis redis « active l'ia » — "
-                             + "je m'occupe du reste (modèle adapté à ta machine + configuration).");
-                var r = Say("Ollama n'est pas installé sur ce PC. Je peux l'installer pour toi — gratuit, open source, "
-                          + "100 % sur ta machine, aucune donnée envoyée, aucun abonnement — puis je le configure et "
-                          + "télécharge le modèle adapté :");
-                r.Action = InstallTool("Ollama.Ollama", "Ollama (IA locale)");
-                return r;
-            };
-            return a;
-        }
-
-        /// <summary>Télécharge le modèle ADAPTÉ à la machine (une seule fois).</summary>
-        public static DocAssistant.ChatAction PullModel()
-        {
-            LocalBrain.ModelPick pick = LocalBrain.ChooseModel();
-            var a = new DocAssistant.ChatAction();
-            a.Label = "Télécharger le modèle (" + pick.Human.Split('—')[0].Trim() + ", gratuit)";
-            a.IsChange = true;
-            a.Warning = "Télécharge " + pick.Human + " via Ollama (une seule fois). Modèle choisi pour TA config. "
-                      + "Il tourne ensuite 100 % hors-ligne. Peut prendre plusieurs minutes selon ta connexion.";
-            a.Run = delegate (Action<string, int> log)
-            {
-                string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
-                if (log != null) log("Téléchargement du modèle " + pick.Tag + " (Ollama)…", 0);
-                // 60 min : un modèle de plusieurs Go sur une connexion normale dépasse le délai par défaut (10 min).
-                try { Sys.Run(exe, "pull " + pick.Tag, Sys.LongRunTimeoutMs); }
-                catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
-                if (LocalBrain.BestModel() != null)
-                {
-                    LocalBrain.SetEnabled(true);
-                    return Say("🧠 Modèle prêt (" + pick.Tag + ") — IA locale ACTIVÉE. Pose-moi n'importe quelle question !");
-                }
-                return Say("Le modèle ne s'est pas installé (connexion ? espace disque ?). Réessaie dans un moment.");
-            };
-            return a;
-        }
-
-        /// <summary>Télécharge bge-m3 (embeddings plus précis, français) et ré-indexe la base.</summary>
-        public static DocAssistant.ChatAction UpgradeEmbed()
-        {
-            var a = new DocAssistant.ChatAction();
-            a.Label = "Installer bge-m3 (~1,2 Go) + ré-indexer";
-            a.IsChange = true;
-            a.Warning = "Télécharge un modèle de recherche plus précis (bge-m3) via Ollama, puis reconstruit l'index de "
-                      + "ta base de connaissances avec. Une seule fois ; ~1,2 Go.";
-            a.Run = delegate (Action<string, int> log)
-            {
-                if (!LocalBrain.ServerUp(1500)) return Say("Ollama ne répond pas — lance-le (« active l'ia »), puis réessaie.");
-                string exe = LocalBrain.OllamaExe(); if (exe == null) exe = "ollama";
-                if (log != null) log("Téléchargement du modèle de recherche bge-m3 (~1,2 Go)…", 0);
-                try { Sys.Run(exe, "pull " + LocalBrain.EmbedModelPro, Sys.LongRunTimeoutMs); }
-                catch (Exception ex) { return Say("Le téléchargement a échoué : " + ex.Message); }
-                if (LocalBrain.EmbedModelName() != LocalBrain.EmbedModelPro)
-                    return Say("Le modèle ne s'est pas installé (connexion ? espace ?). Réessaie plus tard.");
-                if (log != null) log("Ré-indexation de la base avec bge-m3…", 0);
-                try { KnowledgeBase.Invalidate(); KnowledgeBase.EnsureIndex(); } catch { }
-                return Say("✅ bge-m3 installé et base ré-indexée — la recherche dans tes documents est maintenant plus précise (surtout en français).");
-            };
-            return a;
-        }
-
-        /// <summary>Passe la question au modèle LOCAL (lecture seule : ça ne modifie rien).</summary>
-        public static DocAssistant.ChatAction AskBrain(string q, BadgeCatalog.Stats st)
-        {
-            var a = new DocAssistant.ChatAction();
-            a.Label = "Je réfléchis (IA locale)"; a.AutoRun = true; a.IsChange = false;
-            a.Run = delegate (Action<string, int> log)
-            {
-                if (!LocalBrain.ServerUp(1500))
-                    return Say("Mon cerveau IA local ne répond pas : lance Ollama (menu Démarrer), puis repose ta "
-                             + "question. (« active l'ia » refait le point si besoin.)");
-                string model = LocalBrain.BestModel();
-                if (model == null)
-                {
-                    var r0 = Say("Ollama tourne mais aucun modèle n'est téléchargé — je peux m'en charger :");
-                    r0.Action = PullModel();
-                    return r0;
-                }
-                if (log != null) log("IA locale (" + model + ") réfléchit…", 0);
-                string ans;
-                // RAG : on récupère les extraits pertinents de la base de connaissances (intégrée +
-                // tes documents) et on les ajoute au contexte → réponses ancrées et précises.
-                string sysCtx = BrainContext(st);
-                bool grounded = false;   // la réponse s'appuiera-t-elle sur des preuves (base) ?
-                try
-                {
-                    string kb = KnowledgeBase.Search(q, 5);
-                    if (!string.IsNullOrEmpty(kb))
-                    {
-                        sysCtx += "\n\n" + kb + "Sers-toi de ces extraits pour tout fait qu'ils couvrent (cite « base de connaissances »). Si une source est marquée « ⚠ peut-être daté », préviens que l'info n'est peut-être plus à jour. S'ils ne couvrent pas la question, ne force pas et n'invente rien.";
-                        grounded = true;
-                    }
-                }
-                catch { }
-                // Température DYNAMIQUE (technique reconnue anti-hallucination) : quasi nulle pour
-                // une question FACTUELLE (moins de « créativité » = moins d'invention), normale pour
-                // le bavardage / les conseils où un peu de naturel est bienvenu.
-                bool factual = IsFactualLookup(q);
-                // Mémoire de conversation : la question rejoint le fil, l'IA répond EN CONTEXTE
-                // (« et pourquoi ? », « développe »… gardent leur sens).
-                LocalBrain.PushUser(q);
-                try { ans = LocalBrain.AskChat(sysCtx, model, factual ? FactualTemp : NormalTemp, factual ? FactualTopP : NormalTopP); }
-                catch (Exception ex) { return Say("L'IA locale a calé : " + ex.Message); }
-                if (string.IsNullOrEmpty(ans))
-                    return Say("Là, honnêtement, je sèche — reformule, ou pose-moi un souci PC : c'est mon terrain, j'y suis imbattable.");
-
-                // RAISONNEMENT AUTOMATIQUE : valide la réponse contre les règles déterministes du
-                // domaine PC (mythes / conseils dangereux). Si invalide, on y adjoint la correction.
-                ans = ReasonCheck.Enhance(ans.Trim());
-
-                // ══ ANTI-HALLUCINATION ══════════════════════════════════════════════════════
-                // Le vrai piège n'est PAS seulement le doute avoué : c'est l'hallucination
-                // CONFIANTE (inventer une bio, une fiche technique, une date, un chiffre sans la
-                // moindre hésitation — le bug « Clio Williams »). Donc on vérifie sur le web dès
-                // que la question est FACTUELLE (personne, marque, produit, lieu, date, chiffre,
-                // définition d'entité…), MÊME si la réponse a l'air parfaitement sûre.
-                bool webOk   = LocalBrain.Enabled && !LocalBrain.WebOff();   // factual déjà calculé plus haut
-                // Garde côté RÉPONSE : une réponse NON ancrée (ni base, ni web) qui assène un fait
-                // daté (« né en 1997 », « fondée en 2010 ») est typiquement une invention confiante,
-                // même quand la QUESTION n'avait rien de factuel → on la traite pareil.
-                bool riskyFact   = !grounded && AnswerHasHardFact(ans);
-                bool needVerify  = factual || riskyFact || LooksUnsure(ans);
-                bool needHonesty = factual || riskyFact;   // ne doit jamais passer pour une certitude
-
-                if (needVerify && webOk && !PrivacyGuard.HasPII(q))   // jamais de PII vers le web
-                {
-                    if (log != null) log(needHonesty ? "Vérification factuelle sur le web…"
-                                                     : "Réponse incertaine → vérification sur le web…", 0);
-                    List<WebSearch.Result> res = null;
-                    try { res = WebSearch.Query(q, 5); } catch { }
-                    if (res != null && res.Count > 0)
-                    {
-                        string better = null;
-                        try { better = LocalBrain.AskWeb(q, WebSearch.Context(res), model); } catch { }
-                        if (!string.IsNullOrEmpty(better))
-                        {
-                            string bt = better.Trim();
-                            LocalBrain.PushAssistant(bt);
-                            // Si le web est HORS-SUJET (le modèle le dit lui-même), NE PAS afficher
-                            // « Fiabilité élevée » ni mémoriser une non-réponse (bug vu en test météo).
-                            bool weak = WebLooksOffTopic(bt);
-                            if (!weak) LocalBrain.RememberFact(q, bt);
-                            string tag = weak ? "🌐 Fiabilité faible · le web n'a pas répondu clairement là-dessus"
-                                              : Reliability(true, false) + " (" + WebSearch.Sources(res) + ")";
-                            return Say(ReasonCheck.Enhance(bt) + "\n\n— " + tag + ".");
-                        }
-                    }
-                    // Fait à vérifier mais web injoignable / rien trouvé : ne JAMAIS faire passer une
-                    // réponse peut-être inventée pour une certitude → on prévient honnêtement.
-                    if (needHonesty)
-                    {
-                        LocalBrain.PushAssistant(ans.Trim());
-                        return Say(ans.Trim() + "\n\n⚠️ Je n'ai pas pu vérifier ça en ligne (web injoignable ou rien "
-                                 + "trouvé) — à prendre avec des pincettes, je peux me tromper sur ce point précis.");
-                    }
-                }
-                // Fait à affirmer SANS internet : le modèle local seul invente facilement des faits
-                // précis → on l'assume clairement et on propose la vérification.
-                else if (needHonesty && !webOk)
-                {
-                    LocalBrain.PushAssistant(ans.Trim());
-                    return Say(ans.Trim() + "\n\n⚠️ Réponse de mémoire, NON vérifiée en ligne (sur les faits précis "
-                             + "je peux me tromper). Dis « active internet » et je confirme sur le web.");
-                }
-
-                LocalBrain.PushAssistant(ans.Trim());
-                return Say(ans.Trim() + "\n\n— " + Reliability(false, grounded) + " · IA locale (" + model + "), 100 % sur ta machine.");
-            };
-            return a;
-        }
-
-        // ------------------------------------------------------------------
         //  RECHERCHE WEB — le Copilote va chercher l'info d'actualité en ligne
         // ------------------------------------------------------------------
-        /// <summary>Télécharge une page web donnée et la fait RÉSUMER par le modèle local.</summary>
-        public static DocAssistant.ChatAction ReadUrl(string url, string q, BadgeCatalog.Stats st)
-        {
-            var a = new DocAssistant.ChatAction();
-            a.Label = "Lecture de la page"; a.AutoRun = true; a.IsChange = false;
-            a.Run = delegate (Action<string, int> log)
-            {
-                if (LocalBrain.WebOff())
-                    return Say("La recherche internet est coupée. Dis « active internet » pour que je puisse lire des pages web.");
-                if (log != null) log("Lecture de la page " + url + "…", 0);
-                string txt;
-                try { txt = WebSearch.FetchPage(url, 6000); }
-                catch { txt = ""; }
-                if (string.IsNullOrEmpty(txt) || txt.Length < 60)
-                    return Say("Je n'ai pas réussi à lire cette page (injoignable, protégée, ou vide).");
-                if (!LocalBrain.ServerUp(1500) || LocalBrain.BestModel() == null)
-                    return Say("Page lue, mais l'IA locale n'est pas là pour la résumer. Active-la (« active l'ia »).");
-                string demande = string.IsNullOrEmpty(q) ? "Résume cette page en français, points clés." : q;
-                string ans;
-                try { ans = LocalBrain.AskWeb(demande, "Contenu de la page " + url + " :\n" + txt, LocalBrain.BestModel()); }
-                catch (Exception ex) { return Say("Le résumé a échoué : " + ex.Message); }
-                if (string.IsNullOrEmpty(ans)) return Say("Je n'ai pas pu résumer cette page.");
-                return Say(ans.Trim() + "\n\n— 🌐 lu sur " + url + ", synthétisé par l'IA locale.");
-            };
-            return a;
-        }
-
         // Ville mentionnée dans une question météo (« météo à Lyon » → « lyon »), ou "" → géoloc IP.
         private static string ExtractCity(string q)
         {
@@ -1353,7 +1125,7 @@ namespace BTOptimizer
                 if (log != null) log("Traduction (MyMemory)…", 0);
                 string r = null;
                 try { r = LiveData.Translate(text, from, to); } catch { }
-                if (string.IsNullOrEmpty(r)) return Say("Je n'ai pas réussi à traduire (hors-ligne ?). L'IA locale peut essayer si tu reformules.");
+                if (string.IsNullOrEmpty(r)) return Say("Je n'ai pas réussi à traduire (hors-ligne ?).");
                 return Say("🌍 " + r + "\n— traduction " + from + "→" + to + " (MyMemory, gratuit).");
             };
             return a;
@@ -1544,7 +1316,7 @@ namespace BTOptimizer
             return a;
         }
 
-        /// <summary>Définition/explication d'un mot via Wikipédia FR (gratuit, sans clé, sans IA locale). Action asynchrone.</summary>
+        /// <summary>Définition/explication d'un mot via Wikipédia FR (gratuit, sans clé). Action asynchrone.</summary>
         public static DocAssistant.ChatAction DefineAction(string word, BadgeCatalog.Stats st)
         {
             var a = new DocAssistant.ChatAction();
@@ -1893,6 +1665,54 @@ namespace BTOptimizer
             return a;
         }
 
+        /// <summary>Réponse à « désactive la transparence », « remets les widgets »… (choix fait par
+        /// CopiloteReglages) : lit l'état réel du réglage, puis propose l'action à confirmer.</summary>
+        public static DocAssistant.Reply ReglageReply(CopiloteReglages.Choix c)
+        {
+            Tweak t = c.Reglage;
+            if (c.Refus != null) return Say("Je ne le fais pas depuis la conversation : " + c.Refus + " (« " + t.Name + " »).");
+            bool? actif = null;
+            try { if (t.Check != null) actif = t.Check(); } catch { }
+            if (!c.Retablir && actif == true)
+            {
+                var deja = Say("« " + t.Name + " » est déjà en place sur ce PC.");
+                deja.Action = ReglageAction(t, true);
+                return deja;
+            }
+            if (c.Retablir && actif == false)
+                return Say("« " + t.Name + " » n'est pas en place sur ce PC : rien à rétablir.");
+            var r = Say((c.Retablir ? "Je peux remettre l'état d'avant pour « " : "Je peux appliquer « ") + t.Name + " ». Clique pour confirmer.");
+            r.Action = ReglageAction(t, c.Retablir);
+            return r;
+        }
+
+        /// <summary>Applique ou rétablit UN réglage du catalogue par le moteur habituel (sauvegarde du
+        /// registre, état d'origine capturé, suivi de dérive). Le résultat propose toujours l'inverse.</summary>
+        public static DocAssistant.ChatAction ReglageAction(Tweak t, bool retablir)
+        {
+            var a = new DocAssistant.ChatAction();
+            a.Label = (retablir ? "Rétablir : " : "Appliquer : ") + t.Name;
+            a.AutoRun = false; a.IsChange = true;
+            string w = retablir ? "Remet la valeur qu'avait Windows avant ce réglage." : (t.Desc ?? "");
+            if (!retablir && t.Risque == Risque.Fonction) w += " ⚠ Coupe une fonction de Windows que tu peux remarquer.";
+            if (t.Reboot) w += " Redémarrage nécessaire pour l'effet complet.";
+            if (!retablir) w += " Sauvegarde du registre avant, annulable en un clic (« Rétablir »).";
+            a.Warning = w.Trim();
+            a.Run = delegate (Action<string, int> log)
+            {
+                Action<string, int> journal = log ?? delegate (string m, int n) { };
+                EngineResult res = Engine.Run(new List<Tweak> { t }, !retablir, true, false, journal);
+                // Une exception : la page ne note rien au journal de bord et laisse retenter.
+                if (res.PrepFailed) throw new InvalidOperationException("rien n'a été changé, la sauvegarde préalable a échoué (" + res.PrepError + ")");
+                if (res.Ko > 0) throw new InvalidOperationException("Windows a refusé le changement (ONYX est-il lancé en administrateur ?)");
+                var r = Say((retablir ? "✅ Rétabli : " : "✅ Appliqué : ") + t.Name + "."
+                          + (res.RebootNeeded ? " Redémarre le PC pour l'effet complet." : ""));
+                r.Action = ReglageAction(t, !retablir);
+                return r;
+            };
+            return a;
+        }
+
         /// <summary>« Où sont passés mes Go ? » : classement des plus gros dossiers, tous disques.
         /// Lecture seule, budget de temps strict, résultat annoncé partiel si le temps manque.</summary>
         public static DocAssistant.ChatAction BigFoldersAction()
@@ -2162,7 +1982,7 @@ namespace BTOptimizer
             return a;
         }
 
-        /// <summary>Cherche sur le web puis fait répondre le modèle LOCAL à partir des résultats.
+        /// <summary>Cherche sur le web et rend les meilleurs résultats bruts (titre + domaine).
         /// Pour les questions d'actualité/temps réel (match, météo, prix, news…). Lecture seule.</summary>
         public static DocAssistant.ChatAction WebAnswer(string q, BadgeCatalog.Stats st)
         {
@@ -2170,7 +1990,7 @@ namespace BTOptimizer
             a.Label = "Recherche web"; a.AutoRun = true; a.IsChange = false;
             a.Run = delegate (Action<string, int> log)
             {
-                if (LocalBrain.WebOff())
+                if (WebPrefs.WebOff())
                     return Say("La recherche internet est coupée. Dis « active internet » pour que je puisse chercher l'actualité en ligne.");
                 // Garde-fou VIE PRIVÉE : ne jamais envoyer une info perso à un moteur externe.
                 var pii = PrivacyGuard.Detect(q);
@@ -2178,74 +1998,18 @@ namespace BTOptimizer
                     return Say("⚠️ Ta demande contient une info personnelle (" + string.Join(", ", pii.ToArray()) + "). "
                              + "Je ne l'envoie PAS à un moteur de recherche externe (vie privée). Retire l'info sensible et "
                              + "redemande, ou pose-moi ça autrement — les mesures et réparations restent 100 % sur ta machine.");
-                // BASE UNIVERSELLE : Wikipédia d'abord (encyclopédie sourcée) pour les entités/concepts —
-                // bien plus fiable qu'un scraping. On ancre la réponse dessus et on cite l'article.
-                if (LocalBrain.ServerUp(1500) && LocalBrain.BestModel() != null)
-                {
-                    Wikipedia.Page wp = null;
-                    try { wp = Wikipedia.Lookup(q); } catch { }
-                    if (wp != null)
-                    {
-                        if (log != null) log("Wikipédia (« " + wp.Title + " »)…", 0);
-                        string wa = null;
-                        try { wa = LocalBrain.AskWeb(q, Wikipedia.Context(wp), LocalBrain.BestModel()); } catch { }
-                        if (!string.IsNullOrEmpty(wa) && !WebLooksOffTopic(wa))
-                        {
-                            LocalBrain.PushAssistant(wa.Trim());
-                            LocalBrain.RememberFact(q, wa.Trim());
-                            return Say(ReasonCheck.Enhance(wa.Trim()) + "\n\n— 📚 " + Reliability(true, false)
-                                     + " (Wikipédia : " + wp.Url + ").");
-                        }
-                    }
-                }
                 if (log != null) log("Recherche web (DuckDuckGo)…", 0);
                 List<WebSearch.Result> res;
                 try { res = WebSearch.Query(q, 5); }
                 catch { res = null; }
                 if (res == null || res.Count == 0)
                     return Say("Je n'ai pas réussi à joindre le web (hors-ligne ?) ou rien trouvé. Réessaie, ou reformule ta recherche.");
-                if (!LocalBrain.ServerUp(1500) || LocalBrain.BestModel() == null)
-                {
-                    // Pas d'IA pour résumer : on donne quand même les meilleurs résultats bruts.
-                    var sb = new StringBuilder("🌐 Voici ce que j'ai trouvé sur le web :\n\n");
-                    foreach (var r in res) { sb.Append("• ").Append(r.Title); if (!string.IsNullOrEmpty(r.Domain)) sb.Append("  (").Append(r.Domain).Append(')'); sb.Append('\n'); }
-                    return Say(sb.ToString().TrimEnd());
-                }
-                string ans;
-                try { ans = LocalBrain.AskWeb(q, WebSearch.Context(res), LocalBrain.BestModel()); }
-                catch (Exception ex) { return Say("La synthèse a échoué : " + ex.Message); }
-                if (string.IsNullOrEmpty(ans))
-                    return Say("Je n'ai pas pu résumer les résultats. Sources : " + WebSearch.Sources(res) + ".");
-                return Say(ans.Trim() + "\n\n— 🌐 recherché sur le web (" + WebSearch.Sources(res) + "), synthétisé par l'IA locale.");
+                // On donne les meilleurs résultats bruts.
+                var sb = new StringBuilder("🌐 Voici ce que j'ai trouvé sur le web :\n\n");
+                foreach (var r in res) { sb.Append("• ").Append(r.Title); if (!string.IsNullOrEmpty(r.Domain)) sb.Append("  (").Append(r.Domain).Append(')'); sb.Append('\n'); }
+                return Say(sb.ToString().TrimEnd());
             };
             return a;
-        }
-
-        // La réponse trahit-elle une incertitude / un manque d'info ? → déclenche l'auto-vérification web.
-        private static bool LooksUnsure(string ans)
-        {
-            string a = (ans ?? "").ToLowerInvariant();
-            string[] cues =
-            {
-                // doute
-                "je ne suis pas sur", "je ne suis pas certain", "je ne suis pas sûr", "pas totalement sur",
-                "je ne sais pas", "je n'ai pas l'info", "je n'ai pas d'info", "je n'ai pas acces",
-                "je n'ai pas accès", "a verifier", "à vérifier", "reste a confirmer", "je pense que",
-                "il me semble", "peut-etre", "peut etre", "sous reserve", "je ne connais pas",
-                "je n'en suis pas sur", "difficile a dire", "il faudrait verifier",
-                // refus / limite de connaissances (souvent une info RÉCENTE prise pour du futur) → à vérifier sur le web
-                "je ne peux pas fournir", "je ne peux pas répondre", "je ne peux pas repondre",
-                "je ne peux pas te dire", "je ne peux pas confirmer", "je ne peux pas savoir",
-                "je ne dispose pas", "je ne suis pas en mesure", "je n'ai pas la possibilite",
-                "au-dela de mes connaissances", "au-delà de mes connaissances", "ma base de connaissances",
-                "date de coupure", "ma derniere mise a jour", "ma dernière mise à jour", "apres ma formation",
-                "pas encore realise", "pas encore réalisé", "n'est pas encore", "futur lointain",
-                "en temps reel", "en temps réel", "informations en direct",
-                "je n'ai pas cette information", "je ne dispose pas de", "je ne saurais",
-                "sans certitude", "de memoire", "de mémoire", "je crois que", "il se peut"
-            };
-            foreach (string c in cues) if (a.Contains(c)) return true;
-            return false;
         }
 
         // Températures + top-p de génération. Proche de 0 / restreint pour le factuel (moins
@@ -2302,8 +2066,6 @@ namespace BTOptimizer
             if (c3) ok++; sb.Append(DiagLine(c3, "Raisonnement automatique (règles de domaine)"));
             n++; bool c4 = ChatTemperature("qui est untel") < ChatTemperature("raconte une blague");
             if (c4) ok++; sb.Append(DiagLine(c4, "Température & top-p dynamiques"));
-            n++; bool c5 = !string.IsNullOrEmpty(LocalBrain.ExtractKey("c'est qui clio williams"));
-            if (c5) ok++; sb.Append(DiagLine(c5, "Mémoire des faits vérifiés (anti flip-flop)"));
             n++; bool c6 = DocAssistant.IsForget("nouveau sujet");
             if (c6) ok++; sb.Append(DiagLine(c6, "Oubli contextuel (« nouveau sujet »)"));
             sb.Append("\nBilan : ").Append(ok).Append('/').Append(n).Append(ok == n ? " garde-fous actifs. ✅ Système sain." : " — ⚠️ anomalie détectée.");
@@ -2424,20 +2186,6 @@ namespace BTOptimizer
 "R : On regarde ça direct. Dis « fais un bilan complet » : je mesure FPS, température, réseau et process gourmands, puis je te propose les réparations en 1 clic.\n" +
 "Q : je désactive le pagefile pour gagner des FPS ?\n" +
 "R : Non, surtout pas : désactiver le fichier d'échange fait planter les jeux gourmands (« out of memory »). Laisse-le géré par Windows — le gain FPS est un mythe.\n";
-        }
-
-        private static string BrainContext(BadgeCatalog.Stats st)
-        {
-            try { Memory.SeedHardwareOnce(); } catch { }   // renseigne CPU/RAM/GPU une fois → conseils adaptés
-            var sb = new StringBuilder(PromptSkeleton());
-            if (st != null)
-                sb.Append("\n## ÉTAT RÉEL DU PC\nSanté ").Append(st.Health).Append(" %, ").Append(st.OptiActive).Append('/').Append(st.OptiTotal)
-                  .Append(" optimisations actives, ").Append(st.GamesDet).Append(" jeu(x) détecté(s).\n");
-            string mem = Memory.ForPrompt();
-            if (!string.IsNullOrEmpty(mem)) sb.Append("\n").Append(mem).Append("Utilise ces infos pour personnaliser tes réponses (sans les répéter inutilement).\n");
-            string vf = LocalBrain.VerifiedFactsBlock();   // faits sourcés déjà établis cette session → cohérence
-            if (!string.IsNullOrEmpty(vf)) sb.Append("\n").Append(vf);
-            return sb.ToString();
         }
 
         // ------------------------------------------------------------------
@@ -2816,15 +2564,6 @@ namespace BTOptimizer
                 var r = Say(sb.ToString());
                 r.Action = FixForCrash(diag.Fix);   // bouton adapté (DDU, VC++, DISM/SFC…) ou null
 
-                // Module inconnu + IA + web → on va chercher ce module/ce code sur le web pour préciser.
-                if (!diag.Known && !top.Hang && !string.IsNullOrEmpty(top.Module) && LocalBrain.Enabled && !LocalBrain.WebOff())
-                {
-                    var web = new DocAssistant.ChatAction();
-                    web.Label = "Chercher « " + top.Module + " » sur le web"; web.AutoRun = false; web.IsChange = false;
-                    string query = top.Exe + " " + top.Module + " " + top.Code + " crash fix";
-                    web.Run = delegate (Action<string, int> log2) { return WebAnswer(query, st).Run(log2); };
-                    r.Action = web;   // remplace le fix générique par la recherche ciblée
-                }
                 return r;
             };
             return a;

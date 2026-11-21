@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -168,17 +168,16 @@ namespace BTOptimizer
 #endif
 
 #if !BTTEST
-            // Cerveau IA LOCAL : amorçage au démarrage (gratuit, 100 % sur la machine). Bootstrap
-            // décide seul — activation silencieuse si déjà prêt, sinon UNE question « Oui/Non » puis
-            // installation du modèle ADAPTÉ à cette machine. Différé de 20 s (ne pas gêner le
-            // démarrage) ; jamais dans le harnais de test ; « désactive l'ia » coupe et bloque.
-            var iaTimer = new Timer { Interval = 20000 };
-            iaTimer.Tick += (s, e) =>
+            // IA locale retirée (15.85) : au premier lancement après la mise à jour, ONYX efface ses
+            // fichiers d'IA et désinstalle Ollama s'il l'avait posé lui-même (RetraitIaLocale). Différé
+            // de 20 s pour ne pas gêner le démarrage ; jamais dans le harnais de test.
+            var retraitIa = new Timer { Interval = 20000 };
+            retraitIa.Tick += (s, e) =>
             {
-                iaTimer.Stop(); iaTimer.Dispose();
-                System.Threading.Tasks.Task.Run(() => LocalBrain.Bootstrap(this, Log));
+                retraitIa.Stop(); retraitIa.Dispose();
+                System.Threading.Tasks.Task.Run(() => RetraitIaLocale.Lancer());
             };
-            iaTimer.Start();
+            retraitIa.Start();
 #endif
             FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }

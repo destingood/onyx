@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -56,7 +56,7 @@ namespace BTOptimizer
         //
         //  Reference, Section et Nettoie vivaient ici. Elles en sont sorties non par goût du
         //  découpage, mais parce que ce fichier appelle SelfCheck — qui tire Diagnostics,
-        //  CrashScan, LocalBrain, la moitié de l'application. Tant qu'elles y étaient, les
+        //  CrashScan, la moitié de l'application. Tant qu'elles y étaient, les
         //  vérifier revenait à compiler tout ONYX dans le banc d'essai.
         // ==================================================================
         //  Assemblage — IMPUR, et qui n'a pas le droit de lever

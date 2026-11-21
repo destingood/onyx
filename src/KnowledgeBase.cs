@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -7,14 +7,14 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Base de connaissances LOCALE (RAG) du Copilote : une base PC/gaming intégrée + les
-    /// documents que l'utilisateur dépose dans le dossier « bt-savoir\ », vectorisés via Ollama
-    /// (nomic-embed-text). À chaque question, on récupère les extraits les plus pertinents et on
-    /// les donne au modèle AVANT qu'il réponde → réponses ancrées et précises. 100 % local,
-    /// gratuit ; l'index est mis en cache (bt-kb-index.txt) et reconstruit si le savoir change.
+    /// documents que l'utilisateur dépose dans le dossier « bt-savoir\ ». À chaque question, on
+    /// récupère les extraits les plus pertinents par recouvrement de termes (recherche lexicale) →
+    /// réponses ancrées et précises. 100 % local, gratuit, sans index ni serveur : le savoir est
+    /// relu à chaque recherche.
     /// </summary>
     internal static class KnowledgeBase
     {
-        private sealed class Chunk { public string Source; public string Text; public float[] Vec; public DateTime When; }
+        private sealed class Chunk { public string Source; public string Text; public DateTime When; }
 
         // Fraîcheur : au-delà de ce délai, un document de bt-savoir est signalé « peut-être daté »
         // (le savoir périmé est LA cause n°1 d'échec RAG en entreprise — on le rend visible).
@@ -27,12 +27,7 @@ namespace BTOptimizer
             return " · maj " + when.ToString("MM/yyyy") + (IsStale(when) ? " · ⚠ peut-être daté" : "");
         }
 
-        private static readonly object Gate = new object();
-        private static List<Chunk> _index;          // en mémoire (chargé/reconstruit une fois)
-        private static string _signature;           // empreinte du savoir source (détecte un changement)
-
         private static string Dir { get { return AppPaths.File("bt-savoir"); } }
-        private static string IndexPath { get { return AppPaths.File("bt-kb-index.txt"); } }
 
         // --- Base PC/gaming INTÉGRÉE (chaque ligne = un fait interrogeable) ---
         private static readonly string[] Builtin =
@@ -329,17 +324,7 @@ namespace BTOptimizer
             "Base de savoir de référence, libre (MIT) et sourcée pour aller plus loin sur l'optimisation PC gaming : le projet GamingPCSetup de djdallmann sur GitHub — approche par la mesure et les preuves.",
         };
 
-        /// <summary>Empreinte du savoir SOURCE (intégré + fichiers utilisateur + modèle) : sert à
-        /// savoir s'il faut reconstruire l'index.</summary>
-        private static string Signature(List<Chunk> source)
-        {
-            var sb = new StringBuilder(LocalBrain.EmbedModelName() ?? "none").Append('|');
-            foreach (var c in source) sb.Append(c.Source).Append(':').Append(c.Text.Length).Append(';');
-            int h = sb.ToString().GetHashCode();
-            return h.ToString();
-        }
-
-        // Assemble les morceaux SOURCE (intégré + dossier utilisateur), sans vecteurs.
+        // Assemble les morceaux SOURCE (intégré + dossier utilisateur).
         private static List<Chunk> Collect()
         {
             var list = new List<Chunk>();
@@ -483,36 +468,7 @@ namespace BTOptimizer
             if (sb.Length > 0) { string chunk = sb.ToString().Trim(); if (chunk.Length >= 20) yield return chunk; }
         }
 
-        /// <summary>Construit l'index (vectorise ce qui manque) si le serveur + le modèle d'embed
-        /// sont là. Rapide si rien n'a changé (cache). À appeler en tâche de fond.</summary>
-        public static void EnsureIndex()
-        {
-            try
-            {
-                if (!LocalBrain.ServerUp(1200) || !LocalBrain.HasEmbedModel()) return;
-                var source = Collect();
-                string sig = Signature(source);
-                lock (Gate) { if (_index != null && _signature == sig) return; }
-
-                var cached = LoadCache();   // texte → vecteur (réutilise ce qui existe déjà)
-                var built = new List<Chunk>();
-                foreach (var c in source)
-                {
-                    float[] v;
-                    if (cached.TryGetValue(c.Text, out v)) { c.Vec = v; built.Add(c); continue; }
-                    v = LocalBrain.Embed(c.Text, false);
-                    if (v != null) { c.Vec = v; built.Add(c); }
-                }
-                SaveCache(built);
-                lock (Gate) { _index = built; _signature = sig; }
-            }
-            catch { }
-        }
-
-        /// <summary>Extraits les plus pertinents pour la question (top-k), ou "" si la base n'est
-        /// pas prête. Le modèle lit ces extraits pour ancrer sa réponse.</summary>
-        // --- Re-ranking HYBRIDE : score lexical (recouvrement de mots-clés) combiné au sémantique ---
-        private const double LexWeight = 0.12;   // affine le classement sans écraser le sémantique
+        // --- Recherche LEXICALE : recouvrement de mots-clés significatifs ---
         private static readonly HashSet<string> LexStop = new HashSet<string>(StringComparer.Ordinal)
         {
             "les","des","une","mon","ton","son","ses","est","que","qui","pas","sur","par","aux","ces","mes","tes",
@@ -550,26 +506,19 @@ namespace BTOptimizer
         }
 
         /// <summary>
-        /// Part des termes de la question qu'un extrait doit contenir pour être repêché SANS
-        /// index sémantique.
+        /// Part des termes de la question qu'un extrait doit contenir pour être repêché.
         ///
-        /// Haut volontairement. En recherche lexicale pure, il n'y a plus de cosinus pour écarter
-        /// le hors-sujet : un seul mot commun suffirait à remonter n'importe quelle fiche, et une
-        /// base qui répond toujours quelque chose est pire qu'une base qui se tait.
+        /// Haut volontairement. En recherche lexicale pure, rien n'écarte le hors-sujet : un seul
+        /// mot commun suffirait à remonter n'importe quelle fiche, et une base qui répond toujours
+        /// quelque chose est pire qu'une base qui se tait.
         /// </summary>
         private const double SeuilLexical = 0.5;
 
         /// <summary>
         /// PUR : les meilleurs extraits pour cette question, par recouvrement de termes.
         ///
-        /// C'est le chemin emprunté depuis le retrait de l'IA locale : sans serveur d'embeddings,
-        /// il n'y a plus d'index sémantique, et la base — 71 fiches écrites à la main — serait
-        /// devenue silencieuse alors que son CONTENU, lui, n'a jamais dépendu d'Ollama. Seule la
-        /// façon d'y retrouver quelque chose en dépendait.
-        ///
-        /// Ce que ce repli perd honnêtement : les reformulations. « ça rame » ne trouvera pas une
-        /// fiche qui parle de « saccades », là où le cosinus les rapprochait. Le dire vaut mieux
-        /// que laisser croire à une équivalence.
+        /// Limite assumée : les reformulations. « ça rame » ne trouvera pas une fiche qui parle de
+        /// « saccades » : il n'y a ni index sémantique ni synonymes, seulement des termes communs.
         /// </summary>
         /// <remarks>
         /// Rend des INDEX, pas des extraits. Chunk est un type privé de cette classe : une
@@ -603,9 +552,8 @@ namespace BTOptimizer
             return gardes;
         }
 
-        /// <summary>Recherche sans index sémantique. Même format de sortie que Search : les
-        /// appelants ne doivent pas avoir à savoir par quel chemin l'extrait est arrivé.</summary>
-        internal static string SearchLexical(string query, int k)
+        /// <summary>Extraits les plus pertinents pour la question (top-k), ou "" s'il n'y en a pas.</summary>
+        public static string Search(string query, int k)
         {
             try
             {
@@ -628,46 +576,6 @@ namespace BTOptimizer
             catch { return ""; }
         }
 
-        public static string Search(string query, int k)
-        {
-            try
-            {
-                List<Chunk> idx;
-                lock (Gate) idx = _index;
-                if (idx == null) { EnsureIndex(); lock (Gate) idx = _index; }
-                // Pas d'index — c'est désormais le cas NORMAL, l'IA locale étant retirée. Rendre
-                // "" ici rendait la base muette alors que ses fiches sont toujours là.
-                if (idx == null || idx.Count == 0) return SearchLexical(query, k);
-                float[] q = LocalBrain.Embed(query, true);
-                if (q == null) return SearchLexical(query, k);
-
-                // 1) Récupération SÉMANTIQUE : cosinus, on garde ce qui passe le seuil de pertinence.
-                var cand = new List<KeyValuePair<double, Chunk>>();   // clé = score combiné (ré-ordonné)
-                foreach (var c in idx)
-                {
-                    if (c.Vec == null) continue;
-                    double cos = Cosine(q, c.Vec);
-                    if (cos < 0.35) continue;   // trop peu pertinent : le lexical ne doit pas le repêcher
-                    // 2) Re-ranking HYBRIDE : cosinus + recouvrement lexical (termes exacts).
-                    double combined = cos + LexicalScore(query, c.Text) * LexWeight;
-                    cand.Add(new KeyValuePair<double, Chunk>(combined, c));
-                }
-                if (cand.Count == 0) return "";
-                cand.Sort(delegate (KeyValuePair<double, Chunk> a, KeyValuePair<double, Chunk> b) { return b.Key.CompareTo(a.Key); });
-
-                var sb = new StringBuilder("Base de connaissances (extraits pertinents) :\n");
-                int n = Math.Min(k, cand.Count); int kept = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    var c = cand[i].Value;
-                    sb.Append("- ").Append(c.Text).Append(" [").Append(c.Source).Append(FreshTag(c.When)).Append("]\n");
-                    kept++;
-                }
-                return kept > 0 ? sb.ToString() : "";
-            }
-            catch { return ""; }
-        }
-
         /// <summary>Sources actuellement indexées (pour « que contient ta base »).</summary>
         public static string Describe()
         {
@@ -683,9 +591,6 @@ namespace BTOptimizer
             foreach (var kv in bySrc) sb.Append("• ").Append(kv.Key).Append(FreshTag(whenOf[kv.Key])).Append(" : ").Append(kv.Value).Append(" passage(s)\n");
             return sb.ToString().TrimEnd();
         }
-
-        /// <summary>Force la reconstruction au prochain EnsureIndex (ex. après ajout de documents).</summary>
-        public static void Invalidate() { lock (Gate) { _index = null; _signature = null; } try { if (File.Exists(IndexPath)) File.Delete(IndexPath); } catch { } }
 
         /// <summary>Crée le dossier bt-savoir et y dépose un mode d'emploi si vide.</summary>
         public static string FolderPath()
@@ -706,67 +611,10 @@ namespace BTOptimizer
                         "Fraîcheur : au-delà de 18 mois, un document est signalé « peut-être daté » à la citation.\n" +
                         "Archivage : place le contenu PÉRIMÉ dans un sous-dossier « _archive\\ » — il est CONSERVÉ mais\n" +
                         "  IGNORÉ par le Copilote (les noms commençant par « _ » ne sont jamais indexés).\n\n" +
-                        "Pour une recherche encore plus précise (surtout en français), dis « installe bge-m3 ».\n" +
                         "Après tout ajout, dis « recharge mon savoir ».\n");
             }
             catch { }
             return Dir;
-        }
-
-        // ---- cache disque (texte + vecteur) : 1 ligne par morceau ----
-        private static Dictionary<string, float[]> LoadCache()
-        {
-            var map = new Dictionary<string, float[]>();
-            try
-            {
-                if (!File.Exists(IndexPath)) return map;
-                string want = LocalBrain.EmbedModelName() ?? "none";
-                foreach (string line in File.ReadAllLines(IndexPath))
-                {
-                    // En-tête « #MODEL\t<nom> » : vecteurs d'un AUTRE modèle → cache incompatible, on rejette.
-                    if (line.StartsWith("#MODEL\t", StringComparison.Ordinal))
-                    {
-                        if (line.Substring(7).Trim() != want) return new Dictionary<string, float[]>();
-                        continue;
-                    }
-                    int tab = line.IndexOf('\t');
-                    if (tab <= 0) continue;
-                    string text = line.Substring(0, tab).Replace("\\n", "\n");
-                    string[] parts = line.Substring(tab + 1).Split(',');
-                    var v = new float[parts.Length];
-                    bool ok = true;
-                    for (int i = 0; i < parts.Length; i++) if (!float.TryParse(parts[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v[i])) { ok = false; break; }
-                    if (ok) map[text] = v;
-                }
-            }
-            catch { }
-            return map;
-        }
-
-        private static void SaveCache(List<Chunk> chunks)
-        {
-            try
-            {
-                var sb = new StringBuilder();
-                sb.Append("#MODEL\t").Append(LocalBrain.EmbedModelName() ?? "none").Append('\n');
-                foreach (var c in chunks)
-                {
-                    if (c.Vec == null) continue;
-                    sb.Append(c.Text.Replace("\n", "\\n")).Append('\t');
-                    for (int i = 0; i < c.Vec.Length; i++) { if (i > 0) sb.Append(','); sb.Append(c.Vec[i].ToString("R", System.Globalization.CultureInfo.InvariantCulture)); }
-                    sb.Append('\n');
-                }
-                File.WriteAllText(IndexPath, sb.ToString());
-            }
-            catch { }
-        }
-
-        private static double Cosine(float[] a, float[] b)
-        {
-            int n = Math.Min(a.Length, b.Length);
-            double d = 0, na = 0, nb = 0;
-            for (int i = 0; i < n; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-            return (na > 0 && nb > 0) ? d / (Math.Sqrt(na) * Math.Sqrt(nb)) : 0;
         }
     }
 }

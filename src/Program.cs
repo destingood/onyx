@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
@@ -176,12 +176,10 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
-            // BT_KB=<question> : construit l'index RAG et affiche les extraits retrouvés — vérif.
+            // BT_KB=<question> : affiche les sources de la base et les extraits retrouvés — vérif.
             string kbQ = Environment.GetEnvironmentVariable("BT_KB");
             if (!string.IsNullOrEmpty(kbQ))
             {
-                Console.WriteLine("Embed dispo : " + LocalBrain.HasEmbedModel());
-                KnowledgeBase.EnsureIndex();
                 Console.WriteLine("Base :\n" + KnowledgeBase.Describe());
                 Console.WriteLine("\nQuestion : " + kbQ);
                 Console.WriteLine("Extraits retrouvés :\n" + KnowledgeBase.Search(kbQ, 4));
@@ -389,7 +387,7 @@ namespace BTOptimizer
             }
 
             // BT_HALLU=1 : teste le classifieur anti-hallucination (question factuelle → vérif web ?)
-            // sur un jeu d'exemples, et sort. Prouve le tri sans avoir besoin d'Ollama.
+            // sur un jeu d'exemples, et sort. Prouve le tri sans avoir besoin du réseau.
             if (Environment.GetEnvironmentVariable("BT_HALLU") == "1")
             {
                 var cases = new[]
@@ -436,46 +434,6 @@ namespace BTOptimizer
                     bool pass = got == exp; if (pass) ok2++;
                     Console.WriteLine((pass ? "OK  " : "FAIL") + "  fait-date=" + got + " (attendu " + exp + ")  « " + ans + " »");
                 }
-                // Clé d'entité : « Clio Williams » et « c'est qui clio williams » → MÊME clé (cohérence).
-                var keyCases = new[]
-                {
-                    new object[]{ "c'est qui clio williams", "clio williams" },
-                    new object[]{ "Clio Williams", "clio williams" },
-                    new object[]{ "qui est elon musk ?", "elon musk" },
-                    new object[]{ "combien coute une rtx 4090", "rtx 4090" },
-                    new object[]{ "parle moi de la formule 1", "formule 1" },
-                };
-                int ok3 = 0;
-                foreach (var c in keyCases)
-                {
-                    string q = (string)c[0]; string exp = (string)c[1];
-                    string got = LocalBrain.ExtractKey(q);
-                    bool pass = got == exp; if (pass) ok3++;
-                    Console.WriteLine((pass ? "OK  " : "FAIL") + "  cle=« " + got + " » (attendu « " + exp + " »)  <- « " + q + " »");
-                }
-                // Mémoire de faits APPRIS (persistante) : mémorise, réinjecte, ignore les « pas trouvé »,
-                // clé cohérente, SURVIT à ResetHistory (accumulation), effacée par ForgetLearned.
-                LocalBrain.ForgetLearned();   // etat propre
-                LocalBrain.RememberFact("c'est qui clio williams", "Clio Williams est une joueuse de tennis britannique.");
-                LocalBrain.RememberFact("info sur xyznope", "Je n'ai pas pu vérifier ça en ligne.");   // doit être ignoré
-                string block = LocalBrain.VerifiedFactsBlock();
-                int ok4 = 0;
-                bool m1 = block.Contains("clio williams") && block.Contains("tennis"); if (m1) ok4++;
-                Console.WriteLine((m1 ? "OK  " : "FAIL") + "  fait memorise et reinjecte (clio -> tennis)");
-                bool m2 = !block.Contains("xyznope"); if (m2) ok4++;
-                Console.WriteLine((m2 ? "OK  " : "FAIL") + "  « pas trouve » NON memorise");
-                LocalBrain.RememberFact("Clio Williams", "Clio Williams : mise a jour du meme sujet.");
-                string block2 = LocalBrain.VerifiedFactsBlock();
-                int clioCount = 0, idx = 0; while ((idx = block2.IndexOf("clio williams", idx, StringComparison.Ordinal)) >= 0) { clioCount++; idx += 5; }
-                bool m3 = clioCount == 1; if (m3) ok4++;   // même clé → une seule entrée (le plus récent gagne)
-                Console.WriteLine((m3 ? "OK  " : "FAIL") + "  meme entite = 1 seule entree (pas de doublon)");
-                LocalBrain.ResetHistory();
-                bool m4 = LocalBrain.VerifiedFactsBlock().Contains("clio williams"); if (m4) ok4++;   // PERSISTE (accumulation)
-                Console.WriteLine((m4 ? "OK  " : "FAIL") + "  faits appris SURVIVENT a ResetHistory (accumulation)");
-                LocalBrain.ForgetLearned();
-                bool m5 = LocalBrain.VerifiedFactsBlock() == ""; if (m5) ok4++;
-                Console.WriteLine((m5 ? "OK  " : "FAIL") + "  ForgetLearned efface les faits appris");
-
                 // Température dynamique : quasi nulle sur le factuel, souple sinon.
                 var tempCases = new[]
                 {
@@ -615,20 +573,6 @@ namespace BTOptimizer
                 bool exB = !KnowledgeBase.IsExcludedRel("Reseau/DNS.md") && !KnowledgeBase.IsExcludedRel("manuel.pdf");
                 if (exA) ok14++; Console.WriteLine((exA ? "OK  " : "FAIL") + "  exclusion : _lisez-moi et _archive\\ ignores");
                 if (exB) ok14++; Console.WriteLine((exB ? "OK  " : "FAIL") + "  exclusion : documents normaux indexes");
-
-                // TTL des faits appris (retirer l'etat perime).
-                int ok15 = 0;
-                string sNow = DateTime.Now.ToString("MM/yyyy");
-                string sOld = DateTime.Now.AddMonths(-24).ToString("MM/yyyy");
-                string sRecent = DateTime.Now.AddMonths(-6).ToString("MM/yyyy");
-                bool ttl1 = !LocalBrain.IsStampExpired(sNow);
-                bool ttl2 = LocalBrain.IsStampExpired(sOld);
-                bool ttl3 = !LocalBrain.IsStampExpired(sRecent);
-                bool ttl4 = !LocalBrain.IsStampExpired("");
-                if (ttl1) ok15++; Console.WriteLine((ttl1 ? "OK  " : "FAIL") + "  TTL : fait de ce mois -> valide");
-                if (ttl2) ok15++; Console.WriteLine((ttl2 ? "OK  " : "FAIL") + "  TTL : fait de 24 mois -> perime");
-                if (ttl3) ok15++; Console.WriteLine((ttl3 ? "OK  " : "FAIL") + "  TTL : fait de 6 mois -> valide");
-                if (ttl4) ok15++; Console.WriteLine((ttl4 ? "OK  " : "FAIL") + "  TTL : date vide -> tolere (valide)");
 
                 // Garde-fou PII (ne pas envoyer d'info perso au web). IP NON consideree comme PII.
                 int ok16 = 0;
@@ -1237,9 +1181,9 @@ namespace BTOptimizer
                 string dirty2 = ReleaseGuard.Verdict(new string[] { "BTOptimizer.exe", "bt-memoire.txt", "BTOptimizer.pdb" }, out gr, out mi);
                 bool rg6 = gr == 1 && mi == 1 && dirty2.Contains("bt-memoire.txt"); if (rg6) ok63++; Console.WriteLine((rg6 ? "OK  " : "FAIL") + "  publication : melange -> 1 grave + 1 mineur, nommes");
 
-                int total = cases.Length + ansCases.Length + keyCases.Length + 5 + tempCases.Length
-                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6;
-                int good = ok + ok2 + ok3 + ok4 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok15 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63;
+                int total = cases.Length + ansCases.Length + tempCases.Length
+                          + tempCases.Length + 3 + forgetCases.Length + rcCases.Length + 2 + 3 + 2 + corrCases.Length + 4 + 4 + piiCases.Length + 4 + injCases.Length + wthCases.Length + 2 + timeCases.Length + 1 + 6 + 4 + 4 + 4 + 3 + 2 + 4 + 4 + 2 + 3 + 3 + 2 + 2 + 7 + 3 + 2 + 3 + 2 + 3 + 4 + 3 + 2 + 4 + 2 + 3 + 4 + 4 + 4 + 3 + 3 + 4 + 4 + 4 + 4 + 4 + 4 + 5 + 4 + 4 + 5 + 6 + 5 + 6;
+                int good = ok + ok2 + ok5 + ok6 + ok7 + ok8 + ok9 + ok10 + ok11 + ok12 + ok13 + ok14 + ok16 + ok17 + ok18 + ok19 + ok20 + ok21 + ok22 + ok23 + ok24 + ok25 + ok26 + ok27 + ok28 + ok29 + ok30 + ok31 + ok32 + ok33 + ok34 + ok35 + ok36 + ok37 + ok38 + ok39 + ok40 + ok41 + ok42 + ok43 + ok44 + ok45 + ok46 + ok47 + ok48 + ok49 + ok50 + ok51 + ok52 + ok53 + ok54 + ok55 + ok56 + ok57 + ok58 + ok59 + ok60 + ok61 + ok62 + ok63;
                 Console.WriteLine("\nBT_HALLU : " + good + "/" + total + " cas corrects");
                 Environment.Exit(good == total ? 0 : 1);
             }

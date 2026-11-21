@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -6,7 +6,7 @@ namespace BTOptimizer
 {
     /// <summary>
     /// AUTO-DIAGNOSTIC D'ONYX : l'app vérifie SA PROPRE installation (droits, dossier de données,
-    /// WMI, journal d'événements, internet, IA locale, espace disque) et dit ce qui cloche AVANT que
+    /// WMI, journal d'événements, internet, espace disque) et dit ce qui cloche AVANT que
     /// l'utilisateur se demande pourquoi une fonction ne répond pas. Et « Copier les infos de
     /// support » met dans le presse-papiers tout ce qu'il faut pour l'aider — sans donnée perso.
     /// </summary>
@@ -52,7 +52,7 @@ namespace BTOptimizer
             l.Add(new Line { Ok = net, What = "Connexion internet (outils web du Copilote)",
                 Detail = net ? "OK" : "absente — les outils locaux (heure, calcul, lune, nettoyage) marchent quand même" });
 
-            // IA LOCALE RETIRÉE — voir LocalBrain.Retiree. Deux raisons de réécrire cette ligne
+            // IA LOCALE RETIRÉE. Deux raisons de réécrire cette ligne
             // plutôt que de la laisser : elle SONDAIT 127.0.0.1:11434 à chaque auto-diagnostic
             // (1,2 s d'attente bornée pour une réponse désormais connue), et elle invitait à
             // installer un serveur dont ONYX ne se sert plus. Recommander l'inutile est

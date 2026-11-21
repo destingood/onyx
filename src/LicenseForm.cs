@@ -31,21 +31,20 @@ namespace BTOptimizer
 "de données, d'une instabilité, d'une baisse de performances, d'une perte de garantie " +
 "matérielle ou de tout dommage direct ou indirect.\r\n" +
 "\r\n" +
-"4. ASSISTANT IA ET INTERNET (OPTIONNELS). Les mesures et réparations du logiciel fonctionnent " +
-"hors-ligne. En OPTION, l'assistant « Copilote » peut : télécharger et exécuter localement un " +
-"modèle d'intelligence artificielle (Ollama, gratuit) ; effectuer des RECHERCHES WEB et lire des " +
+"4. ASSISTANT ET INTERNET (OPTIONNELS). Les mesures et réparations du logiciel fonctionnent " +
+"hors-ligne. En OPTION, l'assistant « Copilote » peut : effectuer des RECHERCHES WEB et lire des " +
 "pages en ligne ; conserver une mémoire et une base de connaissances dans des fichiers locaux sur " +
 "votre PC. Lorsque la recherche web est activée, votre requête est transmise à un moteur de " +
 "recherche tiers (DuckDuckGo) : ne saisissez pas d'informations sensibles. Ces fonctions sont " +
-"désactivables à tout moment (« coupe internet », « désactive l'ia ») et les données locales sont " +
-"effaçables (« oublie ce que tu sais »). Les réponses de l'IA ou du web peuvent être inexactes ; " +
+"désactivables à tout moment (« coupe internet ») et les données locales sont " +
+"effaçables (« oublie ce que tu sais »). Les réponses de l'assistant ou du web peuvent être inexactes ; " +
 "l'éditeur n'en garantit pas l'exactitude et n'en est pas responsable. " +
 "Les pages « Bons plans » et « Actus », quand vous les ouvrez ou quand vous suivez un jeu, " +
 "interrogent les services publics de Steam, de l'Epic Games Store, de GamerPower et les flux des " +
 "sites d'actualité affichés. Ces services reçoivent votre adresse IP et le nom du logiciel ; le " +
 "texte tapé dans la recherche de jeux est envoyé à Steam. Rien d'autre n'est transmis.\r\n" +
 "\r\n" +
-"5. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD, Intel, Ollama " +
+"5. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD, Intel " +
 "ou DuckDuckGo. Toutes les marques citées appartiennent à leurs propriétaires respectifs.\r\n" +
 "\r\n" +
 "6. USAGE. Vous êtes responsable de la conformité de l'usage sur les machines que vous " +

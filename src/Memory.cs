@@ -83,8 +83,8 @@ namespace BTOptimizer
                 if (File.Exists(Path_)) { foreach (string f in All()) if (f.StartsWith("PC :", StringComparison.Ordinal)) return; }
                 var parts = new List<string>();
                 try { var cpu = Sys.QueryCpu(); if (cpu != null && cpu.Name != null && cpu.Name != "-") parts.Add(cpu.Name.Trim()); } catch { }
-                try { int ram = LocalBrain.DetectRamMB(); if (ram > 0) parts.Add((ram / 1024) + " Go de RAM"); } catch { }
-                try { int vram = LocalBrain.DetectVramMB(); if (vram > 0) parts.Add("carte graphique " + (vram / 1024) + " Go de VRAM"); } catch { }
+                try { int ram = MachineInfo.DetectRamMB(); if (ram > 0) parts.Add((ram / 1024) + " Go de RAM"); } catch { }
+                try { int vram = MachineInfo.DetectVramMB(); if (vram > 0) parts.Add("carte graphique " + (vram / 1024) + " Go de VRAM"); } catch { }
                 if (parts.Count > 0) Add("PC : " + string.Join(", ", parts.ToArray()));
             }
             catch { }

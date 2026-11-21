@@ -104,6 +104,9 @@ namespace BTOptimizer.Tests
             BoutiquesTests.Tout();
             ComparateurTests.Tout();
             BibliothequeTests.Tout();
+            RetraitIaLocaleTests.Tout();
+            CopiloteTexteTests.Tout();
+            CopiloteReglagesTests.Tout();
             SuiviTests.Tout();
             ActusTests.Tout();
             return Banc.Bilan();
