@@ -6,8 +6,6 @@ using System.Text;
 
 namespace BTOptimizer
 {
-    // CS0649 : champs remplis par initialiseur d'objet dans les sources et les pages (tâches 2 à 8).
-#pragma warning disable CS0649
     /// <summary>
     /// Une offre de jeu (promo Steam, jeu gratuit Epic ou GamerPower). Prix en centimes d'euro.
     /// </summary>
@@ -27,7 +25,6 @@ namespace BTOptimizer
         public int SteamAppId;         // 0 hors Steam
         public string Cle { get { return Source + ":" + Id; } }
     }
-#pragma warning restore CS0649
 
     /// <summary>
     /// Bons plans (logique PURE) : prix affichés, plafonds, catégories, filtre, tri, dédoublonnage
@@ -35,9 +32,7 @@ namespace BTOptimizer
     /// </summary>
     internal static class Offres
     {
-#pragma warning disable CS0649
         public sealed class Filtre { public string Texte; public int PlafondCts = -1; public int Tag; public string Plateforme; }
-#pragma warning restore CS0649
 
         public static readonly int[] PlafondsCts = { 0, 100, 500, 1000, 2000 };
 
