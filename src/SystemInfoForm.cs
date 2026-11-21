@@ -776,7 +776,8 @@ namespace BTOptimizer
         {
             if (MessageBox.Show(this,
                     "Désactiver l'intégrité de la mémoire (VBS / HVCI) ?\n\n"
-                    + "• Gain : variable selon le jeu et le processeur, parfois nul ; rien n'est mesuré sur ton PC. Lance « Mesure en jeu » avant et après pour le savoir.\n"
+                    + "• Gain mesuré par Tom's Hardware (2023, i9-13900K + RTX 4090, 15 jeux) : jusqu'à 5 % en 1080p, 2 % en 4K, 10 % dans Flight Simulator. Rien n'est mesuré sur ton PC : lance « Mesure en jeu » avant et après.\n"
+                    + "• Valorant et League of Legends : Riot Vanguard peut exiger cette protection pour lancer le jeu.\n"
                     + "• Contrepartie : c'est une protection de sécurité de Windows. La désactiver réduit la protection contre certains pilotes malveillants.\n"
                     + "• Réversible : une sauvegarde .reg est créée ; tu peux réactiver via « Rétablir » dans l'app.\n"
                     + "• Un redémarrage est nécessaire pour appliquer.",

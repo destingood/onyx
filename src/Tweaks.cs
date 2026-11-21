@@ -1617,7 +1617,7 @@ namespace BTOptimizer
                 Id = "vbs_off", Category = Cat.Systeme, Reboot = true,
                 Risque = Risque.Securite,
                 Name = "Désactiver VBS / Intégrité de la mémoire (HVCI) — SÉCURITÉ",
-                Desc = "La sécurité basée sur la virtualisation coûte des performances en jeu (elle génère des DPC hyperviseur, visibles dans l'analyse de latence). La désactiver les récupère, au prix d'une protection noyau réduite. Réversible.",
+                Desc = "La sécurité basée sur la virtualisation coûte des performances en jeu (elle génère des DPC hyperviseur, visibles dans l'analyse de latence). La désactiver les récupère, au prix d'une protection noyau réduite. Gain mesuré par Tom's Hardware (2023, RTX 4090, 15 jeux) : 2 à 5 % selon la résolution, 10 % dans Flight Simulator. Riot Vanguard (Valorant, LoL) peut exiger cette protection pour lancer le jeu. Réversible.",
                 BackupKeys = new[] { @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" },
                 Apply = () =>
                 {

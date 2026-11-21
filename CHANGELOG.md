@@ -11,9 +11,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   les lanceurs, overlays et navigateurs sans les rouvrir. Il active maintenant le Mode Jeu en y
   ajoutant ces applis : elles passent en mode Efficacité, notées au même journal, et la sortie du
   Mode Jeu les rétablit (même après un plantage d'ONYX).
-- **Intégrité de la mémoire : plus de gain promis.** Le dialogue annonçait « moins de latence et plus
-  de FPS » ; il dit maintenant que le gain varie selon le jeu, peut être nul, et renvoie à
-  « Mesure en jeu » avant et après.
+- **Intégrité de la mémoire : le gain chiffré, plus promis.** Le dialogue annonçait « moins de latence
+  et plus de FPS ». Il cite maintenant le test de Tom's Hardware (2023, RTX 4090, 15 jeux : jusqu'à
+  5 % en 1080p, 2 % en 4K, 10 % dans Flight Simulator), renvoie à « Mesure en jeu » avant et après,
+  et prévient que Riot Vanguard (Valorant, LoL) peut exiger cette protection.
 
 ## v15.78 — Mode Jeu sans fermeture, mesure en jeu enrichie, diagnostic étendu
 
