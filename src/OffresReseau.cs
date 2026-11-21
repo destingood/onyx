@@ -130,7 +130,9 @@ namespace BTOptimizer
                 {
                     var a = appels[i];
                     if (!a.Item2.Result.Echec) toutEchoue = false;
-                    (i < nbSites ? sites : fluxJeux).Add(Actus.LitRss(a.Item2.Result.Texte, a.Item1));
+                    var lus = Actus.LitRss(a.Item2.Result.Texte, a.Item1);
+                    if (i >= nbSites) foreach (var x in lus) x.AppId = jeux[i - nbSites].AppId;   // repli d'image : la jaquette du jeu
+                    (i < nbSites ? sites : fluxJeux).Add(lus);
                 }
                 Erreurs["actus"] = toutEchoue;
                 // Les flux des jeux suivis ont leur propre quota : les sites, plus récents, ne les évincent pas.

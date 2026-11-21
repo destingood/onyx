@@ -50,6 +50,10 @@ namespace BTOptimizer.Tests
             var actus = OffresReseau.Actualites(new[] { new JeuSuivi { AppId = 730, Nom = "Counter-Strike 2" } }).GetAwaiter().GetResult();
             Banc.Verifie("actus : au moins 20 titres, 2 sources", true, actus.Count >= 20 && actus.Exists(a => a.Source != actus[0].Source));
             Banc.Verifie("actus : flux du jeu suivi, source = nom du jeu", true, actus.Exists(a => a.Source == "Counter-Strike 2"));
+            var desSites = actus.FindAll(a => a.Source != "Counter-Strike 2");
+            int actusImage = desSites.FindAll(a => a.Image != null).Count;
+            Banc.Verifie("actus : image pour 90 % des titres des sites (" + actusImage + "/" + desSites.Count + ")", true, desSites.Count > 0 && actusImage * 10 >= desSites.Count * 9);
+            Banc.Verifie("actus : AppId porté par le flux du jeu suivi", true, actus.FindAll(a => a.Source == "Counter-Strike 2").TrueForAll(a => a.AppId == 730) && desSites.TrueForAll(a => a.AppId == 0));
         }
     }
 }

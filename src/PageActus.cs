@@ -9,7 +9,8 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Page « Actus » : les titres des sites d'actualité et des flux Steam des jeux suivis, et les
-    /// favoris. Titres seulement (aucun extrait d'article) ; un clic ouvre l'article dans le navigateur.
+    /// favoris. Le plus récent illustré « à la une », les autres en grille de cartes (vignette du flux,
+    /// sinon jaquette du jeu suivi). Aucun extrait d'article ; un clic ouvre l'article dans le navigateur.
     /// Premier chargement à la première ouverture ; une réponse arrivée après une relance est ignorée.
     /// </summary>
     internal sealed class PageActus : FpsPage
@@ -69,8 +70,8 @@ namespace BTOptimizer
 
             _flow = new BufferedFlow();
             _flow.AutoScroll = true;
-            _flow.FlowDirection = FlowDirection.TopDown;
-            _flow.WrapContents = false;
+            _flow.FlowDirection = FlowDirection.LeftToRight;
+            _flow.WrapContents = true;
             _flow.BackColor = Color.Transparent;
             _flow.Padding = new Padding(0, 4, 0, 12);
             _flow.Resize += (s, e) => AjusteLignes();
@@ -138,10 +139,21 @@ namespace BTOptimizer
             Invalidate();
         }
 
+        private const int Ecart = 14, LargeurMin = 270;
+
+        /// <summary>Grille : autant de colonnes de LargeurMin que la largeur le permet ; la une prend toute la ligne.</summary>
         private void AjusteLignes()
         {
-            int lw = Math.Max(200, _flow.ClientSize.Width - 22);
-            foreach (Control c in _flow.Controls) c.Width = lw;
+            int dispo = Math.Max(220, _flow.ClientSize.Width - 22);
+            int cols = Math.Max(1, (dispo + Ecart) / (LargeurMin + Ecart));
+            int w = Math.Max(200, (dispo - Ecart * cols) / cols);
+            _flow.SuspendLayout();
+            foreach (Control c in _flow.Controls)
+            {
+                if (c is Une) c.Size = new Size(cols * (w + Ecart) - Ecart, Math.Max(210, Math.Min(300, (cols * (w + Ecart)) * 30 / 100)));
+                else c.Size = new Size(w, w * 9 / 16 + Carte.HauteurTexte);
+            }
+            _flow.ResumeLayout();
         }
 
         private void MajOnglets()
@@ -218,10 +230,18 @@ namespace BTOptimizer
             return Actus.Sources.Any(s => string.Equals(s.Nom, source, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static List<Actu> ListeFavoris()
+        private List<Actu> ListeFavoris()
         {
+            // Le fichier des favoris ne garde pas l'image : on la reprend des titres chargés.
+            var charges = new Dictionary<string, Actu>();
+            foreach (Actu a in _toutes) if (a.Lien != null && !charges.ContainsKey(a.Lien)) charges[a.Lien] = a;
             return Magasin.FavorisActus.Where(f => f != null)
-                    .Select(f => new Actu { Titre = f.Titre, Lien = f.Url, Source = f.Source, Date = f.Date })
+                    .Select(f =>
+                    {
+                        Actu c;
+                        charges.TryGetValue(f.Url ?? "", out c);
+                        return new Actu { Titre = f.Titre, Lien = f.Url, Source = f.Source, Date = f.Date, Image = c != null ? c.Image : null, AppId = c != null ? c.AppId : 0 };
+                    })
                     .OrderByDescending(a => a.Date).ToList();
         }
 
@@ -268,10 +288,18 @@ namespace BTOptimizer
             _flow.SuspendLayout();
             foreach (Control c in _flow.Controls.Cast<Control>().ToList()) c.Dispose();
             _flow.Controls.Clear();
-            int lw = Math.Max(200, _flow.ClientSize.Width - 22);
             DateTime maintenant = DateTime.UtcNow;
-            foreach (Actu a in liste) _flow.Controls.Add(new Ligne(this, a, lw, maintenant));
+            int debut = 0;
+            if (liste.Count >= 4 && (liste[0].Image != null || liste[0].AppId > 0))
+            {
+                var une = new Une(this, liste[0], maintenant);
+                _flow.Controls.Add(une);
+                _flow.SetFlowBreak(une, true);
+                debut = 1;
+            }
+            for (int i = debut; i < liste.Count; i++) _flow.Controls.Add(new Carte(this, liste[i], maintenant));
             _flow.ResumeLayout();
+            AjusteLignes();
             try { _flow.AutoScrollPosition = Point.Empty; } catch { }
         }
 
@@ -288,24 +316,38 @@ namespace BTOptimizer
             if (_onglet == OngletFavoris) Affiche();
         }
 
-        /// <summary>Une ligne : ☆, titre, source et âge. Clic sur le titre : l'article dans le navigateur.</summary>
-        private sealed class Ligne : Control
-        {
-            private const int H = 36;
-            private readonly PageActus _page;
-            private readonly Actu _a;
-            private readonly string _meta;
-            private bool _survol;
-            private static readonly Rectangle REtoile = new Rectangle(4, 5, 26, 26);
+        // ------------------------------------------------------------------ cartes
 
-            public Ligne(PageActus page, Actu a, int largeur, DateTime maintenantUtc)
+        private static readonly Font PoliceUne = FpsUi.F(16f, true);
+        private static readonly Font PoliceBadge = FpsUi.F(7.5f, true);
+        private static readonly Font PoliceFond = FpsUi.F(14f, true);
+
+        /// <summary>Couleur d'une source : une par site, violet pour les jeux suivis.</summary>
+        internal static Color CouleurSource(string source)
+        {
+            Color[] c = { FpsUi.Gold, FpsUi.Warn, FpsUi.Ok, Color.FromArgb(240, 110, 160) };   // pas de rouge : il signale une erreur
+            for (int i = 0; i < Actus.Sources.Length; i++)
+                if (string.Equals(Actus.Sources[i].Nom, source, StringComparison.OrdinalIgnoreCase)) return c[i % c.Length];
+            return FpsUi.Violet;
+        }
+
+        /// <summary>Base commune : image (vignette du flux, sinon jaquette du jeu), survol, étoile, clic.</summary>
+        private abstract class Vignette : Control
+        {
+            protected readonly PageActus _page;
+            protected readonly Actu _a;
+            protected readonly string _age;
+            protected readonly bool _nouveau;
+            protected bool _survol;
+            protected Rectangle _etoile;
+
+            protected Vignette(PageActus page, Actu a, DateTime maintenantUtc)
             {
                 _page = page; _a = a;
-                string age = Actus.Age(a.Date, maintenantUtc);
-                _meta = string.IsNullOrEmpty(age) ? (a.Source ?? "") : (a.Source ?? "") + " · " + age;
+                _age = Actus.Age(a.Date, maintenantUtc);
+                _nouveau = a.Date != DateTime.MinValue && a.Date <= maintenantUtc && (maintenantUtc - a.Date).TotalHours < 3;
                 SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-                Size = new Size(largeur, H);
-                Margin = new Padding(0, 0, 0, 4);
+                Margin = new Padding(0, 0, Ecart, Ecart);
                 BackColor = FpsUi.BgMain;
                 Cursor = Cursors.Hand;
                 MouseEnter += (s, e) => { _survol = true; Invalidate(); };
@@ -316,23 +358,169 @@ namespace BTOptimizer
             {
                 base.OnMouseClick(e);
                 if (e.Button != MouseButtons.Left) return;
-                if (REtoile.Contains(e.Location)) { _page.BasculeFavori(_a); if (!IsDisposed) Invalidate(); return; }
+                if (_etoile.Contains(e.Location)) { _page.BasculeFavori(_a); if (!IsDisposed) Invalidate(); return; }
                 PageBonsPlans.Ouvre(_a.Lien);
+            }
+
+            private void Pret()
+            {
+                try { if (!IsDisposed && IsHandleCreated) BeginInvoke((Action)(() => { if (!IsDisposed) Invalidate(); })); } catch { }
+            }
+
+            /// <summary>Image prête, ou null (chargement en cours ou absente : un fond la remplace).</summary>
+            protected Image ImageArticle()
+            {
+                Image img = null;
+                try
+                {
+                    if (_a.Image != null) img = GameArt.GetUrl(_a.Image, Pret);
+                    if (img == null && _a.AppId > 0 && (_a.Image == null || GameArt.EchecUrl(_a.Image))) img = GameArt.Get(_a.AppId, Pret);
+                }
+                catch { }
+                return img;
+            }
+
+            /// <summary>Remplit r sans déformer (recadrage au centre) ; zoom > 1 au survol.</summary>
+            protected static void Couverture(Graphics g, Image img, Rectangle r, float zoom)
+            {
+                float cible = r.Width / (float)r.Height, source = img.Width / (float)img.Height;
+                float sw = source > cible ? img.Height * cible : img.Width;
+                float sh = source > cible ? img.Height : img.Width / cible;
+                sw /= zoom; sh /= zoom;
+                var src = new RectangleF((img.Width - sw) / 2f, (img.Height - sh) / 2f, sw, sh);
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(img, r, src, GraphicsUnit.Pixel);
+            }
+
+            /// <summary>Sans image : dégradé à la couleur de la source et son nom en filigrane.</summary>
+            protected void Fond(Graphics g, Rectangle r)
+            {
+                Color c = CouleurSource(_a.Source);
+                using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(r, Color.FromArgb(70, c), FpsUi.Card, 35f))
+                    g.FillRectangle(b, r);
+                TextRenderer.DrawText(g, _a.Source ?? "", PoliceFond, r, Color.FromArgb(110, c),
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            }
+
+            protected void Etoile(Graphics g, Rectangle r)
+            {
+                _etoile = r;
+                bool fav = _page.EstFavori(_a);
+                using (var b = new SolidBrush(Color.FromArgb(_survol || fav ? 200 : 150, 8, 11, 16))) g.FillEllipse(b, r);
+                TextRenderer.DrawText(g, fav ? "★" : "☆", FpsUi.H3, r, fav ? FpsUi.Gold : FpsUi.Ink,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            }
+
+            /// <summary>Pastille pleine (« NOUVEAU », « À LA UNE ») ; renvoie sa largeur.</summary>
+            protected static int Badge(Graphics g, string texte, Color fond, Color encre, int x, int y)
+            {
+                Size t = TextRenderer.MeasureText(texte, PoliceBadge);
+                var r = new Rectangle(x, y, t.Width + 10, 18);
+                using (var p = FpsUi.Round(r, 9f)) using (var b = new SolidBrush(fond)) g.FillPath(b, p);
+                TextRenderer.DrawText(g, texte, PoliceBadge, r, encre, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                return r.Width;
+            }
+
+            /// <summary>Point de couleur, source et âge.</summary>
+            protected void Meta(Graphics g, int x, int y, int largeur, Color encre)
+            {
+                Color c = CouleurSource(_a.Source);
+                using (var b = new SolidBrush(c)) g.FillEllipse(b, x, y + 5, 8, 8);
+                string t = string.IsNullOrEmpty(_age) ? (_a.Source ?? "") : (_a.Source ?? "") + "  ·  " + _age;
+                TextRenderer.DrawText(g, t, FpsUi.Tiny, new Rectangle(x + 14, y, Math.Max(20, largeur - 14), 18), encre,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            }
+        }
+
+        /// <summary>Carte de la grille : vignette 16:9, puis source, âge et titre sur deux lignes.</summary>
+        private sealed class Carte : Vignette
+        {
+            public const int HauteurTexte = 84;
+
+            public Carte(PageActus page, Actu a, DateTime maintenantUtc) : base(page, a, maintenantUtc)
+            {
+                Size = new Size(LargeurMin, LargeurMin * 9 / 16 + HauteurTexte);
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                FpsUi.PaintCard(g, new Rectangle(0, 0, Width - 1, H - 1), _survol ? FpsUi.CardHi : FpsUi.Card, FpsUi.Border, 8f);
-                bool fav = _page.EstFavori(_a);
-                TextRenderer.DrawText(g, fav ? "★" : "☆", FpsUi.H2, REtoile, fav ? FpsUi.Gold : FpsUi.Dim,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                int mw = Math.Min(260, TextRenderer.MeasureText(_meta, FpsUi.Tiny).Width + 4);
-                TextRenderer.DrawText(g, _meta, FpsUi.Tiny, new Rectangle(Width - mw - 12, 0, mw, H), FpsUi.Dim,
-                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                TextRenderer.DrawText(g, _a.Titre ?? "", FpsUi.Body, new Rectangle(36, 0, Math.Max(40, Width - mw - 36 - 24), H), FpsUi.Ink,
-                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+                var tout = new Rectangle(0, 0, Width - 1, Height - 1);
+                FpsUi.PaintCard(g, tout, _survol ? FpsUi.CardHi : FpsUi.Card, _survol ? FpsUi.Gold : FpsUi.Border, 10f);
+
+                var ri = new Rectangle(1, 1, Width - 2, Height - HauteurTexte - 1);
+                Region avant = g.Clip;
+                using (var p = FpsUi.Round(new Rectangle(1, 1, Width - 3, Height - 3), 9f))
+                {
+                    g.SetClip(p, System.Drawing.Drawing2D.CombineMode.Intersect);
+                    g.SetClip(ri, System.Drawing.Drawing2D.CombineMode.Intersect);
+                    Image img = ImageArticle();
+                    if (img != null) { try { Couverture(g, img, ri, _survol ? 1.06f : 1f); } catch { Fond(g, ri); } }
+                    else Fond(g, ri);
+                    // Fondu bas : l'image se fond dans la carte.
+                    var bas = new Rectangle(ri.X, ri.Bottom - 28, ri.Width, 29);
+                    using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(bas, Color.FromArgb(0, FpsUi.Card), _survol ? FpsUi.CardHi : FpsUi.Card, 90f))
+                        g.FillRectangle(b, bas);
+                }
+                g.Clip = avant;
+
+                if (_nouveau) Badge(g, "NOUVEAU", FpsUi.Gold, FpsUi.BgMain, 10, 10);
+                Etoile(g, new Rectangle(Width - 38, 8, 30, 30));
+
+                Meta(g, 12, ri.Bottom + 6, Width - 24, FpsUi.Dim);
+                TextRenderer.DrawText(g, _a.Titre ?? "", FpsUi.H3, new Rectangle(12, ri.Bottom + 26, Width - 24, HauteurTexte - 32), _survol ? FpsUi.Gold : FpsUi.Ink,
+                    TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl);
+            }
+        }
+
+        /// <summary>« À la une » : le titre le plus récent, image pleine largeur, titre en grand sur un dégradé.</summary>
+        private sealed class Une : Vignette
+        {
+            public Une(PageActus page, Actu a, DateTime maintenantUtc) : base(page, a, maintenantUtc)
+            {
+                Size = new Size(800, 260);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                var tout = new Rectangle(0, 0, Width - 1, Height - 1);
+                FpsUi.PaintCard(g, tout, FpsUi.Card, _survol ? FpsUi.Gold : FpsUi.Border, 12f);
+
+                Region avant = g.Clip;
+                using (var p = FpsUi.Round(new Rectangle(1, 1, Width - 3, Height - 3), 11f))
+                {
+                    g.SetClip(p, System.Drawing.Drawing2D.CombineMode.Intersect);
+                    var ri = new Rectangle(1, 1, Width - 2, Height - 2);
+                    Image img = ImageArticle();
+                    if (img != null) { try { Couverture(g, img, ri, _survol ? 1.04f : 1f); } catch { Fond(g, ri); } }
+                    else Fond(g, ri);
+                    // Dégradés bas et gauche : le titre reste lisible sur n'importe quelle image.
+                    using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(ri, Color.FromArgb(0, FpsUi.BgMain), Color.FromArgb(235, FpsUi.BgMain), 90f))
+                    {
+                        var blend = new System.Drawing.Drawing2D.Blend { Positions = new[] { 0f, 0.35f, 1f }, Factors = new[] { 0f, 0.15f, 1f } };
+                        b.Blend = blend;
+                        g.FillRectangle(b, ri);
+                    }
+                    var gauche = new Rectangle(ri.X, ri.Y, ri.Width * 2 / 3, ri.Height);
+                    using (var b = new System.Drawing.Drawing2D.LinearGradientBrush(gauche, Color.FromArgb(150, FpsUi.BgMain), Color.FromArgb(0, FpsUi.BgMain), 0f))
+                        g.FillRectangle(b, gauche);
+                }
+                g.Clip = avant;
+
+                int x = 22, larg = Math.Min(Width - 44, Math.Max(320, Width * 68 / 100));
+                int bx = x + Badge(g, "À LA UNE", FpsUi.Gold, FpsUi.BgMain, x, 18) + 6;
+                if (_nouveau) Badge(g, "NOUVEAU", Color.FromArgb(220, FpsUi.BgMain), FpsUi.Gold, bx, 18);
+                Etoile(g, new Rectangle(Width - 46, 14, 32, 32));
+
+                Size t = TextRenderer.MeasureText(g, _a.Titre ?? "", PoliceUne, new Size(larg, 200), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                int th = Math.Min(t.Height, PoliceUne.Height * 3 + 4);
+                int ty = Height - 22 - 20 - th;
+                TextRenderer.DrawText(g, _a.Titre ?? "", PoliceUne, new Rectangle(x, ty, larg, th), _survol ? FpsUi.Gold : FpsUi.Ink,
+                    TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.TextBoxControl);
+                Meta(g, x, Height - 22 - 16, larg, FpsUi.Ink);
             }
         }
     }

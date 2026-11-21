@@ -9,12 +9,13 @@ using System.Xml;
 
 namespace BTOptimizer
 {
-    /// <summary>Un titre d'actualité. Date en UTC ; DateTime.MinValue = inconnue.</summary>
-    internal sealed class Actu { public string Titre, Lien, Source; public DateTime Date; }
+    /// <summary>Un titre d'actualité. Date en UTC ; DateTime.MinValue = inconnue. Image : vignette https
+    /// donnée par le flux (null sinon) ; AppId : jeu Steam suivi d'où vient le titre (0 pour un site).</summary>
+    internal sealed class Actu { public string Titre, Lien, Source, Image; public DateTime Date; public int AppId; }
 
     /// <summary>
     /// Actus (logique PURE) : lecture des flux RSS 2.0, fusion, filtre et âge affiché.
-    /// Seuls le titre, le lien et la date sont repris — jamais le contenu des articles
+    /// Seuls le titre, le lien, la date et la vignette déclarée sont repris — jamais le contenu des articles
     /// (description, content:encoded). La DTD est ignorée et aucune ressource externe n'est résolue.
     /// </summary>
     internal static class Actus
@@ -65,7 +66,7 @@ namespace BTOptimizer
                     string titre = Titre(Enfant(item, "title"));
                     string lien = (Enfant(item, "link") ?? "").Trim();
                     if (titre.Length == 0 || !Offres.LienSur(lien)) continue;
-                    res.Add(new Actu { Titre = titre, Lien = lien, Source = source, Date = DateRss(Enfant(item, "pubDate")) });
+                    res.Add(new Actu { Titre = titre, Lien = lien, Source = source, Date = DateRss(Enfant(item, "pubDate")), Image = Vignette(item) });
                 }
             }
             return res;
@@ -142,6 +143,32 @@ namespace BTOptimizer
             foreach (XmlNode c in item.ChildNodes)
                 if (c.NodeType == XmlNodeType.Element && c.LocalName == nom && string.IsNullOrEmpty(c.NamespaceURI)) return c.InnerText;
             return null;
+        }
+
+        private const string NsMedia = "http://search.yahoo.com/mrss/";
+
+        /// <summary>Vignette déclarée par l'item : enclosure image, sinon media:content image, sinon media:thumbnail.
+        /// https seulement ; la description n'est jamais lue.</summary>
+        private static string Vignette(XmlNode item)
+        {
+            string media = null, miniature = null;
+            foreach (XmlNode c in item.ChildNodes)
+            {
+                var e = c as XmlElement;
+                if (e == null) continue;
+                string url = e.GetAttribute("url").Trim(), type = e.GetAttribute("type");
+                if (!ImageSure(url)) continue;
+                if (e.LocalName == "enclosure" && string.IsNullOrEmpty(e.NamespaceURI) && type.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return url;
+                if (e.NamespaceURI != NsMedia) continue;
+                if (media == null && e.LocalName == "content" && (e.GetAttribute("medium") == "image" || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))) media = url;
+                else if (miniature == null && e.LocalName == "thumbnail") miniature = url;
+            }
+            return media ?? miniature;
+        }
+
+        private static bool ImageSure(string url)
+        {
+            return url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && Offres.LienSur(url);
         }
 
         private static string Titre(string brut)
