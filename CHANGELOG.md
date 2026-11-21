@@ -5,6 +5,20 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.81 — Tous les stores dans Bons plans
+
+- **Tous les stores dans Bons plans.** En plus de Steam : GOG et Nintendo eShop (prix en euros,
+  prix promo réel et date de fin pour Nintendo), itch.io et onze stores via CheapShark (Epic Games
+  Store, Humble, Fanatical, Green Man Gaming, Ubisoft, Gamesplanet, GamersGate, IndieGala,
+  GameBillet, WinGameStore, DreamGame). Ces derniers sont en dollars, marqués « US » ; les
+  plafonds en euros ne s'y appliquent pas, sauf « Gratuit ». Un même jeu n'apparaît qu'une fois,
+  au prix le plus bas.
+- **Choix des stores.** Le bouton « Stores » ouvre une liste à cocher (tout cocher, tout
+  décocher) ; le choix est gardé d'une ouverture à l'autre. Une catégorie choisie affiche les
+  promos Steam seulement.
+- **Cartes plus lisibles.** Pastille colorée du store, remise en or dès −75 %, « plus que N h » en
+  orange quand l'offre finit dans moins de 48 h, contour au survol.
+
 ## v15.80 — Interface modernisée, Actus et Bons plans en images
 
 - **Interface modernisée.** Palette carbone et or plus lisible (fonds neutres, textes secondaires
