@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -21,8 +22,14 @@ namespace BTOptimizer
     /// </summary>
     internal class PageStorage : FpsPage
     {
+        [DllImport("user32.dll")]
+        private static extern bool ShowScrollBar(IntPtr window, int bar, bool show);
         private Panel _scroll;
-        private BufferedPanel _drives;
+        private BufferedPanel _drives, _content, _overview, _selectionBar;
+        private readonly Button[] _views = new Button[3];
+        private Label _empty;
+        private ScrollWheelFilter _wheel;
+        private int _view;
         private Button _btnFree, _btnConfig, _btnRescan;
         // Le sous-titre de la page EST la ligne d'état : une seule zone de texte, jamais deux
         // messages concurrents sous le titre.
@@ -37,7 +44,7 @@ namespace BTOptimizer
         private bool _scanned, _busy;
         private bool _rescan;   // une analyse demandée pendant qu'une autre tourne : relancée à la fin
 
-        private const int CardW = 356, CardCleanH = 152, CardBrowseH = 196, Gap = 16, PadX = 34;
+        private const int CardCleanH = 244, CardBrowseH = 272, Gap = 16, PadX = 34;
 
         public PageStorage(DashboardForm host) : base(host)
         {
@@ -56,29 +63,45 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void Build()
         {
-            _scroll = new Panel();
+            _scroll = new BufferedPanel();
+            _scroll.Name = "storage-scroll";
             _scroll.AutoScroll = true;
-            _scroll.BackColor = Color.Transparent;
+            _scroll.BackColor = FpsUi.BgMain;
             Controls.Add(_scroll);
+            _wheel = new ScrollWheelFilter(_scroll); Application.AddMessageFilter(_wheel);
+            _content = new BufferedPanel { BackColor = FpsUi.BgMain }; _scroll.Controls.Add(_content);
+            _overview = new BufferedPanel { BackColor = Color.Transparent };
+            _overview.Paint += PaintOverview; _content.Controls.Add(_overview);
+            _selectionBar = new BufferedPanel { Name = "storage-selection", BackColor = Color.Transparent };
+            _selectionBar.Paint += PaintSelection; Controls.Add(_selectionBar);
+            string[] views = { "Vue d’ensemble", "Nettoyer", "Explorer" };
+            for (int i = 0; i < views.Length; i++)
+            {
+                int view = i; _views[i] = OnyxDesign.Button(views[i]); _views[i].Name = "storage-view-" + i;
+                _views[i].Click += (s, e) => { _view = view; _scroll.AutoScrollPosition = Point.Empty; LayoutCards(); };
+                Controls.Add(_views[i]);
+            }
+            _empty = FpsUi.Text("Analyse en cours…", FpsUi.Body, FpsUi.Dim);
+            _empty.AutoSize = false; _content.Controls.Add(_empty);
 
             _drives = new BufferedPanel();
             _drives.BackColor = Color.Transparent;
             _drives.Paint += PaintDrives;
-            _scroll.Controls.Add(_drives);
+            _content.Controls.Add(_drives);
 
             // Pas d'emoji ici : les boutons sont en Ubuntu, qui n'a pas de repli emoji (carré tofu).
-            _btnFree = OnyxDesign.AccentButton("TOUT LIBÉRER");
-            _btnFree.Height = 30; _btnFree.Width = 168;
+            _btnFree = OnyxDesign.PrimaryButton("Vérifier et nettoyer  →");
+            _btnFree.Height = 40; _btnFree.Width = 230;
             _btnFree.Click += (s, e) => FreeSelected();
-            Controls.Add(_btnFree);
+            _selectionBar.Controls.Add(_btnFree);
 
-            _btnConfig = OnyxDesign.Button("⚙ Configurer…");
-            _btnConfig.Height = 30; _btnConfig.Width = 118;
+            _btnConfig = OnyxDesign.Button("Configurer…");
+            _btnConfig.Height = 36; _btnConfig.Width = 130;
             _btnConfig.Click += (s, e) => OpenConfig();
             Controls.Add(_btnConfig);
 
-            _btnRescan = OnyxDesign.Button("↻ Analyser");
-            _btnRescan.Height = 30; _btnRescan.Width = 96;
+            _btnRescan = OnyxDesign.Button("Analyser à nouveau");
+            _btnRescan.Height = 36; _btnRescan.Width = 160;
             _btnRescan.Click += (s, e) => Scan();
             Controls.Add(_btnRescan);
 
@@ -88,53 +111,69 @@ namespace BTOptimizer
 
         private void DoLayout()
         {
-            if (_scroll == null) return;
+            if (_scroll == null || _selectionBar == null || _btnFree == null) return;
             int top = Host != null ? Host.ContentTop(96) : 96;
-            int bottom = Host != null ? Host.ContentBottom(12) : ClientSize.Height - 12;
-            _scroll.SetBounds(PadX - 14, top, Math.Max(200, ClientSize.Width - (PadX - 14) - 20), Math.Max(120, bottom - top));
-
-            if (_btnRescan != null)
-            {
-                int rx = ClientSize.Width - PadX;
-                _btnRescan.Location = new Point(rx - _btnRescan.Width, 22); rx -= _btnRescan.Width + 8;
-                _btnConfig.Location = new Point(rx - _btnConfig.Width, 22); rx -= _btnConfig.Width + 8;
-                _btnFree.Location = new Point(rx - _btnFree.Width, 22);
-            }
+            for (int i = 0; i < _views.Length; i++) _views[i].SetBounds(PadX + i * 170, top, 158, 36);
+            _selectionBar.SetBounds(PadX, ClientSize.Height - 90, ClientSize.Width - PadX * 2, 72);
+            _btnFree.SetBounds(_selectionBar.Width - 248, 16, 230, 40);
+            _scroll.SetBounds(PadX, top + 52, ClientSize.Width - PadX - 18, Math.Max(120, _selectionBar.Top - top - 68));
+            _btnRescan.SetBounds(ClientSize.Width - PadX - 160, 20, 160, 36);
+            _btnConfig.SetBounds(_btnRescan.Left - 142, 20, 130, 36);
             LayoutCards();
         }
 
-        // Grille fluide : autant de colonnes que la largeur en autorise, jamais moins d'une.
         private void LayoutCards()
         {
-            if (_scroll == null || _drives == null) return;
-            // La largeur de l'ascenseur vertical est réservée D'AVANCE : sinon la première mise en
-            // page (sans ascenseur) déborde dès qu'il apparaît, et un ascenseur HORIZONTAL surgit.
-            int avail = Math.Max(CardW, _scroll.Width - 24 - SystemInformation.VerticalScrollBarWidth);
-            int cols = Math.Max(1, (avail + Gap) / (CardW + Gap));
-
-            _drives.SetBounds(12, 4, Math.Min(avail, cols * (CardW + Gap) - Gap), DrivesHeight());
-            int y = _drives.Bottom + 22;
-            int col = 0;
-            string section = null;
-
-            foreach (Control c in _cards)
+            if (_scroll == null || _drives == null || _content == null) return;
+            int available = Math.Max(280, _scroll.Width - SystemInformation.VerticalScrollBarWidth - 2);
+            int columns = available >= 1040 ? 3 : available >= 640 ? 2 : 1;
+            int width = (available - (columns - 1) * Gap) / columns;
+            _content.SuspendLayout();
+            _overview.Visible = _drives.Visible = _view == 0;
+            _overview.SetBounds(0, 0, available, 108);
+            _drives.SetBounds(0, 128, available, DrivesHeight(available));
+            int y = _view == 0 ? _drives.Bottom + 26 : 4;
+            foreach (var header in _headers.Values) header.Visible = false;
+            int col = 0, shown = 0; string section = null;
+            foreach (Control card in _cards)
             {
-                var tag = c.Tag as CardTag;
-                if (tag == null) continue;
+                var tag = card.Tag as CardTag; if (tag == null) continue;
+                bool visible = _view == 0 || (_view == 1 ? tag.Section == "clean" : tag.Section == "browse");
+                card.Visible = visible;
+                if (!visible) continue;
                 if (tag.Section != section)
                 {
-                    if (section != null) { y += (col > 0 ? RowH(section) + Gap : 0); col = 0; }
+                    if (section != null) { y += col > 0 ? RowH(section) + Gap : 0; col = 0; }
                     section = tag.Section;
-                    var hdr = HeaderFor(section);
-                    if (hdr != null) { hdr.SetBounds(14, y, avail, 22); y += 30; }
+                    var header = HeaderFor(section);
+                    if (header != null) { header.Visible = true; header.SetBounds(0, y, available, 24); y += 36; }
                 }
-                c.SetBounds(12 + col * (CardW + Gap), y, CardW, tag.Height);
-                col++;
-                if (col >= cols) { col = 0; y += tag.Height + Gap; }
+                card.SetBounds(col * (width + Gap), y, width, tag.Height);
+                shown++; col++;
+                if (col == columns) { col = 0; y += tag.Height + Gap; }
             }
             if (col > 0 && section != null) y += RowH(section) + Gap;
-            // Marge de respiration en bas (sinon la dernière rangée colle au bord du défilement).
-            _scroll.AutoScrollMinSize = new Size(0, y + 20);
+            _empty.Visible = shown == 0;
+            _empty.Text = _busy ? "L’analyse est en cours. Les catégories apparaissent au fur et à mesure."
+                : _view == 1 ? "Aucun élément à nettoyer dans les catégories activées." : "Aucun élément à afficher dans cette vue.";
+            _empty.SetBounds(18, y + 16, available - 36, 60);
+            _content.Size = new Size(available, y + (shown == 0 ? 100 : 20));
+            _content.ResumeLayout();
+            int clean = 0, browse = 0;
+            foreach (var card in _cards) { var tag = card.Tag as CardTag; if (tag.Section == "clean") clean++; else browse++; }
+            _views[1].Text = "Nettoyer · " + clean; _views[2].Text = "Explorer · " + browse;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].ForeColor = i == _view ? FpsUi.Gold : FpsUi.Dim;
+                _views[i].BackColor = i == _view ? FpsUi.BlendGold(FpsUi.Card, .1f) : FpsUi.Card;
+                _views[i].FlatAppearance.BorderSize = i == _view ? 1 : 0;
+                _views[i].FlatAppearance.BorderColor = i == _view ? FpsUi.GoldDim : FpsUi.Border;
+                _views[i].Invalidate();
+            }
+            UpdateSelection();
+            // La grille est dimensionnée pour la largeur utile : seul le défilement vertical
+            // est nécessaire. Retire aussi la barre native résiduelle après changement de vue.
+            if (_scroll.IsHandleCreated) ShowScrollBar(_scroll.Handle, 0, false);
         }
 
         private int RowH(string section) { return section == "clean" ? CardCleanH : CardBrowseH; }
@@ -150,6 +189,62 @@ namespace BTOptimizer
             try { if (_scroll != null) _scroll.AutoScrollPosition = new Point(0, Math.Max(0, y)); } catch { }
         }
 
+#if BTTEST
+        internal void PreviewView(int view) { _views[view].PerformClick(); }
+        internal void ValidateViewportUi()
+        {
+            if (_scroll.HorizontalScroll.Visible)
+                throw new InvalidOperationException("Vue " + _view + " : client=" + _scroll.ClientSize + ", contenu=" + _content.Bounds + ", zone=" + _scroll.DisplayRectangle);
+        }
+        internal void ValidateStorageUi()
+        {
+            var selection = new HashSet<string>(_selected);
+            long estimate = RecoverableMB(), sum = 0;
+            foreach (var item in SelectedItems()) sum += item.SizeMB;
+            if (estimate != sum) throw new InvalidOperationException("Estimation différente de la sélection réelle.");
+            for (int view = 0; view < 3; view++)
+            {
+                PreviewView(view);
+                foreach (Control card in _cards)
+                {
+                    var tag = (CardTag)card.Tag;
+                    bool expected = view == 0 || (view == 1 ? tag.Section == "clean" : tag.Section == "browse");
+                    if (card.Visible != expected) throw new InvalidOperationException("Filtre de stockage incorrect.");
+                    if (card.Visible && card.Right > _content.Width) throw new InvalidOperationException("Carte hors de la grille.");
+                    if (tag.Section == "browse") foreach (Control child in card.Controls)
+                        if (child is ToggleSwitch) throw new InvalidOperationException("Sélection de nettoyage sur une catégorie à explorer.");
+                }
+                if (!selection.SetEquals(_selected)) throw new InvalidOperationException("La navigation a modifié la sélection.");
+            }
+            PreviewView(1);
+            foreach (Control card in _cards)
+            {
+                if (!card.Visible) continue;
+                foreach (Control child in card.Controls)
+                {
+                    var toggle = child as ToggleSwitch;
+                    if (toggle == null || toggle.Locked) continue;
+                    var click = typeof(ToggleSwitch).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    click.Invoke(toggle, new object[] { EventArgs.Empty });
+                    if (selection.SetEquals(_selected)) throw new InvalidOperationException("Interrupteur sans effet sur la sélection.");
+                    if (_btnFree.Enabled != (SelectedItems().Count > 0)) throw new InvalidOperationException("État du bouton de nettoyage incorrect.");
+                    click.Invoke(toggle, new object[] { EventArgs.Empty });
+                    if (!selection.SetEquals(_selected) || RecoverableMB() != estimate) throw new InvalidOperationException("Sélection non restaurée.");
+                    goto checkedToggle;
+                }
+            }
+            checkedToggle:
+            PreviewView(0); ScrollTo(200); int before = ScrollY;
+            ShowModules(new List<Storage.Module>(_modules));
+            if (ScrollY != before) throw new InvalidOperationException("Défilement perdu après actualisation des cartes.");
+            ScrollTo(0);
+            if (_scroll.HorizontalScroll.Visible)
+                throw new InvalidOperationException("Défilement horizontal : client=" + _scroll.ClientSize + ", contenu=" + _content.Bounds + ", zone=" + _scroll.DisplayRectangle);
+            if (_scroll.Bottom > _selectionBar.Top || _btnFree.Right > _selectionBar.Width)
+                throw new InvalidOperationException("Barre de sélection hors cadre.");
+        }
+#endif
+
         private readonly Dictionary<string, Label> _headers = new Dictionary<string, Label>();
 
         private Label HeaderFor(string section)
@@ -163,7 +258,7 @@ namespace BTOptimizer
         {
             var l = FpsUi.Text(text, FpsUi.H3, FpsUi.Gold);
             l.AutoSize = false;
-            _scroll.Controls.Add(l);
+            _content.Controls.Add(l);
             _headers[section] = l;
             return l;
         }
@@ -174,11 +269,10 @@ namespace BTOptimizer
             public int Height;
         }
 
-        private int DrivesHeight()
+        private int DrivesHeight(int width)
         {
-            int n = _drivesData.Count;
-            if (n == 0) n = 1;
-            return 44 + n * 52 + 12;
+            int columns = width >= 1040 ? 4 : width >= 640 ? 2 : 1;
+            return 32 + Math.Max(1, (_drivesData.Count + columns - 1) / columns) * 120;
         }
 
         // ------------------------------------------------------------------
@@ -263,15 +357,16 @@ namespace BTOptimizer
             if (_scroll != null) _scroll.AutoScrollPosition = Point.Empty;
             RebuildCards();
             if (_scroll != null) _scroll.AutoScrollPosition = new Point(-pos.X, -pos.Y);
+            if (_scroll.IsHandleCreated) ShowScrollBar(_scroll.Handle, 0, false);
             Invalidate();
         }
 
         private void RebuildCards()
         {
             _scroll.SuspendLayout();
-            foreach (Control c in _cards) { try { _scroll.Controls.Remove(c); c.Dispose(); } catch { } }
+            foreach (Control c in _cards) { try { _content.Controls.Remove(c); c.Dispose(); } catch { } }
             _cards.Clear();
-            foreach (KeyValuePair<string, Label> kv in _headers) { try { _scroll.Controls.Remove(kv.Value); kv.Value.Dispose(); } catch { } }
+            foreach (KeyValuePair<string, Label> kv in _headers) { try { _content.Controls.Remove(kv.Value); kv.Value.Dispose(); } catch { } }
             _headers.Clear();
 
             var clean = new List<Storage.Module>();
@@ -286,20 +381,20 @@ namespace BTOptimizer
 
             // Les en-têtes ne sont créés que si leur section a du contenu (sinon ils flotteraient
             // en haut du panneau, sans rien sous eux).
-            if (clean.Count > 0) MakeHeader("clean", "LIBÉRER DE L'ESPACE");
+            if (clean.Count > 0) MakeHeader("clean", "À NETTOYER  /  " + clean.Count + " catégories");
             foreach (Storage.Module m in clean)
             {
                 Control card = MakeCleanCard(m);
                 _cards.Add(card);
-                _scroll.Controls.Add(card);
+                _content.Controls.Add(card);
             }
 
-            if (browse.Count > 0) MakeHeader("browse", "QUI PREND LA PLACE ?");
+            if (browse.Count > 0) MakeHeader("browse", "À EXPLORER  /  " + browse.Count + " catégories");
             foreach (Storage.Module m in browse)
             {
                 Control card = MakeBrowseCard(m);
                 _cards.Add(card);
-                _scroll.Controls.Add(card);
+                _content.Controls.Add(card);
             }
 
             _scroll.ResumeLayout();
@@ -307,115 +402,60 @@ namespace BTOptimizer
         }
 
         // --- carte « module nettoyable » ---
-        private Control MakeCleanCard(Storage.Module m)
+        private Control MakeCleanCard(Storage.Module module)
         {
-            var card = new Panel();
-            card.BackColor = Color.Transparent;
-            card.Tag = new CardTag { Section = "clean", Height = CardCleanH };
-            card.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
-
-            var glyph = new BufferedPanel();
-            glyph.BackColor = Color.Transparent; glyph.SetBounds(16, 14, 42, 42);
-            glyph.Paint += (s, e) => OnyxDesign.IconWell(e.Graphics, StorageIcon(m.Id), new Rectangle(1, 1, 39, 39));
-            card.Controls.Add(glyph);
-
-            var name = FpsUi.Text(m.Name, FpsUi.H3, FpsUi.Ink);
-            name.AutoSize = false; name.SetBounds(66, 16, 210, 34);
-            card.Controls.Add(name);
-
-            bool big = m.FreeableMB > 0;
-            string sizeTxt;
-            if (m.FreeableMB > 0) sizeTxt = Storage.Human(m.FreeableMB);
-            else if (m.HasActions) sizeTxt = "gain mesuré après coup";
-            else sizeTxt = "rien à récupérer";
-            var size = FpsUi.Text(sizeTxt, big ? FpsUi.Num : FpsUi.H3, FpsUi.Ink);
-            size.AutoSize = false; size.SetBounds(66, 48, 210, 38);
-            card.Controls.Add(size);
-
-            // Les bandes ne se CHEVAUCHENT pas : deux labels transparents superposés se masquent
-            // l'un l'autre (le dernier ajouté passe derrière) — c'est ce qui rognait le badge.
-            var desc = FpsUi.Text(m.Desc, FpsUi.Small, FpsUi.Dim);
-            desc.AutoSize = false; desc.SetBounds(16, 88, CardW - 32, 34);
-            card.Controls.Add(desc);
-
-            if (m.Safety >= Storage.SafeVerifier)
+            var card = new BufferedPanel { BackColor = Color.Transparent, Tag = new CardTag { Section = "clean", Height = CardCleanH } };
+            card.Paint += (s, e) =>
             {
-                // Bornes EXPLICITES : en AutoSize, la hauteur calculée pour Inter (police chargée
-                // depuis un fichier) est trop courte d'environ 3 px et rogne le haut des lettres —
-                // les accents et les hampes disparaissaient (« a verifier » au lieu d'« à vérifier »).
-                // Pas de « ⚠ » non plus : l'orange suffit à alerter, et le symbole force un repli de police.
-                var badge = FpsUi.Text("à vérifier — décoché par défaut", FpsUi.Small, FpsUi.Warn);
-                badge.AutoSize = false;
-                badge.SetBounds(16, 124, CardW - 32, 20);
-                card.Controls.Add(badge);
-            }
-
-            var tog = new ToggleSwitch();
-            tog.AccessibleName = m.Name;
-            tog.Location = new Point(CardW - 62, 18);
-            tog.Locked = !m.HasActions;
-            tog.On = _selected.Contains(m.Id);
-            Storage.Module cap = m;
-            tog.Toggled += delegate
-            {
-                if (tog.On) _selected.Add(cap.Id); else _selected.Remove(cap.Id);
-                SetStatus(null);
+                bool selected = _selected.Contains(module.Id);
+                OnyxDesign.PaintCard(e.Graphics, card.ClientRectangle, FpsUi.Card, selected ? OnyxDesign.Edge : FpsUi.Border, 12);
+                OnyxDesign.IconWell(e.Graphics, StorageIcon(module.Id), new Rectangle(18, 18, 36, 36), selected);
+                OnyxDesign.Text(e.Graphics, module.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(68, 18, card.Width - 144, 44), true);
+                OnyxDesign.Text(e.Graphics, "ESTIMATION RÉCUPÉRABLE", FpsUi.Tiny, FpsUi.Dim2, new Rectangle(18, 74, card.Width - 36, 18));
+                string size = module.FreeableMB > 0 ? Storage.Human(module.FreeableMB) : module.HasActions ? "Mesuré après nettoyage" : "Rien à récupérer";
+                OnyxDesign.Text(e.Graphics, size, module.FreeableMB > 0 ? OnyxDesign.Number : FpsUi.H3, selected ? FpsUi.Gold : FpsUi.Ink, new Rectangle(16, 94, card.Width - 32, 42));
+                OnyxDesign.Text(e.Graphics, module.Desc, FpsUi.Body, FpsUi.Dim, new Rectangle(18, 145, card.Width - 36, 60), true);
+                using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, 18, 211, card.Width - 18, 211);
+                OnyxDesign.Text(e.Graphics, module.Safety >= Storage.SafeVerifier ? "À vérifier avant nettoyage" : "Fichiers temporaires et caches",
+                    FpsUi.Small, module.Safety >= Storage.SafeVerifier ? FpsUi.Warn : FpsUi.Dim2, new Rectangle(18, 220, card.Width - 36, 18));
             };
-            card.Controls.Add(tog);
+            var toggle = new ToggleSwitch { Name = "storage-toggle-" + module.Id, AccessibleName = module.Name, Locked = !module.HasActions, On = _selected.Contains(module.Id) };
+            card.Controls.Add(toggle);
+            card.SizeChanged += (s, e) => toggle.Location = new Point(card.Width - toggle.Width - 18, 20);
+            toggle.Toggled += (s, e) =>
+            {
+                if (toggle.On) _selected.Add(module.Id); else _selected.Remove(module.Id);
+                card.Invalidate(); SetStatus(null);
+            };
             OnyxDesign.HoverCard(card);
             return card;
         }
 
-        // --- carte « qui prend la place » ---
-        private Control MakeBrowseCard(Storage.Module m)
+        private Control MakeBrowseCard(Storage.Module module)
         {
-            var card = new Panel();
-            card.BackColor = Color.Transparent;
-            card.Tag = new CardTag { Section = "browse", Height = CardBrowseH };
-            card.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
-
-            var glyph = new BufferedPanel();
-            glyph.BackColor = Color.Transparent; glyph.SetBounds(16, 14, 42, 42);
-            glyph.Paint += (s, e) => OnyxDesign.IconWell(e.Graphics, StorageIcon(m.Id), new Rectangle(1, 1, 39, 39));
-            card.Controls.Add(glyph);
-
-            var name = FpsUi.Text(m.Name, FpsUi.H3, FpsUi.Ink);
-            name.AutoSize = false; name.SetBounds(66, 14, 220, 34);
-            card.Controls.Add(name);
-
-            var size = FpsUi.Text(m.Items.Count == 0 ? "—" : Storage.Human(m.SizeMB) + "  ·  " + m.Items.Count + " élément(s)",
-                                  FpsUi.Small, FpsUi.Dim);
-            size.AutoSize = false; size.SetBounds(66, 46, 260, 18);
-            card.Controls.Add(size);
-
-            // Aperçu : les trois plus gros, tout de suite lisibles, sans ouvrir quoi que ce soit.
-            int y = 74;
-            int shown = 0;
-            foreach (Storage.StorageItem it in m.Items)
+            var card = new BufferedPanel { BackColor = Color.Transparent, Tag = new CardTag { Section = "browse", Height = CardBrowseH } };
+            card.Paint += (s, e) =>
             {
-                if (shown >= 3) break;
-                var line = FpsUi.Text("• " + Trim(it.Name, 34), FpsUi.Small, FpsUi.Ink);
-                line.AutoSize = false; line.SetBounds(16, y, CardW - 110, 18);
-                card.Controls.Add(line);
-                var mb = FpsUi.Text(it.SizeText, FpsUi.Small, FpsUi.Dim);
-                mb.AutoSize = false; mb.SetBounds(CardW - 96, y, 80, 18);
-                mb.TextAlign = ContentAlignment.MiddleRight;
-                card.Controls.Add(mb);
-                y += 22; shown++;
-            }
-            if (shown == 0)
-            {
-                var none = FpsUi.Text("Rien de notable ici — c'est plutôt bon signe.", FpsUi.Small, FpsUi.Dim2);
-                none.AutoSize = false; none.SetBounds(16, y, CardW - 32, 18);
-                card.Controls.Add(none);
-            }
-
-            var btn = OnyxDesign.Button(BrowseLabel(m));
-            btn.SetBounds(16, CardBrowseH - 44, CardW - 32, 30);
-            btn.ForeColor = FpsUi.Gold;
-            Storage.Module cap = m;
-            btn.Click += (s, e) => OpenBrowse(cap);
-            card.Controls.Add(btn);
+                var g = e.Graphics;
+                OnyxDesign.PaintCard(g, card.ClientRectangle, FpsUi.Card, FpsUi.Border, 12);
+                OnyxDesign.IconWell(g, StorageIcon(module.Id), new Rectangle(18, 18, 36, 36));
+                OnyxDesign.Text(g, module.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(68, 18, card.Width - 86, 44), true);
+                OnyxDesign.Text(g, module.Items.Count == 0 ? "—" : Storage.Human(module.SizeMB), OnyxDesign.Number, FpsUi.Ink, new Rectangle(16, 72, card.Width - 32, 40));
+                OnyxDesign.Text(g, module.Items.Count + (module.Items.Count == 1 ? " élément repéré" : " éléments repérés"), FpsUi.Small, FpsUi.Dim, new Rectangle(18, 113, card.Width - 36, 20));
+                int y = 142, shown = 0;
+                foreach (var item in module.Items)
+                {
+                    if (shown++ == 3) break;
+                    OnyxDesign.Text(g, item.Name, FpsUi.Small, FpsUi.Ink, new Rectangle(18, y, card.Width - 122, 20));
+                    TextRenderer.DrawText(g, item.SizeText, FpsUi.Small, new Rectangle(card.Width - 96, y, 78, 20), FpsUi.Dim,
+                        TextFormatFlags.Right | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                    y += 22;
+                }
+                if (module.Items.Count == 0) OnyxDesign.Text(g, "Aucun élément au-dessus du seuil.", FpsUi.Small, FpsUi.Dim2, new Rectangle(18, 148, card.Width - 36, 40), true);
+            };
+            var button = OnyxDesign.Button(BrowseLabel(module)); button.ForeColor = FpsUi.Gold;
+            button.Click += (s, e) => OpenBrowse(module); card.Controls.Add(button);
+            card.SizeChanged += (s, e) => button.SetBounds(18, card.Height - 50, card.Width - 36, 32);
             OnyxDesign.HoverCard(card);
             return card;
         }
@@ -555,7 +595,7 @@ namespace BTOptimizer
         {
             _busy = busy;
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            if (_btnFree != null) _btnFree.Enabled = !busy;
+            UpdateSelection();
             if (_btnRescan != null) _btnRescan.Enabled = !busy;
             if (_btnConfig != null) _btnConfig.Enabled = !busy;
         }
@@ -563,70 +603,68 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Peinture
         // ------------------------------------------------------------------
+        private void PaintOverview(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; int cell = _overview.Width / 3;
+            OnyxDesign.PaintCard(g, _overview.ClientRectangle, Color.FromArgb(27, 25, 20), OnyxDesign.Edge, 12);
+            long free = 0, total = 0;
+            foreach (var drive in _drivesData) { free += drive.FreeMB; total += drive.TotalMB; }
+            string[] labels = { "ESPACE DISPONIBLE", "ESPACE OCCUPÉ", "NETTOYAGE SÉLECTIONNÉ" };
+            string[] values = { _drivesData.Count == 0 ? "—" : Storage.Human(free), _drivesData.Count == 0 ? "—" : Storage.Human(total - free), _modules.Count == 0 && _busy ? "…" : Storage.Human(RecoverableMB()) };
+            string[] notes = { _drivesData.Count + (_drivesData.Count == 1 ? " volume détecté" : " volumes détectés"), "sur " + Storage.Human(total) + " de capacité", "Estimation avant nettoyage" };
+            for (int i = 0; i < 3; i++)
+            {
+                int x = cell * i + 20;
+                OnyxDesign.Text(g, labels[i], FpsUi.Tiny, FpsUi.Dim, new Rectangle(x, 16, cell - 40, 18));
+                OnyxDesign.Text(g, values[i], OnyxDesign.Number, i == 2 ? FpsUi.Gold : FpsUi.Ink, new Rectangle(x - 2, 35, cell - 36, 42));
+                OnyxDesign.Text(g, notes[i], FpsUi.Small, FpsUi.Dim2, new Rectangle(x, 82, cell - 40, 18));
+                if (i > 0) using (var pen = new Pen(OnyxDesign.Edge)) g.DrawLine(pen, cell * i, 20, cell * i, 88);
+            }
+        }
+
         private void PaintDrives(object sender, PaintEventArgs e)
         {
-            var p = (Panel)sender;
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            OnyxDesign.PaintCard(g, p.ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
-
-            TextRenderer.DrawText(g, "TES DISQUES", FpsUi.H3, new Point(18, 14), FpsUi.Gold, TextFormatFlags.NoPadding);
-
+            var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+            OnyxDesign.Text(g, "TES VOLUMES", FpsUi.H3, FpsUi.Ink, new Rectangle(0, 0, _drives.Width, 24));
             if (_drivesData.Count == 0)
             {
-                TextRenderer.DrawText(g, _scanned ? "Aucun disque fixe lisible." : "Lecture des disques…",
-                    FpsUi.Small, new Point(18, 46), FpsUi.Dim, TextFormatFlags.NoPadding);
-                return;
+                OnyxDesign.Text(g, _busy ? "Lecture des disques…" : "Aucun disque fixe lisible.", FpsUi.Body, FpsUi.Dim, new Rectangle(18, 52, _drives.Width - 36, 30)); return;
             }
-
-            long recoverable = RecoverableMB();
-            int y = 44;
-            foreach (Storage.DriveView d in _drivesData)
+            int columns = _drives.Width >= 1040 ? 4 : _drives.Width >= 640 ? 2 : 1;
+            int width = (_drives.Width - (columns - 1) * 12) / columns;
+            for (int i = 0; i < _drivesData.Count; i++)
             {
-                Color lvl = d.Level == 2 ? FpsUi.Err : (d.Level == 1 ? FpsUi.Warn : FpsUi.Ok);
-                string head = d.Letter + (string.IsNullOrEmpty(d.Label) ? "" : "  " + d.Label) + (d.IsSystem ? "  · système" : "");
-                TextRenderer.DrawText(g, head, FpsUi.H3, new Point(18, y), FpsUi.Ink, TextFormatFlags.NoPadding);
-
-                string right = Storage.Human(d.UsedMB) + " / " + Storage.Human(d.TotalMB) + "   ·   " + d.FreePct + " % libres";
-                Size rs = TextRenderer.MeasureText(g, right, FpsUi.Small);
-                TextRenderer.DrawText(g, right, FpsUi.Small, new Point(p.Width - 20 - rs.Width, y + 2), lvl, TextFormatFlags.NoPadding);
-
-                // Barre : occupé (couleur de verdict) + part récupérable (émeraude translucide)
-                var bar = new RectangleF(18, y + 22, Math.Max(40, p.Width - 38), 10);
-                using (GraphicsPath bg = FpsUi.Round(bar, 5f))
-                using (var br = new SolidBrush(Color.FromArgb(46, 40, 32)))
-                    g.FillPath(br, bg);
-
-                float usedW = d.TotalMB > 0 ? (float)(bar.Width * d.UsedMB / (double)d.TotalMB) : 0;
-                if (usedW > 2)
-                {
-                    using (GraphicsPath up = FpsUi.Round(new RectangleF(bar.X, bar.Y, usedW, bar.Height), 5f))
-                    using (var br = new SolidBrush(lvl))
-                        g.FillPath(br, up);
-                }
-
-                // Ce qui peut revenir : dessiné À LA FIN de la zone occupée, là où l'espace va rendre.
-                if (d.IsSystem && recoverable > 0 && d.TotalMB > 0)
-                {
-                    float recW = (float)(bar.Width * recoverable / (double)d.TotalMB);
-                    if (recW > 2 && recW < usedW)
-                    {
-                        using (GraphicsPath rp = FpsUi.Round(new RectangleF(bar.X + usedW - recW, bar.Y, recW, bar.Height), 5f))
-                        using (var br = new SolidBrush(Color.FromArgb(190, FpsUi.Ok)))
-                            g.FillPath(br, rp);
-                    }
-                }
-                y += 52;
+                var drive = _drivesData[i]; int x = (i % columns) * (width + 12), y = 32 + (i / columns) * 120;
+                Color level = drive.Level == 2 ? FpsUi.Err : drive.Level == 1 ? FpsUi.Warn : FpsUi.Gold;
+                OnyxDesign.PaintCard(g, new Rectangle(x, y, width, 108), FpsUi.Card, drive.IsSystem ? OnyxDesign.Edge : FpsUi.Border, 12);
+                var ring = new Rectangle(x + 16, y + 19, 48, 48);
+                using (var pen = new Pen(FpsUi.Border, 4)) g.DrawEllipse(pen, ring);
+                float used = drive.TotalMB > 0 ? (float)drive.UsedMB / drive.TotalMB : 0;
+                using (var pen = new Pen(level, 4) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    if (used > 0) g.DrawArc(pen, ring, -90, Math.Min(1, used) * 360);
+                TextRenderer.DrawText(g, (100 - drive.FreePct) + "%", FpsUi.Small, ring, FpsUi.Ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                OnyxDesign.Text(g, "occupé", FpsUi.Tiny, FpsUi.Dim2, new Rectangle(x + 18, y + 78, 50, 18));
+                OnyxDesign.Text(g, drive.Letter + (drive.IsSystem ? " · Système" : " · " + drive.Label), FpsUi.H3, FpsUi.Ink, new Rectangle(x + 82, y + 18, width - 98, 24));
+                OnyxDesign.Text(g, Storage.Human(drive.FreeMB) + " libres", FpsUi.H3, level, new Rectangle(x + 82, y + 47, width - 98, 22));
+                OnyxDesign.Text(g, "sur " + Storage.Human(drive.TotalMB), FpsUi.Small, FpsUi.Dim, new Rectangle(x + 82, y + 77, width - 98, 18));
             }
+        }
 
-            if (recoverable > 0)
-            {
-                using (var br = new SolidBrush(Color.FromArgb(190, FpsUi.Ok)))
-                    g.FillEllipse(br, 18, y - 4, 8, 8);
-                TextRenderer.DrawText(g, "cette part revient si tu libères maintenant  (" + Storage.Human(recoverable) + ")",
-                    FpsUi.Tiny, new Point(31, y - 6), FpsUi.Dim, TextFormatFlags.NoPadding);
-            }
+        private void PaintSelection(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            OnyxDesign.PaintCard(g, _selectionBar.ClientRectangle, FpsUi.Card, OnyxDesign.Edge, 12);
+            int count = SelectedItems().Count;
+            string title = _busy ? "Analyse ou nettoyage en cours…" : count == 0 ? "Choisis les catégories à nettoyer" : Storage.Human(RecoverableMB()) + " estimés · " + count + (count == 1 ? " élément sélectionné" : " éléments sélectionnés");
+            OnyxDesign.Text(g, title, FpsUi.H3, FpsUi.Ink, new Rectangle(20, 14, _btnFree.Left - 36, 24));
+            OnyxDesign.Text(g, _busy ? _statusText : "Le détail de la sélection est présenté avant le nettoyage.", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 43, _btnFree.Left - 36, 20));
+        }
+
+        private void UpdateSelection()
+        {
+            if (_btnFree != null) _btnFree.Enabled = !_busy && SelectedItems().Count > 0;
+            if (_overview != null) _overview.Invalidate();
+            if (_selectionBar != null) _selectionBar.Invalidate();
         }
 
         private long RecoverableMB()
@@ -646,22 +684,20 @@ namespace BTOptimizer
         private void SetStatus(string s)
         {
             _statusText = s;
+            UpdateSelection();
             Invalidate();   // le sous-titre est peint, pas posé dans un Label
         }
 
         private string Subtitle()
         {
             if (_busy) return _statusText;
-            if (!_scanned) return "Analyse du disque…";
-            Storage.DriveView sys = null;
-            foreach (Storage.DriveView d in _drivesData) if (d.IsSystem) { sys = d; break; }
-            long rec = RecoverableMB();
-            int n = SelectedItems().Count;
-            var sb = new System.Text.StringBuilder();
-            sb.Append(rec > 0 ? Storage.Human(rec) + " récupérables" : "rien de significatif à récupérer");
-            if (sys != null) sb.Append("  ·  ").Append(sys.Letter).Append(" rempli à ").Append(100 - sys.FreePct).Append(" %");
-            sb.Append("  ·  ").Append(n == 0 ? "aucun module sélectionné" : n + " élément(s) prêts à partir");
-            return sb.ToString();
+            return "Tes disques, l’espace récupérable et les fichiers qui prennent de la place.";
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _wheel != null) { Application.RemoveMessageFilter(_wheel); _wheel = null; }
+            base.Dispose(disposing);
         }
     }
 }

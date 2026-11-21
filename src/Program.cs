@@ -1298,6 +1298,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_STORAGE_UI") == "1")
+                {
+                    try { CaptureStorageUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Stockage ERREUR : " + ex); }
+                    Console.WriteLine("UITEST STOCKAGE — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_COPILOT_UI") == "1")
                 {
                     try { CaptureCopilotUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2133,6 +2140,36 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureStorageUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(8);
+                var page = (PageStorage)dash.PageAt(8);
+                for (int i = 0; i < 120 && page.Occupe; i++)
+                {
+                    Pump(1000);
+                    if (i % 10 == 9) Console.WriteLine("  Analyse stockage : " + page.ModulesAffiches + " catégories prêtes.");
+                }
+                if (page.Occupe) throw new InvalidOperationException("L’analyse n’est pas terminée.");
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateStorageUi();
+                    for (int view = 0; view < 3; view++)
+                    {
+                        page.PreviewView(view); Pump(100);
+                        page.ValidateViewportUi();
+                        SaveGamesShot(dash, dir, "stockage-" + view + "-" + size.Width);
+                    }
+                    Console.WriteLine("  Stockage : vues, sélection, estimation et défilement OK à " + size.Width + "x" + size.Height);
+                }
+                dash.Hide();
+            }
+        }
+
         private static void CaptureCopilotUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);

@@ -1785,9 +1785,9 @@ namespace BTOptimizer
                     p.SetTools(
                         Tool("🎬 Gros fichiers", () => OpenDialog(new StorageFilesForm(Log, null))),
                         Tool("🧹 Nettoyage classique", () => OpenDialog(new CleanupForm(Log))),
-                        Tool("🧩 Nettoyage par appli (winapp2)", () => OpenDialog(new Winapp2Form(Log))),
+                        Tool("Par application", () => OpenDialog(new Winapp2Form(Log))),
                         Tool("🕹 Jeux dormants", () => OpenDialog(new DormantGamesForm(Log))),
-                        Tool("💽 Jeux & disques (santé SSD)", () => OpenDialog(new DiskForm(Log))),
+                        Tool("Santé des disques", () => OpenDialog(new DiskForm(Log))),
                         Tool("🧰 Entretien du PC", () => OpenDialog(new MaintenanceForm(Log))));
                     break;
                 // Laboratoire : ses outils sont désormais INTÉGRÉS EN CARTES dans la page
