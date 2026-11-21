@@ -326,6 +326,10 @@ namespace BTOptimizer
 
         private static bool UnderTestHarness()
         {
+#if BTTEST
+            // Capture des bons plans avec les vraies jaquettes, sur demande explicite du harnais.
+            if (Environment.GetEnvironmentVariable("BT_ART_NETWORK") == "1") return false;
+#endif
             try
             {
                 return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BT_UITEST"))

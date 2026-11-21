@@ -1298,6 +1298,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_DEALS_UI") == "1")
+                {
+                    try { CaptureDealsUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Bons plans ERREUR : " + ex); }
+                    Console.WriteLine("UITEST BONS PLANS — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_CHECKUP_UI") == "1")
                 {
                     try { CaptureCheckupUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2154,6 +2161,45 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureDealsUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(9); Pump(100);
+                var page = (PageBonsPlans)dash.PageAt(9);
+                SaveGamesShot(dash, dir, "bons-plans-chargement");
+                for (int i = 0; i < 120 && page.BusyForTest; i++)
+                {
+                    Pump(1000);
+                    if (i % 15 == 14) Console.WriteLine("  Chargement des boutiques en cours…");
+                }
+                if (page.BusyForTest) throw new InvalidOperationException("Les boutiques n’ont pas terminé leur chargement.");
+                Console.WriteLine("  Bons plans : " + page.OffersForTest + " offres réelles reçues.");
+                Pump(3500);
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateDealsUi(); Pump(150);
+                    SaveGamesShot(dash, dir, "bons-plans-" + size.Width);
+                }
+                dash.ClientSize = new System.Drawing.Size(1280, 800); page.PreviewPricedPage(); Pump(2000);
+                page.ValidateDealsUi(); page.PreviewPricedPage(); Pump(150); SaveGamesShot(dash, dir, "bons-plans-prix");
+                page.PreviewFree(); Pump(100);
+                for (int i = 0; i < 60 && page.BusyForTest; i++) Pump(1000);
+                if (page.BusyForTest) throw new InvalidOperationException("Les offres gratuites n’ont pas terminé leur chargement.");
+                Pump(2000); page.ValidateDealsUi(); SaveGamesShot(dash, dir, "bons-plans-gratuits");
+                for (int tab = 2; tab < 5; tab++)
+                {
+                    page.PreviewLocalTab(tab); Pump(100); page.ValidateDealsUi();
+                    SaveGamesShot(dash, dir, "bons-plans-vide-" + tab);
+                }
+                page.PreviewEmpty(true); Pump(100); SaveGamesShot(dash, dir, "bons-plans-erreur");
+                Console.WriteLine("  Bons plans : cartes, actions, défilement, onglets et états vides OK.");
+                dash.Hide();
+            }
+        }
+
         private static void CaptureCheckupUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);

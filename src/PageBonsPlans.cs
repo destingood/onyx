@@ -34,6 +34,7 @@ namespace BTOptimizer
         private readonly Button[] _pilules = new Button[Plafonds.Length];
         private readonly Label _lPrix, _lCat, _lPlat, _lTri, _etat, _numPage, _info;
         private readonly ComboBox _cat, _plat, _tri;
+        private readonly Button _categoryChoice, _platformChoice, _sortChoice;
         private readonly Button _verifier, _installes, _reessayer, _prec, _suiv;
         private readonly Button _stores;
         private readonly ContextMenuStrip _menuStores;
@@ -43,7 +44,9 @@ namespace BTOptimizer
         private readonly BufferedFlow _flow;
         private readonly LinkLabel _pied;
         private readonly Timer _attente;
-        private ScrollWheelFilter _wheel;
+        private readonly OnyxScrollPanel _viewport = new OnyxScrollPanel();
+        private readonly BufferedPanel _filters = new BufferedPanel(), _searchBox = new BufferedPanel();
+        private readonly Label _context = new Label(), _resultsLabel = new Label();
 
         private int _onglet, _plafond = -1, _generation, _pageIdx, _debutSteam;
         private bool _charge, _occupe, _steamFini, _majCombos;
@@ -56,9 +59,17 @@ namespace BTOptimizer
             _search = new TextBox();
             try { _search.PlaceholderText = "Rechercher un jeu…"; } catch { }
             _search.BackColor = FpsUi.Card; _search.ForeColor = FpsUi.Ink;
-            _search.BorderStyle = BorderStyle.FixedSingle; _search.Font = FpsUi.Small;
+            _search.BorderStyle = BorderStyle.None; _search.Font = FpsUi.Body;
+            _search.AccessibleName = "Rechercher une offre de jeu";
             _search.TextChanged += (s, e) => { _attente.Stop(); _attente.Start(); };
-            Controls.Add(_search);
+            _searchBox.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, _searchBox.ClientRectangle, FpsUi.Card, _search.Focused ? FpsUi.GoldDim : FpsUi.Border, 8);
+            _search.GotFocus += (s, e) => _searchBox.Invalidate(); _search.LostFocus += (s, e) => _searchBox.Invalidate();
+            _searchBox.Controls.Add(_search); Controls.Add(_searchBox);
+            _filters.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, _filters.ClientRectangle, FpsUi.Card, FpsUi.Border, 12);
+            Controls.Add(_filters);
+            _context.Font = FpsUi.Body; _context.ForeColor = FpsUi.Dim; _context.BackColor = Color.Transparent; _context.AutoSize = false;
+            _filters.Controls.Add(_context);
+            _resultsLabel.Font = FpsUi.Small; _resultsLabel.ForeColor = FpsUi.Dim; _resultsLabel.AutoSize = false; Controls.Add(_resultsLabel);
 
             _attente = new Timer { Interval = 400 };   // 400 ms sans frappe avant l'appel
             _attente.Tick += (s, e) => { _attente.Stop(); Recharge(); };
@@ -67,12 +78,12 @@ namespace BTOptimizer
             {
                 int k = i;
                 _onglets[i] = OnyxDesign.Button(NomsOnglets[i]);
-                _onglets[i].Height = 30;
+                _onglets[i].Height = 40; _onglets[i].Font = FpsUi.H3; _onglets[i].Name = "deals-tab-" + i;
                 _onglets[i].Click += (s, e) => ChoisitOnglet(k);
                 Controls.Add(_onglets[i]);
             }
 
-            _lPrix = Etiquette("Prix :");
+            _lPrix = Etiquette("BUDGET");
             for (int i = 0; i < _pilules.Length; i++)
             {
                 int k = i;
@@ -89,6 +100,7 @@ namespace BTOptimizer
             _plat = Liste(130, new[] { "Toutes" }.Concat(Offres.Plateformes));
             _lTri = Etiquette("Tri");
             _tri = Liste(110, Tris.Select(t => t.Key));
+            _categoryChoice = Choice(_cat, "Catégorie de jeu"); _platformChoice = Choice(_plat, "Plateforme"); _sortChoice = Choice(_tri, "Trier les offres");
 
             _stores = OnyxDesign.Button("Stores");
             _stores.Height = 28;
@@ -117,12 +129,10 @@ namespace BTOptimizer
             Controls.Add(_installes);
 
             _flow = new BufferedFlow();
-            _flow.AutoScroll = true;
+            _flow.AutoScroll = false;
             _flow.BackColor = Color.Transparent;
-            _flow.Padding = new Padding(0, 4, 0, 12);
-            Controls.Add(_flow);
-            _wheel = new ScrollWheelFilter(_flow);
-            try { Application.AddMessageFilter(_wheel); } catch { }
+            _flow.Padding = Padding.Empty;
+            _viewport.Content.Controls.Add(_flow); Controls.Add(_viewport);
 
             _etat = new Label { AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = FpsUi.Body, ForeColor = FpsUi.Dim, BackColor = FpsUi.BgMain, Visible = false };
             Controls.Add(_etat);
@@ -164,11 +174,14 @@ namespace BTOptimizer
 
             _majCombos = true;
             _cat.SelectedIndex = 0; _plat.SelectedIndex = 0; _tri.SelectedIndex = 0;
-            _majCombos = false;
-            _cat.SelectedIndexChanged += (s, e) => { if (!_majCombos) Recharge(); };
-            _plat.SelectedIndexChanged += (s, e) => { if (!_majCombos) Recharge(); };
-            _tri.SelectedIndexChanged += (s, e) => { if (!_majCombos) Recharge(); };
+            _majCombos = false; SyncChoices();
+            _cat.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
+            _plat.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
+            _tri.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
 
+            foreach (Control control in new Control[] { _lPrix, _lCat, _lPlat, _lTri, _cat, _plat, _tri, _stores, _verifier, _installes }) _filters.Controls.Add(control);
+            foreach (var pill in _pilules) _filters.Controls.Add(pill);
+            _cat.AccessibleName = "Catégorie de jeu"; _plat.AccessibleName = "Plateforme"; _tri.AccessibleName = "Trier les offres";
             MajOnglets();
             Resize += (s, e) => DoLayout();
         }
@@ -177,7 +190,6 @@ namespace BTOptimizer
         {
             if (disposing)
             {
-                if (_wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
                 try { _attente.Dispose(); } catch { }
                 try { _menuStores.Dispose(); } catch { }
             }
@@ -204,7 +216,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintPremiumTitle(e.Graphics, "BONS PLANS", "Promos, jeux gratuits et nouveautés — tu peux suivre un jeu pour être prévenu de sa promo");
+            PaintPremiumTitle(e.Graphics, "BONS PLANS", "Repère les offres, compare les prix et garde tes jeux à l’œil.");
         }
 
         // ------------------------------------------------------------------ disposition
@@ -228,6 +240,29 @@ namespace BTOptimizer
             return c;
         }
 
+        private Button Choice(ComboBox model, string name)
+        {
+            var button = OnyxDesign.Button(""); button.AccessibleName = name;
+            button.Click += (s, e) =>
+            {
+                var menu = new ContextMenuStrip { Font = FpsUi.Body, ShowImageMargin = false, ShowCheckMargin = true };
+                for (int i = 0; i < model.Items.Count; i++)
+                {
+                    int index = i;
+                    var item = new ToolStripMenuItem(model.Items[i].ToString()) { Checked = i == model.SelectedIndex };
+                    item.Click += (sender, args) => model.SelectedIndex = index; menu.Items.Add(item);
+                }
+                menu.Closed += (sender, args) => menu.Dispose(); menu.Show(button, new Point(0, button.Height + 2));
+            };
+            _filters.Controls.Add(button); return button;
+        }
+        private void SyncChoices()
+        {
+            _categoryChoice.Text = (_cat.SelectedItem ?? "Toutes").ToString() + "   ▾";
+            _platformChoice.Text = (_plat.SelectedItem ?? "Toutes").ToString() + "   ▾";
+            _sortChoice.Text = (_tri.SelectedItem ?? "Remise").ToString() + "   ▾";
+        }
+
         private static void Lien(LinkLabel l, string mot, string url)
         {
             int i = l.Text.IndexOf(mot, StringComparison.Ordinal);
@@ -236,46 +271,50 @@ namespace BTOptimizer
 
         private void DoLayout()
         {
-            int w = ClientSize.Width, h = ClientSize.Height, x0 = 34, droite = Math.Max(x0 + 300, w - 34);
-            _search.SetBounds(Math.Max(x0 + 260, droite - 280), 24, Math.Min(280, droite - x0 - 260), 26);
-
-            int x = x0;
-            foreach (Button b in _onglets)
-            {
-                b.Width = TextRenderer.MeasureText(b.Text, b.Font).Width + 28;
-                b.Location = new Point(x, 90);
-                x += b.Width + 6;
-            }
-
-            // Rangée des filtres : passe à la ligne quand la fenêtre est étroite.
-            var rangee = new List<Control> { _lPrix };
-            rangee.AddRange(_pilules);
-            rangee.AddRange(new Control[] { _stores, _lCat, _cat, _lPlat, _plat, _lTri, _tri, _verifier, _installes });
-            int y = 130;
-            x = x0;
-            foreach (Control c in rangee)
-            {
-                if (!c.Visible) continue;
-                if (c is Label && c.Width == 0) continue;
-                bool etiquette = c is Label;
-                if (x + c.Width > droite && x > x0) { x = x0; y += 34; }
-                c.Location = new Point(x + (etiquette && x > x0 ? 8 : 0), y + (28 - c.Height) / 2);
-                x = c.Right + (etiquette ? 6 : 6);
-            }
-            int haut = y + 40;
-
-            _pied.SetBounds(x0, h - 26, droite - x0, 18);
-            int py = h - 26 - 36;
-            int cx = x0 + (droite - x0) / 2;
-            _numPage.Location = new Point(cx - _numPage.Width / 2, py);
-            _prec.Location = new Point(_numPage.Left - _prec.Width - 8, py);
-            _suiv.Location = new Point(_numPage.Right + 8, py);
-            _info.SetBounds(x0, py, Math.Max(60, _prec.Left - x0 - 12), 28);
-
-            _flow.SetBounds(x0, haut, Math.Max(200, w - x0 - 16), Math.Max(80, py - 8 - haut));
-            _etat.SetBounds(_flow.Left, _flow.Top + 30, Math.Max(200, droite - x0), 48);
-            _reessayer.Location = new Point(_flow.Left + (_etat.Width - _reessayer.Width) / 2, _etat.Bottom + 6);
+            int w = ClientSize.Width, h = ClientSize.Height, width = w - 68;
+            _searchBox.SetBounds(w - 324, 20, 290, 36); _search.SetBounds(12, 9, 266, 22);
+            int tabWidth = (width - 32) / 5;
+            for (int i = 0; i < _onglets.Length; i++) _onglets[i].SetBounds(34 + i * (tabWidth + 8), 98, tabWidth, 40);
+            bool compact = h < 740;
+            _filters.SetBounds(34, compact ? 146 : 154, width, compact ? 92 : 110);
+            int row = compact ? 55 : 67;
+            _lPrix.SetBounds(18, 22, 68, 20);
+            int x = 92;
+            foreach (Button pill in _pilules) { pill.SetBounds(x, 14, pill.Width, 32); x = pill.Right + 6; }
+            _stores.SetBounds(width - 196, 14, 178, 32);
+            _lCat.SetBounds(18, row + 5, 76, 22); _categoryChoice.SetBounds(100, row, 210, 30);
+            _lTri.SetBounds(338, row + 5, 28, 22); _sortChoice.SetBounds(378, row, 190, 30);
+            _lPlat.SetBounds(18, row + 5, 80, 22); _platformChoice.SetBounds(100, row, 236, 30);
+            _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
+            _context.SetBounds(18, 18, width - 36, 42);
+            _resultsLabel.SetBounds(34, compact ? 246 : 278, width, 22);
+            int top = compact ? 280 : 310;
+            _viewport.SetBounds(34, top, w - 50, Math.Max(100, h - top - 80));
+            LayoutCards();
+            _pied.SetBounds(34, h - 25, width, 18);
+            int py = h - 65;
+            _suiv.SetBounds(w - 144, py, 110, 32); _numPage.SetBounds(_suiv.Left - 104, py, 96, 32);
+            _prec.SetBounds(_numPage.Left - 118, py, 110, 32);
+            _info.SetBounds(34, py, Math.Max(60, _prec.Left - 50), 32);
+            _etat.SetBounds(58, _viewport.Top + 52, width - 48, 62);
+            _reessayer.Location = new Point(34 + (width - _reessayer.Width) / 2, _etat.Bottom + 12);
             Invalidate();
+        }
+        private void LayoutCards()
+        {
+            int width = _viewport.ContentWidth;
+            int cols = width >= 1420 ? 4 : width >= 1050 ? 3 : 2;
+            int cardWidth = Math.Max(240, (width - (cols - 1) * 16) / cols);
+            _flow.SuspendLayout();
+            int i = 0;
+            foreach (Control card in _flow.Controls)
+            {
+                card.Size = new Size(cardWidth, 320);
+                card.Margin = new Padding(0, 0, ++i % cols == 0 ? 0 : 16, 16);
+            }
+            int height = Math.Max(120, ((i + cols - 1) / cols) * 336);
+            _flow.SetBounds(0, 0, width, height); _viewport.ContentHeight = height;
+            _flow.ResumeLayout();
         }
 
         private static void Style(Button b, bool actif)
@@ -301,12 +340,20 @@ namespace BTOptimizer
                 Style(_pilules[i], prixActif && Plafonds[i] == _plafond);
             }
             _cat.Enabled = prixActif;
+            _lPrix.Visible = prixActif;
+            foreach (var pill in _pilules) pill.Visible = prixActif;
+            _lCat.Visible = _cat.Visible = prixActif;
+            _context.Visible = !prixActif;
+            _context.Text = _onglet == OngletFavoris ? "Tes offres enregistrées, réunies au même endroit. Les prix actuels sont disponibles sur la boutique." : "Jeux et contenus offerts : consulte les plateformes et la date de fin avant de les récupérer.";
             bool plateforme = _onglet == OngletGratuits;   // une seule plateforme ailleurs (Steam) ; Favoris : texte seul
             _lPlat.Visible = _plat.Visible = plateforme;
             bool tri = _onglet == OngletPromos || _onglet == OngletNouveautes;
             _lTri.Visible = _tri.Visible = tri;
             _verifier.Visible = _installes.Visible = _onglet == OngletSuivis;
             _stores.Visible = _onglet == OngletPromos;
+            _categoryChoice.Visible = prixActif; _platformChoice.Visible = plateforme; _sortChoice.Visible = tri;
+            _cat.Visible = _plat.Visible = _tri.Visible = false;
+            SyncChoices();
             Style(_stores, _onglet == OngletPromos && Magasin.Boutiques.Count < OffresSources.Boutiques.Length);
             DoLayout();
         }
@@ -314,7 +361,7 @@ namespace BTOptimizer
         private void MajStores()
         {
             int n = Magasin.Boutiques.Count;
-            _stores.Text = "Stores " + n.ToString(CultureInfo.InvariantCulture) + "/" + OffresSources.Boutiques.Length.ToString(CultureInfo.InvariantCulture) + " ▾";
+            _stores.Text = "Boutiques " + n.ToString(CultureInfo.InvariantCulture) + "/" + OffresSources.Boutiques.Length.ToString(CultureInfo.InvariantCulture) + " ▾";
             _stores.Width = TextRenderer.MeasureText(_stores.Text, _stores.Font).Width + 24;
             Style(_stores, _onglet == OngletPromos && n < OffresSources.Boutiques.Length);
         }
@@ -716,7 +763,7 @@ namespace BTOptimizer
             _flow.SuspendLayout();
             foreach (Control c in _flow.Controls.Cast<Control>().ToList()) c.Dispose();
             _flow.Controls.Clear();
-            _flow.ResumeLayout();
+            _flow.ResumeLayout(); LayoutCards();
         }
 
         private void Affiche(bool erreur)
@@ -730,9 +777,10 @@ namespace BTOptimizer
                 bool aide = _onglet == OngletSuivis && Texte().Length == 0 && !erreur;
                 bool aucunStore = _onglet == OngletPromos && Magasin.Boutiques.Count == 0;
                 _etat.Text = erreur ? TexteErreur
-                    : aucunStore ? "Aucun store coché : ouvre « Stores » pour en choisir."
-                    : aide ? "Cherche un jeu puis clique sur la cloche : tu seras prévenu dès qu'il passe en promo."
+                    : aucunStore ? "Aucun store coché : ouvre « Boutiques » pour en choisir."
+                    : aide ? "Cherche un jeu puis choisis « Suivre » pour être prévenu de ses promotions."
                     : "Aucun jeu ne correspond à ces filtres.";
+                if (!erreur && _onglet == OngletFavoris) _etat.Text = "Aucun favori pour le moment. Ajoute une offre avec l’étoile pour la retrouver ici.";
                 _etat.Visible = true;
                 _reessayer.Visible = erreur;
             }
@@ -742,7 +790,7 @@ namespace BTOptimizer
                 foreach (Offre o in page) _flow.Controls.Add(new Carte(this, o));   // vignettes : cette page seulement
             }
             _flow.ResumeLayout();
-            try { _flow.AutoScrollPosition = Point.Empty; } catch { }
+            _viewport.ScrollTo(0); LayoutCards();
             MajPagination();
         }
 
@@ -752,7 +800,47 @@ namespace BTOptimizer
             _prec.Enabled = !_occupe && _pageIdx > 0;
             _suiv.Enabled = !_occupe && (plusLocal || (OngletSteam() && !_steamFini && _resultats.Count > 0));
             if (!_occupe) _numPage.Text = "Page " + (_pageIdx + 1).ToString(CultureInfo.InvariantCulture);
+            _resultsLabel.Text = _occupe ? "RECHERCHE DES OFFRES…" : NomsOnglets[_onglet].ToUpperInvariant() + "    /    " + _resultats.Count + (_resultats.Count == 1 ? " offre chargée" : " offres chargées");
         }
+
+#if BTTEST
+        internal bool BusyForTest { get { return _occupe; } }
+        internal int OffersForTest { get { return _resultats.Count; } }
+        internal void PreviewLocalTab(int tab)
+        {
+            _attente.Stop(); _generation++; _occupe = false; _onglet = tab; _pageIdx = 0;
+            _resultats.Clear(); MajOnglets(); Affiche(false);
+        }
+        internal void ValidateDealsUi()
+        {
+            if (!ClientRectangle.Contains(_filters.Bounds) || _viewport.Bottom > _prec.Top)
+                throw new InvalidOperationException("Filtres ou pagination hors de la page.");
+            foreach (Carte card in _flow.Controls)
+            {
+                foreach (Control control in card.Controls)
+                {
+                    if (!control.Visible) continue;
+                    if (!card.ClientRectangle.Contains(control.Bounds)) throw new InvalidOperationException("Action hors de sa carte.");
+                    foreach (Control other in card.Controls)
+                        if (control != other && other.Visible && control.Bounds.IntersectsWith(other.Bounds))
+                            throw new InvalidOperationException("Les actions d’une offre se chevauchent.");
+                }
+            }
+            _viewport.ValidateScrolling();
+        }
+        internal void PreviewEmpty(bool error) { _generation++; _occupe = false; _resultats.Clear(); Affiche(error); }
+        internal void PreviewFree() { ChoisitOnglet(OngletGratuits); }
+        internal void PreviewPricedPage()
+        {
+            int index = _resultats.FindIndex(o => o.PrixCts > 0 && o.SteamAppId > 0);
+            if (index < 0) index = _resultats.FindIndex(o => o.PrixCts > 0);
+            if (index >= 0)
+            {
+                _pageIdx = index / ParPage; Affiche(false);
+                _viewport.ScrollTo(_flow.Controls[index % ParPage].Top);
+            }
+        }
+#endif
 
         /// <summary>Couleur de la pastille d'un store sur les cartes.</summary>
         internal static Color CouleurStore(string source)
@@ -785,178 +873,106 @@ namespace BTOptimizer
         }
 
         /// <summary>Une carte de jeu : jaquette, nom, remise, prix (US s'il est en dollars), store, fin d'offre, ⚖ (comparer), ☆ et 🔔.</summary>
-        private sealed class Carte : Control
+        private sealed class Carte : BufferedPanel
         {
-            private const int L = 300, H = 128;
             private static readonly Font Barre = new Font(FpsUi.Small, FontStyle.Strikeout);
-            private static readonly Font Emoji = new Font("Segoe UI Emoji", 11f);
             private readonly PageBonsPlans _page;
             private readonly Offre _o;
-            private bool _survol, _surComparer;
-
-            private static readonly Rectangle REtoile = new Rectangle(L - 62, H - 34, 26, 26);
-            private static readonly Rectangle RCloche = new Rectangle(L - 34, H - 34, 26, 26);
-            private static readonly Rectangle RComparer = new Rectangle(L - 90, H - 34, 26, 26);
-
-            public Carte(PageBonsPlans page, Offre o)
+            private readonly Button _open, _compare, _favorite, _follow;
+            private readonly ToolTip _tips = new ToolTip();
+            private bool _hover;
+            public Carte(PageBonsPlans page, Offre offer)
             {
-                _page = page; _o = o;
-                SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-                Size = new Size(L, H);
-                Margin = new Padding(0, 0, 12, 12);
-                BackColor = FpsUi.BgMain;
-                Cursor = Cursors.Hand;
-                MouseEnter += (s, e) => { _survol = true; Invalidate(); };
-                MouseLeave += (s, e) => { _survol = false; _surComparer = false; Invalidate(); };
-                MouseMove += (s, e) => { bool sc = RComparer.Contains(e.Location); if (sc != _surComparer) { _surComparer = sc; Invalidate(); } };
+                _page = page; _o = offer; BackColor = FpsUi.BgMain; Size = new Size(360, 320);
+                _open = OnyxDesign.PrimaryButton("Voir l’offre  ↗");
+                _open.Enabled = Offres.LienSur(offer.Url); _open.AccessibleName = "Voir l’offre : " + offer.Nom;
+                _open.Click += (s, e) => Ouvre(_o.Url);
+                _compare = OnyxDesign.Button("Comparer"); _compare.Click += (s, e) => ComparateurForm.Montre(_o, FindForm());
+                _favorite = OnyxDesign.Button(""); _favorite.Font = FpsUi.H2;
+                _favorite.Click += (s, e) => { _page.BasculeFavori(_o); if (!IsDisposed) RefreshActions(); };
+                _follow = OnyxDesign.Button(""); _follow.Visible = _o.SteamAppId > 0;
+                _follow.Click += (s, e) => { _page.BasculeSuivi(_o); if (!IsDisposed) RefreshActions(); };
+                Controls.Add(_open); Controls.Add(_compare); Controls.Add(_favorite); Controls.Add(_follow);
+                RefreshActions(); Resize += (s, e) => LayoutActions(); LayoutActions();
+                MouseEnter += (s, e) => { _hover = true; Invalidate(); };
+                MouseLeave += (s, e) => { _hover = false; Invalidate(); };
             }
-
-            protected override void OnMouseClick(MouseEventArgs e)
+            private void RefreshActions()
             {
-                base.OnMouseClick(e);
-                if (e.Button != MouseButtons.Left) return;
-                if (REtoile.Contains(e.Location)) { _page.BasculeFavori(_o); if (!IsDisposed) Invalidate(); return; }
-                if (RComparer.Contains(e.Location)) { ComparateurForm.Montre(_o, FindForm()); return; }
-                if (_o.SteamAppId > 0 && RCloche.Contains(e.Location)) { _page.BasculeSuivi(_o); if (!IsDisposed) Invalidate(); return; }
-                Ouvre(_o.Url);
+                bool favorite = _page.EstFavori(_o), follow = _page.EstSuivi(_o);
+                _favorite.Text = favorite ? "★" : "☆"; _favorite.ForeColor = favorite ? FpsUi.Gold : FpsUi.Dim;
+                _favorite.AccessibleName = (favorite ? "Retirer des favoris : " : "Ajouter aux favoris : ") + _o.Nom;
+                _tips.SetToolTip(_favorite, favorite ? "Retirer des favoris" : "Ajouter aux favoris");
+                _follow.Text = follow ? "Suivi ✓" : "Suivre"; _follow.ForeColor = follow ? FpsUi.Gold : FpsUi.Ink;
+                _follow.AccessibleName = (follow ? "Ne plus suivre : " : "Suivre les promotions : ") + _o.Nom;
+                _tips.SetToolTip(_follow, "Être prévenu des promotions de ce jeu sur Steam");
             }
-
-            private void Pret()
+            private void LayoutActions()
+            {
+                _compare.SetBounds(Width - 104, 207, 88, 28);
+                _favorite.SetBounds(Width - 52, 270, 36, 34);
+                _follow.SetBounds(_favorite.Left - 88, 270, 80, 34);
+                _open.SetBounds(16, 270, (_o.SteamAppId > 0 ? _follow.Left : _favorite.Left) - 24, 34);
+            }
+            private void Ready()
             {
                 try { if (!IsDisposed && IsHandleCreated) BeginInvoke((Action)(() => { if (!IsDisposed) Invalidate(); })); } catch { }
             }
-
-            private string Plateforme()
+            protected override void Dispose(bool disposing) { if (disposing) _tips.Dispose(); base.Dispose(disposing); }
+            private static void Cover(Graphics g, Image image, Rectangle target)
             {
-                if (_o.Plateformes != null && _o.Plateformes.Length > 0) return string.Join(", ", _o.Plateformes.Take(2));
-                return OffresSources.NomBoutique(_o.Source);
+                float ratio = target.Width / (float)target.Height;
+                RectangleF source = image.Width / (float)image.Height > ratio
+                    ? new RectangleF((image.Width - image.Height * ratio) / 2, 0, image.Height * ratio, image.Height)
+                    : new RectangleF(0, (image.Height - image.Width / ratio) / 2, image.Width, image.Width / ratio);
+                var state = g.Save();
+                using (var path = FpsUi.Round(target, 8)) { g.SetClip(path); g.DrawImage(image, target, source, GraphicsUnit.Pixel); }
+                g.Restore(state);
             }
-
-            /// <summary>Fin proche (moins de 48 h) : « plus que 5 h » ; sinon « jusqu'au 25/11 ».</summary>
-            private string Fin(out bool urgent)
-            {
-                urgent = false;
-                if (!_o.Fin.HasValue) return null;
-                TimeSpan reste = _o.Fin.Value - DateTime.UtcNow;
-                if (reste > TimeSpan.Zero && reste < TimeSpan.FromHours(48))
-                {
-                    urgent = true;
-                    return "plus que " + Math.Max(1, (int)Math.Ceiling(reste.TotalHours)).ToString(CultureInfo.InvariantCulture) + " h";
-                }
-                return "jusqu'au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM", CultureInfo.InvariantCulture);
-            }
-
-            /// <summary>Remplit r sans déformer : l'image est recadrée au centre (vignettes larges de GamerPower).</summary>
-            private static void Couverture(Graphics g, Image img, Rectangle r)
-            {
-                float cible = r.Width / (float)r.Height, source = img.Width / (float)img.Height;
-                RectangleF src = source > cible
-                    ? new RectangleF((img.Width - img.Height * cible) / 2f, 0, img.Height * cible, img.Height)
-                    : new RectangleF(0, (img.Height - img.Width / cible) / 2f, img.Width, img.Width / cible);
-                using (var p = FpsUi.Round(r, 6f))
-                {
-                    Region avant = g.Clip;
-                    g.SetClip(p, System.Drawing.Drawing2D.CombineMode.Intersect);
-                    g.DrawImage(img, r, src, GraphicsUnit.Pixel);
-                    g.Clip = avant;
-                }
-            }
-
             protected override void OnPaint(PaintEventArgs e)
             {
-                Graphics g = e.Graphics;
+                base.OnPaint(e); var g = e.Graphics;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                OnyxDesign.PaintCard(g, new Rectangle(0, 0, L - 1, H - 1), _survol ? FpsUi.CardHi : FpsUi.Card, FpsUi.Border, 10f);
-
-                // Image donnée par la source (Steam avec empreinte, Epic, GamerPower) ; sinon, ou si elle
-                // échoue, la jaquette Steam par AppID ; à défaut, un fond avec le nom de la plateforme.
-                var ri = new Rectangle(8, 8, 76, H - 16);
-                Image img = null;
+                OnyxDesign.PaintCard(g, ClientRectangle, FpsUi.Card, _hover || ContainsFocus ? FpsUi.GoldDim : FpsUi.Border, 12);
+                var art = new Rectangle(8, 8, Width - 16, 130); Image image = null;
                 try
                 {
-                    if (_o.Image != null) img = GameArt.GetUrl(_o.Image, Pret);
-                    if (img == null && _o.SteamAppId > 0 && (_o.Image == null || GameArt.EchecUrl(_o.Image)))
-                        img = GameArt.Get(_o.SteamAppId, Pret);
+                    if (_o.Image != null) image = GameArt.GetUrl(_o.Image, Ready);
+                    if (image == null && _o.SteamAppId > 0 && (_o.Image == null || GameArt.EchecUrl(_o.Image))) image = GameArt.Get(_o.SteamAppId, Ready);
                 }
                 catch { }
-                if (img != null) { try { Couverture(g, img, ri); } catch { } }
+                if (image != null) { try { Cover(g, image, art); } catch { } }
                 else
                 {
-                    using (var p = FpsUi.Round(ri, 6f))
-                    using (var br = new SolidBrush(FpsUi.Accent(24))) g.FillPath(br, p);
-                    TextRenderer.DrawText(g, Plateforme(), FpsUi.Tiny, ri, FpsUi.Dim,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                    OnyxDesign.PaintCard(g, art, FpsUi.BlendGold(FpsUi.RailBg, .06f), OnyxDesign.Edge, 8);
+                    NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(Width / 2 - 25, 50, 50, 40), FpsUi.GoldDim);
                 }
-
-                int tx = 96, tw = L - tx - 10;
-                if (_survol)
-                    using (var p = FpsUi.Round(new Rectangle(0, 0, L - 1, H - 1), 10f))
-                    using (var pen = new Pen(FpsUi.BlendGold(FpsUi.Border, 0.6f))) g.DrawPath(pen, p);
-                TextRenderer.DrawText(g, _o.Nom ?? "", FpsUi.H3, new Rectangle(tx, 8, tw, 38), FpsUi.Ink,
-                    TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-
-                // Remise, prix (« US » en dollars), prix d'origine barré s'il tient.
-                int x = tx;
-                if (_o.Remise > 0)
-                {
-                    string r = "−" + _o.Remise.ToString(CultureInfo.InvariantCulture) + " %";
-                    int rw = TextRenderer.MeasureText(r, FpsUi.Small).Width + 8;
-                    var rr = new Rectangle(x, 52, rw, 20);
-                    using (var p = FpsUi.Round(rr, 5f))
-                    using (var br = new SolidBrush(_o.Remise >= 75 ? FpsUi.Gold : FpsUi.Ok)) g.FillPath(br, p);
-                    TextRenderer.DrawText(g, r, FpsUi.Small, rr, FpsUi.BgMain,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                    x = rr.Right + 8;
-                }
-                if (_o.PrixCts >= 0)
-                {
-                    string prix = Offres.PrixDe(_o);
-                    TextRenderer.DrawText(g, prix, FpsUi.H2, new Point(x, 50), FpsUi.Gold, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
-                    x += TextRenderer.MeasureText(prix, FpsUi.H2, Size.Empty, TextFormatFlags.NoPadding).Width + 4;
-                    if (_o.Devise == "USD" && _o.PrixCts > 0)
-                    {
-                        TextRenderer.DrawText(g, "US", FpsUi.Tiny, new Point(x, 57), FpsUi.Dim, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
-                        x += TextRenderer.MeasureText("US", FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width;
-                    }
-                    x += 6;
-                    if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
-                    {
-                        string avant = Offres.PrixOrigineDe(_o);
-                        if (x + TextRenderer.MeasureText(avant, Barre, Size.Empty, TextFormatFlags.NoPadding).Width <= L - 8)
-                            TextRenderer.DrawText(g, avant, Barre, new Point(x, 55), FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
-                    }
-                }
-
-                // Store en pastille colorée, puis plateformes (offres gratuites) et fin de l'offre.
                 string store = OffresSources.NomBoutique(_o.Source);
-                Color cs = CouleurStore(_o.Source);
-                int sw = Math.Min(TextRenderer.MeasureText(store, FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width + 14, L - tx - 98);
-                var rs = new Rectangle(tx, 82, sw, 18);
-                using (var p = FpsUi.Round(rs, 9f))
-                using (var br = new SolidBrush(Color.FromArgb(46, cs))) g.FillPath(br, p);
-                TextRenderer.DrawText(g, store, FpsUi.Tiny, rs, cs,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                var details = new List<string>();
-                string plats = Plateforme();
-                if (plats != store) details.Add(plats);
-                bool urgent;
-                string fin = Fin(out urgent);
-                if (fin != null) details.Add(fin);
-                else if (_o.Sortie.HasValue) details.Add("sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy", CultureInfo.InvariantCulture));
-                TextRenderer.DrawText(g, string.Join(" · ", details), FpsUi.Tiny, new Rectangle(tx, 104, L - tx - 98, 18), urgent ? FpsUi.Warn : FpsUi.Dim,
-                    TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-
-                TextRenderer.DrawText(g, "⚖", Emoji, RComparer, _surComparer ? FpsUi.Gold : FpsUi.Dim,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                bool fav = _page.EstFavori(_o);
-                TextRenderer.DrawText(g, fav ? "★" : "☆", FpsUi.H2, REtoile, fav ? FpsUi.Gold : FpsUi.Dim,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                if (_o.SteamAppId > 0)
+                int storeWidth = Math.Min(Width - 120, TextRenderer.MeasureText(store, FpsUi.Small).Width + 20);
+                Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
+                if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
+                OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(16, 151, Width - 32, 44), true);
+                string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");
+                OnyxDesign.Text(g, price, FpsUi.H2, FpsUi.Gold, new Rectangle(16, 207, Width - 128, 27));
+                if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
+                    OnyxDesign.Text(g, Offres.PrixOrigineDe(_o), Barre, FpsUi.Dim2, new Rectangle(16, 239, 95, 20));
+                string detail = _o.Plateformes != null ? string.Join(", ", _o.Plateformes.Take(2)) : "";
+                bool urgent = false;
+                if (_o.Fin.HasValue)
                 {
-                    bool suivi = _page.EstSuivi(_o);
-                    TextRenderer.DrawText(g, "🔔", Emoji, RCloche, suivi ? FpsUi.Gold : FpsUi.Dim2,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);                }
+                    var remaining = _o.Fin.Value - DateTime.UtcNow;
+                    urgent = remaining > TimeSpan.Zero && remaining < TimeSpan.FromHours(48);
+                    detail = remaining <= TimeSpan.Zero ? "Offre terminée" : urgent ? "Encore " + Math.Max(1, (int)Math.Ceiling(remaining.TotalHours)) + " h" : "Jusqu’au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM");
+                }
+                else if (_o.Sortie.HasValue) detail = "Sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy");
+                int detailX = _o.Remise > 0 && _o.PrixOrigineCts > 0 ? 112 : 16;
+                OnyxDesign.Text(g, detail, FpsUi.Tiny, urgent ? FpsUi.Warn : FpsUi.Dim, new Rectangle(detailX, 241, Width - detailX - 16, 20));
+            }
+            private static void Badge(Graphics g, string text, Rectangle rect, Color fill, Color ink)
+            {
+                using (var path = FpsUi.Round(rect, 6)) using (var brush = new SolidBrush(fill)) g.FillPath(brush, path);
+                TextRenderer.DrawText(g, text, FpsUi.Small, rect, ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
         }
     }
