@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace BTOptimizer.Tests
 {
     /// <summary>
@@ -54,6 +56,22 @@ namespace BTOptimizer.Tests
             int actusImage = desSites.FindAll(a => a.Image != null).Count;
             Banc.Verifie("actus : image pour 90 % des titres des sites (" + actusImage + "/" + desSites.Count + ")", true, desSites.Count > 0 && actusImage * 10 >= desSites.Count * 9);
             Banc.Verifie("actus : AppId porté par le flux du jeu suivi", true, actus.FindAll(a => a.Source == "Counter-Strike 2").TrueForAll(a => a.AppId == 730) && desSites.TrueForAll(a => a.AppId == 0));
+
+            // Stores hors Steam : au moins 10 promos chacun, liens sûrs, image pour 90 %.
+            string tousCs = OffresSources.IdsCheapShark(OffresSources.LitChoixBoutiques(null));
+            foreach (string src in new[] { "gog", "cheapshark", "nintendo", "itch" })
+            {
+                var p = OffresReseau.PromosStore(src, null, 0, tousCs).GetAwaiter().GetResult();
+                int img = p.Offres.FindAll(o => o.Image != null || o.SteamAppId > 0).Count;
+                Banc.Verifie(src + " : 10 promos ou plus (" + p.Offres.Count + "), liens, prix, images " + img, true, !p.Echec && p.Offres.Count >= 10
+                    && p.Offres.TrueForAll(o => o.Nom.Length > 0 && Offres.LienSur(o.Url) && o.PrixCts >= 0) && img * 10 >= p.Offres.Count * 9);
+                if (src == "cheapshark") Banc.Verifie("cheapshark : plusieurs stores, prix US", true, p.Offres.Select(o => o.Source).Distinct().Count() >= 3 && p.Offres.TrueForAll(o => o.Devise == "USD"));
+                if (src == "gog" || src == "nintendo") Banc.Verifie(src + " : prix en euros, remises", true, p.Offres.TrueForAll(o => o.Devise == "EUR") && p.Offres.FindAll(o => o.Remise > 0).Count * 10 >= p.Offres.Count * 9);
+            }
+            var gogPage2 = OffresReseau.PromosStore("gog", null, 1, null).GetAwaiter().GetResult();
+            Banc.Verifie("gog : page suivante", true, gogPage2.Offres.Count >= 10);
+            Banc.Verifie("recherche par nom (GOG, CheapShark)", true, OffresReseau.PromosStore("gog", "witcher", 0, null).GetAwaiter().GetResult().Offres.Count >= 1
+                && OffresReseau.PromosStore("cheapshark", "batman", 0, tousCs).GetAwaiter().GetResult().Offres.Count >= 1);
         }
     }
 }

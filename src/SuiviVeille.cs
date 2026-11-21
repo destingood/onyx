@@ -15,9 +15,10 @@ namespace BTOptimizer
     /// </summary>
     internal static class Magasin
     {
-        private const string FichierSuivis = "bt-suivis.txt", FichierJeux = "bt-favoris-jeux.txt", FichierActus = "bt-favoris-actus.txt";
+        private const string FichierSuivis = "bt-suivis.txt", FichierJeux = "bt-favoris-jeux.txt", FichierActus = "bt-favoris-actus.txt", FichierBoutiques = "bt-boutiques.txt";
         private static List<JeuSuivi> _suivis;
         private static List<Favori> _favorisJeux, _favorisActus;
+        private static HashSet<string> _boutiques;
 
         /// <summary>Levé après chaque sauvegarde (thread d'interface).</summary>
         public static event Action Change;
@@ -25,6 +26,10 @@ namespace BTOptimizer
         public static List<JeuSuivi> Suivis { get { return _suivis ?? (_suivis = Suivi.Lire(Lit(FichierSuivis))); } }
         public static List<Favori> FavorisJeux { get { return _favorisJeux ?? (_favorisJeux = Favoris.Lire(Lit(FichierJeux))); } }
         public static List<Favori> FavorisActus { get { return _favorisActus ?? (_favorisActus = Favoris.Lire(Lit(FichierActus))); } }
+
+        /// <summary>Stores cochés dans « Stores » (Bons plans) ; tous par défaut.</summary>
+        public static HashSet<string> Boutiques { get { return _boutiques ?? (_boutiques = OffresSources.LitChoixBoutiques(Lit(FichierBoutiques))); } }
+        public static void SauveBoutiques() { Ecrit(FichierBoutiques, OffresSources.EcritChoixBoutiques(Boutiques)); }
 
         public static void SauveSuivis() { Ecrit(FichierSuivis, Suivi.Ecrire(Suivis)); }
         public static void SauveFavorisJeux() { Ecrit(FichierJeux, Favoris.Ecrire(FavorisJeux)); }

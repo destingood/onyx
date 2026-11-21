@@ -15,7 +15,7 @@ namespace BTOptimizer
     /// <summary>
     /// Bons plans et Actus (MACHINE) : HTTP, cache disque et espacement des appels.
     /// User-Agent « ONYX », 12 s au plus, 2 Mo au plus, 1 s au moins entre deux requêtes vers le
-    /// même hôte, aucune donnée de l'utilisateur hors du texte tapé dans la recherche (envoyé à Steam).
+    /// même hôte, aucune donnée de l'utilisateur hors du texte tapé dans la recherche (envoyé aux stores interrogés).
     /// Toute erreur donne null ou une liste vide : rien ne remonte jusqu'à l'interface.
     /// La décision (URL, lecture des réponses) vit dans OffresSources et Actus.
     /// </summary>
@@ -108,6 +108,50 @@ namespace BTOptimizer
                 return Offres.EnCours(Offres.Dedoublonner(tous), DateTime.UtcNow);
             }
             catch { Erreurs["epic"] = true; Erreurs["gamerpower"] = true; return new List<Offre>(); }
+        }
+
+        /// <summary>Une page de promos d'un store autre que Steam ; Fini : plus rien après cette page.</summary>
+        public sealed class PageStore { public List<Offre> Offres = new List<Offre>(); public bool Fini, Echec; }
+
+        /// <summary>
+        /// Promos de "gog", "nintendo", "itch" ou "cheapshark" (stores idsCheapShark), page 0, 1, 2…
+        /// Le texte est cherché par le store (itch.io : filtré ici, son flux n'a qu'une page).
+        /// </summary>
+        public static async Task<PageStore> PromosStore(string source, string texte, int page, string idsCheapShark)
+        {
+            var res = new PageStore();
+            try
+            {
+                string url = source == "gog" ? OffresSources.UrlGog(texte, page + 1)
+                    : source == "nintendo" ? OffresSources.UrlNintendo(texte, page * OffresSources.ParPageNintendo)
+                    : source == "itch" ? (page == 0 ? OffresSources.UrlItch : null)
+                    : source == "cheapshark" && !string.IsNullOrEmpty(idsCheapShark) ? OffresSources.UrlCheapShark(idsCheapShark, texte, page)
+                    : null;
+                if (url == null) { res.Fini = true; return res; }
+                var r = await Lit(url, 30).ConfigureAwait(false);
+                res.Echec = r.Echec;
+                Erreurs[source] = r.Echec;
+                if (r.Texte == null) return res;
+                List<Offre> l = source == "gog" ? OffresSources.PromosGog(r.Texte)
+                    : source == "nintendo" ? OffresSources.PromosNintendo(r.Texte)
+                    : source == "itch" ? OffresSources.PromosItch(r.Texte)
+                    : OffresSources.PromosCheapShark(r.Texte);
+                int brut = l.Count;   // avant le tri des promos finies : une page vidée n'est pas la dernière
+                if (source == "nintendo")
+                {
+                    string urlPrix = OffresSources.UrlPrixNintendo(l);
+                    if (urlPrix != null)
+                    {
+                        var p = await Lit(urlPrix, 30).ConfigureAwait(false);
+                        if (p.Texte != null) l = OffresSources.AppliquePrixNintendo(l, p.Texte);
+                    }
+                }
+                if (source == "itch" && !string.IsNullOrWhiteSpace(texte)) l = Offres.Filtrer(l, new Offres.Filtre { Texte = texte });
+                res.Offres = Offres.EnCours(l, DateTime.UtcNow);
+                res.Fini = source == "itch" || brut == 0;
+                return res;
+            }
+            catch { Erreurs[source ?? ""] = true; res.Echec = true; return res; }
         }
 
         /// <summary>Titres des sites d'actus et des flux Steam des 10 premiers jeux suivis (Source = nom du jeu).</summary>

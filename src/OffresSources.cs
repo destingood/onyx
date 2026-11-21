@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace BTOptimizer
 {
@@ -425,6 +427,10 @@ namespace BTOptimizer
                     : b.Contains("epic") ? "Epic Games"
                     : b.Contains("steam") ? "Steam"
                     : b.Contains("gog") ? "GOG"
+                    : b.Contains("itch") ? "itch.io"
+                    : b.Contains("ubisoft") ? "Ubisoft"
+                    : b.Contains("origin") || b == "ea" || b.StartsWith("ea ", StringComparison.Ordinal) ? "EA"
+                    : b.Contains("battle.net") ? "Battle.net"
                     : b.Contains("android") ? "Android"
                     : b.Contains("ios") ? "iOS"
                     : b == "pc" ? "PC"
@@ -432,6 +438,397 @@ namespace BTOptimizer
                 if (!res.Contains(lib)) res.Add(lib);
             }
             return res.ToArray();
+        }
+    
+
+        // ---------------------------------------------------------------- stores
+
+        /// <summary>Un store du menu « Stores ». CheapShark : son storeID, 0 s'il est lu à la source.</summary>
+        public sealed class Boutique
+        {
+            public readonly string Cle, Nom;
+            public readonly int CheapShark;
+            public Boutique(string cle, string nom, int cheapShark) { Cle = cle; Nom = nom; CheapShark = cheapShark; }
+        }
+
+        /// <summary>
+        /// Steam, GOG et Nintendo sont lus à la source (prix en euros) ; les autres passent par CheapShark
+        /// (prix US en dollars), itch.io par son flux RSS. Microsoft Store et PlayStation Store n'offrent
+        /// pas d'accès exploitable sans clé (relevé le 21/11/2026) ; leurs jeux gratuits viennent de GamerPower.
+        /// </summary>
+        public static readonly Boutique[] Boutiques =
+        {
+            new Boutique("steam", "Steam", 0),
+            new Boutique("gog", "GOG", 0),
+            new Boutique("nintendo", "Nintendo eShop", 0),
+            new Boutique("epic", "Epic Games Store", 25),
+            new Boutique("humble", "Humble Store", 11),
+            new Boutique("fanatical", "Fanatical", 15),
+            new Boutique("gmg", "Green Man Gaming", 3),
+            new Boutique("ubisoft", "Ubisoft Store", 13),
+            new Boutique("gamesplanet", "Gamesplanet", 27),
+            new Boutique("gamersgate", "GamersGate", 2),
+            new Boutique("indiegala", "IndieGala", 30),
+            new Boutique("gamebillet", "GameBillet", 23),
+            new Boutique("wingamestore", "WinGameStore", 21),
+            new Boutique("dreamgame", "DreamGame", 35),
+            new Boutique("itch", "itch.io", 0),
+        };
+
+        /// <summary>Nom affiché d'une source ; inconnue → la clé telle quelle.</summary>
+        public static string NomBoutique(string cle)
+        {
+            if (cle == null) return "";
+            foreach (Boutique b in Boutiques) if (b.Cle == cle) return b.Nom;
+            return cle == "gamerpower" ? "GamerPower" : cle;
+        }
+
+        private const string EnteteChoix = "v1";
+
+        /// <summary>Stores cochés. Fichier absent ou d'un autre format : tous.</summary>
+        public static HashSet<string> LitChoixBoutiques(string texte)
+        {
+            var res = new HashSet<string>();
+            string[] lignes = (texte ?? "").Replace("\r", "").Split('\n');
+            if (lignes.Length == 0 || lignes[0].Trim() != EnteteChoix)
+            {
+                foreach (Boutique b in Boutiques) res.Add(b.Cle);
+                return res;
+            }
+            for (int i = 1; i < lignes.Length; i++)
+            {
+                string c = lignes[i].Trim();
+                foreach (Boutique b in Boutiques) if (b.Cle == c) res.Add(c);
+            }
+            return res;
+        }
+
+        public static string EcritChoixBoutiques(HashSet<string> choix)
+        {
+            var sb = new StringBuilder(EnteteChoix + "\n");
+            foreach (Boutique b in Boutiques) if (choix != null && choix.Contains(b.Cle)) sb.Append(b.Cle).Append('\n');
+            return sb.ToString();
+        }
+
+        /// <summary>storeID CheapShark des stores cochés, triés (« 11,15,25 ») ; aucun → "".</summary>
+        public static string IdsCheapShark(HashSet<string> choix)
+        {
+            var ids = new List<int>();
+            foreach (Boutique b in Boutiques) if (b.CheapShark > 0 && choix != null && choix.Contains(b.Cle)) ids.Add(b.CheapShark);
+            ids.Sort();
+            return string.Join(",", ids.ConvertAll(i => i.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        // ---------------------------------------------------------------- GOG (euros)
+
+        public const int ParPageGog = 48;
+
+        public static string UrlGog(string texte, int page)
+        {
+            string url = "https://catalog.gog.com/v1/catalog?limit=" + ParPageGog.ToString(CultureInfo.InvariantCulture)
+                + "&order=desc:trending&discounted=eq:true&productType=in:game,pack&page=" + Math.Max(1, page).ToString(CultureInfo.InvariantCulture)
+                + "&countryCode=FR&locale=fr-FR&currencyCode=EUR";
+            if (!string.IsNullOrWhiteSpace(texte)) url += "&query=like:" + Uri.EscapeDataString(texte.Trim());
+            return url;
+        }
+
+        public static List<Offre> PromosGog(string json)
+        {
+            var res = new List<Offre>();
+            JsonDocument doc = Ouvre(json);
+            if (doc == null) return res;
+            using (doc)
+            {
+                JsonElement produits;
+                if (!Prop(doc.RootElement, "products", out produits) || produits.ValueKind != JsonValueKind.Array) return res;
+                foreach (var p in produits.EnumerateArray())
+                {
+                    JsonElement prix, fin, base_;
+                    string id = Chaine(p, "id"), nom = Chaine(p, "title"), url = Chaine(p, "storeLink");
+                    if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(nom) || !Offres.LienSur(url)) continue;
+                    if (!Prop(p, "price", out prix) || !Prop(prix, "finalMoney", out fin) || !Prop(prix, "baseMoney", out base_)) continue;
+                    string devise = Chaine(fin, "currency");
+                    if (devise != null && devise != "EUR") continue;
+                    int cts = Montant(Chaine(fin, "amount")), origine = Montant(Chaine(base_, "amount"));
+                    if (cts < 0) continue;
+                    int remise = Pourcent(Chaine(prix, "discount"));
+                    if (remise < 0) remise = RemiseDe(cts, origine);
+                    DateTime d;
+                    string sortie = Chaine(p, "releaseDate");
+                    res.Add(new Offre
+                    {
+                        Source = "gog", Id = id.Trim(), Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise,
+                        Url = url.Trim(), Plateformes = new[] { "GOG" },
+                        Image = ImageSure(Chaine(p, "coverVertical")) ?? ImageSure(Chaine(p, "coverHorizontal")),
+                        Sortie = sortie != null && DateTime.TryParseExact(sortie, "yyyy.MM.dd", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d) ? d : (DateTime?)null,
+                    });
+                }
+            }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- CheapShark (dollars)
+
+        public const int ParPageCheapShark = 60;
+        private static readonly Regex DealSur = new Regex(@"^[A-Za-z0-9%._-]{1,200}$", RegexOptions.CultureInvariant);
+
+        public static string UrlCheapShark(string idsStores, string texte, int page)
+        {
+            string url = "https://www.cheapshark.com/api/1.0/deals?storeID=" + idsStores + "&onSale=1&pageSize=" + ParPageCheapShark.ToString(CultureInfo.InvariantCulture)
+                + "&pageNumber=" + Math.Max(0, page).ToString(CultureInfo.InvariantCulture) + "&sortBy=Deal%20Rating";
+            if (!string.IsNullOrWhiteSpace(texte)) url += "&title=" + Uri.EscapeDataString(texte.Trim());
+            return url;
+        }
+
+        public static List<Offre> PromosCheapShark(string json)
+        {
+            var res = new List<Offre>();
+            var place = new Dictionary<long, int>(); // gameID -> rang dans res : un seul deal par jeu, le moins cher
+            JsonDocument doc = Ouvre(json);
+            if (doc == null) return res;
+            using (doc)
+            {
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) return res;
+                foreach (var g in doc.RootElement.EnumerateArray())
+                {
+                    long store = Entier(g, "storeID", 0), jeu = Entier(g, "gameID", 0);
+                    Boutique b = Array.Find(Boutiques, x => x.CheapShark > 0 && x.CheapShark == store);
+                    string nom = Chaine(g, "title"), deal = Chaine(g, "dealID");
+                    if (b == null || jeu <= 0 || string.IsNullOrWhiteSpace(nom) || deal == null || !DealSur.IsMatch(deal)) continue;
+                    int cts = Montant(Chaine(g, "salePrice")), origine = Montant(Chaine(g, "normalPrice"));
+                    if (cts < 0) continue;
+                    decimal eco;
+                    int remise = decimal.TryParse(Chaine(g, "savings"), NumberStyles.Number, CultureInfo.InvariantCulture, out eco)
+                        ? (int)Math.Max(0, Math.Min(100, Math.Round(eco))) : RemiseDe(cts, origine);
+                    long appId = Entier(g, "steamAppID", 0);
+                    string image = null;
+                    // La vignette d'un jeu Steam est un bandeau large : la jaquette par AppID rend mieux.
+                    if (appId <= 0 || appId > int.MaxValue)
+                    {
+                        appId = 0;
+                        image = ImageSure(Chaine(g, "thumb"));
+                        if (image != null && image.StartsWith("https://cdn1.epicgames.com/", StringComparison.Ordinal) && image.IndexOf('?') < 0)
+                            image += "?w=360&resize=1";
+                    }
+                    int deja;
+                    bool vu = place.TryGetValue(jeu, out deja);
+                    if (vu && res[deja].PrixCts <= cts) continue;
+                    var o = new Offre
+                    {
+                        Source = b.Cle, Id = jeu.ToString(CultureInfo.InvariantCulture), Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise,
+                        Devise = "USD", Url = "https://www.cheapshark.com/redirect?dealID=" + deal, SteamAppId = (int)appId, Image = image,
+                        Plateformes = new[] { b.Nom }, Sortie = DepuisUnix(Entier(g, "releaseDate", 0)),
+                    };
+                    if (vu) res[deja] = o;
+                    else { place[jeu] = res.Count; res.Add(o); }
+                }
+            }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- Nintendo eShop (euros)
+
+        public const int ParPageNintendo = 48;
+
+        /// <summary>Recherche Nintendo (Solr) : seuls lettres, chiffres et espaces passent dans la requête.</summary>
+        public static string UrlNintendo(string texte, int debut)
+        {
+            var mots = new List<string>();
+            var sb = new StringBuilder();
+            foreach (char c in (texte ?? "") + " ")
+            {
+                if (char.IsLetterOrDigit(c)) { sb.Append(c); continue; }
+                if (sb.Length > 0) { mots.Add(Uri.EscapeDataString(sb.ToString())); sb.Clear(); }
+            }
+            string q = mots.Count == 0 ? "*" : string.Join("%20", mots);
+            return "https://searching.nintendo-europe.com/fr/select?q=" + q + "&fq=type:GAME%20AND%20price_has_discount_b:true&rows="
+                + ParPageNintendo.ToString(CultureInfo.InvariantCulture) + "&start=" + Math.Max(0, debut).ToString(CultureInfo.InvariantCulture)
+                + (mots.Count == 0 ? "&sort=change_date%20desc" : "") + "&wt=json";
+        }
+
+        public static List<Offre> PromosNintendo(string json)
+        {
+            var res = new List<Offre>();
+            JsonDocument doc = Ouvre(json);
+            if (doc == null) return res;
+            using (doc)
+            {
+                JsonElement rep, docs;
+                if (!Prop(doc.RootElement, "response", out rep) || !Prop(rep, "docs", out docs) || docs.ValueKind != JsonValueKind.Array) return res;
+                foreach (var d in docs.EnumerateArray())
+                {
+                    string nom = Chaine(d, "title"), chemin = Chaine(d, "url");
+                    if (string.IsNullOrWhiteSpace(nom) || chemin == null || !chemin.StartsWith("/", StringComparison.Ordinal) || chemin.StartsWith("//", StringComparison.Ordinal)) continue;
+                    string url = "https://www.nintendo.com" + chemin.Trim();
+                    if (!Offres.LienSur(url)) continue;
+                    int cts = Montant(Chaine(d, "price_discounted_f")), origine = Montant(Chaine(d, "price_regular_f"));
+                    if (cts < 0) continue;
+                    string nsuid = PremiereChaine(d, "nsuid_txt"), fs = Chaine(d, "fs_id");
+                    string id = ChiffresSeuls(nsuid) ? nsuid : ChiffresSeuls(fs) ? "fs" + fs : null;
+                    if (id == null) continue;
+                    int remise = Pourcent(Chaine(d, "price_discount_percentage_f"));
+                    res.Add(new Offre
+                    {
+                        Source = "nintendo", Id = id, Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise >= 0 ? remise : RemiseDe(cts, origine),
+                        Url = url, Plateformes = new[] { "Switch" },
+                        Image = ImageSure(Chaine(d, "image_url_sq_s")) ?? ImageSure(Chaine(d, "image_url_h2x1_s")),
+                        Sortie = IsoUtc(PremiereChaine(d, "dates_released_dts")),
+                    });
+                }
+            }
+            return res;
+        }
+
+        /// <summary>L'index de recherche peut avoir du retard : prix réels des offres ayant un nsuid (50 max).</summary>
+        public static string UrlPrixNintendo(List<Offre> offres)
+        {
+            var ids = new List<string>();
+            foreach (Offre o in offres ?? new List<Offre>())
+                if (o != null && o.Source == "nintendo" && ChiffresSeuls(o.Id) && !ids.Contains(o.Id) && ids.Count < 50) ids.Add(o.Id);
+            return ids.Count == 0 ? null : "https://api.ec.nintendo.com/v1/price?country=FR&lang=fr&ids=" + string.Join(",", ids);
+        }
+
+        /// <summary>
+        /// Copies des offres avec le prix réel ; une offre dont la promo est finie est retirée.
+        /// Réponse illisible ou offre absente de la réponse : prix de l'index gardé.
+        /// </summary>
+        public static List<Offre> AppliquePrixNintendo(List<Offre> offres, string json)
+        {
+            var res = new List<Offre>();
+            var prix = new Dictionary<string, JsonElement>();
+            JsonDocument doc = Ouvre(json);
+            try
+            {
+                JsonElement liste;
+                if (doc != null && Prop(doc.RootElement, "prices", out liste) && liste.ValueKind == JsonValueKind.Array)
+                    foreach (var p in liste.EnumerateArray())
+                    {
+                        string id = Chaine(p, "title_id");
+                        if (id != null) prix[id] = p;
+                    }
+                foreach (Offre o in offres ?? new List<Offre>())
+                {
+                    if (o == null) continue;
+                    Offre c = o.Copie();
+                    JsonElement p, remise, normal;
+                    if (!prix.TryGetValue(o.Id ?? "", out p)) { res.Add(c); continue; }
+                    if (Chaine(p, "sales_status") != "onsale" || !Prop(p, "discount_price", out remise)) continue;
+                    int cts = Montant(Chaine(remise, "raw_value"));
+                    if (cts < 0) continue;
+                    c.PrixCts = cts;
+                    if (Prop(p, "regular_price", out normal) && Montant(Chaine(normal, "raw_value")) > 0) c.PrixOrigineCts = Montant(Chaine(normal, "raw_value"));
+                    c.Remise = RemiseDe(c.PrixCts, c.PrixOrigineCts);
+                    c.Fin = IsoUtc(Chaine(remise, "end_datetime"));
+                    res.Add(c);
+                }
+            }
+            finally { if (doc != null) doc.Dispose(); }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- itch.io (flux RSS)
+
+        public const string UrlItch = "https://itch.io/games/on-sale.xml";
+
+        public static List<Offre> PromosItch(string xml)
+        {
+            var res = new List<Offre>();
+            if (string.IsNullOrWhiteSpace(xml)) return res;
+            var doc = new XmlDocument { XmlResolver = null };
+            try
+            {
+                var reglages = new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore, XmlResolver = null };
+                using (var sr = new StringReader(xml))
+                using (var r = XmlReader.Create(sr, reglages))
+                    doc.Load(r);
+            }
+            catch { return res; }
+            XmlNodeList items = doc.SelectNodes("/rss/channel/item");
+            if (items == null) return res;
+            foreach (XmlNode it in items)
+            {
+                string lien = Texte(it, "link"), devise = Texte(it, "currency");
+                string nom = Texte(it, "plainTitle");
+                if (string.IsNullOrEmpty(nom))
+                {
+                    nom = Texte(it, "title") ?? "";
+                    int i = nom.IndexOf(" [", StringComparison.Ordinal);
+                    if (i > 0) nom = nom.Substring(0, i);
+                }
+                if (string.IsNullOrWhiteSpace(nom) || lien == null || !lien.StartsWith("https://", StringComparison.Ordinal) || !Offres.LienSur(lien)) continue;
+                if (devise != "USD" && devise != "EUR") continue;
+                int cts = Montant(Texte(it, "price")), origine = Montant(Texte(it, "fullPrice"));
+                if (cts < 0) continue;
+                int remise;
+                if (!int.TryParse(Texte(it, "discountpercent"), NumberStyles.Integer, CultureInfo.InvariantCulture, out remise) || remise < 0 || remise > 100)
+                    remise = RemiseDe(cts, origine);
+                DateTimeOffset fin;
+                string sFin = Texte(it, "saleends");
+                res.Add(new Offre
+                {
+                    Source = "itch", Id = lien.Substring("https://".Length).TrimEnd('/'), Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise,
+                    Devise = devise, Url = lien, Image = ImageSure(Texte(it, "imageurl")), Plateformes = new[] { "itch.io" },
+                    Fin = sFin != null && DateTimeOffset.TryParse(sFin, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out fin) ? fin.UtcDateTime : (DateTime?)null,
+                });
+            }
+            return res;
+        }
+
+        // ---------------------------------------------------------------- aides des stores
+
+        private static string Texte(XmlNode n, string nom)
+        {
+            XmlNode e = n.SelectSingleNode(nom);
+            if (e == null) return null;
+            string t = e.InnerText.Trim();
+            return t.Length == 0 ? null : t;
+        }
+
+        /// <summary>« 22.19 », « $1.98 », « €2,50 », 9.59 → centimes ; illisible → -1.</summary>
+        private static int Montant(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return -1;
+            var sb = new StringBuilder();
+            foreach (char c in s) if (char.IsDigit(c) || c == '.' || c == ',') sb.Append(c);
+            string t = sb.ToString();
+            if (t.IndexOf('.') >= 0) t = t.Replace(",", "");
+            else t = t.Replace(',', '.');
+            decimal d;
+            if (t.Length == 0 || !decimal.TryParse(t, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out d) || d > 1000000m) return -1;
+            return (int)Math.Round(d * 100m);
+        }
+
+        /// <summary>« -40% », « 20 », 20.0 → 40, 20 ; illisible → -1.</summary>
+        private static int Pourcent(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return -1;
+            decimal d;
+            string t = s.Replace("-", "").Replace("%", "").Trim();
+            if (!decimal.TryParse(t, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out d) || d < 0 || d > 100) return -1;
+            return (int)Math.Round(d);
+        }
+
+        private static int RemiseDe(int cts, int origine)
+        {
+            if (cts < 0 || origine <= 0 || cts >= origine) return 0;
+            return (int)Math.Round((1m - cts / (decimal)origine) * 100m);
+        }
+
+        private static string PremiereChaine(JsonElement e, string nom)
+        {
+            JsonElement v;
+            if (!Prop(e, nom, out v)) return null;
+            if (v.ValueKind == JsonValueKind.String) return v.GetString();
+            if (v.ValueKind != JsonValueKind.Array) return null;
+            foreach (var x in v.EnumerateArray()) if (x.ValueKind == JsonValueKind.String) return x.GetString();
+            return null;
+        }
+
+        private static bool ChiffresSeuls(string s)
+        {
+            if (string.IsNullOrEmpty(s) || s.Length > 20) return false;
+            foreach (char c in s) if (c < '0' || c > '9') return false;
+            return true;
         }
     }
 }

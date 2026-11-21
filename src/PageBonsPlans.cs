@@ -9,8 +9,8 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Page « Bons plans » : promos et nouveautés Steam, jeux gratuits (Epic, GamerPower), jeux
-    /// suivis et favoris. Rien n'est chargé avant la première ouverture ; chaque chargement porte
+    /// Page « Bons plans » : promos de 15 stores au choix (Steam, GOG, Nintendo, itch.io, et via CheapShark
+    /// Epic, Humble, Fanatical…), nouveautés Steam, jeux gratuits (Epic, GamerPower), jeux suivis et favoris. Rien n'est chargé avant la première ouverture ; chaque chargement porte
     /// un numéro de génération et une réponse arrivée après un changement de filtre est ignorée.
     /// </summary>
     internal sealed class PageBonsPlans : FpsPage
@@ -35,6 +35,11 @@ namespace BTOptimizer
         private readonly Label _lPrix, _lCat, _lPlat, _lTri, _etat, _numPage, _info;
         private readonly ComboBox _cat, _plat, _tri;
         private readonly Button _verifier, _installes, _reessayer, _prec, _suiv;
+        private readonly Button _stores;
+        private readonly ContextMenuStrip _menuStores;
+        private bool _storesChanges;
+        private readonly Dictionary<string, int> _pagesStores = new Dictionary<string, int>();   // prochaine page par store
+        private readonly HashSet<string> _finis = new HashSet<string>();   // stores sans page suivante
         private readonly BufferedFlow _flow;
         private readonly LinkLabel _pied;
         private readonly Timer _attente;
@@ -85,6 +90,23 @@ namespace BTOptimizer
             _lTri = Etiquette("Tri");
             _tri = Liste(110, Tris.Select(t => t.Key));
 
+            _stores = FpsUi.GhostButton("Stores");
+            _stores.Height = 28;
+            _stores.Click += (s, e) => MenuStores();
+            Controls.Add(_stores);
+            _menuStores = new ContextMenuStrip { ShowCheckMargin = true, ShowImageMargin = false, Font = FpsUi.Small };
+            // Le menu reste ouvert pendant qu'on coche ; le choix est appliqué à sa fermeture.
+            _menuStores.Closing += (s, e) => { if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked) e.Cancel = true; };
+            _menuStores.Closed += (s, e) =>
+            {
+                if (!_storesChanges) return;
+                _storesChanges = false;
+                Magasin.SauveBoutiques();
+                MajStores();
+                Recharge();
+            };
+            MajStores();
+
             _verifier = FpsUi.GhostButton("Vérifier maintenant");
             _verifier.Height = 28; _verifier.Width = 150;
             _verifier.Click += (s, e) => Verifie();
@@ -125,7 +147,7 @@ namespace BTOptimizer
 
             _pied = new LinkLabel
             {
-                Text = "Jeux gratuits : GamerPower.com · Prix : Steam, Epic Games Store",
+                Text = "Prix : Steam, GOG, Nintendo eShop, itch.io, CheapShark (autres stores, prix US) · Jeux gratuits : Epic Games Store, GamerPower.com",
                 Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2, BackColor = FpsUi.BgMain,
                 LinkColor = FpsUi.GoldDim, ActiveLinkColor = FpsUi.Gold, VisitedLinkColor = FpsUi.GoldDim,
                 LinkBehavior = LinkBehavior.HoverUnderline, AutoSize = false,
@@ -133,6 +155,10 @@ namespace BTOptimizer
             Lien(_pied, "GamerPower.com", "https://www.gamerpower.com");
             Lien(_pied, "Steam", "https://store.steampowered.com");
             Lien(_pied, "Epic Games Store", "https://store.epicgames.com/fr/");
+            Lien(_pied, "GOG", "https://www.gog.com/fr");
+            Lien(_pied, "Nintendo eShop", "https://www.nintendo.com/fr-fr/");
+            Lien(_pied, "itch.io", "https://itch.io");
+            Lien(_pied, "CheapShark", "https://www.cheapshark.com");
             _pied.LinkClicked += (s, e) => Ouvre(e.Link.LinkData as string);
             Controls.Add(_pied);
 
@@ -153,6 +179,7 @@ namespace BTOptimizer
             {
                 if (_wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
                 try { _attente.Dispose(); } catch { }
+                try { _menuStores.Dispose(); } catch { }
             }
             base.Dispose(disposing);
         }
@@ -223,7 +250,7 @@ namespace BTOptimizer
             // Rangée des filtres : passe à la ligne quand la fenêtre est étroite.
             var rangee = new List<Control> { _lPrix };
             rangee.AddRange(_pilules);
-            rangee.AddRange(new Control[] { _lCat, _cat, _lPlat, _plat, _lTri, _tri, _verifier, _installes });
+            rangee.AddRange(new Control[] { _stores, _lCat, _cat, _lPlat, _plat, _lTri, _tri, _verifier, _installes });
             int y = 130;
             x = x0;
             foreach (Control c in rangee)
@@ -279,7 +306,57 @@ namespace BTOptimizer
             bool tri = _onglet == OngletPromos || _onglet == OngletNouveautes;
             _lTri.Visible = _tri.Visible = tri;
             _verifier.Visible = _installes.Visible = _onglet == OngletSuivis;
+            _stores.Visible = _onglet == OngletPromos;
+            Style(_stores, _onglet == OngletPromos && Magasin.Boutiques.Count < OffresSources.Boutiques.Length);
             DoLayout();
+        }
+
+        private void MajStores()
+        {
+            int n = Magasin.Boutiques.Count;
+            _stores.Text = "Stores " + n.ToString(CultureInfo.InvariantCulture) + "/" + OffresSources.Boutiques.Length.ToString(CultureInfo.InvariantCulture) + " ▾";
+            _stores.Width = TextRenderer.MeasureText(_stores.Text, _stores.Font).Width + 24;
+            Style(_stores, _onglet == OngletPromos && n < OffresSources.Boutiques.Length);
+        }
+
+        private void MenuStores()
+        {
+            HashSet<string> choix = Magasin.Boutiques;
+            _menuStores.Items.Clear();
+            var tout = new ToolStripMenuItem("Tout cocher");
+            tout.Click += (s, e) => CocheTout(true);
+            var rien = new ToolStripMenuItem("Tout décocher");
+            rien.Click += (s, e) => CocheTout(false);
+            _menuStores.Items.Add(tout);
+            _menuStores.Items.Add(rien);
+            _menuStores.Items.Add(new ToolStripSeparator());
+            foreach (OffresSources.Boutique b in OffresSources.Boutiques)
+            {
+                string cle = b.Cle;
+                bool us = b.CheapShark > 0 || cle == "itch";
+                var it = new ToolStripMenuItem(b.Nom + (us ? "   · prix US" : "")) { Checked = choix.Contains(cle), Tag = cle };
+                it.Click += (s, e) =>
+                {
+                    var m = (ToolStripMenuItem)s;
+                    m.Checked = !m.Checked;
+                    if (m.Checked) choix.Add(cle); else choix.Remove(cle);
+                    _storesChanges = true;
+                };
+                _menuStores.Items.Add(it);
+            }
+            _menuStores.Show(_stores, new Point(0, _stores.Height + 2));
+        }
+
+        private void CocheTout(bool oui)
+        {
+            HashSet<string> choix = Magasin.Boutiques;
+            foreach (OffresSources.Boutique b in OffresSources.Boutiques) { if (oui) choix.Add(b.Cle); else choix.Remove(b.Cle); }
+            foreach (ToolStripItem it in _menuStores.Items)
+            {
+                var m = it as ToolStripMenuItem;
+                if (m != null && m.Tag is string) m.Checked = oui;
+            }
+            _storesChanges = true;
         }
 
         // ------------------------------------------------------------------ actions
@@ -337,6 +414,7 @@ namespace BTOptimizer
             _generation++;
             _occupe = false;
             _pageIdx = 0; _debutSteam = 0; _steamFini = false;
+            _pagesStores.Clear(); _finis.Clear();
             _resultats = new List<Offre>();
             _info.Text = "";
             switch (_onglet)
@@ -375,11 +453,38 @@ namespace BTOptimizer
             MajPagination();
         }
 
+        /// <summary>
+        /// Stores interrogés : en Promos, ceux cochés (Steam seul si une catégorie est choisie : les autres
+        /// stores n'en ont pas) ; ailleurs (Nouveautés, recherche des Suivis), Steam seul.
+        /// </summary>
+        private List<string> SourcesActives(Offres.Filtre f)
+        {
+            var l = new List<string>();
+            HashSet<string> choix = Magasin.Boutiques;
+            bool multi = _onglet == OngletPromos && f.Tag == 0;
+            if (!multi || choix.Contains("steam")) l.Add("steam");
+            if (!multi) return l;
+            foreach (string s in new[] { "gog", "nintendo", "itch" }) if (choix.Contains(s)) l.Add(s);
+            if (OffresSources.IdsCheapShark(choix).Length > 0) l.Add("cheapshark");
+            return l;
+        }
+
+        private static string NomSource(string s) { return s == "cheapshark" ? "CheapShark" : OffresSources.NomBoutique(s); }
+
+        /// <summary>
+        /// Un lot : jusqu'à 3 pages Steam (jusqu'à remplir la page) et une page de chaque autre store, en
+        /// parallèle. Le lot est trié à part et ajouté après les pages déjà vues : elles ne bougent pas.
+        /// </summary>
         private void ChargeSteam(int gen, bool suite)
         {
             Offres.Filtre f = FiltreCourant();
             bool promos = _onglet == OngletPromos, nouveautes = _onglet == OngletNouveautes;
             string tri = promos || nouveautes ? TriCourant() : null;   // Suivis : ordre de pertinence de Steam
+            List<string> sources = SourcesActives(f).Where(x => !_finis.Contains(x)).ToList();
+            if (sources.Count == 0) { _steamFini = true; if (!suite) Affiche(false); else MajPagination(); return; }
+            string ids = OffresSources.IdsCheapShark(Magasin.Boutiques);
+            var pages = new Dictionary<string, int>();
+            foreach (string x in sources) { int pg; pages[x] = _pagesStores.TryGetValue(x, out pg) ? pg : 0; }
             int debut = _debutSteam, deja = _resultats.Count;
             int besoin = (suite ? _pageIdx + 2 : 1) * ParPage;
             if (suite) { _occupe = true; _numPage.Text = "Chargement…"; MajPagination(); }
@@ -388,35 +493,55 @@ namespace BTOptimizer
             Task.Run(async () =>
             {
                 var nouveaux = new List<Offre>();
-                bool fini = false;
+                var finis = new List<string>();
+                var echecs = new List<string>();
                 int d = debut;
-                try
+                List<string> autres = sources.Where(x => x != "steam").ToList();
+                var taches = autres.Select(x => OffresReseau.PromosStore(x, f.Texte, pages[x], ids)).ToList();
+                if (sources.Contains("steam"))
                 {
-                    for (int lot = 0; lot < LotsMax; lot++)
+                    bool fini = false;
+                    try
                     {
-                        List<Offre> brut = await OffresReseau.RechercheSteam(f, promos, nouveautes, d).ConfigureAwait(false);
-                        d += PasSteam;
-                        // Liste vide : fin des résultats, sauf si Steam n'a pas répondu (« Suivant » reste possible).
-                        if (brut.Count == 0) { fini = !OffresReseau.DerniereErreur("steam"); break; }
-                        // Filtre local : le plafond seulement (texte et catégorie sont appliqués par Steam).
-                        foreach (Offre o in brut) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
-                        if (deja + nouveaux.Count >= besoin) break;
+                        for (int lot = 0; lot < LotsMax; lot++)
+                        {
+                            List<Offre> brut = await OffresReseau.RechercheSteam(f, promos, nouveautes, d).ConfigureAwait(false);
+                            d += PasSteam;
+                            // Liste vide : fin des résultats, sauf si Steam n'a pas répondu (« Suivant » reste possible).
+                            if (brut.Count == 0) { fini = !OffresReseau.DerniereErreur("steam"); break; }
+                            // Filtre local : le plafond seulement (texte et catégorie sont appliqués par Steam).
+                            foreach (Offre o in brut) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
+                            if (deja + nouveaux.Count >= besoin) break;
+                        }
                     }
+                    catch { fini = true; }
+                    if (fini) finis.Add("steam");
+                    if (OffresReseau.DerniereErreur("steam")) echecs.Add("steam");
                 }
-                catch { fini = true; }
-                bool erreur = OffresReseau.DerniereErreur("steam");
+                for (int i = 0; i < autres.Count; i++)
+                {
+                    OffresReseau.PageStore p;
+                    try { p = await taches[i].ConfigureAwait(false); } catch { p = new OffresReseau.PageStore { Echec = true }; }
+                    foreach (Offre o in p.Offres) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
+                    if (p.Fini) finis.Add(autres[i]);
+                    if (p.Echec) echecs.Add(autres[i]);
+                }
                 Retour(gen, () =>
                 {
                     _occupe = false;
-                    _debutSteam = d; _steamFini = fini;
+                    _debutSteam = d;
+                    foreach (string x in autres) _pagesStores[x] = pages[x] + 1;
+                    foreach (string x in finis) _finis.Add(x);
+                    _steamFini = SourcesActives(f).All(x => _finis.Contains(x));
                     var vus = new HashSet<string>(_resultats.Select(o => o.Cle));
                     List<Offre> ajout = nouveaux.Where(o => vus.Add(o.Cle)).ToList();
-                    // Chaque lot est trié à part et ajouté après les pages déjà vues : elles ne bougent pas.
                     if (tri != null) ajout = Offres.Trier(ajout, tri);
                     _resultats.AddRange(ajout);
                     if (suite && _resultats.Count > (_pageIdx + 1) * ParPage) _pageIdx++;
-                    Affiche(erreur && _resultats.Count == 0);
-                    if (suite && erreur && !fini) _info.Text = TexteErreur + " Réessayez avec « Suivant ».";
+                    bool rien = echecs.Count == sources.Count && _resultats.Count == 0;
+                    Affiche(rien);
+                    if (!rien && echecs.Count > 0) _info.Text = "Sans réponse : " + string.Join(", ", echecs.Select(NomSource)) + ". Réessayez avec « Suivant ».";
+                    else if (!suite && promos && f.Tag > 0) _info.Text = "Catégorie choisie : promos Steam seulement.";
                 });
             });
         }
@@ -498,7 +623,7 @@ namespace BTOptimizer
                 liste.Add(new Offre
                 {
                     Source = src, Id = id, Nom = f.Titre, Url = f.Url, SteamAppId = appId,
-                    Plateformes = src == "steam" ? new[] { "Steam" } : src == "epic" ? new[] { "Epic Games" } : new string[0],
+                    Plateformes = src == "gamerpower" ? new string[0] : new[] { OffresSources.NomBoutique(src) },
                 });
             }
             liste.Reverse();   // le plus récent en tête
@@ -568,7 +693,7 @@ namespace BTOptimizer
         {
             if (o == null || o.SteamAppId <= 0) return;
             if (EstSuivi(o)) Suivi.Retire(Magasin.Suivis, o.SteamAppId);
-            else if (!Suivi.Ajoute(Magasin.Suivis, o))
+            else if (!Suivi.Ajoute(Magasin.Suivis, o.Source == "steam" ? o : new Offre { Source = "steam", Nom = o.Nom, SteamAppId = o.SteamAppId }))
             {
                 if (Magasin.Suivis.Count >= Suivi.Max) _info.Text = TexteMax;
                 return;
@@ -603,7 +728,9 @@ namespace BTOptimizer
             if (page.Count == 0)
             {
                 bool aide = _onglet == OngletSuivis && Texte().Length == 0 && !erreur;
+                bool aucunStore = _onglet == OngletPromos && Magasin.Boutiques.Count == 0;
                 _etat.Text = erreur ? TexteErreur
+                    : aucunStore ? "Aucun store coché : ouvre « Stores » pour en choisir."
                     : aide ? "Cherche un jeu puis clique sur la cloche : tu seras prévenu dès qu'il passe en promo."
                     : "Aucun jeu ne correspond à ces filtres.";
                 _etat.Visible = true;
@@ -627,7 +754,27 @@ namespace BTOptimizer
             if (!_occupe) _numPage.Text = "Page " + (_pageIdx + 1).ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>Une carte de jeu : jaquette, nom, prix, plateforme et fin d'offre, ☆ et 🔔.</summary>
+        /// <summary>Couleur de la pastille d'un store sur les cartes.</summary>
+        private static Color CouleurStore(string source)
+        {
+            switch (source)
+            {
+                case "steam": return Color.FromArgb(102, 192, 244);
+                case "gog": return Color.FromArgb(190, 130, 240);
+                case "nintendo": return Color.FromArgb(240, 84, 74);
+                case "epic": return Color.FromArgb(215, 215, 210);
+                case "humble": return Color.FromArgb(236, 106, 86);
+                case "fanatical": return Color.FromArgb(255, 152, 56);
+                case "gmg": return Color.FromArgb(112, 210, 112);
+                case "ubisoft": return Color.FromArgb(86, 152, 255);
+                case "itch": return Color.FromArgb(250, 96, 96);
+                case "indiegala": return Color.FromArgb(236, 90, 120);
+                case "gamerpower": return FpsUi.Ok;
+                default: return FpsUi.Gold;
+            }
+        }
+
+        /// <summary>Une carte de jeu : jaquette, nom, remise, prix (US s'il est en dollars), store, fin d'offre, ☆ et 🔔.</summary>
         private sealed class Carte : Control
         {
             private const int L = 300, H = 128;
@@ -669,9 +816,21 @@ namespace BTOptimizer
             private string Plateforme()
             {
                 if (_o.Plateformes != null && _o.Plateformes.Length > 0) return string.Join(", ", _o.Plateformes.Take(2));
-                if (_o.Source == "steam") return "Steam";
-                if (_o.Source == "epic") return "Epic Games";
-                return "GamerPower";
+                return OffresSources.NomBoutique(_o.Source);
+            }
+
+            /// <summary>Fin proche (moins de 48 h) : « plus que 5 h » ; sinon « jusqu'au 25/11 ».</summary>
+            private string Fin(out bool urgent)
+            {
+                urgent = false;
+                if (!_o.Fin.HasValue) return null;
+                TimeSpan reste = _o.Fin.Value - DateTime.UtcNow;
+                if (reste > TimeSpan.Zero && reste < TimeSpan.FromHours(48))
+                {
+                    urgent = true;
+                    return "plus que " + Math.Max(1, (int)Math.Ceiling(reste.TotalHours)).ToString(CultureInfo.InvariantCulture) + " h";
+                }
+                return "jusqu'au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM", CultureInfo.InvariantCulture);
             }
 
             /// <summary>Remplit r sans déformer : l'image est recadrée au centre (vignettes larges de GamerPower).</summary>
@@ -718,9 +877,13 @@ namespace BTOptimizer
                 }
 
                 int tx = 96, tw = L - tx - 10;
+                if (_survol)
+                    using (var p = FpsUi.Round(new Rectangle(0, 0, L - 1, H - 1), 10f))
+                    using (var pen = new Pen(FpsUi.BlendGold(FpsUi.Border, 0.6f))) g.DrawPath(pen, p);
                 TextRenderer.DrawText(g, _o.Nom ?? "", FpsUi.H3, new Rectangle(tx, 8, tw, 38), FpsUi.Ink,
                     TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
 
+                // Remise, prix (« US » en dollars), prix d'origine barré s'il tient.
                 int x = tx;
                 if (_o.Remise > 0)
                 {
@@ -728,25 +891,48 @@ namespace BTOptimizer
                     int rw = TextRenderer.MeasureText(r, FpsUi.Small).Width + 8;
                     var rr = new Rectangle(x, 52, rw, 20);
                     using (var p = FpsUi.Round(rr, 5f))
-                    using (var br = new SolidBrush(FpsUi.Ok)) g.FillPath(br, p);
+                    using (var br = new SolidBrush(_o.Remise >= 75 ? FpsUi.Gold : FpsUi.Ok)) g.FillPath(br, p);
                     TextRenderer.DrawText(g, r, FpsUi.Small, rr, FpsUi.BgMain,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                     x = rr.Right + 8;
                 }
                 if (_o.PrixCts >= 0)
                 {
-                    string prix = Offres.Prix(_o.PrixCts);
+                    string prix = Offres.PrixDe(_o);
                     TextRenderer.DrawText(g, prix, FpsUi.H2, new Point(x, 50), FpsUi.Gold, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
-                    x += TextRenderer.MeasureText(prix, FpsUi.H2, Size.Empty, TextFormatFlags.NoPadding).Width + 8;
+                    x += TextRenderer.MeasureText(prix, FpsUi.H2, Size.Empty, TextFormatFlags.NoPadding).Width + 4;
+                    if (_o.Devise == "USD" && _o.PrixCts > 0)
+                    {
+                        TextRenderer.DrawText(g, "US", FpsUi.Tiny, new Point(x, 57), FpsUi.Dim, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                        x += TextRenderer.MeasureText("US", FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width;
+                    }
+                    x += 6;
                     if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
-                        TextRenderer.DrawText(g, Offres.Prix(_o.PrixOrigineCts), Barre, new Point(x, 55), FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                    {
+                        string avant = Offres.PrixOrigineDe(_o);
+                        if (x + TextRenderer.MeasureText(avant, Barre, Size.Empty, TextFormatFlags.NoPadding).Width <= L - 8)
+                            TextRenderer.DrawText(g, avant, Barre, new Point(x, 55), FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+                    }
                 }
 
-                var details = new List<string> { Plateforme() };
-                if (_o.Fin.HasValue) details.Add("jusqu'au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM", CultureInfo.InvariantCulture));
+                // Store en pastille colorée, puis plateformes (offres gratuites) et fin de l'offre.
+                string store = OffresSources.NomBoutique(_o.Source);
+                Color cs = CouleurStore(_o.Source);
+                int sw = Math.Min(TextRenderer.MeasureText(store, FpsUi.Tiny, Size.Empty, TextFormatFlags.NoPadding).Width + 14, L - tx - 70);
+                var rs = new Rectangle(tx, 82, sw, 18);
+                using (var p = FpsUi.Round(rs, 9f))
+                using (var br = new SolidBrush(Color.FromArgb(46, cs))) g.FillPath(br, p);
+                TextRenderer.DrawText(g, store, FpsUi.Tiny, rs, cs,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                var details = new List<string>();
+                string plats = Plateforme();
+                if (plats != store) details.Add(plats);
+                bool urgent;
+                string fin = Fin(out urgent);
+                if (fin != null) details.Add(fin);
                 else if (_o.Sortie.HasValue) details.Add("sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture));
-                TextRenderer.DrawText(g, string.Join(" · ", details), FpsUi.Tiny, new Rectangle(tx, 82, L - tx - 70, 36), FpsUi.Dim,
-                    TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, string.Join(" · ", details), FpsUi.Tiny, new Rectangle(tx, 104, L - tx - 70, 18), urgent ? FpsUi.Warn : FpsUi.Dim,
+                    TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
 
                 bool fav = _page.EstFavori(_o);
                 TextRenderer.DrawText(g, fav ? "★" : "☆", FpsUi.H2, REtoile, fav ? FpsUi.Gold : FpsUi.Dim,

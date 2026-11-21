@@ -11,7 +11,7 @@ namespace BTOptimizer
     /// </summary>
     internal sealed class Offre
     {
-        public string Source;          // "steam" | "epic" | "gamerpower"
+        public string Source;          // "steam" | "epic" | "gamerpower" | "gog" | "nintendo" | "itch" | store CheapShark
         public string Id;              // identifiant dans la source
         public string Nom;
         public int PrixCts = -1;       // centimes d'euro ; 0 = gratuit ; -1 = inconnu
@@ -24,7 +24,9 @@ namespace BTOptimizer
         public string Url;
         public int SteamAppId;         // 0 hors Steam
         public string Image;           // jaquette ou vignette (URL), null si la source n'en donne pas
+        public string Devise = "EUR";  // "EUR" ou "USD" (CheapShark, itch.io : prix US affichés tels quels)
         public string Cle { get { return Source + ":" + Id; } }
+        public Offre Copie() { return (Offre)MemberwiseClone(); }
     }
 
     /// <summary>
@@ -61,7 +63,7 @@ namespace BTOptimizer
         };
 
         public static readonly string[] Plateformes =
-            { "Steam", "Epic Games", "GOG", "PlayStation", "Xbox", "Switch", "Android", "iOS", "PC" };
+            { "Steam", "Epic Games", "GOG", "itch.io", "Ubisoft", "EA", "Battle.net", "PlayStation", "Xbox", "Switch", "Android", "iOS", "PC" };
 
         public static string LibellePlafond(int cts)
         {
@@ -71,20 +73,32 @@ namespace BTOptimizer
         }
 
         /// <summary>749 → « 7,49 € », 2000 → « 20 € », 0 → « Gratuit », -1 → « — ».</summary>
-        public static string Prix(int cts)
+        public static string Prix(int cts) { return Prix(cts, "EUR"); }
+
+        /// <summary>Devise "USD" → « 9,99 $ » ; toute autre valeur → euros.</summary>
+        public static string Prix(int cts, string devise)
         {
             if (cts < 0) return "—";
             if (cts == 0) return "Gratuit";
-            int euros = cts / 100, centimes = cts % 100;
-            if (centimes == 0) return euros.ToString(CultureInfo.InvariantCulture) + " €";
-            return euros.ToString(CultureInfo.InvariantCulture) + "," + centimes.ToString("00", CultureInfo.InvariantCulture) + " €";
+            string sym = devise == "USD" ? " $" : " €";
+            int unites = cts / 100, centimes = cts % 100;
+            if (centimes == 0) return unites.ToString(CultureInfo.InvariantCulture) + sym;
+            return unites.ToString(CultureInfo.InvariantCulture) + "," + centimes.ToString("00", CultureInfo.InvariantCulture) + sym;
         }
 
-        /// <summary>Plafond inclusif ; un prix inconnu ne passe sous aucun plafond.</summary>
+        public static string PrixDe(Offre o) { return o == null ? "—" : Prix(o.PrixCts, o.Devise); }
+        public static string PrixOrigineDe(Offre o) { return o == null ? "—" : Prix(o.PrixOrigineCts, o.Devise); }
+
+        /// <summary>
+        /// Plafond inclusif ; un prix inconnu ne passe sous aucun plafond. Les plafonds sont en euros :
+        /// une offre en dollars n'y est pas soumise, sauf « Gratuit » (0).
+        /// </summary>
         public static bool SousPlafond(Offre o, int plafondCts)
         {
             if (plafondCts < 0) return true;
-            return o != null && o.PrixCts >= 0 && o.PrixCts <= plafondCts;
+            if (o == null || o.PrixCts < 0) return false;
+            if (o.Devise == "USD" && plafondCts > 0) return true;
+            return o.PrixCts <= plafondCts;
         }
 
         /// <summary>Minuscules, sans accents, lettres et chiffres seulement (« Épée & Bouclier » → « epeebouclier »).</summary>
