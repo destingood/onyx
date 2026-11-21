@@ -27,7 +27,8 @@ namespace BTOptimizer
         public static string CurrentSid;
         public static string TargetSid;
         public static bool SameUser = true;
-        public static string BackupDesktop;
+        public static string BackupDesktop;   // Bureau de l'utilisateur cible : exports demandés seulement
+        public static string BackupDir;       // Documents\ONYX\Sauvegardes : sauvegardes automatiques et historique
 
         public static void Init()
         {
@@ -49,6 +50,32 @@ namespace BTOptimizer
                 }
             }
             BackupDesktop = ResolveDesktop();
+            BackupDir = Sauvegardes.Dossier(ResolveDocuments());
+        }
+
+        private static string ResolveDocuments()
+        {
+            if (!SameUser)
+            {
+                // Documents de l'utilisateur connecté (peut être redirigé, OneDrive compris).
+                try
+                {
+                    object d = GetUser(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders", "Personal");
+                    if (d is string && ((string)d).Length > 0) return (string)d;
+                }
+                catch { }
+                try
+                {
+                    object p = GetMachine(
+                        @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\" + TargetSid,
+                        "ProfileImagePath");
+                    if (p is string && ((string)p).Length > 0)
+                        return Path.Combine((string)p, "Documents");
+                }
+                catch { }
+            }
+            string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            return string.IsNullOrEmpty(docs) ? AppPaths.DataDir : docs;
         }
 
         private static string GetExplorerOwnerSid()
@@ -1527,7 +1554,7 @@ namespace BTOptimizer
         public static string ExportBackup(List<Tweak> tweaks, Action<string, int> log)
         {
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            string dir = Path.Combine(BackupDesktop, "bt-optimizer-backup-" + stamp);
+            string dir = Path.Combine(BackupDir, Sauvegardes.PrefixeDossier + stamp);
             Directory.CreateDirectory(dir);
 
             List<string> keys = tweaks.SelectMany(t => t.BackupKeys)

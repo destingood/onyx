@@ -107,6 +107,7 @@ namespace BTOptimizer.Tests
             RetraitIaLocaleTests.Tout();
             CopiloteTexteTests.Tout();
             CopiloteReglagesTests.Tout();
+            SauvegardesTests.Tout();
             SuiviTests.Tout();
             ActusTests.Tout();
             return Banc.Bilan();

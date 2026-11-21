@@ -170,12 +170,13 @@ namespace BTOptimizer
 #if !BTTEST
             // IA locale retirée (15.85) : au premier lancement après la mise à jour, ONYX efface ses
             // fichiers d'IA et désinstalle Ollama s'il l'avait posé lui-même (RetraitIaLocale). Différé
-            // de 20 s pour ne pas gêner le démarrage ; jamais dans le harnais de test.
+            // de 20 s pour ne pas gêner le démarrage ; jamais dans le harnais de test. Puis les sauvegardes
+            // laissées sur le Bureau par les versions d'avant sont rangées dans Documents\ONYX\Sauvegardes.
             var retraitIa = new Timer { Interval = 20000 };
             retraitIa.Tick += (s, e) =>
             {
                 retraitIa.Stop(); retraitIa.Dispose();
-                System.Threading.Tasks.Task.Run(() => RetraitIaLocale.Lancer());
+                System.Threading.Tasks.Task.Run(() => { RetraitIaLocale.Lancer(); Sauvegardes.RangerBureau(); });
             };
             retraitIa.Start();
 #endif

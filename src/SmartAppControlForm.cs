@@ -95,7 +95,7 @@ namespace BTOptimizer
                 + "• Windows ne filtrera plus les applications non signées ou sans réputation.\n"
                 + "• D'après Microsoft, ce choix est DÉFINITIF : il ne se rallume qu'en réinstallant Windows.\n"
                 + "• Ton antivirus continue de fonctionner normalement.\n"
-                + "• Effet au prochain redémarrage. Une sauvegarde .reg est écrite sur le Bureau.\n\n"
+                + "• Effet au prochain redémarrage. Une sauvegarde .reg est écrite dans Documents\\ONYX\\Sauvegardes.\n\n"
                 + "Confirmer la désactivation ?", SmartAppControl.State.Off);
 
             _btnOn = Action_("Tenter de réactiver", 400, by,
@@ -151,7 +151,7 @@ namespace BTOptimizer
                 if (ok)
                     MessageBox.Show(this,
                         "C'est écrit. Le changement sera effectif après un REDÉMARRAGE du PC.\n\n"
-                        + "Une sauvegarde .reg de l'état d'origine a été déposée sur ton Bureau.",
+                        + "Une sauvegarde .reg de l'état d'origine est dans Documents\\ONYX\\Sauvegardes.",
                         "Smart App Control", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 else
                     MessageBox.Show(this,

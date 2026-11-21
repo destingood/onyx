@@ -1094,7 +1094,7 @@ namespace BTOptimizer
             }
             string msg = "Appliquer " + sel.Count + " optimisation(s) ?";
             if (_chkBackup.Checked)
-                msg += "\n\nUne sauvegarde du registre sera créée sur le Bureau.";
+                msg += "\n\nUne sauvegarde du registre sera créée dans Documents\\ONYX\\Sauvegardes.";
             if (MessageBox.Show(this, msg, "Confirmation",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
@@ -1226,7 +1226,8 @@ namespace BTOptimizer
             _lastBench = r;
             try
             {
-                string hist = System.IO.Path.Combine(Sys.BackupDesktop, "bt-optimizer-mesures.txt");
+                System.IO.Directory.CreateDirectory(Sys.BackupDir);
+                string hist = System.IO.Path.Combine(Sys.BackupDir, Sauvegardes.Historique);
                 System.IO.File.AppendAllText(hist, r.ToText() + Environment.NewLine, System.Text.Encoding.UTF8);
                 Log("Mesure ajoutée à l'historique : " + hist, 0);
             }
@@ -1313,7 +1314,8 @@ namespace BTOptimizer
             using (var dlg = new FolderBrowserDialog())
             {
                 dlg.Description = "Choisissez un dossier de sauvegarde bt-optimizer-backup-...";
-                dlg.SelectedPath = Sys.BackupDesktop;
+                try { System.IO.Directory.CreateDirectory(Sys.BackupDir); dlg.SelectedPath = Sys.BackupDir; }
+                catch { dlg.SelectedPath = Sys.BackupDesktop; }
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 if (MessageBox.Show(this,
                         "Réimporter toutes les clés .reg depuis :\n" + dlg.SelectedPath + " ?",
@@ -1332,7 +1334,7 @@ namespace BTOptimizer
 
         private void OnOpenClicked(object sender, EventArgs e)
         {
-            try { Process.Start("explorer.exe", "\"" + Sys.BackupDesktop + "\""); }
+            try { System.IO.Directory.CreateDirectory(Sys.BackupDir); Process.Start("explorer.exe", "\"" + Sys.BackupDir + "\""); }
             catch (Exception ex) { Log("Impossible d'ouvrir le dossier : " + ex.Message, 3); }
         }
 

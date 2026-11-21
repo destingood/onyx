@@ -87,15 +87,16 @@ namespace BTOptimizer
         /// déjà été coupé (Microsoft : la coupure est définitive jusqu'à réinstallation).</summary>
         public static bool CanReEnable { get { return Read() != State.Off; } }
 
-        /// <summary>Sauvegarde .reg de l'état courant sur le Bureau (même filet que les autres
-        /// modifications de l'app). Renvoie le chemin écrit, ou null.</summary>
+        /// <summary>Sauvegarde .reg de l'état courant dans Documents\ONYX\Sauvegardes (même filet que
+        /// les autres modifications de l'app). Renvoie le chemin écrit, ou null.</summary>
         public static string Backup()
         {
             try
             {
                 State s = Read();
                 if (s == State.Unknown) return null;
-                string path = Path.Combine(Sys.BackupDesktop,
+                Directory.CreateDirectory(Sys.BackupDir);
+                string path = Path.Combine(Sys.BackupDir,
                     "ONYX-smart-app-control-avant-" + DateTime.Now.ToString("yyyyMMdd-HHmm") + ".reg");
                 string body = "Windows Registry Editor Version 5.00\r\n\r\n"
                             + "[HKEY_LOCAL_MACHINE\\" + Key + "]\r\n"

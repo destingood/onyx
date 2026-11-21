@@ -79,6 +79,8 @@
     <!-- Page Jeux : tri jeu / application, jaquettes Epic, fusion multi-plateforme (pur). -->
     <Compile Include="..\src\BibliothequeJeux.cs" />
     <Compile Include="..\src\RetraitIaLocale.cs" />
+    <!-- Sauvegardes hors du Bureau : dossier et repérage de ce qui est à ranger (pur). Le déplacement vit dans Sauvegardes.Machine.cs. -->
+    <Compile Include="..\src\Sauvegardes.cs" />
     <!-- Copilote : compréhension du texte (normalisation, texto, fautes de frappe), pur. -->
     <Compile Include="..\src\CopiloteTexte.cs" />
     <Compile Include="..\src\CopiloteReglages.cs" />
