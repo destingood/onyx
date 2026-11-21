@@ -15,8 +15,11 @@ namespace BTOptimizer
         private Panel _rail, _host;
         private FlowLayoutPanel _pageToolBar;
         private readonly System.Collections.Generic.List<NavCell> _nav = new System.Collections.Generic.List<NavCell>();
-        private readonly FpsPage[] _pages = new FpsPage[9];
+        private readonly FpsPage[] _pages = new FpsPage[11];
         private int _current = -1;
+
+        /// <summary>Pages ajoutées en fin de rail : les index 0 à 8 ne bougent pas (ShowPage(n) est appelé ailleurs).</summary>
+        public const int PageBonsPlansIdx = 9, PageActusIdx = 10;
 
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
         [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
@@ -188,7 +191,11 @@ namespace BTOptimizer
                 return;
             }
             // Barre superposée (non dockée) : sa hauteur ne suit plus automatiquement la fenêtre.
-            if (_rail != null && _rail.Height != ClientSize.Height) _rail.Height = ClientSize.Height;
+            if (_rail != null && _rail.Height != ClientSize.Height)
+            {
+                _rail.Height = ClientSize.Height;
+                LayoutRail();      // pas des cellules adapté à la hauteur (11 cellules dans 680 px)
+            }
             PositionPageTools();   // la rangée d'outils (overlay) suit la largeur
         }
 
@@ -1383,12 +1390,14 @@ namespace BTOptimizer
             var profTip = new ToolTip(); profTip.SetToolTip(_railProfile, "Mon compte");
             _rail.Controls.Add(_railProfile);
 
-            string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙", "💽" };
-            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage" };
+            string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙", "💽", "🏷", "📰" };
+            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage", "Bons plans", "Actus" };
+            // Icône de chaque page : l'index 9 de NavIcons est « Outils », d'où un tableau explicite.
+            int[] icones = { 0, 1, 2, 3, 4, 5, 6, 7, 8, NavIcons.BonsPlans, NavIcons.Actus };
             for (int i = 0; i < glyphs.Length; i++)
             {
                 var cell = new NavCell(glyphs[i], tips[i]);
-                cell.IconId = i;              // icône vectorielle (NavIcons), dans l'ordre des pages
+                cell.IconId = icones[i];      // icône vectorielle (NavIcons)
                 int idx = i;
                 cell.Click += (s, e) => ShowPage(idx);
                 _nav.Add(cell);
@@ -1513,7 +1522,10 @@ namespace BTOptimizer
             if (_rail == null) return;
             int cellW = Math.Max(48, _rail.Width - 18);
             int y = BrandH + 12;
-            foreach (NavCell c in _nav) { c.SetBounds(9, y, cellW, 48); y += 56; }
+            // Pas adapté à la hauteur : 11 cellules au pas de 56 demandent 804 px, la fenêtre descend à 680.
+            int dispo = _rail.Height - BrandH - 12 - ProfileH - 52;
+            int pas = _nav.Count == 0 ? 56 : Math.Max(40, Math.Min(56, dispo / _nav.Count));
+            foreach (NavCell c in _nav) { c.SetBounds(9, y, cellW, pas - 8); y += pas; }
             if (_tools != null) _tools.SetBounds(9, y + 4, cellW, 44);
             if (_railBrand != null) _railBrand.Invalidate();
             if (_railProfile != null) _railProfile.Invalidate();
@@ -1622,6 +1634,41 @@ namespace BTOptimizer
             _pageToolBar.SetBounds(34, 84, Math.Max(200, _host.ClientSize.Width - 54), 34);
         }
 
+        /// <summary>Pastille chiffrée de la cellule « Bons plans » (0 l'efface). Appelable depuis n'importe quel thread.</summary>
+        public void SignaleBonsPlans(int nombre)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke((Action)(() => SignaleBonsPlans(nombre))); } catch { }
+                return;
+            }
+            try { if (_nav.Count > PageBonsPlansIdx) _nav[PageBonsPlansIdx].Badge = Math.Max(0, nombre); } catch { }
+        }
+
+        /// <summary>
+        /// Notification Windows (centre de notifications), repli sur la bulle de la zone de
+        /// notification si le toast échoue — même modèle que les alertes de la veille système.
+        /// Appelable depuis n'importe quel thread.
+        /// </summary>
+        public void Notifie(string titre, string texte)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke((Action)(() => Notifie(titre, texte))); } catch { }
+                return;
+            }
+            try
+            {
+                if (!WinToast.Show(titre, texte))
+                {
+                    _tray.BalloonTipTitle = titre;
+                    _tray.BalloonTipText = texte;
+                    _tray.ShowBalloonTip(10000);
+                }
+            }
+            catch { }
+        }
+
         private FpsPage CreatePage(int idx)
         {
             FpsPage p;
@@ -1636,6 +1683,8 @@ namespace BTOptimizer
                 case 6: p = new PageConsultation(this); break;
                 case 7: p = new PageSystem(this); break;
                 case 8: p = new PageStorage(this); break;
+                case PageBonsPlansIdx: p = new PageBonsPlans(this); break;
+                case PageActusIdx: p = new PageActus(this); break;
                 default: p = new PageDashboard(this); break;
             }
             try { AttachPageTools(p, idx); } catch { }

@@ -15,7 +15,7 @@ namespace BTOptimizer
     {
         public const int Dashboard = 0, Optimisations = 1, Jeux = 2, CheckUp = 3,
                          Laboratoire = 4, Collection = 5, Consultation = 6, Systeme = 7,
-                         Stockage = 8, Outils = 9;
+                         Stockage = 8, Outils = 9, BonsPlans = 10, Actus = 11;
 
         /// <summary>Dessine l'icône <paramref name="id"/> centrée dans <paramref name="box"/>.</summary>
         public static void Draw(Graphics g, int id, RectangleF box, Color color)
@@ -122,6 +122,17 @@ namespace BTOptimizer
                     g.FillEllipse(fill, 4.6f, 10.8f, 2.6f, 2.6f);
                     g.FillEllipse(fill, 10.7f, 10.8f, 2.6f, 2.6f);
                     g.FillEllipse(fill, 16.8f, 10.8f, 2.6f, 2.6f);
+                    break;
+                case BonsPlans:      // étiquette de prix (pentagone incliné + œillet)
+                    g.DrawPolygon(p, Pts(3.5f, 12.5f, 11.5f, 4.5f, 19.5f, 4.5f, 19.5f, 12.5f, 11.5f, 20.5f));
+                    g.DrawEllipse(p, 14.6f, 7.4f, 2.4f, 2.4f);
+                    break;
+                case Actus:          // journal (cadre, titre épais, trois lignes)
+                    using (var page = Round(new RectangleF(3.5f, 4.5f, 17f, 15f), 2f)) g.DrawPath(p, page);
+                    g.FillRectangle(fill, 6.5f, 7.3f, 11f, 2.4f);
+                    g.DrawLine(p, 6.5f, 12.2f, 17.5f, 12.2f);
+                    g.DrawLine(p, 6.5f, 14.6f, 17.5f, 14.6f);
+                    g.DrawLine(p, 6.5f, 17f, 13.5f, 17f);
                     break;
             }
         }
