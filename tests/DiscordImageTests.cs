@@ -1,22 +1,21 @@
+
 namespace BTOptimizer.Tests
 {
     /// <summary>
-    /// Image de la présence Discord. L'application Discord d'ONYX n'a aucune ressource « logo »
-    /// (Art Assets vide) : demander « logo » donnait une image blanche chez les amis. La grande
-    /// image est donc une adresse https (Discord ne résout pas les adresses http), l'icône de
-    /// l'application ONYX servie par Discord lui-même.
+    /// Image de la présence Discord. La 15.87 envoyait l'adresse de l'icône de l'application
+    /// (256 px) : Discord ne l'a pas affichée, la page blanche est restée. La grande image est
+    /// désormais la ressource « logo » (1024 × 1024) déposée dans le portail développeur, Rich
+    /// Presence → Art Assets : la voie documentée par Discord.
     /// </summary>
     internal static class DiscordImageTests
     {
         public static void Tout()
         {
             string a = DiscordPresence.Assets();
-            Banc.Verifie("grande image = adresse https, pas un nom de ressource absent", true,
-                a.Contains("\"large_image\":\"https://"));
-            Banc.Verifie("plus de ressource « logo » (inexistante dans l'application ONYX)", false,
+            Banc.Verifie("grande image = ressource « logo » du portail Discord", true,
                 a.Contains("\"large_image\":\"logo\""));
-            Banc.Verifie("icône de l'application ONYX, servie par Discord", true,
-                DiscordPresence.ImageLogo.StartsWith("https://cdn.discordapp.com/app-icons/" + DiscordPresence.AppIdParDefaut + "/"));
+            Banc.Verifie("plus d'adresse d'icône de 256 px (non affichée par Discord)", false,
+                a.Contains("\"large_image\":\"https://"));
             Banc.Verifie("texte au survol gardé", true, a.Contains("\"large_text\":\"ONYX"));
         }
     }

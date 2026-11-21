@@ -11,14 +11,13 @@ namespace BTOptimizer
         public const string AppIdParDefaut = "1537266582785495120";
 
         /// <summary>
-        /// Grande image de la présence : l'icône de l'application ONYX, servie par Discord.
-        /// L'application n'a aucune ressource dans Rich Presence → Art Assets ; demander la clé
-        /// « logo » donnait une image blanche chez tous ceux qui voyaient le statut. Discord
-        /// accepte une adresse à la place d'une clé, à condition qu'elle soit en https.
-        /// Si l'icône de l'application change, ce hachage change aussi : le mettre à jour ici.
+        /// Grande image de la présence : la ressource « logo » de l'application ONYX, déposée
+        /// dans le portail développeur Discord (Rich Presence → Art Assets, 1024 × 1024, fichier
+        /// source marketing/discord-logo-1024.png). La 15.87 envoyait à la place l'adresse de
+        /// l'icône de l'application : elle ne fait que 256 px et Discord ne l'a pas affichée.
+        /// Si la ressource « logo » disparaît du portail, le statut redevient une page blanche.
         /// </summary>
-        public const string ImageLogo =
-            "https://cdn.discordapp.com/app-icons/" + AppIdParDefaut + "/7f8cd3c27bca764ed9667980345b769e.png?size=1024";
+        public const string ImageLogo = "logo";
 
         /// <summary>Bloc « assets » de l'activité envoyée à Discord.</summary>
         public static string Assets()

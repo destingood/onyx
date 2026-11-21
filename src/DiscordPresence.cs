@@ -20,8 +20,8 @@ namespace BTOptimizer
     /// tout client qui utilise Rich Presence. Il n'ouvre aucun accès au compte, contrairement au
     /// jeton du bot — qui, lui, n'a rien à faire ici et n'y est pas.
     ///
-    /// Le logo affiché à côté du statut est l'icône de l'application, donnée par son adresse
-    /// (DiscordPresence.Image.cs) : aucune ressource à déposer dans le portail Discord.
+    /// Le logo affiché à côté du statut est la ressource « logo » déposée dans le portail
+    /// Discord de l'application ONYX (DiscordPresence.Image.cs).
     /// </summary>
     internal static partial class DiscordPresence
     {
