@@ -39,6 +39,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   shaders précompilés de Windows (Advanced Shader Delivery) mais que Windows est antérieur à 24H2
   ou que le pilote est trop ancien (NVIDIA 621.01, AMD Adrenalin 26.6.1, Intel 32.0.101.9150),
   ONYX le signale. Lecture seule ; prérequis publiés par Microsoft le 21 octobre 2026.
+- **Diagnostic : conseil mode Xbox.** Sur un PC à 16 Go de mémoire ou moins, ou avec une puce
+  graphique intégrée seule, ONYX signale le mode Xbox de Windows (Win+F11) quand Windows le
+  propose. Texte honnête : 0,2 à 0,3 Go de mémoire en moins en jeu, 0,6 à 1,3 Go au repos,
+  aucun FPS en plus (mesures LTT Labs). Rien n'est activé par ONYX.
 - **Les caches de shaders ne sont plus vidés par défaut.** Les vider fait recompiler chaque shader
   en jeu, d'où des saccades. Ils sortent de « Tout entretenir », du Check Up+, des cases cochées
   du Stockage et du Nettoyage disque, et de « Libérer l'espace » (Copilote, réparation des

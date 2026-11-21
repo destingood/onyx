@@ -129,6 +129,10 @@ namespace BTOptimizer
                 string asdPil = gd == null ? null : ShadersPrecompiles.PiloteTropAncien(build, gd.Name, gd.Version,
                     ShadersPrecompiles.CarteEligible(gd.Name) == "amd" ? VersionAdrenalin() : null);
                 if (asdPil != null) f.Add(new Finding(1, asdPil));
+                // Mode Xbox : mémoire libérée sur les PC où elle compte (aucun FPS promis).
+                string xbox = ModeXbox.Conseil(NativeMem.TotalPhysMB(), NomsCartes(), build,
+                    ubr == null ? 0 : Convert.ToInt32(ubr));
+                if (xbox != null) f.Add(new Finding(1, xbox));
             }
             catch { }
             // Ryzen X3D à deux CCD : ce qui empêche le pilote AMD de garer le CCD sans V-Cache.
@@ -662,6 +666,27 @@ namespace BTOptimizer
             }
             catch { }
             return null;
+        }
+
+        /// <summary>Noms de toutes les cartes d'affichage réelles (WMI, mêmes exclusions que
+        /// GpuDriver). Tableau vide si illisible.</summary>
+        private static string[] NomsCartes()
+        {
+            var noms = new List<string>();
+            try
+            {
+                using (var s = new ManagementObjectSearcher("SELECT Name FROM Win32_VideoController"))
+                    foreach (ManagementObject mo in s.Get())
+                    {
+                        string name = Convert.ToString(mo["Name"]) ?? "";
+                        string low = name.ToLowerInvariant();
+                        if (name.Length == 0 || low.Contains("microsoft") || low.Contains("basic")
+                            || low.Contains("parsec") || low.Contains("virtual")) continue;
+                        noms.Add(name);
+                    }
+            }
+            catch { }
+            return noms.ToArray();
         }
 
         /// <summary>Pilote GPU principal : nom, version, âge en jours (WMI). null si illisible.

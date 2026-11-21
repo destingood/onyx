@@ -62,6 +62,7 @@
     <Compile Include="..\src\ConstatsMateriel.cs" />
     <Compile Include="..\src\ProblemesConnus.cs" />
     <Compile Include="..\src\ShadersPrecompiles.cs" />
+    <Compile Include="..\src\ModeXbox.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />
     <Compile Include="..\src\MsiConditionnel.cs" />
     <!-- Mode Efficacité du Mode Jeu : journal, décisions et texte (pur). La machine vit dans ApplisDeFond. -->
