@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.82 — Interface harmonisée, menu et page Jeux revus
+
+- **Interface harmonisée.** Cartes, titres et boutons partagent le même habillage carbone et or
+  sur le tableau de bord, Optimisations, CheckUp, Laboratoire, Stockage, Système, Collection,
+  Consultation, Bons plans et Jeux.
+- **Menu latéral plus simple.** Il s'ouvre au survol, un clic l'épingle ou le referme, Ctrl+B
+  l'ouvre ou le ferme ; la page ne se décale plus quand il s'ouvre.
+- **Page Jeux et fiche d'un jeu réorganisées.** Filtres plus clairs, grille de jaquettes et
+  fiche avec boutons « Lancer le jeu », « Ouvrir le dossier », « Masquer » et « Désinstaller… ».
+
 ## v15.81 — Tous les stores dans Bons plans
 
 - **Tous les stores dans Bons plans.** En plus de Steam : GOG et Nintendo eShop (prix en euros,
