@@ -1354,6 +1354,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_COPILOT_UI") == "1")
+                {
+                    try { CaptureCopilotUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Copilote ERREUR : " + ex); }
+                    Console.WriteLine("UITEST COPILOTE — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_LAB_UI") == "1")
                 {
                     try { CapturePerformanceUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2182,6 +2189,34 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureCopilotUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(6); Pump(500);
+                var page = (PageConsultation)dash.PageAt(6);
+                var sizes = new[] { new System.Drawing.Size(1680, 960), new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
+                foreach (var size in sizes)
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateCopilotUi(); Pump(100);
+                    SaveGamesShot(dash, dir, "copilote-accueil-" + size.Width);
+                }
+                dash.ClientSize = sizes[0]; Pump(100); page.PreviewConversation();
+                foreach (var size in sizes)
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateCopilotUi(); page.PreviewConversationTop(); Pump(100);
+                    SaveGamesShot(dash, dir, "copilote-conversation-" + size.Width);
+                    page.PreviewConversationBottom(); Pump(100);
+                    SaveGamesShot(dash, dir, "copilote-actions-" + size.Width);
+                    Console.WriteLine("  Copilote : accueil, saisie et conversation redimensionnée OK à " + size.Width + "x" + size.Height);
+                }
+                dash.Hide();
+            }
+        }
+
         private static void CapturePerformanceUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);

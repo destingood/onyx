@@ -32,12 +32,18 @@ namespace BTOptimizer
         private string _typingProgress;                   // null = animation de points ; sinon texte affiché
         private Panel _hero;                              // accueil scénarisé (chat vide) — retiré au 1er message
         private FlowLayoutPanel _heroChips;               // suggestions de départ, centrées dans le héros
+        private readonly ContextMenuStrip _topics = new ContextMenuStrip();
+        private readonly Dictionary<Control, Action<int>> _messageLayouts = new Dictionary<Control, Action<int>>();
+        private Label _inputHint, _inputPlaceholder, _contextNote;
+        private Button _openHardware;
+        private bool _reflowing;
+        private static readonly Font MessageFont = FpsUi.F(10.5f, false);
         private Label _status;                            // état vivant du Copilote (prêt / écrit / N causes)
         private int _statusCauses;                        // dernières causes identifiées (pour l'état au repos)
 
-        // Fontes d'incarnation : le nom du Copilote se grave en Marcellus.
-        private static readonly Font HeroTitle = Fonts.Make(Fonts.Marcellus, 21f, FontStyle.Regular, "Georgia");
-        private static readonly Font NameFont = Fonts.Make(Fonts.Marcellus, 8.5f, FontStyle.Regular, "Georgia");
+        // Typographie commune au reste de l'interface ONYX.
+        private static readonly Font HeroTitle = FpsUi.F(23f, true);
+        private static readonly Font NameFont = FpsUi.H3;
 
         public PageConsultation(DashboardForm host) : base(host)
         {
@@ -47,7 +53,8 @@ namespace BTOptimizer
         private void Build()
         {
             _flow = new BufferedFlow { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, BackColor = FpsUi.BgMain };
-            _flow.Padding = new Padding(20, 12, 20, 12);
+            _flow.Name = "copilot-conversation";
+            _flow.Padding = new Padding(0, 12, 0, 16);
             Controls.Add(_flow);
             _wheel = new ScrollWheelFilter(_flow);
             try { Application.AddMessageFilter(_wheel); } catch { }
@@ -55,15 +62,26 @@ namespace BTOptimizer
             BuildHero();
 
             // --- Cockpit : 4 tuiles d'état EN DIRECT (santé / écrans / ping / GPU) ---
-            _statsRow = new Panel { BackColor = Color.Transparent };
+            _statsRow = new BufferedPanel { BackColor = Color.Transparent };
+            _statsRow.Paint += (s, e) =>
+            {
+                OnyxDesign.PaintCard(e.Graphics, _statsRow.ClientRectangle, FpsUi.RailBg, FpsUi.Border, 14);
+                OnyxDesign.Text(e.Graphics, "TON PC", FpsUi.H3, FpsUi.Ink, new Rectangle(18, 19, _statsRow.Width - 70, 24));
+                OnyxDesign.Text(e.Graphics, "Le contexte du diagnostic", FpsUi.Small, FpsUi.Dim, new Rectangle(18, 47, _statsRow.Width - 36, 22));
+            };
             Controls.Add(_statsRow);
-            _vHealth = StatTile("SANTÉ");
-            _vScreen = StatTile("ÉCRANS");
-            _vPing = StatTile("PING");
-            _vGpu = StatTile("GPU");
+            _vHealth = StatTile("SANTÉ DU PC", NavIcons.CheckUp);
+            _vScreen = StatTile("FRÉQUENCE ÉCRAN", NavIcons.Systeme);
+            _vPing = StatTile("LATENCE RÉSEAU", NavIcons.Optimisations);
+            _vGpu = StatTile("TEMPÉRATURE GPU", NavIcons.Jeux);
             _refresh = OnyxDesign.Button("↻");
             _refresh.Click += (s, e) => RefreshTiles();
-            Controls.Add(_refresh);
+            _refresh.AccessibleName = "Actualiser les mesures du PC";
+            _statsRow.Controls.Add(_refresh);
+            _contextNote = FpsUi.Text("Mesures actualisées à l’ouverture. Utilise ↻ pour les rafraîchir.", FpsUi.Small, FpsUi.Dim);
+            _contextNote.AutoSize = false; _statsRow.Controls.Add(_contextNote);
+            _openHardware = OnyxDesign.Button("Voir mon matériel  →");
+            _openHardware.Click += (s, e) => Host.Goto(7); _statsRow.Controls.Add(_openHardware);
 
             // --- État vivant : le Copilote dit ce qu'il fait (prêt / analyse / bilan). ---
             _status = new Label
@@ -75,7 +93,7 @@ namespace BTOptimizer
             SetStatus(StatusKind.Ready);
 
             // --- Barre de saisie « pro » : carte arrondie dont le liseré s'allume au focus. ---
-            _inputBar = new Panel { BackColor = Color.Transparent };
+            _inputBar = new BufferedPanel { Name = "copilot-composer", BackColor = Color.Transparent };
             _inputBar.Paint += (s, e) =>
             {
                 bool focus = _input != null && _input.Focused;
@@ -83,15 +101,31 @@ namespace BTOptimizer
                     focus ? FpsUi.Gold : FpsUi.Border, 12f);
             };
             Controls.Add(_inputBar);
-            _input = new TextBox { BorderStyle = BorderStyle.None, BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, Font = FpsUi.Body };
-            try { _input.PlaceholderText = "Décris ton souci… (les fautes de frappe sont comprises)"; } catch { }
-            _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SendInput(); } };
+            _input = new TextBox { Name = "copilot-input", Multiline = true, AcceptsReturn = true, BorderStyle = BorderStyle.None,
+                BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, Font = MessageFont, ScrollBars = ScrollBars.None };
+            _input.AccessibleName = "Ton message au Copilote";
+            try { _input.PlaceholderText = "Décris ce qui te gêne ou pose ta question…"; } catch { }
+            _input.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; SendInput(); } };
             _input.GotFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
             _input.LostFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
             _inputBar.Controls.Add(_input);
-            _send = OnyxDesign.AccentButton("→");
+            _inputPlaceholder = FpsUi.Text("Décris ce qui te gêne ou pose ta question…", MessageFont, FpsUi.Dim);
+            _inputPlaceholder.AutoSize = false; _inputPlaceholder.BackColor = FpsUi.Card;
+            _inputPlaceholder.Click += (s, e) => _input.Focus();
+            _inputBar.Controls.Add(_inputPlaceholder);
+            _inputPlaceholder.Cursor = Cursors.IBeam;
+            _inputPlaceholder.BringToFront();
+            _send = OnyxDesign.PrimaryButton("Envoyer  ↑");
+            _send.Name = "copilot-send"; _send.Enabled = false;
+            _input.TextChanged += (s, e) =>
+            {
+                _send.Enabled = !string.IsNullOrWhiteSpace(_input.Text);
+                _inputPlaceholder.Visible = _input.Text.Length == 0;
+            };
             _send.Click += (s, e) => SendInput();
             _inputBar.Controls.Add(_send);
+            _inputHint = FpsUi.Text("Entrée : envoyer · Maj+Entrée : nouvelle ligne", FpsUi.Tiny, FpsUi.Dim2);
+            _inputHint.AutoSize = false; _inputBar.Controls.Add(_inputHint);
 
             // --- Raccourcis PERMANENTS (pas seulement dans le message d'accueil) ---
             _quick = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, BackColor = Color.Transparent };
@@ -104,8 +138,24 @@ namespace BTOptimizer
                 ("Prépare ma partie", "prépare ma partie"),
                 ("Pourquoi ?", "pourquoi"),
             };
-            foreach (var qd in qs) { var c = Chip(qd.Item1); string txt = qd.Item2; c.Click += (s, e) => Send(txt); _quick.Controls.Add(c); }
-            Controls.Add(_quick);
+            foreach (int index in new[] { 0, 4, 5 })
+            {
+                var qd = qs[index]; var chip = Chip(qd.Item1); string text = qd.Item2;
+                chip.Click += (s, e) => Send(text); _quick.Controls.Add(chip);
+            }
+            _topics.BackColor = FpsUi.Card; _topics.ForeColor = FpsUi.Ink; _topics.Font = FpsUi.Body;
+            var quickMenu = new ToolStripMenuItem("Actions rapides");
+            foreach (var qd in qs) { string text = qd.Item2; quickMenu.DropDownItems.Add(qd.Item1, null, (s, e) => Send(text)); }
+            _topics.Items.Add(quickMenu);
+            foreach (var group in StarterGroups)
+            {
+                var menu = new ToolStripMenuItem(group.Title);
+                foreach (var starter in group.Items) { string text = starter.Item2; menu.DropDownItems.Add(starter.Item1, null, (s, e) => Send(text)); }
+                _topics.Items.Add(menu);
+            }
+            var more = Chip("Tous les sujets  ⌄"); more.Name = "copilot-topics";
+            more.Click += (s, e) => _topics.Show(more, new Point(0, more.Height));
+            _quick.Controls.Add(more); Controls.Add(_quick);
 
             Resize += (s, e) => DoLayout();
         }
@@ -127,8 +177,8 @@ namespace BTOptimizer
                     case StatusKind.Findings:
                         _status.ForeColor = _statusCauses > 0 ? FpsUi.Warn : FpsUi.Ok;
                         _status.Text = _statusCauses > 0
-                            ? "●  " + _statusCauses + " cause(s) identifiée(s)"
-                            : "●  rien à signaler";
+                            ? "●  " + _statusCauses + (_statusCauses == 1 ? " cause identifiée" : " causes identifiées")
+                            : "●  réponse prête";
                         break;
                     default:
                         _status.ForeColor = FpsUi.Dim; _status.Text = "●  prêt"; break;
@@ -142,94 +192,67 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private void BuildHero()
         {
-            _hero = new BufferedPanel { BackColor = FpsUi.BgMain };
-            _hero.Paint += OnPaintHero;
-            Controls.Add(_hero);
-
-            _heroChips = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
-                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent
-            };
-            // Rendu TRIÉ : un en-tête doré par famille, chaque famille sur ses propres lignes.
-            foreach (var grp in StarterGroups)
-            {
-                var head = new Label
-                {
-                    Text = grp.Title, AutoSize = true, Font = FpsUi.Small,
-                    ForeColor = FpsUi.Gold, BackColor = Color.Transparent,
-                    Margin = new Padding(0, 8, 0, 4)
-                };
-                _heroChips.Controls.Add(head);
-                _heroChips.SetFlowBreak(head, true);            // les pastilles commencent sous l'en-tête
-                Control last = null;
-                foreach (var st in grp.Items)
-                {
-                    var c = Chip(st.Item1); string sendText = st.Item2;
-                    c.Click += (s, e) => Send(sendText);
-                    _heroChips.Controls.Add(c);
-                    last = c;
-                }
-                if (last != null) _heroChips.SetFlowBreak(last, true);   // le groupe suivant repart à la ligne
-            }
+            _hero = new BufferedPanel { Name = "copilot-welcome", BackColor = FpsUi.BgMain };
+            _hero.Paint += OnPaintHero; Controls.Add(_hero);
+            _heroChips = new FlowLayoutPanel { WrapContents = true, BackColor = Color.Transparent };
             _hero.Controls.Add(_heroChips);
+            AddStarter(NavIcons.Jeux, "Retrouver de la fluidité", "FPS bas, saccades, latence en jeu", "ça rame et ça saccade en jeu");
+            AddStarter(NavIcons.Systeme, "Comprendre mon PC", "CPU, GPU et ralentissements", "c'est mon cpu ou mon gpu qui me limite ?");
+            AddStarter(NavIcons.Optimisations, "Résoudre le lag", "Ping élevé et connexion instable", "ça lag en ligne, ping élevé");
+            AddStarter(NavIcons.Stockage, "Faire de la place", "Disques, caches et applications", "libérer de l'espace disque");
         }
-
+        private void AddStarter(int icon, string title, string subtitle, string query)
+        {
+            var card = new StarterCard(icon, title, subtitle);
+            card.Click += (s, e) => Send(query); _heroChips.Controls.Add(card);
+        }
         private void OnPaintHero(object sender, PaintEventArgs e)
         {
-            var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            int w = _hero.ClientSize.Width;
-            int top = HeroTop();
-
-            // Halo d'or très doux derrière l'anneau : l'écrin, pas un projecteur.
-            int ring = 64, cx = w / 2, cy = top + HeroRingCy;
-            var halo = new Rectangle(cx - 110, cy - 110, 220, 220);
-            using (var path = new GraphicsPath())
-            {
-                path.AddEllipse(halo);
-                using (var pgb = new PathGradientBrush(path))
-                {
-                    pgb.CenterColor = FpsUi.Accent(26);
-                    pgb.SurroundColors = new[] { Color.FromArgb(0, FpsUi.Gold) };
-                    g.FillEllipse(pgb, halo);
-                }
-            }
-            Logo.Draw(g, new RectangleF(cx - ring / 2f, cy - ring / 2f, ring, ring), FpsUi.Gold, false);
-
-            // « Le Copilote » gravé, puis sa promesse en une ligne.
-            float tw = FpsUi.MeasureTracked(g, "LE COPILOTE", HeroTitle, 3f);
-            FpsUi.DrawTracked(g, "LE COPILOTE", HeroTitle, FpsUi.Ink, cx - tw / 2f, cy + 68, 3f);
-            const string tag = "Il mesure en direct, explique son diagnostic et corrige — toujours avec ton accord.";
-            Size tsz = TextRenderer.MeasureText(g, tag, FpsUi.Body);
-            TextRenderer.DrawText(g, tag, FpsUi.Body, new Point(cx - tsz.Width / 2, cy + 92), FpsUi.Dim, TextFormatFlags.NoPrefix);
-
-            // L'invitation, sous les suggestions.
-            const string hint = "…ou décris ton souci dans la barre en bas — les fautes de frappe sont comprises.";
-            Size hsz = TextRenderer.MeasureText(g, hint, FpsUi.Small);
-            int hy = _heroChips != null ? _heroChips.Bottom + 18 : cy + 130;
-            TextRenderer.DrawText(g, hint, FpsUi.Small, new Point(cx - hsz.Width / 2, hy), FpsUi.Dim2, TextFormatFlags.NoPrefix);
+            var g = e.Graphics; int w = _hero.Width;
+            OnyxDesign.PaintCard(g, _hero.ClientRectangle, Color.FromArgb(23, 22, 19), OnyxDesign.Edge, 14);
+            Logo.Draw(g, new RectangleF(24, 24, 42, 42), FpsUi.Gold, false);
+            OnyxDesign.Text(g, "ASSISTANT ONYX", FpsUi.Small, FpsUi.Gold, new Rectangle(80, 26, w - 104, 21));
+            OnyxDesign.Text(g, "Mesures · explications · actions", FpsUi.Small, FpsUi.Dim, new Rectangle(80, 49, w - 104, 20));
+            OnyxDesign.Text(g, "Qu’est-ce qui te ralentit ?", HeroTitle, FpsUi.Ink, new Rectangle(23, 88, w - 46, 42));
+            OnyxDesign.Text(g, "Décris ton problème. Je t’aide à le comprendre et à choisir la suite.",
+                MessageFont, FpsUi.Dim, new Rectangle(24, 137, w - 48, 42), true);
         }
-
-        // Verticales du héros : anneau (centre), nom, accroche, puis suggestions et invitation.
-        private const int HeroRingCy = 46, HeroChipsY = 176;
-
-        /// <summary>Y du bloc central du héros (l'ensemble respire, légèrement au-dessus du milieu).</summary>
-        private int HeroTop()
-        {
-            int contentH = HeroChipsY + (_heroChips != null ? _heroChips.PreferredSize.Height : 60) + 52;
-            return Math.Max(8, (_hero.ClientSize.Height - contentH) / 2);
-        }
-
         private void LayoutHero()
         {
             if (_hero == null || _heroChips == null) return;
-            int w = _hero.ClientSize.Width;
-            int chipsW = Math.Min(660, Math.Max(240, w - 120));
-            _heroChips.MaximumSize = new Size(chipsW, 0);
-            _heroChips.Location = new Point((w - _heroChips.PreferredSize.Width) / 2, HeroTop() + HeroChipsY);
+            _heroChips.SetBounds(24, 190, _hero.Width - 48, 200);
+            int width = (_heroChips.Width - 12) / 2;
+            int index = 0;
+            foreach (Control card in _heroChips.Controls)
+            {
+                card.Size = new Size(width, 88);
+                card.Margin = new Padding(0, 0, ++index % 2 == 0 ? 0 : 12, 12);
+            }
             _hero.Invalidate();
+        }
+
+        private sealed class StarterCard : Button
+        {
+            private readonly int _icon;
+            private readonly string _subtitle;
+            private bool _hot;
+            public StarterCard(int icon, string title, string subtitle)
+            {
+                _icon = icon; Text = title; _subtitle = subtitle; AccessibleName = title; AccessibleDescription = subtitle;
+                BackColor = FpsUi.Card; Cursor = Cursors.Hand; FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+                MouseEnter += (s, e) => { _hot = true; Invalidate(); }; MouseLeave += (s, e) => { _hot = false; Invalidate(); };
+                GotFocus += (s, e) => Invalidate(); LostFocus += (s, e) => Invalidate();
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics; g.Clear(Color.FromArgb(23, 22, 19));
+                bool active = _hot || (Focused && ShowFocusCues);
+                OnyxDesign.PaintCard(g, ClientRectangle, active ? FpsUi.CardHi : FpsUi.Card, active ? FpsUi.GoldDim : FpsUi.Border, 10);
+                NavIcons.Draw(g, _icon, new RectangleF(15, 17, 23, 23), FpsUi.Gold);
+                OnyxDesign.Text(g, Text, FpsUi.H3, FpsUi.Ink, new Rectangle(48, 17, Width - 62, 23));
+                OnyxDesign.Text(g, _subtitle, FpsUi.Small, FpsUi.Dim, new Rectangle(15, 53, Width - 30, 23));
+            }
         }
 
         /// <summary>Premier message (envoi, conseil proactif ou capture) : l'accueil s'efface.</summary>
@@ -242,14 +265,20 @@ namespace BTOptimizer
         }
 
         /// <summary>Tuile du cockpit : légende + valeur colorée (— tant que la mesure n'est pas là).</summary>
-        private Label StatTile(string title)
+        private Label StatTile(string title, int icon)
         {
-            var tile = FpsUi.CardPanel(10f);
-            var cap = FpsUi.Text(title, FpsUi.Tiny, FpsUi.Dim2); cap.Location = new Point(12, 6);
-            var val = FpsUi.Text("—", FpsUi.F(12.5f, true), FpsUi.Dim); val.Location = new Point(12, 19);
-            tile.Controls.Add(cap); tile.Controls.Add(val);
-            _statsRow.Controls.Add(tile);
-            return val;
+            var tile = new BufferedPanel { BackColor = Color.Transparent, Tag = "stat" };
+            tile.Paint += (s, e) =>
+            {
+                OnyxDesign.PaintCard(e.Graphics, tile.ClientRectangle, FpsUi.Card, FpsUi.Border, 10);
+                NavIcons.Draw(e.Graphics, icon, new RectangleF(tile.Width - 39, 26, 22, 22), FpsUi.GoldDim);
+            };
+            var cap = FpsUi.Text(title, FpsUi.Tiny, FpsUi.Dim);
+            cap.SetBounds(14, 12, 160, 18); cap.AutoSize = false;
+            var value = FpsUi.Text("—", FpsUi.F(18, true), FpsUi.Dim);
+            value.AutoSize = false; value.SetBounds(12, 31, 160, 32);
+            tile.Controls.Add(cap); tile.Controls.Add(value); _statsRow.Controls.Add(tile);
+            return value;
         }
 
         /// <summary>Met à jour une tuile ; si l'ancienne et la nouvelle valeur commencent par un
@@ -696,20 +725,23 @@ namespace BTOptimizer
             string body = doc && reply != null ? reply.Text : text;
             int flowW = _flow.ClientSize.Width;
             int colW = Math.Min(ColumnW, flowW - 12);
-            int maxTextW = Math.Min(620, Math.Max(220, colW - AV - GAP - 90));
+            int maxTextW = MessageWidth();
 
             // Bulle auto-dimensionnée : Copilote carbone / Toi bronze, coins arrondis asymétriques
             // (le coin proche de l'émetteur est serré : la bulle « pointe » vers qui parle).
             Color bg = doc ? BubbleDoc : BubbleUser;
             Color bord = doc ? FpsUi.Border : Color.FromArgb(120, FpsUi.GoldDim);
-            var bubble = new Panel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(16, 12, 18, 14), Margin = new Padding(0) };
+            var bubble = new BufferedPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = bg, Padding = new Padding(16, 12, 18, 14), Margin = new Padding(0) };
             bubble.SizeChanged += (s, e) =>
             {
                 try
                 {
                     using (var p = doc ? RoundAsym(bubble.ClientRectangle, 5, 14, 14, 14)
                                        : RoundAsym(bubble.ClientRectangle, 14, 5, 14, 14))
-                        bubble.Region = new Region(p);
+                    {
+                        var oldRegion = bubble.Region; bubble.Region = new Region(p);
+                        if (oldRegion != null) oldRegion.Dispose();
+                    }
                 }
                 catch { }
             };
@@ -725,7 +757,7 @@ namespace BTOptimizer
                 catch { }
             };
 
-            var col = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
+            var col = new FlowLayoutPanel { Location = new Point(16, 12), AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Color.Transparent, Margin = new Padding(0) };
             // En-tête : qui parle + l'heure (repère utile quand la conversation s'allonge).
             // Le nom du Copilote se grave en Marcellus or — c'est sa signature.
             col.Controls.Add(new Label
@@ -736,9 +768,9 @@ namespace BTOptimizer
                 // ont 3 px par défaut) : sans ça l'en-tête débordait de 3 px vers la gauche
                 // et la première lettre passait sous l'arrondi de la bulle.
                 BackColor = Color.Transparent, Margin = new Padding(3, 0, 3, 5),
-                Text = (doc ? "LE COPILOTE" : "TOI") + "   " + DateTime.Now.ToString("HH:mm")
+                Text = (doc ? "Copilote" : "Toi") + "   " + DateTime.Now.ToString("HH:mm")
             });
-            var bodyLbl = new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = FpsUi.Body, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" };
+            var bodyLbl = new Label { AutoSize = true, MaximumSize = new Size(maxTextW, 0), Font = MessageFont, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = body ?? "" };
             col.Controls.Add(bodyLbl);
 
             // Enfants « riches » (cartes, boutons, pied) : mémorisés pour n'apparaître qu'à la fin
@@ -818,6 +850,15 @@ namespace BTOptimizer
                 });
                 bubble.ContextMenuStrip = cms; col.ContextMenuStrip = cms;
                 foreach (Control cc in col.Controls) if (cc is Label) cc.ContextMenuStrip = cms;
+                bubble.Disposed += (s, e) => cms.Dispose();
+                if (doc)
+                {
+                    var copy = OnyxDesign.Button("Copier la réponse");
+                    copy.Name = "copilot-copy"; copy.Tag = "compact";
+                    copy.Size = new Size(150, 28); copy.Margin = new Padding(0, 12, 0, 0);
+                    copy.Click += (s, e) => ((ToolStripMenuItem)cms.Items[0]).PerformClick();
+                    col.Controls.Add(copy); lateKids.Add(copy);
+                }
             }
             bubble.Controls.Add(col);
 
@@ -838,10 +879,21 @@ namespace BTOptimizer
                 if (row.Width != rw || row.Height != rh)
                 {
                     row.Size = new Size(rw, rh);
-                    row.Margin = new Padding(doc ? ColLeft() : Math.Max(6, flowW - rw - ColLeft() - 22), 7, 10, 7);
+                    row.Margin = new Padding(doc ? ColLeft() : Math.Max(6, _flow.ClientSize.Width - rw - ColLeft() - 22), 7, 10, 7);
                 }
             };
             bubble.SizeChanged += (s, e) => { try { sync(); } catch { } };
+            _messageLayouts[row] = width =>
+            {
+                col.SuspendLayout();
+                foreach (Control child in col.Controls)
+                {
+                    if (child is Label || child is FlowLayoutPanel) child.MaximumSize = new Size(width, 0);
+                    else if (child is Button) child.Width = Math.Min(width, (string)child.Tag == "compact" ? 150 : 380);
+                    else if ((string)child.Tag == "cause") child.Width = Math.Min(width, 560);
+                }
+                col.ResumeLayout(true); bubble.PerformLayout(); sync();
+            };
             sync();
             _flow.Controls.Add(row);
             try { _flow.ScrollControlIntoView(row); } catch { }
@@ -857,6 +909,7 @@ namespace BTOptimizer
                 bodyLbl.Text = "";
                 var writer = new Timer { Interval = 16 };
                 int idx = 0, tick = 0;
+                bubble.Disposed += (s, e) => { try { writer.Stop(); writer.Dispose(); } catch { } };
                 Action finish = delegate
                 {
                     try { writer.Stop(); writer.Dispose(); } catch { }
@@ -928,46 +981,49 @@ namespace BTOptimizer
         /// orange ≥ 65, jaune sinon), texte, et bouton de correction intégré quand il y en a une.</summary>
         private Control MakeCard(DocAssistant.Card cd, int maxW)
         {
-            Color acc = cd.Impact >= 85 ? FpsUi.Err : cd.Impact >= 65 ? Color.FromArgb(255, 152, 64) : FpsUi.Warn;
+            Color accent = cd.Impact >= 85 ? FpsUi.Err : cd.Impact >= 65 ? Color.FromArgb(255, 152, 64) : FpsUi.Warn;
             string level = cd.Impact >= 85 ? "CRITIQUE" : cd.Impact >= 65 ? "ÉLEVÉ" : "MOYEN";
-            var pnl = new Panel { Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
-            pnl.Paint += (s, e) =>
+            var panel = new BufferedPanel { Tag = "cause", Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 12, 0, 0) };
+            panel.Paint += (s, e) =>
             {
-                OnyxDesign.PaintCard(e.Graphics, pnl.ClientRectangle, FpsUi.CardHi, FpsUi.Border, 10f);
-                using (var br = new SolidBrush(acc)) e.Graphics.FillRectangle(br, 1, 10, 3, pnl.Height - 20);
+                OnyxDesign.PaintCard(e.Graphics, panel.ClientRectangle, FpsUi.CardHi, FpsUi.Border, 10);
+                using (var brush = new SolidBrush(accent)) e.Graphics.FillRectangle(brush, 1, 12, 3, panel.Height - 24);
             };
-            var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, acc);
-            pill.Location = new Point(14, 8);
-            var body = new Label
-            {
-                AutoSize = true, MaximumSize = new Size(pnl.Width - 28, 0), Font = FpsUi.Body,
-                ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Location = new Point(14, 25), Text = cd.Text ?? ""
-            };
-            pnl.Controls.Add(pill); pnl.Controls.Add(body);
-            int y = 25 + body.PreferredSize.Height;
+            var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, accent);
+            pill.AutoSize = false; panel.Controls.Add(pill);
+            var body = new Label { AutoSize = true, Font = MessageFont, ForeColor = FpsUi.Ink, BackColor = Color.Transparent, Text = cd.Text ?? "" };
+            panel.Controls.Add(body);
+            Button action = null; Label warning = null;
             if (cd.Fix != null)
             {
-                var act = cd.Fix;
-                var go = OnyxDesign.AccentButton("▶  " + act.Label);
-                go.AutoSize = false; go.Size = new Size(Math.Min(pnl.Width - 28, 320), 30);
-                go.Location = new Point(14, y + 8);
-                go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
-                pnl.Controls.Add(go);
-                y = go.Location.Y + go.Height;
-                if (!string.IsNullOrEmpty(act.Warning))
+                var fix = cd.Fix;
+                action = OnyxDesign.AccentButton(fix.Label + "  →");
+                action.Click += (s, e) => { action.Enabled = false; action.Text = "En cours…"; RunAction(fix, action); };
+                panel.Controls.Add(action);
+                if (!string.IsNullOrEmpty(fix.Warning))
                 {
-                    var warn = new Label
-                    {
-                        AutoSize = true, MaximumSize = new Size(pnl.Width - 28, 0), Font = FpsUi.Tiny,
-                        ForeColor = FpsUi.Dim2, BackColor = Color.Transparent,
-                        Location = new Point(14, y + 4), Text = act.Warning
-                    };
-                    pnl.Controls.Add(warn);
-                    y = warn.Location.Y + warn.PreferredSize.Height;
+                    warning = new Label { AutoSize = true, Font = FpsUi.Small, ForeColor = FpsUi.Dim, BackColor = Color.Transparent, Text = fix.Warning };
+                    panel.Controls.Add(warning);
                 }
             }
-            pnl.Height = y + 12;
-            return pnl;
+            bool arranging = false;
+            Action layout = () =>
+            {
+                if (arranging) return; arranging = true;
+                try
+                {
+                    int width = Math.Max(160, panel.Width - 32);
+                    pill.SetBounds(16, 12, width, 18);
+                    body.Location = new Point(16, 38); body.MaximumSize = new Size(width, 0);
+                    int y = 38 + body.PreferredSize.Height;
+                    if (action != null) { action.SetBounds(16, y + 14, width, 36); y = action.Bottom; }
+                    if (warning != null) { warning.Location = new Point(16, y + 8); warning.MaximumSize = new Size(width, 0); y = warning.Top + warning.PreferredSize.Height; }
+                    panel.Height = y + 16;
+                }
+                finally { arranging = false; }
+            };
+            panel.SizeChanged += (s, e) => layout(); layout();
+            return panel;
         }
 
         /// <summary>Le diagnostic complet mis en page pour un .txt : en-tête daté, causes avec
@@ -995,72 +1051,114 @@ namespace BTOptimizer
 
         // Ré-aligne la colonne quand la largeur change (Copilote à gauche de la colonne,
         // Toi à droite de la colonne — la colonne elle-même reste centrée).
+        private int MessageWidth()
+        {
+            return Math.Min(620, Math.Max(220, _flow.ClientSize.Width - AV - GAP - 64));
+        }
         private void RealignUserRows()
         {
-            if (_flow == null) return;
-            int flowW = _flow.ClientSize.Width, left = ColLeft();
-            foreach (Control c in _flow.Controls)
+            if (_flow == null || _reflowing) return;
+            _reflowing = true;
+            _flow.SuspendLayout();
+            try
             {
-                string tag = c.Tag as string;
-                var m = c.Margin;
-                if (tag == "user") m.Left = Math.Max(6, flowW - c.Width - left - 22);
-                else m.Left = left;
-                c.Margin = m;
+                int flowW = _flow.ClientSize.Width, left = ColLeft(), width = MessageWidth();
+                foreach (Control row in _flow.Controls)
+                {
+                    Action<int> layout;
+                    if (_messageLayouts.TryGetValue(row, out layout)) layout(width);
+                    var margin = row.Margin;
+                    margin.Left = (string)row.Tag == "user" ? Math.Max(6, flowW - row.Width - left - 22) : left;
+                    row.Margin = margin;
+                }
             }
+            finally { _flow.ResumeLayout(true); _reflowing = false; }
         }
 
         private static Button Chip(string text)
         {
-            var b = new Button
-            {
-                Text = text, AutoSize = false, Height = 28,
-                Width = TextRenderer.MeasureText(text, FpsUi.Small).Width + 24,
-                FlatStyle = FlatStyle.Flat, Font = FpsUi.Small, Cursor = Cursors.Hand,
-                BackColor = FpsUi.Card, ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
-            };
-            b.FlatAppearance.BorderColor = FpsUi.Border;
-            b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Gold; b.FlatAppearance.BorderColor = FpsUi.Gold; };
-            b.MouseLeave += (s, e) => { b.ForeColor = FpsUi.Dim; b.FlatAppearance.BorderColor = FpsUi.Border; };
-            return b;
+            var button = OnyxDesign.Button(text);
+            button.Size = new Size(TextRenderer.MeasureText(text, FpsUi.Small).Width + 24, 30);
+            button.Margin = new Padding(0, 0, 8, 6);
+            return button;
         }
 
         private void DoLayout()
         {
-            if (_flow == null) return;
-            int W = ClientSize.Width, H = ClientSize.Height, m = 34;
-
-            // État vivant à droite de la ligne de titre.
-            if (_status != null) _status.SetBounds(W - m - 260, 30, 260, 18);
-
-            // Cockpit sous le sous-titre (le titre peint finit vers y ≈ 80) + ↻ à droite.
-            if (_statsRow != null)
-            {
-                _statsRow.SetBounds(m, 88, Math.Max(220, W - 2 * m - 38), 46);
-                int n = _statsRow.Controls.Count;
-                if (n > 0)
-                {
-                    int gap = 8, tw = (_statsRow.Width - (n - 1) * gap) / n, x = 0;
-                    foreach (Control t in _statsRow.Controls) { t.SetBounds(x, 0, tw, 46); x += tw + gap; }
-                }
-                if (_refresh != null) _refresh.SetBounds(W - m - 30, 96, 30, 30);
-            }
-
-            // Pile du bas : raccourcis permanents, puis barre de saisie.
-            int inputH = 46, quickH = 30, pad = 16;
-            int barY = H - pad - inputH;
-            if (_inputBar != null)
-            {
-                _inputBar.SetBounds(m, barY, Math.Max(220, W - 2 * m), inputH);
-                if (_send != null) _send.SetBounds(_inputBar.Width - 44, 7, 36, 32);
-                if (_input != null) _input.SetBounds(16, 14, Math.Max(80, _inputBar.Width - 16 - 46 - 12), 20);
-            }
-            int quickY = barY - 6 - quickH;
-            if (_quick != null) _quick.SetBounds(m - 4, quickY, Math.Max(220, W - 2 * (m - 4)), quickH);
-
-            _flow.SetBounds(20, 142, W - 40, Math.Max(120, quickY - 10 - 142));
-            if (_hero != null) { _hero.SetBounds(20, 142, W - 40, Math.Max(120, quickY - 10 - 142)); LayoutHero(); }
+            if (_flow == null || _statsRow == null) return;
+            int width = ClientSize.Width, height = ClientSize.Height, side = width >= 1200 ? 244 : 220;
+            int main = width - 68 - side - 18;
+            _status.SetBounds(width - 34 - side, 28, side, 24);
+            _statsRow.SetBounds(34 + main + 18, 96, side, Math.Max(480, height - 114));
+            int y = 80;
+            foreach (Control tile in _statsRow.Controls)
+                if ((string)tile.Tag == "stat") { tile.SetBounds(14, y, side - 28, 74); y += 86; }
+            _refresh.SetBounds(side - 48, 14, 32, 32);
+            _contextNote.SetBounds(18, 430, side - 36, 54);
+            _openHardware.SetBounds(14, _statsRow.Height - 48, side - 28, 34);
+            int inputY = height - 122;
+            _inputBar.SetBounds(34, inputY, main, 104);
+            _input.SetBounds(16, 14, main - 32, 37);
+            _inputPlaceholder.SetBounds(16, 14, main - 32, 37);
+            _send.SetBounds(main - 122, 60, 106, 32);
+            _inputHint.SetBounds(16, 71, main - 154, 20);
+            _quick.SetBounds(34, inputY - 40, main, 34);
+            _flow.SetBounds(34, 96, main, Math.Max(120, inputY - 148));
+            if (_hero != null) { _hero.SetBounds(34, 96, main, Math.Max(398, _flow.Height)); LayoutHero(); }
             RealignUserRows();
         }
+
+#if BTTEST
+        private bool _previewActionRan;
+        internal void PreviewConversation()
+        {
+            AddBubble(false, "Comment savoir si le problème vient du CPU ou du GPU ?", null);
+            var reply = new DocAssistant.Reply
+            {
+                Text = "Commence par observer l’utilisation du CPU et du GPU pendant la même scène de jeu. Compare ensuite les FPS et les temps de rendu avant et après un seul changement.\n\nLes mesures du PC donnent du contexte : elles ne remplacent pas un test dans le jeu concerné.",
+                Footer = "Aperçu de conversation pour vérifier la mise en page. Aucun réglage n’est appliqué.",
+                Cards = new List<DocAssistant.Card>
+                {
+                    new DocAssistant.Card
+                    {
+                        Impact = 70,
+                        Text = "Exemple de carte de diagnostic avec une explication longue : le texte, le bouton et la description de l’action doivent rester lisibles lorsque la fenêtre devient plus étroite.",
+                        Fix = new DocAssistant.ChatAction
+                        {
+                            Label = "Vérifier les réglages proposés pour ce diagnostic",
+                            Warning = "Action fictive du test d’interface, sans modification du système.",
+                            IsChange = true,
+                            Run = log => { _previewActionRan = true; return null; }
+                        }
+                    }
+                }
+            };
+            AddBubble(true, reply.Text, reply);
+            RealignUserRows();
+        }
+        internal void PreviewConversationTop() { _flow.AutoScrollPosition = Point.Empty; }
+        internal void PreviewConversationBottom() { _flow.AutoScrollPosition = new Point(0, 100000); }
+        internal void ValidateCopilotUi()
+        {
+            DoLayout();
+            int messages = _flow.Controls.Count;
+            _input.Text = "   "; SendInput();
+            if (_flow.Controls.Count != messages || _send.Enabled) throw new InvalidOperationException("Envoi vide autorisé.");
+            _input.Text = "Première ligne\r\nDeuxième ligne";
+            if (!_send.Enabled || !_input.Multiline || _input.Lines.Length != 2) throw new InvalidOperationException("Saisie multiligne incorrecte.");
+            _input.Clear();
+            if (!_inputPlaceholder.Visible || _inputBar.GetChildAtPoint(new Point(20, 20)) != _inputPlaceholder)
+                throw new InvalidOperationException("Invitation de saisie masquée.");
+            if (_inputBar.Right >= _statsRow.Left || _inputBar.Bottom > Height || _quick.Bottom > _inputBar.Top)
+                throw new InvalidOperationException("Zones du Copilote superposées.");
+            if (_hero != null && (_hero.Bottom > _quick.Top || _heroChips.Bottom > _hero.Height))
+                throw new InvalidOperationException("Accueil du Copilote rogné.");
+            foreach (Control row in _flow.Controls)
+                if (row.Width + row.Margin.Horizontal > _flow.ClientSize.Width)
+                    throw new InvalidOperationException("Message trop large : " + row.Width + " / " + _flow.ClientSize.Width);
+            if (_previewActionRan) throw new InvalidOperationException("Une action a été exécutée sans clic.");
+        }
+#endif
 
         /// <summary>Rectangle arrondi à coins INDÉPENDANTS (tl/tr/br/bl) : le coin serré fait
         /// « pointer » la bulle vers son émetteur.</summary>
@@ -1079,14 +1177,14 @@ namespace BTOptimizer
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { try { HideTyping(); } catch { } if (_wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; } }
+            if (disposing) { _topics.Dispose(); _messageLayouts.Clear(); try { HideTyping(); } catch { } if (_wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; } }
             base.Dispose(disposing);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintPremiumTitle(e.Graphics, "COPILOTE", "Cockpit local : il mesure en direct, explique son diagnostic et corrige gratuitement — toujours avec ton accord.");
+            PaintPremiumTitle(e.Graphics, "COPILOTE", "Comprendre ton PC. Trouver la bonne action.");
         }
     }
 }
