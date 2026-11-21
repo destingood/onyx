@@ -35,6 +35,10 @@ namespace BTOptimizer.Tests
         public static void Tout()
         {
             Banc.Titre("Bons plans : sources Steam, Epic, GamerPower");
+            // Portail captif ou page d'erreur en HTML répondus en 200 : ni lus ni mis en cache.
+            Banc.Verifie("réponse plausible : JSON et XML acceptés", true, OffresSources.ReponsePlausible("{\"a\":1}") && OffresSources.ReponsePlausible(" \r\n[1]") && OffresSources.ReponsePlausible("﻿<?xml version=\"1.0\"?><rss/>") && OffresSources.ReponsePlausible("<rss version=\"2.0\"></rss>") && OffresSources.ReponsePlausible("<!-- flux --><feed/>"));
+            Banc.Verifie("réponse plausible : page HTML refusée", true, !OffresSources.ReponsePlausible("<!DOCTYPE html><html><body>Connexion Wi-Fi</body></html>") && !OffresSources.ReponsePlausible("  <HTML><head>") && !OffresSources.ReponsePlausible("<head><title>x</title>"));
+            Banc.Verifie("réponse plausible : vide ou texte brut refusé", true, !OffresSources.ReponsePlausible("") && !OffresSources.ReponsePlausible(null) && !OffresSources.ReponsePlausible("Connectez-vous pour continuer"));
             DateTime t = new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc);
 
             string u = OffresSources.UrlRechercheSteam("elden ring", 19, 1000, true, false, 50);

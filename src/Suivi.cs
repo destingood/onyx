@@ -96,7 +96,7 @@ namespace BTOptimizer
                 int id, remise;
                 if (c.Length < 4 || !int.TryParse(c[0], NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0) continue;
                 if (!vus.Add(id)) continue;
-                if (!int.TryParse(c[1], NumberStyles.None, CultureInfo.InvariantCulture, out remise) || remise > 100) remise = 0;
+                if (!int.TryParse(c[1], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out remise) || remise > 100 || remise < AAmorcer) remise = 0;
                 res.Add(new JeuSuivi { AppId = id, RemiseNotifiee = remise, GratuitNotifie = c[2], Nom = c[3] });
             }
             return res;
@@ -115,6 +115,17 @@ namespace BTOptimizer
                   .Append(Favoris.Champ(j.Nom)).Append('\n');
             }
             return sb.ToString();
+        }
+
+        /// <summary>Remise pas encore connue (jeu ajouté depuis la bibliothèque) : le premier contrôle l'amorce sans alerte.</summary>
+        public const int AAmorcer = -1;
+
+        /// <summary>Jeu Steam installé, remise inconnue : suivi « à amorcer » pour qu'une promo déjà en cours ne notifie pas.</summary>
+        public static bool AjouteInstalle(List<JeuSuivi> jeux, int appId, string nom)
+        {
+            if (!Ajoute(jeux, new Offre { Source = "steam", SteamAppId = appId, Nom = nom })) return false;
+            jeux[jeux.Count - 1].RemiseNotifiee = AAmorcer;
+            return true;
         }
 
         /// <summary>Faux si déjà suivi, hors Steam ou si Max est atteint. Une promo en cours ne déclenche pas d'alerte immédiate.</summary>
@@ -142,7 +153,8 @@ namespace BTOptimizer
                 if (f != null)
                 {
                     if (!string.IsNullOrWhiteSpace(f.Nom)) j.Nom = Favoris.Champ(f.Nom).Trim();
-                    if (f.Remise > 0 && f.PrixCts >= 0 && f.Remise > j.RemiseNotifiee)
+                    if (j.RemiseNotifiee == AAmorcer) j.RemiseNotifiee = Math.Max(0, f.Remise);   // premier contrôle : aucune alerte
+                    else if (f.Remise > 0 && f.PrixCts >= 0 && f.Remise > j.RemiseNotifiee)
                     {
                         res.Add(new Alerte
                         {

@@ -42,6 +42,14 @@ namespace BTOptimizer.Tests
             var relus = Suivi.Lire(Suivi.Ecrire(jeux));
             Banc.Verifie("suivis : aller-retour", true, relus.Count == 1 && relus[0].AppId == 2909400 && relus[0].RemiseNotifiee == 75 && relus[0].Nom == "FINAL FANTASY VII REBIRTH");
             Banc.Verifie("redémarrage : pas de doublon", true, Suivi.Decide(relus, new List<Offre> { fiche(75) }, aucune).Count == 0);
+            // Jeux installés : remise inconnue à l'ajout, amorcée sans alerte au premier contrôle.
+            var inst = new List<JeuSuivi>();
+            Func<int, Offre> cs = r => new Offre { Source = "steam", Id = "730", SteamAppId = 730, Nom = "Counter-Strike 2", Url = "https://store.steampowered.com/app/730/", PrixCts = 1000 * (100 - r) / 100, PrixOrigineCts = 1000, Remise = r };
+            Banc.Verifie("jeu installé : ajouté à amorcer", true, Suivi.AjouteInstalle(inst, 730, "CS2") && inst[0].RemiseNotifiee == Suivi.AAmorcer && !Suivi.AjouteInstalle(inst, 730, "CS2"));
+            Banc.Verifie("jeu installé : fiche absente, reste à amorcer", true, Suivi.Decide(inst, aucune, aucune).Count == 0 && inst[0].RemiseNotifiee == Suivi.AAmorcer);
+            Banc.Verifie("jeu installé : à amorcer conservé au redémarrage", true, Suivi.Lire(Suivi.Ecrire(inst))[0].RemiseNotifiee == Suivi.AAmorcer);
+            Banc.Verifie("jeu installé déjà en promo : amorcé sans alerte", true, Suivi.Decide(inst, new List<Offre> { cs(50) }, aucune).Count == 0 && inst[0].RemiseNotifiee == 50);
+            Banc.Verifie("jeu installé : promo plus forte ensuite, une alerte", true, Suivi.Decide(inst, new List<Offre> { cs(75) }, aucune).Count == 1);
             var g = new List<Offre> { new Offre { Source = "epic", Id = "1f9a", Nom = "Final Fantasy VII: Rebirth", PrixCts = 0, Remise = 100, Plateformes = new[] { "Epic Games" }, Fin = new DateTime(2026, 11, 26, 16, 0, 0, DateTimeKind.Utc), Url = "https://store.epicgames.com/fr/p/x" } };
             var ag = Suivi.Decide(relus, aucune, g);
             Banc.Verifie("gratuit ailleurs : alerte", true, ag.Count == 1 && ag[0].Titre == "FINAL FANTASY VII REBIRTH est gratuit" && ag[0].Texte.StartsWith("Sur Epic Games jusqu'au 26/11"));

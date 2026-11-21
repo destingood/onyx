@@ -218,7 +218,9 @@ namespace BTOptimizer
                         if (taille.HasValue && taille.Value > MaxOctets) return null;
                         byte[] octets = await LitBorne(rep, delai.Token).ConfigureAwait(false);
                         if (octets == null) return null;
-                        return Decode(octets, rep.Content.Headers.ContentType == null ? null : rep.Content.Headers.ContentType.CharSet);
+                        string texte = Decode(octets, rep.Content.Headers.ContentType == null ? null : rep.Content.Headers.ContentType.CharSet);
+                        // Portail captif (Wi-Fi public) ou page d'erreur en 200 : traité comme un échec, jamais mis en cache.
+                        return OffresSources.ReponsePlausible(texte) ? texte : null;
                     }
                 }
                 catch { return null; }

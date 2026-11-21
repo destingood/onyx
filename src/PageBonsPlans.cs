@@ -287,6 +287,8 @@ namespace BTOptimizer
         private void ChoisitOnglet(int i)
         {
             _onglet = i;
+            // « Gratuit » n'existe pas en Promos (il mène à Gratuits) : un plafond 0 venu des Nouveautés est levé.
+            if (i == OngletPromos && _plafond == 0) _plafond = -1;
             if (i == OngletSuivis) SuiviVeille.MarqueVues();
             _majCombos = true;
             _tri.SelectedIndex = i == OngletNouveautes ? 2 : 0;   // « recent » pour les nouveautés, « remise » sinon
@@ -394,7 +396,8 @@ namespace BTOptimizer
                     {
                         List<Offre> brut = await OffresReseau.RechercheSteam(f, promos, nouveautes, d).ConfigureAwait(false);
                         d += PasSteam;
-                        if (brut.Count == 0) { fini = true; break; }
+                        // Liste vide : fin des résultats, sauf si Steam n'a pas répondu (« Suivant » reste possible).
+                        if (brut.Count == 0) { fini = !OffresReseau.DerniereErreur("steam"); break; }
                         // Filtre local : le plafond seulement (texte et catégorie sont appliqués par Steam).
                         foreach (Offre o in brut) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
                         if (deja + nouveaux.Count >= besoin) break;
@@ -413,6 +416,7 @@ namespace BTOptimizer
                     _resultats.AddRange(ajout);
                     if (suite && _resultats.Count > (_pageIdx + 1) * ParPage) _pageIdx++;
                     Affiche(erreur && _resultats.Count == 0);
+                    if (suite && erreur && !fini) _info.Text = TexteErreur + " Réessayez avec « Suivant ».";
                 });
             });
         }
@@ -535,8 +539,8 @@ namespace BTOptimizer
                         if (g == null || g.SteamAppId <= 0 || string.IsNullOrWhiteSpace(g.Name)) continue;
                         if (Magasin.Suivis.Exists(j => j.AppId == g.SteamAppId)) continue;
                         if (Magasin.Suivis.Count >= Suivi.Max) { plein = true; break; }
-                        var o = new Offre { Source = "steam", Id = g.SteamAppId.ToString(CultureInfo.InvariantCulture), Nom = g.Name, SteamAppId = g.SteamAppId };
-                        if (Suivi.Ajoute(Magasin.Suivis, o)) n++;
+                        // Remise inconnue ici : le premier contrôle l'amorce sans notifier les promos déjà en cours.
+                        if (Suivi.AjouteInstalle(Magasin.Suivis, g.SteamAppId, g.Name)) n++;
                     }
                     if (n > 0) Magasin.SauveSuivis();
                     _installes.Enabled = true;

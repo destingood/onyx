@@ -15,6 +15,21 @@ namespace BTOptimizer
     internal static class OffresSources
     {
         /// <summary>Route non officielle d'Epic : peut changer sans préavis (d'où la lecture défensive).</summary>
+        /// <summary>
+        /// Vrai pour un corps JSON ou XML (RSS, Atom). Une page HTML, du texte brut ou un corps vide
+        /// répondus en 200 (portail captif d'un Wi-Fi public, page d'erreur) ne sont ni lus ni mis en cache.
+        /// </summary>
+        public static bool ReponsePlausible(string texte)
+        {
+            if (string.IsNullOrEmpty(texte)) return false;
+            string t = texte.TrimStart((char)0xFEFF, ' ', '\t', '\r', '\n');
+            if (t.Length == 0) return false;
+            if (t[0] == '{' || t[0] == '[') return true;
+            if (t[0] != '<') return false;
+            string debut = (t.Length > 20 ? t.Substring(0, 20) : t).ToLowerInvariant();
+            return !(debut.StartsWith("<!doctype html", StringComparison.Ordinal) || debut.StartsWith("<html", StringComparison.Ordinal) || debut.StartsWith("<head", StringComparison.Ordinal) || debut.StartsWith("<body", StringComparison.Ordinal));
+        }
+
         public const string UrlEpic = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=fr&country=FR&allowCountries=FR";
         public const string UrlGamerPower = "https://www.gamerpower.com/api/giveaways?type=game";
         public const int LotSteam = 50;
