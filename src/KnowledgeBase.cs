@@ -300,7 +300,7 @@ namespace BTOptimizer
             // ═══ JEUX POPULAIRES (soucis connus + réglages) ═══
             "Valorant : exige TPM 2.0 + Secure Boot (BIOS). Une erreur « VAN » au lancement vient souvent de Vanguard : redémarrer le PC (Vanguard démarre avec Windows). Jeu très léger : viser un ping bas et un écran haute fréquence.",
             "CS2 (Counter-Strike 2) : très dépendant du CPU. Couper les applis de fond, activer le mode faible latence / Reflex, désactiver la V-Sync, privilégier une haute fréquence d'écran (144 Hz+) pour la réactivité.",
-            "Fortnite : le mode de rendu « Performances » (au lieu de DirectX 12) débloque énormément de FPS sur PC modeste. Vider le cache shaders si micro-saccades après une mise à jour.",
+            "Fortnite : le mode de rendu « Performances » (au lieu de DirectX 12) débloque énormément de FPS sur PC modeste. Micro-saccades après une mise à jour : les shaders se recompilent, ça passe en jouant ; ne pas vider le cache shaders, ça les relance toutes.",
             "Apex Legends : plafonné à 144 FPS par défaut — le débloquer via l'option de lancement « +fps_max unlimited ». 16 Go de RAM conseillés ; sensible aux fuites mémoire sur longues sessions.",
             "League of Legends : très léger, tourne sur presque tout. Les lags viennent quasi toujours du RÉSEAU (bon serveur, câble) ou d'un pic de latence, rarement des FPS.",
             "GTA V / GTA Online : SSD réduit fortement les chargements. Le MSAA est très coûteux (le baisser), régler la distance d'affichage et la densité de population gagne beaucoup de FPS.",

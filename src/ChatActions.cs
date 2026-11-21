@@ -166,7 +166,7 @@ namespace BTOptimizer
         }
 
         /// <summary>Ce qu'on peut rendre SANS que l'utilisateur perde quoi que ce soit de visible :
-        /// temporaires, caches, shaders. Exclut la corbeille et l'historique.</summary>
+        /// temporaires, caches. Exclut la corbeille, l'historique et les shaders.</summary>
         public static long RecoverableSafeMb()
         {
             return Storage.TotalRecoverableMB(Storage.SafeSuperflu);
@@ -195,11 +195,12 @@ namespace BTOptimizer
                 {
                     // "ia" écarté partout : l'utilisateur a cliqué « libérer l'espace », pas
                     // « efface mon historique Copilot/Recall ». Ça, ça se coche à la main
-                    // dans la fenêtre Nettoyage disque.
+                    // dans la fenêtre Nettoyage disque. Les shaders ("gpu") non plus : les vider
+                    // fait saccader les jeux le temps de les recompiler.
                     List<Sys.CleanTarget> targets = Sys.CleanTargets();
-                    foreach (var t in targets) { if (t.Kind != "ia") before += t.SizeMB; }
-                    foreach (var t in targets) { if (t.Kind == "ia") continue; try { n += Sys.CleanTargetNow(t, log); } catch { } }
-                    foreach (var t in Sys.CleanTargets()) { if (t.Kind != "ia") after += t.SizeMB; }
+                    foreach (var t in targets) { if (t.Kind != "ia" && t.Kind != "gpu") before += t.SizeMB; }
+                    foreach (var t in targets) { if (t.Kind == "ia" || t.Kind == "gpu") continue; try { n += Sys.CleanTargetNow(t, log); } catch { } }
+                    foreach (var t in Sys.CleanTargets()) { if (t.Kind != "ia" && t.Kind != "gpu") after += t.SizeMB; }
                 }
                 catch { return Say("Le nettoyage n'a pas pu aller au bout (fichiers verrouillés par Windows)."); }
                 long freed = Math.Max(0, before - after);

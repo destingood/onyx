@@ -101,7 +101,7 @@ namespace BTOptimizer
             {
                 // Les caches IA (Copilot, Recall) ne sont jamais cochés d'avance : ce sont
                 // des traces d'activité, et elles ne se régénèrent pas une fois effacées.
-                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && t.Kind != "ia");
+                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && t.Kind != "ia" && t.Kind != "gpu");   // shaders : à cocher à la main
                 sum += t.SizeMB;
             }
             _total.Text = string.Format("Total récupérable : {0:N0} Mo", sum);

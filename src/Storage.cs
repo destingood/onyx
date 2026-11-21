@@ -19,8 +19,9 @@ namespace BTOptimizer
     /// idée simple : chaque octet récupérable est classé sur TROIS niveaux de sûreté, et c'est
     /// l'utilisateur qui choisit son cran.
     ///
-    ///   0 — SUPERFLU     : aucune perte possible (temporaires, caches, shaders). Coché par défaut.
-    ///   1 — À VÉRIFIER   : régénérable mais visible (historique, corbeille, hibernation, WinSxS).
+    ///   0 — SUPERFLU     : aucune perte possible (temporaires, caches). Coché par défaut.
+    ///   1 — À VÉRIFIER   : régénérable mais visible (historique, corbeille, hibernation, WinSxS,
+    ///                      caches de shaders : les vider fait saccader les jeux le temps de recompiler).
     ///   2 — DONNÉES PERSO: JAMAIS supprimé par un lot. Uniquement montré, avec une action manuelle.
     ///
     /// Promesse tenue au niveau du code : aucun chemin du niveau 2 ne porte d'action <c>Free</c>,
@@ -100,8 +101,8 @@ namespace BTOptimizer
             {
                 new Module { Id = "temp",    Glyph = "🗑", Name = "Fichiers temporaires & caches", Safety = SafeSuperflu,
                              Desc = "Temporaires Windows, mises à jour déjà installées, caches navigateurs, rapports de plantage." },
-                new Module { Id = "gpu",     Glyph = "🎮", Name = "Caches graphiques & shaders", Safety = SafeSuperflu,
-                             Desc = "NVIDIA, AMD, DirectX, Steam. Recompilés au prochain lancement (quelques saccades une seule fois)." },
+                new Module { Id = "gpu",     Glyph = "🎮", Name = "Caches graphiques & shaders", Safety = SafeVerifier,
+                             Desc = "NVIDIA, AMD, DirectX, Steam. À garder : vidés, ils sont recompilés en jeu (saccades). Seulement en cas d'artefacts après une mise à jour du pilote." },
                 new Module { Id = "history", Glyph = "🕘", Name = "Historique & traces", Safety = SafeVerifier,
                              Desc = "Fichiers récents, Jump Lists, miniatures. Rien de perdu, mais tes listes « récents » repartent à zéro." },
                 new Module { Id = "bin",     Glyph = "♻", Name = "Corbeille", Safety = SafeVerifier,
@@ -448,7 +449,7 @@ namespace BTOptimizer
             try
             {
                 foreach (Sys.CleanTarget t in Sys.CleanTargets())
-                    if (t.Safety <= maxSafety) mb += t.SizeMB;
+                    if (t.Safety <= maxSafety && t.Kind != "gpu") mb += t.SizeMB;   // le Copilote ne vide pas les shaders
             }
             catch { }
             return mb;

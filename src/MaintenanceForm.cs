@@ -65,8 +65,8 @@ namespace BTOptimizer
             });
             _routines.Add(new Routine
             {
-                Id = 2, Name = "Vidage des caches GPU (shaders)", InAll = true,
-                Desc = "Shaders NVIDIA (DX/GL), DirectX Windows et AMD : à refaire après une MAJ de pilote ou en cas de stutters.",
+                Id = 2, Name = "Vidage des caches GPU (shaders)", InAll = false,
+                Desc = "Shaders NVIDIA (DX/GL), DirectX Windows et AMD. Hors « tout entretenir » : vidés, ils sont recompilés en jeu (saccades). Seulement en cas d'artefacts après une MAJ de pilote.",
                 Run = log => CleanKind("gpu", log)
             });
             _routines.Add(new Routine

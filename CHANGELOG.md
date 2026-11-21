@@ -39,6 +39,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   shaders précompilés de Windows (Advanced Shader Delivery) mais que Windows est antérieur à 24H2
   ou que le pilote est trop ancien (NVIDIA 621.01, AMD Adrenalin 26.6.1, Intel 32.0.101.9150),
   ONYX le signale. Lecture seule ; prérequis publiés par Microsoft le 21 octobre 2026.
+- **Les caches de shaders ne sont plus vidés par défaut.** Les vider fait recompiler chaque shader
+  en jeu, d'où des saccades. Ils sortent de « Tout entretenir », du Check Up+, des cases cochées
+  du Stockage et du Nettoyage disque, et de « Libérer l'espace » (Copilote, réparation des
+  launchers). Ils restent proposés à la main, pour un artefact après une mise à jour du pilote.
 
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 

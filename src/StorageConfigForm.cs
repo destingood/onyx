@@ -225,8 +225,8 @@ namespace BTOptimizer
         private void UpdateExplain()
         {
             _explain.Text = _rDeep.Checked
-                ? "Le bouton videra aussi la corbeille et l'historique de l'Explorateur, et pourra couper la veille prolongée. Toujours annoncé avant, jamais tes fichiers personnels."
-                : "Le bouton ne touchera que ce qui se régénère seul : temporaires, caches, shaders. Les modules « à vérifier » restent affichés, simplement décochés au départ.";
+                ? "Le bouton videra aussi la corbeille, l'historique de l'Explorateur et les caches de shaders (saccades le temps de les recompiler), et pourra couper la veille prolongée. Toujours annoncé avant, jamais tes fichiers personnels."
+                : "Le bouton ne touchera que ce qui se régénère seul : temporaires et caches (pas les shaders, qui feraient saccader les jeux). Les modules « à vérifier » restent affichés, simplement décochés au départ.";
         }
 
         private void RefreshIgnored()

@@ -60,9 +60,10 @@ namespace BTOptimizer
                 {
                     long mb = 0;
                     // Faire de la place pour un launcher ne justifie pas d'effacer l'historique
-                    // Copilot/Recall (genre "ia") : ça se coche à la main dans Nettoyage disque.
+                    // Copilot/Recall (genre "ia"), ni les shaders ("gpu", saccades à la recompilation) :
+                    // ça se coche à la main dans Nettoyage disque.
                     foreach (Sys.CleanTarget t in Sys.CleanTargets())
-                        if (t.Kind != "ia") mb += Sys.CleanTargetNow(t, log);
+                        if (t.Kind != "ia" && t.Kind != "gpu") mb += Sys.CleanTargetNow(t, log);
                     double after = FreeGB(Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows)));
                     log("Nettoyage : ~" + Math.Max(0, mb) + " Mo récupérés — désormais "
                         + after.ToString("0.0") + " Go libres.", 1);

@@ -1120,12 +1120,13 @@ namespace BTOptimizer
                 new CleanTarget { Name = "Cache Windows Update", Path = Path.Combine(win, @"SoftwareDistribution\Download") },
                 new CleanTarget { Name = "Prefetch", Path = Path.Combine(win, "Prefetch") },
                 new CleanTarget { Name = "Rapports d'erreurs (WER)", Path = Path.Combine(local, @"Microsoft\Windows\WER") },
-                // Caches de shaders : à vider après une MAJ de pilote ou en cas de stutters —
-                // les jeux les recompilent au prochain lancement (saccades passagères normales).
-                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Kind = "gpu", Path = Path.Combine(local, @"NVIDIA\DXCache") },
-                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Kind = "gpu", Path = Path.Combine(local, @"NVIDIA\GLCache") },
-                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Kind = "gpu", Path = Path.Combine(local, "D3DSCache") },
-                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Kind = "gpu", Path = Path.Combine(local, @"AMD\DxCache") },
+                // Caches de shaders : JAMAIS vidés par défaut (Safety = 1, « à vérifier »). Les
+                // vider fait recompiler chaque shader en jeu : des saccades, l'inverse du but.
+                // Utile seulement en cas d'artefacts après une MAJ de pilote : à cocher à la main.
+                new CleanTarget { Name = "Shaders NVIDIA DirectX (recompilés au prochain lancement)", Kind = "gpu", Safety = 1, Path = Path.Combine(local, @"NVIDIA\DXCache") },
+                new CleanTarget { Name = "Shaders NVIDIA OpenGL/Vulkan", Kind = "gpu", Safety = 1, Path = Path.Combine(local, @"NVIDIA\GLCache") },
+                new CleanTarget { Name = "Shaders DirectX Windows (D3DSCache)", Kind = "gpu", Safety = 1, Path = Path.Combine(local, "D3DSCache") },
+                new CleanTarget { Name = "Shaders AMD (si GPU AMD)", Kind = "gpu", Safety = 1, Path = Path.Combine(local, @"AMD\DxCache") },
                 // Rapports de plantage : minidumps et vidages, aucun intérêt à les garder.
                 new CleanTarget { Name = "Rapports de plantage (CrashDumps)", Path = Path.Combine(local, "CrashDumps") },
                 new CleanTarget { Name = "Minidumps Windows (écrans bleus passés)", Path = Path.Combine(win, "Minidump") },
@@ -1161,7 +1162,7 @@ namespace BTOptimizer
                 {
                     string sc = Path.Combine(steam.Replace('/', '\\'), @"steamapps\shadercache");
                     if (Directory.Exists(sc))
-                        list.Add(new CleanTarget { Name = "Shaders Steam (recompilés au prochain lancement)", Kind = "gpu", Path = sc });
+                        list.Add(new CleanTarget { Name = "Shaders Steam (recompilés au prochain lancement)", Kind = "gpu", Safety = 1, Path = sc });
                 }
             }
             catch { }

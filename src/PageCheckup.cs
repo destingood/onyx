@@ -36,7 +36,7 @@ namespace BTOptimizer
         {
             Add(0, "Nettoyage des fichiers temporaires", "Supprime les fichiers temporaires Windows et applications. Libère de l'espace disque.");
             Add(1, "Optimisation des disques", "TRIM sur les SSD, défragmentation consolidée sur les HDD.");
-            Add(2, "Réinitialisation des caches GPU", "Supprime les caches de shaders DirectX/NVIDIA. Résout stutters et artefacts.");
+            Add(2, "Réinitialisation des caches GPU", "Supprime les caches de shaders DirectX/NVIDIA. Seulement en cas d'artefacts après une MAJ de pilote : sinon, saccades le temps de les recompiler.");
             Add(3, "Suppression de l'historique Windows", "Efface les fichiers récents, le cache de miniatures et les Jump Lists.");
             Add(4, "Réparation des fichiers système", "Exécute SFC + DISM pour réparer les fichiers système corrompus.");
             Add(5, "Rafraîchissement réseau", "Vide le cache DNS et le cache ARP de Windows.");
@@ -66,7 +66,7 @@ namespace BTOptimizer
             var ds = new Label(); ds.Text = desc; ds.Font = FpsUi.Small; ds.ForeColor = FpsUi.Dim; ds.BackColor = Color.Transparent;
             ds.SetBounds(18, 64, 300, 66);
 
-            var sel = new ToggleSwitch(); sel.Location = new Point(292, 18); sel.On = (id == 0 || id == 2 || id == 5);
+            var sel = new ToggleSwitch(); sel.Location = new Point(292, 18); sel.On = (id == 0 || id == 5);   // shaders (2) décochés : les vider fait saccader
             card.Controls.Add(nm); card.Controls.Add(ds); card.Controls.Add(sel);
             Controls.Add(card);
             _routines.Add(new Routine { Id = id, Name = name, Desc = desc, Sel = sel });
