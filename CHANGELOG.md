@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.90 — Matériel, santé et bons plans modernisés
+
+- **Matériel en direct.** Cartes CPU, GPU et RAM, graphique du composant sélectionné,
+  historique de 30, 60 ou 120 secondes et pause des relevés. Les capteurs indisponibles
+  sont signalés sans afficher de fausses mesures à zéro.
+- **Bilan & santé.** Vues Bilan du PC et Entretien, score indicatif, résultats classés
+  par priorité et filtres. La maintenance conserve sa sélection avec un récapitulatif
+  et une confirmation avant le lancement.
+- **Bons plans.** Grandes jaquettes, prix et remises mieux présentés, filtres harmonisés,
+  boutons pour comparer, suivre un jeu ou l’ajouter aux favoris. La grille s’adapte à
+  la fenêtre et conserve les devises et les dates des offres.
+- Thème carbone et or, défilement assorti et navigation au clavier.
+
 ## v15.89 — Images de Discord intactes
 
 - **Images de Discord intactes.** Le nettoyage vidait le cache de Discord pendant que Discord
