@@ -5,6 +5,12 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.84 — Copilote refait
+
+- **Copilote refait.** Accueil avec cartes de démarrage et menu « Tous les sujets », titres et
+  polices alignés sur le reste d'ONYX, conversation qui s'adapte à la largeur de la fenêtre et
+  zone de saisie plus claire.
+
 ## v15.83 — Comparateur de prix, page Mes jeux corrigée
 
 - **Comparateur de prix dans Bons plans.** Un clic sur un jeu ouvre une fenêtre : meilleur prix
