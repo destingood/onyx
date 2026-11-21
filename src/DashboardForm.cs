@@ -36,8 +36,8 @@ namespace BTOptimizer
 
         public DashboardForm()
         {
-            Text = "ONYX — QG";
-            ClientSize = new Size(1200, 760);
+            Text = "ONYX — Windows & Gaming";
+            ClientSize = new Size(1360, 820);
             MinimumSize = new Size(1040, 680);
             StartPosition = FormStartPosition.CenterScreen;
             try { WindowBounds.Restore(this); } catch { }   // rouvre où l'utilisateur avait laissé la fenêtre
@@ -70,6 +70,7 @@ namespace BTOptimizer
             BuildRail();
             Controls.Add(_rail);
             _rail.BringToFront();   // la barre superposée doit rester au-dessus du contenu
+            UpdateRailMode();
 
             BuildTray();
             // Rappel VISIBLE d'une mise à jour en attente. La notification Windows est fugace (elle
@@ -197,6 +198,7 @@ namespace BTOptimizer
                 _rail.Height = ClientSize.Height;
                 LayoutRail();      // pas des cellules adapté à la hauteur (11 cellules dans 680 px)
             }
+            UpdateRailMode();
             PositionPageTools();   // la rangée d'outils (overlay) suit la largeur
         }
 
@@ -1335,8 +1337,10 @@ namespace BTOptimizer
         //  Barre laterale
         // ------------------------------------------------------------------
         // Barre latérale repliable : étroite (icônes seules) ou large (icônes + libellés).
-        private const int RailNarrow = 66, RailWide = 232, BrandH = 64, ProfileH = 64;
-        private static readonly Font BrandFont = Fonts.Make(Fonts.Marcellus, 14.5f, FontStyle.Regular, "Georgia");
+        private const int RailNarrow = 66, RailWide = 224, BrandH = 88, ProfileH = 64;
+        private bool _railDocked;
+        private static readonly Font BrandFont = FpsUi.F(18f, true);
+        private readonly Label[] _navSections = new Label[3];
         private bool _railOpen;
         private Panel _railBrand, _railProfile;
         private NavCell _tools;
@@ -1365,7 +1369,9 @@ namespace BTOptimizer
                 if (_railOpen)
                 {
                     // Wordmark gravé : capitales Marcellus or, interlettrées — l'écrin de la marque.
-                    FpsUi.DrawTracked(gr, "ONYX", BrandFont, FpsUi.Gold, mx + mw + 12, BrandH / 2f, 3f);
+                    FpsUi.DrawTracked(gr, "ONYX", BrandFont, FpsUi.Ink, mx + mw + 12, BrandH / 2f - 8, 2f);
+                    TextRenderer.DrawText(gr, "WINDOWS / GAMING", FpsUi.Tiny, new Point(mx + mw + 12, 56), FpsUi.Dim,
+                        TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                     // Pastille discrète = menu épinglé (il ne se referme plus quand on s'éloigne).
                     if (_railPinned)
                         using (var br = new SolidBrush(FpsUi.Gold))
@@ -1375,13 +1381,14 @@ namespace BTOptimizer
             // La barre s'ouvre au survol ; le clic sur la marque l'ÉPINGLE (elle reste ouverte).
             _railBrand.Click += (s, e) =>
             {
+                if (_railDocked) return;
                 _railPinned = !_railPinned;
                 if (_railPinned) { SetRail(true); if (_railHover != null) _railHover.Stop(); }
                 else RailHoverIn();
                 _railBrand.Invalidate();
             };
             var brandTip = new ToolTip();
-            brandTip.SetToolTip(_railBrand, "Le menu s'ouvre au survol — clic pour l'épingler / le libérer");
+            brandTip.SetToolTip(_railBrand, "Navigation étendue sur grand écran. En mode compact : survol pour ouvrir, clic pour épingler.");
             _rail.Controls.Add(_railBrand);
 
             // --- Bas : bloc profil (mène à « Mon compte »). ---
@@ -1392,7 +1399,7 @@ namespace BTOptimizer
             _rail.Controls.Add(_railProfile);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙", "💽", "🏷", "📰" };
-            string[] tips = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage", "Bons plans", "Actus" };
+            string[] tips = { "Centre de contrôle", "Optimiser Windows", "Mes jeux", "Santé & entretien", "Performances", "Mes badges", "Assistant PC", "Matériel en direct", "Nettoyage & disques", "Bons plans", "Actualités" };
             // Icône de chaque page : l'index 9 de NavIcons est « Outils », d'où un tableau explicite.
             int[] icones = { 0, 1, 2, 3, 4, 5, 6, 7, 8, NavIcons.BonsPlans, NavIcons.Actus };
             for (int i = 0; i < glyphs.Length; i++)
@@ -1411,6 +1418,14 @@ namespace BTOptimizer
             _tools.Click += (s, e) => _toolsMenu.Show(_tools, new Point(_tools.Width, 0));
             _rail.Controls.Add(_tools);
 
+            string[] sections = { "WINDOWS", "GAMING", "DÉCOUVRIR" };
+            for (int i = 0; i < sections.Length; i++)
+            {
+                _navSections[i] = FpsUi.Text(sections[i], FpsUi.Tiny, FpsUi.Dim2);
+                _navSections[i].AutoSize = false;
+                _rail.Controls.Add(_navSections[i]);
+            }
+
             LayoutRail();
             HookRailHover(_rail);   // ouverture automatique dès que le curseur arrive
         }
@@ -1418,6 +1433,25 @@ namespace BTOptimizer
         private Timer _railAnim;
         private int _railFrom, _railTo, _railElapsed;
         private const int RailAnimMs = 180, RailFrameMs = 15;
+
+        // Sur grand écran, les libellés restent visibles sans recouvrir la page.
+        // En dessous, le rail compact conserve l'ouverture au survol.
+        private void UpdateRailMode()
+        {
+            if (_rail == null) return;
+            bool docked = ClientSize.Width >= 1200;
+            if (_railDocked == docked) return;
+            _railDocked = docked;
+            if (_railAnim != null) _railAnim.Stop();
+            if (_railHover != null) _railHover.Stop();
+            _railPinned = docked;
+            _railOpen = docked;
+            foreach (NavCell cell in _nav) cell.Expanded = docked;
+            if (_tools != null) _tools.Expanded = docked;
+            _rail.Width = docked ? RailWide : RailNarrow;
+            Padding = new Padding(_rail.Width, Padding.Top, Padding.Right, Padding.Bottom);
+            LayoutRail();
+        }
 
         /// <summary>
         /// Replie / déplie la barre avec une transition fluide.
@@ -1522,11 +1556,28 @@ namespace BTOptimizer
         {
             if (_rail == null) return;
             int cellW = Math.Max(48, _rail.Width - 18);
-            int y = BrandH + 12;
-            // Pas adapté à la hauteur : 11 cellules au pas de 56 demandent 804 px, la fenêtre descend à 680.
-            int dispo = _rail.Height - BrandH - 12 - ProfileH - 52;
-            int pas = _nav.Count == 0 ? 56 : Math.Max(40, Math.Min(56, dispo / _nav.Count));
-            foreach (NavCell c in _nav) { c.SetBounds(9, y, cellW, pas - 8); y += pas; }
+            int y = BrandH + 4;
+            int sectionH = _railOpen ? 26 : 10;
+            int dispo = _rail.Height - BrandH - 8 - ProfileH - 48 - sectionH * 3;
+            int pas = _nav.Count == 0 ? 42 : Math.Max(28, Math.Min(44, dispo / _nav.Count));
+            int[][] groups = { new[] { 0, 1, 7, 3, 8 }, new[] { 2, 4, 6 }, new[] { 9, 10, 5 } };
+            int tab = 0;
+            for (int group = 0; group < groups.Length; group++)
+            {
+                if (_navSections[group] != null)
+                {
+                    _navSections[group].Visible = _railOpen;
+                    _navSections[group].SetBounds(23, y + 4, cellW - 20, 18);
+                }
+                y += sectionH;
+                foreach (int idx in groups[group])
+                {
+                    if (idx >= _nav.Count) continue;
+                    _nav[idx].SetBounds(9, y, cellW, pas - 4);
+                    _nav[idx].TabIndex = tab++;
+                    y += pas;
+                }
+            }
             if (_tools != null) _tools.SetBounds(9, y + 4, cellW, 44);
             if (_railBrand != null) _railBrand.Invalidate();
             if (_railProfile != null) _railProfile.Invalidate();
@@ -1549,7 +1600,7 @@ namespace BTOptimizer
             int tx = x + d + 12, tw = _railProfile.Width - tx - 26;
             TextRenderer.DrawText(gr, "Joueur ONYX", FpsUi.Small, new Rectangle(tx, cy - 1, tw, 18), FpsUi.Ink,
                 TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
-            TextRenderer.DrawText(gr, "Ma collection", FpsUi.Tiny, new Rectangle(tx, cy + 16, tw, 16), FpsUi.Dim,
+            TextRenderer.DrawText(gr, "Mon compte", FpsUi.Tiny, new Rectangle(tx, cy + 16, tw, 16), FpsUi.Dim,
                 TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(gr, "›", FpsUi.H3, new Rectangle(_railProfile.Width - 24, 0, 20, ProfileH), FpsUi.Dim,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
@@ -1907,16 +1958,15 @@ namespace BTOptimizer
 
         public virtual void OnShown() { }
 
-        /// <summary>Titre de page souligne neon.</summary>
+        /// <summary>Hiérarchie commune : titre lisible, puis description secondaire.</summary>
         protected void PaintTitle(Graphics g, string title, string subtitle)
         {
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            TextRenderer.DrawText(g, title, FpsUi.H3, new Point(34, 26), FpsUi.Ink, TextFormatFlags.NoPadding);
-            int w = TextRenderer.MeasureText(g, title, FpsUi.H3).Width;
-            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, 34, 50, 34 + w, 50);
-            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 34, 51, Width - 34, 51);
+            string heading = title.Length > 0 ? title.Substring(0, 1) + title.Substring(1).ToLowerInvariant() : title;
+            TextRenderer.DrawText(g, heading, FpsUi.H2, new Point(34, 24), FpsUi.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
             if (!string.IsNullOrEmpty(subtitle))
-                TextRenderer.DrawText(g, subtitle, FpsUi.Body, new Point(34, 64), FpsUi.Dim, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, subtitle, FpsUi.Body, new Rectangle(34, 58, Math.Max(1, Width - 68), 24), FpsUi.Dim,
+                    TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
         }
     }
 
@@ -1975,7 +2025,7 @@ namespace BTOptimizer
             g.Clear(Parent != null ? Parent.BackColor : FpsUi.BgMain);
 
             var rf = new RectangleF(0.5f, 1.5f, Width - 1.5f, Height - 3f);
-            using (var path = FpsUi.Round(rf, (Height - 3f) / 2f))
+            using (var path = FpsUi.Round(rf, 6f))
             {
                 using (var fill = new SolidBrush(_hover ? FpsUi.Accent(32) : FpsUi.Card))
                     g.FillPath(fill, path);
@@ -2043,26 +2093,26 @@ namespace BTOptimizer
             {
                 // Fond teinté + CONTOUR néon : l'item courant se repère d'un coup d'œil, replié
                 // comme déplié (la barre latérale d'avant disparaissait une fois le rail élargi).
-                using (var path = FpsUi.Round(rf, 12f))
+                using (var path = FpsUi.Round(rf, 7f))
                 {
                     using (var br = new SolidBrush(FpsUi.Accent(26))) g.FillPath(br, path);
-                    using (var pen = new Pen(FpsUi.Gold, 1.4f)) g.DrawPath(pen, path);
+                    using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, 6, 10, 6, Height - 10);
                 }
             }
             else if (_hover)
             {
-                using (var path = FpsUi.Round(rf, 12f))
+                using (var path = FpsUi.Round(rf, 7f))
                 using (var br = new SolidBrush(Color.FromArgb(16, 255, 255, 255))) g.FillPath(br, path);
             }
 
             Color fg = _active ? FpsUi.Gold : (_hover ? FpsUi.Ink : FpsUi.Dim);
 
-            const int IcoSz = 24;
+            const int IcoSz = 21;
             if (_expanded)
             {
                 DrawIcon(g, new Rectangle(14, (Height - IcoSz) / 2, IcoSz, IcoSz), fg);
-                var textR = new Rectangle(54, 0, Math.Max(10, Width - 54 - 30), Height);
-                TextRenderer.DrawText(g, (Label ?? "").ToUpperInvariant(), FpsUi.Small, textR, fg,
+                var textR = new Rectangle(46, 0, Math.Max(10, Width - 46 - 26), Height);
+                TextRenderer.DrawText(g, Label ?? "", FpsUi.Body, textR, fg,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
             else

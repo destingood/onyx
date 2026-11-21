@@ -680,8 +680,8 @@ namespace BTOptimizer
 
         private const int AV = 36, GAP = 10;
         private const int ColumnW = 860;                                   // largeur maxi de la conversation
-        private static readonly Color BubbleDoc = Color.FromArgb(24, 20, 16);   // carbone chaud (Copilote)
-        private static readonly Color BubbleUser = Color.FromArgb(42, 34, 22);  // bronze éteint (joueur)
+        private static readonly Color BubbleDoc = FpsUi.Card;
+        private static readonly Color BubbleUser = FpsUi.BlendGold(FpsUi.Card, 0.1f);
 
         /// <summary>Marge gauche de la colonne : la conversation est CENTRÉE (pas collée au rail).</summary>
         private int ColLeft()
@@ -731,7 +731,7 @@ namespace BTOptimizer
             col.Controls.Add(new Label
             {
                 AutoSize = true, Font = doc ? NameFont : FpsUi.Small,
-                ForeColor = doc ? FpsUi.Gold : Color.FromArgb(216, 190, 130),
+                ForeColor = doc ? FpsUi.Gold : FpsUi.Ink,
                 // Même marge gauche que le corps du message (les Label d'un FlowLayoutPanel
                 // ont 3 px par défaut) : sans ça l'en-tête débordait de 3 px vers la gauche
                 // et la première lettre passait sous l'arrondi de la bulle.
@@ -933,7 +933,7 @@ namespace BTOptimizer
             var pnl = new Panel { Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
             pnl.Paint += (s, e) =>
             {
-                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, Color.FromArgb(28, 24, 19), FpsUi.Border, 10f);
+                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, FpsUi.CardHi, FpsUi.Border, 10f);
                 using (var br = new SolidBrush(acc)) e.Graphics.FillRectangle(br, 1, 10, 3, pnl.Height - 20);
             };
             var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, acc);
@@ -1016,7 +1016,7 @@ namespace BTOptimizer
                 Text = text, AutoSize = false, Height = 28,
                 Width = TextRenderer.MeasureText(text, FpsUi.Small).Width + 24,
                 FlatStyle = FlatStyle.Flat, Font = FpsUi.Small, Cursor = Cursors.Hand,
-                BackColor = Color.FromArgb(25, 21, 16), ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
+                BackColor = FpsUi.Card, ForeColor = FpsUi.Dim, Margin = new Padding(0, 0, 6, 6)
             };
             b.FlatAppearance.BorderColor = FpsUi.Border;
             b.MouseEnter += (s, e) => { b.ForeColor = FpsUi.Gold; b.FlatAppearance.BorderColor = FpsUi.Gold; };

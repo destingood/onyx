@@ -9,28 +9,22 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page Check Up+ : routines de maintenance selectionnables + ligne cardiaque
-    // animee + execution reelle (nettoyage, caches, reseau, SFC/DISM, defrag).
+    // Page Bilan & entretien : routines de maintenance sélectionnables, récapitulatif
+    // et exécution réelle (nettoyage, caches, réseau, SFC/DISM, defrag).
     internal class PageCheckup : FpsPage
     {
         private class Routine { public string Name, Desc; public int Id; public ToggleSwitch Sel; }
 
         private readonly List<Routine> _routines = new List<Routine>();
-        private Panel _heart;
+        private Panel _summary;
         private Button _run;
-        private readonly Timer _beat = new Timer();
-        private float _phase;
 
         public PageCheckup(DashboardForm host) : base(host)
         {
             Build();
-            _beat.Interval = 40;
-            _beat.Tick += (s, e) => { _phase += 0.06f; if (_heart != null) _heart.Invalidate(); };
         }
 
-        public override void OnShown() { DoLayout(); _beat.Start(); }
-        protected override void OnVisibleChanged(EventArgs e) { base.OnVisibleChanged(e); if (!Visible) { try { _beat.Stop(); } catch { } } }
-        protected override void OnHandleDestroyed(EventArgs e) { try { _beat.Stop(); } catch { } base.OnHandleDestroyed(e); }
+        public override void OnShown() { DoLayout(); }
 
         private void Build()
         {
@@ -41,12 +35,12 @@ namespace BTOptimizer
             Add(4, "Réparation des fichiers système", "Exécute SFC + DISM pour réparer les fichiers système corrompus.");
             Add(5, "Rafraîchissement réseau", "Vide le cache DNS et le cache ARP de Windows.");
 
-            _heart = new Panel();
-            _heart.BackColor = Color.Transparent;
-            _heart.Paint += PaintHeart;
-            Controls.Add(_heart);
+            _summary = new Panel();
+            _summary.BackColor = Color.Transparent;
+            _summary.Paint += PaintSummary;
+            Controls.Add(_summary);
 
-            _run = FpsUi.GhostButton("▶   LANCER LE CHECK UP+");
+            _run = FpsUi.GoldButton("Lancer la maintenance  →");
             _run.Font = FpsUi.H3; _run.Height = 56;
             _run.Click += (s, e) => RunSelected();
             Controls.Add(_run);
@@ -62,11 +56,15 @@ namespace BTOptimizer
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
             var nm = new Label(); nm.Text = name; nm.Font = FpsUi.H3; nm.ForeColor = FpsUi.Ink; nm.BackColor = Color.Transparent;
+            nm.Name = "title";
             nm.SetBounds(18, 16, 250, 44);
             var ds = new Label(); ds.Text = desc; ds.Font = FpsUi.Small; ds.ForeColor = FpsUi.Dim; ds.BackColor = Color.Transparent;
+            ds.Name = "description";
             ds.SetBounds(18, 64, 300, 66);
 
             var sel = new ToggleSwitch(); sel.Location = new Point(292, 18); sel.On = (id == 0 || id == 5);   // shaders (2) décochés : les vider fait saccader
+            sel.AccessibleName = name;
+            sel.Toggled += (s, e) => { if (_summary != null) _summary.Invalidate(); };
             card.Controls.Add(nm); card.Controls.Add(ds); card.Controls.Add(sel);
             Controls.Add(card);
             _routines.Add(new Routine { Id = id, Name = name, Desc = desc, Sel = sel });
@@ -75,40 +73,33 @@ namespace BTOptimizer
         private void DoLayout()
         {
             int L = 34, top = Host != null ? Host.ContentTop(100) : 100, gap = 18, cols = 3;
-            int w = (ClientSize.Width - L * 2 - gap * (cols - 1)) / cols, hgt = 150;
+            int w = (ClientSize.Width - L * 2 - gap * (cols - 1)) / cols, hgt = 170;
             int i = 0;
             foreach (var r in _routines)
             {
                 Panel card = (Panel)r.Sel.Parent;
                 int col = i % cols, row = i / cols;
                 card.SetBounds(L + col * (w + gap), top + row * (hgt + gap), w, hgt);
+                card.Controls["title"].SetBounds(18, 16, Math.Max(80, w - 92), 58);
+                card.Controls["description"].SetBounds(18, 80, w - 36, 76);
+                r.Sel.Location = new Point(w - r.Sel.Width - 18, 18);
                 i++;
             }
             int by = top + 2 * (hgt + gap) + 6;
-            if (_heart != null) _heart.SetBounds(L, by, w * 2 + gap, 92);
+            if (_summary != null) _summary.SetBounds(L, by, w * 2 + gap, 92);
             if (_run != null) _run.SetBounds(L + w * 2 + gap + 24, by + 18, w - 24, 56);
         }
 
-        private void PaintHeart(object sender, PaintEventArgs e)
+        private void PaintSummary(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            Rectangle r = _heart.ClientRectangle;
+            Rectangle r = _summary.ClientRectangle;
             FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
-            TextRenderer.DrawText(g, "RYTHME CARDIAQUE DU SYSTÈME", FpsUi.Small, new Point(16, 12), FpsUi.Dim, TextFormatFlags.NoPadding);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            int midY = r.Height / 2 + 12, left = 16, right = r.Width - 16;
-            var pts = new List<PointF>();
-            for (int x = left; x <= right; x += 3)
-            {
-                float t = (x - left) * 0.06f + _phase;
-                float baseY = midY;
-                float m = t % 6.283f;
-                float spike = 0;
-                float local = m % 2.0f;
-                if (local < 0.5f) spike = -(0.5f - Math.Abs(local - 0.25f) * 4) * 34;
-                pts.Add(new PointF(x, baseY + spike));
-            }
-            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLines(pen, pts.ToArray());
+            int selected = 0;
+            foreach (var routine in _routines) if (routine.Sel.On) selected++;
+            TextRenderer.DrawText(g, selected + " routine(s) sélectionnée(s)", FpsUi.H3, new Point(18, 18), FpsUi.Ink, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, "Choisis les opérations à lancer pour entretenir ton PC.", FpsUi.Body,
+                new Rectangle(18, 46, r.Width - 36, 36), FpsUi.Dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
         }
 
         private void RunSelected()
@@ -128,7 +119,7 @@ namespace BTOptimizer
                     try { report.AppendLine("• " + RunOne(id)); } catch (Exception ex) { report.AppendLine("• Erreur : " + ex.Message); }
                 }
                 try { BadgeStore.IncCheckups(1); BadgeCatalog.EvaluateEvents(); } catch { }   // débloque Infirmier / Routine (+ toast)
-                try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "▶   LANCER LE CHECK UP+";
+                try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "Lancer la maintenance  →";
                     MessageBox.Show(FindForm(), report.ToString(), "Check Up+ terminé", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
                 catch { }
             });
@@ -241,7 +232,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "ROUTINE CHECK UP+", "À réaliser régulièrement pour maintenir ton système dans un état clinique optimal.");
+            PaintTitle(e.Graphics, "BILAN & ENTRETIEN", "Vérifie la santé de ton PC et choisis les opérations de maintenance utiles.");
         }
     }
 }

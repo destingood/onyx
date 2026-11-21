@@ -13,23 +13,25 @@ namespace BTOptimizer
     // ----------------------------------------------------------------------
     internal static class FpsUi
     {
-        // Palette ONYX « Carbone & Or » : noirs chauds (jamais bleutés) + or champagne.
+        // Palette ONYX : carbone chaud et or champagne, avec des couleurs d'état distinctes.
         // Une seule source de vérité : changer l'accent ici le change dans tout le shell
         // (logo, rail, anneau de santé, boutons, overlay).
         //
         // RÈGLE SÉMANTIQUE : l'or SIGNE (marque, nav active, CTA, focus) mais ne code
         // JAMAIS un état. Les verdicts parlent leur langue universelle : Ok = émeraude,
         // Warn = orange vif (bien distinct du champagne), Err = rouge.
-        public static readonly Color BgMain  = Color.FromArgb(11, 10, 9);      // #0B0A09
-        public static readonly Color RailBg  = Color.FromArgb(16, 14, 12);     // #100E0C (.frame)
-        public static readonly Color Card    = Color.FromArgb(22, 19, 15);     // #16130F
-        public static readonly Color CardHi  = Color.FromArgb(32, 28, 22);     // #201C16 (survol)
-        public static readonly Color Border  = Color.FromArgb(43, 37, 29);     // #2B251D
-        public static readonly Color Gold    = Color.FromArgb(227, 183, 92);   // #E3B75C (accent identité)
-        public static readonly Color GoldDim = Color.FromArgb(176, 139, 70);   // #B08B46
-        public static readonly Color Ink     = Color.FromArgb(243, 237, 226);  // #F3EDE2 (ivoire)
-        public static readonly Color Dim     = Color.FromArgb(180, 170, 154);  // #B4AA9A
-        public static readonly Color Dim2    = Color.FromArgb(134, 125, 111);  // #867D6F
+        public static readonly Color BgMain  = Color.FromArgb(17, 17, 16);
+        public static readonly Color RailBg  = Color.FromArgb(22, 22, 20);
+        public static readonly Color Card    = Color.FromArgb(28, 28, 25);
+        public static readonly Color CardHi  = Color.FromArgb(37, 37, 33);
+        public static readonly Color Border  = Color.FromArgb(56, 55, 49);
+        public static readonly Color Gold    = Color.FromArgb(227, 183, 92);
+        public static readonly Color GoldDim = Color.FromArgb(176, 139, 70);
+        public static readonly Color Ink     = Color.FromArgb(243, 237, 226);
+        public static readonly Color Dim     = Color.FromArgb(184, 181, 171);
+        public static readonly Color Dim2    = Color.FromArgb(152, 149, 138);
+        public static readonly Color GraphSecondary = Color.FromArgb(214, 205, 189);
+        public static readonly Color Violet = Color.FromArgb(170, 154, 255); // couleur de catégorie (sources), pas accent du thème
         public static readonly Color Ok      = Color.FromArgb(76, 196, 140);   // #4CC48C (émeraude sobre)
         public static readonly Color Warn    = Color.FromArgb(240, 148, 54);   // #F09436 (orange vif ≠ or)
         public static readonly Color Err     = Color.FromArgb(232, 90, 80);    // #E85A50
@@ -46,20 +48,19 @@ namespace BTOptimizer
                 (int)(bg.B + (Gold.B - bg.B) * amount));
         }
 
-        // Polices ONYX : Marcellus (display/logo — l'or gravé), Ubuntu (titres/nav),
-        // Inter (corps). Toutes libres (OFL / Ubuntu Font Licence).
+        // Segoe UI est disponible nativement avec Windows et garde les mêmes métriques
+        // dans GDI (TextRenderer) et GDI+. Marcellus reste réservé à la marque.
         public static Font F(float size, bool semibold)
         {
-            return semibold ? Fonts.Make(Fonts.Ubuntu, size, FontStyle.Bold, "Segoe UI Semibold")
-                            : Fonts.Make(Fonts.Inter, size, FontStyle.Regular, "Segoe UI");
+            return new Font(semibold ? "Segoe UI Semibold" : "Segoe UI", size, FontStyle.Regular);
         }
-        public static readonly Font H1    = Fonts.Make(Fonts.Ubuntu, 20f,  FontStyle.Bold,    "Segoe UI Semibold");
-        public static readonly Font H2    = Fonts.Make(Fonts.Ubuntu, 12f,  FontStyle.Bold,    "Segoe UI Semibold");
-        public static readonly Font H3    = Fonts.Make(Fonts.Ubuntu, 10.5f, FontStyle.Bold,   "Segoe UI Semibold");
-        public static readonly Font Body  = Fonts.Make(Fonts.Inter,  9f,   FontStyle.Regular, "Segoe UI");
-        public static readonly Font Small = Fonts.Make(Fonts.Inter,  8.5f, FontStyle.Regular, "Segoe UI");
-        public static readonly Font Tiny  = Fonts.Make(Fonts.Inter,  7.5f, FontStyle.Regular, "Segoe UI");
-        public static readonly Font Num   = Fonts.Make(Fonts.Ubuntu, 20f,  FontStyle.Bold,    "Segoe UI Semibold");
+        public static readonly Font H1    = F(20f, true);
+        public static readonly Font H2    = F(12f, true);
+        public static readonly Font H3    = F(10.5f, true);
+        public static readonly Font Body  = F(9.5f, false);
+        public static readonly Font Small = F(8.5f, false);
+        public static readonly Font Tiny  = F(8f, false);
+        public static readonly Font Num   = F(20f, true);
         public static readonly Font Display  = Fonts.Make(Fonts.Marcellus, 22f, FontStyle.Regular, "Georgia");
         public static readonly Font DisplayL = Fonts.Make(Fonts.Marcellus, 30f, FontStyle.Regular, "Georgia");
         public static readonly Font Glyph = new Font("Segoe UI Emoji", 15f);
@@ -85,9 +86,7 @@ namespace BTOptimizer
             return Color.FromArgb(c.A, Math.Min(255, c.R + by), Math.Min(255, c.G + by), Math.Min(255, c.B + by));
         }
 
-        /// <summary>Peint une carte arrondie (fond + bordure) sur toute la surface donnée. Léger dégradé
-        /// vertical (haut plus clair) + liseré haut ivoire chaud : donne de la PROFONDEUR sur fond
-        /// carbone (pas d'ombre possible sur du noir).</summary>
+        /// <summary>Surface mate et contour discret, communs à toutes les pages.</summary>
         public static void PaintCard(Graphics g, Rectangle r, Color fill, Color border, float radius)
         {
             if (r.Width < 4 || r.Height < 4) return;
@@ -95,12 +94,9 @@ namespace BTOptimizer
             var rf = new RectangleF(r.X + 0.5f, r.Y + 0.5f, r.Width - 1f, r.Height - 1f);
             using (var path = Round(rf, radius))
             {
-                using (var br = new LinearGradientBrush(new RectangleF(rf.X, rf.Y - 1, rf.Width, rf.Height + 2), Lighten(fill, 8), fill, 90f))
+                using (var br = new SolidBrush(fill))
                     g.FillPath(br, path);
                 using (var pen = new Pen(border)) g.DrawPath(pen, path);
-                // liseré supérieur légèrement plus clair = arête éclairée (teinte chaude, pas blanc froid).
-                using (var pen = new Pen(Color.FromArgb(20, 255, 238, 200)))
-                    g.DrawLine(pen, rf.X + radius, rf.Y + 1f, rf.Right - radius, rf.Y + 1f);
             }
         }
 
@@ -115,14 +111,14 @@ namespace BTOptimizer
 
         public static Button GhostButton(string text)
         {
-            var b = new Button();
+            var b = new SurfaceButton();
             b.Text = text;
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderSize = 0;
-            b.BackColor = Color.FromArgb(31, 27, 22);
+            b.BackColor = CardHi;
             // Retours au survol / à l'appui : un bouton qui ne réagit pas fait « maquette ».
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(44, 39, 31);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(23, 20, 16);
+            b.FlatAppearance.MouseOverBackColor = BlendGold(CardHi, 0.08f);
+            b.FlatAppearance.MouseDownBackColor = Card;
             b.ForeColor = Ink;
             b.Font = Small;
             b.Cursor = Cursors.Hand;
@@ -132,7 +128,7 @@ namespace BTOptimizer
 
         public static Button GoldButton(string text)
         {
-            var b = new Button();
+            var b = new SurfaceButton();
             b.Text = text;
             b.FlatStyle = FlatStyle.Flat;
             b.FlatAppearance.BorderColor = Gold;
@@ -145,6 +141,16 @@ namespace BTOptimizer
             b.Font = H3;
             b.Cursor = Cursors.Hand;
             b.UseVisualStyleBackColor = false;
+            return b;
+        }
+
+        public static Button PrimaryButton(string text)
+        {
+            var b = GoldButton(text);
+            b.BackColor = Gold;
+            b.ForeColor = BgMain;
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(242, 205, 135);
+            b.FlatAppearance.MouseDownBackColor = GoldDim;
             return b;
         }
 
@@ -187,6 +193,56 @@ namespace BTOptimizer
         }
     }
 
+    /// <summary>Garde le comportement natif du bouton (clavier, DialogResult, accessibilité)
+    /// avec un rendu commun aux actions des pages. Les couleurs restent personnalisables.</summary>
+    internal sealed class SurfaceButton : Button
+    {
+        private bool _hover, _pressed;
+
+        public SurfaceButton()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            if (Width < 4 || Height < 4) return;
+            var old = Region;
+            using (var path = FpsUi.Round(new RectangleF(0, 0, Width, Height), 7f))
+                Region = new Region(path);
+            if (old != null) old.Dispose();
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { _hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hover = _pressed = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnMouseDown(MouseEventArgs e) { _pressed = e.Button == MouseButtons.Left; Invalidate(); base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { _pressed = false; Invalidate(); base.OnMouseUp(e); }
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { _pressed = false; Invalidate(); base.OnLostFocus(e); }
+        protected override void OnKeyDown(KeyEventArgs e) { if (e.KeyCode == Keys.Space) { _pressed = true; Invalidate(); } base.OnKeyDown(e); }
+        protected override void OnKeyUp(KeyEventArgs e) { _pressed = false; Invalidate(); base.OnKeyUp(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            if (Width < 4 || Height < 4) return;
+            var g = e.Graphics;
+            g.Clear(BackColor);
+            Color fill = !Enabled ? FpsUi.Card : _pressed ? FlatAppearance.MouseDownBackColor
+                : _hover ? FlatAppearance.MouseOverBackColor : BackColor;
+            if (fill.IsEmpty) fill = BackColor;
+            Color line = Focused && ShowFocusCues ? FpsUi.Gold
+                : FlatAppearance.BorderSize > 0 ? FlatAppearance.BorderColor : fill;
+            FpsUi.PaintCard(g, ClientRectangle, fill, line, 7f);
+            var textBounds = Rectangle.Inflate(ClientRectangle, Width < 60 ? -2 : -6, -2);
+            if (_pressed) textBounds.Offset(0, 1);
+            TextRenderer.DrawText(g, Text, Font, textBounds, Enabled ? ForeColor : FpsUi.Dim2,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+                | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+        }
+    }
+
     // ----------------------------------------------------------------------
     //  Interrupteur (toggle) style ONYX.
     // ----------------------------------------------------------------------
@@ -221,12 +277,29 @@ namespace BTOptimizer
             Size = new Size(46, 24);
             Cursor = Cursors.Hand;
             BackColor = Color.Transparent;
+            SetStyle(ControlStyles.Selectable, true);
+            TabStop = true;
+            AccessibleRole = AccessibleRole.CheckButton;
         }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Space && Enabled && !_locked)
+            {
+                OnClick(EventArgs.Empty);
+                e.Handled = e.SuppressKeyPress = true;
+            }
+            base.OnKeyUp(e);
+        }
+
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
 
         protected override void OnClick(EventArgs e)
         {
             base.OnClick(e);
-            if (_locked) return;
+            if (_locked || !Enabled) return;
+            Focus();
             _on = !_on;
             Invalidate();
             if (Toggled != null) Toggled(this, EventArgs.Empty);
@@ -237,17 +310,20 @@ namespace BTOptimizer
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var r = new RectangleF(1, 1, Width - 2, Height - 2);
-            Color track = _on ? FpsUi.Gold : Color.FromArgb(52, 46, 38);
-            if (_locked) track = Color.FromArgb(43, 38, 31);
+            Color track = _on ? FpsUi.Gold : FpsUi.Border;
+            if (_locked || !Enabled) track = FpsUi.CardHi;
             using (var path = FpsUi.Round(r, r.Height / 2f))
             using (var br = new SolidBrush(track))
                 g.FillPath(br, path);
 
             int d = Height - 8;
             int kx = _on ? Width - d - 4 : 4;
-            Color knob = _on ? Color.FromArgb(16, 13, 9) : Color.FromArgb(188, 180, 166);
+            Color knob = _on ? FpsUi.BgMain : FpsUi.Dim;
             using (var br = new SolidBrush(knob))
                 g.FillEllipse(br, kx, 4, d, d);
+            if (Focused && ShowFocusCues)
+                using (var path = FpsUi.Round(r, r.Height / 2f))
+                using (var pen = new Pen(FpsUi.Ink)) g.DrawPath(pen, path);
         }
     }
 }

@@ -163,7 +163,7 @@ namespace BTOptimizer
                 bool actif = i == _onglet;
                 Button b = _onglets[i];
                 b.ForeColor = actif ? FpsUi.Gold : FpsUi.Ink;
-                b.BackColor = actif ? FpsUi.BlendGold(FpsUi.Card, 0.16f) : Color.FromArgb(31, 27, 22);
+                b.BackColor = actif ? FpsUi.BlendGold(FpsUi.Card, 0.16f) : FpsUi.CardHi;
                 b.FlatAppearance.BorderColor = FpsUi.Gold;
                 b.FlatAppearance.BorderSize = actif ? 1 : 0;
             }

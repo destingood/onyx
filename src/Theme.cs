@@ -27,12 +27,12 @@ namespace BTOptimizer
         private static readonly Color AccentRef = Color.FromArgb(79, 70, 229); // repère HÉRITÉ (classification de vieux boutons accent)
 
         // Métaux ONYX : or champagne (sombre) et bronze profond (clair, lisible sur blanc).
-        private static readonly Color GoldRef = Color.FromArgb(227, 183, 92);   // #E3B75C
-        private static readonly Color BronzeRef = Color.FromArgb(158, 116, 49); // #9E7431
+        private static readonly Color GoldRef = FpsUi.Gold;
+        private static readonly Color BronzeRef = Color.FromArgb(158, 116, 49);
 
         // Liseré signature sous les bandeaux (identité ONYX) : or → bronze.
-        private static readonly Color BrandA = Color.FromArgb(227, 183, 92);   // #E3B75C
-        private static readonly Color BrandB = Color.FromArgb(176, 139, 70);   // #B08B46
+        private static readonly Color BrandA = FpsUi.Gold;
+        private static readonly Color BrandB = FpsUi.GoldDim;
 
         // Tokens (basculent avec le thème).
         private static Color Bg, Panel, Ink, InkDim, Line, GroupInk, FieldBg;
@@ -77,12 +77,12 @@ namespace BTOptimizer
                 // Palette ONYX : carbone chaud + or champagne, alignée sur le shell (FpsUi).
                 // Toutes les fenêtres du menu ⋯ passent par ces tokens (Theme.Apply) — les
                 // retoucher ici reskin les ~40 fenêtres ET le menu lui-même d'un coup.
-                Bg = Color.FromArgb(11, 10, 9); Panel = Color.FromArgb(22, 19, 15);
-                Ink = Color.FromArgb(243, 237, 226); InkDim = Color.FromArgb(172, 163, 148);
-                Line = Color.FromArgb(43, 37, 29); GroupInk = Color.FromArgb(214, 186, 124);
-                FieldBg = Color.FromArgb(16, 14, 12);
-                MenuBg = Color.FromArgb(22, 19, 15); MenuHot = Color.FromArgb(54, 45, 28);
-                MenuLine = Color.FromArgb(43, 37, 29);
+                Bg = FpsUi.BgMain; Panel = FpsUi.Card;
+                Ink = FpsUi.Ink; InkDim = FpsUi.Dim;
+                Line = FpsUi.Border; GroupInk = FpsUi.Ink;
+                FieldBg = FpsUi.RailBg;
+                MenuBg = FpsUi.Card; MenuHot = FpsUi.CardHi;
+                MenuLine = FpsUi.Border;
             }
             else
             {
@@ -356,7 +356,7 @@ namespace BTOptimizer
 
             if (header)
             {
-                if (c is Panel) c.BackColor = HeaderBg;
+                if (c is Panel) c.BackColor = FpsUi.RailBg;
                 if (c is Label)
                     c.ForeColor = (c.Font != null && c.Font.Size >= 12.5f) ? Color.White : Color.FromArgb(170, 175, 185);
             }

@@ -100,7 +100,7 @@ namespace BTOptimizer
         {
             base.OnPaint(e);
             Graphics g = e.Graphics;
-            PaintTitle(g, "GÉNÉRAL", null);
+            PaintTitle(g, "MATÉRIEL EN DIRECT", null);
 
             int L = 34, top = 74, gap = 16;
             int rightW = 250;
@@ -108,14 +108,14 @@ namespace BTOptimizer
             int graphW = ClientSize.Width - L * 2 - rightW - gap;
 
             HwSample s = _last;
-            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, Color.FromArgb(214, 205, 189),
+            DrawMetric(g, L, top, graphW, cardH, rightW, "PROCESSEUR", _cpu, FpsUi.Gold,
                 s != null && s.CpuLoad >= 0 ? s.CpuLoad : double.NaN,
                 s != null && !double.IsNaN(s.CpuTempC) ? s.CpuTempC : double.NaN,
                 "CPU", s != null ? Environment.ProcessorCount + " threads" : "");
             int r2 = top + cardH + gap;
             double gu = s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.Util : double.NaN;
             double gt = s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.TempC : double.NaN;
-            DrawMetric(g, L, r2, graphW, cardH, rightW, "CARTE GRAPHIQUE", _gpu, FpsUi.Gold, gu, gt, "GPU",
+            DrawMetric(g, L, r2, graphW, cardH, rightW, "CARTE GRAPHIQUE", _gpu, FpsUi.GraphSecondary, gu, gt, "GPU",
                 s != null && s.Gpu != null && s.Gpu.Ok ? s.Gpu.Name : "n/d");
             int r3 = r2 + cardH + gap;
             string ramDetail = s != null && s.RamTotalMB > 0 ? (s.RamUsedMB / 1024.0).ToString("0.0") + " / " + (s.RamTotalMB / 1024.0).ToString("0.0") + " Go" : "";

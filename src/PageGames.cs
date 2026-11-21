@@ -368,7 +368,7 @@ namespace BTOptimizer
                     {
                         // Placeholder soigné pour les jeux hors Steam (Riot/Epic/Blizzard…) : dégradé +
                         // pastille ronde à la manette + nom bien lisible (au lieu d'une boîte vide).
-                        using (var lg = new LinearGradientBrush(rr, Color.FromArgb(30, 27, 21), Color.FromArgb(14, 12, 10), 90f)) gr.FillRectangle(lg, rr);
+                        using (var lg = new LinearGradientBrush(rr, FpsUi.CardHi, FpsUi.RailBg, 90f)) gr.FillRectangle(lg, rr);
                         Color ac = detected ? FpsUi.Gold : FpsUi.Dim2;
 
                         // Aucune jaquette Steam possible (Battle.net, EA app, jeux hors launcher) :

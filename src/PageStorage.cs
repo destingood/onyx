@@ -329,13 +329,13 @@ namespace BTOptimizer
             else if (m.HasActions) sizeTxt = "gain mesuré après coup";
             else sizeTxt = "rien à récupérer";
             var size = FpsUi.Text(sizeTxt, big ? FpsUi.Num : FpsUi.H3, FpsUi.Ink);
-            size.AutoSize = false; size.SetBounds(66, 50, 210, 30);
+            size.AutoSize = false; size.SetBounds(66, 48, 210, 38);
             card.Controls.Add(size);
 
             // Les bandes ne se CHEVAUCHENT pas : deux labels transparents superposés se masquent
             // l'un l'autre (le dernier ajouté passe derrière) — c'est ce qui rognait le badge.
             var desc = FpsUi.Text(m.Desc, FpsUi.Small, FpsUi.Dim);
-            desc.AutoSize = false; desc.SetBounds(16, 84, CardW - 32, 36);
+            desc.AutoSize = false; desc.SetBounds(16, 88, CardW - 32, 34);
             card.Controls.Add(desc);
 
             if (m.Safety >= Storage.SafeVerifier)
@@ -351,6 +351,7 @@ namespace BTOptimizer
             }
 
             var tog = new ToggleSwitch();
+            tog.AccessibleName = m.Name;
             tog.Location = new Point(CardW - 62, 18);
             tog.Locked = !m.HasActions;
             tog.On = _selected.Contains(m.Id);

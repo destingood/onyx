@@ -1355,7 +1355,7 @@ namespace BTOptimizer
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 string shot = Environment.GetEnvironmentVariable("BT_UISHOT");
-                if (!string.IsNullOrEmpty(shot)) { try { CaptureShellShots(shot); } catch (Exception ex) { Console.WriteLine("  Capture ERREUR : " + ex.Message); } }
+                if (!string.IsNullOrEmpty(shot)) { try { CaptureShellShots(shot); } catch (Exception ex) { uiErr++; Console.WriteLine("  Capture ERREUR : " + ex.Message); } }
                 Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
                 Environment.Exit(uiErr == 0 ? 0 : 1);
             }
@@ -2171,7 +2171,7 @@ namespace BTOptimizer
         private static void CaptureShellShots(string dir)
         {
             try { System.IO.Directory.CreateDirectory(dir); } catch { }
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme", "Stockage" };
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "CheckUp", "Laboratoire", "Collection", "Consultation", "Systeme", "Stockage", "BonsPlans", "Actus" };
             var sizes = new System.Drawing.Size[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) };
             foreach (var sz in sizes)
             {
@@ -2187,6 +2187,28 @@ namespace BTOptimizer
                     // Jeux : laisse charger les jaquettes (cache Steam local).
                     // Stockage : laisse l'analyse des modules aboutir (mesures réelles, mises en cache).
                     Pump(names[p] == "Jeux" ? 3000 : (names[p] == "Stockage" ? 25000 : 350));
+                    if (p == 1)
+                    {
+                        // Exerce l'interaction réelle des nouvelles cartes, sans appliquer un réglage.
+                        bool checkedDetails = false;
+                        foreach (Control description in dash.PageAt(p).Controls.Find("description", true))
+                        {
+                            if (description.Text.Length < 350) continue;
+                            var details = description.Parent.Controls["details"] as Button;
+                            if (details == null) continue;
+                            int collapsed = description.Height;
+                            details.PerformClick();
+                            if (description.Height <= collapsed)
+                                throw new InvalidOperationException("Le détail de l'optimisation ne se déplie pas.");
+                            details.PerformClick();
+                            if (description.Height != collapsed)
+                                throw new InvalidOperationException("La carte ne retrouve pas sa hauteur compacte.");
+                            checkedDetails = true;
+                            break;
+                        }
+                        if (!checkedDetails) throw new InvalidOperationException("Aucune carte détaillée vérifiée.");
+                        Console.WriteLine("  Cartes dépliables OK à " + sz.Width + "x" + sz.Height);
+                    }
                     try
                     {
                         using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
@@ -2256,14 +2278,14 @@ namespace BTOptimizer
             Console.WriteLine("  Captures écrites dans " + dir);
         }
 
-        /// <summary>Construit le shell DTG et rend chacune des 8 pages hors-écran, à trois
+        /// <summary>Construit le shell ONYX et rend ses onze pages hors-écran, à trois
         /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
         /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
         /// sans afficher de fenêtre. Lecture seule : aucun effet de bord.</summary>
         private static void TestShellUi(ref int errors)
         {
-            Console.WriteLine("Shell le concurrent (dashboard + 9 pages, rendu hors-écran)...");
-            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage" };
+            Console.WriteLine("Shell ONYX (11 pages, rendu hors-écran)...");
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage", "Bons plans", "Actus" };
             // Les exceptions de peinture doivent remonter à notre try/catch (et pas ouvrir la
             // boîte de dialogue d'erreur WinForms, qui bloquerait ce test sans interface).
             try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
@@ -2274,7 +2296,7 @@ namespace BTOptimizer
 
             var sizes = new System.Drawing.Size[]
             {
-                new System.Drawing.Size(1200, 760),   // défaut
+                new System.Drawing.Size(1360, 820),   // défaut, navigation étendue
                 new System.Drawing.Size(1040, 680),   // minimum
                 new System.Drawing.Size(1680, 960),   // large
             };

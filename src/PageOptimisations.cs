@@ -44,7 +44,7 @@ namespace BTOptimizer
             _flow = new FlowLayoutPanel();
             _flow.AutoScroll = true;
             _flow.BackColor = Color.Transparent;
-            _flow.Padding = new Padding(28, 4, 20, 20);
+            _flow.Padding = new Padding(0, 4, 0, 20);
             Controls.Add(_flow);
 
             _search = new TextBox();
@@ -87,7 +87,7 @@ namespace BTOptimizer
             _bAuto = FpsUi.GoldButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
             _bAuto.Click += (s, e) => ApplyAuto();
             // Optimisation PROUVÉE : applique par lots, mesure, annule ce qui dégrade (PreuveRun).
-            _bProve = FpsUi.GoldButton("✓ Optimiser et prouver"); _bProve.Height = 30; _bProve.Width = 172;
+            _bProve = FpsUi.PrimaryButton("Optimiser et mesurer"); _bProve.Height = 30; _bProve.Width = 172;
             _bProve.Click += (s, e) =>
             {
                 using (var f = new PreuveForm(_tweaks)) f.ShowDialog(FindForm());
@@ -151,7 +151,7 @@ namespace BTOptimizer
 
         private void AddChip(string text, string cat, ref int x)
         {
-            var b = new Button();
+            var b = FpsUi.GhostButton(text);
             b.Text = text;
             b.AutoSize = false;
             b.Height = 30;
@@ -174,7 +174,7 @@ namespace BTOptimizer
         private void StyleChip(Button b, bool on)
         {
             b.FlatAppearance.BorderColor = on ? FpsUi.Gold : FpsUi.Border;
-            b.BackColor = on ? Color.FromArgb(18, 34, 26) : FpsUi.Card;
+            b.BackColor = on ? FpsUi.BlendGold(FpsUi.Card, 0.12f) : FpsUi.Card;
             b.ForeColor = on ? FpsUi.Gold : FpsUi.Dim;
         }
 
@@ -191,6 +191,7 @@ namespace BTOptimizer
                 if (!Match(t)) continue;
                 _flow.Controls.Add(MakeCard(t));
             }
+            LayoutCards();
             _flow.ResumeLayout();
             foreach (Control c in old) { try { c.Dispose(); } catch { } }  // libère les handles GDI des anciennes cartes
         }
@@ -199,7 +200,7 @@ namespace BTOptimizer
         {
             const int pad = 16, nameW = 258, descW = 316;
             var card = new Panel();
-            card.Margin = new Padding(10);
+            card.Margin = new Padding(0, 0, 16, 16);
             card.BackColor = Color.Transparent;
             card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
@@ -208,6 +209,7 @@ namespace BTOptimizer
             int nameH = TextRenderer.MeasureText(t.Name ?? "", FpsUi.H3, new Size(nameW, 0), wrap).Height;
             if (nameH < 40) nameH = 40;
             var name = new Label();
+            name.Name = "title"; name.UseMnemonic = false;
             name.Text = t.Name;
             name.Font = FpsUi.H3; name.ForeColor = FpsUi.Ink; name.BackColor = Color.Transparent;
             name.SetBounds(pad, 14, nameW, nameH);
@@ -216,25 +218,41 @@ namespace BTOptimizer
             int descH = TextRenderer.MeasureText(t.Desc ?? "", FpsUi.Small, new Size(descW, 0), wrap).Height + 2;
             if (descH < 34) descH = 34;
             var desc = new Label();
+            desc.Name = "description"; desc.UseMnemonic = false;
             desc.Text = t.Desc; desc.Font = FpsUi.Small; desc.ForeColor = FpsUi.Dim; desc.BackColor = Color.Transparent;
+            desc.AutoEllipsis = true;
+            desc.Tag = false;
             desc.SetBounds(pad, descY, descW, descH);
 
             var tog = new ToggleSwitch();
+            tog.Name = "toggle";
+            tog.AccessibleName = t.Name;
             tog.Location = new Point(288, 16);
             tog.Toggled += (s, e) => OnToggle(t, tog);
             _toggles[t.Id] = tog;
 
             card.Controls.Add(name); card.Controls.Add(desc); card.Controls.Add(tog);
 
-            int y = descY + descH + 8;
-            if (t.Reboot)
+            string status = t.Risque == Risque.Securite ? "Protection réduite"
+                : t.Risque == Risque.Fonction ? "Fonction Windows modifiée"
+                : t.Risque == Risque.AnnulationNonGarantie ? "Rétablissement à vérifier"
+                : t.Recommended ? "Recommandé" : "Au choix";
+            if (t.Reboot) status += " · Redémarrage";
+            var badge = FpsUi.Text(status, FpsUi.Tiny, t.Risque != Risque.Aucun || t.Reboot ? FpsUi.Warn : FpsUi.Dim);
+            badge.Name = "status"; badge.AutoSize = false;
+            card.Controls.Add(badge);
+            var details = FpsUi.GhostButton("Détails ↓");
+            details.Name = "details";
+            details.AccessibleName = "Détails : " + t.Name;
+            details.Click += (s, e) =>
             {
-                var rb = FpsUi.Text("redémarrage requis", FpsUi.Tiny, FpsUi.Warn);
-                rb.Location = new Point(pad, y);
-                card.Controls.Add(rb);
-                y += 18;
-            }
-            card.Size = new Size(348, Math.Max(132, y + 8));
+                bool expanded = !(bool)desc.Tag;
+                desc.Tag = expanded;
+                details.Text = expanded ? "Réduire ↑" : "Détails ↓";
+                LayoutCards();
+            };
+            card.Controls.Add(details);
+            card.Size = new Size(348, 200);
             return card;
         }
 
@@ -269,47 +287,74 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            if (_chips != null) _chips.Top = Host != null ? Host.ContentTop(90) : 90;
-            int ft = Host != null ? Host.ContentTop(138) : 138;
-            _flow.SetBounds(20, ft, ClientSize.Width - 40, ClientSize.Height - ft);
+            int right = ClientSize.Width - 34;
+            int y = Host != null ? Host.ContentTop(96) : 96;
+            _search.SetBounds(right - 260, 24, 260, 26);
             if (_bReset != null)
             {
-                int rx = ClientSize.Width - 34;
-                _bReset.Location = new Point(rx - _bReset.Width, 22); rx -= _bReset.Width + 8;
-                _bEsport.Location = new Point(rx - _bEsport.Width, 22); rx -= _bEsport.Width + 8;
-                _bReco.Location = new Point(rx - _bReco.Width, 22); rx -= _bReco.Width + 8;
-                _bSur.Location = new Point(rx - _bSur.Width, 22); rx -= _bSur.Width + 8;
-                _bAuto.Location = new Point(rx - _bAuto.Width, 22); rx -= _bAuto.Width + 8;
-                _bProve.Location = new Point(rx - _bProve.Width, 22); rx -= _bProve.Width + 8;
-                // Sept boutons et la recherche ne tiennent pas tous sur la ligne du titre
-                // (« OPTIMISATIONS », x = 34) : ce qui déborde passe sur une deuxième ligne, alignée
-                // à droite (y = 58, avant les filtres à y = 90) — d'abord la recherche, puis
-                // Compétition. FinTitre : marge sûre après le titre.
-                const int FinTitre = 260, Rech = 220;
-                int xCompet = rx - _bCompet.Width;
-                int xRech2 = ClientSize.Width - 34 - Rech;
-                if (xCompet - 12 - Rech >= FinTitre)
+                int x = 34;
+                foreach (Button b in new[] { _bProve, _bAuto, _bSur, _bReco, _bEsport, _bCompet, _bReset })
                 {
-                    _bCompet.Location = new Point(xCompet, 22);
-                    if (_search != null) _search.SetBounds(xCompet - 12 - Rech, 24, Rech, 26);
+                    if (x + b.Width > right && x > 34) { x = 34; y += 40; }
+                    b.Location = new Point(x, y);
+                    b.Height = 32;
+                    x += b.Width + 8;
                 }
-                else if (xCompet >= FinTitre)
-                {
-                    _bCompet.Location = new Point(xCompet, 22);
-                    if (_search != null) _search.SetBounds(xRech2, 58, Rech, 26);
-                }
-                else
-                {
-                    _bCompet.Location = new Point(xRech2 - 12 - _bCompet.Width, 56);
-                    if (_search != null) _search.SetBounds(xRech2, 58, Rech, 26);
-                }
+                y += 48;
             }
+            // Toutes les catégories restent accessibles, même dans une petite fenêtre.
+            int chipX = 0, chipY = 0, chipWidth = Math.Max(200, right - 34);
+            foreach (Button b in _chipBtns)
+            {
+                if (chipX + b.Width > chipWidth && chipX > 0) { chipX = 0; chipY += 36; }
+                b.Location = new Point(chipX, chipY);
+                chipX += b.Width + 8;
+            }
+            _chips.SetBounds(34, y, chipWidth, chipY + 32);
+            int ft = _chips.Bottom + 16;
+            _flow.SetBounds(34, ft, ClientSize.Width - 50, Math.Max(80, ClientSize.Height - ft - 16));
+            LayoutCards();
+        }
+
+        private void LayoutCards()
+        {
+            int available = Math.Max(300, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth);
+            int columns = Math.Max(1, available / 360);
+            int width = available / columns - 16;
+            _flow.SuspendLayout();
+            foreach (Control card in _flow.Controls)
+            {
+                var name = card.Controls["title"];
+                var desc = card.Controls["description"];
+                var toggle = card.Controls["toggle"];
+                if (name == null || desc == null || toggle == null) continue;
+                var flags = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
+                int nameW = Math.Max(80, width - 90);
+                int nameH = Math.Max(40, TextRenderer.MeasureText(name.Text, name.Font, new Size(nameW, 0), flags).Height);
+                name.SetBounds(16, 16, nameW, nameH);
+                toggle.Location = new Point(width - 62, 16);
+                int fullHeight = Math.Max(48, TextRenderer.MeasureText(desc.Text, desc.Font, new Size(width - 32, 0), flags).Height + 4);
+                bool expanded = desc.Tag is bool && (bool)desc.Tag;
+                int descH = expanded ? Math.Max(52, fullHeight) : 52;
+                desc.SetBounds(16, name.Bottom + 8, width - 32, descH);
+                int bottom = desc.Bottom + 16;
+                var status = card.Controls["status"];
+                if (status != null) status.SetBounds(16, bottom, width - 158, 36);
+                var details = card.Controls["details"];
+                if (details != null)
+                {
+                    details.Visible = fullHeight > 52;
+                    details.SetBounds(width - 126, bottom - 2, 110, 32);
+                }
+                card.Size = new Size(width, bottom + 46);
+            }
+            _flow.ResumeLayout();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "OPTIMISATIONS", Subtitle());
+            PaintTitle(e.Graphics, "OPTIMISER WINDOWS", Subtitle());
         }
 
         // Sous-titre vivant : nombre d'optimisations actives (vue complète) ou nombre affiché (vue filtrée).

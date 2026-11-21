@@ -7,367 +7,260 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page d'accueil « QG » : greeting, jauge SANTE, cartes stats,
-    // graphe systeme live, statut patient + badge.
+    // Centre de contrôle : actions Windows, mesures réelles et profil gaming.
     internal class PageDashboard : FpsPage
     {
-        // Séries du graphe : trio ONYX lisible sur carbone (émeraude / ivoire / or).
-        private static readonly Color SerRam = FpsUi.Ok;
-        private static readonly Color SerCpu = Color.FromArgb(214, 205, 189);
-        private static readonly Color SerGpu = FpsUi.Gold;
-        private static readonly Font GreetFont = Fonts.Make(Fonts.Marcellus, 19f, FontStyle.Regular, "Georgia");
-
-        /// <summary>Boutique — sert uniquement au bouton « Soutenir ONYX ».</summary>
         internal const string SupportUrl = "https://fluide.gumroad.com";
-
-        private readonly HwMonitor _mon = new HwMonitor();
-        private readonly Timer _timer = new Timer();
-        private readonly Queue<double> _cpu = new Queue<double>();
-        private readonly Queue<double> _gpu = new Queue<double>();
-        private readonly Queue<double> _ram = new Queue<double>();
-        private const int Hist = 60;
-        private bool _sampling;
-        private int _health = -1, _activeOpti = 0;
-        private double _curCpu = double.NaN, _curGpu = double.NaN, _curRam = double.NaN;
-
-        private Panel _graph;
-        private Label _nOpti, _nCheck, _nJeux;
-
-        // --- Animation d'entrée (l'anneau se remplit, les compteurs montent) -------------
-        private readonly Timer _animTimer = new Timer();
-        private float _animT = 1f;                    // 0 = début, 1 = état final
-        private int _tOpti, _tTotal, _tJeux;          // valeurs cibles des compteurs
-        private bool _statsReady;
-        private readonly HashSet<Control> _hover = new HashSet<Control>();   // cartes sous la souris
-
-        /// <summary>Animations désactivées si l'utilisateur a coupé les effets Windows
-        /// (accessibilité) ou sous le harnais de capture, qui doit voir l'état final.</summary>
-        private static bool MotionEnabled
-        {
-            get
-            {
-                try { return SystemInformation.UIEffectsEnabled && Environment.GetEnvironmentVariable("BT_UITEST") != "1"; }
-                catch { return false; }
-            }
-        }
-
-        /// <summary>Décélération douce (ease-out cubique) : rapide au départ, posée à l'arrivée.</summary>
-        private static float Ease(float t) { float u = 1f - t; return 1f - u * u * u; }
+        private static readonly Font HeroFont = FpsUi.F(25f, true);
+        private readonly HwMonitor _monitor = new HwMonitor();
+        private readonly Timer _timer = new Timer { Interval = 1500 };
+        private readonly BufferedPanel _scroll = new BufferedPanel(), _content = new BufferedPanel();
+        private readonly BufferedPanel _hero = new BufferedPanel(), _graph = new BufferedPanel(), _configuration = new BufferedPanel();
+        private readonly BufferedPanel[] _metrics = new BufferedPanel[3];
+        private readonly Queue<double>[] _history = { new Queue<double>(), new Queue<double>(), new Queue<double>() };
+        private readonly Color[] _series = { FpsUi.Gold, FpsUi.GraphSecondary, FpsUi.Ok };
+        private readonly string[] _names = { "PROCESSEUR", "CARTE GRAPHIQUE", "MÉMOIRE RAM" };
+        private readonly double[] _values = { double.NaN, double.NaN, double.NaN };
+        private readonly Button _optimize, _gaming, _settings;
+        private readonly DashboardShortcut[] _shortcuts;
+        private ScrollWheelFilter _wheel;
+        private bool _sampling, _disposed;
+        private AppStats.Snap _stats;
+        private HwSample _sample;
+        private const int Samples = 40;
 
         public PageDashboard(DashboardForm host) : base(host)
         {
-            Build();
-            _timer.Interval = 1000;
+            _scroll.Name = "dashboard-scroll";
+            _scroll.AutoScroll = true;
+            _scroll.BackColor = _content.BackColor = FpsUi.BgMain;
+            Controls.Add(_scroll); _scroll.Controls.Add(_content);
+            _wheel = new ScrollWheelFilter(_scroll); Application.AddMessageFilter(_wheel);
+            _hero.BackColor = _graph.BackColor = _configuration.BackColor = FpsUi.BgMain;
+            _hero.Paint += PaintHero; _graph.Paint += PaintGraph; _configuration.Paint += PaintConfiguration;
+            _content.Controls.AddRange(new Control[] { _hero, _graph, _configuration });
+            _optimize = FpsUi.PrimaryButton("Optimiser Windows  →");
+            _optimize.Name = "dashboard-optimize";
+            _optimize.Click += (s, e) => Host.Goto(1);
+            _gaming = FpsUi.GoldButton("Configurer mon profil gaming");
+            _gaming.Click += (s, e) => Host.OpenDialog(new CompetitionForm(Catalog.All()));
+            _hero.Controls.AddRange(new Control[] { _optimize, _gaming });
+            _settings = FpsUi.GhostButton("Parcourir les réglages  →");
+            _settings.Click += (s, e) => Host.Goto(1); _configuration.Controls.Add(_settings);
+            for (int i = 0; i < 3; i++)
+            {
+                int metric = i;
+                var panel = new BufferedPanel { BackColor = FpsUi.BgMain };
+                panel.Paint += (s, e) => PaintMetric(e.Graphics, panel.ClientRectangle, metric);
+                _metrics[i] = panel; _content.Controls.Add(panel);
+            }
+            _shortcuts = new[]
+            {
+                new DashboardShortcut(NavIcons.Stockage, "Nettoyer Windows", "Disques, caches et fichiers", () => Host.Goto(8)),
+                new DashboardShortcut(NavIcons.Optimisations, "Réduire la latence", "Souris, écran et chaîne d'entrée", () => Host.OpenDialog(new ChaineEntreeForm(Host.Log))),
+                new DashboardShortcut(NavIcons.Laboratoire, "Mesurer les performances", "FPS, benchmarks et stabilité", () => Host.Goto(4))
+            };
+            foreach (var shortcut in _shortcuts) _content.Controls.Add(shortcut);
             _timer.Tick += (s, e) => Sample();
-            _animTimer.Interval = 16;                 // ~60 images/s
-            _animTimer.Tick += (s, e) => AnimTick();
+            Resize += (s, e) => DoLayout();
         }
 
         public override void OnShown()
         {
-            DoLayout();
-            _animT = MotionEnabled ? 0f : 1f;
-            ApplyCounters();
-            ComputeHealth();
-            Sample();
-            _timer.Start();
-            if (MotionEnabled) _animTimer.Start();
+            DoLayout(); _hero.Invalidate(); _configuration.Invalidate();
+            AppStats.Get(stats =>
+            {
+                if (_disposed) return;
+                try { BeginInvoke((Action)(() => { _stats = stats; _configuration.Invalidate(); })); } catch { }
+            });
+            Sample(); _timer.Start();
         }
-
-        private void AnimTick()
-        {
-            _animT += 0.05f;                          // ~340 ms au total
-            if (_animT >= 1f) { _animT = 1f; _animTimer.Stop(); }
-            ApplyCounters();
-            Invalidate();
-        }
-
-        /// <summary>Compteurs : de 0 à leur valeur, suivant la même courbe que l'anneau.</summary>
-        private void ApplyCounters()
-        {
-            if (!_statsReady) return;
-            float e = Ease(_animT);
-            if (_nOpti != null) _nOpti.Text = ((int)Math.Round(_tOpti * e)).ToString();
-            if (_nCheck != null) _nCheck.Text = ((int)Math.Round(_tTotal * e)).ToString();
-            if (_nJeux != null) _nJeux.Text = ((int)Math.Round(_tJeux * e)).ToString();
-        }
-
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            if (!Visible) { try { _timer.Stop(); _animTimer.Stop(); } catch { } }
+            if (!Visible && !_disposed) _timer.Stop();
         }
-
-        protected override void OnHandleDestroyed(EventArgs e) { try { _timer.Stop(); _animTimer.Stop(); _mon.Dispose(); } catch { } base.OnHandleDestroyed(e); }
-
-        private void Build()
+        protected override void Dispose(bool disposing)
         {
-            _nOpti = MakeStat(NavIcons.Optimisations, "Optimisations actives", "OPTIMISATIONS", () => Host.Goto(1), 0);
-            _nCheck = MakeStat(NavIcons.Collection, "Optimisations au total", "VOIR TOUT", () => Host.Goto(1), 1);
-            _nJeux = MakeStat(NavIcons.Jeux, "Jeux boostés", "JEUX", () => Host.Goto(2), 2);
-
-            _graph = new Panel();
-            _graph.BackColor = Color.Transparent;
-            _graph.Paint += PaintGraph;
-            Controls.Add(_graph);
-
-            // ONYX est gratuit : ce bouton est le seul lien vers la boutique, pour qui veut soutenir.
-            var prem = FpsUi.GoldButton("◆  SOUTENIR ONYX");
-            prem.Name = "prem";
-            prem.Click += (s, e) => OpenSupport();
-            Controls.Add(prem);
-
-            Resize += (s, e) => { DoLayout(); Invalidate(); };
-        }
-
-        private void OpenSupport()
-        {
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(SupportUrl) { UseShellExecute = true }); }
-            catch
+            if (disposing && !_disposed)
             {
-                MessageBox.Show(FindForm(), "Ouvre cette adresse dans ton navigateur :\r\n" + SupportUrl,
-                    "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _disposed = true; _timer.Dispose();
+                if (_wheel != null) { Application.RemoveMessageFilter(_wheel); _wheel = null; }
+                // Si une lecture est en cours, son worker libère le moniteur à sa sortie.
+                lock (_monitor) { if (!_sampling) _monitor.Dispose(); }
             }
+            base.Dispose(disposing);
         }
-
-        private Label MakeStat(int iconId, string label, string btn, Action click, int slot)
-        {
-            var card = new Panel();
-            card.BackColor = Color.Transparent;
-            card.Tag = "stat" + slot;
-            // Au survol : fond éclairci + liseré or (la carte réagit sous la souris).
-            // L'icône est VECTORIELLE (celles du rail) : cohérente, dorée, nette — fini l'emoji.
-            card.Paint += (s, e) =>
-            {
-                var p = (Panel)s;
-                bool hot = _hover.Contains(p);
-                FpsUi.PaintCard(e.Graphics, p.ClientRectangle,
-                                hot ? FpsUi.CardHi : FpsUi.Card,
-                                hot ? FpsUi.GoldDim : FpsUi.Border, 12f);
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                NavIcons.Draw(e.Graphics, iconId, new RectangleF(18, 16, 26, 26), hot ? FpsUi.Gold : FpsUi.GoldDim);
-            };
-
-            var num = FpsUi.Text("—", FpsUi.Num, FpsUi.Ink); num.Name = "num"; num.SetBounds(56, 12, 130, 36); num.AutoSize = false;
-            var lab = FpsUi.Text(label, FpsUi.Body, FpsUi.Dim); lab.Name = "lab"; lab.SetBounds(18, 54, 230, 20); lab.AutoSize = false;
-            var b = FpsUi.GhostButton(btn); b.Name = "btn"; b.SetBounds(16, 84, 210, 32); b.Click += (s, e) => click();
-
-            card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(b);
-            Controls.Add(card);
-            WireHover(card, card);   // après l'ajout des enfants : ils captent aussi la souris
-            return num;
-        }
-
-        /// <summary>Suit le survol sur la carte ET ses enfants (un enfant sous la souris
-        /// déclencherait sinon un MouseLeave de la carte, d'où le test de position réelle).</summary>
-        private void WireHover(Control root, Panel card)
-        {
-            root.MouseEnter += (s, e) => { if (_hover.Add(card)) card.Invalidate(); };
-            root.MouseLeave += (s, e) =>
-            {
-                try
-                {
-                    if (card.ClientRectangle.Contains(card.PointToClient(Cursor.Position))) return;
-                }
-                catch { }
-                if (_hover.Remove(card)) card.Invalidate();
-            };
-            foreach (Control ch in root.Controls) WireHover(ch, card);
-        }
-
         private void DoLayout()
         {
-            int L = 34, top = 118, w = ClientSize.Width;
-            int rightW = 300, rightX = w - 34 - rightW;
-            int statsW = rightX - L - 24;
-            int gap = 16, cardW = (statsW - gap * 2) / 3;
-            foreach (Control c in Controls)
-            {
-                if (c.Tag is string && ((string)c.Tag).StartsWith("stat"))
-                {
-                    int slot = int.Parse(((string)c.Tag).Substring(4));
-                    c.SetBounds(L + slot * (cardW + gap), top, cardW, 130);
-                    LayoutStat(c);
-                }
-            }
-            // Le graphe s'ÉTIRE : la page occupe toute la hauteur, plus de vide sous le bouton.
-            int bottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
-            int premH = 46, graphY = top + 146;
-            int graphH = Math.Max(220, bottom - graphY - premH - 16);
-            if (_graph != null) _graph.SetBounds(L, graphY, statsW, graphH);
-            var prem = Controls["prem"];
-            if (prem != null) prem.SetBounds(L, graphY + graphH + 16, statsW, premH);
+            _scroll.SetBounds(30, 92, Math.Max(300, Width - 46), Math.Max(120, Height - 108));
+            int width = Math.Max(300, _scroll.Width - SystemInformation.VerticalScrollBarWidth - 1);
+            int height = Math.Max(678, _scroll.Height);
+            _content.Size = new Size(width, height);
+            _hero.SetBounds(0, 0, width, 202);
+            _optimize.SetBounds(24, 144, 196, 38); _gaming.SetBounds(232, 144, 236, 38);
+            int cell = (width - 32) / 3;
+            for (int i = 0; i < 3; i++) _metrics[i].SetBounds(i * (cell + 16), 218, cell, 96);
+            int side = 280, chartHeight = height - 430;
+            _graph.SetBounds(0, 330, width - side - 16, chartHeight);
+            _configuration.SetBounds(width - side, 330, side, chartHeight);
+            _settings.SetBounds(20, chartHeight - 52, side - 40, 32);
+            for (int i = 0; i < 3; i++) _shortcuts[i].SetBounds(i * (cell + 16), height - 84, cell, 84);
         }
-
-        // Ajuste les enfants d'une carte stat à sa largeur réelle (évite tout débordement
-        // quand la fenêtre est étroite : les cartes rétrécissent, les contrôles suivent).
-        private static void LayoutStat(Control card)
-        {
-            int w = card.Width;
-            var num = card.Controls["num"]; if (num != null) num.SetBounds(56, 12, Math.Max(60, w - 72), 36);
-            var lab = card.Controls["lab"]; if (lab != null) lab.SetBounds(18, 54, Math.Max(60, w - 32), 22);
-            var b = card.Controls["btn"]; if (b != null) b.SetBounds(16, 84, Math.Max(60, w - 32), 32);
-        }
-
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-
-            string name = Environment.UserName;
-            if (string.IsNullOrEmpty(name)) name = "joueur";
-
-            // Le bonjour se grave en Marcellus : la page d'accueil porte la voix de la marque.
-            int L = 34;
-            TextRenderer.DrawText(g, "Bonjour, ", GreetFont, new Point(L, 30), FpsUi.Ink, TextFormatFlags.NoPadding);
-            int wHi = TextRenderer.MeasureText(g, "Bonjour, ", GreetFont).Width;
-            TextRenderer.DrawText(g, name, GreetFont, new Point(L + wHi - 4, 30), FpsUi.Gold, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "Bienvenue dans ton QG.", FpsUi.Body, new Point(L + 2, 74), FpsUi.Dim, TextFormatFlags.NoPadding);
-
-            // La carte santé s'aligne sur le bas de la colonne de gauche (graphe + bouton) :
-            // les deux colonnes finissent sur la même ligne, la page est d'un seul tenant.
-            int rightW = 300, rightX = ClientSize.Width - 34 - rightW;
-            int patientTop = 118;
-            int patientBottom = Host != null ? Host.ContentBottom(24) : ClientSize.Height - 24;
-            int patientH = Math.Max(320, patientBottom - patientTop);
-            DrawPatient(g, rightX, patientTop, rightW, patientH);
+            Draw(e.Graphics, "Centre de contrôle", FpsUi.H1, FpsUi.Ink, new Rectangle(30, 20, Width - 60, 36));
+            Draw(e.Graphics, "Windows, matériel et gaming : tout au même endroit.", FpsUi.Body, FpsUi.Dim, new Rectangle(31, 59, Width - 62, 23));
         }
-
-        // Carte santé unifiée : titre + anneau de SANTÉ + logo + verdict, hauteur dynamique.
-        private void DrawPatient(Graphics g, int x, int y, int w, int h)
+        private void PaintHero(object sender, PaintEventArgs e)
         {
-            FpsUi.PaintCard(g, new Rectangle(x, y, w, h), FpsUi.Card, FpsUi.Border, 14f);
-            TextRenderer.DrawText(g, "SANTÉ DE MON PC", FpsUi.H3, new Rectangle(x, y + 20, w, 22), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
-
-            int ring = 132;
-            DrawHealthRing(g, x + (w - ring) / 2, y + 52, ring);
-
-            // Logo DTG centré sous l'anneau ; ne s'affiche que si la carte est assez haute.
-            int by = y + 52 + ring + 12;
-            int statusY = y + h - 34;
-            int bs = Math.Min(120, statusY - by - 6);
-            if (bs >= 60) Logo.Draw(g, new RectangleF(x + (w - bs) / 2f, by, bs, bs), FpsUi.Gold, false);
-
-            // Verdict aligné sur le vocabulaire historique du bilan (et les seuils de l'anneau) —
-            // et sur sa COULEUR : le verdict parle la même langue que l'anneau.
-            int hp = _health < 0 ? 0 : _health;
-            string verdict = hp < 30 ? "À corriger" : hp < 60 ? "Moyen" : hp < 85 ? "Bon" : "Excellent";
-            Color vc = hp < 30 ? FpsUi.Err : hp < 60 ? FpsUi.Warn : FpsUi.Ok;
-            TextRenderer.DrawText(g, verdict, FpsUi.H2, new Rectangle(x, statusY, w, 24), vc, TextFormatFlags.HorizontalCenter);
-        }
-
-        private void DrawHealthRing(Graphics g, int x, int y, int size)
-        {
-            int hp = _health < 0 ? 0 : _health;
-            // L'anneau se remplit à l'ouverture ; la COULEUR reste celle du score final
-            // (sinon elle virerait rouge → orange → vert pendant le remplissage).
-            // Sémantique ONYX : émeraude = sain (l'or est réservé à la marque).
-            int shown = (int)Math.Round(hp * Ease(_animT));
-            var rf = new RectangleF(x + 6, y + 6, size - 12, size - 12);
-            using (var back = new Pen(Color.FromArgb(42, 37, 29), 8f)) g.DrawArc(back, rf, 0, 360);
-            Color arc = hp < 30 ? FpsUi.Err : (hp < 60 ? FpsUi.Warn : FpsUi.Ok);
-            if (shown > 0)
+            var g = e.Graphics; var r = _hero.ClientRectangle;
+            FpsUi.PaintCard(g, r, Color.FromArgb(32, 28, 21), Color.FromArgb(83, 69, 43), 14f);
+            int split = Math.Max(510, r.Width - 300);
+            using (var pen = new Pen(Color.FromArgb(38, FpsUi.Gold)))
+                for (int i = 0; i < 5; i++)
+                {
+                    int x = split + i * 35;
+                    g.DrawLines(pen, new[] { new Point(x, 1), new Point(x, 30 + i * 8), new Point(x + 36, 66 + i * 8), new Point(r.Width - 12, 66 + i * 8) });
+                }
+            Draw(g, "OPTIMISATION WINDOWS / GAMING", FpsUi.Small, FpsUi.Gold, new Rectangle(24, 18, split - 40, 22));
+            Draw(g, "Ton PC. Tes performances.", HeroFont, FpsUi.Ink, new Rectangle(22, 44, split - 18, 48));
+            Draw(g, "Maîtrise les réglages, l'activité en fond et la latence.", FpsUi.Body, FpsUi.Dim, new Rectangle(24, 102, split - 32, 25));
+            if (r.Width - split >= 245)
             {
-                // Halo doux sous l'arc : l'anneau semble éclairé de l'intérieur.
-                using (var glow = new Pen(Color.FromArgb(56, arc), 14f)) { glow.StartCap = LineCap.Round; glow.EndCap = LineCap.Round; g.DrawArc(glow, rf, -90, 360f * shown / 100f); }
-                using (var pen = new Pen(arc, 8f)) { pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; g.DrawArc(pen, rf, -90, 360f * shown / 100f); }
+                var session = new Rectangle(split + 12, 26, r.Width - split - 36, 150);
+                FpsUi.PaintCard(g, session, FpsUi.RailBg, FpsUi.Border, 12);
+                NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(session.X + 18, session.Y + 18, 34, 34), FpsUi.Gold);
+                Draw(g, "MODE JEU", FpsUi.Small, FpsUi.Dim, new Rectangle(session.X + 66, session.Y + 18, session.Width - 78, 20));
+                Draw(g, GameBoost.IsActive ? "Activé" : "En veille", FpsUi.H2, GameBoost.IsActive ? FpsUi.Ok : FpsUi.Ink,
+                    new Rectangle(session.X + 66, session.Y + 40, session.Width - 78, 26));
+                Draw(g, "Un profil dédié à tes sessions.\nÀ configurer selon tes jeux.", FpsUi.Body, FpsUi.Dim,
+                    new Rectangle(session.X + 18, session.Y + 86, session.Width - 36, 48), true);
             }
-            TextRenderer.DrawText(g, shown + "%", FpsUi.Num, new Rectangle(x, y + size / 2 - 20, size, 34), FpsUi.Ink, TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(g, "SANTÉ", FpsUi.Small, new Rectangle(x, y + size / 2 + 14, size, 16), FpsUi.Dim, TextFormatFlags.HorizontalCenter);
         }
-
+        private void PaintMetric(Graphics g, Rectangle r, int index)
+        {
+            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 10f);
+            using (var brush = new SolidBrush(_series[index])) g.FillRectangle(brush, 1, 20, 3, 54);
+            Draw(g, _names[index], FpsUi.Tiny, FpsUi.Dim, new Rectangle(18, 12, r.Width - 36, 20));
+            Draw(g, Percent(_values[index]), FpsUi.Num, FpsUi.Ink, new Rectangle(16, 32, 128, 40));
+            string detail = index == 0 ? Environment.ProcessorCount + " processeurs logiques"
+                : index == 1 ? (_sample != null && _sample.Gpu != null && _sample.Gpu.Ok ? _sample.Gpu.Name : "Capteur GPU")
+                : _sample != null && _sample.RamTotalMB > 0 ? (_sample.RamUsedMB / 1024.0).ToString("0.0") + " / " + (_sample.RamTotalMB / 1024.0).ToString("0.0") + " Go" : "Lecture en cours…";
+            Draw(g, detail, FpsUi.Tiny, FpsUi.Dim2, new Rectangle(18, 74, r.Width - 36, 18));
+            DrawSeries(g, new Rectangle(r.Width - 120, 39, 100, 28), _history[index], _series[index]);
+        }
+        private void PaintConfiguration(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; var r = _configuration.ClientRectangle;
+            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
+            Draw(g, "Configuration Windows", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 18, r.Width - 40, 26));
+            Draw(g, _stats == null ? "—" : _stats.OptiActive.ToString(), FpsUi.Num, FpsUi.Gold, new Rectangle(18, 52, 100, 42));
+            Draw(g, _stats == null ? "Analyse en cours…" : "réglages actifs sur " + _stats.OptiTotal, FpsUi.Body, FpsUi.Dim,
+                new Rectangle(20, 98, r.Width - 40, 24));
+            int filled = _stats == null || _stats.OptiTotal == 0 ? 0 : (r.Width - 40) * _stats.OptiActive / _stats.OptiTotal;
+            using (var b = new SolidBrush(FpsUi.Border)) g.FillRectangle(b, 20, 134, r.Width - 40, 4);
+            if (filled > 0) using (var b = new SolidBrush(FpsUi.Gold)) g.FillRectangle(b, 20, 134, filled, 4);
+            Draw(g, "Choisis les réglages adaptés à tes usages.", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 151, r.Width - 40, 36), true);
+        }
         private void PaintGraph(object sender, PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
-            Rectangle r = _graph.ClientRectangle;
-            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
-            int pad = 18;
-            TextRenderer.DrawText(g, "UTILISATION SYSTÈME", FpsUi.H3, new Point(pad, 14), FpsUi.Ink, TextFormatFlags.NoPadding);
-            Legend(g, r.Width - 320, 15, "RAM", _curRam, SerRam);
-            Legend(g, r.Width - 210, 15, "CPU", _curCpu, SerCpu);
-            Legend(g, r.Width - 100, 15, "GPU", _curGpu, SerGpu);
-
-            var plot = new Rectangle(pad, 48, r.Width - pad * 2, r.Height - 76);
-            TextRenderer.DrawText(g, "100%", FpsUi.Small, new Point(pad, 44), FpsUi.Dim2, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "0%", FpsUi.Small, new Point(pad, plot.Bottom - 2), FpsUi.Dim2, TextFormatFlags.NoPadding);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            Series(g, plot, _ram, SerRam);
-            Series(g, plot, _cpu, SerCpu);
-            Series(g, plot, _gpu, SerGpu);
-        }
-
-        private void Legend(Graphics g, int x, int y, string t, double val, Color c)
-        {
-            using (var pen = new Pen(c, 2.5f)) g.DrawLine(pen, x, y + 9, x + 18, y + 9);
-            TextRenderer.DrawText(g, t, FpsUi.Small, new Point(x + 23, y), FpsUi.Dim, TextFormatFlags.NoPadding);
-            int tw = TextRenderer.MeasureText(g, t, FpsUi.Small).Width;
-            TextRenderer.DrawText(g, double.IsNaN(val) ? "—" : val.ToString("0") + " %", FpsUi.H3, new Point(x + 23 + tw + 5, y - 1), c, TextFormatFlags.NoPadding);
-        }
-
-        private void Series(Graphics g, Rectangle plot, Queue<double> q, Color c)
-        {
-            if (q.Count < 2) return;
-            var arr = q.ToArray();
-            var pts = new PointF[arr.Length];
-            for (int i = 0; i < arr.Length; i++)
+            var g = e.Graphics; var r = _graph.ClientRectangle;
+            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
+            Draw(g, "Charge système", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 17, r.Width - 40, 24));
+            Draw(g, "EN DIRECT · 60 S", FpsUi.Tiny, FpsUi.Dim, new Rectangle(r.Width - 136, 22, 116, 18));
+            string[] legends = { "CPU", "GPU", "RAM" };
+            for (int i = 0; i < 3; i++)
             {
-                float fx = plot.Left + (float)i / (Hist - 1) * plot.Width;
-                float v = (float)Math.Max(0, Math.Min(100, arr[i]));
-                pts[i] = new PointF(fx, plot.Bottom - v / 100f * plot.Height);
+                using (var b = new SolidBrush(_series[i])) g.FillEllipse(b, 20 + i * 86, 55, 6, 6);
+                Draw(g, legends[i], FpsUi.Small, FpsUi.Dim, new Rectangle(34 + i * 86, 49, 60, 22));
             }
-            // Courbe lissée (spline) + aire en dégradé qui s'efface vers le bas : la lecture
-            // est plus douce qu'une ligne brisée, et l'aire donne de la profondeur.
-            const float tension = 0.4f;              // au-delà, la spline « rebondit »
-            if (plot.Height > 1)
+            var plot = new Rectangle(48, 88, Math.Max(10, r.Width - 68), Math.Max(20, r.Height - 122));
+            for (int value = 0; value <= 100; value += 50)
             {
-                using (var path = new GraphicsPath())
+                int y = plot.Bottom - value * plot.Height / 100;
+                using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, plot.Left, y, plot.Right, y);
+                Draw(g, value.ToString(), FpsUi.Tiny, FpsUi.Dim2, new Rectangle(12, y - 9, 30, 18));
+            }
+            for (int i = 0; i < 3; i++) DrawSeries(g, plot, _history[i], _series[i]);
+            Draw(g, "−60 s", FpsUi.Tiny, FpsUi.Dim2, new Rectangle(plot.Left, plot.Bottom + 10, 80, 18));
+            Draw(g, "Maintenant", FpsUi.Tiny, FpsUi.Dim2, new Rectangle(plot.Right - 66, plot.Bottom + 10, 76, 18));
+        }
+        private static void DrawSeries(Graphics g, Rectangle plot, Queue<double> queue, Color color)
+        {
+            var values = queue.ToArray(); g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var pen = new Pen(color, 1.8f))
+                for (int i = 1; i < values.Length; i++)
                 {
-                    path.AddCurve(pts, tension);
-                    path.AddLine(pts[arr.Length - 1].X, plot.Bottom, pts[0].X, plot.Bottom);
-                    path.CloseFigure();
-                    using (var br = new LinearGradientBrush(
-                        new Rectangle(plot.X, plot.Y, Math.Max(1, plot.Width), plot.Height),
-                        Color.FromArgb(70, c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B), 90f))
-                        g.FillPath(br, path);
+                    if (double.IsNaN(values[i - 1]) || double.IsNaN(values[i])) continue;
+                    float x = plot.Left + (float)(Samples - values.Length + i - 1) / (Samples - 1) * plot.Width;
+                    float next = plot.Left + (float)(Samples - values.Length + i) / (Samples - 1) * plot.Width;
+                    g.DrawLine(pen, x, plot.Bottom - (float)Math.Clamp(values[i - 1], 0, 100) * plot.Height / 100,
+                        next, plot.Bottom - (float)Math.Clamp(values[i], 0, 100) * plot.Height / 100);
                 }
-            }
-            using (var pen = new Pen(c, 1.8f)) { pen.LineJoin = LineJoin.Round; g.DrawCurve(pen, pts, tension); }
         }
-
         private void Sample()
         {
-            if (_sampling) return;
-            _sampling = true;
+            lock (_monitor) { if (_sampling || _disposed) return; _sampling = true; }
             Task.Run(() =>
             {
-                double cpu = 0, gpu = 0, ram = 0;
-                try { HwSample s = _mon.Sample(); cpu = s.CpuLoad < 0 ? 0 : s.CpuLoad; ram = s.RamLoad; gpu = s.Gpu != null && s.Gpu.Ok ? s.Gpu.Util : 0; }
+                HwSample sample = null;
+                try { sample = _monitor.Sample(); } catch { }
+                lock (_monitor) { _sampling = false; if (_disposed) { _monitor.Dispose(); return; } }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        if (_disposed) return;
+                        _sample = sample;
+                        _values[0] = sample != null && sample.CpuLoad >= 0 ? sample.CpuLoad : double.NaN;
+                        _values[1] = sample != null && sample.Gpu != null && sample.Gpu.Ok ? sample.Gpu.Util : double.NaN;
+                        _values[2] = sample != null && sample.RamTotalMB > 0 ? sample.RamLoad : double.NaN;
+                        for (int i = 0; i < 3; i++)
+                        {
+                            _history[i].Enqueue(_values[i]);
+                            while (_history[i].Count > Samples) _history[i].Dequeue();
+                            _metrics[i].Invalidate();
+                        }
+                        _graph.Invalidate(); _hero.Invalidate();
+                    }));
+                }
                 catch { }
-                try { BeginInvoke((Action)(() => { _curCpu = cpu; _curGpu = gpu; _curRam = ram; Push(_cpu, cpu); Push(_gpu, gpu); Push(_ram, ram); if (_graph != null) _graph.Invalidate(); _sampling = false; })); }
-                catch { _sampling = false; }
             });
         }
-
-        private static void Push(Queue<double> q, double v) { q.Enqueue(v); while (q.Count > Hist) q.Dequeue(); }
-
-        private void ComputeHealth()
+        private static string Percent(double value) { return double.IsNaN(value) ? "—" : value.ToString("0") + " %"; }
+        private static void Draw(Graphics g, string text, Font font, Color color, Rectangle rect, bool wrap = false)
         {
-            // État partagé/caché (AppStats) : évite de recalculer ce que la page Collection calcule aussi.
-            AppStats.Get(s =>
-            {
-                try { BeginInvoke((Action)(() => {
-                    _activeOpti = s.OptiActive; _health = s.Health;
-                    // Cibles de l'animation : les compteurs y montent (ou s'y posent
-                    // directement si les effets sont coupés / si l'entrée est terminée).
-                    _tOpti = s.OptiActive; _tTotal = s.OptiTotal; _tJeux = GameBoost.IsActive ? 1 : 0;
-                    _statsReady = true;
-                    ApplyCounters();
-                    Invalidate();
-                })); }
-                catch { }
-            });
+            TextRenderer.DrawText(g, text, font, rect, color, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix
+                | TextFormatFlags.EndEllipsis | (wrap ? TextFormatFlags.WordBreak : TextFormatFlags.SingleLine));
+        }
+    }
+
+    internal sealed class DashboardShortcut : Button
+    {
+        private readonly int _icon;
+        private readonly string _description;
+        private bool _hover;
+        public DashboardShortcut(int icon, string title, string description, Action action)
+        {
+            _icon = icon; Text = title; _description = description; AccessibleName = title;
+            FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0; BackColor = FpsUi.BgMain; Cursor = Cursors.Hand;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            MouseEnter += (s, e) => { _hover = true; Invalidate(); }; MouseLeave += (s, e) => { _hover = false; Invalidate(); };
+            GotFocus += (s, e) => Invalidate(); LostFocus += (s, e) => Invalidate(); Click += (s, e) => action();
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(FpsUi.BgMain);
+            FpsUi.PaintCard(g, ClientRectangle, _hover ? FpsUi.CardHi : FpsUi.Card,
+                _hover || (Focused && ShowFocusCues) ? FpsUi.GoldDim : FpsUi.Border, 10);
+            NavIcons.Draw(g, _icon, new RectangleF(16, 18, 22, 22), FpsUi.Gold);
+            TextRenderer.DrawText(g, Text, FpsUi.H3, new Rectangle(48, 18, Width - 58, 24), FpsUi.Ink,
+                TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+            TextRenderer.DrawText(g, _description, FpsUi.Small, new Rectangle(16, 51, Width - 32, 24), FpsUi.Dim,
+                TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
         }
     }
 }
