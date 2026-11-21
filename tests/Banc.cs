@@ -65,9 +65,15 @@ namespace BTOptimizer.Tests
 
     internal static class Programme
     {
-        private static int Main()
+        private static int Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            // « -- reseau » : seul le test des vraies sources (Bons plans, Actus). Le banc par défaut reste hors ligne.
+            if (Array.IndexOf(args, "reseau") >= 0)
+            {
+                OffresReseauTests.Tout();
+                return Banc.Bilan();
+            }
             PilotesRefusesTests.Tout();
             JournalTechniqueTests.Tout();
             CanauxWindowsTests.Tout();

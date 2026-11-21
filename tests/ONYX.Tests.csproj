@@ -78,6 +78,8 @@
     <Compile Include="..\src\OffresSources.cs" />
     <Compile Include="..\src\Suivi.cs" />
     <Compile Include="..\src\Actus.cs" />
+    <!-- Machine (HTTP, cache) : compilé pour le test réseau à la demande seulement (argument « reseau »). -->
+    <Compile Include="..\src\OffresReseau.cs" />
   </ItemGroup>
 
   <ItemGroup>
