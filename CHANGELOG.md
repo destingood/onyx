@@ -5,7 +5,9 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## Prochaine version — le mode MSI n'écrit plus rien quand il est déjà actif
+## v15.78 — Mode Jeu sans fermeture, mesure en jeu enrichie, diagnostic étendu
+
+### Mode MSI : rien d'écrit quand il est déjà actif
 
 - **Déjà en MSI : rien d'écrit.** Sur un PC récent, le pilote met déjà la carte graphique,
   l'USB, le NVMe et le réseau en interruptions par message (MSI) ; un test publié (RigPolice,
@@ -17,6 +19,9 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   passée en interruptions à ligne voit ses DPC monter de 8,5 à 116 µs (même test).
 - **État affiché juste avec deux cartes graphiques** : le MSI était jugé actif d'après la
   première trouvée (souvent la puce intégrée). Toutes sont maintenant prises en compte.
+
+### Mesure en jeu et Mode Jeu
+
 - **Mesure en jeu : régularité et frametime P99.** Le relevé affiche, en plus des FPS moyens et
   du 1 % low, la régularité (1 % low / FPS moyens) et le temps d'image au 99e centile, avec un
   rapport avant/après en %.
@@ -35,6 +40,9 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   directement à l'écran ou par le compositeur de Windows (environ un rafraîchissement de latence
   en plus, calcul non mesuré) et propose, à la fin de la mesure « après », le réglage pour les
   jeux en fenêtré s'il manque. Règles inspirées de PresentMon (Intel, MIT).
+
+### Diagnostic étendu
+
 - **Diagnostic : shaders précompilés.** Si la carte graphique est compatible avec la livraison de
   shaders précompilés de Windows (Advanced Shader Delivery) mais que Windows est antérieur à 24H2
   ou que le pilote est trop ancien (NVIDIA 621.01, AMD Adrenalin 26.6.1, Intel 32.0.101.9150),
@@ -52,6 +60,9 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   réglages d'Overwatch, de Battlefield 6 et de Black Ops 6 et signale NVIDIA Reflex coupé
   (carte NVIDIA) ou la faible latence AMD coupée (carte AMD). Lecture seule ; rien n'est modifié
   dans les jeux.
+
+### Caches de shaders gardés
+
 - **Les caches de shaders ne sont plus vidés par défaut.** Les vider fait recompiler chaque shader
   en jeu, d'où des saccades. Ils sortent de « Tout entretenir », du Check Up+, des cases cochées
   du Stockage et du Nettoyage disque, et de « Libérer l'espace » (Copilote, réparation des
