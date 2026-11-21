@@ -20,10 +20,10 @@ namespace BTOptimizer
     /// tout client qui utilise Rich Presence. Il n'ouvre aucun accès au compte, contrairement au
     /// jeton du bot — qui, lui, n'a rien à faire ici et n'y est pas.
     ///
-    /// Pour que le logo s'affiche à côté du statut, l'application doit porter une ressource nommée
-    /// exactement « logo » dans Rich Presence → Art Assets. Sans elle, le texte s'affiche seul.
+    /// Le logo affiché à côté du statut est l'icône de l'application, donnée par son adresse
+    /// (DiscordPresence.Image.cs) : aucune ressource à déposer dans le portail Discord.
     /// </summary>
-    internal static class DiscordPresence
+    internal static partial class DiscordPresence
     {
         private static NamedPipeClientStream _pipe;
         private static Thread _thread;
@@ -45,11 +45,6 @@ namespace BTOptimizer
             get { try { return !File.Exists(ConfigPath) || File.ReadAllText(ConfigPath).Trim() != "0"; } catch { return true; } }
             set { try { File.WriteAllText(ConfigPath, value ? "1" : "0"); } catch { } }
         }
-
-        /// <summary>Application « ONYX » officielle du portail développeur Discord. Identifiant
-        /// PUBLIC (voir la note de la classe) : c'est ce qui permet à la présence de marcher dès
-        /// l'installation, sans manipulation.</summary>
-        public const string AppIdParDefaut = "1537266582785495120";
 
         /// <summary>Application ID Discord. Celui collé par l'utilisateur (menu ⋯ → Système)
         /// l'emporte ; sinon l'application ONYX officielle sert. Un fichier présent mais illisible
@@ -262,7 +257,7 @@ namespace BTOptimizer
             string json =
                 "{\"cmd\":\"SET_ACTIVITY\",\"nonce\":\"" + nonce + "\",\"args\":{\"pid\":" + pid + ",\"activity\":{" +
                 "\"details\":\"" + DetailsLine(tick) + "\",\"state\":\"avec ONYX" + ver + "\"," +
-                "\"assets\":{\"large_image\":\"logo\",\"large_text\":\"ONYX — l'optimiseur gaming\"}," +
+                Assets() + "," +
                 "\"timestamps\":{\"start\":" + StartTs + "}}}}";
             try { Write(1, json); ReadFrame(); } catch { }
         }
