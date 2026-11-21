@@ -5,6 +5,20 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.83 — Comparateur de prix, page Mes jeux corrigée
+
+- **Comparateur de prix dans Bons plans.** Un clic sur un jeu ouvre une fenêtre : meilleur prix
+  converti en euros (taux BCE), plus bas historique et verdict, prix de chaque store officiel, et
+  boutons de recherche chez Instant Gaming, G2A, Eneba, Kinguin et AllKeyShop (aucun prix lu
+  chez eux). Liens vers l'historique complet sur IsThereAnyDeal et SteamDB.
+- **Mes jeux : des images pour tous.** Les jeux Epic prennent la jaquette du launcher ;
+  World of Warcraft et Hearthstone affichent leur icône officielle sur un fond à leurs couleurs.
+- **Mes jeux : seulement des jeux.** Moteurs, plugins, éditeurs, outils WinGet, launchers et
+  logiciels vendus sur Steam (Wallpaper Engine, 3DMark…) ne sont plus listés.
+- **Mes jeux : un jeu, une carte.** Un jeu installé sur plusieurs plateformes n'apparaît qu'une
+  fois, avec toutes ses plateformes (« STEAM + EPIC ») et dans le filtre de chacune.
+- **Page Performances** habillée en carbone et or comme le reste de l'interface.
+
 ## v15.82 — Interface harmonisée, menu et page Jeux revus
 
 - **Interface harmonisée.** Cartes, titres et boutons partagent le même habillage carbone et or
