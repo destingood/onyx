@@ -114,7 +114,40 @@ namespace BTOptimizer
                 try { games = GameScan.Known(); GameScan.Detect(games); } catch { }
                 try { MergeScanned(games); } catch { }   // + TOUS les jeux installés (scanner générique multi-plateforme)
                 try { BeginInvoke((Action)(() => { _all = games; UpdatePlatforms(); Render(); PrefetchArt(); })); } catch { }
+                DropSteamSoftware(games);
             });
+        }
+
+        /// <summary>
+        /// Steam vend aussi des logiciels (Wallpaper Engine, 3DMark, Lossless Scaling) que rien ne
+        /// distingue d'un jeu sur le disque : le store les classe « Software ». On les retire de la
+        /// bibliothèque dès que la réponse arrive (mise en cache 7 jours ; hors ligne, ils restent).
+        /// </summary>
+        private void DropSteamSoftware(List<GameScan.GameInfo> games)
+        {
+            var ids = new List<int>();
+            foreach (GameScan.GameInfo g in games) if (g.Detected && g.SteamId > 0 && !ids.Contains(g.SteamId)) ids.Add(g.SteamId);
+            var software = new HashSet<int>();
+            for (int i = 0; i < ids.Count; i += OffresSources.LotSteam)
+            {
+                try
+                {
+                    string url = OffresSources.UrlFichesSteam(ids.GetRange(i, Math.Min(OffresSources.LotSteam, ids.Count - i)));
+                    software.UnionWith(BibliothequeJeux.LogicielsSteam(OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult()));
+                }
+                catch { }
+            }
+            if (software.Count == 0) return;
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    if (_all == null) return;
+                    _all.RemoveAll(g => g.Detected && software.Contains(g.SteamId));
+                    UpdatePlatforms(); Render();
+                }));
+            }
+            catch { }
         }
 
         // Fusionne les jeux RÉELLEMENT installés (toutes plateformes, connus ou pas) détectés par
@@ -126,20 +159,18 @@ namespace BTOptimizer
             try { scanned = GameLibrary.ScanAll(); } catch { return; }
             if (scanned == null || scanned.Count == 0) return;
 
-            var byName = new System.Collections.Generic.Dictionary<string, GameScan.GameInfo>();
-            foreach (GameScan.GameInfo g in games)
-            {
-                string k = NormName(g.Name);
-                if (k.Length > 0 && !byName.ContainsKey(k)) byName[k] = g;
-            }
+            foreach (GameScan.GameInfo g in games) if (g.Detected) BibliothequeJeux.AjouteStore(g.Stores, g.Store);
 
             foreach (GameLibrary.InstalledGame s in scanned)
             {
-                string k = NormName(s.Name);
-                if (k.Length == 0) continue;
+                if (BibliothequeJeux.Cle(s.Name).Length == 0) continue;
 
-                GameScan.GameInfo known;
-                if (byName.TryGetValue(k, out known))
+                // Même jeu sur une autre plateforme (même AppID, même nom à l'édition près, ou nom
+                // court du launcher = mot-clé du catalogue) : une seule carte, toutes les plateformes.
+                GameScan.GameInfo known = null;
+                foreach (GameScan.GameInfo g in games)
+                    if (BibliothequeJeux.MemeJeu(g.Name, g.SteamId, g.Keywords, s.Name, s.SteamAppId)) { known = g; break; }
+                if (known != null)
                 {
                     // Le catalogue connaît déjà ce jeu — mais souvent SANS chemin d'installation :
                     // GameScan.Detect() peut le marquer « détecté » sur un simple mot-clé de
@@ -150,16 +181,19 @@ namespace BTOptimizer
                     if (string.IsNullOrEmpty(known.InstallPath)) known.InstallPath = s.InstallDir;
                     if (string.IsNullOrEmpty(known.Store)) known.Store = s.Launcher;
                     if (known.SteamId <= 0 && s.SteamAppId > 0) known.SteamId = s.SteamAppId;
+                    if (known.ImageUrl == null) known.ImageUrl = s.ImageUrl;
+                    BibliothequeJeux.AjouteStore(known.Stores, known.Store);
+                    BibliothequeJeux.AjouteStore(known.Stores, s.Launcher);
                     continue;
                 }
 
                 var added = new GameScan.GameInfo
                 {
                     Name = s.Name, Detected = true, SteamId = s.SteamAppId,
-                    InstallPath = s.InstallDir, Store = s.Launcher
+                    InstallPath = s.InstallDir, Store = s.Launcher, ImageUrl = s.ImageUrl
                 };
+                BibliothequeJeux.AjouteStore(added.Stores, s.Launcher);
                 games.Add(added);
-                byName[k] = added;
             }
         }
 
@@ -187,7 +221,7 @@ namespace BTOptimizer
             if (_all == null) return;
             foreach (GameScan.GameInfo g in _all)
             {
-                if (!g.Detected || g.SteamId > 0 || string.IsNullOrEmpty(g.Name)) continue;
+                if (!g.Detected || g.SteamId > 0 || g.ImageUrl != null || string.IsNullOrEmpty(g.Name)) continue;
                 GameScan.GameInfo gg = g;
                 int id = SteamAppIndex.Resolve(gg.Name, () =>
                 {
@@ -256,15 +290,37 @@ namespace BTOptimizer
             return _spaceData != null && _spaceData.TryGetValue(NormName(g.Name), out e) ? e : null;
         }
 
+        /// <summary>Plateformes du jeu : toutes celles où il est installé, sinon son launcher.</summary>
+        private static List<string> Stores(GameScan.GameInfo game)
+        {
+            if (game.Stores.Count > 0) return game.Stores;
+            var one = new List<string>();
+            BibliothequeJeux.AjouteStore(one, game.Store);
+            return one;
+        }
+
+        /// <summary>Texte de la pastille : « STEAM + EPIC », ou « Autres ».</summary>
         private static string StoreName(GameScan.GameInfo game)
         {
-            return string.IsNullOrWhiteSpace(game.Store) ? "Autres" : game.Store.Trim().ToUpperInvariant();
+            return BibliothequeJeux.Pastille(Stores(game));
+        }
+
+        private static bool OnStore(GameScan.GameInfo game, string store)
+        {
+            List<string> all = Stores(game);
+            return all.Count == 0 ? store == "Autres" : all.Contains(store);
         }
 
         private void UpdatePlatforms()
         {
             var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var game in _all) if (!GameHidden.IsHidden(game.Name)) names.Add(StoreName(game));
+            foreach (var game in _all)
+            {
+                if (GameHidden.IsHidden(game.Name)) continue;
+                List<string> all = Stores(game);
+                if (all.Count == 0) names.Add("Autres");
+                foreach (string s in all) names.Add(s);
+            }
             _platformMenu.Items.Clear();
             AddPlatform("Toutes les plateformes");
             foreach (string name in names) AddPlatform(name);
@@ -285,7 +341,7 @@ namespace BTOptimizer
         private bool Match(GameScan.GameInfo game)
         {
             return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query))
-                && (_storeFilter == "Toutes les plateformes" || StoreName(game) == _storeFilter);
+                && (_storeFilter == "Toutes les plateformes" || OnStore(game, _storeFilter));
         }
 
         private void Render()
@@ -374,7 +430,9 @@ namespace BTOptimizer
                 int artHeight = card.Height - 90;
                 var art = new Rectangle(1, 1, card.Width - 2, artHeight);
                 OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused ? FpsUi.GoldDim : FpsUi.Border, 12);
-                Image cover = GameArt.ForGame(game.Name, game.SteamId, ready);
+                // Hors Steam, la jaquette du catalogue local d'Epic ; à défaut, recherche du nom sur Steam.
+                bool epicArt = game.SteamId <= 0 && game.ImageUrl != null && !GameArt.EchecUrl(game.ImageUrl);
+                Image cover = epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready);
                 var state = gr.Save();
                 using (var clip = FpsUi.Round(new RectangleF(1, 1, card.Width - 2, card.Height - 2), 11)) gr.SetClip(clip);
                 gr.SetClip(art, CombineMode.Intersect);
@@ -384,10 +442,10 @@ namespace BTOptimizer
                     using (var fill = new LinearGradientBrush(art, Color.FromArgb(43, 39, 29), FpsUi.RailBg, 60f)) gr.FillRectangle(fill, art);
                     using (var line = new Pen(Color.FromArgb(14, FpsUi.Gold)))
                         for (int x = -artHeight; x < card.Width; x += 22) gr.DrawLine(line, x, art.Bottom, x + artHeight, art.Top);
-                    Image icon = game.Detected ? GameIcon.For(game.InstallPath, ready) : null;
-                    int size = Math.Min(100, artHeight - 64);
+                    Image icon = game.Detected && !epicArt ? GameIcon.For(game.InstallPath, ready) : null;
+                    int size = Math.Min(icon != null ? 132 : 100, artHeight - 64);
                     var iconRect = new Rectangle((card.Width - size) / 2, (artHeight - size) / 2, size, size);
-                    if (icon != null) gr.DrawImage(icon, iconRect);
+                    if (icon != null) DrawIconCover(gr, icon, art, iconRect);
                     else OnyxDesign.IconWell(gr, NavIcons.Jeux, new Rectangle((card.Width - 64) / 2, (artHeight - 64) / 2, 64, 64));
                 }
                 using (var fade = new LinearGradientBrush(art, Color.FromArgb(30, 0, 0, 0), Color.FromArgb(100, 0, 0, 0), 90f)) gr.FillRectangle(fade, art);
@@ -462,7 +520,7 @@ namespace BTOptimizer
             {
                 ((ToolStripMenuItem)_platformMenu.Items[1]).PerformClick();
                 foreach (Control tile in _flow.Controls)
-                    if (tile.Tag is GameScan.GameInfo game && StoreName(game) != _storeFilter) throw new InvalidOperationException("Filtre de plateforme incorrect.");
+                    if (tile.Tag is GameScan.GameInfo game && !OnStore(game, _storeFilter)) throw new InvalidOperationException("Filtre de plateforme incorrect.");
                 ((ToolStripMenuItem)_platformMenu.Items[0]).PerformClick();
             }
             _search.Text = "counter";
@@ -531,6 +589,41 @@ namespace BTOptimizer
             if (_mode != null) _mode.Visible = on;
             if (_prio != null) _prio.Visible = on;
             Invalidate();
+        }
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Image, Bitmap> _blur =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Image, Bitmap>();
+
+        /// <summary>
+        /// Jeu sans jaquette publiée (World of Warcraft, Hearthstone : ni sur Steam ni sur Epic) :
+        /// son icône officielle en grand, sur un fond tiré de ses propres couleurs (icône réduite
+        /// à 6×6 puis agrandie, donc floue), assombri pour garder le nom lisible.
+        /// </summary>
+        private static void DrawIconCover(Graphics g, Image icon, Rectangle art, Rectangle iconRect)
+        {
+            try
+            {
+                Bitmap small;
+                if (!_blur.TryGetValue(icon, out small))
+                {
+                    small = new Bitmap(6, 6);
+                    using (Graphics sg = Graphics.FromImage(small))
+                    {
+                        sg.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        sg.DrawImage(icon, new Rectangle(0, 0, 6, 6));
+                    }
+                    try { _blur.Add(icon, small); } catch { }
+                }
+                var old = g.InterpolationMode; var oldOffset = g.PixelOffsetMode;
+                g.InterpolationMode = InterpolationMode.HighQualityBilinear; g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(small, art, new RectangleF(0.5f, 0.5f, 5f, 5f), GraphicsUnit.Pixel);
+                g.PixelOffsetMode = oldOffset;
+                using (var veil = new SolidBrush(Color.FromArgb(120, 10, 10, 12))) g.FillRectangle(veil, art);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(icon, iconRect);
+                g.InterpolationMode = old;
+            }
+            catch { }
         }
 
         // Dessine l'image en « cover » (remplit dst, recadrage centré).

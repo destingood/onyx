@@ -103,6 +103,7 @@ namespace BTOptimizer.Tests
             OffresSourcesTests.Tout();
             BoutiquesTests.Tout();
             ComparateurTests.Tout();
+            BibliothequeTests.Tout();
             SuiviTests.Tout();
             ActusTests.Tout();
             return Banc.Bilan();

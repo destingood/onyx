@@ -122,6 +122,9 @@ namespace BTOptimizer
             public string[] Keywords;    // mots-clés dans les clés de désinstallation
             public string InstallPath;   // dossier d'installation résolu (si trouvé sur disque)
             public string Store;         // launcher résolu (STEAM / EPIC / RIOT / BATTLE.NET) si détecté
+            public string ImageUrl;      // jaquette hors Steam (catalogue local d'Epic), null sinon
+            /// <summary>Toutes les plateformes où le jeu est installé (une seule carte par jeu).</summary>
+            public readonly System.Collections.Generic.List<string> Stores = new System.Collections.Generic.List<string>();
         }
 
         // Fabrique compacte : garde le grand catalogue lisible. uncap en dernier (chaîne la plus longue).
@@ -326,7 +329,8 @@ namespace BTOptimizer
                         foreach (string name in uninstall)
                         {
                             foreach (string kw in g.Keywords)
-                                if (name.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0) { g.Detected = true; break; }
+                                // Mot entier, hors outils : « Rustup: the Rust toolchain installer » n'est pas Rust.
+                                if (BibliothequeJeux.MotCleDans(name, kw)) { g.Detected = true; break; }
                             if (g.Detected) break;
                         }
 

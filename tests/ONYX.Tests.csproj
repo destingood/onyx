@@ -76,6 +76,8 @@
     <!-- Bons plans et Actus : modèle, sources, suivi, flux (purs). Le réseau vit dans OffresReseau.cs. -->
     <Compile Include="..\src\Offres.cs" />
     <Compile Include="..\src\OffresSources.cs" />
+    <!-- Page Jeux : tri jeu / application, jaquettes Epic, fusion multi-plateforme (pur). -->
+    <Compile Include="..\src\BibliothequeJeux.cs" />
     <Compile Include="..\src\Suivi.cs" />
     <Compile Include="..\src\Actus.cs" />
     <!-- Machine (HTTP, cache) : compilé pour le test réseau à la demande seulement (argument « reseau »). -->

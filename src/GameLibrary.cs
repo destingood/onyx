@@ -23,6 +23,7 @@ namespace BTOptimizer
             public string InstallDir;   // dossier d'installation (peut être null)
             public string Exe;          // exécutable principal si connu (sinon null)
             public int SteamAppId;      // AppID Steam pour la jaquette officielle (0 sinon)
+            public string ImageUrl;     // jaquette hors Steam (catalogue local d'Epic), null sinon
 
             /// <summary>Dernière partie. DateTime.MinValue = pas de date (jamais jouée OU hors Steam).</summary>
             public DateTime LastPlayed;
@@ -260,23 +261,30 @@ namespace BTOptimizer
                 @"Epic\EpicGamesLauncher\Data\Manifests");
             if (!Directory.Exists(dir)) return games;
 
+            // Jaquettes : le launcher garde son catalogue en local (JSON en base64), sans réseau ni clé.
+            Dictionary<string, string> images = null;
             foreach (string item in Directory.GetFiles(dir, "*.item"))
             {
                 try
                 {
-                    using (JsonDocument doc = JsonDocument.Parse(File.ReadAllText(item)))
+                    // Moteur, plugins, assets et extensions (éditeur UEFN, contenu LEGO) ne sont pas des jeux.
+                    BibliothequeJeux.Epic m = BibliothequeJeux.EpicManifeste(File.ReadAllText(item));
+                    if (m == null || !m.EstJeu) continue;
+                    if (images == null)
                     {
-                        JsonElement r = doc.RootElement;
-                        string name = GetStr(r, "DisplayName");
-                        if (string.IsNullOrWhiteSpace(name)) continue;
-                        games.Add(new InstalledGame
-                        {
-                            Name = name,
-                            Launcher = "EPIC",
-                            InstallDir = GetStr(r, "InstallLocation"),
-                            Exe = GetStr(r, "LaunchExecutable")
-                        });
+                        string cat = Path.Combine(Path.GetDirectoryName(dir), @"Catalog\catcache.bin");
+                        try { images = File.Exists(cat) && new FileInfo(cat).Length < 64L * 1024 * 1024 ? BibliothequeJeux.ImagesEpic(File.ReadAllText(cat)) : null; } catch { }
+                        if (images == null) images = new Dictionary<string, string>();
                     }
+                    string img;
+                    games.Add(new InstalledGame
+                    {
+                        Name = m.Nom,
+                        Launcher = "EPIC",
+                        InstallDir = m.Dossier,
+                        Exe = m.Exe,
+                        ImageUrl = m.Id != null && images.TryGetValue(m.Id, out img) ? img : null
+                    });
                 }
                 catch { }
             }
@@ -443,13 +451,8 @@ namespace BTOptimizer
             "gpu-z", "crystaldisk", "ccleaner", "latencymon", "onedrive"
         };
 
-        // Launchers eux-mêmes : exclus en correspondance EXACTE seulement, pour ne pas éliminer
-        // un vrai jeu (ex. « The Seven Deadly Sins: Origin » ne doit pas sauter à cause d'« Origin »).
-        private static readonly string[] LauncherApps =
-        {
-            "battle.net", "ea app", "ea desktop", "origin", "epic games launcher", "ubisoft connect",
-            "uplay", "gog galaxy", "steam", "riot client", "rockstar games launcher"
-        };
+        // Launchers eux-mêmes : BibliothequeJeux.EstLauncher (correspondance EXACTE, pour ne pas
+        // éliminer « The Seven Deadly Sins: Origin » à cause d'« Origin »).
 
         private static List<InstalledGame> ScanInstalledPrograms()
         {
@@ -485,15 +488,20 @@ namespace BTOptimizer
                             bool locExists;
                             try { locExists = Directory.Exists(loc); } catch { locExists = false; }
                             if (!locExists) continue;
+                            if (BibliothequeJeux.CheminOutil(loc)) continue;   // outils en ligne de commande posés par WinGet
                             string trimmed = name.Trim();
-                            if (LauncherApps.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
+                            if (BibliothequeJeux.EstLauncher(trimmed)) continue;
                             if (NoiseExactNames.Any(a => string.Equals(trimmed, a, StringComparison.OrdinalIgnoreCase))) continue;
                             if (NoisePublishers.Any(p => pub.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
                             if (NoiseNames.Any(n => trimmed.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                            // Hors launcher connu, le registre liste aussi des applications (Wireshark,
+                            // PS Remote Play…) : on exige un indice de jeu dans le dossier.
+                            string launcher = LauncherFor(loc, pub);
+                            if (launcher == "PC" && !BibliothequeJeux.IndiceDeJeu(FichiersProches(loc))) continue;
                             games.Add(new InstalledGame
                             {
                                 Name = trimmed,
-                                Launcher = LauncherFor(loc, pub),
+                                Launcher = launcher,
                                 InstallDir = loc
                             });
                         }
@@ -535,7 +543,10 @@ namespace BTOptimizer
                     string name = Path.GetFileName(sub);
                     if (string.IsNullOrWhiteSpace(name)) continue;
                     if (string.Equals(name, "GameSave", StringComparison.OrdinalIgnoreCase)) continue;  // dossier système, pas un jeu
+                    if (BibliothequeJeux.EstLauncher(name)) continue;                                     // Minecraft Launcher
                     string content = Path.Combine(sub, "Content");
+                    // Un jeu Xbox PC porte toujours MicrosoftGame.config ; « Shaders » (cache) n'en a pas.
+                    if (!File.Exists(Path.Combine(content, "MicrosoftGame.config")) && !File.Exists(Path.Combine(sub, "MicrosoftGame.config"))) continue;
                     games.Add(new InstalledGame
                     {
                         Name = name,
@@ -548,6 +559,37 @@ namespace BTOptimizer
         }
 
         // ----------------------------------------------------------- utilitaires
+
+        /// <summary>Chemins relatifs des fichiers et dossiers d'un dossier, sur 3 niveaux et 4 000 fichiers au plus.</summary>
+        private static IEnumerable<string> FichiersProches(string racine)
+        {
+            var file = new Queue<KeyValuePair<string, int>>();
+            file.Enqueue(new KeyValuePair<string, int>(racine, 0));
+            int vus = 0;
+            while (file.Count > 0)
+            {
+                KeyValuePair<string, int> d = file.Dequeue();
+                string[] fichiers, dossiers;
+                try { fichiers = Directory.GetFiles(d.Key); } catch { fichiers = new string[0]; }
+                foreach (string f in fichiers)
+                {
+                    if (++vus > 4000) yield break;
+                    yield return Relatif(racine, f);
+                }
+                if (d.Value >= 2) continue;
+                try { dossiers = Directory.GetDirectories(d.Key); } catch { dossiers = new string[0]; }
+                foreach (string s in dossiers)
+                {
+                    yield return Relatif(racine, s) + "\\";
+                    file.Enqueue(new KeyValuePair<string, int>(s, d.Value + 1));
+                }
+            }
+        }
+
+        private static string Relatif(string racine, string chemin)
+        {
+            return chemin.StartsWith(racine, StringComparison.OrdinalIgnoreCase) ? chemin.Substring(racine.Length).TrimStart('\\') : chemin;
+        }
         private static IEnumerable<string> FixedDrives()
         {
             DriveInfo[] drives;
