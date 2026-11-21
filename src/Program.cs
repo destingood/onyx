@@ -1354,6 +1354,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_LAB_UI") == "1")
+                {
+                    try { CapturePerformanceUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Performances ERREUR : " + ex); }
+                    Console.WriteLine("UITEST PERFORMANCES — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_GAMES_UI") == "1")
                 {
                     try { CaptureGamesUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2175,6 +2182,28 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CapturePerformanceUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(4);
+                var page = (PageLab)dash.PageAt(4);
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    page.PreviewScroll(0); dash.ClientSize = size; Pump(150);
+                    page.ValidatePerformanceUi(); Pump(100);
+                    SaveGamesShot(dash, dir, "performances-" + size.Width);
+                    page.PreviewScroll(370); Pump(100);
+                    SaveGamesShot(dash, dir, "outils-" + size.Width);
+                    Console.WriteLine("  Performances : filtres, recherche, état vide et grille OK à " + size.Width + "x" + size.Height);
+                }
+                dash.Hide();
+            }
+        }
+
         private static void CaptureGamesUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
