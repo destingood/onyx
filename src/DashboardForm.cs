@@ -128,6 +128,7 @@ namespace BTOptimizer
                 try { Audience.PingSiActive(); } catch { }
             });
             _rattrapage.Start();
+            try { SuiviVeille.Demarre(this); } catch { }   // Bons plans : veille des jeux suivis (reportée pendant une partie)
 
             Shown += (s, e) =>
             {
