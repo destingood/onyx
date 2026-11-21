@@ -145,6 +145,21 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>Offres encore valables : sans date de fin, ou fin pas encore passée.</summary>
+        public static List<Offre> EnCours(IEnumerable<Offre> offres, DateTime maintenantUtc)
+        {
+            if (offres == null) return new List<Offre>();
+            return offres.Where(o => o != null && (!o.Fin.HasValue || o.Fin.Value >= maintenantUtc)).ToList();
+        }
+
+        /// <summary>Retire les offres des sources nommées (sources en échec : leur cache peut être périmé).</summary>
+        public static List<Offre> SansSources(IEnumerable<Offre> offres, IEnumerable<string> sources)
+        {
+            if (offres == null) return new List<Offre>();
+            var exclues = new HashSet<string>(sources ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            return offres.Where(o => o != null && !exclues.Contains(o.Source ?? "")).ToList();
+        }
+
         /// <summary>Une offre par clé ; parmi les gratuites, une par nom (Epic préféré à GamerPower).</summary>
         public static List<Offre> Dedoublonner(IEnumerable<Offre> offres)
         {

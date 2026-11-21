@@ -86,6 +86,25 @@ namespace BTOptimizer
             return tous.OrderByDescending(a => a.Date).Take(Math.Max(0, max)).ToList();
         }
 
+        /// <summary>
+        /// Sites plafonnés à max titres, plus jusqu'à parJeu titres par jeu suivi : les flux des jeux,
+        /// souvent plus anciens, ne sont pas évincés par les sites. Le tout du plus récent au plus ancien.
+        /// </summary>
+        public static List<Actu> FusionneAvecJeux(IEnumerable<List<Actu>> sites, IEnumerable<List<Actu>> jeux, int max, int parJeu)
+        {
+            var tous = Fusionne(sites, max);
+            var liens = new HashSet<string>(tous.Select(a => a.Lien));
+            if (jeux != null)
+                foreach (var l in jeux)
+                {
+                    if (l == null) continue;
+                    var propres = l.Where(a => a != null && a.Lien != null && !liens.Contains(a.Lien))
+                        .OrderByDescending(a => a.Date).Take(Math.Max(0, parJeu)).ToList();
+                    foreach (var a in propres) if (liens.Add(a.Lien)) tous.Add(a);
+                }
+            return tous.OrderByDescending(a => a.Date).ToList();
+        }
+
         public static List<Actu> Filtre(List<Actu> actus, string texte, string source)
         {
             var res = new List<Actu>();

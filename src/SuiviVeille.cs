@@ -130,7 +130,12 @@ namespace BTOptimizer
                     fiches = await OffresReseau.FichesSteam(ids, 0).ConfigureAwait(false);
                     echecSteam = OffresReseau.DerniereErreur("steam");
                     gratuits = await OffresReseau.Gratuits().ConfigureAwait(false);
-                    echecGratuits = OffresReseau.DerniereErreur("epic") && OffresReseau.DerniereErreur("gamerpower");
+                    var enEchec = new List<string>();
+                    if (OffresReseau.DerniereErreur("epic")) enEchec.Add("epic");
+                    if (OffresReseau.DerniereErreur("gamerpower")) enEchec.Add("gamerpower");
+                    echecGratuits = enEchec.Count == 2;
+                    // Une source en échec rend son cache, parfois vieux de plusieurs jours : on ne notifie pas dessus.
+                    gratuits = Offres.SansSources(gratuits, enEchec);
                 }
                 catch { }
                 try

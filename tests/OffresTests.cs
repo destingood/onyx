@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace BTOptimizer.Tests
@@ -52,6 +53,15 @@ namespace BTOptimizer.Tests
             Banc.Verifie("tri prix : inconnu en dernier", true, Offres.Trier(new List<Offre> { O("steam", "1", "A", -1, 0), O("steam", "2", "B", 300, 0) }, "prix")[0].Id == "2");
             Banc.Verifie("tri nom", true, Offres.Trier(new List<Offre> { O("steam", "1", "b", 1, 0), O("steam", "2", "A", 1, 0) }, "nom")[0].Id == "2");
             Banc.Verifie("18 catégories, Action = 19", true, Offres.Categories.Length == 18 && Offres.Categories[0].Key == "Action" && Offres.Categories[0].Value == 19);
+            // Revue finale : offres terminées et sources en échec écartées.
+            var now = new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc);
+            var finie = O("gamerpower", "1", "Fini", 0, 0); finie.Fin = now.AddHours(-1);
+            var active = O("epic", "2", "Actif", 0, 0); active.Fin = now.AddDays(2);
+            var sansFin = O("gamerpower", "3", "Sans fin", 0, 0);
+            var enCours = Offres.EnCours(new List<Offre> { finie, active, sansFin }, now);
+            Banc.Verifie("gratuits : offre terminée écartée", true, enCours.Count == 2 && !enCours.Contains(finie));
+            var sains = Offres.SansSources(new List<Offre> { finie, active, sansFin }, new[] { "gamerpower" });
+            Banc.Verifie("gratuits : source en échec écartée", true, sains.Count == 1 && sains[0] == active);
         }
     }
 }

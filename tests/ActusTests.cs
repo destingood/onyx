@@ -39,6 +39,14 @@ namespace BTOptimizer.Tests
             Banc.Verifie("flux Steam", true, Actus.UrlFluxSteam(730) == "https://store.steampowered.com/feeds/news/app/730/?l=french");
             Banc.Verifie("4 sources, toutes en https", true, Actus.Sources.Length == 4 && Array.TrueForAll(Actus.Sources, s => s.Url.StartsWith("https://")));
             Banc.Verifie("favori d'actu", true, Actus.EnFavori(l[0]).Cle == l[0].Lien && Actus.EnFavori(l[0]).Titre == l[0].Titre);
+            // Revue finale : le plafond vaut pour les sites ; les jeux suivis gardent leurs titres même plus anciens.
+            var sites = new List<Actu>();
+            for (int i = 0; i < 30; i++) sites.Add(new Actu { Titre = "S" + i, Lien = "https://s.fr/" + i, Source = "jeuxvideo.com", Date = new DateTime(2026, 11, 21, 0, 0, 0, DateTimeKind.Utc).AddMinutes(-i) });
+            var jeu = new List<Actu>();
+            for (int i = 0; i < 15; i++) jeu.Add(new Actu { Titre = "J" + i, Lien = "https://j.fr/" + i, Source = "CS2", Date = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(-i) });
+            var mix = Actus.FusionneAvecJeux(new[] { sites }, new[] { jeu }, 20, 10);
+            Banc.Verifie("fusion : sites plafonnés, 10 titres par jeu suivi", true, mix.FindAll(a => a.Source == "jeuxvideo.com").Count == 20 && mix.FindAll(a => a.Source == "CS2").Count == 10);
+            Banc.Verifie("fusion : du plus récent au plus ancien", true, mix[0].Titre == "S0" && mix[mix.Count - 1].Titre == "J9");
         }
     }
 }

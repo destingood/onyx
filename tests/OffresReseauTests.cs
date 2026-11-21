@@ -10,6 +10,29 @@ namespace BTOptimizer.Tests
         {
             Banc.Titre("Bons plans et Actus : sources réelles (réseau)");
 
+            // Revue finale : un serveur qui se tait en plein corps de réponse ne bloque pas plus de 12 s.
+            var ecoute = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            ecoute.Start();
+            int port = ((System.Net.IPEndPoint)ecoute.LocalEndpoint).Port;
+            var muet = System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    using (var c = ecoute.AcceptTcpClient())
+                    {
+                        byte[] debut = System.Text.Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 100000\r\n\r\nabc");
+                        c.GetStream().Write(debut, 0, debut.Length);
+                        System.Threading.Thread.Sleep(30000);
+                    }
+                }
+                catch { }
+            });
+            var chrono = System.Diagnostics.Stopwatch.StartNew();
+            string lu = OffresReseau.Texte("http://127.0.0.1:" + port + "/muet-" + System.DateTime.UtcNow.Ticks, 0).GetAwaiter().GetResult();
+            chrono.Stop();
+            try { ecoute.Stop(); } catch { }
+            Banc.Verifie("délai de 12 s tenu pendant la lecture du corps (" + (int)chrono.Elapsed.TotalSeconds + " s)", true, lu == null && chrono.Elapsed.TotalSeconds < 16);
+
             var promos = OffresReseau.RechercheSteam(new Offres.Filtre { PlafondCts = 1000 }, true, false, 0).GetAwaiter().GetResult();
             Banc.Verifie("Steam : au moins 10 promos lues", true, promos.Count >= 10);
             Banc.Verifie("Steam : noms, prix en euros, liens", true, promos.TrueForAll(o => o.Nom.Length > 0 && o.SteamAppId > 0 && Offres.LienSur(o.Url)) && promos.Exists(o => o.PrixCts > 0 && o.Remise > 0));

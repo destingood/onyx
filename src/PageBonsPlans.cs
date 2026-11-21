@@ -44,6 +44,7 @@ namespace BTOptimizer
         private bool _charge, _occupe, _steamFini, _majCombos;
         private List<Offre> _resultats = new List<Offre>();
         private List<Offre> _gratuitsBruts;
+        private DateTime _gratuitsLe;   // UTC ; au-delà d'une heure, la liste est rechargée
 
         public PageBonsPlans(DashboardForm host) : base(host)
         {
@@ -418,7 +419,7 @@ namespace BTOptimizer
 
         private void ChargeGratuits(int gen)
         {
-            if (_gratuitsBruts != null) { AfficheGratuits(false); return; }
+            if (_gratuitsBruts != null && DateTime.UtcNow - _gratuitsLe < TimeSpan.FromMinutes(60)) { AfficheGratuits(false); return; }
             EtatChargement();
             Task.Run(async () =>
             {
@@ -429,6 +430,7 @@ namespace BTOptimizer
                 {
                     _occupe = false;
                     _gratuitsBruts = erreur && l.Count == 0 ? null : l;
+                    _gratuitsLe = DateTime.UtcNow;
                     AfficheGratuits(erreur);
                 });
             });

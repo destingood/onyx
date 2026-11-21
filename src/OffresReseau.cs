@@ -104,7 +104,8 @@ namespace BTOptimizer
                 var tous = new List<Offre>();
                 tous.AddRange(OffresSources.GratuitsEpic(epic.Result.Texte, DateTime.UtcNow));
                 tous.AddRange(OffresSources.GratuitsGamerPower(gp.Result.Texte));
-                return Offres.Dedoublonner(tous);
+                // GamerPower n'a pas toujours retiré une offre finie ; un cache peut aussi être ancien.
+                return Offres.EnCours(Offres.Dedoublonner(tous), DateTime.UtcNow);
             }
             catch { Erreurs["epic"] = true; Erreurs["gamerpower"] = true; return new List<Offre>(); }
         }
@@ -121,15 +122,19 @@ namespace BTOptimizer
                 foreach (var s in Actus.Sources) appels.Add(Tuple.Create(s.Nom, Lit(s.Url, 15)));
                 foreach (var j in jeux) appels.Add(Tuple.Create(j.Nom, Lit(Actus.UrlFluxSteam(j.AppId), 15)));
                 await Task.WhenAll(appels.Select(a => a.Item2)).ConfigureAwait(false);
-                var flux = new List<List<Actu>>();
+                var sites = new List<List<Actu>>();
+                var fluxJeux = new List<List<Actu>>();
+                int nbSites = Actus.Sources.Length;
                 bool toutEchoue = true;
-                foreach (var a in appels)
+                for (int i = 0; i < appels.Count; i++)
                 {
+                    var a = appels[i];
                     if (!a.Item2.Result.Echec) toutEchoue = false;
-                    flux.Add(Actus.LitRss(a.Item2.Result.Texte, a.Item1));
+                    (i < nbSites ? sites : fluxJeux).Add(Actus.LitRss(a.Item2.Result.Texte, a.Item1));
                 }
                 Erreurs["actus"] = toutEchoue;
-                return Actus.Fusionne(flux, Actus.MaxAffiche);
+                // Les flux des jeux suivis ont leur propre quota : les sites, plus récents, ne les évincent pas.
+                return Actus.FusionneAvecJeux(sites, fluxJeux, Actus.MaxAffiche, 10);
             }
             catch { Erreurs["actus"] = true; return new List<Actu>(); }
         }
@@ -202,14 +207,16 @@ namespace BTOptimizer
                     TimeSpan attente = dernier + Espacement - DateTime.UtcNow;
                     if (attente > TimeSpan.Zero) await Task.Delay(attente).ConfigureAwait(false);
                 }
+                // Http.Timeout ne couvre pas la lecture du corps (ResponseHeadersRead) : un jeton borne l'appel entier.
                 try
                 {
-                    using (var rep = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false))
+                    using (var delai = new CancellationTokenSource(Http.Timeout))
+                    using (var rep = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, delai.Token).ConfigureAwait(false))
                     {
                         if (!rep.IsSuccessStatusCode) return null;
                         long? taille = rep.Content.Headers.ContentLength;
                         if (taille.HasValue && taille.Value > MaxOctets) return null;
-                        byte[] octets = await LitBorne(rep).ConfigureAwait(false);
+                        byte[] octets = await LitBorne(rep, delai.Token).ConfigureAwait(false);
                         if (octets == null) return null;
                         return Decode(octets, rep.Content.Headers.ContentType == null ? null : rep.Content.Headers.ContentType.CharSet);
                     }
@@ -220,14 +227,14 @@ namespace BTOptimizer
             finally { porte.Release(); }
         }
 
-        private static async Task<byte[]> LitBorne(HttpResponseMessage rep)
+        private static async Task<byte[]> LitBorne(HttpResponseMessage rep, CancellationToken jeton)
         {
-            using (var flux = await rep.Content.ReadAsStreamAsync().ConfigureAwait(false))
+            using (var flux = await rep.Content.ReadAsStreamAsync(jeton).ConfigureAwait(false))
             using (var ms = new MemoryStream())
             {
                 var tampon = new byte[81920];
                 int n;
-                while ((n = await flux.ReadAsync(tampon, 0, tampon.Length).ConfigureAwait(false)) > 0)
+                while ((n = await flux.ReadAsync(tampon, 0, tampon.Length, jeton).ConfigureAwait(false)) > 0)
                 {
                     if (ms.Length + n > MaxOctets) return null;
                     ms.Write(tampon, 0, n);
