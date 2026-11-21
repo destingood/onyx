@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -1772,16 +1772,7 @@ namespace BTOptimizer
                         Tool("Prérequis auto", () => OpenDialog(new AutoInstallForm(Log))),
                         Tool("Boutiques en jeu", () => OpenDialog(new ShopFixForm(Log))));
                     break;
-                case 3: // Check Up+
-                    p.SetTools(
-                        Tool("Santé du PC", () => OpenDialog(new HealthForm(Log))),
-                        Tool("Qui ralentit ?", () => OpenDialog(new BloatForm(Log))),
-                        Tool("Réglages néfastes", () => OpenDialog(new CheckupForm(Log))),
-                        Tool("Stabilité", () => OpenDialog(new StabilityForm(Log))),
-                        Tool("Températures", () => OpenDialog(new ThermalForm(Log))),
-                        Tool("🧰 Entretien", () => OpenDialog(new MaintenanceForm(Log))),
-                        Tool("Rapport HTML", () => GenerateHealthReport()));
-                    break;
+                // Bilan & santé : diagnostics et entretien intégrés à PageCheckup.
                 case 8: // Stockage
                     p.SetTools(
                         Tool("🎬 Gros fichiers", () => OpenDialog(new StorageFilesForm(Log, null))),

@@ -9,131 +9,239 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    // Page Bilan & entretien : routines de maintenance sélectionnables, récapitulatif
-    // et exécution réelle (nettoyage, caches, réseau, SFC/DISM, defrag).
     internal class PageCheckup : FpsPage
     {
-        private class Routine { public string Name, Desc; public int Id; public ToggleSwitch Sel; }
-
+        private sealed class Routine { public string Name, Desc, Hint; public int Id; public ToggleSwitch Sel; public BufferedPanel Card; }
         private readonly List<Routine> _routines = new List<Routine>();
-        private Panel _summary;
-        private Button _run;
+        private readonly List<Button> _tools = new List<Button>();
+        private readonly OnyxScrollPanel _scroll = new OnyxScrollPanel();
+        private readonly BufferedPanel _content;
+        private readonly BufferedPanel _hero = new BufferedPanel(), _historyCard = new BufferedPanel(), _summary = new BufferedPanel();
+        private readonly Button[] _tabs = new Button[2];
+        private readonly Button _scan, _report, _run, _clear;
+        private readonly Label _section = FpsUi.Text("", FpsUi.H3, FpsUi.Dim);
+        private List<int> _history = new List<int>();
+        private bool _maintenance, _running;
+        private string _progress = "";
+        private static readonly string[] ToolNames = { "Stabilité & crashs", "Températures", "Ce qui ralentit le PC", "Réglages à vérifier", "Santé des disques", "Entretien avancé" };
+        private static readonly string[] ToolDescriptions = { "Écrans bleus, erreurs GPU et arrêts inattendus.", "Surveille la chauffe et les limites thermiques.", "Repère les programmes qui consomment des ressources.", "Examine les réglages laissés par d’autres optimiseurs.", "Contrôle les informations SMART et l’espace disponible.", "Retrouve les outils de maintenance de Windows." };
+        private static readonly int[] ToolIcons = { NavIcons.CheckUp, NavIcons.Systeme, NavIcons.Optimisations, NavIcons.Outils, NavIcons.Stockage, NavIcons.Outils };
 
         public PageCheckup(DashboardForm host) : base(host)
         {
-            Build();
-        }
-
-        public override void OnShown() { DoLayout(); }
-
-        private void Build()
-        {
-            Add(0, "Nettoyage des fichiers temporaires", "Supprime les fichiers temporaires Windows et applications. Libère de l'espace disque.");
-            Add(1, "Optimisation des disques", "TRIM sur les SSD, défragmentation consolidée sur les HDD.");
-            Add(2, "Réinitialisation des caches GPU", "Supprime les caches de shaders DirectX/NVIDIA. Seulement en cas d'artefacts après une MAJ de pilote : sinon, saccades le temps de les recompiler.");
-            Add(3, "Suppression de l'historique Windows", "Efface les fichiers récents, le cache de miniatures et les Jump Lists.");
-            Add(4, "Réparation des fichiers système", "Exécute SFC + DISM pour réparer les fichiers système corrompus.");
-            Add(5, "Rafraîchissement réseau", "Vide le cache DNS et le cache ARP de Windows.");
-
-            _summary = new Panel();
-            _summary.BackColor = Color.Transparent;
-            _summary.Paint += PaintSummary;
-            Controls.Add(_summary);
-
-            _run = OnyxDesign.AccentButton("Lancer la maintenance  →");
-            _run.Font = FpsUi.H3; _run.Height = 56;
-            _run.Click += (s, e) => RunSelected();
-            Controls.Add(_run);
-
-            Resize += (s, e) => DoLayout();
-        }
-
-        private void Add(int id, string name, string desc)
-        {
-            var card = new Panel();
-            card.Tag = "routine";
-            card.BackColor = Color.Transparent;
-            card.Paint += (s, e) =>
+            _report = OnyxDesign.Button("Exporter le rapport");
+            _report.Click += (s, e) => Host.GenerateHealthReport(); Controls.Add(_report);
+            for (int i = 0; i < 2; i++)
             {
-                var selected = card.Controls["toggle"] as ToggleSwitch;
-                bool active = selected != null && selected.On;
-                OnyxDesign.PaintCard(e.Graphics, card.ClientRectangle, FpsUi.Card, active ? OnyxDesign.Edge : FpsUi.Border, 12);
-                int icon = id == 0 || id == 1 || id == 3 ? NavIcons.Stockage : id == 2 ? NavIcons.Jeux : NavIcons.Systeme;
-                OnyxDesign.IconWell(e.Graphics, icon, new Rectangle(18, 16, 32, 32), active);
+                int tab = i;
+                _tabs[i] = OnyxDesign.Button(i == 0 ? "Bilan du PC" : "Entretien");
+                _tabs[i].Name = "checkup-tab-" + i; _tabs[i].Font = FpsUi.H3;
+                _tabs[i].Click += (s, e) => ChangeView(tab == 1); Controls.Add(_tabs[i]);
+            }
+            _content = _scroll.Content; Controls.Add(_scroll);
+            _hero.Paint += PaintHero; _content.Controls.Add(_hero);
+            _historyCard.Paint += PaintHistory; _content.Controls.Add(_historyCard);
+            _scan = OnyxDesign.PrimaryButton("Analyser la santé du PC  →");
+            _scan.Click += (s, e) => { Host.OpenDialog(new HealthForm(Host.Log)); RefreshHistory(); };
+            _hero.Controls.Add(_scan);
+            _section.AutoSize = false; _content.Controls.Add(_section);
+            Action[] actions = {
+                () => Host.OpenDialog(new StabilityForm(Host.Log)), () => Host.OpenDialog(new ThermalForm(Host.Log)),
+                () => Host.OpenDialog(new BloatForm(Host.Log)), () => Host.OpenDialog(new CheckupForm(Host.Log)),
+                () => Host.OpenDialog(new DiskForm(Host.Log)), () => Host.OpenDialog(new MaintenanceForm(Host.Log))
             };
-
-            var nm = new Label(); nm.Text = name; nm.Font = FpsUi.H3; nm.ForeColor = FpsUi.Ink; nm.BackColor = Color.Transparent;
-            nm.Name = "title";
-            nm.SetBounds(18, 16, 250, 44);
-            var ds = new Label(); ds.Text = desc; ds.Font = FpsUi.Small; ds.ForeColor = FpsUi.Dim; ds.BackColor = Color.Transparent;
-            ds.Name = "description";
-            ds.SetBounds(18, 64, 300, 66);
-
-            var sel = new ToggleSwitch(); sel.Location = new Point(292, 18); sel.On = (id == 0 || id == 5);   // shaders (2) décochés : les vider fait saccader
-            sel.Name = "toggle";
-            sel.AccessibleName = name;
-            sel.Toggled += (s, e) => { card.Invalidate(); if (_summary != null) _summary.Invalidate(); };
-            card.Controls.Add(nm); card.Controls.Add(ds); card.Controls.Add(sel);
-            Controls.Add(card);
-            _routines.Add(new Routine { Id = id, Name = name, Desc = desc, Sel = sel });
-            OnyxDesign.HoverCard(card);
+            for (int i = 0; i < actions.Length; i++)
+            {
+                var card = new DiagnosticCard(i); int index = i;
+                card.Click += (s, e) => actions[index](); _tools.Add(card); _content.Controls.Add(card);
+            }
+            Add(0, "Fichiers temporaires", "Supprime les fichiers temporaires de Windows et des applications.", "LIBÉRER DE L’ESPACE");
+            Add(1, "Optimisation des disques", "Lance TRIM sur les SSD et la défragmentation sur les HDD.", "OUTIL WINDOWS · PLUSIEURS MINUTES");
+            Add(2, "Caches de shaders GPU", "À utiliser après un problème de pilote. Les shaders seront recompilés : des saccades peuvent apparaître temporairement.", "EN CAS DE PROBLÈME");
+            Add(3, "Historique Windows", "Efface les fichiers récents, les miniatures et les Jump Lists.", "EFFACER LES TRACES RÉCENTES");
+            Add(4, "Réparation du système", "Lance SFC et DISM pour vérifier et réparer les fichiers de Windows.", "OUTIL WINDOWS · PLUSIEURS MINUTES");
+            Add(5, "Caches réseau", "Vide les caches DNS et ARP de Windows pour rafraîchir les résolutions réseau.", "RAFRAÎCHIR LE RÉSEAU");
+            _summary.Paint += PaintSummary; Controls.Add(_summary);
+            _run = OnyxDesign.PrimaryButton("Vérifier et lancer  →"); _run.Click += (s, e) => RunSelected(); _summary.Controls.Add(_run);
+            _clear = OnyxDesign.Button("Tout désélectionner");
+            _clear.Click += (s, e) => { foreach (var r in _routines) r.Sel.On = false; UpdateSelection(); }; _summary.Controls.Add(_clear);
+            Resize += (s, e) => DoLayout(); ChangeView(false);
         }
-
+        public override void OnShown() { RefreshHistory(); DoLayout(); }
+        private void RefreshHistory() { _history = HealthForm.LoadHistory(); _historyCard.Invalidate(); }
+        private void Add(int id, string title, string description, string hint)
+        {
+            var r = new Routine { Id = id, Name = title, Desc = description, Hint = hint, Card = new BufferedPanel(), Sel = new ToggleSwitch() };
+            r.Card.Name = "checkup-routine-" + id; r.Card.BackColor = FpsUi.BgMain;
+            r.Sel.On = id == 0 || id == 5; r.Sel.AccessibleName = title;
+            r.Sel.Toggled += (s, e) => UpdateSelection();
+            r.Card.Paint += (s, e) => PaintRoutine(e.Graphics, r);
+            r.Card.Controls.Add(r.Sel); _content.Controls.Add(r.Card); _routines.Add(r);
+            OnyxDesign.HoverCard(r.Card);
+        }
+        private int SelectedCount { get { int n = 0; foreach (var r in _routines) if (r.Sel.On) n++; return n; } }
+        private void UpdateSelection()
+        {
+            foreach (var r in _routines) { r.Sel.Enabled = !_running; r.Card.Invalidate(); }
+            _run.Enabled = !_running && SelectedCount > 0;
+            _clear.Enabled = !_running && SelectedCount > 0;
+            _run.Text = _running ? "En cours…" : "Vérifier et lancer  →"; _summary.Invalidate();
+        }
+        private void ChangeView(bool maintenance)
+        {
+            _maintenance = maintenance; _scroll.ScrollTo(0);
+            _hero.Visible = _historyCard.Visible = !maintenance;
+            foreach (var tool in _tools) tool.Visible = !maintenance;
+            foreach (var r in _routines) r.Card.Visible = maintenance;
+            _summary.Visible = maintenance;
+            _section.Text = maintenance ? "CHOISIS LES OPÉRATIONS À EFFECTUER" : "EXAMINER UN POINT PRÉCIS";
+            for (int i = 0; i < 2; i++)
+            {
+                bool active = maintenance == (i == 1);
+                _tabs[i].BackColor = active ? FpsUi.BlendGold(FpsUi.Card, .12f) : FpsUi.Card;
+                _tabs[i].ForeColor = active ? FpsUi.Gold : FpsUi.Dim;
+                _tabs[i].FlatAppearance.BorderSize = active ? 1 : 0;
+                _tabs[i].FlatAppearance.BorderColor = FpsUi.GoldDim;
+            }
+            UpdateSelection(); DoLayout();
+        }
         private void DoLayout()
         {
-            int L = 34, top = Host != null ? Host.ContentTop(100) : 100, gap = 18, cols = 3;
-            int w = (ClientSize.Width - L * 2 - gap * (cols - 1)) / cols, hgt = 170;
-            int i = 0;
-            foreach (var r in _routines)
+            if (_run == null) return;
+            _report.SetBounds(Width - 214, 20, 180, 36);
+            _tabs[0].SetBounds(34, 98, 154, 40); _tabs[1].SetBounds(198, 98, 154, 40);
+            _scroll.SetBounds(34, 156, Math.Max(400, Width - 50), Math.Max(150, Height - (_maintenance ? 272 : 174)));
+            int w = _scroll.ContentWidth;
+            int height;
+            if (!_maintenance)
             {
-                Panel card = (Panel)r.Sel.Parent;
-                int col = i % cols, row = i / cols;
-                card.SetBounds(L + col * (w + gap), top + row * (hgt + gap), w, hgt);
-                card.Controls["title"].SetBounds(62, 16, Math.Max(80, w - 136), 58);
-                card.Controls["description"].SetBounds(18, 80, w - 36, 76);
-                r.Sel.Location = new Point(w - r.Sel.Width - 18, 18);
-                i++;
+                int main = (w - 16) * 62 / 100;
+                _hero.SetBounds(0, 0, main, 214); _historyCard.SetBounds(main + 16, 0, w - main - 16, 214);
+                _scan.SetBounds(24, 156, 240, 38); _section.SetBounds(0, 238, w, 24);
+                int cols = w >= 1050 ? 3 : 2, cw = (w - (cols - 1) * 16) / cols;
+                for (int i = 0; i < _tools.Count; i++) _tools[i].SetBounds((i % cols) * (cw + 16), 278 + i / cols * 156, cw, 140);
+                height = 278 + ((_tools.Count + cols - 1) / cols) * 156;
             }
-            int by = top + 2 * (hgt + gap) + 6;
-            if (_summary != null) _summary.SetBounds(L, by, w * 2 + gap, 92);
-            if (_run != null) _run.SetBounds(L + w * 2 + gap + 24, by + 18, w - 24, 56);
+            else
+            {
+                _section.SetBounds(0, 0, w, 24); int cw = (w - 16) / 2;
+                for (int i = 0; i < _routines.Count; i++)
+                {
+                    var r = _routines[i]; r.Card.SetBounds(i % 2 * (cw + 16), 42 + i / 2 * 168, cw, 152);
+                    r.Sel.Location = new Point(cw - r.Sel.Width - 18, 20);
+                }
+                height = 42 + 3 * 168;
+            }
+            _scroll.ContentHeight = height;
+            _summary.SetBounds(34, Height - 100, Width - 68, 82);
+            _run.SetBounds(_summary.Width - 230, 21, 210, 40); _clear.SetBounds(_run.Left - 188, 23, 174, 36);
+            Invalidate();
         }
-
+        private void PaintHero(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; int w = _hero.Width;
+            OnyxDesign.PaintCard(g, _hero.ClientRectangle, FpsUi.BlendGold(FpsUi.Card, .035f), OnyxDesign.Edge, 12);
+            OnyxDesign.Text(g, "DIAGNOSTIC WINDOWS & GAMING", FpsUi.Small, FpsUi.Gold, new Rectangle(24, 22, w - 48, 20));
+            OnyxDesign.Text(g, "Un bilan avant d’agir.", OnyxDesign.Title, FpsUi.Ink, new Rectangle(24, 55, w - 48, 34));
+            OnyxDesign.Text(g, "Stabilité, disques, réseau et réglages : retrouve les points à examiner et les outils adaptés.", FpsUi.Body, FpsUi.Dim, new Rectangle(24, 100, w - 48, 44), true);
+        }
+        private void PaintHistory(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; int w = _historyCard.Width;
+            OnyxDesign.PaintCard(g, _historyCard.ClientRectangle, FpsUi.Card, FpsUi.Border, 12);
+            OnyxDesign.Text(g, "DERNIER SCORE ENREGISTRÉ", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 22, w - 40, 22));
+            string value = _history.Count == 0 ? "—" : _history[_history.Count - 1].ToString();
+            OnyxDesign.Text(g, value, OnyxDesign.Display, FpsUi.Gold, new Rectangle(18, 58, 100, 54));
+            OnyxDesign.Text(g, "/ 100", FpsUi.H3, FpsUi.Dim, new Rectangle(124, 82, 70, 24));
+            OnyxDesign.Text(g, _history.Count == 0 ? "Ton premier bilan t’attend." : "Score indicatif du dernier bilan.", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 125, w - 40, 24));
+            OnyxDesign.Text(g, "Lance une analyse pour connaître l’état actuel.", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 158, w - 40, 42), true);
+        }
+        private void PaintRoutine(Graphics g, Routine r)
+        {
+            int w = r.Card.Width;
+            OnyxDesign.PaintCard(g, r.Card.ClientRectangle, FpsUi.Card, r.Sel.On ? FpsUi.GoldDim : FpsUi.Border, 12);
+            OnyxDesign.Text(g, r.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(18, 20, w - 100, 24));
+            OnyxDesign.Text(g, r.Desc, FpsUi.Small, FpsUi.Dim, new Rectangle(18, 57, w - 36, 56), true);
+            OnyxDesign.Text(g, r.Hint, FpsUi.Tiny, r.Id == 2 ? FpsUi.Warn : FpsUi.Gold, new Rectangle(18, 124, w - 36, 20));
+        }
         private void PaintSummary(object sender, PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
-            Rectangle r = _summary.ClientRectangle;
-            OnyxDesign.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
-            int selected = 0;
-            foreach (var routine in _routines) if (routine.Sel.On) selected++;
-            TextRenderer.DrawText(g, selected + (selected == 1 ? " opération sélectionnée" : " opérations sélectionnées"), FpsUi.H3, new Point(18, 18), FpsUi.Ink, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "Choisis les opérations à lancer pour entretenir ton PC.", FpsUi.Body,
-                new Rectangle(18, 46, r.Width - 36, 36), FpsUi.Dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+            OnyxDesign.PaintCard(e.Graphics, _summary.ClientRectangle, FpsUi.Card, OnyxDesign.Edge, 12);
+            OnyxDesign.Text(e.Graphics, _running ? "Maintenance en cours" : SelectedCount + " opération(s) sélectionnée(s)", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 17, _clear.Left - 36, 24));
+            OnyxDesign.Text(e.Graphics, _running ? _progress : "Vérifie ta sélection avant de lancer les opérations.", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 46, _clear.Left - 36, 22));
         }
-
         private void RunSelected()
         {
-            var ids = new List<int>();
-            foreach (var r in _routines) if (r.Sel.On) ids.Add(r.Id);
-            if (ids.Count == 0) { MessageBox.Show(FindForm(), "Sélectionne au moins une routine.", "Check Up+", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-            if (MessageBox.Show(FindForm(), "Lancer " + ids.Count + " routine(s) de maintenance ?\n\nCertaines (SFC/DISM, défragmentation) ouvriront une console et peuvent durer plusieurs minutes.",
-                "Check Up+", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
-
-            _run.Enabled = false; _run.Text = "Check Up+ en cours...";
+            if (_running) return;
+            var selected = _routines.FindAll(r => r.Sel.On);
+            if (selected.Count == 0) return;
+            string names = string.Join("\n", selected.ConvertAll(r => "• " + r.Name));
+            if (MessageBox.Show(FindForm(), "Lancer ces opérations ?\n\n" + names + "\n\nSFC/DISM et l’optimisation des disques peuvent ouvrir une console et durer plusieurs minutes.", "Confirmer la maintenance", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            _running = true; _progress = "Préparation des opérations…"; UpdateSelection();
             Task.Run(() =>
             {
                 var report = new System.Text.StringBuilder();
-                foreach (int id in ids)
+                foreach (var routine in selected)
                 {
-                    try { report.AppendLine("• " + RunOne(id)); } catch (Exception ex) { report.AppendLine("• Erreur : " + ex.Message); }
+                    string name = routine.Name;
+                    try { BeginInvoke((Action)(() => { if (IsDisposed) return; _progress = name; _summary.Invalidate(); })); } catch { }
+                    try { report.AppendLine("• " + RunOne(routine.Id)); } catch (Exception ex) { report.AppendLine("• Erreur : " + ex.Message); }
                 }
-                try { BadgeStore.IncCheckups(1); BadgeCatalog.EvaluateEvents(); } catch { }   // débloque Infirmier / Routine (+ toast)
-                try { BeginInvoke((Action)(() => { _run.Enabled = true; _run.Text = "Lancer la maintenance  →";
-                    MessageBox.Show(FindForm(), report.ToString(), "Check Up+ terminé", MessageBoxButtons.OK, MessageBoxIcon.Information); })); }
-                catch { }
+                try { BadgeStore.IncCheckups(1); BadgeCatalog.EvaluateEvents(); } catch { }
+                try { BeginInvoke((Action)(() => {
+                    if (IsDisposed) return;
+                    _running = false; UpdateSelection();
+                    MessageBox.Show(FindForm(), report.ToString(), "Compte rendu de maintenance", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                })); } catch { }
             });
         }
-
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e); PaintPremiumTitle(e.Graphics, "BILAN & SANTÉ", "Comprends l’état de ton PC et prépare son entretien.");
+        }
+        private sealed class DiagnosticCard : Button
+        {
+            private readonly int _index; private bool _hot;
+            public DiagnosticCard(int index)
+            {
+                _index = index; Text = ToolNames[index]; AccessibleName = Text; BackColor = FpsUi.BgMain; Cursor = Cursors.Hand;
+                FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+                MouseEnter += (s, e) => { _hot = true; Invalidate(); }; MouseLeave += (s, e) => { _hot = false; Invalidate(); };
+                GotFocus += (s, e) => Invalidate(); LostFocus += (s, e) => Invalidate();
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics; g.Clear(BackColor);
+                OnyxDesign.PaintCard(g, ClientRectangle, FpsUi.Card, _hot || (Focused && ShowFocusCues) ? FpsUi.GoldDim : FpsUi.Border, 12);
+                OnyxDesign.IconWell(g, ToolIcons[_index], new Rectangle(18, 18, 34, 34), _hot);
+                OnyxDesign.Text(g, Text, FpsUi.H3, FpsUi.Ink, new Rectangle(64, 24, Width - 108, 26));
+                OnyxDesign.Text(g, "↗", FpsUi.H3, FpsUi.Gold, new Rectangle(Width - 34, 23, 24, 24));
+                OnyxDesign.Text(g, ToolDescriptions[_index], FpsUi.Small, FpsUi.Dim, new Rectangle(18, 72, Width - 36, 48), true);
+            }
+        }
+#if BTTEST
+        internal void PreviewView(bool maintenance) { _tabs[maintenance ? 1 : 0].PerformClick(); }
+        internal void PreviewBottom() { _scroll.ScrollTo(_content.Height); }
+        internal void ValidateCheckupUi()
+        {
+            bool[] saved = _routines.ConvertAll(r => r.Sel.On).ToArray();
+            PreviewView(true); _clear.PerformClick();
+            if (SelectedCount != 0 || _run.Enabled) throw new InvalidOperationException("La maintenance vide doit être désactivée.");
+            var click = typeof(ToggleSwitch).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            click.Invoke(_routines[2].Sel, new object[] { EventArgs.Empty });
+            if (SelectedCount != 1 || !_run.Enabled) throw new InvalidOperationException("Sélection d’une opération incorrecte.");
+            PreviewView(false); PreviewView(true);
+            if (!_routines[2].Sel.On) throw new InvalidOperationException("La navigation perd la sélection.");
+            for (int i = 0; i < saved.Length; i++) _routines[i].Sel.On = saved[i];
+            UpdateSelection();
+            if (_scroll.Bottom > _summary.Top || !ClientRectangle.Contains(_summary.Bounds)) throw new InvalidOperationException("Le pied de page masque les opérations.");
+            _scroll.ValidateScrolling();
+            _routines[5].Sel.Focus();
+            int focusBottom = _scroll.PointToClient(_routines[5].Sel.PointToScreen(new Point(0, _routines[5].Sel.Height))).Y;
+            if (focusBottom > _scroll.Height) throw new InvalidOperationException("La sélection au clavier doit défiler vers l’opération.");
+        }
+#endif
         private string RunOne(int id)
         {
             switch (id)
@@ -238,10 +346,5 @@ namespace BTOptimizer
             catch { return false; }
         }
 
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            PaintPremiumTitle(e.Graphics, "BILAN & ENTRETIEN", "Vérifie la santé de ton PC et choisis les opérations de maintenance utiles.");
-        }
     }
 }

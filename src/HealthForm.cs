@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -9,155 +10,233 @@ using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    /// <summary>
-    /// Santé de mon PC : un score global sur 100 qui agrège les contrôles rapides de tous
-    /// les panneaux (crashs, thermique, réglages néfastes, boutiques, bibliothèques, disque,
-    /// réseau, optimisations). Chaque point à corriger ouvre le panneau concerné en un clic.
-    /// </summary>
     internal class HealthForm : Form
     {
         private readonly Action<string, int> _log;
-        private Label _scoreLabel, _grade, _sub;
-        private Panel _gauge, _chart;
-        private List<int> _history = new List<int>();
-        private ListView _list;
-        private Button _btnScan, _btnOpen, _btnClose;
-        private int _score = -1;
-
-        private static readonly Color Accent = Theme.AccentColor;
-        private static readonly Color Warn = Color.FromArgb(200, 110, 0);
-        private static readonly Color Bad = Color.FromArgb(200, 60, 40);
-
-        private class Finding
-        {
-            public string Text; public int Severity;   // 0 ok, 1 attention, 2 grave
-            public Func<Form> Open;                     // panneau à ouvrir (facultatif)
-        }
+        private readonly BufferedPanel _gauge = new BufferedPanel(), _summary = new BufferedPanel(), _rows;
+        private readonly OnyxScrollPanel _results = new OnyxScrollPanel();
+        private readonly Button _btnScan, _btnClose;
+        private readonly Button[] _filters = new Button[3];
         private readonly List<Finding> _findings = new List<Finding>();
+        private readonly List<FindingRow> _cards = new List<FindingRow>();
+        private List<int> _history = new List<int>();
+        private bool _busy, _recordHistory = true;
+        private int _score = -1, _filter;
+        private string _message = "Lance un bilan pour examiner ton PC.", _evolution = "";
+        private DateTime _completed;
+        private static readonly Color Accent = FpsUi.Gold, Warn = FpsUi.Warn, Bad = FpsUi.Err;
+        private sealed class Finding { public string Text; public int Severity; public Func<Form> Open; }
 
         public HealthForm(Action<string, int> log)
         {
             _log = log;
-            Build();
-            Scan();
-            Theme.Apply(this);
-        }
-
-        // Polices possédées par la fenêtre, libérées à la fermeture (les Control ne libèrent
-        // PAS leur Font eux-mêmes) : évite une fuite de handles à chaque ouverture du bilan.
-        private readonly System.Collections.Generic.List<Font> _fonts = new System.Collections.Generic.List<Font>();
-        private Font Own(Font f) { _fonts.Add(f); return f; }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing) { foreach (Font f in _fonts) { try { f.Dispose(); } catch { } } _fonts.Clear(); }
-            base.Dispose(disposing);
-        }
-
-        private void Build()
-        {
-            Text = "ONYX — Santé de mon PC";
-            ClientSize = new Size(680, 520);
-            StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false; MinimizeBox = false;
-            BackColor = Color.FromArgb(245, 246, 248);
-            Font = Own(new Font("Segoe UI", 9f));
+            Text = "ONYX — Bilan de santé"; BackColor = FpsUi.BgMain; ForeColor = FpsUi.Ink; Font = FpsUi.Body;
+            ClientSize = new Size(1080, 760); MinimumSize = new Size(936, 739);
+            StartPosition = FormStartPosition.CenterParent; MinimizeBox = false;
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
-
-            var banner = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = Color.FromArgb(28, 30, 38) };
-            banner.Controls.Add(new Label
+            _gauge.Paint += PaintGauge; _summary.Paint += PaintSummary;
+            Controls.Add(_gauge); Controls.Add(_summary);
+            string[] labels = { "Tous les contrôles", "À examiner", "Conformes" };
+            for (int i = 0; i < 3; i++)
             {
-                Text = "  Santé de mon PC — le bilan en un coup d'œil",
-                Dock = DockStyle.Fill, ForeColor = Color.White,
-                Font = Own(new Font("Segoe UI Semibold", 12.5f)), TextAlign = ContentAlignment.MiddleLeft
-            });
-            Controls.Add(banner);
-
-            // Jauge de score (gros nombre à gauche).
-            _gauge = new Panel { Location = new Point(18, 66), Size = new Size(180, 120), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            _scoreLabel = new Label { Text = "…", Location = new Point(0, 14), Size = new Size(180, 62), Font = Own(new Font("Segoe UI", 42f, FontStyle.Bold)), ForeColor = Accent, TextAlign = ContentAlignment.MiddleCenter };
-            _grade = new Label { Text = "", Location = new Point(0, 80), Size = new Size(180, 30), Font = Own(new Font("Segoe UI Semibold", 13f)), ForeColor = Color.FromArgb(60, 64, 72), TextAlign = ContentAlignment.MiddleCenter };
-            _gauge.Controls.Add(_scoreLabel); _gauge.Controls.Add(_grade);
-            Controls.Add(_gauge);
-
-            // Hauteur calée sur le texte réel (3 lignes + interligne) : à 56 px le libellé
-            // débordait SOUS le graphique de tendance, les deux se chevauchaient.
-            _sub = new Label
-            {
-                Location = new Point(212, 66), Size = new Size(450, 72), ForeColor = Color.FromArgb(60, 64, 72),
-                Font = Own(new Font("Segoe UI", 9.5f))
+                int index = i; _filters[i] = OnyxDesign.Button(labels[i]); _filters[i].Font = FpsUi.H3;
+                _filters[i].Click += (s, e) => { _filter = index; FilterResults(); }; Controls.Add(_filters[i]);
+            }
+            _rows = _results.Content;
+            _rows.Paint += (s, e) => {
+                if (_busy || _cards.Count == 0) OnyxDesign.Text(e.Graphics, _message, FpsUi.Body, FpsUi.Dim, new Rectangle(22, 26, _rows.Width - 44, 80), true);
+                else if (!_cards.Any(c => Matches(c.Item))) OnyxDesign.Text(e.Graphics, "Aucun contrôle dans cette catégorie.", FpsUi.Body, FpsUi.Dim, new Rectangle(22, 26, _rows.Width - 44, 50), true);
             };
-            Controls.Add(_sub);
-
-            // Mini-graphique de tendance des scores (historique), sous le texte avec une vraie
-            // respiration (le libellé fait 4 lignes quand il y a des points graves ET d'attention).
-            _chart = new Panel { Location = new Point(212, 142), Size = new Size(450, 46), BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            _chart.Paint += DrawHistoryChart;
-            Controls.Add(_chart);
-
-            _list = new ListView
-            {
-                Location = new Point(18, 200), Size = new Size(644, 258),
-                View = View.Details, FullRowSelect = true, GridLines = false, MultiSelect = false
-            };
-            _list.Columns.Add("État", 52);
-            _list.Columns.Add("Contrôle", 592);
-            _list.DoubleClick += (s, e) => OpenSelected();
-            Controls.Add(_list);
-
-            _btnScan = MakeBtn("Refaire le bilan", 18, 470, 150, 38, false);
-            _btnScan.Click += (s, e) => Scan();
-            _btnOpen = MakeBtn("Ouvrir le panneau du point sélectionné", 178, 470, 320, 38, true);
-            _btnOpen.Click += (s, e) => OpenSelected();
-            _btnClose = MakeBtn("Fermer", 572, 470, 90, 38, false);
-            _btnClose.Click += (s, e) => Close();
-            Controls.Add(_btnScan); Controls.Add(_btnOpen); Controls.Add(_btnClose);
+            Controls.Add(_results); Dwm.Darken(this);
+            _btnScan = OnyxDesign.PrimaryButton("Refaire le bilan"); _btnScan.Click += (s, e) => Scan(); Controls.Add(_btnScan);
+            _btnClose = OnyxDesign.Button("Fermer"); _btnClose.Click += (s, e) => Close(); Controls.Add(_btnClose); CancelButton = _btnClose;
+            Resize += (s, e) => DoLayout(); Shown += (s, e) => Scan();
+            _history = LoadHistory(); FilterResults(); DoLayout();
         }
-
-        private Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
+        private void DoLayout()
         {
-            var b = new Button
-            {
-                Text = text, Location = new Point(x, y), Size = new Size(w, h), FlatStyle = FlatStyle.Flat,
-                BackColor = primary ? Accent : Color.White, ForeColor = primary ? Color.White : Color.FromArgb(40, 44, 52),
-                Font = Own(primary ? new Font("Segoe UI Semibold", 9.5f) : new Font("Segoe UI", 9f))
-            };
-            b.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
-            return b;
+            if (_btnScan == null) return;
+            _gauge.SetBounds(28, 88, 236, 190); _summary.SetBounds(280, 88, ClientSize.Width - 308, 190);
+            for (int i = 0; i < 3; i++) _filters[i].SetBounds(28 + i * 180, 298, 168, 38);
+            _results.SetBounds(28, 354, ClientSize.Width - 40, Math.Max(140, ClientSize.Height - 430));
+            _btnScan.SetBounds(28, ClientSize.Height - 58, 186, 36); _btnClose.SetBounds(ClientSize.Width - 138, ClientSize.Height - 58, 110, 36);
+            LayoutRows(); Invalidate();
         }
-
+        private bool Matches(Finding item) { return _filter == 0 || (_filter == 1 ? item.Severity > 0 : item.Severity == 0); }
+        private void LayoutRows()
+        {
+            int width = Math.Max(300, _results.ContentWidth), top = 0;
+            foreach (var card in _cards)
+            {
+                bool show = !_busy && Matches(card.Item); card.Visible = show;
+                if (!show) continue;
+                int textHeight = TextRenderer.MeasureText(card.Item.Text, FpsUi.Body, new Size(width - 214, 0), TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height;
+                int height = Math.Max(78, textHeight + 32);
+                card.SetBounds(0, top, width, height); top += height + 10;
+            }
+            _results.ContentHeight = Math.Max(120, top);
+            _rows.Invalidate();
+        }
+        private void FilterResults()
+        {
+            string[] labels = { "Tous les contrôles", "À examiner", "Conformes" };
+            int[] counts = { _findings.Count, _findings.Count(f => f.Severity > 0), _findings.Count(f => f.Severity == 0) };
+            for (int i = 0; i < 3; i++)
+            {
+                _filters[i].Text = labels[i] + (_score < 0 || _busy ? "" : "  ·  " + counts[i]);
+                _filters[i].Enabled = !_busy;
+                _filters[i].BackColor = i == _filter ? FpsUi.BlendGold(FpsUi.Card, .12f) : FpsUi.Card;
+                _filters[i].ForeColor = i == _filter ? FpsUi.Gold : FpsUi.Dim;
+                _filters[i].FlatAppearance.BorderSize = i == _filter ? 1 : 0; _filters[i].FlatAppearance.BorderColor = FpsUi.GoldDim;
+            }
+            _results.ScrollTo(0); LayoutRows();
+        }
         private void SetBusy(bool busy)
         {
-            Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
-            _btnScan.Enabled = !busy; _btnOpen.Enabled = !busy; _list.Enabled = !busy;
+            _busy = busy; _btnScan.Enabled = !busy; _btnScan.Text = busy ? "Analyse en cours…" : "Refaire le bilan";
+            FilterResults(); _gauge.Invalidate(); _summary.Invalidate(); Invalidate();
         }
-
-        private void OpenSelected()
-        {
-            if (_list.SelectedItems.Count != 1) return;
-            var f = _list.SelectedItems[0].Tag as Finding;
-            if (f == null || f.Open == null) return;
-            try { using (Form panel = f.Open()) panel.ShowDialog(this); }
-            catch (Exception ex) { if (_log != null) _log("Ouverture du panneau : " + ex.Message, 2); }
-            Scan();
-        }
-
         private void Scan()
         {
+            if (_busy || IsDisposed) return;
+            _score = -1; _filter = 0; _completed = default(DateTime); _evolution = "";
+            _message = "Analyse en cours : stabilité, disques, réseau et réglages…";
+            _findings.Clear(); foreach (var c in _cards) c.Dispose(); _cards.Clear();
             SetBusy(true);
-            _scoreLabel.Text = "…"; _grade.Text = ""; _sub.Text = "Bilan en cours (crashs, thermique, réglages, disque, réseau)...";
-            _list.Items.Clear();
             Task.Run(() =>
             {
-                var findings = Compute(out _score);
-                try { BeginInvoke((Action)(() => Render(findings))); } catch { }
+                try
+                {
+                    int score; var findings = Compute(out score);
+                    try { BeginInvoke((Action)(() => { if (IsDisposed) return; _score = score; Render(findings); })); } catch { }
+                }
+                catch (Exception ex)
+                {
+                    try { BeginInvoke((Action)(() => { if (IsDisposed) return; _message = "Le bilan n’a pas pu se terminer. Relance l’analyse."; SetBusy(false); _log?.Invoke("Bilan santé : " + ex.Message, 2); })); } catch { }
+                }
             });
         }
-
-        // ------------------------------------------------------------------
-        //  Calcul du score (contrôles rapides, agrégés)
-        // ------------------------------------------------------------------
+        private void OpenFinding(Finding finding)
+        {
+            if (_busy || finding.Open == null) return;
+            try { using (Form panel = finding.Open()) panel.ShowDialog(this); }
+            catch (Exception ex) { _log?.Invoke("Ouverture du panneau : " + ex.Message, 2); }
+            Scan();
+        }
+        private string Grade { get { return _score < 0 ? (_busy ? "Analyse en cours" : "Bilan indisponible") : _score >= 90 ? "Excellent" : _score >= 75 ? "Bon" : _score >= 55 ? "À surveiller" : "À examiner"; } }
+        private Color ScoreColor { get { return _score < 0 || _score >= 90 ? Accent : _score >= 75 ? FpsUi.Ok : _score >= 55 ? Warn : Bad; } }
+        private void PaintGauge(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+            OnyxDesign.PaintCard(g, _gauge.ClientRectangle, FpsUi.Card, OnyxDesign.Edge, 12);
+            OnyxDesign.Text(g, "SCORE INDICATIF", FpsUi.Small, FpsUi.Dim, new Rectangle(20, 16, 200, 22));
+            var ring = new Rectangle(68, 46, 100, 100);
+            using (var pen = new Pen(FpsUi.Border, 6)) g.DrawArc(pen, ring, 135, 270);
+            if (_score > 0) using (var pen = new Pen(ScoreColor, 6) { StartCap = LineCap.Round, EndCap = LineCap.Round }) g.DrawArc(pen, ring, 135, 270f * _score / 100);
+            TextRenderer.DrawText(g, _score < 0 ? "—" : _score.ToString(), OnyxDesign.Number, new Rectangle(68, 69, 100, 44), ScoreColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, "/ 100", FpsUi.Small, new Rectangle(68, 116, 100, 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, Grade, FpsUi.H3, new Rectangle(10, 160, 216, 24), FpsUi.Ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
+        }
+        private void PaintSummary(object sender, PaintEventArgs e)
+        {
+            var g = e.Graphics; int w = _summary.Width;
+            OnyxDesign.PaintCard(g, _summary.ClientRectangle, FpsUi.Card, FpsUi.Border, 12);
+            OnyxDesign.Text(g, _busy ? "VÉRIFICATION DU PC" : "RÉSULTATS DU BILAN", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 17, w - 40, 24));
+            if (_score < 0)
+            {
+                OnyxDesign.Text(g, _message, FpsUi.Body, FpsUi.Dim, new Rectangle(20, 61, w - 40, 64), true);
+                return;
+            }
+            int[] counts = { _findings.Count(f => f.Severity == 2), _findings.Count(f => f.Severity == 1), _findings.Count(f => f.Severity == 0) };
+            string[] labels = { "Prioritaires", "À surveiller", "Conformes" }; Color[] colors = { Bad, Warn, FpsUi.Ok };
+            int cw = (w - 40) / 3;
+            for (int i = 0; i < 3; i++)
+            {
+                int x = 20 + i * cw;
+                OnyxDesign.Text(g, counts[i].ToString(), OnyxDesign.Number, counts[i] > 0 ? colors[i] : FpsUi.Dim, new Rectangle(x, 54, cw, 42));
+                OnyxDesign.Text(g, labels[i], FpsUi.Small, FpsUi.Dim, new Rectangle(x, 103, cw, 22));
+            }
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, 20, 139, w - 20, 139);
+            OnyxDesign.Text(g, _evolution, FpsUi.Small, FpsUi.Dim, new Rectangle(20, 156, w - 210, 22));
+            PaintHistory(g, new Rectangle(w - 170, 152, 148, 20));
+        }
+        private void PaintHistory(Graphics g, Rectangle plot)
+        {
+            if (_history.Count == 0) return;
+            var recent = _history.Skip(Math.Max(0, _history.Count - 20)).ToArray();
+            var points = new PointF[recent.Length];
+            for (int i = 0; i < points.Length; i++) points[i] = new PointF(plot.Left + (points.Length == 1 ? plot.Width : i * plot.Width / (float)(points.Length - 1)), plot.Bottom - recent[i] / 100f * plot.Height);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            if (points.Length > 1) using (var pen = new Pen(FpsUi.Gold, 1.5f)) g.DrawLines(pen, points);
+            var last = points[points.Length - 1]; using (var brush = new SolidBrush(FpsUi.Gold)) g.FillEllipse(brush, last.X - 2, last.Y - 2, 4, 4);
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            OnyxDesign.Text(e.Graphics, "Bilan de santé", OnyxDesign.Title, FpsUi.Ink, new Rectangle(28, 20, 500, 34));
+            OnyxDesign.Text(e.Graphics, "Les contrôles prioritaires apparaissent en premier. Ouvre un résultat pour l’examiner.", FpsUi.Small, FpsUi.Dim, new Rectangle(28, 58, ClientSize.Width - 56, 22));
+            string footer = _completed == default(DateTime) || _busy ? "Le bilan analyse le PC sans appliquer de correction." : "Bilan terminé à " + _completed.ToString("HH:mm") + " · Aucune correction automatique";
+            OnyxDesign.Text(e.Graphics, footer, FpsUi.Small, FpsUi.Dim, new Rectangle(232, ClientSize.Height - 48, ClientSize.Width - 400, 24));
+        }
+        private void Render(List<Finding> findings)
+        {
+            _findings.AddRange(findings); _completed = DateTime.Now;
+            var previous = LoadHistory();
+            int delta = previous.Count > 0 ? _score - previous[previous.Count - 1] : 0;
+            _evolution = previous.Count == 0 ? "Premier bilan" : delta == 0 ? "Stable depuis le dernier bilan" : (delta > 0 ? "+" : "") + delta + " points depuis le dernier bilan";
+            if (_recordHistory) SaveHistory(_score);
+            _history = new List<int>(previous) { _score };
+            foreach (var finding in findings)
+            {
+                var row = new FindingRow(finding); row.Click += (s, e) => OpenFinding(finding);
+                _cards.Add(row); _rows.Controls.Add(row);
+            }
+            _log?.Invoke("Bilan santé PC : score " + _score + "/100 (" + Grade + "), " + findings.Count(f => f.Severity == 2) + " prioritaire(s), " + findings.Count(f => f.Severity == 1) + " à surveiller.", findings.Any(f => f.Severity == 2) ? 2 : findings.Any(f => f.Severity == 1) ? 0 : 1);
+            SetBusy(false);
+        }
+        private sealed class FindingRow : Button
+        {
+            internal readonly Finding Item;
+            private bool _hot;
+            internal FindingRow(Finding item)
+            {
+                Item = item; Text = item.Text; AccessibleName = (item.Severity == 2 ? "Prioritaire. " : item.Severity == 1 ? "À surveiller. " : "Conforme. ") + item.Text;
+                BackColor = FpsUi.BgMain; Cursor = item.Open == null ? Cursors.Default : Cursors.Hand;
+                FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0; TabStop = item.Open != null;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+                MouseEnter += (s, e) => { _hot = true; Invalidate(); }; MouseLeave += (s, e) => { _hot = false; Invalidate(); };
+                GotFocus += (s, e) => Invalidate(); LostFocus += (s, e) => Invalidate();
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics; g.Clear(BackColor);
+                OnyxDesign.PaintCard(g, ClientRectangle, FpsUi.Card, (Item.Open != null && _hot) || (Focused && ShowFocusCues) ? FpsUi.GoldDim : FpsUi.Border, 10);
+                Color color = Item.Severity == 2 ? Bad : Item.Severity == 1 ? Warn : FpsUi.Ok;
+                string label = Item.Severity == 2 ? "PRIORITAIRE" : Item.Severity == 1 ? "À SURVEILLER" : "CONFORME";
+                using (var brush = new SolidBrush(color)) g.FillEllipse(brush, 18, Height / 2 - 3, 6, 6);
+                TextRenderer.DrawText(g, label, FpsUi.Tiny, new Rectangle(34, 0, 102, Height), color, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                TextRenderer.DrawText(g, Item.Text, FpsUi.Body, new Rectangle(146, 12, Width - 214, Height - 24), FpsUi.Ink, TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                if (Item.Open != null) TextRenderer.DrawText(g, "↗", FpsUi.H2, new Rectangle(Width - 50, 0, 28, Height), FpsUi.Gold, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            }
+        }
+#if BTTEST
+        internal static HealthForm Preview(Action<string, int> log) { return new HealthForm(log) { _recordHistory = false }; }
+        internal bool BusyForTest { get { return _busy; } }
+        internal void ValidateHealthUi()
+        {
+            if (_score < 0 || _findings.Count == 0) throw new InvalidOperationException("Aucun résultat réel pour le bilan.");
+            for (int i = 0; i < _filters.Length; i++)
+            {
+                _filters[i].PerformClick();
+                if (_cards.Count(c => c.Visible) != _findings.Count(Matches)) throw new InvalidOperationException("Filtre santé incorrect.");
+            }
+            _filters[0].PerformClick();
+            _results.ValidateScrolling();
+            if (_results.Bottom > _btnScan.Top || !ClientRectangle.Contains(_summary.Bounds)) throw new InvalidOperationException("Chevauchement dans le bilan.");
+        }
+        internal void PreviewFilter(int filter) { _filters[filter].PerformClick(); }
+#endif
         private List<Finding> Compute(out int score)
         {
             var f = new List<Finding>();
@@ -266,108 +345,12 @@ namespace BTOptimizer
             jitter = times.Count > 1 ? j / (times.Count - 1) : 0;
         }
 
-        // ------------------------------------------------------------------
-        //  Rendu
-        // ------------------------------------------------------------------
-        private void Render(List<Finding> findings)
-        {
-            _findings.Clear(); _findings.AddRange(findings);
-
-            Color c = _score >= 90 ? Accent : _score >= 75 ? Color.FromArgb(90, 150, 60) : _score >= 55 ? Warn : Bad;
-            string grade = _score >= 90 ? "Excellent" : _score >= 75 ? "Bon" : _score >= 55 ? "Moyen" : "À corriger";
-            _scoreLabel.Text = _score.ToString(); _scoreLabel.ForeColor = c;
-            _grade.Text = grade; _grade.ForeColor = c;
-            _gauge.BackColor = Theme.FieldColor;   // carte de score adaptée au thème (sombre par défaut)
-
-            int graves = findings.Count(x => x.Severity == 2);
-            int attn = findings.Count(x => x.Severity == 1);
-            _sub.Text = graves + attn == 0
-                ? "✔ Ton PC est en pleine forme pour jouer. Rien à corriger — profite du jeu.\n\nAstuce : refais ce bilan après une grosse mise à jour Windows ou de pilote."
-                : (graves > 0 ? graves + " point(s) GRAVE(S)" : "") + (graves > 0 && attn > 0 ? " et " : "") + (attn > 0 ? attn + " point(s) d'attention" : "")
-                  + ".\n\nDouble-clique un point (ou sélectionne-le et « Ouvrir le panneau ») pour aller le corriger. "
-                  + "Les points graves sont en haut.";
-
-            // Historique : compare au bilan précédent AVANT d'enregistrer celui-ci.
-            List<int> previous = LoadHistory();
-            if (previous.Count > 0)
-            {
-                int delta = _score - previous[previous.Count - 1];
-                string arrow = delta > 0 ? "▲ +" + delta : delta < 0 ? "▼ " + delta : "= stable";
-                _sub.Text += "\n\nÉvolution : " + arrow + " depuis le dernier bilan (voir le graphique).";
-            }
-            SaveHistory(_score);
-            _history = LoadHistory();          // inclut le score qu'on vient d'enregistrer
-            if (_chart != null) _chart.Invalidate();
-
-            _list.Items.Clear();
-            foreach (Finding fi in findings)
-            {
-                var it = new ListViewItem(fi.Severity == 2 ? "⛔" : fi.Severity == 1 ? "⚠" : "✔") { Tag = fi };
-                it.SubItems.Add(fi.Text + (fi.Open != null ? "   →" : ""));
-                it.ForeColor = fi.Severity == 2 ? Bad : fi.Severity == 1 ? Warn : Theme.InkColor;   // OK : lisible en thème sombre
-                _list.Items.Add(it);
-            }
-            if (_log != null) _log("Bilan santé PC : score " + _score + "/100 (" + grade + "), "
-                + graves + " grave(s), " + attn + " attention(s).", graves > 0 ? 2 : (attn > 0 ? 0 : 1));
-            SetBusy(false);
-        }
-
-        // Mini-graphique : courbe des derniers scores (0-100), point courant mis en avant.
-        private void DrawHistoryChart(object sender, PaintEventArgs e)
-        {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            int w = _chart.ClientSize.Width, h = _chart.ClientSize.Height;
-            int padL = 6, padR = 6, padT = 6, padB = 6;
-
-            using (var grid = new Pen(Theme.LineColor))
-                for (int i = 0; i <= 4; i++) { int y = padT + (h - padT - padB) * i / 4; g.DrawLine(grid, padL, y, w - padR, y); }
-
-            var pts = _history;
-            if (pts == null || pts.Count == 0)
-            {
-                using (var f = new Font("Segoe UI", 8.5f))
-                using (var gb = new SolidBrush(Theme.InkDimColor))
-                    g.DrawString("Aucun historique — refais un bilan pour voir la tendance.", f, gb, padL + 2, h / 2 - 8);
-                return;
-            }
-
-            int n = Math.Min(20, pts.Count);
-            var recent = pts.GetRange(pts.Count - n, n);
-            float plotW = w - padL - padR, plotH = h - padT - padB;
-            Func<int, float> xAt = i => n <= 1 ? padL + plotW / 2 : padL + plotW * i / (n - 1);
-            Func<int, float> yAt = v => padT + plotH * (100 - Math.Max(0, Math.Min(100, v))) / 100f;
-
-            Color line = recent[recent.Count - 1] >= 75 ? Accent : recent[recent.Count - 1] >= 55 ? Warn : Bad;
-            if (n >= 2)
-                using (var pen = new Pen(line, 2f))
-                    for (int i = 1; i < n; i++)
-                        g.DrawLine(pen, xAt(i - 1), yAt(recent[i - 1]), xAt(i), yAt(recent[i]));
-
-            for (int i = 0; i < n; i++)
-            {
-                float x = xAt(i), y = yAt(recent[i]);
-                bool last = i == n - 1;
-                using (var br = new SolidBrush(last ? line : Color.FromArgb(150, line)))
-                    g.FillEllipse(br, x - (last ? 3.5f : 2f), y - (last ? 3.5f : 2f), last ? 7 : 4, last ? 7 : 4);
-            }
-            using (var f = new Font("Segoe UI Semibold", 8.5f))
-            using (var lineBrush = new SolidBrush(line))
-            {
-                g.DrawString("100", f, Brushes.Silver, w - padR - 22, padT - 2);
-                g.DrawString(recent[recent.Count - 1].ToString(), f, lineBrush, padL + 2, padT - 2);
-            }
-        }
-
-        // ------------------------------------------------------------------
-        //  Historique des scores (fichier local, à côté de l'app)
-        // ------------------------------------------------------------------
         private static string HistoryPath()
         {
             return AppPaths.File("bt-health-history.txt");
         }
 
-        private static List<int> LoadHistory()
+        internal static List<int> LoadHistory()
         {
             var scores = new List<int>();
             try
@@ -378,7 +361,7 @@ namespace BTOptimizer
                 {
                     string[] parts = line.Split('\t');
                     int v;
-                    if (parts.Length >= 2 && int.TryParse(parts[1], out v)) scores.Add(v);
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out v) && v >= 0 && v <= 100) scores.Add(v);
                 }
             }
             catch { }

@@ -1298,6 +1298,20 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_CHECKUP_UI") == "1")
+                {
+                    try { CaptureCheckupUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Bilan ERREUR : " + ex); }
+                    Console.WriteLine("UITEST BILAN — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
+                if (Environment.GetEnvironmentVariable("BT_HARDWARE_UI") == "1")
+                {
+                    try { CaptureHardwareUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Matériel ERREUR : " + ex); }
+                    Console.WriteLine("UITEST MATÉRIEL — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_STORAGE_UI") == "1")
                 {
                     try { CaptureStorageUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2140,6 +2154,93 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureCheckupUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(3); Pump(200);
+                var page = (PageCheckup)dash.PageAt(3);
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateCheckupUi();
+                    for (int view = 0; view < 2; view++)
+                    {
+                        page.PreviewView(view == 1); Pump(100);
+                        SaveGamesShot(dash, dir, "bilan-" + view + "-" + size.Width);
+                        page.PreviewBottom(); Pump(100);
+                        SaveGamesShot(dash, dir, "bilan-bas-" + view + "-" + size.Width);
+                    }
+                    Console.WriteLine("  Bilan : vues, sélection et pied de page OK à " + size.Width + "x" + size.Height);
+                }
+                dash.Hide();
+            }
+            string historyPath = AppPaths.File("bt-health-history.txt");
+            string historyBefore = System.IO.File.Exists(historyPath) ? System.IO.File.ReadAllText(historyPath) : null;
+            using (var health = HealthForm.Preview((message, level) => Console.WriteLine("  " + message)))
+            {
+                health.StartPosition = FormStartPosition.Manual; health.Location = new System.Drawing.Point(-5000, -5000);
+                health.Show(); Pump(100);
+                SaveGamesShot(health, dir, "sante-analyse");
+                for (int i = 0; i < 90 && health.BusyForTest; i++)
+                {
+                    Pump(1000);
+                    if (i % 15 == 14) Console.WriteLine("  Bilan de santé réel en cours…");
+                }
+                if (health.BusyForTest) throw new InvalidOperationException("L’analyse santé n’est pas terminée.");
+                foreach (var size in new[] { new System.Drawing.Size(1080, 760), new System.Drawing.Size(920, 700), new System.Drawing.Size(1280, 880) })
+                {
+                    health.ClientSize = size; Pump(100); health.ValidateHealthUi();
+                    SaveGamesShot(health, dir, "sante-" + size.Width);
+                    health.PreviewFilter(1); Pump(100); SaveGamesShot(health, dir, "sante-priorites-" + size.Width);
+                    Console.WriteLine("  Santé : résultats réels et filtres OK à " + size.Width + "x" + size.Height);
+                }
+                health.Hide();
+            }
+            string historyAfter = System.IO.File.Exists(historyPath) ? System.IO.File.ReadAllText(historyPath) : null;
+            if (historyAfter != historyBefore) throw new InvalidOperationException("La capture de test a modifié l’historique santé.");
+        }
+
+        private static void CaptureHardwareUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(7); Pump(7000);
+                var page = (PageSystem)dash.PageAt(7);
+                if (page.ReadingCount == 0) throw new InvalidOperationException("Aucun relevé reçu.");
+                page.PreviewPause();
+                int count = page.ReadingCount;
+                Pump(1300);
+                if (page.SamplingEnabled || page.ReadingCount != count)
+                    throw new InvalidOperationException("Les mesures continuent pendant la pause.");
+                dash.Goto(0); Pump(100); dash.Goto(7); Pump(100);
+                if (page.SamplingEnabled) throw new InvalidOperationException("La pause doit être conservée à la navigation.");
+                page.PreviewPause(); Pump(1800);
+                if (!page.SamplingEnabled || page.ReadingCount <= count)
+                    throw new InvalidOperationException("Les mesures ne reprennent pas.");
+                dash.Goto(0); Pump(100);
+                if (page.SamplingEnabled) throw new InvalidOperationException("Le moniteur reste actif hors de sa page.");
+                dash.Goto(7); Pump(200);
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateHardwareUi();
+                    for (int device = 0; device < 3; device++)
+                    {
+                        page.PreviewDevice(device); Pump(100);
+                        SaveGamesShot(dash, dir, "materiel-" + device + "-" + size.Width);
+                    }
+                    Console.WriteLine("  Matériel : composants, historique et disposition OK à " + size.Width + "x" + size.Height);
+                }
+                Console.WriteLine("  Matériel : pause, reprise et navigation OK.");
+                dash.Hide();
+            }
+        }
+
         private static void CaptureStorageUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
