@@ -888,7 +888,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  « Prépare ma partie » — nettoie le fond AVANT une session de jeu
         // ------------------------------------------------------------------
-        //  Catégories fermées d'un clic. Comms (Discord) et audio (Spotify) restent
+        //  Catégories mises en Efficacité avec le Mode Jeu (rien n'est fermé). Comms (Discord) et audio (Spotify) restent
         //  VOLONTAIREMENT ouverts, et Riot est nécessaire pour LoL/Valorant.
         private static readonly string[] PrepCats = { "RGB", "lanceur", "fond animé", "overlay", "capture", "stream", "cloud", "navigateur" };
 
@@ -912,31 +912,27 @@ namespace BTOptimizer
                 foreach (var r in run) sb.Append("• ").Append(r[0]).Append("  (").Append(r[1]).Append(")\n");
                 sb.Append('\n');
                 sb.Append(close.Count == 0
-                    ? "Rien à fermer d'office : ce qui tourne (comms/musique) reste ton choix."
-                    : "Je peux fermer les " + close.Count + " non essentielles d'un clic — je laisse exprès Discord/Spotify (comms/musique) et Riot.");
+                    ? "Rien à mettre en retrait : ce qui tourne (comms/musique) reste ton choix."
+                    : GameBoost.IsActive
+                        ? "Le Mode Jeu est déjà actif. Coupe-le puis relance le repérage pour y ajouter ces " + close.Count + " appli(s)."
+                        : "Je peux activer le Mode Jeu en y ajoutant les " + close.Count + " non essentielles, sans rien fermer. Je laisse exprès Discord/Spotify (comms/musique) et Riot.");
                 var rep = Say(sb.ToString().TrimEnd());
-                if (close.Count > 0)
+                // Rien n'est fermé : ces applis passent en mode Efficacité avec le Mode Jeu, notées à
+                // son journal, et sa sortie les rétablit (même après un plantage d'ONYX).
+                if (close.Count > 0 && !GameBoost.IsActive)
                 {
                     var fix = new DocAssistant.ChatAction();
-                    fix.Label = "Fermer " + close.Count + " appli(s) de fond";
+                    fix.Label = "Activer le Mode Jeu (+" + close.Count + " appli(s))";
                     fix.IsChange = true;
-                    fix.Warning = "Ferme : " + string.Join(", ", close.ToArray()) + ". Fermeture douce d'abord ; tout se "
-                                + "relance à la main. Enregistre ce que tu veux garder (onglets, projets) avant.";
+                    fix.Warning = "Rien n'est fermé : " + string.Join(", ", close.ToArray()) + " passent en mode Efficacité "
+                                + "(priorité basse), avec les autres applis de fond du Mode Jeu, et ses services de fond "
+                                + "s'arrêtent. Tout est rétabli quand tu coupes le Mode Jeu (Ctrl+Alt+G).";
                     fix.Run = delegate (Action<string, int> log2)
                     {
-                        int total = 0, forcedTot = 0;
-                        var sb2 = new StringBuilder();
-                        foreach (var n in close)
-                        {
-                            int f; int c = CloseByName(n, out f);
-                            total += c; forcedTot += f;
-                            if (c > 0) sb2.Append("✅ ").Append(n).Append('\n');
-                        }
-                        if (total == 0) return Say("Tout était déjà fermé. 🎮 Bonne partie !");
-                        sb2.Append('\n').Append(total).Append(" processus fermé(s)")
-                           .Append(forcedTot > 0 ? " (dont " + forcedTot + " forcé(s))" : "")
-                           .Append(" — le fond est propre. 🎮 Bonne partie !");
-                        return Say(sb2.ToString().TrimEnd());
+                        GameBoost.Activate(log2, null, close);
+                        if (!GameBoost.IsActive) return Say("Le Mode Jeu n'a pas pu s'activer : détail dans le journal.");
+                        return Say("✅ Mode Jeu activé, applis de fond en mode Efficacité. Coupe-le après la partie "
+                                 + "(Ctrl+Alt+G) pour tout rétablir. 🎮 Bonne partie !");
                     };
                     rep.Action = fix;
                 }

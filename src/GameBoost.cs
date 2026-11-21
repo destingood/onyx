@@ -186,7 +186,14 @@ namespace BTOptimizer
         /// déclenché le mode automatique : il ne sera ni mis en Efficacité, ni vidé de sa mémoire.
         /// Sans lui, lancer Roblox reviendrait à ralentir Roblox.
         /// </summary>
-        public static void Activate(Action<string, int> log, string jeuProtege)
+        public static void Activate(Action<string, int> log, string jeuProtege) { Activate(log, jeuProtege, null); }
+
+        /// <summary>
+        /// Idem, avec des processus EN PLUS des catégories actives (le repérage avant-partie du
+        /// Copilote). Ils passent eux aussi en Efficacité, notés au même journal : la sortie du
+        /// Mode Jeu les rétablit comme les autres, même après un plantage.
+        /// </summary>
+        public static void Activate(Action<string, int> log, string jeuProtege, IEnumerable<string> processusEnPlus)
         {
             lock (_verrou)   // deux clics rapides, le raccourci et le mode auto peuvent tomber ensemble
             {
@@ -228,7 +235,14 @@ namespace BTOptimizer
                 {
                     // Le marqueur est écrit AVANT chaque arrêt (Retenir), pas après : c'est la seule
                     // façon qu'un plantage entre les deux ne laisse pas un service orphelin.
-                    res = ApplisDeFond.MettreEnEfficacite(ApplisDeFond.Actives(), proteges, log,
+                    List<ApplisDeFond.Categorie> cats = ApplisDeFond.Actives();
+                    var enPlus = new List<string>();
+                    if (processusEnPlus != null)
+                        foreach (string n in processusEnPlus)
+                            if (!string.IsNullOrEmpty(n) && !ApplisDeFond.EstVital(n) && !enPlus.Contains(n)) enPlus.Add(n);
+                    if (enPlus.Count > 0)
+                        cats.Add(new ApplisDeFond.Categorie { Cle = "avant-partie", Libelle = "Repérage avant-partie", Processus = enPlus.ToArray() });
+                    res = ApplisDeFond.MettreEnEfficacite(cats, proteges, log,
                         delegate(Efficacite.Entree e)
                         {
                             _eco.Add(e);

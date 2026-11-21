@@ -776,7 +776,7 @@ namespace BTOptimizer
         {
             if (MessageBox.Show(this,
                     "Désactiver l'intégrité de la mémoire (VBS / HVCI) ?\n\n"
-                    + "• Gain : moins de latence et plus de FPS en jeu.\n"
+                    + "• Gain : variable selon le jeu et le processeur, parfois nul ; rien n'est mesuré sur ton PC. Lance « Mesure en jeu » avant et après pour le savoir.\n"
                     + "• Contrepartie : c'est une protection de sécurité de Windows. La désactiver réduit la protection contre certains pilotes malveillants.\n"
                     + "• Réversible : une sauvegarde .reg est créée ; tu peux réactiver via « Rétablir » dans l'app.\n"
                     + "• Un redémarrage est nécessaire pour appliquer.",

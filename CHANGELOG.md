@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## Prochaine version
+
+- **Repérage avant-partie du Copilote : plus rien de fermé.** Le bouton « Fermer N appli(s) » fermait
+  les lanceurs, overlays et navigateurs sans les rouvrir. Il active maintenant le Mode Jeu en y
+  ajoutant ces applis : elles passent en mode Efficacité, notées au même journal, et la sortie du
+  Mode Jeu les rétablit (même après un plantage d'ONYX).
+- **Intégrité de la mémoire : plus de gain promis.** Le dialogue annonçait « moins de latence et plus
+  de FPS » ; il dit maintenant que le gain varie selon le jeu, peut être nul, et renvoie à
+  « Mesure en jeu » avant et après.
+
 ## v15.78 — Mode Jeu sans fermeture, mesure en jeu enrichie, diagnostic étendu
 
 ### Mode MSI : rien d'écrit quand il est déjà actif
