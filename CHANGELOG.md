@@ -5,6 +5,15 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.89 — Images de Discord intactes
+
+- **Images de Discord intactes.** Le nettoyage vidait le cache de Discord pendant que Discord
+  était ouvert : des carrés blancs remplaçaient ensuite les décorations d'avatar, les plaques
+  de profil et les bannières de serveur. ONYX ne vide plus le cache d'une appli ouverte
+  (Discord, Chrome, Edge, Brave, Firefox, Epic) : il te demande de la fermer d'abord.
+- **Déjà touché ?** Quitte Discord (icône près de l'horloge → Quitter Discord), supprime le
+  dossier `%APPDATA%\discord\Cache`, puis relance Discord : les images reviennent.
+
 ## v15.88 — Logo Discord, pour de bon
 
 - **Logo Discord, pour de bon.** La 15.87 n'a pas suffi : le statut « avec ONYX » montrait
