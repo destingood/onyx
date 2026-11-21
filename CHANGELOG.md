@@ -48,6 +48,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   coupée, il précise que ce n'est pas cette mise à jour (Microsoft ne touche pas un PC où elle a
   été coupée). Elle ne fait plus partie du lot « Ré-appliquer » des réglages annulés : la couper
   reste un choix explicite, avec son propre bouton.
+- **Diagnostic : Reflex et Anti-Lag 2 dans d'autres jeux.** Comme pour Fortnite, ONYX relit les
+  réglages d'Overwatch, de Battlefield 6 et de Black Ops 6 et signale NVIDIA Reflex coupé
+  (carte NVIDIA) ou la faible latence AMD coupée (carte AMD). Lecture seule ; rien n'est modifié
+  dans les jeux.
 - **Les caches de shaders ne sont plus vidés par défaut.** Les vider fait recompiler chaque shader
   en jeu, d'où des saccades. Ils sortent de « Tout entretenir », du Check Up+, des cases cochées
   du Stockage et du Nettoyage disque, et de « Libérer l'espace » (Copilote, réparation des

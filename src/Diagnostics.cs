@@ -206,6 +206,29 @@ namespace BTOptimizer
                 }
             }
             catch { }
+            // Reflex / Anti-Lag 2 coupés dans d'autres jeux (fichiers de réglages, lecture seule).
+            try
+            {
+                GpuDrv carte = GpuDriver();
+                string gpu = carte == null ? null : carte.Name;
+                if (ReflexJeux.Marque(gpu) != null)
+                {
+                    string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    string ow = LitPartage(System.IO.Path.Combine(docs, @"Overwatch\Settings\Settings_v0.ini"));
+                    string bf = LitPartage(System.IO.Path.Combine(docs, @"Battlefield 6\settings\PROFSAVEbf6mp_profile"));
+                    string cod = LitPartage(System.IO.Path.Combine(docs, @"Call of Duty BO6\players\s.1.0.cod24.txt0"));
+                    string[] constats =
+                    {
+                        ReflexJeux.Constat("Overwatch", gpu, ReflexJeux.OverwatchReflex(ow), null, null),
+                        ReflexJeux.Constat("Battlefield 6", gpu, ReflexJeux.Battlefield6Reflex(bf),
+                            ReflexJeux.Battlefield6AntiLag(bf), "AMD Low Latency"),
+                        ReflexJeux.Constat("Black Ops 6", gpu, ReflexJeux.Bo6Reflex(cod),
+                            ReflexJeux.Bo6AntiLag2(cod), "AMD Anti-Lag 2"),
+                    };
+                    foreach (string c in constats) if (c != null) f.Add(new Finding(1, c));
+                }
+            }
+            catch { }
 
             // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
             // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
@@ -671,6 +694,21 @@ namespace BTOptimizer
             }
             catch { }
             return null;
+        }
+
+        /// <summary>Contenu d'un fichier de réglages qu'un jeu peut tenir ouvert ; null si absent ou
+        /// illisible. Lecture seule, partage complet.</summary>
+        private static string LitPartage(string chemin)
+        {
+            try
+            {
+                if (!System.IO.File.Exists(chemin)) return null;
+                using (var fs = new System.IO.FileStream(chemin, System.IO.FileMode.Open, System.IO.FileAccess.Read,
+                                                         System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+                using (var sr = new System.IO.StreamReader(fs))
+                    return sr.ReadToEnd();
+            }
+            catch { return null; }
         }
 
         /// <summary>Noms de toutes les cartes d'affichage réelles (WMI, mêmes exclusions que
