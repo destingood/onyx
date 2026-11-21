@@ -5,6 +5,20 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.85 — Copilote sans IA locale, réglages en un clic
+
+- **IA locale retirée.** Le Copilote ne télécharge plus de modèle d'IA. Au premier lancement
+  après la mise à jour, ONYX efface ses fichiers d'IA. Il désinstalle aussi Ollama et ses
+  modèles, mais seulement s'il les avait installés lui-même. Un Ollama installé par toi n'est
+  pas touché. Le bilan est dans « qu'est-ce que tu as changé ? ».
+- **Le Copilote comprend mieux.** Apostrophes de téléphone, accents, lettres répétées
+  (« laaaag »), texto collé à la ponctuation, « BSOD », « rezo », « connection »…
+- **Réglages en un clic.** « désactive la transparence », « remets les widgets », « coupe
+  Cortana »… : le Copilote retrouve le réglage et propose de l'appliquer ou de le rétablir,
+  avec une sauvegarde avant et un bouton « Rétablir » après. S'il hésite entre deux réglages,
+  il ne propose rien. Les réglages qui baissent une protection, ou dont le retour n'est pas
+  garanti, restent dans la page Optimisations.
+
 ## v15.84 — Copilote refait
 
 - **Copilote refait.** Accueil avec cartes de démarrage et menu « Tous les sujets », titres et
