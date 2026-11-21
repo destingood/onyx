@@ -674,6 +674,22 @@ namespace BTOptimizer
                 return "GamerPower";
             }
 
+            /// <summary>Remplit r sans déformer : l'image est recadrée au centre (vignettes larges de GamerPower).</summary>
+            private static void Couverture(Graphics g, Image img, Rectangle r)
+            {
+                float cible = r.Width / (float)r.Height, source = img.Width / (float)img.Height;
+                RectangleF src = source > cible
+                    ? new RectangleF((img.Width - img.Height * cible) / 2f, 0, img.Height * cible, img.Height)
+                    : new RectangleF(0, (img.Height - img.Width / cible) / 2f, img.Width, img.Width / cible);
+                using (var p = FpsUi.Round(r, 6f))
+                {
+                    Region avant = g.Clip;
+                    g.SetClip(p, System.Drawing.Drawing2D.CombineMode.Intersect);
+                    g.DrawImage(img, r, src, GraphicsUnit.Pixel);
+                    g.Clip = avant;
+                }
+            }
+
             protected override void OnPaint(PaintEventArgs e)
             {
                 Graphics g = e.Graphics;
@@ -681,11 +697,18 @@ namespace BTOptimizer
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 FpsUi.PaintCard(g, new Rectangle(0, 0, L - 1, H - 1), _survol ? FpsUi.CardHi : FpsUi.Card, FpsUi.Border, 10f);
 
-                // Jaquette Steam (portrait) ; hors Steam, un fond avec le nom de la plateforme.
+                // Image donnée par la source (Steam avec empreinte, Epic, GamerPower) ; sinon, ou si elle
+                // échoue, la jaquette Steam par AppID ; à défaut, un fond avec le nom de la plateforme.
                 var ri = new Rectangle(8, 8, 76, H - 16);
                 Image img = null;
-                if (_o.SteamAppId > 0) { try { img = GameArt.Get(_o.SteamAppId, Pret); } catch { } }
-                if (img != null) { try { g.DrawImage(img, ri); } catch { } }
+                try
+                {
+                    if (_o.Image != null) img = GameArt.GetUrl(_o.Image, Pret);
+                    if (img == null && _o.SteamAppId > 0 && (_o.Image == null || GameArt.EchecUrl(_o.Image)))
+                        img = GameArt.Get(_o.SteamAppId, Pret);
+                }
+                catch { }
+                if (img != null) { try { Couverture(g, img, ri); } catch { } }
                 else
                 {
                     using (var p = FpsUi.Round(ri, 6f))

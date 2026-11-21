@@ -23,6 +23,7 @@ namespace BTOptimizer
         public int[] Tags = new int[0];   // tagids Steam
         public string Url;
         public int SteamAppId;         // 0 hors Steam
+        public string Image;           // jaquette ou vignette (URL), null si la source n'en donne pas
         public string Cle { get { return Source + ":" + Id; } }
     }
 

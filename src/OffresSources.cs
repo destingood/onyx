@@ -93,7 +93,7 @@ namespace BTOptimizer
             }
             if (n == 0) return null;
             sb.Append("],\"context\":{\"language\":\"french\",\"country_code\":\"FR\"},")
-              .Append("\"data_request\":{\"include_basic_info\":true,\"include_tag_count\":5,\"include_release\":true,\"include_platforms\":true}}");
+              .Append("\"data_request\":{\"include_basic_info\":true,\"include_tag_count\":5,\"include_release\":true,\"include_platforms\":true,\"include_assets\":true}}");
             return "https://api.steampowered.com/IStoreBrowseService/GetItems/v1?input_json=" + Uri.EscapeDataString(sb.ToString());
         }
 
@@ -121,6 +121,7 @@ namespace BTOptimizer
                         Url = "https://store.steampowered.com/app/" + appid.ToString(CultureInfo.InvariantCulture) + "/",
                         Plateformes = new[] { "Steam" },
                         Tags = Entiers(it, "tagids"),
+                        Image = ImageSteam(it),
                     };
                     JsonElement rel;
                     if (Prop(it, "release", out rel)) o.Sortie = DepuisUnix(Entier(rel, "steam_release_date", 0));
@@ -180,6 +181,7 @@ namespace BTOptimizer
                         Remise = 100,
                         Fin = fin,
                         Plateformes = new[] { "Epic Games" },
+                        Image = ImageEpic(el),
                         Url = slug != null ? "https://store.epicgames.com/fr/p/" + slug : "https://store.epicgames.com/fr/free-games",
                     });
                 }
@@ -214,10 +216,61 @@ namespace BTOptimizer
                         Sortie = DateGamerPower(Chaine(g, "published_date")),
                         Fin = DateGamerPower(Chaine(g, "end_date")),
                         Plateformes = PlateformesGamerPower(Chaine(g, "platforms")),
+                        Image = ImageSure(Chaine(g, "thumbnail")) ?? ImageSure(Chaine(g, "image")),
                     });
                 }
             }
             return res;
+        }
+
+        // ---------------------------------------------------------------- images
+
+        private const string BaseImagesSteam = "https://shared.akamai.steamstatic.com/store_item_assets/";
+
+        /// <summary>
+        /// Jaquette Steam (library_capsule, portrait), sinon le bandeau, sinon la capsule. Les jeux récents
+        /// ne sont plus servis à l'ancienne adresse /steam/apps/&lt;id&gt;/library_600x900.jpg : seul le chemin
+        /// avec empreinte donné par l'API (asset_url_format + nom de fichier) existe.
+        /// </summary>
+        private static string ImageSteam(JsonElement item)
+        {
+            JsonElement a;
+            if (!Prop(item, "assets", out a)) return null;
+            string format = Chaine(a, "asset_url_format");
+            if (format == null || !format.StartsWith("steam/", StringComparison.Ordinal) || !format.Contains("${FILENAME}")) return null;
+            foreach (string cle in new[] { "library_capsule", "header", "main_capsule" })
+            {
+                string f = Chaine(a, cle);
+                if (string.IsNullOrWhiteSpace(f) || f.Contains("..") || f.Contains("://")) continue;
+                return ImageSure(BaseImagesSteam + format.Replace("${FILENAME}", f.Trim()));
+            }
+            return null;
+        }
+
+        /// <summary>Image Epic : verticale d'abord (comme la jaquette Steam), puis vignette, puis large.</summary>
+        private static string ImageEpic(JsonElement el)
+        {
+            JsonElement imgs;
+            if (!Prop(el, "keyImages", out imgs) || imgs.ValueKind != JsonValueKind.Array) return null;
+            foreach (string type in new[] { "OfferImageTall", "DieselStoreFrontTall", "Thumbnail", "OfferImageWide", "DieselStoreFrontWide" })
+                foreach (var k in imgs.EnumerateArray())
+                    if (Chaine(k, "type") == type)
+                    {
+                        string u = ImageSure(Chaine(k, "url"));
+                        // Le CDN d'Epic sert l'original (souvent 2 Mo) ; il redimensionne sur demande (≈ 30 Ko).
+                        if (u != null && u.StartsWith("https://cdn1.epicgames.com/", StringComparison.Ordinal) && u.IndexOf('?') < 0)
+                            u += "?h=360&w=240&resize=1";
+                        if (u != null) return u;
+                    }
+            return null;
+        }
+
+        /// <summary>URL d'image acceptée : https seulement (jamais javascript:, file:, http en clair).</summary>
+        private static string ImageSure(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            Uri u;
+            return Uri.TryCreate(url.Trim(), UriKind.Absolute, out u) && u.Scheme == Uri.UriSchemeHttps ? url.Trim() : null;
         }
 
         // ---------------------------------------------------------------- aides

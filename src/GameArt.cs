@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -159,7 +161,154 @@ namespace BTOptimizer
                 }
                 catch { }   // 404 sur ce format : on tente le suivant
             }
+
+            // Jeux récents : plus rien à l'ancienne adresse. L'API Steam donne le chemin avec empreinte.
+            try
+            {
+                string json = await OffresReseau.Texte(OffresSources.UrlFichesSteam(new[] { appId }), 7 * 24 * 60).ConfigureAwait(false);
+                var fiches = OffresSources.FichesSteam(json);
+                string u = fiches.Count > 0 ? fiches[0].Image : null;
+                byte[] data = u == null ? null : await TelechargeImage(u).ConfigureAwait(false);
+                if (data != null)
+                {
+                    try { string p = DiskPath(appId); Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { }
+                    return FromBytes(data);
+                }
+            }
+            catch { }
             return null;
+        }
+
+        // ------------------------------------------------ images par URL (Bons plans : Steam, Epic, GamerPower)
+
+        private static readonly Dictionary<string, Image> _urlCache = new Dictionary<string, Image>();
+        private static readonly Dictionary<string, List<Action>> _urlWaiters = new Dictionary<string, List<Action>>();
+        private static readonly HashSet<string> _urlLoading = new HashSet<string>();
+        private static readonly HashSet<string> _urlFailed = new HashSet<string>();
+        private const int MaxImageBytes = 4 * 1024 * 1024;
+        private const int HauteurMax = 360;   // réduit à l'affichage : une carte n'en montre que 112 px
+        private static HttpClient _httpOnyx;
+
+        /// <summary>Image d'une URL https (cache mémoire puis disque), ou null tant qu'elle n'est pas prête.
+        /// onReady est rappelé (thread de fond) quand elle est prête ou a échoué.</summary>
+        public static Image GetUrl(string url, Action onReady)
+        {
+            if (!UrlImageSure(url)) return null;
+            bool start = false;
+            lock (_lock)
+            {
+                Image img;
+                if (_urlCache.TryGetValue(url, out img)) return img;
+                if (_urlFailed.Contains(url)) return null;
+                if (onReady != null)
+                {
+                    List<Action> list;
+                    if (!_urlWaiters.TryGetValue(url, out list)) { list = new List<Action>(); _urlWaiters[url] = list; }
+                    list.Add(onReady);
+                }
+                if (!_urlLoading.Contains(url)) { _urlLoading.Add(url); start = true; }
+            }
+            if (start) { var _ignore = LoadUrlAsync(url); }
+            return null;
+        }
+
+        /// <summary>Vrai si l'image de cette URL n'a pas pu être chargée (l'appelant passe à son repli).</summary>
+        public static bool EchecUrl(string url)
+        {
+            if (url == null) return false;
+            lock (_lock) return _urlFailed.Contains(url);
+        }
+
+        private static bool UrlImageSure(string url)
+        {
+            return Offres.LienSur(url) && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static async Task LoadUrlAsync(string url)
+        {
+            Image loaded = null;
+            try
+            {
+                string p = UrlDiskPath(url);
+                loaded = await Task.Run(() => File.Exists(p) && new FileInfo(p).Length >= MinArtBytes ? Reduit(FromFile(p)) : null).ConfigureAwait(false);
+                if (loaded == null && !UnderTestHarness())
+                {
+                    await _gate.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+                        byte[] data = await TelechargeImage(url).ConfigureAwait(false);
+                        if (data != null)
+                        {
+                            loaded = Reduit(FromBytes(data));
+                            if (loaded != null) { try { Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { } }
+                        }
+                    }
+                    finally { _gate.Release(); }
+                }
+            }
+            catch { }
+
+            Action[] cbs;
+            lock (_lock)
+            {
+                if (loaded != null) _urlCache[url] = loaded; else _urlFailed.Add(url);
+                _urlLoading.Remove(url);
+                List<Action> list;
+                cbs = _urlWaiters.TryGetValue(url, out list) ? list.ToArray() : new Action[0];
+                _urlWaiters.Remove(url);
+            }
+            // Rappel aussi en cas d'échec : la carte bascule alors sur son repli.
+            foreach (var cb in cbs) { try { cb(); } catch { } }
+        }
+
+        /// <summary>Téléchargement borné (https, 4 Mo, 10 s, User-Agent « ONYX ») ; null si absent ou image d'attente.</summary>
+        private static async Task<byte[]> TelechargeImage(string url)
+        {
+            if (!UrlImageSure(url)) return null;
+            if (_httpOnyx == null)
+                lock (_lock)
+                {
+                    if (_httpOnyx == null)
+                    {
+                        var h = new HttpClient { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = MaxImageBytes };
+                        h.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "ONYX");
+                        _httpOnyx = h;
+                    }
+                }
+            try
+            {
+                byte[] data = await _httpOnyx.GetByteArrayAsync(url).ConfigureAwait(false);
+                return data != null && data.Length >= MinArtBytes ? data : null;
+            }
+            catch { return null; }
+        }
+
+        private static string UrlDiskPath(string url)
+        {
+            byte[] h;
+            using (var sha = SHA256.Create()) h = sha.ComputeHash(Encoding.UTF8.GetBytes(url));
+            var sb = new StringBuilder("u-");
+            for (int i = 0; i < 12; i++) sb.Append(h[i].ToString("x2"));
+            return Path.Combine(AppContext.BaseDirectory, "bt-gamecache", sb.Append(".img").ToString());
+        }
+
+        /// <summary>Copie réduite à HauteurMax (une jaquette Epic d'origine dépasse 2 000 px) ; libère l'original.</summary>
+        private static Image Reduit(Image img)
+        {
+            if (img == null || img.Height <= HauteurMax) return img;
+            try
+            {
+                int w = Math.Max(1, img.Width * HauteurMax / img.Height);
+                var b = new Bitmap(w, HauteurMax);
+                using (var g = Graphics.FromImage(b))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(img, 0, 0, w, HauteurMax);
+                }
+                img.Dispose();
+                return b;
+            }
+            catch { return img; }
         }
 
         // Décode entièrement dans un Bitmap indépendant (le flux peut se fermer sans casser le dessin GDI+).
