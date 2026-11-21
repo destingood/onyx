@@ -43,6 +43,11 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   graphique intégrée seule, ONYX signale le mode Xbox de Windows (Win+F11) quand Windows le
   propose. Texte honnête : 0,2 à 0,3 Go de mémoire en moins en jeu, 0,6 à 1,3 Go au repos,
   aucun FPS en plus (mesures LTT Labs). Rien n'est activé par ONYX.
+- **Diagnostic : intégrité de la mémoire expliquée.** Quand elle est active, ONYX dit pourquoi :
+  depuis octobre 2026, Windows l'active d'office là où elle n'était pas réglée. Si ONYX l'avait
+  coupée, il précise que ce n'est pas cette mise à jour (Microsoft ne touche pas un PC où elle a
+  été coupée). Elle ne fait plus partie du lot « Ré-appliquer » des réglages annulés : la couper
+  reste un choix explicite, avec son propre bouton.
 - **Les caches de shaders ne sont plus vidés par défaut.** Les vider fait recompiler chaque shader
   en jeu, d'où des saccades. Ils sortent de « Tout entretenir », du Check Up+, des cases cochées
   du Stockage et du Nettoyage disque, et de « Libérer l'espace » (Copilote, réparation des

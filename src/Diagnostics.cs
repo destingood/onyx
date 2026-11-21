@@ -294,7 +294,12 @@ namespace BTOptimizer
             // Intégrité mémoire (VBS/HVCI)
             object hvci = Sys.GetMachine(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", "Enabled");
             if (Sys.IntEquals(hvci, 1))
-                f.Add(new Finding(1, "Intégrité de la mémoire (VBS/HVCI) activée — coûte des performances en jeu.", FixKind.DisableVbs, "Désactiver"));
+            {
+                // Activée d'office depuis octobre 2026 là où rien n'était réglé ; jamais sur un PC où
+                // elle avait été coupée. Le texte dit laquelle des deux situations, et laisse le choix.
+                bool parOnyx = TweakDrift.Load().Exists(e => IntegriteMemoire.AvisSepare(e.Id));
+                f.Add(new Finding(1, IntegriteMemoire.Constat(true, parOnyx), FixKind.DisableVbs, "Désactiver"));
+            }
 
             // L'hyperviseur qui tourne SANS que HVCI soit actif : le test ci-dessus le ratait
             // entièrement. Sur une machine où WSL2 ou Docker a été installé, c'est la « Plateforme

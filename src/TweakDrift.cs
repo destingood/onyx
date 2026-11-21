@@ -158,6 +158,8 @@ namespace BTOptimizer
             {
                 Tweak t;
                 if (e == null || !byId.TryGetValue(e.Id, out t) || t.Check == null) continue;
+                // Intégrité de la mémoire : son propre constat, jamais re-coupée dans un lot.
+                if (IntegriteMemoire.AvisSepare(t.Id)) continue;
                 bool? state;
                 try { state = t.Check(); }
                 catch { continue; }                    // lecture impossible : pas un constat
