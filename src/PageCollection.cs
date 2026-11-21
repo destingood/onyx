@@ -26,7 +26,7 @@ namespace BTOptimizer
 
         public PageCollection(DashboardForm host) : base(host)
         {
-            _btnExport = FpsUi.GhostButton("Exporter en image");
+            _btnExport = OnyxDesign.Button("Exporter en image");
             _btnExport.Size = new Size(160, 30);
             _btnExport.Click += (s, e) => ExportShowcase();
             Controls.Add(_btnExport);
@@ -211,11 +211,11 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int unlocked = Unlocked();
-            PaintTitle(g, "COLLECTION", "Débloque des badges en soignant ton PC — " + unlocked + " / " + BadgeCatalog.All.Length + " obtenus. (Ils restent acquis.)");
+            PaintPremiumTitle(g, "COLLECTION", "Débloque des badges en soignant ton PC — " + unlocked + " / " + BadgeCatalog.All.Length + " obtenus. (Ils restent acquis.)");
 
             // Vitrine (gauche) : le badge le plus élevé débloqué + résumé.
             _vitrineRect = new Rectangle(L, TopY, VW, VH);
-            FpsUi.PaintCard(g, _vitrineRect, FpsUi.Card, FpsUi.Border, 14f);
+            OnyxDesign.PaintCard(g, _vitrineRect, FpsUi.Card, FpsUi.Border, 14f);
             _best = Best();
             var tier = _best != null ? BadgeCatalog.TierColor[_best.Tier - 1] : FpsUi.Dim2;
             BadgeRender.DrawShape(g, L + (VW - 150) / 2, TopY + 34, 150, _best != null ? _best.Glyph : "🩺",
@@ -241,7 +241,7 @@ namespace BTOptimizer
             int cellH = onImage ? 138 : 132;
             Color tier = BadgeCatalog.TierColor[b.Tier - 1];
             var cell = new Rectangle(cx, cy, cellW, cellH);
-            FpsUi.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
+            OnyxDesign.PaintCard(g, cell, ok ? Color.FromArgb(15, 20, 17) : Color.FromArgb(14, 15, 14), ok ? Color.FromArgb(tier.R, tier.G, tier.B) : FpsUi.Border, 12f);
             BadgeRender.DrawShape(g, cx + (cellW - 56) / 2, cy + 10, 56, b.Glyph, ok, tier, b.Shape);
             TextRenderer.DrawText(g, b.Name, FpsUi.H3, new Rectangle(cx + 4, cy + 70, cellW - 8, 18),
                 ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis);

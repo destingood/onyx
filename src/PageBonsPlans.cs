@@ -66,7 +66,7 @@ namespace BTOptimizer
             for (int i = 0; i < _onglets.Length; i++)
             {
                 int k = i;
-                _onglets[i] = FpsUi.GhostButton(NomsOnglets[i]);
+                _onglets[i] = OnyxDesign.Button(NomsOnglets[i]);
                 _onglets[i].Height = 30;
                 _onglets[i].Click += (s, e) => ChoisitOnglet(k);
                 Controls.Add(_onglets[i]);
@@ -76,7 +76,7 @@ namespace BTOptimizer
             for (int i = 0; i < _pilules.Length; i++)
             {
                 int k = i;
-                _pilules[i] = FpsUi.GhostButton(Offres.LibellePlafond(Plafonds[i]));
+                _pilules[i] = OnyxDesign.Button(Offres.LibellePlafond(Plafonds[i]));
                 _pilules[i].Height = 28;
                 _pilules[i].Width = TextRenderer.MeasureText(_pilules[i].Text, FpsUi.Small).Width + 20;
                 _pilules[i].Click += (s, e) => ChoisitPlafond(Plafonds[k]);
@@ -90,7 +90,7 @@ namespace BTOptimizer
             _lTri = Etiquette("Tri");
             _tri = Liste(110, Tris.Select(t => t.Key));
 
-            _stores = FpsUi.GhostButton("Stores");
+            _stores = OnyxDesign.Button("Stores");
             _stores.Height = 28;
             _stores.Click += (s, e) => MenuStores();
             Controls.Add(_stores);
@@ -107,11 +107,11 @@ namespace BTOptimizer
             };
             MajStores();
 
-            _verifier = FpsUi.GhostButton("Vérifier maintenant");
+            _verifier = OnyxDesign.Button("Vérifier maintenant");
             _verifier.Height = 28; _verifier.Width = 150;
             _verifier.Click += (s, e) => Verifie();
             Controls.Add(_verifier);
-            _installes = FpsUi.GhostButton("Suivre mes jeux installés");
+            _installes = OnyxDesign.Button("Suivre mes jeux installés");
             _installes.Height = 28; _installes.Width = 190;
             _installes.Click += (s, e) => SuitInstalles();
             Controls.Add(_installes);
@@ -126,19 +126,19 @@ namespace BTOptimizer
 
             _etat = new Label { AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Font = FpsUi.Body, ForeColor = FpsUi.Dim, BackColor = FpsUi.BgMain, Visible = false };
             Controls.Add(_etat);
-            _reessayer = FpsUi.GoldButton("Réessayer");
+            _reessayer = OnyxDesign.AccentButton("Réessayer");
             _reessayer.Size = new Size(130, 34); _reessayer.Visible = false;
             _reessayer.Click += (s, e) => { _gratuitsBruts = null; Recharge(); };
             Controls.Add(_reessayer);
             _etat.BringToFront(); _reessayer.BringToFront();
 
-            _prec = FpsUi.GhostButton("‹ Précédent");
+            _prec = OnyxDesign.Button("‹ Précédent");
             _prec.Size = new Size(110, 28);
             _prec.Click += (s, e) => { if (_pageIdx > 0) { _pageIdx--; Affiche(false); } };
             Controls.Add(_prec);
             _numPage = Etiquette("Page 1");
             _numPage.AutoSize = false; _numPage.TextAlign = ContentAlignment.MiddleCenter; _numPage.Size = new Size(110, 28);
-            _suiv = FpsUi.GhostButton("Suivant ›");
+            _suiv = OnyxDesign.Button("Suivant ›");
             _suiv.Size = new Size(110, 28);
             _suiv.Click += (s, e) => Suivant();
             Controls.Add(_suiv);
@@ -204,7 +204,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "BONS PLANS", "Promos, jeux gratuits et nouveautés — tu peux suivre un jeu pour être prévenu de sa promo");
+            PaintPremiumTitle(e.Graphics, "BONS PLANS", "Promos, jeux gratuits et nouveautés — tu peux suivre un jeu pour être prévenu de sa promo");
         }
 
         // ------------------------------------------------------------------ disposition
@@ -854,7 +854,7 @@ namespace BTOptimizer
                 Graphics g = e.Graphics;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                FpsUi.PaintCard(g, new Rectangle(0, 0, L - 1, H - 1), _survol ? FpsUi.CardHi : FpsUi.Card, FpsUi.Border, 10f);
+                OnyxDesign.PaintCard(g, new Rectangle(0, 0, L - 1, H - 1), _survol ? FpsUi.CardHi : FpsUi.Card, FpsUi.Border, 10f);
 
                 // Image donnée par la source (Steam avec empreinte, Epic, GamerPower) ; sinon, ou si elle
                 // échoue, la jaquette Steam par AppID ; à défaut, un fond avec le nom de la plateforme.

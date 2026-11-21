@@ -67,17 +67,17 @@ namespace BTOptimizer
             _scroll.Controls.Add(_drives);
 
             // Pas d'emoji ici : les boutons sont en Ubuntu, qui n'a pas de repli emoji (carré tofu).
-            _btnFree = FpsUi.GoldButton("TOUT LIBÉRER");
+            _btnFree = OnyxDesign.AccentButton("TOUT LIBÉRER");
             _btnFree.Height = 30; _btnFree.Width = 168;
             _btnFree.Click += (s, e) => FreeSelected();
             Controls.Add(_btnFree);
 
-            _btnConfig = FpsUi.GhostButton("⚙ Configurer…");
+            _btnConfig = OnyxDesign.Button("⚙ Configurer…");
             _btnConfig.Height = 30; _btnConfig.Width = 118;
             _btnConfig.Click += (s, e) => OpenConfig();
             Controls.Add(_btnConfig);
 
-            _btnRescan = FpsUi.GhostButton("↻ Analyser");
+            _btnRescan = OnyxDesign.Button("↻ Analyser");
             _btnRescan.Height = 30; _btnRescan.Width = 96;
             _btnRescan.Click += (s, e) => Scan();
             Controls.Add(_btnRescan);
@@ -312,11 +312,11 @@ namespace BTOptimizer
             var card = new Panel();
             card.BackColor = Color.Transparent;
             card.Tag = new CardTag { Section = "clean", Height = CardCleanH };
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            card.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
-            var glyph = FpsUi.Text(m.Glyph, FpsUi.GlyphL, FpsUi.Ink);
-            glyph.AutoSize = false; glyph.SetBounds(14, 12, 48, 48);
-            glyph.TextAlign = ContentAlignment.MiddleCenter;
+            var glyph = new BufferedPanel();
+            glyph.BackColor = Color.Transparent; glyph.SetBounds(16, 14, 42, 42);
+            glyph.Paint += (s, e) => OnyxDesign.IconWell(e.Graphics, StorageIcon(m.Id), new Rectangle(1, 1, 39, 39));
             card.Controls.Add(glyph);
 
             var name = FpsUi.Text(m.Name, FpsUi.H3, FpsUi.Ink);
@@ -362,6 +362,7 @@ namespace BTOptimizer
                 SetStatus(null);
             };
             card.Controls.Add(tog);
+            OnyxDesign.HoverCard(card);
             return card;
         }
 
@@ -371,11 +372,11 @@ namespace BTOptimizer
             var card = new Panel();
             card.BackColor = Color.Transparent;
             card.Tag = new CardTag { Section = "browse", Height = CardBrowseH };
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            card.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
-            var glyph = FpsUi.Text(m.Glyph, FpsUi.GlyphL, FpsUi.Ink);
-            glyph.AutoSize = false; glyph.SetBounds(16, 14, 44, 44);
-            glyph.TextAlign = ContentAlignment.MiddleCenter;
+            var glyph = new BufferedPanel();
+            glyph.BackColor = Color.Transparent; glyph.SetBounds(16, 14, 42, 42);
+            glyph.Paint += (s, e) => OnyxDesign.IconWell(e.Graphics, StorageIcon(m.Id), new Rectangle(1, 1, 39, 39));
             card.Controls.Add(glyph);
 
             var name = FpsUi.Text(m.Name, FpsUi.H3, FpsUi.Ink);
@@ -409,13 +410,22 @@ namespace BTOptimizer
                 card.Controls.Add(none);
             }
 
-            var btn = FpsUi.GhostButton(BrowseLabel(m));
+            var btn = OnyxDesign.Button(BrowseLabel(m));
             btn.SetBounds(16, CardBrowseH - 44, CardW - 32, 30);
             btn.ForeColor = FpsUi.Gold;
             Storage.Module cap = m;
             btn.Click += (s, e) => OpenBrowse(cap);
             card.Controls.Add(btn);
+            OnyxDesign.HoverCard(card);
             return card;
+        }
+
+        private static int StorageIcon(string id)
+        {
+            if (id == "games" || id == "gpu") return NavIcons.Jeux;
+            if (id == "apps") return NavIcons.Collection;
+            if (id == "winsys" || id == "history") return NavIcons.Systeme;
+            return NavIcons.Stockage;
         }
 
         private static string BrowseLabel(Storage.Module m)
@@ -559,7 +569,7 @@ namespace BTOptimizer
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            FpsUi.PaintCard(g, p.ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            OnyxDesign.PaintCard(g, p.ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
 
             TextRenderer.DrawText(g, "TES DISQUES", FpsUi.H3, new Point(18, 14), FpsUi.Gold, TextFormatFlags.NoPadding);
 
@@ -630,7 +640,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "STOCKAGE", Subtitle());
+            PaintPremiumTitle(e.Graphics, "STOCKAGE", Subtitle());
         }
 
         private void SetStatus(string s)

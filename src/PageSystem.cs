@@ -24,11 +24,11 @@ namespace BTOptimizer
         {
             _timer.Interval = 1000;
             _timer.Tick += (s, e) => Sample();
-            _btnComp = FpsUi.GhostButton("Composants détaillés");
+            _btnComp = OnyxDesign.Button("Composants détaillés");
             _btnComp.Size = new Size(200, 30);
             _btnComp.Click += (s, e) => Host.OpenDialog(new SystemInfoForm(Host.Log));
             Controls.Add(_btnComp);
-            _btnReport = FpsUi.GhostButton("Rapport de santé");
+            _btnReport = OnyxDesign.Button("Rapport de santé");
             _btnReport.Size = new Size(150, 30);
             _btnReport.Click += (s, e) => Host.GenerateHealthReport();
             Controls.Add(_btnReport);
@@ -100,11 +100,11 @@ namespace BTOptimizer
         {
             base.OnPaint(e);
             Graphics g = e.Graphics;
-            PaintTitle(g, "MATÉRIEL EN DIRECT", null);
+            PaintPremiumTitle(g, "MATÉRIEL EN DIRECT", null);
 
             int L = 34, top = 74, gap = 16;
             int rightW = 250;
-            int cardH = (ClientSize.Height - top - 34 - gap * 2) / 3;
+            int cardH = (ClientSize.Height - top - 60 - gap * 2) / 3;
             int graphW = ClientSize.Width - L * 2 - rightW - gap;
 
             HwSample s = _last;
@@ -126,10 +126,12 @@ namespace BTOptimizer
         private void DrawMetric(Graphics g, int x, int y, int gw, int h, int rw, string title, Queue<double> q, Color col,
             double util, double temp, string tag, string detail)
         {
-            FpsUi.PaintCard(g, new Rectangle(x, y, gw, h), FpsUi.Card, FpsUi.Border, 12f);
+            OnyxDesign.PaintCard(g, new Rectangle(x, y, gw, h), FpsUi.Card, FpsUi.Border, 12f);
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             TextRenderer.DrawText(g, title, FpsUi.H3, new Point(x + 16, y + 12), FpsUi.Ink, TextFormatFlags.NoPadding);
             var plot = new Rectangle(x + 16, y + 44, gw - 32, h - 66);
+            using (var grid = new Pen(FpsUi.Border))
+                for (int i = 0; i < 3; i++) g.DrawLine(grid, plot.Left, plot.Top + i * plot.Height / 2, plot.Right, plot.Top + i * plot.Height / 2);
             TextRenderer.DrawText(g, "100%", FpsUi.Small, new Point(plot.Right - 34, y + 40), FpsUi.Dim2, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "0%", FpsUi.Small, new Point(x + 16, plot.Bottom - 2), FpsUi.Dim2, TextFormatFlags.NoPadding);
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -138,7 +140,7 @@ namespace BTOptimizer
                 var arr = q.ToArray(); var pts = new PointF[arr.Length];
                 for (int i = 0; i < arr.Length; i++)
                 {
-                    float fx = plot.Left + (float)i / (Hist - 1) * plot.Width;
+                    float fx = plot.Left + (float)(Hist - arr.Length + i) / (Hist - 1) * plot.Width;
                     float v = (float)Math.Max(0, Math.Min(100, arr[i]));
                     pts[i] = new PointF(fx, plot.Bottom - v / 100f * plot.Height);
                 }
@@ -147,15 +149,15 @@ namespace BTOptimizer
 
             // Carte detail a droite.
             int dx = x + gw + 16;
-            FpsUi.PaintCard(g, new Rectangle(dx, y, rw, h), FpsUi.Card, FpsUi.Border, 12f);
+            OnyxDesign.PaintCard(g, new Rectangle(dx, y, rw, h), FpsUi.Card, FpsUi.Border, 12f);
             TextRenderer.DrawText(g, tag, FpsUi.H3, new Point(dx + 16, y + 14), FpsUi.Ink, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "UTILISATION", FpsUi.Small, new Point(dx + 16, y + 48), FpsUi.Dim, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, double.IsNaN(util) ? "n/d" : util.ToString("0") + " %", FpsUi.H2, new Point(dx + 16, y + 64),
+            TextRenderer.DrawText(g, double.IsNaN(util) ? "—" : util.ToString("0") + " %", OnyxDesign.Number, new Point(dx + 14, y + 65),
                 double.IsNaN(util) ? FpsUi.Dim : (util < 60 ? FpsUi.Gold : util < 85 ? FpsUi.Warn : FpsUi.Err), TextFormatFlags.NoPadding);
             if (!double.IsNaN(temp))
             {
-                TextRenderer.DrawText(g, "TEMPÉRATURE", FpsUi.Small, new Point(dx + 16, y + 96), FpsUi.Dim, TextFormatFlags.NoPadding);
-                TextRenderer.DrawText(g, temp.ToString("0") + " °C", FpsUi.H2, new Point(dx + 16, y + 112),
+                TextRenderer.DrawText(g, "TEMPÉRATURE", FpsUi.Tiny, new Point(dx + 138, y + 48), FpsUi.Dim, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, temp.ToString("0") + "°", OnyxDesign.Number, new Point(dx + 136, y + 65),
                     temp < 70 ? FpsUi.Gold : temp < 84 ? FpsUi.Warn : FpsUi.Err, TextFormatFlags.NoPadding);
             }
             if (!string.IsNullOrEmpty(detail))

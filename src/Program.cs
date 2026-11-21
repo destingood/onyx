@@ -1354,6 +1354,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_GAMES_UI") == "1")
+                {
+                    try { CaptureGamesUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Mes jeux ERREUR : " + ex); }
+                    Console.WriteLine("UITEST MES JEUX — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 string shot = Environment.GetEnvironmentVariable("BT_UISHOT");
                 if (!string.IsNullOrEmpty(shot)) { try { CaptureShellShots(shot); } catch (Exception ex) { uiErr++; Console.WriteLine("  Capture ERREUR : " + ex.Message); } }
                 Console.WriteLine("UITEST TERMINÉ — " + uiErr + " erreur(s).");
@@ -2168,6 +2175,45 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureGamesUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual;
+                dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(2);
+                var page = (PageGames)dash.PageAt(2);
+                for (int i = 0; i < 100 && !page.PreviewReady; i++) Pump(300);
+                if (!page.PreviewReady) throw new InvalidOperationException("La bibliothèque n'a pas fini de charger.");
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(150); page.ValidateLibraryUi(); Pump(800);
+                    SaveGamesShot(dash, dir, "mes-jeux-" + size.Width);
+                    page.PreviewDetail(true); Pump(500);
+                    SaveGamesShot(dash, dir, "fiche-jeu-" + size.Width);
+                    page.PreviewDetail(false); Pump(100);
+                    if (!page.Controls.Find("games-grid", true)[0].Visible) throw new InvalidOperationException("Retour à la grille impossible.");
+                    Console.WriteLine("  Mes jeux : filtres, état vide, grille et fiche OK à " + size.Width + "x" + size.Height);
+                }
+                dash.Hide();
+            }
+        }
+
+        private static void SaveGamesShot(Form form, string dir, string name)
+        {
+            using (var bitmap = new System.Drawing.Bitmap(form.Width, form.Height))
+            {
+                using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+                {
+                    IntPtr hdc = graphics.GetHdc();
+                    try { PrintWindow(form.Handle, hdc, PW_RENDERFULLCONTENT); }
+                    finally { graphics.ReleaseHdc(hdc); }
+                }
+                bitmap.Save(System.IO.Path.Combine(dir, name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+            }
+        }
+
         private static void CaptureShellShots(string dir)
         {
             try { System.IO.Directory.CreateDirectory(dir); } catch { }
@@ -2209,6 +2255,20 @@ namespace BTOptimizer
                         if (!checkedDetails) throw new InvalidOperationException("Aucune carte détaillée vérifiée.");
                         Console.WriteLine("  Cartes dépliables OK à " + sz.Width + "x" + sz.Height);
                     }
+                    if (p == 4)
+                    {
+                        var page = dash.PageAt(p);
+                        var grid = page.Controls.Find("module-grid", true)[0];
+                        ((Button)page.Controls.Find("module-filter-1", true)[0]).PerformClick();
+                        int visible = 0;
+                        foreach (Control card in grid.Controls) if (card.Visible) visible++;
+                        if (visible != 6) throw new InvalidOperationException("Filtre Mesurer incorrect : " + visible);
+                        ((Button)page.Controls.Find("module-filter-0", true)[0]).PerformClick();
+                        visible = 0;
+                        foreach (Control card in grid.Controls) if (card.Visible) visible++;
+                        if (visible != 14) throw new InvalidOperationException("Liste complète incorrecte : " + visible);
+                        Console.WriteLine("  Filtres des outils OK à " + sz.Width + "x" + sz.Height);
+                    }
                     try
                     {
                         using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
@@ -2225,6 +2285,21 @@ namespace BTOptimizer
                     }
                     catch (Exception ex) { Console.WriteLine("  shot " + names[p] + " : " + ex.Message); }
                 }
+                dash.Goto(0);
+                dash.PreviewNavigation(true);
+                Pump(120);
+                using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                {
+                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        try { PrintWindow(dash.Handle, hdc, PW_RENDERFULLCONTENT); }
+                        finally { g.ReleaseHdc(hdc); }
+                    }
+                    bmp.Save(System.IO.Path.Combine(dir, "p0-Navigation-" + sz.Width + "x" + sz.Height + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+                dash.PreviewNavigation(false);
+                Console.WriteLine("  Menu ouvrant / fermant OK à " + sz.Width + "x" + sz.Height);
                 // Collection DÉFILÉE : régression du bug « logos/textes détachés des cartes en
                 // scrollant » (TextRenderer ignore TranslateTransform — coordonnées manuelles).
                 try

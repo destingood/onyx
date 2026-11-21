@@ -11,7 +11,7 @@ namespace BTOptimizer
     internal class PageDashboard : FpsPage
     {
         internal const string SupportUrl = "https://fluide.gumroad.com";
-        private static readonly Font HeroFont = FpsUi.F(25f, true);
+        private static readonly Font HeroFont = FpsUi.F(30f, true);
         private readonly HwMonitor _monitor = new HwMonitor();
         private readonly Timer _timer = new Timer { Interval = 1500 };
         private readonly BufferedPanel _scroll = new BufferedPanel(), _content = new BufferedPanel();
@@ -39,19 +39,22 @@ namespace BTOptimizer
             _hero.BackColor = _graph.BackColor = _configuration.BackColor = FpsUi.BgMain;
             _hero.Paint += PaintHero; _graph.Paint += PaintGraph; _configuration.Paint += PaintConfiguration;
             _content.Controls.AddRange(new Control[] { _hero, _graph, _configuration });
-            _optimize = FpsUi.PrimaryButton("Optimiser Windows  →");
+            _optimize = OnyxDesign.PrimaryButton("Optimiser Windows  →");
             _optimize.Name = "dashboard-optimize";
             _optimize.Click += (s, e) => Host.Goto(1);
-            _gaming = FpsUi.GoldButton("Configurer mon profil gaming");
+            _gaming = OnyxDesign.AccentButton("Configurer mon profil gaming");
             _gaming.Click += (s, e) => Host.OpenDialog(new CompetitionForm(Catalog.All()));
             _hero.Controls.AddRange(new Control[] { _optimize, _gaming });
-            _settings = FpsUi.GhostButton("Parcourir les réglages  →");
+            _settings = OnyxDesign.Button("Parcourir les réglages  →");
             _settings.Click += (s, e) => Host.Goto(1); _configuration.Controls.Add(_settings);
             for (int i = 0; i < 3; i++)
             {
                 int metric = i;
                 var panel = new BufferedPanel { BackColor = FpsUi.BgMain };
                 panel.Paint += (s, e) => PaintMetric(e.Graphics, panel.ClientRectangle, metric);
+                panel.Cursor = Cursors.Hand;
+                panel.Click += (s, e) => Host.Goto(7);
+                OnyxDesign.HoverCard(panel);
                 _metrics[i] = panel; _content.Controls.Add(panel);
             }
             _shortcuts = new[]
@@ -95,15 +98,15 @@ namespace BTOptimizer
         {
             _scroll.SetBounds(30, 92, Math.Max(300, Width - 46), Math.Max(120, Height - 108));
             int width = Math.Max(300, _scroll.Width - SystemInformation.VerticalScrollBarWidth - 1);
-            int height = Math.Max(678, _scroll.Height);
+            int height = Math.Max(692, _scroll.Height);
             _content.Size = new Size(width, height);
-            _hero.SetBounds(0, 0, width, 202);
-            _optimize.SetBounds(24, 144, 196, 38); _gaming.SetBounds(232, 144, 236, 38);
+            _hero.SetBounds(0, 0, width, 234);
+            _optimize.SetBounds(28, 172, 202, 42); _gaming.SetBounds(242, 172, 242, 42);
             int cell = (width - 32) / 3;
-            for (int i = 0; i < 3; i++) _metrics[i].SetBounds(i * (cell + 16), 218, cell, 96);
-            int side = 280, chartHeight = height - 430;
-            _graph.SetBounds(0, 330, width - side - 16, chartHeight);
-            _configuration.SetBounds(width - side, 330, side, chartHeight);
+            for (int i = 0; i < 3; i++) _metrics[i].SetBounds(i * (cell + 16), 250, cell, 96);
+            int side = 280, chartHeight = height - 462;
+            _graph.SetBounds(0, 362, width - side - 16, chartHeight);
+            _configuration.SetBounds(width - side, 362, side, chartHeight);
             _settings.SetBounds(20, chartHeight - 52, side - 40, 32);
             for (int i = 0; i < 3; i++) _shortcuts[i].SetBounds(i * (cell + 16), height - 84, cell, 84);
         }
@@ -116,35 +119,50 @@ namespace BTOptimizer
         private void PaintHero(object sender, PaintEventArgs e)
         {
             var g = e.Graphics; var r = _hero.ClientRectangle;
-            FpsUi.PaintCard(g, r, Color.FromArgb(32, 28, 21), Color.FromArgb(83, 69, 43), 14f);
-            int split = Math.Max(510, r.Width - 300);
-            using (var pen = new Pen(Color.FromArgb(38, FpsUi.Gold)))
-                for (int i = 0; i < 5; i++)
-                {
-                    int x = split + i * 35;
-                    g.DrawLines(pen, new[] { new Point(x, 1), new Point(x, 30 + i * 8), new Point(x + 36, 66 + i * 8), new Point(r.Width - 12, 66 + i * 8) });
-                }
-            Draw(g, "OPTIMISATION WINDOWS / GAMING", FpsUi.Small, FpsUi.Gold, new Rectangle(24, 18, split - 40, 22));
-            Draw(g, "Ton PC. Tes performances.", HeroFont, FpsUi.Ink, new Rectangle(22, 44, split - 18, 48));
-            Draw(g, "Maîtrise les réglages, l'activité en fond et la latence.", FpsUi.Body, FpsUi.Dim, new Rectangle(24, 102, split - 32, 25));
-            if (r.Width - split >= 245)
+            OnyxDesign.PaintCard(g, r, Color.FromArgb(25, 23, 19), OnyxDesign.Edge, 16f);
+            int split = Math.Max(510, r.Width - 360);
+            // Trame carbone très légère, confinée à la partie illustration.
+            var state = g.Save();
+            using (var clip = FpsUi.Round(new RectangleF(1, 1, r.Width - 2, r.Height - 2), 15)) g.SetClip(clip);
+            using (var pen = new Pen(Color.FromArgb(9, FpsUi.Gold)))
+                for (int x = split - 80; x < r.Width + r.Height; x += 14) g.DrawLine(pen, x, 0, x - r.Height, r.Height);
+            using (var pen = new Pen(Color.FromArgb(48, FpsUi.Gold))) g.DrawLine(pen, 28, 1, r.Width - 28, 1);
+            g.Restore(state);
+            Draw(g, "ONYX  /  WINDOWS & GAMING", FpsUi.Small, FpsUi.Gold, new Rectangle(28, 20, split - 40, 22));
+            Draw(g, "La performance,", HeroFont, FpsUi.Ink, new Rectangle(25, 47, split - 12, 54));
+            Draw(g, "sous ton contrôle.", HeroFont, FpsUi.Gold, new Rectangle(25, 94, split - 12, 54));
+            DrawChip(g, new Rectangle(split + (r.Width - split) / 2 - 55, 42, 110, 110));
+            Draw(g, "MODE JEU", FpsUi.Small, FpsUi.Dim, new Rectangle(split, 174, r.Width - split - 12, 20));
+            Draw(g, GameBoost.IsActive ? "Activé pour ta session" : "Prêt à configurer", FpsUi.H3,
+                GameBoost.IsActive ? FpsUi.Ok : FpsUi.Ink, new Rectangle(split, 197, r.Width - split - 12, 24));
+        }
+
+        private static void DrawChip(Graphics g, Rectangle r)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var pen = new Pen(Color.FromArgb(52, FpsUi.Gold)))
             {
-                var session = new Rectangle(split + 12, 26, r.Width - split - 36, 150);
-                FpsUi.PaintCard(g, session, FpsUi.RailBg, FpsUi.Border, 12);
-                NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(session.X + 18, session.Y + 18, 34, 34), FpsUi.Gold);
-                Draw(g, "MODE JEU", FpsUi.Small, FpsUi.Dim, new Rectangle(session.X + 66, session.Y + 18, session.Width - 78, 20));
-                Draw(g, GameBoost.IsActive ? "Activé" : "En veille", FpsUi.H2, GameBoost.IsActive ? FpsUi.Ok : FpsUi.Ink,
-                    new Rectangle(session.X + 66, session.Y + 40, session.Width - 78, 26));
-                Draw(g, "Un profil dédié à tes sessions.\nÀ configurer selon tes jeux.", FpsUi.Body, FpsUi.Dim,
-                    new Rectangle(session.X + 18, session.Y + 86, session.Width - 36, 48), true);
+                for (int i = 0; i < 6; i++)
+                {
+                    int offset = 18 + i * 15;
+                    g.DrawLine(pen, r.Left - 42, r.Top + offset, r.Left, r.Top + offset);
+                    g.DrawLine(pen, r.Right, r.Top + offset, r.Right + 42, r.Top + offset);
+                    g.DrawLine(pen, r.Left + offset, r.Top - 22, r.Left + offset, r.Top);
+                    g.DrawLine(pen, r.Left + offset, r.Bottom, r.Left + offset, r.Bottom + 12);
+                }
             }
+            OnyxDesign.PaintCard(g, Rectangle.Inflate(r, 9, 9), Color.FromArgb(32, 28, 21), OnyxDesign.Edge, 16);
+            OnyxDesign.PaintCard(g, r, FpsUi.RailBg, FpsUi.GoldDim, 12);
+            NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(r.X + 28, r.Y + 22, 54, 54), FpsUi.Gold);
+            TextRenderer.DrawText(g, "ONYX", FpsUi.Small, new Rectangle(r.X, r.Y + 78, r.Width, 20), FpsUi.Dim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
         }
         private void PaintMetric(Graphics g, Rectangle r, int index)
         {
-            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 10f);
+            OnyxDesign.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 10f);
             using (var brush = new SolidBrush(_series[index])) g.FillRectangle(brush, 1, 20, 3, 54);
             Draw(g, _names[index], FpsUi.Tiny, FpsUi.Dim, new Rectangle(18, 12, r.Width - 36, 20));
-            Draw(g, Percent(_values[index]), FpsUi.Num, FpsUi.Ink, new Rectangle(16, 32, 128, 40));
+            Draw(g, Percent(_values[index]), OnyxDesign.Number, FpsUi.Ink, new Rectangle(16, 28, 128, 46));
             string detail = index == 0 ? Environment.ProcessorCount + " processeurs logiques"
                 : index == 1 ? (_sample != null && _sample.Gpu != null && _sample.Gpu.Ok ? _sample.Gpu.Name : "Capteur GPU")
                 : _sample != null && _sample.RamTotalMB > 0 ? (_sample.RamUsedMB / 1024.0).ToString("0.0") + " / " + (_sample.RamTotalMB / 1024.0).ToString("0.0") + " Go" : "Lecture en cours…";
@@ -154,7 +172,7 @@ namespace BTOptimizer
         private void PaintConfiguration(object sender, PaintEventArgs e)
         {
             var g = e.Graphics; var r = _configuration.ClientRectangle;
-            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
+            OnyxDesign.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
             Draw(g, "Configuration Windows", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 18, r.Width - 40, 26));
             Draw(g, _stats == null ? "—" : _stats.OptiActive.ToString(), FpsUi.Num, FpsUi.Gold, new Rectangle(18, 52, 100, 42));
             Draw(g, _stats == null ? "Analyse en cours…" : "réglages actifs sur " + _stats.OptiTotal, FpsUi.Body, FpsUi.Dim,
@@ -167,7 +185,7 @@ namespace BTOptimizer
         private void PaintGraph(object sender, PaintEventArgs e)
         {
             var g = e.Graphics; var r = _graph.ClientRectangle;
-            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
+            OnyxDesign.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12);
             Draw(g, "Charge système", FpsUi.H3, FpsUi.Ink, new Rectangle(20, 17, r.Width - 40, 24));
             Draw(g, "EN DIRECT · 60 S", FpsUi.Tiny, FpsUi.Dim, new Rectangle(r.Width - 136, 22, 116, 18));
             string[] legends = { "CPU", "GPU", "RAM" };
@@ -191,13 +209,18 @@ namespace BTOptimizer
         {
             var values = queue.ToArray(); g.SmoothingMode = SmoothingMode.AntiAlias;
             using (var pen = new Pen(color, 1.8f))
+            using (var fill = new SolidBrush(Color.FromArgb(15, color)))
                 for (int i = 1; i < values.Length; i++)
                 {
                     if (double.IsNaN(values[i - 1]) || double.IsNaN(values[i])) continue;
                     float x = plot.Left + (float)(Samples - values.Length + i - 1) / (Samples - 1) * plot.Width;
                     float next = plot.Left + (float)(Samples - values.Length + i) / (Samples - 1) * plot.Width;
-                    g.DrawLine(pen, x, plot.Bottom - (float)Math.Clamp(values[i - 1], 0, 100) * plot.Height / 100,
-                        next, plot.Bottom - (float)Math.Clamp(values[i], 0, 100) * plot.Height / 100);
+                    float y = plot.Bottom - (float)Math.Clamp(values[i - 1], 0, 100) * plot.Height / 100;
+                    float nextY = plot.Bottom - (float)Math.Clamp(values[i], 0, 100) * plot.Height / 100;
+                    if (plot.Height > 60) g.FillPolygon(fill, new[] { new PointF(x, plot.Bottom), new PointF(x, y), new PointF(next, nextY), new PointF(next, plot.Bottom) });
+                    g.DrawLine(pen, x, y, next, nextY);
+                    if (i == values.Length - 1)
+                        using (var dot = new SolidBrush(color)) g.FillEllipse(dot, next - 2, nextY - 2, 4, 4);
                 }
         }
         private void Sample()
@@ -254,7 +277,7 @@ namespace BTOptimizer
         {
             var g = e.Graphics;
             g.Clear(FpsUi.BgMain);
-            FpsUi.PaintCard(g, ClientRectangle, _hover ? FpsUi.CardHi : FpsUi.Card,
+            OnyxDesign.PaintCard(g, ClientRectangle, _hover ? FpsUi.CardHi : FpsUi.Card,
                 _hover || (Focused && ShowFocusCues) ? FpsUi.GoldDim : FpsUi.Border, 10);
             NavIcons.Draw(g, _icon, new RectangleF(16, 18, 22, 22), FpsUi.Gold);
             TextRenderer.DrawText(g, Text, FpsUi.H3, new Rectangle(48, 18, Width - 58, 24), FpsUi.Ink,

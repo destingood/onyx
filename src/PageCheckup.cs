@@ -40,7 +40,7 @@ namespace BTOptimizer
             _summary.Paint += PaintSummary;
             Controls.Add(_summary);
 
-            _run = FpsUi.GoldButton("Lancer la maintenance  →");
+            _run = OnyxDesign.AccentButton("Lancer la maintenance  →");
             _run.Font = FpsUi.H3; _run.Height = 56;
             _run.Click += (s, e) => RunSelected();
             Controls.Add(_run);
@@ -53,7 +53,14 @@ namespace BTOptimizer
             var card = new Panel();
             card.Tag = "routine";
             card.BackColor = Color.Transparent;
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            card.Paint += (s, e) =>
+            {
+                var selected = card.Controls["toggle"] as ToggleSwitch;
+                bool active = selected != null && selected.On;
+                OnyxDesign.PaintCard(e.Graphics, card.ClientRectangle, FpsUi.Card, active ? OnyxDesign.Edge : FpsUi.Border, 12);
+                int icon = id == 0 || id == 1 || id == 3 ? NavIcons.Stockage : id == 2 ? NavIcons.Jeux : NavIcons.Systeme;
+                OnyxDesign.IconWell(e.Graphics, icon, new Rectangle(18, 16, 32, 32), active);
+            };
 
             var nm = new Label(); nm.Text = name; nm.Font = FpsUi.H3; nm.ForeColor = FpsUi.Ink; nm.BackColor = Color.Transparent;
             nm.Name = "title";
@@ -63,11 +70,13 @@ namespace BTOptimizer
             ds.SetBounds(18, 64, 300, 66);
 
             var sel = new ToggleSwitch(); sel.Location = new Point(292, 18); sel.On = (id == 0 || id == 5);   // shaders (2) décochés : les vider fait saccader
+            sel.Name = "toggle";
             sel.AccessibleName = name;
-            sel.Toggled += (s, e) => { if (_summary != null) _summary.Invalidate(); };
+            sel.Toggled += (s, e) => { card.Invalidate(); if (_summary != null) _summary.Invalidate(); };
             card.Controls.Add(nm); card.Controls.Add(ds); card.Controls.Add(sel);
             Controls.Add(card);
             _routines.Add(new Routine { Id = id, Name = name, Desc = desc, Sel = sel });
+            OnyxDesign.HoverCard(card);
         }
 
         private void DoLayout()
@@ -80,7 +89,7 @@ namespace BTOptimizer
                 Panel card = (Panel)r.Sel.Parent;
                 int col = i % cols, row = i / cols;
                 card.SetBounds(L + col * (w + gap), top + row * (hgt + gap), w, hgt);
-                card.Controls["title"].SetBounds(18, 16, Math.Max(80, w - 92), 58);
+                card.Controls["title"].SetBounds(62, 16, Math.Max(80, w - 136), 58);
                 card.Controls["description"].SetBounds(18, 80, w - 36, 76);
                 r.Sel.Location = new Point(w - r.Sel.Width - 18, 18);
                 i++;
@@ -94,10 +103,10 @@ namespace BTOptimizer
         {
             Graphics g = e.Graphics;
             Rectangle r = _summary.ClientRectangle;
-            FpsUi.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
+            OnyxDesign.PaintCard(g, r, FpsUi.Card, FpsUi.Border, 12f);
             int selected = 0;
             foreach (var routine in _routines) if (routine.Sel.On) selected++;
-            TextRenderer.DrawText(g, selected + " routine(s) sélectionnée(s)", FpsUi.H3, new Point(18, 18), FpsUi.Ink, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, selected + (selected == 1 ? " opération sélectionnée" : " opérations sélectionnées"), FpsUi.H3, new Point(18, 18), FpsUi.Ink, TextFormatFlags.NoPadding);
             TextRenderer.DrawText(g, "Choisis les opérations à lancer pour entretenir ton PC.", FpsUi.Body,
                 new Rectangle(18, 46, r.Width - 36, 36), FpsUi.Dim, TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
         }
@@ -232,7 +241,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "BILAN & ENTRETIEN", "Vérifie la santé de ton PC et choisis les opérations de maintenance utiles.");
+            PaintPremiumTitle(e.Graphics, "BILAN & ENTRETIEN", "Vérifie la santé de ton PC et choisis les opérations de maintenance utiles.");
         }
     }
 }

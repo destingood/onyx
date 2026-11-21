@@ -15,6 +15,14 @@ namespace BTOptimizer
         private Button _prio;
         private Button _space;
         private TextBox _search;
+        private BufferedPanel _searchBox;
+        private Button _installed, _catalogue;
+        private Button _platform;
+        private readonly ContextMenuStrip _platformMenu = new ContextMenuStrip();
+        private Label _results;
+        private bool _catalogueMode;
+        private string _storeFilter = "Toutes les plateformes";
+        private readonly ToolTip _tips = new ToolTip();
 
         // Mode « Espace » : retrie la bibliothèque par espace DORMANT (taille × temps sans jouer)
         // et affiche taille + dernière partie sur chaque tuile, au lieu du simple « DÉTECTÉ ».
@@ -34,33 +42,54 @@ namespace BTOptimizer
 
         private void Build()
         {
-            _mode = FpsUi.GoldButton("▶  MODE JEU");
-            _mode.Width = 150; _mode.Height = 34;
+            _mode = OnyxDesign.AccentButton("Activer le mode jeu");
+            _mode.Width = 190; _mode.Height = 36;
             _mode.Click += (s, e) => ToggleBoost();
             Controls.Add(_mode);
 
-            _prio = FpsUi.GhostButton("⚙  Priorité par jeu");
+            _prio = OnyxDesign.Button("Priorité par jeu");
             _prio.Width = 160; _prio.Height = 34;
             _prio.Click += (s, e) => Host.OpenDialog(new GameProfileForm(Host.Log));
             Controls.Add(_prio);
 
-            _space = FpsUi.GhostButton("🧹  Espace");
+            _space = OnyxDesign.Button("Trier par espace");
             _space.Width = 128; _space.Height = 34;
             _space.Click += (s, e) => ToggleSpace();
             Controls.Add(_space);
 
-            _search = new TextBox();
-            try { _search.PlaceholderText = "Rechercher un jeu…"; } catch { }
-            _search.BackColor = FpsUi.Card; _search.ForeColor = FpsUi.Ink;
-            _search.BorderStyle = BorderStyle.FixedSingle; _search.Font = FpsUi.Small;
-            _search.SetBounds(400, 26, 200, 26);
-            _search.TextChanged += (s, e) => { _query = _search.Text.Trim().ToLowerInvariant(); if (_all != null) Render(); };
-            Controls.Add(_search);
+            _installed = OnyxDesign.Button("Sur mon PC");
+            _catalogue = OnyxDesign.Button("Catalogue");
+            _installed.Name = "games-installed"; _catalogue.Name = "games-catalogue";
+            _installed.Click += (s, e) => { _catalogueMode = false; Render(); };
+            _catalogue.Click += (s, e) => { _catalogueMode = true; Render(); };
+            Controls.Add(_installed); Controls.Add(_catalogue);
+
+            _platform = OnyxDesign.Button("Toutes les plateformes  ⌄");
+            _platform.Name = "games-platform";
+            _platform.AccessibleName = "Filtrer par plateforme";
+            _platformMenu.BackColor = FpsUi.Card; _platformMenu.ForeColor = FpsUi.Ink;
+            _platformMenu.Font = FpsUi.Body; _platformMenu.ShowImageMargin = false;
+            _platform.Click += (s, e) => _platformMenu.Show(_platform, new Point(0, _platform.Height + 4));
+            Controls.Add(_platform);
+
+            _searchBox = new BufferedPanel { BackColor = Color.Transparent };
+            _searchBox.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, _searchBox.ClientRectangle, FpsUi.Card,
+                _search.Focused ? FpsUi.GoldDim : FpsUi.Border, 8);
+            _search = new TextBox { Name = "games-search", PlaceholderText = "Rechercher un jeu…",
+                BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, BorderStyle = BorderStyle.None, Font = FpsUi.Body };
+            _search.AccessibleName = "Rechercher dans les jeux";
+            _search.TextChanged += (s, e) => { _query = _search.Text.Trim().ToLowerInvariant(); Render(); };
+            _search.GotFocus += (s, e) => _searchBox.Invalidate();
+            _search.LostFocus += (s, e) => _searchBox.Invalidate();
+            _searchBox.Controls.Add(_search); Controls.Add(_searchBox);
+            _results = FpsUi.Text("Chargement de la bibliothèque…", FpsUi.Small, FpsUi.Dim);
+            _results.AutoSize = false; Controls.Add(_results);
 
             _flow = new BufferedFlow();      // double-bufferé → défilement fluide, sans scintillement
             _flow.AutoScroll = true;
             _flow.BackColor = Color.Transparent;
-            _flow.Padding = new Padding(28, 6, 20, 20);
+            _flow.Padding = new Padding(0, 0, 0, 16);
+            _flow.Name = "games-grid";
             Controls.Add(_flow);
 
             // La molette défile la grille même quand le curseur est sur une carte (le message va
@@ -77,14 +106,14 @@ namespace BTOptimizer
             UpdateModeButton();
             // Deja charge : on redessine quand meme, pour repercuter un masquage fait depuis la
             // fiche d'un jeu (sinon la tuile resterait visible jusqu'au prochain lancement).
-            if (_loaded) { Render(); return; }
+            if (_loaded) { Render(); if (_detail != null) Host.SetPageToolsVisible(false); return; }
             _loaded = true;
             Task.Run(() =>
             {
                 List<GameScan.GameInfo> games = new List<GameScan.GameInfo>();
                 try { games = GameScan.Known(); GameScan.Detect(games); } catch { }
                 try { MergeScanned(games); } catch { }   // + TOUS les jeux installés (scanner générique multi-plateforme)
-                try { BeginInvoke((Action)(() => { _all = games; Render(); PrefetchArt(); })); } catch { }
+                try { BeginInvoke((Action)(() => { _all = games; UpdatePlatforms(); Render(); PrefetchArt(); })); } catch { }
             });
         }
 
@@ -139,17 +168,6 @@ namespace BTOptimizer
             return mb >= 1024 ? (mb / 1024.0).ToString("0.0") + " Go" : mb + " Mo";
         }
 
-        // Texte centré avec ombre portée : garantit la lisibilité par-dessus n'importe quelle
-        // jaquette (claire comme sombre), sans dépendre du seul dégradé.
-        private static void Shadowed(Graphics gr, string text, Font font, Rectangle rect, Color color)
-        {
-            var sh = new Rectangle(rect.X + 1, rect.Y + 1, rect.Width, rect.Height);
-            TextRenderer.DrawText(gr, text, font, sh, Color.FromArgb(205, 0, 0, 0),
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
-            TextRenderer.DrawText(gr, text, font, rect, color,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
-        }
-
         private static string NormName(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
@@ -196,13 +214,13 @@ namespace BTOptimizer
         private void ToggleSpace()
         {
             _spaceMode = !_spaceMode;
-            if (_space != null) _space.Text = _spaceMode ? "🧹  Espace  ✓" : "🧹  Espace";
+            if (_space != null) _space.Text = _spaceMode ? "Tri : espace ↓" : "Trier par espace";
 
             if (_spaceMode && _spaceData == null && !_spaceLoading)
             {
                 _spaceLoading = true;
-                _subtitle = "Calcul de l'espace occupé… (le premier passage est le plus long, ensuite c'est en cache)";
-                Invalidate();
+                _results.Text = "Analyse de l’espace occupé en cours…";
+                Render();
                 Task.Run(() =>
                 {
                     List<DormantGames.Entry> res;
@@ -238,225 +256,178 @@ namespace BTOptimizer
             return _spaceData != null && _spaceData.TryGetValue(NormName(g.Name), out e) ? e : null;
         }
 
-        private bool Match(GameScan.GameInfo g)
+        private static string StoreName(GameScan.GameInfo game)
         {
-            if (_query.Length == 0) return true;
-            return g.Name != null && g.Name.ToLowerInvariant().Contains(_query);
+            return string.IsNullOrWhiteSpace(game.Store) ? "Autres" : game.Store.Trim().ToUpperInvariant();
+        }
+
+        private void UpdatePlatforms()
+        {
+            var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var game in _all) if (!GameHidden.IsHidden(game.Name)) names.Add(StoreName(game));
+            _platformMenu.Items.Clear();
+            AddPlatform("Toutes les plateformes");
+            foreach (string name in names) AddPlatform(name);
+        }
+
+        private void AddPlatform(string name)
+        {
+            var item = new ToolStripMenuItem(name) { Checked = name == _storeFilter };
+            item.Click += (s, e) =>
+            {
+                _storeFilter = name; _platform.Text = name + "  ⌄";
+                foreach (ToolStripMenuItem choice in _platformMenu.Items) choice.Checked = choice == item;
+                Render();
+            };
+            _platformMenu.Items.Add(item);
+        }
+
+        private bool Match(GameScan.GameInfo game)
+        {
+            return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query))
+                && (_storeFilter == "Toutes les plateformes" || StoreName(game) == _storeFilter);
         }
 
         private void Render()
         {
             if (_all == null || _flow == null) return;
+            var visible = new List<GameScan.GameInfo>();
+            int installed = 0, catalogue = 0;
+            foreach (var game in _all)
+            {
+                if (GameHidden.IsHidden(game.Name)) continue;
+                if (game.Detected) installed++; else catalogue++;
+                if (game.Detected == !_catalogueMode && Match(game)) visible.Add(game);
+            }
+            visible.Sort((a, b) =>
+            {
+                int rank = _spaceMode && !_catalogueMode ? SpaceRank(a).CompareTo(SpaceRank(b)) : 0;
+                return rank != 0 ? rank : StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name);
+            });
+            _installed.Text = "Sur mon PC · " + installed; _catalogue.Text = "Catalogue · " + catalogue;
+            StyleFilter(_installed, !_catalogueMode); StyleFilter(_catalogue, _catalogueMode);
+            StyleFilter(_space, _spaceMode && !_catalogueMode);
+            _space.Enabled = !_catalogueMode;
+            _subtitle = installed + (installed == 1 ? " jeu détecté" : " jeux détectés") + " · Tes jeux, leurs réglages et leurs performances.";
+            _results.Text = visible.Count + (visible.Count == 1 ? " jeu" : " jeux")
+                + (_catalogueMode ? " dans le catalogue · Non détectés sur ce PC" : " sur ton PC")
+                + (_spaceMode && !_catalogueMode ? (_spaceLoading ? " · Analyse de l’espace…" : " · Tri par espace récupérable") : " · Par ordre alphabétique");
+            if (_spaceMode && !_catalogueMode && !_spaceLoading && _spaceData != null)
+            {
+                long total = 0;
+                foreach (var game in visible) { var info = SpaceInfo(game); if (info != null) total += info.SizeMB; }
+                _results.Text += " · " + Go(total) + " mesurés";
+            }
             _flow.SuspendLayout();
-            var old = new Control[_flow.Controls.Count];
-            _flow.Controls.CopyTo(old, 0);
-            _flow.Controls.Clear();
-
-            var det = new List<GameScan.GameInfo>();
-            var other = new List<GameScan.GameInfo>();
-            foreach (var g in _all)
+            var old = new Control[_flow.Controls.Count]; _flow.Controls.CopyTo(old, 0);
+            _flow.Controls.Clear(); _flow.AutoScrollPosition = Point.Empty;
+            foreach (var game in visible) _flow.Controls.Add(Card(game));
+            if (visible.Count == 0)
             {
-                if (!Match(g)) continue;
-                if (GameHidden.IsHidden(g.Name)) continue;   // masqué par l'utilisateur (réversible)
-                if (g.Detected) det.Add(g); else other.Add(g);
-            }
-
-            // Mode Espace : les plus gros dormants en premier (classement calculé par DormantGames).
-            if (_spaceMode && _spaceRank != null)
-                det.Sort((a, b) => SpaceRank(a).CompareTo(SpaceRank(b)));
-
-            Control last = null;
-            if (det.Count > 0)
-            {
-                AddHeader("DÉTECTÉS SUR CE PC", det.Count, FpsUi.Gold);
-                foreach (var g in det) { last = Card(g, true); _flow.Controls.Add(last); }
-            }
-            if (other.Count > 0)
-            {
-                if (last != null) _flow.SetFlowBreak(last, true);
-                AddHeader(_query.Length > 0 ? "AUTRES RÉSULTATS" : "BIBLIOTHÈQUE", other.Count, FpsUi.Dim);
-                foreach (var g in other) _flow.Controls.Add(Card(g, false));
-            }
-
-            _flow.ResumeLayout();
-            foreach (Control c in old) { try { c.Dispose(); } catch { } }  // libère les handles GDI
-
-            // Démarre tout de suite le chargement des jaquettes des jeux détectés (priorité à ce
-            // qui est visible en haut) ; les autres se chargeront à la demande au défilement.
-            foreach (var g in det) GameArt.ForGame(g.Name, g.SteamId, null);   // AppID connu OU résolu par le nom
-
-            int shownDet = det.Count;
-            if (_query.Length > 0)
-                _subtitle = (det.Count + other.Count) + " résultat(s) pour « " + _search.Text.Trim() + " »   ·   " + shownDet + " détecté(s)";
-            else if (_spaceMode && _spaceData != null)
-            {
-                long tot = 0, dorm = 0;
-                foreach (GameScan.GameInfo g in det)
+                var empty = new BufferedPanel { Height = 200, Tag = "empty", BackColor = Color.Transparent };
+                empty.Paint += (s, e) =>
                 {
-                    DormantGames.Entry e = SpaceInfo(g);
-                    if (e == null) continue;
-                    tot += e.SizeMB;
-                    if (e.IsDormant) dorm += e.SizeMB;
-                }
-                _subtitle = shownDet + " jeu(x) · " + Go(tot) + " au total · " + Go(dorm)
-                          + " dormants (3 mois sans y jouer) — triés par espace récupérable";
+                    OnyxDesign.PaintCard(e.Graphics, empty.ClientRectangle, FpsUi.Card, FpsUi.Border, 12);
+                    OnyxDesign.IconWell(e.Graphics, NavIcons.Jeux, new Rectangle(24, 26, 48, 48));
+                    OnyxDesign.Text(e.Graphics, "Aucun jeu dans cette vue", FpsUi.H2, FpsUi.Ink, new Rectangle(90, 28, empty.Width - 114, 28));
+                    OnyxDesign.Text(e.Graphics, "Essaie un autre nom ou sélectionne toutes les plateformes.", FpsUi.Body, FpsUi.Dim, new Rectangle(90, 65, empty.Width - 114, 52), true);
+                };
+                _flow.Controls.Add(empty);
             }
-            else
-                _subtitle = shownDet + " jeu(x) détecté(s) sur ton PC (toutes plateformes)";
+            LayoutCards(); _flow.ResumeLayout();
+            foreach (Control control in old) { _tips.SetToolTip(control, null); control.Dispose(); }
             Invalidate();
         }
 
-        private void AddHeader(string text, int count, Color col)
+        private static void StyleFilter(Button button, bool active)
         {
-            var h = new Label();
-            h.Text = text + "   (" + count + ")";
-            h.Font = FpsUi.Small; h.ForeColor = col; h.BackColor = Color.Transparent;
-            h.AutoSize = false; h.Height = 30;
-            h.Width = Math.Max(200, _flow.ClientSize.Width - 60);
-            h.TextAlign = ContentAlignment.MiddleLeft;
-            h.Margin = new Padding(10, 12, 10, 2);
-            _flow.Controls.Add(h);
-            _flow.SetFlowBreak(h, true);
+            button.ForeColor = active ? FpsUi.Gold : FpsUi.Dim;
+            button.BackColor = active ? FpsUi.BlendGold(FpsUi.Card, .1f) : FpsUi.Card;
+            button.FlatAppearance.BorderSize = active ? 1 : 0;
+            button.FlatAppearance.BorderColor = active ? FpsUi.GoldDim : FpsUi.Border;
+            button.Invalidate();
         }
 
-        private Control Card(GameScan.GameInfo g, bool detected)
+        private void LayoutCards()
         {
-            // Tuile « affiche » verticale (comme la bibliothèque Steam) : jaquette officielle 600x900.
-            // (Le flux parent est composité WS_EX_COMPOSITED → pas besoin de double-buffer par carte.)
-            var card = new Panel();
-            card.Size = new Size(170, 252);
-            card.Margin = new Padding(9);
-            card.BackColor = Color.Transparent;
-            card.Paint += (s, e) =>
+            int available = Math.Max(250, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2);
+            int columns = Math.Max(1, available / 205);
+            int width = (available - (columns - 1) * 16) / columns;
+            int index = 0;
+            foreach (Control card in _flow.Controls)
+            {
+                if (card.Tag is string) { card.Size = new Size(available, 200); continue; }
+                card.Size = new Size(width, (int)(width * 1.12f) + 90);
+                card.Margin = new Padding(0, 0, ++index % columns == 0 ? 0 : 16, 18);
+            }
+        }
+
+        private Control Card(GameScan.GameInfo game)
+        {
+            var card = new GameTile { Tag = game, Text = game.Name, AccessibleName = game.Name,
+                AccessibleDescription = "Ouvrir la fiche du jeu", BackColor = FpsUi.BgMain };
+            Action ready = () => { try { if (card.IsHandleCreated && !card.IsDisposed) card.BeginInvoke((Action)card.Invalidate); } catch { } };
+            card.Paint += (sender, e) =>
             {
                 Graphics gr = e.Graphics;
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
-                gr.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                var rr = new Rectangle(0, 0, ((Panel)s).ClientRectangle.Width - 1, ((Panel)s).ClientRectangle.Height - 1);
-
-                // Jeu sans AppID (Battle.net, EA app, GOG, hors launcher) : on retrouve son AppID
-                // Steam par le NOM afin d'afficher la VRAIE jaquette — la plupart des jeux PC
-                // existent sur Steam même installés ailleurs. L'index se charge en tâche de fond ;
-                // en attendant, la tuile retombe proprement sur l'icône du jeu.
-                if (g.SteamId <= 0 && detected)
-                {
-                    int rid = SteamAppIndex.Resolve(g.Name,
-                        () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } });
-                    if (rid > 0) g.SteamId = rid;
-                }
-
-                Image img = g.SteamId > 0
-                    ? GameArt.Get(g.SteamId, () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } })
-                    : null;
-
-                using (var clip = Round(rr, 12))
-                {
-                    var save = gr.Clip; gr.SetClip(clip);
-                    if (img != null)
-                    {
-                        DrawCover(gr, img, rr);
-                        if (!detected) using (var veil = new SolidBrush(Color.FromArgb(155, 9, 11, 10))) gr.FillRectangle(veil, rr);
-                        // En mode Espace on affiche 2 lignes (taille + ancienneté) : dégradé plus HAUT
-                        // et plus OPAQUE pour rester lisible même sur une jaquette claire (Borderlands…).
-                        int sh = _spaceMode ? 74 : 54;
-                        int sa = _spaceMode ? 238 : 210;
-                        var scrim = new Rectangle(0, rr.Height - sh, rr.Width + 1, sh + 1);
-                        using (var lg = new LinearGradientBrush(scrim, Color.FromArgb(0, 9, 11, 10), Color.FromArgb(sa, 9, 11, 10), 90f))
-                            gr.FillRectangle(lg, scrim);
-                    }
-                    else
-                    {
-                        // Placeholder soigné pour les jeux hors Steam (Riot/Epic/Blizzard…) : dégradé +
-                        // pastille ronde à la manette + nom bien lisible (au lieu d'une boîte vide).
-                        using (var lg = new LinearGradientBrush(rr, FpsUi.CardHi, FpsUi.RailBg, 90f)) gr.FillRectangle(lg, rr);
-                        Color ac = detected ? FpsUi.Gold : FpsUi.Dim2;
-
-                        // Aucune jaquette Steam possible (Battle.net, EA app, jeux hors launcher) :
-                        // on affiche l'icône HAUTE RÉSOLUTION du jeu, extraite de son exécutable.
-                        // Extraction en tâche de fond → la carte se redessine dès qu'elle est prête.
-                        Image ico = detected
-                            ? GameIcon.For(g.InstallPath, () => { try { if (card.IsHandleCreated) card.BeginInvoke((Action)card.Invalidate); } catch { } })
-                            : null;
-
-                        if (ico != null && ico.Width >= 64)
-                        {
-                            // Vraie icône 128/256 px : on la montre EN GRAND, comme une vignette.
-                            // (Pas de pastille ronde : elle rapetisserait l'illustration pour rien.)
-                            int isz = 112;
-                            var ir = new Rectangle((rr.Width - isz) / 2, 24, isz, isz);
-                            InterpolationMode oldIm = gr.InterpolationMode;
-                            gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                            gr.DrawImage(ico, ir);
-                            gr.InterpolationMode = oldIm;
-                        }
-                        else
-                        {
-                            // Rien de mieux qu'une petite icône (ou rien) : pastille ronde classique.
-                            int d = 78; var circ = new Rectangle((rr.Width - d) / 2, 40, d, d);
-                            using (var cb = new SolidBrush(Color.FromArgb(detected ? 34 : 22, ac.R, ac.G, ac.B))) gr.FillEllipse(cb, circ);
-                            using (var cp = new Pen(Color.FromArgb(detected ? 130 : 60, ac.R, ac.G, ac.B), 1.5f)) gr.DrawEllipse(cp, circ);
-
-                            if (ico != null)
-                            {
-                                int isz = Math.Min(48, Math.Max(32, ico.Width));
-                                var ir = new Rectangle(circ.X + (circ.Width - isz) / 2, circ.Y + (circ.Height - isz) / 2, isz, isz);
-                                InterpolationMode oldIm = gr.InterpolationMode;
-                                gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                                gr.DrawImage(ico, ir);
-                                gr.InterpolationMode = oldIm;
-                            }
-                            else
-                            {
-                                // GDI (TextRenderer) centre mal les emoji : leurs métriques débordent
-                                // de la cellule → glyphe décalé. GDI+ + StringFormat centré = au milieu.
-                                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                                using (var gb = new SolidBrush(ac))
-                                    gr.DrawString("🎮", FpsUi.GlyphL, gb, (RectangleF)circ, sf);
-                            }
-                        }
-                        TextRenderer.DrawText(gr, g.Name, FpsUi.H3, new Rectangle(10, 138, rr.Width - 20, 68), detected ? FpsUi.Ink : FpsUi.Dim,
-                            TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                    }
-                    gr.Clip = save; save.Dispose();
-                }
-
-                // Statut en bas (sur le dégradé).
-                DormantGames.Entry sp = (detected && _spaceMode) ? SpaceInfo(g) : null;
-                if (sp != null)
-                {
-                    // Ligne 1 : taille, en gros et blanc. Ligne 2 : ancienneté, colorée par dormance.
-                    Shadowed(gr, sp.SizeText, FpsUi.H3, new Rectangle(0, rr.Height - 46, rr.Width, 24), Color.White);
-                    Color ic = sp.Never || sp.DaysIdle >= 180 ? Color.FromArgb(255, 120, 120)   // rouge : à libérer
-                             : sp.DaysIdle >= 90 ? Color.FromArgb(255, 190, 90)                  // orange : peu joué
-                             : sp.DaysIdle < 0 ? Color.FromArgb(170, 176, 186)                   // gris : inconnu
-                             : Color.FromArgb(120, 230, 160);                                     // vert : récent
-                    Shadowed(gr, "● " + sp.IdleText, FpsUi.Tiny, new Rectangle(0, rr.Height - 22, rr.Width, 16), ic);
-                }
+                int artHeight = card.Height - 90;
+                var art = new Rectangle(1, 1, card.Width - 2, artHeight);
+                OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused ? FpsUi.GoldDim : FpsUi.Border, 12);
+                Image cover = GameArt.ForGame(game.Name, game.SteamId, ready);
+                var state = gr.Save();
+                using (var clip = FpsUi.Round(new RectangleF(1, 1, card.Width - 2, card.Height - 2), 11)) gr.SetClip(clip);
+                gr.SetClip(art, CombineMode.Intersect);
+                if (cover != null) DrawCover(gr, cover, art);
                 else
                 {
-                    string tag = detected ? "● DÉTECTÉ" : "non installé";
-                    Color tc = detected ? FpsUi.Ok : FpsUi.Dim2;   // presence = état → émeraude
-                    TextRenderer.DrawText(gr, tag, FpsUi.Small, new Rectangle(0, rr.Height - 26, rr.Width, 18), tc,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+                    using (var fill = new LinearGradientBrush(art, Color.FromArgb(43, 39, 29), FpsUi.RailBg, 60f)) gr.FillRectangle(fill, art);
+                    using (var line = new Pen(Color.FromArgb(14, FpsUi.Gold)))
+                        for (int x = -artHeight; x < card.Width; x += 22) gr.DrawLine(line, x, art.Bottom, x + artHeight, art.Top);
+                    Image icon = game.Detected ? GameIcon.For(game.InstallPath, ready) : null;
+                    int size = Math.Min(100, artHeight - 64);
+                    var iconRect = new Rectangle((card.Width - size) / 2, (artHeight - size) / 2, size, size);
+                    if (icon != null) gr.DrawImage(icon, iconRect);
+                    else OnyxDesign.IconWell(gr, NavIcons.Jeux, new Rectangle((card.Width - 64) / 2, (artHeight - 64) / 2, 64, 64));
                 }
-
-                // Pastille du launcher (coin haut-gauche).
-                if (detected && !string.IsNullOrEmpty(g.Store))
+                using (var fade = new LinearGradientBrush(art, Color.FromArgb(30, 0, 0, 0), Color.FromArgb(100, 0, 0, 0), 90f)) gr.FillRectangle(fade, art);
+                gr.Restore(state);
+                string store = StoreName(game);
+                int chipWidth = Math.Min(card.Width - 24, TextRenderer.MeasureText(store, FpsUi.Tiny).Width + 18);
+                var chip = new Rectangle(12, 12, chipWidth, 23);
+                using (var path = FpsUi.Round(chip, 6))
+                using (var fill = new SolidBrush(Color.FromArgb(225, FpsUi.RailBg))) gr.FillPath(fill, path);
+                TextRenderer.DrawText(gr, store, FpsUi.Tiny, chip, FpsUi.Ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                if (card.Hot || card.Focused)
                 {
-                    Size ts = TextRenderer.MeasureText(g.Store, FpsUi.Tiny);
-                    var chip = new Rectangle(8, 8, ts.Width + 12, 17);
-                    using (var b = new SolidBrush(Color.FromArgb(200, 0, 0, 0))) gr.FillRectangle(b, chip);
-                    TextRenderer.DrawText(gr, g.Store, FpsUi.Tiny, chip, FpsUi.Gold,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    var action = new Rectangle(12, artHeight - 40, card.Width - 24, 30);
+                    OnyxDesign.PaintCard(gr, action, FpsUi.Gold, FpsUi.Gold, 7);
+                    TextRenderer.DrawText(gr, "Voir le jeu  →", FpsUi.H3, action, FpsUi.BgMain, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
-
-                using (var pen = new Pen(detected ? FpsUi.Border : Color.FromArgb(26, 28, 27), 1f))
-                using (var bp = Round(rr, 12)) gr.DrawPath(pen, bp);
+                OnyxDesign.Text(gr, game.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
+                var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
+                string status = info != null ? info.SizeText + " · " + info.IdleText : game.Detected ? "Détecté sur ce PC" : "Fiche & réglages";
+                OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
+                    new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };
-            var tt = new ToolTip(); tt.SetToolTip(card, g.Name + " — clic pour la fiche détaillée");
-            card.Cursor = Cursors.Hand;
-            card.Click += (s, e) => OpenDetail(g);
+            _tips.SetToolTip(card, game.Name + " — ouvrir la fiche et les réglages");
+            card.Click += (s, e) => OpenDetail(game);
             return card;
+        }
+
+        private sealed class GameTile : Button
+        {
+            public bool Hot;
+            public GameTile()
+            {
+                FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0; Cursor = Cursors.Hand;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
+            }
+            protected override void OnPaint(PaintEventArgs e) { e.Graphics.Clear(BackColor); base.OnPaint(e); }
+            protected override void OnMouseEnter(EventArgs e) { Hot = true; Invalidate(); base.OnMouseEnter(e); }
+            protected override void OnMouseLeave(EventArgs e) { Hot = false; Invalidate(); base.OnMouseLeave(e); }
+            protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+            protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
         }
 
         // ------------------------------------------------------------------
@@ -466,10 +437,52 @@ namespace BTOptimizer
         //  conteneur — on réutilise toute la fiche sans dupliquer une ligne.
         // ------------------------------------------------------------------
         private Form _detail;
+        private Point _libraryScroll;
+
+#if BTTEST
+        internal bool PreviewReady { get { return _all != null; } }
+        internal void PreviewDetail(bool open)
+        {
+            if (!open) { CloseDetail(); return; }
+            var game = _all.Find(g => g.Detected && g.SteamId == 730) ?? _all.Find(g => g.Detected);
+            if (game == null) throw new InvalidOperationException("Aucun jeu détecté pour vérifier la fiche.");
+            OpenDetail(game);
+            if (_detail == null || _flow.Visible || _searchBox.Visible || _space.Visible)
+                throw new InvalidOperationException("La fiche ne remplace pas correctement la bibliothèque.");
+        }
+        internal void ValidateLibraryUi()
+        {
+            _catalogue.PerformClick();
+            foreach (Control tile in _flow.Controls)
+                if (tile.Tag is GameScan.GameInfo game && game.Detected) throw new InvalidOperationException("Jeu détecté dans le catalogue.");
+            _installed.PerformClick();
+            foreach (Control tile in _flow.Controls)
+                if (tile.Tag is GameScan.GameInfo game && !game.Detected) throw new InvalidOperationException("Jeu du catalogue parmi les jeux détectés.");
+            if (_platformMenu.Items.Count > 1)
+            {
+                ((ToolStripMenuItem)_platformMenu.Items[1]).PerformClick();
+                foreach (Control tile in _flow.Controls)
+                    if (tile.Tag is GameScan.GameInfo game && StoreName(game) != _storeFilter) throw new InvalidOperationException("Filtre de plateforme incorrect.");
+                ((ToolStripMenuItem)_platformMenu.Items[0]).PerformClick();
+            }
+            _search.Text = "counter";
+            foreach (Control tile in _flow.Controls)
+                if (tile.Tag is GameScan.GameInfo game && !(game.Name ?? "").ToLowerInvariant().Contains("counter"))
+                    throw new InvalidOperationException("Recherche incorrecte.");
+            _search.Text = "__onyx_no_game_matches_734981__";
+            if (_flow.Controls.Count != 1 || !(_flow.Controls[0].Tag is string)) throw new InvalidOperationException("État vide absent.");
+            _search.Text = "";
+            DoLayout();
+            foreach (Control tile in _flow.Controls)
+                if (tile.Right > _flow.ClientSize.Width || tile.Width < 180) throw new InvalidOperationException("Grille hors cadre.");
+            if (_platform.Right + 8 > _searchBox.Left) throw new InvalidOperationException("Filtres superposés.");
+        }
+#endif
 
         private void OpenDetail(GameScan.GameInfo g)
         {
             CloseDetail();
+            _libraryScroll = _flow.AutoScrollPosition;
             try
             {
                 var f = new GameDetailForm(g, Host.Log);
@@ -505,28 +518,19 @@ namespace BTOptimizer
             try { if (_flow != null) _flow.BringToFront(); } catch { }
             ResumeLayout(true);
             try { f.Dispose(); } catch { }
+            Render();
+            _flow.AutoScrollPosition = new Point(-_libraryScroll.X, -_libraryScroll.Y);
         }
 
         private void ShowLibraryChrome(bool on)
         {
             if (_flow != null) _flow.Visible = on;
-            if (_search != null) _search.Visible = on;
+            if (_searchBox != null) _searchBox.Visible = on;
+            _installed.Visible = _catalogue.Visible = _platform.Visible = _results.Visible = _space.Visible = on;
+            Host.SetPageToolsVisible(on);
             if (_mode != null) _mode.Visible = on;
             if (_prio != null) _prio.Visible = on;
             Invalidate();
-        }
-
-        // Rectangle à coins arrondis (les 4).
-        private static GraphicsPath Round(Rectangle r, int rad)
-        {
-            var p = new GraphicsPath();
-            int d = rad * 2;
-            p.AddArc(r.X, r.Y, d, d, 180, 90);
-            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
-            p.CloseFigure();
-            return p;
         }
 
         // Dessine l'image en « cover » (remplit dst, recadrage centré).
@@ -561,13 +565,13 @@ namespace BTOptimizer
         {
             if (GameBoost.IsActive)
             {
-                _mode.Text = "■  MODE JEU ACTIF";
-                _mode.ForeColor = FpsUi.Err;
-                _mode.FlatAppearance.BorderColor = FpsUi.Err;
+                _mode.Text = "Mode jeu actif · Arrêter";
+                _mode.ForeColor = FpsUi.Gold;
+                _mode.FlatAppearance.BorderColor = FpsUi.Gold;
             }
             else
             {
-                _mode.Text = "▶  MODE JEU";
+                _mode.Text = "Activer le mode jeu";
                 _mode.ForeColor = FpsUi.Gold;
                 _mode.FlatAppearance.BorderColor = FpsUi.Gold;
             }
@@ -576,26 +580,31 @@ namespace BTOptimizer
         private void DoLayout()
         {
             if (_flow == null) return;
-            int ft = Host != null ? Host.ContentTop(112) : 112;
-            _flow.SetBounds(20, ft, ClientSize.Width - 40, ClientSize.Height - ft);
-            if (_mode != null) _mode.Location = new Point(ClientSize.Width - 34 - _mode.Width, 22);
-            if (_prio != null && _mode != null) _prio.Location = new Point(_mode.Left - 12 - _prio.Width, 22);
-            if (_search != null && _prio != null) _search.SetBounds(Math.Max(180, _prio.Left - 12 - 200), 26, 200, 26);
-            if (_space != null && _search != null) _space.Location = new Point(Math.Max(20, _search.Left - 12 - _space.Width), 22);
-            // Les en-têtes de section suivent la largeur du flux.
-            foreach (Control c in _flow.Controls) if (c is Label) c.Width = Math.Max(200, _flow.ClientSize.Width - 60);
+            int row = Host != null ? Host.ContentTop(96) : 96;
+            int right = ClientSize.Width - 34;
+            _mode.SetBounds(right - 190, 20, 190, 36);
+            _prio.SetBounds(_mode.Left - 172, 20, 160, 36);
+            _installed.SetBounds(34, row, 142, 36); _catalogue.SetBounds(184, row, 136, 36);
+            _space.SetBounds(332, row, 132, 36);
+            _searchBox.SetBounds(right - 230, row, 230, 36);
+            _search.SetBounds(12, 9, 206, 20);
+            _platform.SetBounds(478, row, Math.Max(120, _searchBox.Left - 490), 36);
+            _results.SetBounds(34, row + 52, right - 34, 24);
+            _flow.SetBounds(34, row + 86, ClientSize.Width - 52, Math.Max(100, ClientSize.Height - row - 102));
+            _flow.SuspendLayout(); LayoutCards(); _flow.ResumeLayout();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             if (_detail != null) return;   // la fiche intégrée dessine son propre en-tête
-            PaintTitle(e.Graphics, "BIBLIOTHÈQUE", _subtitle);
+            PaintPremiumTitle(e.Graphics, "MES JEUX", _subtitle);
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
+            if (disposing) { _tips.Dispose(); _platformMenu.Dispose(); }
             base.Dispose(disposing);
         }
     }

@@ -70,7 +70,6 @@ namespace BTOptimizer
             BuildRail();
             Controls.Add(_rail);
             _rail.BringToFront();   // la barre superposée doit rester au-dessus du contenu
-            UpdateRailMode();
 
             BuildTray();
             // Rappel VISIBLE d'une mise à jour en attente. La notification Windows est fugace (elle
@@ -198,7 +197,6 @@ namespace BTOptimizer
                 _rail.Height = ClientSize.Height;
                 LayoutRail();      // pas des cellules adapté à la hauteur (11 cellules dans 680 px)
             }
-            UpdateRailMode();
             PositionPageTools();   // la rangée d'outils (overlay) suit la largeur
         }
 
@@ -1338,7 +1336,6 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         // Barre latérale repliable : étroite (icônes seules) ou large (icônes + libellés).
         private const int RailNarrow = 66, RailWide = 224, BrandH = 88, ProfileH = 64;
-        private bool _railDocked;
         private static readonly Font BrandFont = FpsUi.F(18f, true);
         private readonly Label[] _navSections = new Label[3];
         private bool _railOpen;
@@ -1372,23 +1369,21 @@ namespace BTOptimizer
                     FpsUi.DrawTracked(gr, "ONYX", BrandFont, FpsUi.Ink, mx + mw + 12, BrandH / 2f - 8, 2f);
                     TextRenderer.DrawText(gr, "WINDOWS / GAMING", FpsUi.Tiny, new Point(mx + mw + 12, 56), FpsUi.Dim,
                         TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-                    // Pastille discrète = menu épinglé (il ne se referme plus quand on s'éloigne).
-                    if (_railPinned)
-                        using (var br = new SolidBrush(FpsUi.Gold))
-                            gr.FillEllipse(br, _railBrand.Width - 22, BrandH / 2f - 3.5f, 7f, 7f);
+                    TextRenderer.DrawText(gr, _railPinned ? "‹" : "+", FpsUi.H2,
+                        new Rectangle(_railBrand.Width - 29, 28, 22, 28), FpsUi.Gold,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
                 }
             };
             // La barre s'ouvre au survol ; le clic sur la marque l'ÉPINGLE (elle reste ouverte).
             _railBrand.Click += (s, e) =>
             {
-                if (_railDocked) return;
                 _railPinned = !_railPinned;
                 if (_railPinned) { SetRail(true); if (_railHover != null) _railHover.Stop(); }
-                else RailHoverIn();
+                else { if (_railHover != null) _railHover.Stop(); SetRail(false); }
                 _railBrand.Invalidate();
             };
             var brandTip = new ToolTip();
-            brandTip.SetToolTip(_railBrand, "Navigation étendue sur grand écran. En mode compact : survol pour ouvrir, clic pour épingler.");
+            brandTip.SetToolTip(_railBrand, "Survol : ouvrir le menu · Clic : épingler / fermer · Ctrl+B : ouvrir / fermer");
             _rail.Controls.Add(_railBrand);
 
             // --- Bas : bloc profil (mène à « Mon compte »). ---
@@ -1434,34 +1429,38 @@ namespace BTOptimizer
         private int _railFrom, _railTo, _railElapsed;
         private const int RailAnimMs = 180, RailFrameMs = 15;
 
-        // Sur grand écran, les libellés restent visibles sans recouvrir la page.
-        // En dessous, le rail compact conserve l'ouverture au survol.
-        private void UpdateRailMode()
+#if BTTEST
+        internal void PreviewNavigation(bool open)
         {
-            if (_rail == null) return;
-            bool docked = ClientSize.Width >= 1200;
-            if (_railDocked == docked) return;
-            _railDocked = docked;
-            if (_railAnim != null) _railAnim.Stop();
+            int contentWidth = _host.Width;
+            _railPinned = open;
             if (_railHover != null) _railHover.Stop();
-            _railPinned = docked;
-            _railOpen = docked;
-            foreach (NavCell cell in _nav) cell.Expanded = docked;
-            if (_tools != null) _tools.Expanded = docked;
-            _rail.Width = docked ? RailWide : RailNarrow;
-            Padding = new Padding(_rail.Width, Padding.Top, Padding.Right, Padding.Bottom);
-            LayoutRail();
+            SetRail(open);
+            if (_rail.Width != (open ? RailWide : RailNarrow) || _host.Width != contentWidth)
+                throw new InvalidOperationException("Le menu doit se déplier sans déplacer la page.");
+            foreach (NavCell cell in _nav)
+                if (cell.Bottom > _rail.Height - ProfileH) throw new InvalidOperationException("Navigation hors du cadre.");
+        }
+#endif
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == (Keys.Control | Keys.B) || (keyData == Keys.Escape && _railOpen))
+            {
+                _railPinned = keyData != Keys.Escape && !_railOpen;
+                if (_railHover != null) _railHover.Stop();
+                SetRail(_railPinned);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         /// <summary>
         /// Replie / déplie la barre avec une transition fluide.
         /// </summary>
         /// <remarks>
-        /// Animation DÉDIÉE, volontairement indépendante du système Anim global : celui-ci se coupe
-        /// dès qu'un jeu tourne, que le Mode Jeu est actif ou que Windows est réglé sur « meilleures
-        /// performances » — or déplier un menu est une interaction DIRECTE de l'utilisateur, pas un
-        /// effet décoratif : elle doit répondre dans tous les cas. Seul le harnais de test la coupe,
-        /// pour garder des captures déterministes.
+        /// La transition respecte les préférences d'animation et le mode jeu. Quand les effets
+        /// sont désactivés, le menu prend immédiatement sa largeur finale.
         /// </remarks>
         private void ToggleRail() { SetRail(!_railOpen); }
 
@@ -1476,7 +1475,7 @@ namespace BTOptimizer
             _railFrom = _rail.Width;
             _railTo = _railOpen ? RailWide : RailNarrow;
 
-            if (Anim.ForceOff) { _rail.Width = _railTo; LayoutRail(); return; }
+            if (!Anim.On) { if (_railAnim != null) _railAnim.Stop(); _rail.Width = _railTo; LayoutRail(); return; }
 
             _railElapsed = 0;
             if (_railAnim == null)
@@ -1557,7 +1556,8 @@ namespace BTOptimizer
             if (_rail == null) return;
             int cellW = Math.Max(48, _rail.Width - 18);
             int y = BrandH + 4;
-            int sectionH = _railOpen ? 26 : 10;
+            // Les icônes gardent leur position pendant l'ouverture : seule la largeur change.
+            int sectionH = 22;
             int dispo = _rail.Height - BrandH - 8 - ProfileH - 48 - sectionH * 3;
             int pas = _nav.Count == 0 ? 42 : Math.Max(28, Math.Min(44, dispo / _nav.Count));
             int[][] groups = { new[] { 0, 1, 7, 3, 8 }, new[] { 2, 4, 6 }, new[] { 9, 10, 5 } };
@@ -1680,6 +1680,11 @@ namespace BTOptimizer
         }
 
         // Place la rangée d'outils juste SOUS la bande de titre (sous-titre à ~y64), pleine largeur.
+        internal void SetPageToolsVisible(bool visible)
+        {
+            if (_pageToolBar != null) _pageToolBar.Visible = visible && _headerToolsH > 0;
+        }
+
         private void PositionPageTools()
         {
             if (_pageToolBar == null || _host == null) return;
@@ -1967,6 +1972,12 @@ namespace BTOptimizer
             if (!string.IsNullOrEmpty(subtitle))
                 TextRenderer.DrawText(g, subtitle, FpsUi.Body, new Rectangle(34, 58, Math.Max(1, Width - 68), 24), FpsUi.Dim,
                     TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+        }
+
+        // Opt-in explicite : la page Actus continue d'utiliser PaintTitle.
+        protected void PaintPremiumTitle(Graphics g, string title, string subtitle)
+        {
+            OnyxDesign.Heading(g, title, subtitle, Width);
         }
     }
 

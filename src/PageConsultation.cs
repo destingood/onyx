@@ -61,7 +61,7 @@ namespace BTOptimizer
             _vScreen = StatTile("ÉCRANS");
             _vPing = StatTile("PING");
             _vGpu = StatTile("GPU");
-            _refresh = FpsUi.GhostButton("↻");
+            _refresh = OnyxDesign.Button("↻");
             _refresh.Click += (s, e) => RefreshTiles();
             Controls.Add(_refresh);
 
@@ -79,7 +79,7 @@ namespace BTOptimizer
             _inputBar.Paint += (s, e) =>
             {
                 bool focus = _input != null && _input.Focused;
-                FpsUi.PaintCard(e.Graphics, _inputBar.ClientRectangle, FpsUi.Card,
+                OnyxDesign.PaintCard(e.Graphics, _inputBar.ClientRectangle, FpsUi.Card,
                     focus ? FpsUi.Gold : FpsUi.Border, 12f);
             };
             Controls.Add(_inputBar);
@@ -89,7 +89,7 @@ namespace BTOptimizer
             _input.GotFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
             _input.LostFocus += (s, e) => { try { _inputBar.Invalidate(); } catch { } };
             _inputBar.Controls.Add(_input);
-            _send = FpsUi.GoldButton("→");
+            _send = OnyxDesign.AccentButton("→");
             _send.Click += (s, e) => SendInput();
             _inputBar.Controls.Add(_send);
 
@@ -761,7 +761,7 @@ namespace BTOptimizer
             // Diagnostic exportable : un .txt propre sur le Bureau — le livrable à montrer/garder.
             if (reply != null && reply.Exportable)
             {
-                var ex = FpsUi.GhostButton("📄  Enregistrer ce diagnostic (Bureau)");
+                var ex = OnyxDesign.Button("📄  Enregistrer ce diagnostic (Bureau)");
                 ex.AutoSize = false; ex.Size = new Size(Math.Min(maxTextW, 300), 30); ex.Margin = new Padding(0, 8, 0, 0);
                 var rep = reply; string bodyTxt = body ?? "";
                 ex.Click += (s, e) =>
@@ -781,7 +781,7 @@ namespace BTOptimizer
             }
             if (reply != null && reply.Tool != null)
             {
-                var btn = FpsUi.GoldButton("Ouvrir « " + reply.Tool.Tool + " »  →");
+                var btn = OnyxDesign.AccentButton("Ouvrir « " + reply.Tool.Tool + " »  →");
                 btn.AutoSize = false; btn.Size = new Size(Math.Min(maxTextW, 320), 34); btn.Margin = new Padding(0, 8, 0, 2);
                 var entry = reply.Tool;
                 btn.Click += (s, e) => { try { Host.OpenDialog(entry.Open()); } catch { } };
@@ -907,7 +907,7 @@ namespace BTOptimizer
         private List<Control> AddActionButton(Control col, DocAssistant.ChatAction act, int maxTextW)
         {
             var made = new List<Control>();
-            var go = FpsUi.GoldButton("▶  " + act.Label);
+            var go = OnyxDesign.AccentButton("▶  " + act.Label);
             go.AutoSize = false; go.Size = new Size(Math.Min(maxTextW, 340), 36); go.Margin = new Padding(0, 10, 0, 2);
             go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
             col.Controls.Add(go); made.Add(go);
@@ -933,7 +933,7 @@ namespace BTOptimizer
             var pnl = new Panel { Width = Math.Min(maxW, 560), BackColor = Color.Transparent, Margin = new Padding(0, 8, 0, 0) };
             pnl.Paint += (s, e) =>
             {
-                FpsUi.PaintCard(e.Graphics, pnl.ClientRectangle, FpsUi.CardHi, FpsUi.Border, 10f);
+                OnyxDesign.PaintCard(e.Graphics, pnl.ClientRectangle, FpsUi.CardHi, FpsUi.Border, 10f);
                 using (var br = new SolidBrush(acc)) e.Graphics.FillRectangle(br, 1, 10, 3, pnl.Height - 20);
             };
             var pill = FpsUi.Text("IMPACT " + cd.Impact + "  ·  " + level, FpsUi.Tiny, acc);
@@ -948,7 +948,7 @@ namespace BTOptimizer
             if (cd.Fix != null)
             {
                 var act = cd.Fix;
-                var go = FpsUi.GoldButton("▶  " + act.Label);
+                var go = OnyxDesign.AccentButton("▶  " + act.Label);
                 go.AutoSize = false; go.Size = new Size(Math.Min(pnl.Width - 28, 320), 30);
                 go.Location = new Point(14, y + 8);
                 go.Click += (s, e) => { go.Enabled = false; go.Text = "en cours…"; RunAction(act, go); };
@@ -1086,7 +1086,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "COPILOTE", "Cockpit local : il mesure en direct, explique son diagnostic et corrige gratuitement — toujours avec ton accord.");
+            PaintPremiumTitle(e.Graphics, "COPILOTE", "Cockpit local : il mesure en direct, explique son diagnostic et corrige gratuitement — toujours avec ton accord.");
         }
     }
 }

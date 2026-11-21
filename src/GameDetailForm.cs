@@ -62,38 +62,35 @@ namespace BTOptimizer
         }
 
         private const int Pad = 40;        // marge de page
-        private const int CoverW = 320;    // largeur de la jaquette (colonne droite)
+        private int CoverW { get { return Math.Max(240, Math.Min(340, ClientSize.Width / 3)); } } //    // largeur de la jaquette (colonne droite)
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
-        private Button _back, _mode, _launch, _folder, _close, _hide, _uninstall;
+        private Button _back, _launch, _folder, _close, _hide, _uninstall;
 
         private void BuildActions()
         {
             // Onglet « ‹ BIBLIOTHÈQUE » : ramène à la liste.
-            _back = FpsUi.GhostButton("‹  BIBLIOTHÈQUE");
+            _back = OnyxDesign.Button("←  Mes jeux");
             _back.FlatAppearance.BorderSize = 0;
             _back.BackColor = FpsUi.BgMain; _back.ForeColor = FpsUi.Dim;
             _back.Click += (s, e) => Close();
             Controls.Add(_back);
 
-            _mode = FpsUi.GoldButton("▶  MODE JEU");
-            _mode.Click += (s, e) => { try { Close(); } catch { } };
-            Controls.Add(_mode);
 
             if (_exes != null)
             {
-                _prio = FpsUi.GhostButton("Priorité CPU : —");
+                _prio = OnyxDesign.Button("Priorité CPU : —");
                 _prio.Click += (s, e) => TogglePrio();
                 Controls.Add(_prio);
             }
 
-            _launch = FpsUi.GoldButton("▶  Lancer");
+            _launch = OnyxDesign.PrimaryButton("Lancer le jeu  →");
             _launch.Enabled = _g.SteamId > 0 || _g.InstallPath != null;
             _launch.Click += (s, e) => Launch();
             Controls.Add(_launch);
 
-            _folder = FpsUi.GhostButton("Ouvrir le dossier");
+            _folder = OnyxDesign.Button("Ouvrir le dossier");
             _folder.Enabled = _g.InstallPath != null;
             _folder.Click += (s, e) => OpenFolder();
             Controls.Add(_folder);
@@ -102,15 +99,15 @@ namespace BTOptimizer
 
             // Deux actions VOLONTAIREMENT distinctes : masquer ne touche à rien sur le disque,
             // désinstaller délègue au désinstalleur officiel. Ne jamais confondre les deux.
-            _hide = FpsUi.GhostButton(GameHidden.IsHidden(_g.Name) ? "Réafficher" : "Masquer");
+            _hide = OnyxDesign.Button(GameHidden.IsHidden(_g.Name) ? "Réafficher" : "Masquer");
             _hide.Click += (s, e) => ToggleHide();
             Controls.Add(_hide);
 
-            _uninstall = FpsUi.GhostButton("Désinstaller…");
+            _uninstall = OnyxDesign.Button("Désinstaller…");
             _uninstall.Click += (s, e) => Uninstall();
             Controls.Add(_uninstall);
 
-            _close = FpsUi.GhostButton("Fermer");
+            _close = OnyxDesign.Button("Fermer");
             _close.Click += (s, e) => Close();
             Controls.Add(_close);
 
@@ -126,7 +123,6 @@ namespace BTOptimizer
             if (lw < 200) return;                       // trop étroit : on ne repositionne pas
 
             if (_back != null) _back.SetBounds(Pad, 22, 170, 30);
-            if (_mode != null) _mode.SetBounds(W - Pad - 150, 20, 150, 34);
 
             int cardY = 146, cardW = (lw - 16) / 2;
             if (_cardLight != null) _cardLight.SetBounds(Pad, cardY, cardW, 166);
@@ -263,11 +259,11 @@ namespace BTOptimizer
         private Panel BoostCard(int x, int y, int w, string title, bool pro, out Label num, out Button btn)
         {
             var card = new Panel { Bounds = new Rectangle(x, y, w, 166), BackColor = Color.Transparent };
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
-                pro ? Color.FromArgb(24, 23, 46) : FpsUi.Card, pro ? FpsUi.GoldDim : FpsUi.Border, 12f);
+            card.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, ((Panel)s).ClientRectangle,
+                pro ? FpsUi.BlendGold(FpsUi.Card, .06f) : FpsUi.Card, pro ? FpsUi.GoldDim : FpsUi.Border, 12f);
 
             // Grand nombre (le compte réel), puis le libellé et l'explication.
-            num = FpsUi.Text("…", FpsUi.Display, FpsUi.Ink);
+            num = FpsUi.Text("…", OnyxDesign.Number, FpsUi.Ink);
             num.AutoSize = false; num.SetBounds(20, 16, w - 40, 46);
             var lab = FpsUi.Text("Optimisations", FpsUi.Small, FpsUi.Dim2);
             lab.AutoSize = false; lab.SetBounds(22, 62, w - 44, 18);
@@ -275,9 +271,11 @@ namespace BTOptimizer
             sub.AutoSize = false; sub.SetBounds(22, 84, w - 44, 34);
             sub.Text = pro ? "Adapté à TON matériel (eSport)." : "Réglages sûrs, tous jeux.";
 
-            btn = pro ? FpsUi.GoldButton("BOOST COMPLET") : FpsUi.GhostButton("BOOST LÉGER");
+            btn = pro ? OnyxDesign.AccentButton("BOOST COMPLET") : OnyxDesign.Button("BOOST LÉGER");
             btn.SetBounds(20, 122, w - 40, 34);
             card.Controls.Add(num); card.Controls.Add(lab); card.Controls.Add(sub); card.Controls.Add(btn);
+            foreach (Control child in card.Controls) child.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            OnyxDesign.HoverCard(card);
 
             bool isPro = pro;
             btn.Click += (s, e) => ApplyBoost(isPro);
@@ -351,13 +349,9 @@ namespace BTOptimizer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int W = ClientSize.Width;
 
-            // --- Onglets : « BIBLIOTHÈQUE » (bouton) puis le jeu, actif et souligné ---
-            int tabX = Pad + 182;
-            TextRenderer.DrawText(g, _g.Name.ToUpperInvariant(), FpsUi.H3, new Rectangle(tabX, 26, W - tabX - 210, 22),
-                FpsUi.Ink, TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
-            int tabW = Math.Min(W - tabX - 210, TextRenderer.MeasureText(_g.Name.ToUpperInvariant(), FpsUi.H3).Width);
-            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLine(pen, tabX, 52, tabX + tabW, 52);
-            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 52, W - Pad, 52);
+            // En-tête de la fiche, indépendant de la barre d’outils de la bibliothèque.
+            OnyxDesign.Text(g, _g.Name, OnyxDesign.Title, FpsUi.Ink, new Rectangle(Pad + 180, 20, W - Pad * 2 - 180, 34));
+            using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 64, W - Pad, 64);
 
             // --- Colonne droite : grande jaquette ---
             var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, 440);
@@ -370,15 +364,16 @@ namespace BTOptimizer
                 else
                 {
                     using (var b = new SolidBrush(FpsUi.Card)) g.FillRectangle(b, cover);
-                    TextRenderer.DrawText(g, "🎮", FpsUi.GlyphXL, cover, FpsUi.Dim2,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    Image icon = GameIcon.For(_g.InstallPath, () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } });
+                    if (icon != null) g.DrawImage(icon, new Rectangle(cover.X + (cover.Width - 128) / 2, cover.Y + (cover.Height - 128) / 2, 128, 128));
+                    else OnyxDesign.IconWell(g, NavIcons.Jeux, new Rectangle(cover.X + (cover.Width - 80) / 2, cover.Y + (cover.Height - 80) / 2, 80, 80));
                 }
                 g.Clip = save; save.Dispose();
             }
             using (var pen = new Pen(FpsUi.Border)) using (var bp = Round(cover, 14)) g.DrawPath(pen, bp);
 
             // --- Colonne gauche : titre du bloc + réglages, puis les cartes de boost ---
-            TextRenderer.DrawText(g, "OPTIMISATIONS DE JEU", FpsUi.H2, new Rectangle(Pad, 84, LeftW, 26),
+            TextRenderer.DrawText(g, "Préparer ta session", FpsUi.H2, new Rectangle(Pad, 84, LeftW, 26),
                 FpsUi.Ink, TextFormatFlags.NoPrefix);
             string st2 = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
             TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),

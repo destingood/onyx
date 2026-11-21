@@ -41,7 +41,7 @@ namespace BTOptimizer
             _chips.BackColor = Color.Transparent;
             Controls.Add(_chips);
 
-            _flow = new FlowLayoutPanel();
+            _flow = new BufferedFlow();
             _flow.AutoScroll = true;
             _flow.BackColor = Color.Transparent;
             _flow.Padding = new Padding(0, 4, 0, 20);
@@ -74,20 +74,20 @@ namespace BTOptimizer
 
         private void BuildPresets()
         {
-            _bReco = FpsUi.GoldButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
+            _bReco = OnyxDesign.AccentButton("Recommandé"); _bReco.Height = 30; _bReco.Width = 118;
             _bReco.Click += (s, e) => Batch(t => t.Recommended, true, "Recommandé");
             // « Sûr » : seulement ce qui s'annule à l'identique, sans effet de bord, au gain mesuré ou sans enjeu de performance.
-            _bSur = FpsUi.GhostButton("Sûr"); _bSur.Height = 30; _bSur.Width = 70; _bSur.ForeColor = FpsUi.Gold;
+            _bSur = OnyxDesign.Button("Sûr"); _bSur.Height = 30; _bSur.Width = 70; _bSur.ForeColor = FpsUi.Gold;
             _bSur.Click += (s, e) => Batch(t => t.Sur, true, "Sûr — annulable à l'identique");
             _tip.SetToolTip(_bSur, "Seulement des réglages sans effet de bord, annulables à l'identique, au gain mesuré ou sans enjeu de performance.");
-            _bEsport = FpsUi.GhostButton("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Gold;
+            _bEsport = OnyxDesign.Button("eSport"); _bEsport.Height = 30; _bEsport.Width = 82; _bEsport.ForeColor = FpsUi.Gold;
             _bEsport.Click += (s, e) => Batch(t => t.Esport, true, "eSport");
-            _bReset = FpsUi.GhostButton("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
+            _bReset = OnyxDesign.Button("Réinitialiser"); _bReset.Height = 30; _bReset.Width = 100; _bReset.ForeColor = FpsUi.Err;
             _bReset.Click += (s, e) => Batch(t => true, false, "Réinitialisation");
-            _bAuto = FpsUi.GoldButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
+            _bAuto = OnyxDesign.AccentButton("⚙ Auto"); _bAuto.Height = 30; _bAuto.Width = 92;
             _bAuto.Click += (s, e) => ApplyAuto();
             // Optimisation PROUVÉE : applique par lots, mesure, annule ce qui dégrade (PreuveRun).
-            _bProve = FpsUi.PrimaryButton("Optimiser et mesurer"); _bProve.Height = 30; _bProve.Width = 172;
+            _bProve = OnyxDesign.PrimaryButton("Optimiser et mesurer"); _bProve.Height = 30; _bProve.Width = 172;
             _bProve.Click += (s, e) =>
             {
                 using (var f = new PreuveForm(_tweaks)) f.ShowDialog(FindForm());
@@ -95,7 +95,7 @@ namespace BTOptimizer
                 RefreshStatesAsync();
             };
             // Mode COMPÉTITION : profils, Mode Jeu auto, eSport prouvé, plafond — annulable d'un clic.
-            _bCompet = FpsUi.GhostButton("🏁 Compétition"); _bCompet.Height = 30; _bCompet.Width = 130; _bCompet.ForeColor = FpsUi.Gold;
+            _bCompet = OnyxDesign.Button("🏁 Compétition"); _bCompet.Height = 30; _bCompet.Width = 130; _bCompet.ForeColor = FpsUi.Gold;
             _bCompet.Click += (s, e) =>
             {
                 using (var f = new CompetitionForm(_tweaks)) f.ShowDialog(FindForm());
@@ -151,7 +151,7 @@ namespace BTOptimizer
 
         private void AddChip(string text, string cat, ref int x)
         {
-            var b = FpsUi.GhostButton(text);
+            var b = OnyxDesign.Button(text);
             b.Text = text;
             b.AutoSize = false;
             b.Height = 30;
@@ -202,7 +202,15 @@ namespace BTOptimizer
             var card = new Panel();
             card.Margin = new Padding(0, 0, 16, 16);
             card.BackColor = Color.Transparent;
-            card.Paint += (s, e) => FpsUi.PaintCard(e.Graphics, ((Panel)s).ClientRectangle, FpsUi.Card, FpsUi.Border, 12f);
+            card.Paint += (s, e) =>
+            {
+                var toggle = card.Controls["toggle"] as ToggleSwitch;
+                bool active = toggle != null && toggle.On;
+                OnyxDesign.PaintCard(e.Graphics, card.ClientRectangle, FpsUi.Card, active ? OnyxDesign.Edge : FpsUi.Border, 12);
+                int icon = t.Category == Cat.Gpu ? NavIcons.Jeux : t.Category == Cat.Stockage ? NavIcons.Stockage
+                    : t.Category == Cat.Alim ? NavIcons.Optimisations : NavIcons.Systeme;
+                OnyxDesign.IconWell(e.Graphics, icon, new Rectangle(16, 16, 32, 32), active);
+            };
 
             // Hauteurs mesurées (retour à la ligne) : la carte s'adapte au texte au lieu de le rogner.
             var wrap = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
@@ -219,7 +227,7 @@ namespace BTOptimizer
             if (descH < 34) descH = 34;
             var desc = new Label();
             desc.Name = "description"; desc.UseMnemonic = false;
-            desc.Text = t.Desc; desc.Font = FpsUi.Small; desc.ForeColor = FpsUi.Dim; desc.BackColor = Color.Transparent;
+            desc.Text = t.Desc; desc.Font = FpsUi.Body; desc.ForeColor = FpsUi.Dim; desc.BackColor = Color.Transparent;
             desc.AutoEllipsis = true;
             desc.Tag = false;
             desc.SetBounds(pad, descY, descW, descH);
@@ -228,7 +236,7 @@ namespace BTOptimizer
             tog.Name = "toggle";
             tog.AccessibleName = t.Name;
             tog.Location = new Point(288, 16);
-            tog.Toggled += (s, e) => OnToggle(t, tog);
+            tog.Toggled += (s, e) => { card.Invalidate(); OnToggle(t, tog); };
             _toggles[t.Id] = tog;
 
             card.Controls.Add(name); card.Controls.Add(desc); card.Controls.Add(tog);
@@ -241,7 +249,7 @@ namespace BTOptimizer
             var badge = FpsUi.Text(status, FpsUi.Tiny, t.Risque != Risque.Aucun || t.Reboot ? FpsUi.Warn : FpsUi.Dim);
             badge.Name = "status"; badge.AutoSize = false;
             card.Controls.Add(badge);
-            var details = FpsUi.GhostButton("Détails ↓");
+            var details = OnyxDesign.Button("Détails ↓");
             details.Name = "details";
             details.AccessibleName = "Détails : " + t.Name;
             details.Click += (s, e) =>
@@ -253,6 +261,7 @@ namespace BTOptimizer
             };
             card.Controls.Add(details);
             card.Size = new Size(348, 200);
+            OnyxDesign.HoverCard(card);
             return card;
         }
 
@@ -267,7 +276,7 @@ namespace BTOptimizer
                 try { AppStats.Invalidate(); } catch { }  // une opti a changé : invalide le cache partagé
                 bool? st = null; try { st = t.Check != null ? t.Check() : (bool?)apply; } catch { }
                 bool final = st ?? apply;
-                try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; Invalidate(); })); } catch { }
+                try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; tog.Parent.Invalidate(); Invalidate(); })); } catch { }
             });
         }
 
@@ -279,7 +288,7 @@ namespace BTOptimizer
             {
                 var res = new Dictionary<string, bool>();
                 foreach (Tweak t in snapshot) { bool? st = null; try { st = t.Check != null ? t.Check() : null; } catch { } if (st.HasValue) res[t.Id] = st.Value; }
-                try { BeginInvoke((Action)(() => { foreach (var kv in res) if (_toggles.ContainsKey(kv.Key)) _toggles[kv.Key].On = kv.Value; _statesLoaded = true; Invalidate(); })); }
+                try { BeginInvoke((Action)(() => { foreach (var kv in res) if (_toggles.ContainsKey(kv.Key)) { _toggles[kv.Key].On = kv.Value; _toggles[kv.Key].Parent.Invalidate(); } _statesLoaded = true; Invalidate(); })); }
                 catch { }
             });
         }
@@ -329,9 +338,9 @@ namespace BTOptimizer
                 var toggle = card.Controls["toggle"];
                 if (name == null || desc == null || toggle == null) continue;
                 var flags = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
-                int nameW = Math.Max(80, width - 90);
+                int nameW = Math.Max(80, width - 138);
                 int nameH = Math.Max(40, TextRenderer.MeasureText(name.Text, name.Font, new Size(nameW, 0), flags).Height);
-                name.SetBounds(16, 16, nameW, nameH);
+                name.SetBounds(60, 16, nameW, nameH);
                 toggle.Location = new Point(width - 62, 16);
                 int fullHeight = Math.Max(48, TextRenderer.MeasureText(desc.Text, desc.Font, new Size(width - 32, 0), flags).Height + 4);
                 bool expanded = desc.Tag is bool && (bool)desc.Tag;
@@ -354,7 +363,7 @@ namespace BTOptimizer
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            PaintTitle(e.Graphics, "OPTIMISER WINDOWS", Subtitle());
+            PaintPremiumTitle(e.Graphics, "OPTIMISER WINDOWS", Subtitle());
         }
 
         // Sous-titre vivant : nombre d'optimisations actives (vue complète) ou nombre affiché (vue filtrée).
