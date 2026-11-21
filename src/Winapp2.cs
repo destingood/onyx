@@ -198,6 +198,14 @@ namespace BTOptimizer
         public static int Clean(Entry e, Action<string, int> log)
         {
             int removed = 0, refuses = 0;
+            // Appli ouverte : son cache n'est pas vidé (index verrouillé, données effacées =
+            // images cassées dans Discord ou le navigateur jusqu'au redémarrage).
+            string ouvert = CachesApplis.Ouvert(CachesApplis.PourEntreeWinapp2(e.Name), Sys.ProcessusOuverts());
+            if (ouvert != null)
+            {
+                if (log != null) log("winapp2 — " + CachesApplis.MessageIgnore(e.Name, ouvert), 2);
+                return 0;
+            }
             foreach (FileKey fk in e.Files)
                 foreach (string f in EnumFiles(fk))
                 {

@@ -1134,6 +1134,10 @@ namespace BTOptimizer
             /// choses : 0 = superflu (aucune perte possible), 1 = à vérifier (régénérable mais
             /// visible pour l'utilisateur : historique, corbeille). Voir <see cref="Storage"/>.</summary>
             public int Safety;
+
+            /// <summary>Processus qui possèdent ce cache (voir <see cref="CachesApplis"/>) : tant
+            /// que l'un d'eux tourne, le cache n'est PAS vidé. Null = aucun propriétaire.</summary>
+            public string[] Proprietaires;
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -1197,14 +1201,14 @@ namespace BTOptimizer
             {
                 string epic = Path.Combine(local, @"EpicGamesLauncher\Saved\webcache");
                 if (Directory.Exists(epic))
-                    list.Add(new CleanTarget { Name = "Cache du launcher Epic Games", Path = epic });
+                    list.Add(new CleanTarget { Name = "Cache du launcher Epic Games", Path = epic, Proprietaires = CachesApplis.Epic });
             }
             catch { }
             try
             {
                 string disc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"discord\Cache");
                 if (Directory.Exists(disc))
-                    list.Add(new CleanTarget { Name = "Cache Discord", Path = disc });
+                    list.Add(new CleanTarget { Name = "Cache Discord", Path = disc, Proprietaires = CachesApplis.Discord });
             }
             catch { }
             try
@@ -1223,19 +1227,19 @@ namespace BTOptimizer
             {
                 var chromium = new[]
                 {
-                    new[] { "Chrome", Path.Combine(local, @"Google\Chrome\User Data") },
-                    new[] { "Edge",   Path.Combine(local, @"Microsoft\Edge\User Data") },
-                    new[] { "Brave",  Path.Combine(local, @"BraveSoftware\Brave-Browser\User Data") },
+                    new { Nom = "Chrome", Dossier = Path.Combine(local, @"Google\Chrome\User Data"), Proc = CachesApplis.Chrome },
+                    new { Nom = "Edge",   Dossier = Path.Combine(local, @"Microsoft\Edge\User Data"), Proc = CachesApplis.Edge },
+                    new { Nom = "Brave",  Dossier = Path.Combine(local, @"BraveSoftware\Brave-Browser\User Data"), Proc = CachesApplis.Brave },
                 };
-                foreach (string[] b in chromium)
+                foreach (var b in chromium)
                 {
-                    string userData = b[1];
+                    string userData = b.Dossier;
                     if (!Directory.Exists(userData)) continue;
                     foreach (string profile in ProfileDirs(userData))
                     {
                         string cache = Path.Combine(profile, "Cache");
                         if (Directory.Exists(cache))
-                            list.Add(new CleanTarget { Name = "Cache " + b[0] + " (" + Path.GetFileName(profile) + ")", Path = cache });
+                            list.Add(new CleanTarget { Name = "Cache " + b.Nom + " (" + Path.GetFileName(profile) + ")", Path = cache, Proprietaires = b.Proc });
                     }
                 }
 
@@ -1245,7 +1249,7 @@ namespace BTOptimizer
                     {
                         string cache = Path.Combine(profile, "cache2");
                         if (Directory.Exists(cache))
-                            list.Add(new CleanTarget { Name = "Cache Firefox (" + Path.GetFileName(profile) + ")", Path = cache });
+                            list.Add(new CleanTarget { Name = "Cache Firefox (" + Path.GetFileName(profile) + ")", Path = cache, Proprietaires = CachesApplis.Firefox });
                     }
             }
             catch { }
@@ -1331,6 +1335,8 @@ namespace BTOptimizer
                     return 1;
                 }
                 if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
+                string ouvert = CachesApplis.Ouvert(t.Proprietaires, ProcessusOuverts());
+                if (ouvert != null) { log(CachesApplis.MessageIgnore(t.Name, ouvert), 2); return 0; }
                 foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
                 {
                     try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); removed++; } catch { }
@@ -1343,6 +1349,23 @@ namespace BTOptimizer
             }
             catch (Exception ex) { log(t.Name + " : " + ex.Message, 2); }
             return removed;
+        }
+
+        /// <summary>Noms des processus ouverts (sans « .exe »). Liste vide si la lecture échoue :
+        /// la garde des caches retombe alors sur l'ancien comportement plutôt que de planter.</summary>
+        internal static System.Collections.Generic.List<string> ProcessusOuverts()
+        {
+            var noms = new System.Collections.Generic.List<string>();
+            try
+            {
+                foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcesses())
+                {
+                    try { noms.Add(p.ProcessName); } catch { }
+                    finally { p.Dispose(); }
+                }
+            }
+            catch { }
+            return noms;
         }
 
         // ------------------------------------------------------------------

@@ -109,6 +109,7 @@ namespace BTOptimizer.Tests
             CopiloteReglagesTests.Tout();
             SauvegardesTests.Tout();
             DiscordImageTests.Tout();
+            CachesApplisTests.Tout();
             SuiviTests.Tout();
             ActusTests.Tout();
             return Banc.Bilan();

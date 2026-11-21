@@ -83,6 +83,8 @@
     <Compile Include="..\src\Sauvegardes.cs" />
     <!-- Présence Discord : identifiant et image (pur). Le tuyau IPC vit dans DiscordPresence.cs. -->
     <Compile Include="..\src\DiscordPresence.Image.cs" />
+    <!-- Caches d'applications : ne vider le cache d'une appli que si elle est fermée (pur). -->
+    <Compile Include="..\src\CachesApplis.cs" />
     <!-- Copilote : compréhension du texte (normalisation, texto, fautes de frappe), pur. -->
     <Compile Include="..\src\CopiloteTexte.cs" />
     <Compile Include="..\src\CopiloteReglages.cs" />
