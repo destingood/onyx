@@ -39,7 +39,11 @@ namespace BTOptimizer
 "recherche tiers (DuckDuckGo) : ne saisissez pas d'informations sensibles. Ces fonctions sont " +
 "désactivables à tout moment (« coupe internet », « désactive l'ia ») et les données locales sont " +
 "effaçables (« oublie ce que tu sais »). Les réponses de l'IA ou du web peuvent être inexactes ; " +
-"l'éditeur n'en garantit pas l'exactitude et n'en est pas responsable.\r\n" +
+"l'éditeur n'en garantit pas l'exactitude et n'en est pas responsable. " +
+"Les pages « Bons plans » et « Actus », quand vous les ouvrez ou quand vous suivez un jeu, " +
+"interrogent les services publics de Steam, de l'Epic Games Store, de GamerPower et les flux des " +
+"sites d'actualité affichés. Ces services reçoivent votre adresse IP et le nom du logiciel ; le " +
+"texte tapé dans la recherche de jeux est envoyé à Steam. Rien d'autre n'est transmis.\r\n" +
 "\r\n" +
 "5. MARQUES. Le logiciel n'est ni affilié ni approuvé par Microsoft, NVIDIA, AMD, Intel, Ollama " +
 "ou DuckDuckGo. Toutes les marques citées appartiennent à leurs propriétaires respectifs.\r\n" +

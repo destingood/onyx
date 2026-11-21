@@ -7,6 +7,14 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 
 ## Prochaine version
 
+- **Nouvelle page Bons plans.** Les promos Steam en euros, les jeux gratuits de toutes les
+  plateformes (Epic Games Store, GamerPower), les nouveautés, avec plafonds de prix (gratuit, 1, 5,
+  10 ou 20 € max), catégories, recherche et favoris. Suivre un jeu prévient par une notification
+  Windows et une pastille sur le rail dès qu'il passe en promo ou devient gratuit ; le contrôle a
+  lieu toutes les 6 h, jamais pendant une partie.
+- **Nouvelle page Actus.** Les derniers titres de jeuxvideo.com, Gamekult, ActuGaming, PC Gamer et
+  des jeux suivis, filtrables par texte et par source ; un clic ouvre l'article, l'étoile le garde
+  en favori.
 - **Repérage avant-partie du Copilote : plus rien de fermé.** Le bouton « Fermer N appli(s) » fermait
   les lanceurs, overlays et navigateurs sans les rouvrir. Il active maintenant le Mode Jeu en y
   ajoutant ces applis : elles passent en mode Efficacité, notées au même journal, et la sortie du
