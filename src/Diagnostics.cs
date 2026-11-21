@@ -121,6 +121,14 @@ namespace BTOptimizer
                 string connu = gd == null ? null : ProblemesConnus.Constat(Environment.OSVersion.Version.Build,
                     ubr == null ? 0 : Convert.ToInt32(ubr), gd.Name, gd.Version);
                 if (connu != null) f.Add(new Finding(2, connu));
+                // Shaders précompilés (Advanced Shader Delivery) : Windows 24H2 et pilote minimum.
+                int build = Environment.OSVersion.Version.Build;
+                string gpuNom = gd == null ? null : gd.Name;
+                string asdWin = ShadersPrecompiles.WindowsTropAncien(build, gpuNom);
+                if (asdWin != null) f.Add(new Finding(1, asdWin, FixKind.WindowsUpdate, "Windows Update"));
+                string asdPil = gd == null ? null : ShadersPrecompiles.PiloteTropAncien(build, gd.Name, gd.Version,
+                    ShadersPrecompiles.CarteEligible(gd.Name) == "amd" ? VersionAdrenalin() : null);
+                if (asdPil != null) f.Add(new Finding(1, asdPil));
             }
             catch { }
             // Ryzen X3D à deux CCD : ce qui empêche le pilote AMD de garer le CCD sans V-Cache.
@@ -627,6 +635,34 @@ namespace BTOptimizer
         }
 
         public sealed class GpuDrv { public string Name; public string Version; public int AgeDays; }
+
+        /// <summary>Version Adrenalin d'AMD (« 26.6.1 ») lue dans la clé du pilote d'affichage
+        /// (valeur « RadeonSoftwareVersion »). Lecture seule ; null si absente ou illisible.</summary>
+        private static string VersionAdrenalin()
+        {
+            try
+            {
+                using (var cls = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"))
+                {
+                    if (cls == null) return null;
+                    foreach (string nom in cls.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using (var k = cls.OpenSubKey(nom))
+                            {
+                                string v = k == null ? null : k.GetValue("RadeonSoftwareVersion") as string;
+                                if (!string.IsNullOrEmpty(v)) return v.Trim();
+                            }
+                        }
+                        catch { }   // sous-clé « Properties » protégée : ignorée
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
 
         /// <summary>Pilote GPU principal : nom, version, âge en jours (WMI). null si illisible.
         /// Sert au « bilan mises à jour » du Copilote : il MESURE avant de proposer quoi que ce soit.</summary>

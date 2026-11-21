@@ -85,6 +85,7 @@ namespace BTOptimizer.Tests
             SuiviParalleleTests.Tout();
             ConstatsMaterielTests.Tout();
             ProblemesConnusTests.Tout();
+            ShadersPrecompilesTests.Tout();
             EtatOrigineTests.Tout();
             MsiConditionnelTests.Tout();
             EfficaciteTests.Tout();

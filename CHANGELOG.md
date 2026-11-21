@@ -35,6 +35,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   directement à l'écran ou par le compositeur de Windows (environ un rafraîchissement de latence
   en plus, calcul non mesuré) et propose, à la fin de la mesure « après », le réglage pour les
   jeux en fenêtré s'il manque. Règles inspirées de PresentMon (Intel, MIT).
+- **Diagnostic : shaders précompilés.** Si la carte graphique est compatible avec la livraison de
+  shaders précompilés de Windows (Advanced Shader Delivery) mais que Windows est antérieur à 24H2
+  ou que le pilote est trop ancien (NVIDIA 621.01, AMD Adrenalin 26.6.1, Intel 32.0.101.9150),
+  ONYX le signale. Lecture seule ; prérequis publiés par Microsoft le 21 octobre 2026.
 
 ## v15.77 — « Rétablir » remet l'état d'origine exact, et un bouton « Sûr »
 
