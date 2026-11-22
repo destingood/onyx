@@ -1,82 +1,50 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace BTOptimizer
 {
-    /// <summary>Fiche d'un badge (au clic) : badge en grand, statut/progression, objectif, et un
-    /// bouton « Y aller » qui ouvre la page du shell où progresser vers ce badge.</summary>
     internal class BadgeDetailForm : Form
     {
-        private readonly BadgeCatalog.Badge _b;
-        private readonly BadgeCatalog.Stats _s;
-        private readonly bool _ok;
-        private readonly Action _goTo;
-
+        private readonly BadgeCatalog.Badge _badge;
+        private readonly BadgeCatalog.Stats _stats;
+        private readonly bool _unlocked;
         [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr h, int attr, ref int val, int sz);
 
-        public BadgeDetailForm(BadgeCatalog.Badge b, BadgeCatalog.Stats s, bool ok, Action goTo)
+        public BadgeDetailForm(BadgeCatalog.Badge badge, BadgeCatalog.Stats stats, bool unlocked, Action goTo)
         {
-            _b = b; _s = s; _ok = ok; _goTo = goTo;
-            Text = "ONYX — " + b.Name;
-            ClientSize = new Size(400, 360);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false; MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            BackColor = FpsUi.BgMain;
-            Font = FpsUi.Body;
-            DoubleBuffered = true;
+            _badge = badge; _stats = stats; _unlocked = unlocked;
+            Text = "ONYX — " + badge.Name;
+            ClientSize = new Size(480, 480); FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false; MinimizeBox = false; StartPosition = FormStartPosition.CenterParent;
+            BackColor = FpsUi.BgMain; Font = FpsUi.Body; DoubleBuffered = true;
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
-
-            var go = FpsUi.GoldButton("Y aller  →");
-            go.SetBounds(24, 302, 200, 40);
-            go.Click += (s2, e2) => { try { if (_goTo != null) _goTo(); } catch { } Close(); };
-            var close = FpsUi.GhostButton("Fermer");
-            close.SetBounds(300, 307, 76, 30);
-            close.Click += (s2, e2) => Close();
-            Controls.Add(go); Controls.Add(close);
+            var go = OnyxDesign.AccentButton("Ouvrir " + PageName(badge.Page));
+            go.SetBounds(24, 418, 284, 40);
+            go.Click += (s, e) => { Close(); if (goTo != null) goTo(); };
+            var close = OnyxDesign.Button("Fermer"); close.SetBounds(320, 418, 136, 40);
+            close.Click += (s, e) => Close(); close.DialogResult = DialogResult.Cancel;
+            Controls.Add(go); Controls.Add(close); CancelButton = close;
         }
-
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { }   // barre de titre sombre
+            try { int v = 1; DwmSetWindowAttribute(Handle, 20, ref v, 4); } catch { }
         }
-
-        private static string PageName(int p)
-        {
-            switch (p) { case 1: return "Optimisations"; case 2: return "Jeux"; case 3: return "Check Up+"; default: return "l'app"; }
-        }
-
+        private static string PageName(int page) { return page == 1 ? "les optimisations" : page == 2 ? "mes jeux" : page == 3 ? "le bilan" : "ONYX"; }
         protected override void OnPaint(PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            int w = ClientSize.Width;
-            Color tier = BadgeCatalog.TierColor[Math.Max(0, Math.Min(2, _b.Tier - 1))];
-
-            BadgeRender.DrawShape(g, (w - 120) / 2, 26, 120, _b.Glyph, _ok, tier, _b.Shape);
-            TextRenderer.DrawText(g, _b.Name, FpsUi.H1, new Rectangle(0, 152, w, 34), _ok ? FpsUi.Ink : FpsUi.Dim, TextFormatFlags.HorizontalCenter);
-
-            if (_ok)
-            {
-                TextRenderer.DrawText(g, "✔  Badge débloqué", FpsUi.H3, new Rectangle(0, 194, w, 22), tier, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
-            }
-            else if (_s != null)
-            {
-                TextRenderer.DrawText(g, "Progression : " + _b.ProgressLabel(_s), FpsUi.H3, new Rectangle(0, 190, w, 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
-                var bar = new Rectangle(70, 220, w - 140, 8);
-                using (var bg = new SolidBrush(Color.FromArgb(30, 33, 31))) g.FillRectangle(bg, bar);
-                int fw = (int)(bar.Width * _b.Progress(_s));
-                if (fw > 1) using (var fb = new SolidBrush(tier)) g.FillRectangle(fb, bar.X, bar.Y, fw, bar.Height);
-            }
-
-            TextRenderer.DrawText(g, "Objectif : " + _b.Crit, FpsUi.Body, new Rectangle(24, 250, w - 48, 22), FpsUi.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
-            if (!_ok)
-                TextRenderer.DrawText(g, "→ " + PageName(_b.Page) + " pour progresser", FpsUi.Small, new Rectangle(24, 276, w - 48, 20), FpsUi.GoldDim, TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPrefix);
+            base.OnPaint(e);
+            var g = e.Graphics; var tier = BadgeCatalog.TierColor[_badge.Tier - 1]; int w = ClientSize.Width;
+            OnyxDesign.PaintCard(g, new Rectangle(24, 20, w - 48, 378), FpsUi.Card, OnyxDesign.Edge, 16);
+            PageCollection.Center(g, "COLLECTION ONYX  /  " + PageCollection.TierName(_badge.Tier), FpsUi.Small, tier, new Rectangle(40, 37, w - 80, 22));
+            BadgeRender.DrawShape(g, (w - 148) / 2, 70, 148, _badge.Glyph, _unlocked, tier, _badge.Shape);
+            PageCollection.Center(g, _badge.Name, OnyxDesign.Title, FpsUi.Ink, new Rectangle(36, 229, w - 72, 34));
+            PageCollection.Center(g, _unlocked ? "DÉBLOQUÉ · ACQUIS DÉFINITIVEMENT" : _stats == null ? "À OBTENIR" : "PROGRESSION  " + _badge.ProgressLabel(_stats), FpsUi.Small, _unlocked ? tier : FpsUi.Dim, new Rectangle(36, 272, w - 72, 24));
+            PageCollection.ProgressBar(g, new Rectangle(66, 308, w - 132, 5), _unlocked ? 1 : _badge.Progress(_stats), tier);
+            TextRenderer.DrawText(g, _badge.Crit, FpsUi.Body, new Rectangle(48, 332, w - 96, 48), FpsUi.Dim,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
         }
     }
 }

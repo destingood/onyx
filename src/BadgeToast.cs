@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -57,7 +57,7 @@ namespace BTOptimizer
             StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(12, 14, 13);
             DoubleBuffered = true;
-            ClientSize = new Size(330, 84);
+            ClientSize = new Size(390, 104);
             try
             {
                 using (var p = new GraphicsPath())
@@ -112,20 +112,12 @@ namespace BTOptimizer
             var r = ClientRectangle;
             Color tier = BadgeCatalog.TierColor[Math.Max(0, Math.Min(2, _b.Tier - 1))];
 
-            using (var pen = new Pen(tier, 2f)) g.DrawRectangle(pen, 1, 1, r.Width - 3, r.Height - 3);
-
-            // Pastille du badge (cercle teinté + emoji).
-            int s = 56, cx = 16, cy = (r.Height - s) / 2;
-            using (var br = new SolidBrush(Color.FromArgb(36, tier.R, tier.G, tier.B))) g.FillEllipse(br, cx, cy, s, s);
-            using (var pen = new Pen(tier, 2f)) g.DrawEllipse(pen, cx, cy, s, s);
-            BadgeRender.DrawGlyph(g, _b.Glyph, new Rectangle(cx, cy, s, s), (int)(s * 0.5f), tier);
-
-            int tx = cx + s + 14;
-            TextRenderer.DrawText(g, "NOUVEAU BADGE DÉBLOQUÉ", FpsUi.Small, new Point(tx, 16), tier, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-            TextRenderer.DrawText(g, _b.Name, FpsUi.H2, new Point(tx, 34), FpsUi.Ink, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
-            TextRenderer.DrawText(g, _b.Crit, FpsUi.Tiny, new Point(tx, 58), FpsUi.Dim, TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            OnyxDesign.PaintCard(g, r, FpsUi.Card, tier, 12);
+            BadgeRender.DrawShape(g, 14, 18, 64, _b.Glyph, true, tier, _b.Shape);
+            OnyxDesign.Text(g, "NOUVEAU BADGE · " + PageCollection.TierName(_b.Tier), FpsUi.Tiny, tier, new Rectangle(92, 14, 282, 18));
+            OnyxDesign.Text(g, _b.Name, FpsUi.H2, FpsUi.Ink, new Rectangle(92, 35, 282, 28));
+            OnyxDesign.Text(g, _b.Crit, FpsUi.Tiny, FpsUi.Dim, new Rectangle(92, 67, 282, 30), true);
         }
-
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             try { _timer.Stop(); _timer.Dispose(); } catch { }

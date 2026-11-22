@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.91.0.0")]
-[assembly: AssemblyFileVersion("15.91.0.0")]
+[assembly: AssemblyVersion("15.92.0.0")]
+[assembly: AssemblyFileVersion("15.92.0.0")]
 
 namespace BTOptimizer
 {
@@ -1234,8 +1234,8 @@ namespace BTOptimizer
                     t.Refresh();
                     using (var bmp = new System.Drawing.Bitmap(t.Width, t.Height))
                     {
-                        using (var g = System.Drawing.Graphics.FromImage(bmp))
-                        { IntPtr hdc = g.GetHdc(); try { PrintWindow(t.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); } }
+                        // Les fenêtres sans activation ne sont pas composées hors écran par DWM.
+                        t.DrawToBitmap(bmp, t.ClientRectangle);
                         bmp.Save(toastOut, System.Drawing.Imaging.ImageFormat.Png);
                     }
                 }
@@ -1298,6 +1298,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_BADGES_UI") == "1")
+                {
+                    try { CaptureBadgesUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("  Badges ERREUR : " + ex); }
+                    Console.WriteLine("UITEST BADGES — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_DEALS_UI") == "1")
                 {
                     try { CaptureDealsUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2161,6 +2168,48 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureBadgesUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            using (var dash = new DashboardForm())
+            {
+                dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-5000, -5000);
+                dash.Show(); Pump(450); dash.Goto(5); Pump(100);
+                var page = (PageCollection)dash.PageAt(5); page.SeedDemoStats();
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680), new System.Drawing.Size(1680, 960) })
+                {
+                    dash.ClientSize = size; Pump(100); page.ValidateBadgeUi(); Pump(100);
+                    SaveGamesShot(dash, dir, "collection-" + size.Width);
+                    page.ScrollGridTo(int.MaxValue); Pump(100); SaveGamesShot(dash, dir, "collection-bas-" + size.Width);
+                }
+                using (var bmp = page.RenderShowcase()) bmp.Save(System.IO.Path.Combine(dir, "collection-export.png"), System.Drawing.Imaging.ImageFormat.Png);
+                dash.ClientSize = new System.Drawing.Size(1280, 800);
+                page.PreviewBadgeStats(new BadgeCatalog.Stats()); page.ValidateBadgeUi(); Pump(100);
+                SaveGamesShot(dash, dir, "collection-vide");
+                page.PreviewBadgeStats(new BadgeCatalog.Stats { OptiActive = 120, Health = 100, GamesDet = 30, Checkups = 20, Boost = true });
+                page.ValidateBadgeUi(); Pump(100); SaveGamesShot(dash, dir, "collection-complete");
+                var stats = new BadgeCatalog.Stats { GamesDet = 6, Health = 78, Checkups = 6, OptiActive = 44 };
+                foreach (string id in new[] { "explorateur", "legende" })
+                using (var detail = new BadgeDetailForm(BadgeCatalog.ById(id), stats, id == "explorateur", () => { }))
+                {
+                    detail.StartPosition = FormStartPosition.Manual; detail.Location = new System.Drawing.Point(-5000, -5000);
+                    detail.Show(); Pump(150); SaveGamesShot(detail, dir, "badge-" + id); detail.Hide();
+                }
+                using (var toast = new BadgeToast(BadgeCatalog.ById("grandludo")))
+                {
+                    toast.Location = new System.Drawing.Point(-5000, -5000); toast.Show(); Pump(100);
+                    using (var bmp = new System.Drawing.Bitmap(toast.Width, toast.Height))
+                    {
+                        toast.DrawToBitmap(bmp, toast.ClientRectangle);
+                        bmp.Save(System.IO.Path.Combine(dir, "badge-notification.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    }
+                    toast.Hide();
+                }
+                Console.WriteLine("  Badges : 25 identifiants uniques, 6 nouveaux seuils, filtres, défilement et 3 tailles OK.");
+                dash.Hide();
+            }
+        }
+
         private static void CaptureDealsUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);

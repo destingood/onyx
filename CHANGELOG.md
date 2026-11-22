@@ -1,9 +1,21 @@
-# Journal des versions — ONYX
+﻿# Journal des versions — ONYX
 
 Toutes les optimisations ont un bouton **« Rétablir »** ; la plupart reviennent à l'identique,
 celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'utilise
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
+
+## v15.92 — Nouvelle collection de badges
+
+- **25 badges, dont 6 nouveaux.** Prise en main, Équipe complète, Explorateur,
+  Archiviste, Régulier et Équilibre rejoignent la collection. Les badges acquis restent acquis.
+- **Emblèmes vectoriels.** Finitions bronze, argent et or sur fond carbone, avec un
+  rendu net dans la collection, les fiches de détail et les notifications.
+- **Collection modernisée.** Vitrine agrandie, filtres Tous / Débloqués / À obtenir,
+  progression, navigation au clavier et défilement assorti au thème ONYX.
+- **Export PNG.** Choisis où enregistrer l’image de ta collection.
+- Les objectifs liés aux réglages actifs indiquent leur véritable mesure, distincte
+  du score de santé matériel.
 
 ## v15.91 — Images nettes dans Bons plans
 
