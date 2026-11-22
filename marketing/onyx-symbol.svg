@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="ONYX">
+  <defs><linearGradient id="gold" x2=".82" y2="1"><stop stop-color="#fcd88f"/><stop offset="1" stop-color="#e3b75c"/></linearGradient></defs>
+  <path fill="url(#gold)" fill-rule="evenodd" d="M25 5H75L95 25V75L75 95H25L5 75V25ZM31 17H69L83 31V69L69 83H31L17 69V31Z"/>
+  <path fill="#000" opacity=".255" d="M95 75L75 95H25L31 83H69L83 69Z"/>
+  <path d="M27 52H36L43 35L54 65L62 48H73" fill="none" stroke="#e3b75c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

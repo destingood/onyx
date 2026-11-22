@@ -1,108 +1,98 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 namespace BTOptimizer
 {
-    /// <summary>
-    /// Logo ONYX : un anneau d'or (le « O », l'écrin) serti de la frametime qui devient
-    /// parfaitement plate — le chaos (stutter) à gauche, la ligne idéale à droite, le point
-    /// de mesure au bout. La promesse mesurable du produit (« Mesuré, pas promis. ») gravée
-    /// dans le métal. Vectoriel → net à toute taille (rail, icône de fenêtre, à propos).
-    /// </summary>
+    /// <summary>Identité ONYX : O facetté et signal stabilisé. Tracés partagés par l'UI et les exports.</summary>
     internal static class Logo
     {
-        /// <summary>Dessine la marque dans 'box'. withPlate = plaque arrondie carbone + liseré or (icône).</summary>
+        [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr icon);
+
         public static void Draw(Graphics g, RectangleF box, Color accent, bool withPlate)
         {
-            var sm = g.SmoothingMode; g.SmoothingMode = SmoothingMode.AntiAlias;
-            float x = box.X, y = box.Y, w = box.Width, h = box.Height;
-
-            if (withPlate)
+            if (box.Width <= 0 || box.Height <= 0) return;
+            var state = g.Save();
+            try
             {
-                using (var path = RoundRect(box, w * 0.22f))
-                using (var bg = new SolidBrush(Color.FromArgb(14, 12, 10)))
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                float size = Math.Min(box.Width, box.Height);
+                g.TranslateTransform(box.X + (box.Width - size) / 2, box.Y + (box.Height - size) / 2);
+                g.ScaleTransform(size / 100f, size / 100f);
+                if (withPlate)
                 {
-                    g.FillPath(bg, path);
-                    using (var pen = new Pen(Color.FromArgb(150, accent), Math.Max(1f, w * 0.045f))) g.DrawPath(pen, path);
+                    using (var plate = RoundRect(new RectangleF(1, 1, 98, 98), 22))
+                    using (var fill = new LinearGradientBrush(new RectangleF(0, 0, 100, 100), Color.FromArgb(36, 34, 29), Color.FromArgb(12, 13, 13), 65f))
+                    {
+                        g.FillPath(fill, plate);
+                        using (var edge = new Pen(Color.FromArgb(97, 82, 53), 1.2f)) g.DrawPath(edge, plate);
+                    }
+                    g.TranslateTransform(13, 13); g.ScaleTransform(.74f, .74f);
                 }
-                // La gravure respire à l'intérieur de la plaque.
-                float inset = w * 0.14f;
-                x += inset; y += inset; w -= inset * 2; h -= inset * 2;
+                // Une bande pleine conserve la silhouette à 16 px, sans traits décoratifs fragiles.
+                using (var ring = new GraphicsPath(FillMode.Alternate))
+                {
+                    ring.AddPolygon(Octagon(5, 95, 25));
+                    ring.AddPolygon(Octagon(17, 83, 31));
+                    using (var metal = new LinearGradientBrush(new RectangleF(0, 0, 100, 100), Light(accent), accent, 55f)) g.FillPath(metal, ring);
+                }
+                if (size >= 32)
+                {
+                    using (var facet = new SolidBrush(Color.FromArgb(65, Color.Black)))
+                        g.FillPolygon(facet, new[] { new PointF(95, 75), new PointF(75, 95), new PointF(25, 95), new PointF(31, 83), new PointF(69, 83), new PointF(83, 69) });
+                }
+                // Un seul pic, puis une ligne stable : lisible même dans la zone de notification.
+                using (var signal = new Pen(accent, size < 24 ? 9f : 7f) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round })
+                    g.DrawLines(signal, new[] { new PointF(27, 52), new PointF(36, 52), new PointF(43, 35), new PointF(54, 65), new PointF(62, 48), new PointF(73, 48) });
             }
-
-            float cx = x + w / 2f, cy = y + h / 2f;
-            float ring = Math.Max(1.5f, w * 0.085f);          // épaisseur du métal
-            float rad = (Math.Min(w, h) - ring) / 2f;         // rayon au centre du trait
-
-            // L'anneau : or plein, puis reflet clair en haut-gauche = métal poli.
-            var rr = new RectangleF(cx - rad, cy - rad, rad * 2, rad * 2);
-            using (var pen = new Pen(accent, ring)) g.DrawEllipse(pen, rr);
-            using (var pen = new Pen(Color.FromArgb(170, Glint(accent)), ring * 0.72f))
-            {
-                pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round;
-                g.DrawArc(pen, rr, 195f, 95f);
-            }
-
-            // La frametime sertie : chaos → plat, contenue dans l'anneau.
-            float ix = cx - rad, iw = rad * 2;                // fenêtre horizontale intérieure
-            var line = new[]
-            {
-                new PointF(ix + .18f * iw, cy + .02f * iw),
-                new PointF(ix + .27f * iw, cy - .13f * iw),
-                new PointF(ix + .36f * iw, cy + .12f * iw),
-                new PointF(ix + .44f * iw, cy - .07f * iw),
-                new PointF(ix + .52f * iw, cy + .04f * iw),
-                new PointF(ix + .58f * iw, cy),
-                new PointF(ix + .80f * iw, cy)
-            };
-            using (var pen = new Pen(accent, Math.Max(1.4f, w * 0.062f)))
-            {
-                pen.StartCap = LineCap.Round; pen.EndCap = LineCap.Round; pen.LineJoin = LineJoin.Round;
-                g.DrawLines(pen, line);
-            }
-            // Le point d'arrivée : la mesure stabilisée.
-            float r = Math.Max(1.4f, w * 0.052f);
-            using (var b = new SolidBrush(accent))
-                g.FillEllipse(b, ix + .80f * iw - r, cy - r, r * 2, r * 2);
-
-            g.SmoothingMode = sm;
+            finally { g.Restore(state); }
         }
 
-        /// <summary>Reflet métallique dérivé de l'accent (poussé vers l'ivoire).</summary>
-        private static Color Glint(Color c)
+        /// <summary>Logotype géométrique sans dépendance à une police, ratio 4,55:1.</summary>
+        public static void DrawWordmark(Graphics g, RectangleF box, Color color)
         {
-            return Color.FromArgb(
-                Math.Min(255, c.R + 45),
-                Math.Min(255, c.G + 52),
-                Math.Min(255, c.B + 78));
+            if (box.Width <= 0 || box.Height <= 0) return;
+            var state = g.Save();
+            try
+            {
+                float scale = Math.Min(box.Width / 182f, box.Height / 40f);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TranslateTransform(box.X, box.Y + (box.Height - 40 * scale) / 2);
+                g.ScaleTransform(scale, scale);
+                using (var pen = new Pen(color, 5.5f) { LineJoin = LineJoin.Bevel, StartCap = LineCap.Square, EndCap = LineCap.Square })
+                {
+                    g.DrawPolygon(pen, new[] { new PointF(11, 4), new PointF(29, 4), new PointF(36, 11), new PointF(36, 29), new PointF(29, 36), new PointF(11, 36), new PointF(4, 29), new PointF(4, 11) });
+                    g.DrawLines(pen, new[] { new PointF(53, 36), new PointF(53, 4), new PointF(85, 36), new PointF(85, 4) });
+                    g.DrawLines(pen, new[] { new PointF(101, 4), new PointF(117, 21), new PointF(133, 4) });
+                    g.DrawLine(pen, 117, 21, 117, 36);
+                    g.DrawLine(pen, 149, 4, 178, 36); g.DrawLine(pen, 178, 4, 149, 36);
+                }
+            }
+            finally { g.Restore(state); }
         }
-
-        /// <summary>Icône de fenêtre/tray dessinée à partir du logo. (Un HICON est laissé vivant pour
-        /// la durée de l'app — négligeable.)</summary>
         public static Icon MakeIcon(int size, Color accent)
         {
             using (var bmp = new Bitmap(size, size))
             {
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    g.Clear(Color.Transparent);
-                    Draw(g, new RectangleF(0, 0, size, size), accent, true);
-                }
-                return Icon.FromHandle(bmp.GetHicon());
+                using (var g = Graphics.FromImage(bmp)) { g.Clear(Color.Transparent); Draw(g, new RectangleF(0, 0, size, size), accent, true); }
+                IntPtr handle = bmp.GetHicon();
+                try { using (var borrowed = Icon.FromHandle(handle)) return (Icon)borrowed.Clone(); }
+                finally { DestroyIcon(handle); }
             }
         }
-
-        private static GraphicsPath RoundRect(RectangleF r, float rad)
+        private static PointF[] Octagon(float low, float high, float cut)
         {
-            var p = new GraphicsPath();
-            float d = rad * 2;
-            p.AddArc(r.X, r.Y, d, d, 180, 90);
-            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
-            p.CloseFigure();
-            return p;
+            return new[] { new PointF(cut, low), new PointF(100 - cut, low), new PointF(high, cut), new PointF(high, 100 - cut),
+                new PointF(100 - cut, high), new PointF(cut, high), new PointF(low, 100 - cut), new PointF(low, cut) };
+        }
+        private static Color Light(Color c) { return Color.FromArgb(Math.Min(255, c.R + 25), Math.Min(255, c.G + 33), Math.Min(255, c.B + 51)); }
+        private static GraphicsPath RoundRect(RectangleF r, float radius)
+        {
+            var p = new GraphicsPath(); float d = radius * 2;
+            p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure(); return p;
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -139,21 +139,12 @@ namespace BTOptimizer
             try { return v * c.DeviceDpi / 96f; } catch { return v; }
         }
 
-        /// <summary>Wordmark « ONYX » : capitales Marcellus or, interlettrées (gravure) ;
-        /// renvoie la largeur peinte. La taille suit la police passée par la fenêtre.</summary>
+        /// <summary>Logotype ONYX vectoriel ; renvoie la largeur peinte.</summary>
         internal static float DrawWordmark(Graphics g, Font font, float x, float y)
         {
-            var old = g.TextRenderingHint;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-            using (Font f = Fonts.Make(Fonts.Marcellus, font.Size, FontStyle.Regular, "Georgia"))
-            {
-                float track = Math.Max(1.5f, font.Size * 0.18f);
-                float h = TextRenderer.MeasureText(g, "O", f, new Size(int.MaxValue, int.MaxValue),
-                    TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Height;
-                float end = FpsUi.DrawTracked(g, "ONYX", f, GoldRef, x, y + h / 2f, track);
-                g.TextRenderingHint = old;
-                return end - x;
-            }
+            float height = font.GetHeight(g) * .8f, width = height * 4.55f;
+            Logo.DrawWordmark(g, new RectangleF(x, y, width, height), GoldRef);
+            return width;
         }
 
         /// <summary>Rectangle arrondi (partagé avec les fenêtres pour puces et cartes).</summary>

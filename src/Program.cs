@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.92.0.0")]
-[assembly: AssemblyFileVersion("15.92.0.0")]
+[assembly: AssemblyVersion("15.93.0.0")]
+[assembly: AssemblyFileVersion("15.93.0.0")]
 
 namespace BTOptimizer
 {
@@ -91,6 +91,14 @@ namespace BTOptimizer
                 autoIds.Sort(StringComparer.Ordinal);
                 foreach (string id in autoIds) Console.WriteLine(id);
                 return;
+            }
+
+            string brandOut = Environment.GetEnvironmentVariable("BT_BRAND");
+            if (!string.IsNullOrEmpty(brandOut))
+            {
+                ExportBrand(brandOut);
+                Console.WriteLine("Logos ONYX exportés : " + brandOut);
+                Environment.Exit(0);
             }
 
             // BT_ICON=<fichier.ico> : génère l'icône d'application ONYX (multi-tailles, entrées
@@ -1298,6 +1306,26 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_LOGO_UI") == "1")
+                {
+                    try
+                    {
+                        string dir = Environment.GetEnvironmentVariable("BT_UISHOT");
+                        System.IO.Directory.CreateDirectory(dir);
+                        using (var dash = new DashboardForm())
+                        {
+                            dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-5000, -5000);
+                            dash.Show(); Pump(450); dash.ClientSize = new System.Drawing.Size(1280, 800);
+                            dash.Goto(6); Pump(200); SaveGamesShot(dash, dir, "copilote-logo");
+                            var toggle = typeof(DashboardForm).GetMethod("SetRail", BindingFlags.NonPublic | BindingFlags.Instance);
+                            toggle.Invoke(dash, new object[] { true }); Pump(500); SaveGamesShot(dash, dir, "menu-logo");
+                            dash.Hide();
+                        }
+                    }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("Logo ERREUR : " + ex); }
+                    Console.WriteLine("UITEST LOGO — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_BADGES_UI") == "1")
                 {
                     try { CaptureBadgesUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2168,6 +2196,44 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void ExportBrand(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            foreach (string name in new[] { "onyx-icon-1024.png", "onyx-symbol-1024.png", "discord-logo-1024.png", "onyx-wordmark.png" })
+            {
+                bool word = name == "onyx-wordmark.png";
+                using (var bmp = new System.Drawing.Bitmap(word ? 1200 : 1024, word ? 300 : 1024))
+                using (var g = System.Drawing.Graphics.FromImage(bmp))
+                {
+                    g.Clear(System.Drawing.Color.Transparent);
+                    if (word) Logo.DrawWordmark(g, new System.Drawing.RectangleF(24, 24, 1152, 252), FpsUi.Gold);
+                    else if (name == "discord-logo-1024.png")
+                    {
+                        g.Clear(FpsUi.BgMain);
+                        Logo.Draw(g, new System.Drawing.RectangleF(252, 100, 520, 520), FpsUi.Gold, false);
+                        Logo.DrawWordmark(g, new System.Drawing.RectangleF(172, 700, 680, 150), FpsUi.Gold);
+                    }
+                    else Logo.Draw(g, new System.Drawing.RectangleF(0, 0, 1024, 1024), FpsUi.Gold, name == "onyx-icon-1024.png");
+                    bmp.Save(System.IO.Path.Combine(dir, name), System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            using (var bmp = new System.Drawing.Bitmap(1000, 440))
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.Clear(FpsUi.BgMain);
+                Logo.Draw(g, new System.Drawing.RectangleF(40, 45, 260, 260), FpsUi.Gold, true);
+                Logo.DrawWordmark(g, new System.Drawing.RectangleF(355, 65, 570, 126), FpsUi.Gold);
+                int x = 360;
+                foreach (int size in new[] { 16, 20, 24, 32, 48, 64, 128 })
+                {
+                    Logo.Draw(g, new System.Drawing.RectangleF(x, 245, size, size), FpsUi.Gold, true);
+                    OnyxDesign.Text(g, size + " px", FpsUi.Tiny, FpsUi.Dim, new System.Drawing.Rectangle(x, 390, 65, 22));
+                    x += size + 22;
+                }
+                bmp.Save(System.IO.Path.Combine(dir, "onyx-brand-preview.png"), System.Drawing.Imaging.ImageFormat.Png);
+            }
+        }
+
         private static void CaptureBadgesUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);

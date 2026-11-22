@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -1336,7 +1336,6 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         // Barre latérale repliable : étroite (icônes seules) ou large (icônes + libellés).
         private const int RailNarrow = 66, RailWide = 224, BrandH = 88, ProfileH = 64;
-        private static readonly Font BrandFont = FpsUi.F(18f, true);
         private readonly Label[] _navSections = new Label[3];
         private bool _railOpen;
         private Panel _railBrand, _railProfile;
@@ -1365,8 +1364,8 @@ namespace BTOptimizer
                 Logo.Draw(gr, new RectangleF(mx, (BrandH - mw) / 2f, mw, mw), FpsUi.Gold, false);
                 if (_railOpen)
                 {
-                    // Wordmark gravé : capitales Marcellus or, interlettrées — l'écrin de la marque.
-                    FpsUi.DrawTracked(gr, "ONYX", BrandFont, FpsUi.Ink, mx + mw + 12, BrandH / 2f - 8, 2f);
+                    // Logotype vectoriel partagé avec les icônes et les exports.
+                    Logo.DrawWordmark(gr, new RectangleF(mx + mw + 12, 27, 96, 22), FpsUi.Gold);
                     TextRenderer.DrawText(gr, "WINDOWS / GAMING", FpsUi.Tiny, new Point(mx + mw + 12, 56), FpsUi.Dim,
                         TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
                     TextRenderer.DrawText(gr, _railPinned ? "‹" : "+", FpsUi.H2,

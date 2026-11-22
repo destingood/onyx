@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.93 — Nouvelle identité ONYX
+
+- **Logo redessiné.** Un O facetté en or, un signal de performance simplifié et un fond
+  carbone. Le symbole reste lisible dans les petites icônes Windows.
+- **Lettrage ONYX sur mesure.** Un tracé géométrique vectoriel commun au menu et aux
+  bandeaux de l’application, indépendant des polices installées.
+- **Icônes harmonisées.** Application, fenêtres, zone de notification et installateur
+  utilisent le même symbole. L’icône Windows contient neuf tailles, de 16 à 256 px.
+- Déclinaisons haute définition : icône, symbole transparent, lettrage et visuel de profil.
+
 ## v15.92 — Nouvelle collection de badges
 
 - **25 badges, dont 6 nouveaux.** Prise en main, Équipe complète, Explorateur,
