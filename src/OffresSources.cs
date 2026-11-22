@@ -218,7 +218,7 @@ namespace BTOptimizer
                         Sortie = DateGamerPower(Chaine(g, "published_date")),
                         Fin = DateGamerPower(Chaine(g, "end_date")),
                         Plateformes = PlateformesGamerPower(Chaine(g, "platforms")),
-                        Image = ImageSure(Chaine(g, "thumbnail")) ?? ImageSure(Chaine(g, "image")),
+                        Image = ImageSure(Chaine(g, "image")) ?? ImageSure(Chaine(g, "thumbnail")),
                     });
                 }
             }
@@ -230,7 +230,7 @@ namespace BTOptimizer
         private const string BaseImagesSteam = "https://shared.akamai.steamstatic.com/store_item_assets/";
 
         /// <summary>
-        /// Jaquette Steam (library_capsule, portrait), sinon le bandeau, sinon la capsule. Les jeux récents
+        /// Visuel Steam horizontal (capsule, puis bandeau), portrait seulement en repli. Les jeux récents
         /// ne sont plus servis à l'ancienne adresse /steam/apps/&lt;id&gt;/library_600x900.jpg : seul le chemin
         /// avec empreinte donné par l'API (asset_url_format + nom de fichier) existe.
         /// </summary>
@@ -240,7 +240,7 @@ namespace BTOptimizer
             if (!Prop(item, "assets", out a)) return null;
             string format = Chaine(a, "asset_url_format");
             if (format == null || !format.StartsWith("steam/", StringComparison.Ordinal) || !format.Contains("${FILENAME}")) return null;
-            foreach (string cle in new[] { "library_capsule", "header", "main_capsule" })
+            foreach (string cle in new[] { "main_capsule", "header", "library_capsule" })
             {
                 string f = Chaine(a, cle);
                 if (string.IsNullOrWhiteSpace(f) || f.Contains("..") || f.Contains("://")) continue;
@@ -249,19 +249,19 @@ namespace BTOptimizer
             return null;
         }
 
-        /// <summary>Image Epic : verticale d'abord (comme la jaquette Steam), puis vignette, puis large.</summary>
+        /// <summary>Image Epic : horizontale en priorité, sans la réduction en vignette de 240 pixels.</summary>
         private static string ImageEpic(JsonElement el)
         {
             JsonElement imgs;
             if (!Prop(el, "keyImages", out imgs) || imgs.ValueKind != JsonValueKind.Array) return null;
-            foreach (string type in new[] { "OfferImageTall", "DieselStoreFrontTall", "Thumbnail", "OfferImageWide", "DieselStoreFrontWide" })
+            foreach (string type in new[] { "OfferImageWide", "DieselStoreFrontWide", "OfferImageTall", "DieselStoreFrontTall", "Thumbnail" })
                 foreach (var k in imgs.EnumerateArray())
                     if (Chaine(k, "type") == type)
                     {
                         string u = ImageSure(Chaine(k, "url"));
-                        // Le CDN d'Epic sert l'original (souvent 2 Mo) ; il redimensionne sur demande (≈ 30 Ko).
+                        // Le CDN fournit une largeur adaptée aux grandes cartes et aux écrans à haute densité.
                         if (u != null && u.StartsWith("https://cdn1.epicgames.com/", StringComparison.Ordinal) && u.IndexOf('?') < 0)
-                            u += "?h=360&w=240&resize=1";
+                            u += "?w=1280&resize=1";
                         if (u != null) return u;
                     }
             return null;
@@ -559,7 +559,7 @@ namespace BTOptimizer
                     {
                         Source = "gog", Id = id.Trim(), Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise,
                         Url = url.Trim(), Plateformes = new[] { "GOG" },
-                        Image = ImageSure(Chaine(p, "coverVertical")) ?? ImageSure(Chaine(p, "coverHorizontal")),
+                        Image = ImageSure(Chaine(p, "coverHorizontal")) ?? ImageSure(Chaine(p, "coverVertical")),
                         Sortie = sortie != null && DateTime.TryParseExact(sortie, "yyyy.MM.dd", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d) ? d : (DateTime?)null,
                     });
                 }
@@ -608,7 +608,7 @@ namespace BTOptimizer
                         appId = 0;
                         image = ImageSure(Chaine(g, "thumb"));
                         if (image != null && image.StartsWith("https://cdn1.epicgames.com/", StringComparison.Ordinal) && image.IndexOf('?') < 0)
-                            image += "?w=360&resize=1";
+                            image += "?w=1280&resize=1";
                     }
                     int deja;
                     bool vu = place.TryGetValue(jeu, out deja);
@@ -869,7 +869,7 @@ namespace BTOptimizer
                     {
                         Source = "nintendo", Id = id, Nom = nom.Trim(), PrixCts = cts, PrixOrigineCts = origine, Remise = remise >= 0 ? remise : RemiseDe(cts, origine),
                         Url = url, Plateformes = new[] { "Switch" },
-                        Image = ImageSure(Chaine(d, "image_url_sq_s")) ?? ImageSure(Chaine(d, "image_url_h2x1_s")),
+                        Image = ImageSure(Chaine(d, "image_url_h2x1_s")) ?? ImageSure(Chaine(d, "image_url_sq_s")),
                         Sortie = IsoUtc(PremiereChaine(d, "dates_released_dts")),
                     });
                 }

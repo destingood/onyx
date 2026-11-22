@@ -68,11 +68,11 @@ namespace BTOptimizer.Tests
             Banc.Verifie("GamerPower : nom nettoyé, plateformes", true, gp[0].Nom == "Mark of the Deep" && gp[0].Plateformes.Length == 2 && gp[0].Plateformes[0] == "PC" && gp[0].Plateformes[1] == "Epic Games" && gp[0].Fin == new DateTime(2026, 11, 26, 23, 59, 0));
             Banc.Verifie("GamerPower : consoles, fin N/A", true, gp[1].Fin == null && string.Join(",", gp[1].Plateformes) == "PlayStation,Xbox,Switch,DRM-Free");
             Banc.Verifie("URL fiches : images demandées", true, Uri.UnescapeDataString(uf).Contains("\"include_assets\":true"));
-            Banc.Verifie("image Steam : jaquette à l'adresse avec empreinte", true, fs[0].Image == "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2909400/480bd879/library_600x900.jpg?t=1793774936");
+            Banc.Verifie("image Steam : bandeau horizontal avec empreinte", true, fs[0].Image == "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2909400/64a1/header.jpg?t=1793774936");
             Banc.Verifie("image Steam : sans jaquette, le bandeau", true, fs[1].Image == "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1245620/9a81/header.jpg");
             Banc.Verifie("image Steam : sans assets, aucune", true, fs[2].Image == null);
-            Banc.Verifie("image Epic : jaquette verticale préférée", true, ep[0].Image == "https://cdn1.epicgames.com/offer/x/tall.jpg?h=360&w=240&resize=1");
-            Banc.Verifie("image GamerPower : vignette, lien piégé ignoré", true, gp[0].Image == "https://www.gamerpower.com/offers/1/6aff1d0e4942d.jpg" && gp[1].Image == null);
+            Banc.Verifie("image Epic : visuel horizontal en haute résolution", true, ep[0].Image == "https://cdn1.epicgames.com/offer/x/wide.jpg?w=1280&resize=1");
+            Banc.Verifie("image GamerPower : image complète, lien piégé ignoré", true, gp[0].Image == "https://www.gamerpower.com/offers/1b/6aff1d0e4942d.jpg" && gp[1].Image == null);
             Banc.Verifie("GamerPower : rien de disponible (objet)", true, OffresSources.GratuitsGamerPower("{\"status\":0,\"status_message\":\"No active giveaways available at the moment, please try again later.\"}").Count == 0);
         }
     }

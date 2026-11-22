@@ -921,12 +921,14 @@ namespace BTOptimizer
             protected override void Dispose(bool disposing) { if (disposing) _tips.Dispose(); base.Dispose(disposing); }
             private static void Cover(Graphics g, Image image, Rectangle target)
             {
-                float ratio = target.Width / (float)target.Height;
-                RectangleF source = image.Width / (float)image.Height > ratio
-                    ? new RectangleF((image.Width - image.Height * ratio) / 2, 0, image.Height * ratio, image.Height)
-                    : new RectangleF(0, (image.Height - image.Width / ratio) / 2, image.Width, image.Width / ratio);
+                Rectangle destination = DealArtwork.Fit(image.Size, target);
+                OnyxDesign.PaintCard(g, target, FpsUi.RailBg, FpsUi.Border, 8);
                 var state = g.Save();
-                using (var path = FpsUi.Round(target, 8)) { g.SetClip(path); g.DrawImage(image, target, source, GraphicsUnit.Pixel); }
+                using (var path = FpsUi.Round(target, 8))
+                {
+                    g.SetClip(path);
+                    g.DrawImage(image, destination, new Rectangle(Point.Empty, image.Size), GraphicsUnit.Pixel);
+                }
                 g.Restore(state);
             }
             protected override void OnPaint(PaintEventArgs e)
@@ -938,8 +940,7 @@ namespace BTOptimizer
                 var art = new Rectangle(8, 8, Width - 16, 130); Image image = null;
                 try
                 {
-                    if (_o.Image != null) image = GameArt.GetUrl(_o.Image, Ready);
-                    if (image == null && _o.SteamAppId > 0 && (_o.Image == null || GameArt.EchecUrl(_o.Image))) image = GameArt.Get(_o.SteamAppId, Ready);
+                    image = GameArt.ForDeal(_o, Ready);
                 }
                 catch { }
                 if (image != null) { try { Cover(g, image, art); } catch { } }

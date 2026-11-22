@@ -191,32 +191,47 @@ namespace BTOptimizer
 
         /// <summary>Image d'une URL https (cache mémoire puis disque), ou null tant qu'elle n'est pas prête.
         /// onReady est rappelé (thread de fond) quand elle est prête ou a échoué.</summary>
-        public static Image GetUrl(string url, Action onReady)
+        public static Image GetUrl(string url, Action onReady, bool highResolution = false)
         {
             if (!UrlImageSure(url)) return null;
+            string key = highResolution ? "hd:" + url : url;
             bool start = false;
             lock (_lock)
             {
                 Image img;
-                if (_urlCache.TryGetValue(url, out img)) return img;
-                if (_urlFailed.Contains(url)) return null;
+                if (_urlCache.TryGetValue(key, out img)) return img;
+                if (_urlFailed.Contains(key)) return null;
                 if (onReady != null)
                 {
                     List<Action> list;
-                    if (!_urlWaiters.TryGetValue(url, out list)) { list = new List<Action>(); _urlWaiters[url] = list; }
+                    if (!_urlWaiters.TryGetValue(key, out list)) { list = new List<Action>(); _urlWaiters[key] = list; }
                     list.Add(onReady);
                 }
-                if (!_urlLoading.Contains(url)) { _urlLoading.Add(url); start = true; }
+                if (!_urlLoading.Contains(key)) { _urlLoading.Add(key); start = true; }
             }
-            if (start) { var _ignore = LoadUrlAsync(url); }
+            if (start) { var _ignore = LoadUrlAsync(url, key, highResolution); }
             return null;
         }
 
+        // Les offres utilisent un cache mémoire distinct : une vignette d'Actus déjà chargée
+        // ne doit pas remplacer leur visuel HD. Le cache disque conserve les octets originaux.
+        public static Image ForDeal(Offre offer, Action ready)
+        {
+            Image image = offer.Image == null ? null : GetUrl(offer.Image, ready, true);
+            if (image != null || offer.SteamAppId <= 0 || (offer.Image != null && !EchecUrl(offer.Image, true))) return image;
+            string root = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + offer.SteamAppId + "/";
+            string capsule = root + "capsule_616x353.jpg", header = root + "header.jpg";
+            image = GetUrl(capsule, ready, true);
+            if (image == null && EchecUrl(capsule, true)) image = GetUrl(header, ready, true);
+            if (image == null && EchecUrl(capsule, true) && EchecUrl(header, true)) image = Get(offer.SteamAppId, ready);
+            return image;
+        }
+
         /// <summary>Vrai si l'image de cette URL n'a pas pu être chargée (l'appelant passe à son repli).</summary>
-        public static bool EchecUrl(string url)
+        public static bool EchecUrl(string url, bool highResolution = false)
         {
             if (url == null) return false;
-            lock (_lock) return _urlFailed.Contains(url);
+            lock (_lock) return _urlFailed.Contains(highResolution ? "hd:" + url : url);
         }
 
         private static bool UrlImageSure(string url)
@@ -224,13 +239,13 @@ namespace BTOptimizer
             return Offres.LienSur(url) && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static async Task LoadUrlAsync(string url)
+        private static async Task LoadUrlAsync(string url, string key, bool highResolution)
         {
             Image loaded = null;
             try
             {
                 string p = UrlDiskPath(url);
-                loaded = await Task.Run(() => File.Exists(p) && new FileInfo(p).Length >= MinArtBytes ? Reduit(FromFile(p)) : null).ConfigureAwait(false);
+                loaded = await Task.Run(() => File.Exists(p) && new FileInfo(p).Length >= MinArtBytes ? Reduit(FromFile(p), highResolution) : null).ConfigureAwait(false);
                 if (loaded == null && !UnderTestHarness())
                 {
                     await _gate.WaitAsync().ConfigureAwait(false);
@@ -239,7 +254,7 @@ namespace BTOptimizer
                         byte[] data = await TelechargeImage(url).ConfigureAwait(false);
                         if (data != null)
                         {
-                            loaded = Reduit(FromBytes(data));
+                            loaded = Reduit(FromBytes(data), highResolution);
                             if (loaded != null) { try { Directory.CreateDirectory(Path.GetDirectoryName(p)); File.WriteAllBytes(p, data); } catch { } }
                         }
                     }
@@ -251,11 +266,11 @@ namespace BTOptimizer
             Action[] cbs;
             lock (_lock)
             {
-                if (loaded != null) _urlCache[url] = loaded; else _urlFailed.Add(url);
-                _urlLoading.Remove(url);
+                if (loaded != null) _urlCache[key] = loaded; else _urlFailed.Add(key);
+                _urlLoading.Remove(key);
                 List<Action> list;
-                cbs = _urlWaiters.TryGetValue(url, out list) ? list.ToArray() : new Action[0];
-                _urlWaiters.Remove(url);
+                cbs = _urlWaiters.TryGetValue(key, out list) ? list.ToArray() : new Action[0];
+                _urlWaiters.Remove(key);
             }
             // Rappel aussi en cas d'échec : la carte bascule alors sur son repli.
             foreach (var cb in cbs) { try { cb(); } catch { } }
@@ -293,17 +308,18 @@ namespace BTOptimizer
         }
 
         /// <summary>Copie réduite à HauteurMax (une jaquette Epic d'origine dépasse 2 000 px) ; libère l'original.</summary>
-        private static Image Reduit(Image img)
+        private static Image Reduit(Image img, bool highResolution = false)
         {
-            if (img == null || img.Height <= HauteurMax) return img;
+            if (img == null) return null;
+            Size size = highResolution ? DealArtwork.CacheSize(img.Size) : new Size(Math.Max(1, img.Width * Math.Min(img.Height, HauteurMax) / img.Height), Math.Min(img.Height, HauteurMax));
+            if (size == img.Size) return img;
             try
             {
-                int w = Math.Max(1, img.Width * HauteurMax / img.Height);
-                var b = new Bitmap(w, HauteurMax);
+                var b = new Bitmap(size.Width, size.Height);
                 using (var g = Graphics.FromImage(b))
                 {
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(img, 0, 0, w, HauteurMax);
+                    g.DrawImage(img, 0, 0, size.Width, size.Height);
                 }
                 img.Dispose();
                 return b;

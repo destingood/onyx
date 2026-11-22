@@ -71,7 +71,7 @@ namespace BTOptimizer.Tests
             var gog = OffresSources.PromosGog(Gog);
             Banc.Verifie("GOG : lien piégé et prix absent écartés", true, gog.Count == 2);
             Banc.Verifie("GOG : offre complète", true, gog[0].Source == "gog" && gog[0].Id == "2141207403" && gog[0].Nom == "Wicked Island" && gog[0].PrixCts == 2219 && gog[0].PrixOrigineCts == 3699 && gog[0].Remise == 40
-                && gog[0].Url == "https://www.gog.com/fr/game/wicked_island" && gog[0].Image == "https://images.gog-statics.com/b2e3.jpg" && gog[0].Devise == "EUR" && gog[0].Plateformes[0] == "GOG" && gog[0].Sortie == new DateTime(2026, 11, 17, 0, 0, 0, DateTimeKind.Utc));
+                && gog[0].Url == "https://www.gog.com/fr/game/wicked_island" && gog[0].Image == "https://images.gog-statics.com/9500.png" && gog[0].Devise == "EUR" && gog[0].Plateformes[0] == "GOG" && gog[0].Sortie == new DateTime(2026, 11, 17, 0, 0, 0, DateTimeKind.Utc));
             Banc.Verifie("GOG : prix entier, image http refusée → horizontale", true, gog[1].PrixCts == 500 && gog[1].Remise == 50 && gog[1].Image == "https://images.gog-statics.com/h.png");
             Banc.Verifie("GOG : entrée invalide", true, OffresSources.PromosGog(null).Count == 0 && OffresSources.PromosGog("[]").Count == 0 && OffresSources.PromosGog("<html>").Count == 0);
 
@@ -83,7 +83,7 @@ namespace BTOptimizer.Tests
             Banc.Verifie("CheapShark : offre Epic gratuite", true, cs[0].Source == "epic" && cs[0].Id == "297257" && cs[0].PrixCts == 0 && cs[0].PrixOrigineCts == 1999 && cs[0].Remise == 100 && cs[0].Devise == "USD"
                 && cs[0].Url == "https://www.cheapshark.com/redirect?dealID=J3QoV3DZfxoGHf0gnngRHd1PS4AMm%2Fuqeh6CmIov%2Fk4%3D" && cs[0].SteamAppId == 1933370 && cs[0].Plateformes[0] == "Epic Games Store");
             Banc.Verifie("CheapShark : jaquette Steam par AppID plutôt que la vignette large", true, cs[0].Image == null);
-            Banc.Verifie("CheapShark : vignette Epic réduite", true, OffresSources.PromosCheapShark(Cs.Replace("2.99", "9.99"))[1].Image == "https://cdn1.epicgames.com/spt-assets/f424/need-for-speed-heat-1lhdh.jpg?w=360&resize=1");
+            Banc.Verifie("CheapShark : visuel Epic assez large pour les cartes", true, OffresSources.PromosCheapShark(Cs.Replace("2.99", "9.99"))[1].Image == "https://cdn1.epicgames.com/spt-assets/f424/need-for-speed-heat-1lhdh.jpg?w=1280&resize=1");
             Banc.Verifie("CheapShark : un seul deal par jeu, le moins cher, à sa place", true, cs[0].Source == "epic" && cs[0].PrixCts == 0
                 && cs[1].Source == "fanatical" && cs[1].Id == "204097" && cs[1].PrixCts == 299 && cs[1].Remise == 96 && cs[1].SteamAppId == 0 && cs[1].Url.EndsWith("dealID=jkl"));
             Banc.Verifie("CheapShark : Fanatical", true, cs[2].Source == "fanatical" && cs[2].Remise == 50 && cs[2].Image == "https://cdn.fanatical.com/x.jpg" && cs[2].Sortie == null);

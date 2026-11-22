@@ -5,6 +5,15 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.91 — Images nettes dans Bons plans
+
+- **Visuels plus nets.** Les cartes privilégient les images horizontales et les versions
+  en meilleure résolution fournies par les boutiques, avec un cache HD dédié.
+- **Fin du zoom excessif.** Les images restent entières, sans étirement ni agrandissement
+  au-delà de leur résolution. Les titres présents sur les jaquettes restent visibles.
+- Les petites vignettes restent à leur taille native quand aucune meilleure image
+  n’est disponible. L’affichage des Actualités conserve son fonctionnement.
+
 ## v15.90 — Matériel, santé et bons plans modernisés
 
 - **Matériel en direct.** Cartes CPU, GPU et RAM, graphique du composant sélectionné,

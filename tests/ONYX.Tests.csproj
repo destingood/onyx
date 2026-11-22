@@ -75,6 +75,7 @@
     <Compile Include="..\src\Model.cs" />
     <!-- Bons plans et Actus : modèle, sources, suivi, flux (purs). Le réseau vit dans OffresReseau.cs. -->
     <Compile Include="..\src\Offres.cs" />
+    <Compile Include="..\src\DealArtwork.cs" />
     <Compile Include="..\src\OffresSources.cs" />
     <!-- Page Jeux : tri jeu / application, jaquettes Epic, fusion multi-plateforme (pur). -->
     <Compile Include="..\src\BibliothequeJeux.cs" />

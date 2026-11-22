@@ -100,6 +100,7 @@ namespace BTOptimizer.Tests
             EfficaciteTests.Tout();
             ModePresentationTests.Tout();
             OffresTests.Tout();
+            DealArtworkTests.Tout();
             OffresSourcesTests.Tout();
             BoutiquesTests.Tout();
             ComparateurTests.Tout();
