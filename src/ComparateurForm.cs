@@ -33,7 +33,7 @@ namespace BTOptimizer
             StartPosition = FormStartPosition.CenterParent; BackColor = FpsUi.BgMain;
             Font = FpsUi.Body; DoubleBuffered = true;
             try { Icon = Logo.MakeIcon(32, FpsUi.Gold); } catch { }
-            _original = MakeButton(MonetisationRuntime.IsAffiliate(_o.Url) ? "Offre affiliée  ↗" : "Offre repérée  ↗", () => MonetisationRuntime.OpenOffer(_o.Url), false);
+            _original = MakeButton("Offre repérée  ↗", () => MonetisationRuntime.OpenOffer(_o.Url), false);
             _original.Enabled = Offres.LienSur(_o.Url);
             _bestLink = MakeButton("Voir la meilleure offre  ↗", () => { var best = Best(); if (best != null) MonetisationRuntime.OpenOffer(best.Url); }, true);
             _stores = MakeButton("Boutiques", () => SetTab(false), false);
@@ -125,7 +125,7 @@ namespace BTOptimizer
             _empty.Visible = _list.Content.Controls.Count == 1;
             _empty.Text = _loading || _c == null ? "Recherche des offres en cours…" : _euros.Checked ? "Aucune offre facturée en euros. Décoche le filtre pour voir les autres boutiques." : "Aucun prix disponible. Actualise ou consulte les revendeurs de clés.";
             var best = Best(); _bestLink.Enabled = best != null && Offres.LienSur(best.Url);
-            _source.Text = "Prix US et historique : CheapShark. " + (_c != null && _c.Taux > 0
+            _source.Text = "Prix US et historique : CheapShark. " + MonetisationRuntime.Mention("", " ") + (_c != null && _c.Taux > 0
                 ? "Conversion BCE du " + _c.JourTaux.ToString("dd/MM/yyyy") + " : 1 € = " + _c.Taux.ToString("0.0000", CultureInfo.GetCultureInfo("fr-FR")) + " $ US. Prix local à vérifier sur la boutique."
                 : "Conversion en euros indisponible. Le prix local est indiqué par la boutique.");
             _list.ScrollTo(0); LayoutContent(); Invalidate();
@@ -202,7 +202,6 @@ namespace BTOptimizer
             TextAt(g, best == null ? (_c == null ? "…" : "Indisponible") : MainPrice(best), best == null ? OnyxDesign.Title : OnyxDesign.Display, FpsUi.Gold, rect.X + 16, 74, rect.Width - 32, 54);
             TextAt(g, best == null ? (_c == null ? "Recherche en cours" : "Aucun prix pour cette sélection") : best.Store, FpsUi.H3, FpsUi.Ink, rect.X + 18, 136, rect.Width - 36, 24);
             string detail = best == null ? "Actualise pour relancer la recherche." : best.Devise == "USD" ? "Facturé " + NativePrice(best.Cts, best.Devise) : "Prix facturé en euros";
-            if (best != null && MonetisationRuntime.IsAffiliate(best.Url)) detail += " · Lien affilié";
             TextAt(g, detail, FpsUi.Small, FpsUi.Dim, rect.X + 18, 169, rect.Width - 36, 32, true);
             _bestLink.Text = comparable ? "Voir la meilleure offre  ↗" : "Voir l’offre  ↗";
         }
@@ -260,14 +259,14 @@ namespace BTOptimizer
                     TextAt(g, _rank.ToString("00"), FpsUi.Small, _rank == 1 ? FpsUi.Gold : FpsUi.Dim, 12, 25, 26, 22);
                     int priceX = Width - 282;
                     TextAt(g, _line.Store, FpsUi.H3, FpsUi.Ink, 44, 12, priceX - 54, 24);
-                    TextAt(g, _affiliated ? "Lien affilié · commission possible" : _line.DeLaCarte ? "Offre repérée" : _line.Remise > 0 ? "Remise de " + _line.Remise + " %" : "Boutique officielle", FpsUi.Tiny, _line.DeLaCarte ? FpsUi.Gold : FpsUi.Dim, 44, 40, priceX - 54, 18);
+                    TextAt(g, _line.DeLaCarte ? "Offre repérée" : _line.Remise > 0 ? "Remise de " + _line.Remise + " %" : "Boutique officielle", FpsUi.Tiny, _line.DeLaCarte ? FpsUi.Gold : FpsUi.Dim, 44, 40, priceX - 54, 18);
                     TextAt(g, MainPrice(_line), FpsUi.H2, _rank == 1 ? FpsUi.Gold : FpsUi.Ink, priceX, 12, 158, 24);
                     TextAt(g, _line.Devise == "USD" ? (_line.EurCts >= 0 ? NativePrice(_line.Cts, "USD") : "Prix en dollars US") : "Facturé en euros", FpsUi.Tiny, FpsUi.Dim, priceX, 40, 158, 18);
                 }
                 else
                 {
                     TextAt(g, _reseller.Nom, FpsUi.H3, FpsUi.Ink, 16, 12, Width - 144, 24);
-                    TextAt(g, _affiliated ? "Lien affilié · commission possible" : _reseller.Nom == "AllKeyShop" ? "Comparateur de revendeurs" : _reseller.PlaceDeMarche ? "Place de marché · vendeurs tiers" : "Revendeur de clés", FpsUi.Small, FpsUi.Dim, 16, 40, Width - 144, 20);
+                    TextAt(g, _reseller.Nom == "AllKeyShop" ? "Comparateur de revendeurs" : _reseller.PlaceDeMarche ? "Place de marché · vendeurs tiers" : "Revendeur de clés", FpsUi.Small, FpsUi.Dim, 16, 40, Width - 144, 20);
                 }
             }
         }

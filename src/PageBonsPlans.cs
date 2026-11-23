@@ -45,6 +45,7 @@ namespace BTOptimizer
         private readonly HashSet<string> _finis = new HashSet<string>();   // stores sans page suivante
         private readonly BufferedFlow _flow;
         private readonly LinkLabel _pied;
+        private readonly Label _mention;
         private readonly Timer _attente;
         private readonly OnyxScrollPanel _viewport = new OnyxScrollPanel();
         private readonly BufferedPanel _filters = new BufferedPanel(), _searchBox = new BufferedPanel();
@@ -177,6 +178,9 @@ namespace BTOptimizer
             Lien(_pied, "CheapShark", "https://www.cheapshark.com");
             _pied.LinkClicked += (s, e) => Ouvre(e.Link.LinkData as string);
             Controls.Add(_pied);
+            // Une seule mention d'affiliation pour toute la page, à la place d'un badge sur chaque lien.
+            _mention = new Label { Text = Monetisation.Notice, Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2, BackColor = FpsUi.BgMain, AutoSize = false, UseMnemonic = false };
+            Controls.Add(_mention);
 
             _majCombos = true;
             _cat.SelectedIndex = 0; _plat.SelectedIndex = 0; _tri.SelectedIndex = 0;
@@ -305,10 +309,14 @@ namespace BTOptimizer
             _resultsLabel.SetBounds(34, 244, width, 22);
             _partner.SetBounds(34, 276, width, 76);
             int top = _partner.Active ? 364 : 276;
-            _viewport.SetBounds(34, top, w - 50, Math.Max(100, h - top - 80));
+            // La mention d'affiliation occupe une ligne sous le pied de page, seulement si une règle est active.
+            bool mention = Monetisation.HasAffiliation(MonetisationRuntime.Settings);
+            int bas = mention ? 16 : 0;
+            _viewport.SetBounds(34, top, w - 50, Math.Max(100, h - top - 80 - bas));
             LayoutCards();
-            _pied.SetBounds(34, h - 25, width, 18);
-            int py = h - 65;
+            _pied.SetBounds(34, h - 25 - bas, width, 18);
+            _mention.Visible = mention; _mention.SetBounds(34, h - 23, width, 18);
+            int py = h - 65 - bas;
             _suiv.SetBounds(w - 144, py, 110, 32); _numPage.SetBounds(_suiv.Left - 104, py, 96, 32);
             _prec.SetBounds(_numPage.Left - 118, py, 110, 32);
             _info.SetBounds(34, py, Math.Max(60, _prec.Left - 50), 32);
@@ -858,6 +866,10 @@ namespace BTOptimizer
                 }
             }
             _viewport.ValidateScrolling();
+            if (Monetisation.HasAffiliation(MonetisationRuntime.Settings)
+                && (_mention.Width <= 0 || !ClientRectangle.Contains(_mention.Bounds) || _mention.Top < _pied.Bottom - 2 || _prec.Bottom > _pied.Top
+                    || TextRenderer.MeasureText(_mention.Text, _mention.Font).Width > _mention.Width))
+                throw new InvalidOperationException("Mention d’affiliation absente, coupée ou superposée.");
         }
         internal void PreviewEmpty(bool error) { _generation++; _occupe = false; _resultats.Clear(); Affiche(error); }
         internal void PreviewFree() { ChoisitOnglet(OngletGratuits); }
@@ -948,7 +960,7 @@ namespace BTOptimizer
                     const string lien = "Instant Gaming ↗";
                     _instantGaming = new LinkLabel
                     {
-                        Text = lien + "  · lien affilié", LinkArea = new LinkArea(0, lien.Length), Font = FpsUi.Tiny, AutoSize = false,
+                        Text = lien, LinkArea = new LinkArea(0, lien.Length), Font = FpsUi.Tiny, AutoSize = false,
                         BackColor = FpsUi.Card, ForeColor = FpsUi.Dim2, LinkColor = FpsUi.Dim, ActiveLinkColor = FpsUi.Gold,
                         LinkBehavior = LinkBehavior.HoverUnderline, TextAlign = ContentAlignment.MiddleLeft, UseMnemonic = false,
                         AccessibleName = "Chercher " + _o.Nom + " sur Instant Gaming",
@@ -1019,7 +1031,6 @@ namespace BTOptimizer
                 string store = OffresSources.NomBoutique(_o.Source);
                 int storeWidth = Math.Min(Width - 120, TextRenderer.MeasureText(store, FpsUi.Small).Width + 20);
                 Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
-                if (MonetisationRuntime.IsAffiliate(_o.Url)) Badge(g, "Lien affilié", new Rectangle(18, 48, 92, 21), FpsUi.RailBg, FpsUi.Gold);
                 if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
                 OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - 28, 23));
                 string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");

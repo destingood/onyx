@@ -71,6 +71,14 @@ namespace BTOptimizer
             return campaign;
         }
         private static bool ShortText(string text, int max) { return !string.IsNullOrWhiteSpace(text) && text.Length <= max && !text.Any(char.IsControl); }
+        /// <summary>Mention affichée une seule fois par écran (pied de page) à la place d'un badge sur chaque lien.</summary>
+        internal const string Notice = "Certains liens sont affiliés : commission possible pour ONYX, même prix pour toi.";
+        /// <summary>Vrai si au moins une règle d'affiliation peut s'appliquer : c'est elle qui déclenche la mention.</summary>
+        internal static bool HasAffiliation(Settings settings)
+        {
+            return settings != null && settings.Enabled && settings.AffiliateRules != null && settings.AffiliateRules.Any(r =>
+                r != null && r.Enabled && !string.IsNullOrWhiteSpace(r.MerchantHost) && (!string.IsNullOrEmpty(r.AppendQuery) || !string.IsNullOrEmpty(r.UrlTemplate)));
+        }
         internal static Link Resolve(Settings settings, string original)
         {
             var result = new Link { Url = original };

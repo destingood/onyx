@@ -70,6 +70,18 @@ namespace BTOptimizer.Tests
             Banc.Verifie("aucune bannière partenaire", true, livree.Sponsor == null);
             Banc.Verifie("aucun bouton de soutien", true, Monetisation.Support(livree) == null);
             Banc.Verifie("lien Instant Gaming affilié", true, Monetisation.Resolve(livree, recherche).Url == recherche + "&igr=destingood");
+
+            Banc.Titre("Mention d'affiliation unique (pied de page)");
+            Banc.Verifie("configuration livrée : mention affichée", true, Monetisation.HasAffiliation(livree));
+            Banc.Verifie("mention : affiliation et commission nommées", true, Monetisation.Notice.Contains("affiliés") && Monetisation.Notice.Contains("commission"));
+            Banc.Verifie("aucune configuration : pas de mention", false, Monetisation.HasAffiliation(null));
+            Banc.Verifie("aucune règle : pas de mention", false, Monetisation.HasAffiliation(new Monetisation.Settings { Enabled = true }));
+            ig.AffiliateRules[0].AppendQuery = "igr=destingood";
+            Banc.Verifie("règle active : mention", true, Monetisation.HasAffiliation(ig));
+            ig.AffiliateRules[0].Enabled = false;
+            Banc.Verifie("règle inactive : pas de mention", false, Monetisation.HasAffiliation(ig));
+            ig.AffiliateRules[0].Enabled = true; ig.Enabled = false;
+            Banc.Verifie("monétisation désactivée : pas de mention", false, Monetisation.HasAffiliation(ig));
         }
 
         private static string Livree()

@@ -1,11 +1,11 @@
 # Monétisation ONYX
 
-**État livré : affiliation Instant Gaming active, rien d’autre.** `config/monetisation.json` ajoute `igr=destingood` aux liens Instant Gaming du comparateur (onglet « Revendeurs de clés ») et à la ligne discrète « Instant Gaming ↗ · lien affilié » sous chaque offre payante de Bons plans (absente pour les jeux gratuits). Pas de bannière, pas de bouton de soutien, pas de fenêtre : l’utilisateur ne voit qu’une petite mention « Lien affilié » sur le bouton concerné. Le prix payé ne change pas ; Instant Gaming verse la commission sur les achats attribués à ce code.
+**État livré : affiliation Instant Gaming active, rien d’autre.** `config/monetisation.json` ajoute `igr=destingood` aux liens Instant Gaming du comparateur (onglet « Revendeurs de clés ») et à la ligne discrète « Instant Gaming ↗ » sous chaque offre payante de Bons plans (absente pour les jeux gratuits). Pas de bannière, pas de bouton de soutien, pas de fenêtre, pas de badge sur les liens : une seule phrase en pied de page de Bons plans et du comparateur (« Certains liens sont affiliés : commission possible pour ONYX, même prix pour toi. »), reprise dans l’infobulle des liens concernés. Cette phrase ne s’affiche que si une règle d’affiliation est active ; ne la retire pas : elle indique l’intention commerciale (Code de la consommation, art. L121-3 ; loi n° 2004-575 du 21 juin 2004, art. 20). Le prix payé ne change pas ; Instant Gaming verse la commission sur les achats attribués à ce code.
 
 ## Les trois possibilités
 
 - **Partenaire direct** : une entreprise paie pour un emplacement dans Bons plans. ONYX affiche une carte « SPONSORISÉ · annonceur », avec lien et bouton de fermeture. Le contrat et le paiement se font avec le partenaire ; ONYX ne facture rien automatiquement.
-- **Affiliation** : un réseau rémunère les achats attribués à tes liens. Les boutons concernés portent une mention « Lien affilié ». Les prix et le classement des offres ne changent pas.
+- **Affiliation** : un réseau rémunère les achats attribués à tes liens. Aucun badge par lien : la mention unique de pied de page couvre tous les liens affiliés. Les prix et le classement des offres ne changent pas.
 - **Soutien volontaire** : ton lien public de paiement ajoute un bouton « Soutenir ONYX » dans Bons plans. Aucune fonction ne devient payante.
 
 Pour démarrer, GOG propose https://affiliate.gog.com/ et Fanatical présente ses programmes sur https://support.fanatical.com/hc/en-us/articles/360001415777-Affiliate-Partner-FAQ. Déclare ONYX comme application Windows avec comparateur et demande l’accord pour ce mode de diffusion. L’acceptation, les commissions et les paiements dépendent du programme.
@@ -66,7 +66,7 @@ $env:BT_UISHOT='E:\bt\build\monetisation-preview'
 dotnet build/monetisation-ui-test/BTOptimizer.dll
 ```
 
-Le harnais affiche des exemples explicitement marqués « DÉMONSTRATION », ne clique sur aucun lien et vérifie que la configuration livrée n’affiche ni bannière ni bouton de soutien et que les liens Instant Gaming sont affiliés. Les exemples de test ne sont pas des partenaires ni des revenus réels.
+Le harnais affiche des exemples explicitement marqués « DÉMONSTRATION », ne clique sur aucun lien et vérifie que la configuration livrée n’affiche ni bannière ni bouton de soutien, que les liens Instant Gaming sont affiliés et que la mention de pied de page est entière et lisible. Les exemples de test ne sont pas des partenaires ni des revenus réels.
 
 ## Désactivation et confidentialité
 
