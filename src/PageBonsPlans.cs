@@ -830,6 +830,12 @@ namespace BTOptimizer
             if (_partner.Active || _viewport.Top != 276) throw new InvalidOperationException("Le partenaire masqué réserve encore de la place.");
         }
         internal bool BusyForTest { get { return _occupe; } }
+        internal int PricedForTest { get { return _resultats.Count(o => o.PrixCts > 0); } }
+        internal int InstantGamingLinksForTest { get { return _flow.Controls.OfType<Carte>().Count(c => c.HasInstantGaming); } }
+        internal void PreviewInstantGaming()
+        {
+            var card = _flow.Controls.OfType<Carte>().FirstOrDefault(c => c.HasInstantGaming);
+            if (card != null) _viewport.ScrollTo(card.Top);        }
         internal int OffersForTest { get { return _resultats.Count; } }
         internal void PreviewLocalTab(int tab)
         {
@@ -904,11 +910,16 @@ namespace BTOptimizer
             private readonly PageBonsPlans _page;
             private readonly Offre _o;
             private readonly Button _open, _compare, _favorite, _follow;
+            private readonly LinkLabel _instantGaming;
             private readonly ToolTip _tips = new ToolTip();
             private bool _hover;
             // Le cadre suit le format horizontal des jaquettes au lieu d'une hauteur fixe.
             private static int ImageHeight(int width) { return (int)Math.Round((width - 16) * 9.0 / 16); }
-            internal static int HeightForWidth(int width) { return ImageHeight(width) + 141; }
+            internal static int HeightForWidth(int width) { return ImageHeight(width) + 141 + (LigneInstantGaming ? 22 : 0); }
+            // Ligne « Instant Gaming » réservée seulement si l'affiliation est active : sinon la carte garde sa taille.
+            internal bool HasInstantGaming { get { return _instantGaming != null; } }
+            private static bool LigneInstantGaming { get { return MonetisationRuntime.IsAffiliate(OffresSources.UrlRevendeur(InstantGaming, "jeu")); } }
+            private static readonly OffresSources.Revendeur InstantGaming = OffresSources.Revendeurs.First(r => r.Nom == "Instant Gaming");
             private Rectangle Artwork { get { return new Rectangle(8, 8, Width - 16, ImageHeight(Width)); } }
             private int TitleY { get { return Artwork.Bottom + 10; } }
             private int PriceY { get { return TitleY + 29; } }
@@ -930,6 +941,23 @@ namespace BTOptimizer
                 _follow = OnyxDesign.Button(""); _follow.Visible = _o.SteamAppId > 0;
                 _follow.Click += (s, e) => { _page.BasculeSuivi(_o); if (!IsDisposed) RefreshActions(); };
                 Controls.Add(_open); Controls.Add(_compare); Controls.Add(_favorite); Controls.Add(_follow);
+                // Lien discret vers la même recherche chez Instant Gaming (affilié). Pas pour un jeu gratuit.
+                string ig = _o.PrixCts == 0 ? null : OffresSources.UrlRevendeur(InstantGaming, _o.Nom);
+                if (ig != null && MonetisationRuntime.IsAffiliate(ig))
+                {
+                    const string lien = "Instant Gaming ↗";
+                    _instantGaming = new LinkLabel
+                    {
+                        Text = lien + "  · lien affilié", LinkArea = new LinkArea(0, lien.Length), Font = FpsUi.Tiny, AutoSize = false,
+                        BackColor = FpsUi.Card, ForeColor = FpsUi.Dim2, LinkColor = FpsUi.Dim, ActiveLinkColor = FpsUi.Gold,
+                        LinkBehavior = LinkBehavior.HoverUnderline, TextAlign = ContentAlignment.MiddleLeft, UseMnemonic = false,
+                        AccessibleName = "Chercher " + _o.Nom + " sur Instant Gaming",
+                        AccessibleDescription = "Lien affilié : ONYX peut recevoir une commission si tu achètes. Le prix ne change pas."
+                    };
+                    _instantGaming.LinkClicked += (s, e) => MonetisationRuntime.OpenOffer(ig);
+                    _tips.SetToolTip(_instantGaming, "Chercher ce jeu sur Instant Gaming — lien affilié, le prix ne change pas pour toi.");
+                    Controls.Add(_instantGaming);
+                }
                 RefreshActions(); Resize += (s, e) => LayoutActions(); LayoutActions();
                 MouseEnter += (s, e) => { _hover = true; Invalidate(); };
                 MouseLeave += (s, e) => { _hover = false; Invalidate(); };
@@ -951,6 +979,7 @@ namespace BTOptimizer
                 _favorite.SetBounds(Width - 46, actionsY, 32, 32);
                 _follow.SetBounds(_favorite.Left - 80, actionsY, 72, 32);
                 _open.SetBounds(14, actionsY, (_o.SteamAppId > 0 ? _follow.Left : _favorite.Left) - 22, 32);
+                if (_instantGaming != null) _instantGaming.SetBounds(14, actionsY + 36, Width - 28, 18);
             }
             private void Ready()
             {

@@ -1,7 +1,13 @@
 {
   "version": 1,
-  "enabled": false,
+  "enabled": true,
   "supportUrl": null,
   "sponsor": null,
-  "affiliateRules": []
+  "affiliateRules": [
+    {
+      "enabled": true,
+      "merchantHost": "www.instant-gaming.com",
+      "appendQuery": "igr=destingood"
+    }
+  ]
 }

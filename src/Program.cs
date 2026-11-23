@@ -2217,6 +2217,7 @@ namespace BTOptimizer
                 Sponsor = new Monetisation.Campaign { Id = "demo", Advertiser = "DÉMONSTRATION", Title = "Un emplacement pour ton futur partenaire",
                     Description = "Aperçu uniquement · aucun annonceur connecté", Url = "https://partner.test/", StartsUtc = DateTimeOffset.UtcNow.AddDays(-1).ToString("O"), EndsUtc = DateTimeOffset.UtcNow.AddDays(1).ToString("O") } };
             settings.AffiliateRules.Add(new Monetisation.AffiliateRule { Enabled = true, MerchantHost = "www.gog.com", UrlTemplate = "https://partner.test/click?url={url}" });
+            settings.AffiliateRules.Add(new Monetisation.AffiliateRule { Enabled = true, MerchantHost = "www.instant-gaming.com", AppendQuery = "igr=demo" });
             MonetisationRuntime.Preview = settings;
             try
             {
@@ -2227,7 +2228,12 @@ namespace BTOptimizer
                     dash.Show(); Pump(450); dash.ClientSize = size; dash.Goto(9); Pump(100);
                     var page = (PageBonsPlans)dash.PageAt(9);
                     SaveGamesShot(dash, dir, "partenaire-demo-" + size.Width);
-                    page.ValidatePartnerUi(); page.ValidateDealsUi(); Pump(100); SaveGamesShot(dash, dir, "partenaire-masque-" + size.Width); dash.Hide();
+                    page.ValidatePartnerUi(); page.ValidateDealsUi(); Pump(100); SaveGamesShot(dash, dir, "partenaire-masque-" + size.Width);
+                    for (int i = 0; i < 90 && page.BusyForTest; i++) Pump(1000);
+                    page.PreviewPricedPage(); Pump(1500); page.PreviewInstantGaming(); Pump(1500); page.ValidateDealsUi();
+                    Console.WriteLine("  Bons plans " + size.Width + " : " + page.OffersForTest + " offres, " + page.PricedForTest + " payantes, " + page.InstantGamingLinksForTest + " liens Instant Gaming sur la page.");
+                    if (page.PricedForTest > 0 && page.InstantGamingLinksForTest == 0) throw new InvalidOperationException("Offres payantes sans lien Instant Gaming.");
+                    page.PreviewInstantGaming(); dash.Refresh(); Pump(60); SaveGamesShot(dash, dir, "instant-gaming-" + size.Width); dash.Hide();
                 }
                 using (var form = new ComparateurForm(new Offre { Source = "gog", Nom = "Exemple de lien affilié", Devise = "EUR", PrixCts = 1299, Url = "https://www.gog.com/game/demo" }))
                 {
@@ -2236,8 +2242,10 @@ namespace BTOptimizer
                 }
             }
             finally { MonetisationRuntime.Preview = null; }
-            if (MonetisationRuntime.Settings.Enabled) throw new InvalidOperationException("Monétisation activée sans compte dans la configuration livrée.");
-            Console.WriteLine("  Monétisation : campagne de démonstration, masquage, deux tailles, transparence des liens et configuration livrée inactive OK.");
+            var livree = MonetisationRuntime.Settings;
+            if (livree.Sponsor != null || Monetisation.Support(livree) != null) throw new InvalidOperationException("La configuration livrée affiche une bannière ou un bouton de soutien.");
+            if (!MonetisationRuntime.IsAffiliate("https://www.instant-gaming.com/fr/rechercher/?q=test")) throw new InvalidOperationException("Lien Instant Gaming non affilié dans la configuration livrée.");
+            Console.WriteLine("  Monétisation : campagne de démonstration, masquage, deux tailles, transparence des liens, configuration livrée discrète et Instant Gaming affilié OK.");
         }
 
         private static void CaptureCompareUi(string dir)

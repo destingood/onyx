@@ -1,6 +1,6 @@
 # Monétisation ONYX
 
-Le système est prêt mais **désactivé** dans `config/monetisation.json`. Aucun compte de paiement ou d’affiliation n’est connecté. Ajouter ce code ne produit pas de revenus à lui seul.
+**État livré : affiliation Instant Gaming active, rien d’autre.** `config/monetisation.json` ajoute `igr=destingood` aux liens Instant Gaming du comparateur (onglet « Revendeurs de clés ») et à la ligne discrète « Instant Gaming ↗ · lien affilié » sous chaque offre payante de Bons plans (absente pour les jeux gratuits). Pas de bannière, pas de bouton de soutien, pas de fenêtre : l’utilisateur ne voit qu’une petite mention « Lien affilié » sur le bouton concerné. Le prix payé ne change pas ; Instant Gaming verse la commission sur les achats attribués à ce code.
 
 ## Les trois possibilités
 
@@ -48,7 +48,8 @@ Chaque entrée de `affiliateRules` contient :
 
 - `enabled` : activation de cette règle, en plus de l’activation globale ;
 - `merchantHost` : domaine exact de la boutique, par exemple `www.gog.com` ; les sous-domaines et domaines voisins ne correspondent pas automatiquement ;
-- `urlTemplate` : le modèle HTTPS fourni par le réseau, avec **une seule** occurrence de `{url}` à l’emplacement du lien produit encodé.
+- `urlTemplate` : le modèle HTTPS fourni par le réseau, avec **une seule** occurrence de `{url}` à l’emplacement du lien produit encodé ;
+- `appendQuery` (au lieu de `urlTemplate`) : un paramètre `nom=valeur` ajouté directement au lien de la boutique, pour les programmes maison comme Instant Gaming (`igr=destingood`). Un paramètre du même nom déjà présent est remplacé ; nom et valeur se limitent à lettres, chiffres, `_` et `-`.
 
 Ne devine pas les paramètres d’un programme. Il faut un modèle qui accepte une URL de destination encodée dans un lien profond. ONYX remplace `{url}` par l’URL originale complète encodée, y compris sa requête. Un réseau qui utilise une autre méthode nécessite une intégration spécifique.
 
@@ -65,7 +66,7 @@ $env:BT_UISHOT='E:\bt\build\monetisation-preview'
 dotnet build/monetisation-ui-test/BTOptimizer.dll
 ```
 
-Le harnais affiche des exemples explicitement marqués « DÉMONSTRATION », ne clique sur aucun lien et vérifie que la configuration livrée est toujours inactive. Les exemples de test ne sont pas des partenaires ni des revenus réels.
+Le harnais affiche des exemples explicitement marqués « DÉMONSTRATION », ne clique sur aucun lien et vérifie que la configuration livrée n’affiche ni bannière ni bouton de soutien et que les liens Instant Gaming sont affiliés. Les exemples de test ne sont pas des partenaires ni des revenus réels.
 
 ## Désactivation et confidentialité
 

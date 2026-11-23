@@ -33,6 +33,9 @@ namespace BTOptimizer
             public bool Enabled { get; set; }
             public string MerchantHost { get; set; }
             public string UrlTemplate { get; set; }
+            /// <summary>Paramètre d'affilié ajouté au lien de la boutique elle-même (ex. « igr=pseudo »
+            /// chez Instant Gaming). Prioritaire sur UrlTemplate : aucune redirection par un tiers.</summary>
+            public string AppendQuery { get; set; }
         }
         public sealed class Link { public string Url; public bool Affiliated; }
         internal static Settings Parse(string json)
@@ -76,6 +79,12 @@ namespace BTOptimizer
             foreach (var rule in settings.AffiliateRules)
             {
                 if (rule == null || !rule.Enabled || !string.Equals(rule.MerchantHost, source.IdnHost, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!string.IsNullOrEmpty(rule.AppendQuery))
+                {
+                    string tagged = AppendParameter(source, rule.AppendQuery);
+                    if (tagged == null || !PublicHttps(tagged)) continue;
+                    result.Url = tagged; result.Affiliated = true; break;
+                }
                 string template = rule.UrlTemplate;
                 if (string.IsNullOrEmpty(template) || template.Length > 2048 || template.IndexOf("{url}", StringComparison.Ordinal) < 0
                     || template.IndexOf("{url}", StringComparison.Ordinal) != template.LastIndexOf("{url}", StringComparison.Ordinal)) continue;
@@ -86,5 +95,19 @@ namespace BTOptimizer
             }
             return result;
         }
+
+        /// <summary>Ajoute « nom=valeur » à la requête du lien, en remplaçant un éventuel paramètre
+        /// du même nom. Nom et valeur limités à [A-Za-z0-9_-] : rien à encoder, rien à injecter.</summary>
+        private static string AppendParameter(Uri source, string parameter)
+        {
+            int eq = parameter.IndexOf('=');
+            if (parameter.Length > 100 || eq <= 0 || eq == parameter.Length - 1 || !parameter.Where((c, i) => i != eq).All(SafeChar)) return null;
+            string prefix = parameter.Substring(0, eq + 1);
+            var kept = source.Query.TrimStart('?').Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(p => !p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && !string.Equals(p, prefix.TrimEnd('='), StringComparison.OrdinalIgnoreCase));
+            var builder = new UriBuilder(source) { Query = string.Join("&", kept.Concat(new[] { parameter })) };
+            return builder.Uri.AbsoluteUri;
+        }
+        private static bool SafeChar(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-'; }
     }
 }
