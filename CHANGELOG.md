@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.94 — Bons plans plus compacts
+
+- **Cartes resserrées.** Quatre jeux par ligne dans la fenêtre standard, avec une grille
+  qui s’adapte à la largeur disponible et des boutons plus compacts.
+- **Jaquettes au format 16:9.** Les images horizontales occupent mieux leur cadre,
+  sans étirement ni agrandissement au-delà de leur résolution native.
+- **Moins d’espace perdu.** Filtres, titres, prix et actions sont rapprochés. Les noms
+  longs restent consultables au survol et les commandes restent accessibles au clavier.
+- Thème carbone et or conservé.
+
 ## v15.93 — Nouvelle identité ONYX
 
 - **Logo redessiné.** Un O facetté en or, un signal de performance simplifié et un fond

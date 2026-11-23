@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -275,9 +275,8 @@ namespace BTOptimizer
             _searchBox.SetBounds(w - 324, 20, 290, 36); _search.SetBounds(12, 9, 266, 22);
             int tabWidth = (width - 32) / 5;
             for (int i = 0; i < _onglets.Length; i++) _onglets[i].SetBounds(34 + i * (tabWidth + 8), 98, tabWidth, 40);
-            bool compact = h < 740;
-            _filters.SetBounds(34, compact ? 146 : 154, width, compact ? 92 : 110);
-            int row = compact ? 55 : 67;
+            _filters.SetBounds(34, 146, width, 88);
+            int row = 50;
             _lPrix.SetBounds(18, 22, 68, 20);
             int x = 92;
             foreach (Button pill in _pilules) { pill.SetBounds(x, 14, pill.Width, 32); x = pill.Right + 6; }
@@ -286,9 +285,9 @@ namespace BTOptimizer
             _lTri.SetBounds(338, row + 5, 28, 22); _sortChoice.SetBounds(378, row, 190, 30);
             _lPlat.SetBounds(18, row + 5, 80, 22); _platformChoice.SetBounds(100, row, 236, 30);
             _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
-            _context.SetBounds(18, 18, width - 36, 42);
-            _resultsLabel.SetBounds(34, compact ? 246 : 278, width, 22);
-            int top = compact ? 280 : 310;
+            _context.SetBounds(18, 14, width - 36, 30);
+            _resultsLabel.SetBounds(34, 244, width, 22);
+            int top = 276;
             _viewport.SetBounds(34, top, w - 50, Math.Max(100, h - top - 80));
             LayoutCards();
             _pied.SetBounds(34, h - 25, width, 18);
@@ -303,16 +302,18 @@ namespace BTOptimizer
         private void LayoutCards()
         {
             int width = _viewport.ContentWidth;
-            int cols = width >= 1420 ? 4 : width >= 1050 ? 3 : 2;
-            int cardWidth = Math.Max(240, (width - (cols - 1) * 16) / cols);
+            const int gap = 12;
+            int cols = Math.Max(2, (width + gap) / (270 + gap));
+            int cardWidth = Math.Max(240, (width - (cols - 1) * gap) / cols);
+            int cardHeight = Carte.HeightForWidth(cardWidth);
             _flow.SuspendLayout();
             int i = 0;
             foreach (Control card in _flow.Controls)
             {
-                card.Size = new Size(cardWidth, 320);
-                card.Margin = new Padding(0, 0, ++i % cols == 0 ? 0 : 16, 16);
+                card.Size = new Size(cardWidth, cardHeight);
+                card.Margin = new Padding(0, 0, ++i % cols == 0 ? 0 : gap, gap);
             }
-            int height = Math.Max(120, ((i + cols - 1) / cols) * 336);
+            int height = Math.Max(120, ((i + cols - 1) / cols) * (cardHeight + gap));
             _flow.SetBounds(0, 0, width, height); _viewport.ContentHeight = height;
             _flow.ResumeLayout();
         }
@@ -881,9 +882,16 @@ namespace BTOptimizer
             private readonly Button _open, _compare, _favorite, _follow;
             private readonly ToolTip _tips = new ToolTip();
             private bool _hover;
+            // Le cadre suit le format horizontal des jaquettes au lieu d'une hauteur fixe.
+            private static int ImageHeight(int width) { return (int)Math.Round((width - 16) * 9.0 / 16); }
+            internal static int HeightForWidth(int width) { return ImageHeight(width) + 141; }
+            private Rectangle Artwork { get { return new Rectangle(8, 8, Width - 16, ImageHeight(Width)); } }
+            private int TitleY { get { return Artwork.Bottom + 10; } }
+            private int PriceY { get { return TitleY + 29; } }
             public Carte(PageBonsPlans page, Offre offer)
             {
-                _page = page; _o = offer; BackColor = FpsUi.BgMain; Size = new Size(360, 320);
+                _page = page; _o = offer; BackColor = FpsUi.BgMain; Size = new Size(280, HeightForWidth(280));
+                AccessibleName = offer.Nom; _tips.SetToolTip(this, offer.Nom);
                 _open = OnyxDesign.PrimaryButton("Voir l’offre  ↗");
                 _open.Enabled = Offres.LienSur(offer.Url); _open.AccessibleName = "Voir l’offre : " + offer.Nom;
                 _open.Click += (s, e) => Ouvre(_o.Url);
@@ -909,10 +917,11 @@ namespace BTOptimizer
             }
             private void LayoutActions()
             {
-                _compare.SetBounds(Width - 104, 207, 88, 28);
-                _favorite.SetBounds(Width - 52, 270, 36, 34);
-                _follow.SetBounds(_favorite.Left - 88, 270, 80, 34);
-                _open.SetBounds(16, 270, (_o.SteamAppId > 0 ? _follow.Left : _favorite.Left) - 24, 34);
+                int actionsY = PriceY + 50;
+                _compare.SetBounds(Width - 92, PriceY - 1, 78, 26);
+                _favorite.SetBounds(Width - 46, actionsY, 32, 32);
+                _follow.SetBounds(_favorite.Left - 80, actionsY, 72, 32);
+                _open.SetBounds(14, actionsY, (_o.SteamAppId > 0 ? _follow.Left : _favorite.Left) - 22, 32);
             }
             private void Ready()
             {
@@ -937,7 +946,7 @@ namespace BTOptimizer
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 OnyxDesign.PaintCard(g, ClientRectangle, FpsUi.Card, _hover || ContainsFocus ? FpsUi.GoldDim : FpsUi.Border, 12);
-                var art = new Rectangle(8, 8, Width - 16, 130); Image image = null;
+                var art = Artwork; Image image = null;
                 try
                 {
                     image = GameArt.ForDeal(_o, Ready);
@@ -947,17 +956,17 @@ namespace BTOptimizer
                 else
                 {
                     OnyxDesign.PaintCard(g, art, FpsUi.BlendGold(FpsUi.RailBg, .06f), OnyxDesign.Edge, 8);
-                    NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(Width / 2 - 25, 50, 50, 40), FpsUi.GoldDim);
+                    NavIcons.Draw(g, NavIcons.Jeux, new RectangleF(art.X + (art.Width - 50) / 2, art.Y + (art.Height - 40) / 2, 50, 40), FpsUi.GoldDim);
                 }
                 string store = OffresSources.NomBoutique(_o.Source);
                 int storeWidth = Math.Min(Width - 120, TextRenderer.MeasureText(store, FpsUi.Small).Width + 20);
                 Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
                 if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
-                OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(16, 151, Width - 32, 44), true);
+                OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - 28, 23));
                 string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");
-                OnyxDesign.Text(g, price, FpsUi.H2, FpsUi.Gold, new Rectangle(16, 207, Width - 128, 27));
+                OnyxDesign.Text(g, price, FpsUi.H2, FpsUi.Gold, new Rectangle(14, PriceY, Width - 116, 25));
                 if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
-                    OnyxDesign.Text(g, Offres.PrixOrigineDe(_o), Barre, FpsUi.Dim2, new Rectangle(16, 239, 95, 20));
+                    OnyxDesign.Text(g, Offres.PrixOrigineDe(_o), Barre, FpsUi.Dim2, new Rectangle(14, PriceY + 27, 82, 18));
                 string detail = _o.Plateformes != null ? string.Join(", ", _o.Plateformes.Take(2)) : "";
                 bool urgent = false;
                 if (_o.Fin.HasValue)
@@ -967,8 +976,8 @@ namespace BTOptimizer
                     detail = remaining <= TimeSpan.Zero ? "Offre terminée" : urgent ? "Encore " + Math.Max(1, (int)Math.Ceiling(remaining.TotalHours)) + " h" : "Jusqu’au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM");
                 }
                 else if (_o.Sortie.HasValue) detail = "Sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy");
-                int detailX = _o.Remise > 0 && _o.PrixOrigineCts > 0 ? 112 : 16;
-                OnyxDesign.Text(g, detail, FpsUi.Tiny, urgent ? FpsUi.Warn : FpsUi.Dim, new Rectangle(detailX, 241, Width - detailX - 16, 20));
+                int detailX = _o.Remise > 0 && _o.PrixOrigineCts > 0 ? 100 : 14;
+                OnyxDesign.Text(g, detail, FpsUi.Tiny, urgent ? FpsUi.Warn : FpsUi.Dim, new Rectangle(detailX, PriceY + 27, Width - detailX - 14, 18));
             }
             private static void Badge(Graphics g, string text, Rectangle rect, Color fill, Color ink)
             {
