@@ -63,6 +63,23 @@ namespace BTOptimizer.Tests
                 Banc.Verifie("paramètre refusé : " + bad, false, Monetisation.Resolve(ig, recherche).Affiliated);
             }
 
+            Banc.Titre("Affiliation GOG (hôte af.gog.com, paramètre as)");
+            var gog = new Monetisation.Settings { Enabled = true, AffiliateRules = new List<Monetisation.AffiliateRule> {
+                new Monetisation.AffiliateRule { Enabled = true, MerchantHost = "www.gog.com", LinkHost = "af.gog.com", AppendQuery = "as=1234567" } } };
+            var g = Monetisation.Resolve(gog, "https://www.gog.com/fr/game/heroes_of_might_and_magic_3_complete_edition");
+            Banc.Verifie("lien de jeu : hôte af et as ajouté", true, g.Affiliated && g.Url == "https://af.gog.com/fr/game/heroes_of_might_and_magic_3_complete_edition?as=1234567");
+            Banc.Egal("requête et ancre conservées", "https://af.gog.com/games?sort=popularity&as=1234567#top", Monetisation.Resolve(gog, "https://www.gog.com/games?sort=popularity#top").Url);
+            Banc.Verifie("lien déjà en af.gog.com : non retraité", false, Monetisation.Resolve(gog, "https://af.gog.com/game/x").Affiliated);
+            foreach (string bad in new[] { "af.gog.com.evil.test", "evil.test", "gog.com.evil.test", "af gog.com", "user@af.gog.com", "af.gog.com:8080", "127.0.0.1" })
+            {
+                gog.AffiliateRules[0].LinkHost = bad;
+                Banc.Verifie("hôte refusé : " + bad, false, Monetisation.Resolve(gog, "https://www.gog.com/fr/game/x").Affiliated);
+            }
+            gog.AffiliateRules[0].LinkHost = "AF.GOG.COM";
+            Banc.Egal("hôte en majuscules normalisé", "https://af.gog.com/game/x?as=1234567", Monetisation.Resolve(gog, "https://www.gog.com/game/x").Url);
+            var lu = Monetisation.Parse("{\"version\":1,\"enabled\":true,\"affiliateRules\":[{\"enabled\":true,\"merchantHost\":\"www.gog.com\",\"linkHost\":\"af.gog.com\",\"appendQuery\":\"as=42\"}]}");
+            Banc.Egal("linkHost lu depuis le JSON", "https://af.gog.com/game/x?as=42", Monetisation.Resolve(lu, "https://www.gog.com/game/x").Url);
+
             Banc.Titre("Configuration livrée : rémunérée sans déranger");
             string chemin = Livree();
             var livree = Monetisation.Parse(chemin == null ? null : System.IO.File.ReadAllText(chemin));

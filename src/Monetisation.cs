@@ -36,6 +36,9 @@ namespace BTOptimizer
             /// <summary>Paramètre d'affilié ajouté au lien de la boutique elle-même (ex. « igr=pseudo »
             /// chez Instant Gaming). Prioritaire sur UrlTemplate : aucune redirection par un tiers.</summary>
             public string AppendQuery { get; set; }
+            /// <summary>Avec AppendQuery seulement : hôte du lien affilié quand la boutique en impose un autre
+            /// (ex. « af.gog.com » pour GOG). Doit rester sur le même domaine que MerchantHost.</summary>
+            public string LinkHost { get; set; }
         }
         public sealed class Link { public string Url; public bool Affiliated; }
         internal static Settings Parse(string json)
@@ -89,7 +92,7 @@ namespace BTOptimizer
                 if (rule == null || !rule.Enabled || !string.Equals(rule.MerchantHost, source.IdnHost, StringComparison.OrdinalIgnoreCase)) continue;
                 if (!string.IsNullOrEmpty(rule.AppendQuery))
                 {
-                    string tagged = AppendParameter(source, rule.AppendQuery);
+                    string tagged = AppendParameter(source, rule.AppendQuery, rule.LinkHost, rule.MerchantHost);
                     if (tagged == null || !PublicHttps(tagged)) continue;
                     result.Url = tagged; result.Affiliated = true; break;
                 }
@@ -106,15 +109,28 @@ namespace BTOptimizer
 
         /// <summary>Ajoute « nom=valeur » à la requête du lien, en remplaçant un éventuel paramètre
         /// du même nom. Nom et valeur limités à [A-Za-z0-9_-] : rien à encoder, rien à injecter.</summary>
-        private static string AppendParameter(Uri source, string parameter)
+        private static string AppendParameter(Uri source, string parameter, string linkHost, string merchantHost)
         {
             int eq = parameter.IndexOf('=');
             if (parameter.Length > 100 || eq <= 0 || eq == parameter.Length - 1 || !parameter.Where((c, i) => i != eq).All(SafeChar)) return null;
+            if (!string.IsNullOrEmpty(linkHost) && !SameDomain(linkHost, merchantHost)) return null;
             string prefix = parameter.Substring(0, eq + 1);
             var kept = source.Query.TrimStart('?').Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => !p.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && !string.Equals(p, prefix.TrimEnd('='), StringComparison.OrdinalIgnoreCase));
             var builder = new UriBuilder(source) { Query = string.Join("&", kept.Concat(new[] { parameter })) };
+            if (!string.IsNullOrEmpty(linkHost)) builder.Host = linkHost.ToLowerInvariant();
             return builder.Uri.AbsoluteUri;
+        }
+        /// <summary>Vrai si « host » est un nom DNS du même domaine que la boutique (www.gog.com → af.gog.com),
+        /// pour qu'une faute de configuration ne puisse pas envoyer les clics vers un autre site.</summary>
+        private static bool SameDomain(string host, string merchantHost)
+        {
+            if (host.Length > 253 || Uri.CheckHostName(host) != UriHostNameType.Dns || string.IsNullOrEmpty(merchantHost)) return false;
+            string[] labels = merchantHost.ToLowerInvariant().Split('.');
+            if (labels.Length < 2) return false;
+            string domain = labels[labels.Length - 2] + "." + labels[labels.Length - 1];
+            string h = host.ToLowerInvariant();
+            return h == domain || h.EndsWith("." + domain, StringComparison.Ordinal);
         }
         private static bool SafeChar(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-'; }
     }

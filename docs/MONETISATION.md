@@ -8,7 +8,7 @@
 - **Affiliation** : un réseau rémunère les achats attribués à tes liens. Aucun badge par lien : la mention unique de pied de page couvre tous les liens affiliés. Les prix et le classement des offres ne changent pas.
 - **Soutien volontaire** : ton lien public de paiement ajoute un bouton « Soutenir ONYX » dans Bons plans. Aucune fonction ne devient payante.
 
-Pour démarrer, GOG propose https://affiliate.gog.com/ et Fanatical présente ses programmes sur https://support.fanatical.com/hc/en-us/articles/360001415777-Affiliate-Partner-FAQ. Déclare ONYX comme application Windows avec comparateur et demande l’accord pour ce mode de diffusion. L’acceptation, les commissions et les paiements dépendent du programme.
+Pour démarrer, GOG décrit son programme sur https://support.gog.com/hc/en-us/articles/4405004689297-How-to-join-the-GOG-Affiliate-Program (e-mail à affiliate@gog.com avec le lien de ton site ou de ta chaîne, puis inscription sur Adtraction, catégorie « International » ; 6 % des ventes nettes, attribution 7 jours ; liens au format `https://af.gog.com/…?as=<ID de canal Adtraction>` : voir l’exemple GOG plus bas) et Fanatical présente ses programmes sur https://support.fanatical.com/hc/en-us/articles/360001415777-Affiliate-Partner-FAQ. Déclare ONYX comme application Windows avec comparateur et demande l’accord pour ce mode de diffusion. L’acceptation, les commissions et les paiements dépendent du programme.
 
 ## Activation après obtention de tes liens
 
@@ -49,7 +49,16 @@ Chaque entrée de `affiliateRules` contient :
 - `enabled` : activation de cette règle, en plus de l’activation globale ;
 - `merchantHost` : domaine exact de la boutique, par exemple `www.gog.com` ; les sous-domaines et domaines voisins ne correspondent pas automatiquement ;
 - `urlTemplate` : le modèle HTTPS fourni par le réseau, avec **une seule** occurrence de `{url}` à l’emplacement du lien produit encodé ;
-- `appendQuery` (au lieu de `urlTemplate`) : un paramètre `nom=valeur` ajouté directement au lien de la boutique, pour les programmes maison comme Instant Gaming (`igr=destingood`). Un paramètre du même nom déjà présent est remplacé ; nom et valeur se limitent à lettres, chiffres, `_` et `-`.
+- `appendQuery` (au lieu de `urlTemplate`) : un paramètre `nom=valeur` ajouté directement au lien de la boutique, pour les programmes maison comme Instant Gaming (`igr=destingood`). Un paramètre du même nom déjà présent est remplacé ; nom et valeur se limitent à lettres, chiffres, `_` et `-` ;
+- `linkHost` (avec `appendQuery` seulement) : hôte imposé par la boutique pour ses liens affiliés. Il doit rester sur le même domaine que `merchantHost` (`af.gog.com` pour `www.gog.com`), sinon la règle est ignorée.
+
+Exemple GOG, une fois ton canal Adtraction accepté (remplace `TON_ID` par ton identifiant de canal, un nombre ; `af.gog.com` répond 404 à un identifiant non numérique et redirige vers Adtraction sinon, vérifié le 23/11/2026) :
+
+```json
+{ "enabled": true, "merchantHost": "www.gog.com", "linkHost": "af.gog.com", "appendQuery": "as=TON_ID" }
+```
+
+`https://www.gog.com/fr/game/witcher_3` devient alors `https://af.gog.com/fr/game/witcher_3?as=TON_ID`.
 
 Ne devine pas les paramètres d’un programme. Il faut un modèle qui accepte une URL de destination encodée dans un lien profond. ONYX remplace `{url}` par l’URL originale complète encodée, y compris sa requête. Un réseau qui utilise une autre méthode nécessite une intégration spécifique.
 
