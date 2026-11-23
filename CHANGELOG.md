@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.95 — Comparateur de prix repensé
+
+- **Toutes les offres accessibles.** La liste défile au-delà des sept premières boutiques,
+  avec un bouton Voir l’offre par ligne et une navigation au clavier.
+- **Prix plus lisibles.** Euros au premier plan, conversion signalée par ≈, montant facturé
+  dans sa devise d’origine et filtre pour les offres facturées en euros uniquement.
+- **Comparaison explicite.** Sans taux de change, les devises restent séparées et aucune
+  offre n’est présentée comme la moins chère entre euros et dollars.
+- **Revendeurs dans leur onglet.** Les liens de recherche sont distincts des prix relevés.
+- Fenêtre redimensionnable, meilleure offre mise en avant, historique, actualisation et
+  accès direct à l’offre repérée. Le prix hors remise correspond à la boutique sélectionnée.
+- Thème carbone et or, jaquette horizontale nette et états de chargement ou sans résultat.
+
 ## v15.94 — Bons plans plus compacts
 
 - **Cartes resserrées.** Quatre jeux par ligne dans la fenêtre standard, avec une grille

@@ -10,8 +10,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("15.94.0.0")]
-[assembly: AssemblyFileVersion("15.94.0.0")]
+[assembly: AssemblyVersion("15.95.0.0")]
+[assembly: AssemblyFileVersion("15.95.0.0")]
 
 namespace BTOptimizer
 {
@@ -1306,6 +1306,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_COMPARE_UI") == "1")
+                {
+                    try { CaptureCompareUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("Comparateur ERREUR : " + ex); }
+                    Console.WriteLine("UITEST COMPARATEUR — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_LOGO_UI") == "1")
                 {
                     try
@@ -2196,6 +2203,35 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureCompareUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            var offer = new Offre { Nom = "Total War: WARHAMMER III", Source = "steam", Devise = "EUR", PrixCts = 899, PrixOrigineCts = 5999, Remise = 85, SteamAppId = 1142710, Url = "https://store.steampowered.com/app/1142710/" };
+            var data = new OffresReseau.ComparatifJeu { Taux = 1.1m, JourTaux = DateTime.Today,
+                Histo = new OffresSources.HistoriquePrix { PlusBasCts = 761, PlusBasLe = DateTime.Today.AddDays(-4) } };
+            string[] names = { "GameBillet", "Gamesplanet", "Steam", "WinGameStore", "Green Man Gaming", "Fanatical", "GOG", "Humble Store", "Epic Games Store", "Ubisoft", "IndieGala", "Microsoft Store" };
+            for (int i = 0; i < names.Length; i++) data.Prix.Add(new OffresSources.PrixCompare { Store = names[i], PrixCts = 761 + i * 93, PrixOrigineCts = 5999, Remise = 87 - i * 2, Url = "https://www.cheapshark.com/" });
+            using (var form = new ComparateurForm(offer))
+            {
+                form.PreviewLoading(); form.StartPosition = FormStartPosition.Manual; form.Location = new System.Drawing.Point(-5000, -5000);
+                form.Show(); Pump(2000); SaveGamesShot(form, dir, "comparateur-chargement"); form.SeedPreview(data);
+                foreach (var size in new[] { new System.Drawing.Size(1100, 780), new System.Drawing.Size(924, 661), new System.Drawing.Size(1380, 900) })
+                {
+                    form.ClientSize = size; Pump(100); form.ValidateUi(); SaveGamesShot(form, dir, "comparateur-" + size.Width);
+                    form.PreviewBottom(); Pump(100); SaveGamesShot(form, dir, "comparateur-bas-" + size.Width);
+                    form.PreviewKeys(true); Pump(100); form.ValidateUi(); SaveGamesShot(form, dir, "revendeurs-" + size.Width);
+                    form.PreviewKeys(false); form.PreviewEuros(true); form.ValidateUi(); Pump(100); SaveGamesShot(form, dir, "euros-" + size.Width);
+                    form.PreviewEuros(false);
+                }
+                form.ClientSize = new System.Drawing.Size(1100, 780); data.Taux = 0; form.SeedPreview(data); form.ValidateUi(); Pump(100); SaveGamesShot(form, dir, "sans-taux");
+                data.Taux = 1.1m; data.Prix[0].PrixCts = 0; data.Prix[0].Remise = 100; form.SeedPreview(data); form.ValidateUi(); Pump(100); SaveGamesShot(form, dir, "comparateur-gratuit");
+                offer.Nom = "Un titre de jeu particulièrement long : édition complète avec toutes ses extensions et contenus supplémentaires";
+                offer.PrixCts = -1; form.SeedPreview(new OffresReseau.ComparatifJeu()); form.ValidateUi(); Pump(100); SaveGamesShot(form, dir, "comparateur-vide");
+                form.Hide();
+            }
+            Console.WriteLine("  Comparateur : 13 offres accessibles, filtres, clavier, défilement, devises et 3 tailles OK (données de démonstration).");
+        }
+
         private static void ExportBrand(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
