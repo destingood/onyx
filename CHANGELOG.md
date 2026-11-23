@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.96 — Menus Bons plans stables et liens affiliés discrets
+
+- **Plus de plantage des menus.** Catégorie, Plateforme et Tri dans Bons plans ne font
+  plus fermer ONYX au clic suivant.
+- **Présence Discord effacée** dès sa désactivation, au lieu de rester affichée.
+- **Liens Instant Gaming affiliés.** Le comparateur et la ligne « Instant Gaming ↗ » des
+  Bons plans soutiennent ONYX sans changer le prix payé ni l'ordre des offres. Une seule
+  phrase en pied de page l'indique ; aucun badge, bannière ni fenêtre.
+- Préparation des liens GOG (af.gog.com), inactifs tant que le programme n'est pas validé.
+
 ## v15.95 — Comparateur de prix repensé
 
 - **Toutes les offres accessibles.** La liste défile au-delà des sept premières boutiques,
