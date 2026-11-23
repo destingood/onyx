@@ -17,6 +17,14 @@ namespace BTOptimizer.Tests
             Banc.Verifie("plus d'adresse d'icône de 256 px (non affichée par Discord)", false,
                 a.Contains("\"large_image\":\"https://"));
             Banc.Verifie("texte au survol gardé", true, a.Contains("\"large_text\":\"ONYX"));
+
+            // Couper la présence doit DIRE à Discord de l'effacer. Fermer le tuyau sans un mot
+            // laissait l'activité affichée jusqu'au redémarrage de Discord : l'utilisateur
+            // décoche la case et ne voit rien changer.
+            string c = DiscordPresence.OrdreEffacement(4242);
+            Banc.Verifie("l'effacement est un CLEAR_ACTIVITY", true, c.Contains("\"cmd\":\"CLEAR_ACTIVITY\""));
+            Banc.Verifie("l'effacement vise le même processus que l'activité", true,
+                c.Contains("\"pid\":4242"));
         }
     }
 }

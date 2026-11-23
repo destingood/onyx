@@ -107,6 +107,9 @@ namespace BTOptimizer
         public static void Stop()
         {
             _running = false;
+            // D'abord dire à Discord d'effacer l'activité, ENSUITE couper le tuyau. L'inverse
+            // laissait la présence affichée jusqu'au redémarrage de Discord.
+            try { if (_pipe != null && _pipe.IsConnected) { Write(1, OrdreEffacement(System.Diagnostics.Process.GetCurrentProcess().Id)); ReadFrame(); } } catch { }
             try { if (_pipe != null) { _pipe.Dispose(); _pipe = null; } } catch { }
         }
 

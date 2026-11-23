@@ -29,6 +29,8 @@ namespace BTOptimizer
         private const string TexteMax = "50 jeux suivis au maximum : retire-en un d'abord.";
         private const string TexteErreur = "Source indisponible pour l'instant.";
 
+        private readonly PartnerBanner _partner = new PartnerBanner();
+        private readonly Button _support;
         private readonly TextBox _search;
         private readonly Button[] _onglets = new Button[NomsOnglets.Length];
         private readonly Button[] _pilules = new Button[Plafonds.Length];
@@ -56,6 +58,10 @@ namespace BTOptimizer
 
         public PageBonsPlans(DashboardForm host) : base(host)
         {
+            _support = OnyxDesign.Button("Soutenir ONYX  ↗");
+            _support.AccessibleDescription = "Soutien facultatif au développement d’ONYX";
+            _support.Click += (s, e) => Ouvre(Monetisation.Support(MonetisationRuntime.Settings));
+            Controls.Add(_support); Controls.Add(_partner);
             _search = new TextBox();
             try { _search.PlaceholderText = "Rechercher un jeu…"; } catch { }
             _search.BackColor = FpsUi.Card; _search.ForeColor = FpsUi.Ink;
@@ -183,6 +189,7 @@ namespace BTOptimizer
             foreach (var pill in _pilules) _filters.Controls.Add(pill);
             _cat.AccessibleName = "Catégorie de jeu"; _plat.AccessibleName = "Plateforme"; _tri.AccessibleName = "Trier les offres";
             MajOnglets();
+            _partner.VisibilityChanged += DoLayout;
             Resize += (s, e) => DoLayout();
         }
 
@@ -198,6 +205,7 @@ namespace BTOptimizer
 
         public override void OnShown()
         {
+            _partner.RefreshCampaign();
             DoLayout();
             if (SuiviVeille.AlertesNonVues > 0) { _charge = true; MontreSuivis(); return; }
             MajOnglets();
@@ -252,7 +260,13 @@ namespace BTOptimizer
                     var item = new ToolStripMenuItem(model.Items[i].ToString()) { Checked = i == model.SelectedIndex };
                     item.Click += (sender, args) => model.SelectedIndex = index; menu.Items.Add(item);
                 }
-                menu.Closed += (sender, args) => menu.Dispose(); menu.Show(button, new Point(0, button.Height + 2));
+                // Libération différée : détruire le menu dans Closed le laisse inscrit comme menu actif
+                // de WinForms, qui le referme au clic suivant → ObjectDisposedException (plantage).
+                menu.Closed += (sender, args) =>
+                {
+                    if (IsHandleCreated && !IsDisposed) BeginInvoke((Action)menu.Dispose); else menu.Dispose();
+                };
+                menu.Show(button, new Point(0, button.Height + 2));
             };
             _filters.Controls.Add(button); return button;
         }
@@ -272,6 +286,8 @@ namespace BTOptimizer
         private void DoLayout()
         {
             int w = ClientSize.Width, h = ClientSize.Height, width = w - 68;
+            _support.Visible = Monetisation.Support(MonetisationRuntime.Settings) != null;
+            _support.SetBounds(w - 486, 20, 150, 36);
             _searchBox.SetBounds(w - 324, 20, 290, 36); _search.SetBounds(12, 9, 266, 22);
             int tabWidth = (width - 32) / 5;
             for (int i = 0; i < _onglets.Length; i++) _onglets[i].SetBounds(34 + i * (tabWidth + 8), 98, tabWidth, 40);
@@ -287,7 +303,8 @@ namespace BTOptimizer
             _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
             _context.SetBounds(18, 14, width - 36, 30);
             _resultsLabel.SetBounds(34, 244, width, 22);
-            int top = 276;
+            _partner.SetBounds(34, 276, width, 76);
+            int top = _partner.Active ? 364 : 276;
             _viewport.SetBounds(34, top, w - 50, Math.Max(100, h - top - 80));
             LayoutCards();
             _pied.SetBounds(34, h - 25, width, 18);
@@ -805,6 +822,13 @@ namespace BTOptimizer
         }
 
 #if BTTEST
+        internal void ValidatePartnerUi()
+        {
+            _partner.ValidateUi();
+            if (_partner.Active && _partner.Bottom >= _viewport.Top) throw new InvalidOperationException("Partenaire superposé aux offres.");
+            _partner.PreviewDismiss();
+            if (_partner.Active || _viewport.Top != 276) throw new InvalidOperationException("Le partenaire masqué réserve encore de la place.");
+        }
         internal bool BusyForTest { get { return _occupe; } }
         internal int OffersForTest { get { return _resultats.Count; } }
         internal void PreviewLocalTab(int tab)
@@ -894,7 +918,12 @@ namespace BTOptimizer
                 AccessibleName = offer.Nom; _tips.SetToolTip(this, offer.Nom);
                 _open = OnyxDesign.PrimaryButton("Voir l’offre  ↗");
                 _open.Enabled = Offres.LienSur(offer.Url); _open.AccessibleName = "Voir l’offre : " + offer.Nom;
-                _open.Click += (s, e) => Ouvre(_o.Url);
+                _open.Click += (s, e) => MonetisationRuntime.OpenOffer(_o.Url);
+                if (MonetisationRuntime.IsAffiliate(_o.Url))
+                {
+                    _open.AccessibleDescription = "Lien affilié : ONYX peut recevoir une commission si tu achètes.";
+                    _tips.SetToolTip(_open, _open.AccessibleDescription);
+                }
                 _compare = OnyxDesign.Button("Comparer"); _compare.Click += (s, e) => ComparateurForm.Montre(_o, FindForm());
                 _favorite = OnyxDesign.Button(""); _favorite.Font = FpsUi.H2;
                 _favorite.Click += (s, e) => { _page.BasculeFavori(_o); if (!IsDisposed) RefreshActions(); };
@@ -961,6 +990,7 @@ namespace BTOptimizer
                 string store = OffresSources.NomBoutique(_o.Source);
                 int storeWidth = Math.Min(Width - 120, TextRenderer.MeasureText(store, FpsUi.Small).Width + 20);
                 Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
+                if (MonetisationRuntime.IsAffiliate(_o.Url)) Badge(g, "Lien affilié", new Rectangle(18, 48, 92, 21), FpsUi.RailBg, FpsUi.Gold);
                 if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
                 OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - 28, 23));
                 string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");

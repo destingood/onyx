@@ -24,5 +24,17 @@ namespace BTOptimizer
         {
             return "\"assets\":{\"large_image\":\"" + ImageLogo + "\",\"large_text\":\"ONYX — l'optimiseur gaming\"}";
         }
+
+        /// <summary>
+        /// Ordre qui EFFACE la présence. Fermer le tuyau sans l'envoyer ne suffit pas : Discord
+        /// garde l'activité affichée jusqu'à son propre redémarrage, et l'utilisateur qui décoche
+        /// la case ne voit rien changer. Le pid est celui annoncé à SET_ACTIVITY, sinon Discord
+        /// ne sait pas quelle activité retirer.
+        /// </summary>
+        public static string OrdreEffacement(int pid)
+        {
+            return "{\"cmd\":\"CLEAR_ACTIVITY\",\"nonce\":\"" + System.Guid.NewGuid().ToString()
+                 + "\",\"args\":{\"pid\":" + pid + "}}";
+        }
     }
 }

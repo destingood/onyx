@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Banc d'essai d'ONYX.
        Pas de framework de test : les modules d'analyse sont écrits pour être PURS, donc
@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Compile Include="*.cs" />
+    <Compile Include="..\src\Monetisation.cs" />
     <!-- Les modules sous test, TELS QUELS : les fichiers du dépôt, pas des copies. Une copie
          diverge en silence et finit par tester du code que plus personne ne livre. -->
     <Compile Include="..\src\PilotesRefuses.cs" />

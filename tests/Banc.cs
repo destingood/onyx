@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace BTOptimizer.Tests
 {
@@ -101,6 +101,7 @@ namespace BTOptimizer.Tests
             ModePresentationTests.Tout();
             OffresTests.Tout();
             DealArtworkTests.Tout();
+            MonetisationTests.Tout();
             OffresSourcesTests.Tout();
             BoutiquesTests.Tout();
             ComparateurTests.Tout();

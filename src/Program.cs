@@ -1306,6 +1306,13 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
+                if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
+                {
+                    try { CaptureMonetisationUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
+                    catch (Exception ex) { uiErr++; Console.WriteLine("Monétisation ERREUR : " + ex); }
+                    Console.WriteLine("UITEST MONÉTISATION — " + uiErr + " erreur(s).");
+                    Environment.Exit(uiErr == 0 ? 0 : 1);
+                }
                 if (Environment.GetEnvironmentVariable("BT_COMPARE_UI") == "1")
                 {
                     try { CaptureCompareUi(Environment.GetEnvironmentVariable("BT_UISHOT")); }
@@ -2203,6 +2210,36 @@ namespace BTOptimizer
         /// et capture chaque page via PrintWindow(PW_RENDERFULLCONTENT) — seule méthode qui saisit
         /// le contenu peint par des contrôles double-buffered/DWM (DrawToBitmap rend du vide).
         /// Sert à l'inspection visuelle réelle sans afficher de fenêtre à l'utilisateur.</summary>
+        private static void CaptureMonetisationUi(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir);
+            var settings = new Monetisation.Settings { Enabled = true, SupportUrl = "https://partner.test/support",
+                Sponsor = new Monetisation.Campaign { Id = "demo", Advertiser = "DÉMONSTRATION", Title = "Un emplacement pour ton futur partenaire",
+                    Description = "Aperçu uniquement · aucun annonceur connecté", Url = "https://partner.test/", StartsUtc = DateTimeOffset.UtcNow.AddDays(-1).ToString("O"), EndsUtc = DateTimeOffset.UtcNow.AddDays(1).ToString("O") } };
+            settings.AffiliateRules.Add(new Monetisation.AffiliateRule { Enabled = true, MerchantHost = "www.gog.com", UrlTemplate = "https://partner.test/click?url={url}" });
+            MonetisationRuntime.Preview = settings;
+            try
+            {
+                foreach (var size in new[] { new System.Drawing.Size(1280, 800), new System.Drawing.Size(1040, 680) })
+                using (var dash = new DashboardForm())
+                {
+                    dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-5000, -5000);
+                    dash.Show(); Pump(450); dash.ClientSize = size; dash.Goto(9); Pump(100);
+                    var page = (PageBonsPlans)dash.PageAt(9);
+                    SaveGamesShot(dash, dir, "partenaire-demo-" + size.Width);
+                    page.ValidatePartnerUi(); page.ValidateDealsUi(); Pump(100); SaveGamesShot(dash, dir, "partenaire-masque-" + size.Width); dash.Hide();
+                }
+                using (var form = new ComparateurForm(new Offre { Source = "gog", Nom = "Exemple de lien affilié", Devise = "EUR", PrixCts = 1299, Url = "https://www.gog.com/game/demo" }))
+                {
+                    form.SeedPreview(new OffresReseau.ComparatifJeu()); form.StartPosition = FormStartPosition.Manual;
+                    form.Location = new System.Drawing.Point(-5000, -5000); form.Show(); Pump(100); form.ValidateUi(); SaveGamesShot(form, dir, "affiliation-demo"); form.Hide();
+                }
+            }
+            finally { MonetisationRuntime.Preview = null; }
+            if (MonetisationRuntime.Settings.Enabled) throw new InvalidOperationException("Monétisation activée sans compte dans la configuration livrée.");
+            Console.WriteLine("  Monétisation : campagne de démonstration, masquage, deux tailles, transparence des liens et configuration livrée inactive OK.");
+        }
+
         private static void CaptureCompareUi(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
