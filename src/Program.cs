@@ -1319,6 +1319,9 @@ namespace BTOptimizer
                 TestVeilleJeu(ref uiErr);
                 TestRetours(ref uiErr);
                 TestMinuteurs(ref uiErr);
+                TestAppelsBloquants(ref uiErr);
+                TestFermetureProcessus(ref uiErr);
+                TestMenusContextuels(ref uiErr);
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
@@ -2646,6 +2649,91 @@ namespace BTOptimizer
         // un seul relevé à la fois, et la fermeture du tableau de bord pendant un relevé est sans erreur.
         /// <summary>Retour de la zone de notification : la page affichée reprend son
         /// rafraîchissement ; une page cachée garde son minuteur arrêté.</summary>
+        private static void TestAppelsBloquants(ref int err)
+        {
+            Console.WriteLine("Appels bloquants hors du fil d'interface...");
+            var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;
+            var dash = new DashboardForm();
+            dash.StartPosition = FormStartPosition.Manual;
+            dash.Location = new System.Drawing.Point(-20000, -20000);
+            var hook = typeof(DashboardForm).GetField("VerifMajPourTest", bf);
+            try
+            {
+                dash.Show(); Pump(200);
+                if (hook == null) { err++; Console.WriteLine("  KO mise à jour : crochet VerifMajPourTest absent."); }
+                int filUi = System.Threading.Thread.CurrentThread.ManagedThreadId; bool surUi = false;
+                // Sur le fil d'interface, la suite synchrone ouvrirait une boîte modale : on ferme la fenêtre pour débloquer.
+                if (hook != null) hook.SetValue(null, (Func<Tuple<Updater.Release, string>>)(() =>
+                {
+                    if (System.Threading.Thread.CurrentThread.ManagedThreadId == filUi) { surUi = true; dash.Dispose(); }
+                    else System.Threading.Thread.Sleep(600);
+                    return Tuple.Create((Updater.Release)null, "test");
+                }));
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                try { if (hook != null) typeof(DashboardForm).GetMethod("ShowUpdateCheck", bf).Invoke(dash, null); } catch { }
+                if (surUi) { err++; Console.WriteLine("  KO « Vérifier les mises à jour » interroge le réseau sur le fil d'interface."); }
+                else if (sw.ElapsedMilliseconds > 100) { err++; Console.WriteLine("  KO « Vérifier les mises à jour » gèle l'interface " + sw.ElapsedMilliseconds + " ms."); }
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO appels bloquants : " + ex.GetType().Name + " — " + ex.Message); }
+            finally { try { dash.Dispose(); } catch { } if (hook != null) hook.SetValue(null, null); }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumThreadWindows(int threadId, EnumFen cb, IntPtr l);
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern int GetCurrentThreadId();
+        private delegate bool EnumFen(IntPtr h, IntPtr l);
+        private static void FermeMenusOuverts()
+        {
+            var ouverts = new System.Collections.Generic.List<ToolStripDropDown>();
+            EnumThreadWindows(GetCurrentThreadId(), (h, l) => { var d = Control.FromHandle(h) as ToolStripDropDown; if (d != null && d.Visible) ouverts.Add(d); return true; }, IntPtr.Zero);
+            foreach (var d in ouverts) d.Close();
+        }
+
+        private static void TestMenusContextuels(ref int err)
+        {
+            Console.WriteLine("Menus contextuels (libération)...");
+            var f = new MainForm();
+            f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+            try
+            {
+                // Sans la fenêtre d'accueil modale (son marqueur sur disque n'est pas touché).
+                var accueil = typeof(MainForm).GetMethod("OnShownWelcome", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                f.Shown -= (EventHandler)Delegate.CreateDelegate(typeof(EventHandler), f, accueil);
+                f.Show(); Pump(300);
+                var btn = (Button)typeof(MainForm).GetField("_btnAuto", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(f);
+                var moi = System.Diagnostics.Process.GetCurrentProcess().Handle;
+                btn.PerformClick(); Pump(50); FermeMenusOuverts(); Pump(100);   // premier passage : caches WinForms
+                GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); Pump(100);
+                int user0 = GetGuiResources(moi, 1), gdi0 = GetGuiResources(moi, 0);
+                for (int i = 0; i < 10; i++) { btn.PerformClick(); Pump(30); FermeMenusOuverts(); Pump(30); }
+                Pump(200);
+                GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); Pump(100);
+                int du = GetGuiResources(moi, 1) - user0, dg = GetGuiResources(moi, 0) - gdi0;
+                if (du > 3 || dg > 5) { err++; Console.WriteLine("  KO menu « Auto » : fuite après 10 ouvertures (USER +" + du + ", GDI +" + dg + ")."); }
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO menus contextuels : " + ex.GetType().Name + " — " + ex.Message); }
+            finally { try { f.Dispose(); } catch { } }
+        }
+
+        private static void TestFermetureProcessus(ref int err)
+        {
+            Console.WriteLine("Fermeture d'un processus sans geler l'interface...");
+            System.Diagnostics.Process cible = null;
+            var f = new BloatForm(null);
+            try
+            {
+                cible = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ping", "-n 60 127.0.0.1") { UseShellExecute = false, CreateNoWindow = true });
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                f.FermeProcessus(cible.Id, "ping");
+                long ms = sw.ElapsedMilliseconds;
+                if (ms > 100) { err++; Console.WriteLine("  KO « Fermer l'application » gèle l'interface " + ms + " ms."); }
+                var lim = System.Diagnostics.Stopwatch.StartNew();
+                while (!cible.HasExited && lim.ElapsedMilliseconds < 5000) Pump(50);
+                if (!cible.HasExited) { err++; Console.WriteLine("  KO processus non fermé après 5 s."); }
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO fermeture processus : " + ex.GetType().Name + " — " + ex.Message); }
+            finally { try { if (cible != null && !cible.HasExited) cible.Kill(); } catch { } try { f.Dispose(); } catch { } }
+        }
+
         private static void TestMinuteurs(ref int err)
         {
             Console.WriteLine("Minuteurs au retour de la zone de notification...");

@@ -389,11 +389,30 @@ namespace BTOptimizer
 
         /// <summary>Vérification des mises à jour d'ONYX, à la demande. Si une version plus récente
         /// existe, propose de télécharger l'installateur officiel — jamais sans clic.</summary>
+        internal static Func<Tuple<Updater.Release, string>> VerifMajPourTest;   // harnais : remplace le réseau
+        private bool _majEnCours;
+        // Le réseau (jusqu'à 20 s) part en fond : l'interface ne gèle plus pendant la vérification.
         private void ShowUpdateCheck()
         {
-            string status = "";
-            Updater.Release rel = null;
-            try { rel = Updater.Check(out status); } catch (Exception ex) { status = "Échec : " + ex.Message; }
+            if (_majEnCours) return;
+            _majEnCours = true;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string status = "";
+                Updater.Release rel = null;
+                try
+                {
+                    if (VerifMajPourTest != null) { var t = VerifMajPourTest(); rel = t.Item1; status = t.Item2; }
+                    else rel = Updater.Check(out status);
+                }
+                catch (Exception ex) { status = "Échec : " + ex.Message; }
+                try { BeginInvoke((Action)(() => { _majEnCours = false; AfficheMaj(rel, status); })); } catch { }
+            });
+        }
+
+        private void AfficheMaj(Updater.Release rel, string status)
+        {
+            if (IsDisposed) return;
             var cur = Updater.CurrentVersion();
             string txt = Updater.Describe(cur, rel, status);
             bool canInstall = rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl, Updater.ManifestUrl);
