@@ -115,6 +115,7 @@ namespace BTOptimizer.Tests
             SuiviTests.Tout();
             ActusTests.Tout();
             GrilleCartesTests.Tout();
+            VeilleJeuTests.Tout();
             return Banc.Bilan();
         }
     }

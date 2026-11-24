@@ -1240,29 +1240,59 @@ namespace BTOptimizer
             catch { }
         }
 
-        private void AutoTimer()
+        private int _veille;   // 1 : un relevé de processus est en cours sur un fil de fond
+
+        /// <summary>Minuteur de 2 s : le relevé (processus, plein écran) part en fond, un seul à la
+        /// fois ; ce qui touche l'interface ou l'état des modules est appliqué ici, au retour.</summary>
+        internal void AutoTimer()
         {
+            if (System.Threading.Interlocked.Exchange(ref _veille, 1) == 1) return;
+            Func<VeilleJeu.Releve> prend = VeilleJeu.PrendPourTest ?? VeilleJeu.Prend;
             try
             {
-                bool wanted = Native.IsGameFullscreen();
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    bool rendu = false;
+                    try
+                    {
+                        VeilleJeu.Releve r = prend();
+                        if (!IsDisposed && IsHandleCreated)
+                        {
+                            BeginInvoke((Action)(() => { try { Applique(r); } finally { System.Threading.Interlocked.Exchange(ref _veille, 0); } }));
+                            rendu = true;
+                        }
+                    }
+                    catch (ObjectDisposedException) { }
+                    catch (InvalidOperationException) { }   // fenêtre détruite pendant le relevé
+                    catch (Exception ex) { JournalTechnique.Echec("DashboardForm.AutoTimer", ex); }
+                    finally { if (!rendu) System.Threading.Interlocked.Exchange(ref _veille, 0); }
+                });
+            }
+            catch { System.Threading.Interlocked.Exchange(ref _veille, 0); }
+        }
+
+        private void Applique(VeilleJeu.Releve r)
+        {
+            if (IsDisposed || r == null) return;
+            try
+            {
+                bool wanted = r.PleinEcran;
                 if (wanted != Native.TimerActive) Native.SetTimer1ms(wanted);
 
-                bool knownGame = false;
-                try { knownGame = GameScan.RunningKnownGame() != null; } catch { }
+                bool knownGame = r.JeuConnu != null;
 
                 // Animations coupées quand un jeu tourne (plein écran, jeu connu, ou Mode Jeu actif).
                 bool anyGame = wanted || knownGame;
                 try { anyGame = anyGame || GameBoost.IsActive; } catch { }
                 try { AnimSettings.SetGameRunning(anyGame); } catch { }
 
-                // Viseur AUTO en jeu : affiché dès qu'un jeu tourne (jeu connu ou plein écran), retiré au bureau.
                 // MODE JEU AUTO : suspend les services de fond quand un jeu démarre, les relance
-                // quand il se ferme. Ce shell n'avait PAS la fonction — elle ne vivait que dans
-                // l'ancienne fenêtre, derrière une case à cocher que plus personne n'ouvrait.
-                try { AutoJeu.Tick(Log, null); } catch { }
-                // PROFIL PAR JEU : cœurs préférés, priorité Haute, plan Performances le temps de la partie.
-                try { ProfilJeu.Tick(Log); } catch { }
+                // quand il se ferme. PROFIL PAR JEU : cœurs préférés, priorité Haute, plan
+                // Performances le temps de la partie. Les deux reçoivent le relevé déjà pris.
+                try { AutoJeu.Tick(Log, null, r); } catch { }
+                try { ProfilJeu.Tick(Log, r); } catch { }
 
+                // Viseur AUTO en jeu : affiché dès qu'un jeu tourne (jeu connu ou plein écran), retiré au bureau.
                 if (Crosshair.AutoGameEnabled)
                     Crosshair.AutoTick(knownGame || wanted, knownGame || wanted);
             }

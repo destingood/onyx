@@ -30,13 +30,20 @@ namespace BTOptimizer
         public static void Tick(Action<string, int> log, Action apres)
         {
             if (!Actif || _occupe) return;
+            VeilleJeu.Releve r = null;
+            try { r = VeilleJeu.Prend(); }
+            catch (Exception ex) { JournalTechnique.Echec("AutoJeu.Tick/releve", ex); }
+            Tick(log, apres, r);
+        }
 
-            bool jeuConnu = false, pleinEcran = false;
-            string nom = null;
-            try { nom = GameScan.RunningKnownGame(); jeuConnu = nom != null; }
-            catch (Exception ex) { JournalTechnique.Echec("AutoJeu.Tick/jeu", ex); }
-            try { pleinEcran = Native.IsGameFullscreen(); }
-            catch (Exception ex) { JournalTechnique.Echec("AutoJeu.Tick/pleinEcran", ex); }
+        /// <summary>Même tour, sur un relevé déjà pris (le minuteur du tableau de bord le prend en
+        /// fond, une fois pour le Mode Jeu auto, le profil par jeu et le viseur).</summary>
+        public static void Tick(Action<string, int> log, Action apres, VeilleJeu.Releve r)
+        {
+            if (!Actif || _occupe || r == null) return;
+
+            string nom = r.JeuConnu;
+            bool jeuConnu = nom != null, pleinEcran = r.PleinEcran;
 
             _etat.BoostActif = GameBoost.IsActive;
             Geste g = Decide(_etat, jeuConnu, pleinEcran);

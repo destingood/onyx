@@ -20,58 +20,11 @@ namespace BTOptimizer
         /// <summary>Nom du processus d'un jeu connu en cours d'exécution, ou null. Pour le MODE JEU AUTO précis.</summary>
         public static string RunningKnownGame()
         {
-            try
-            {
-                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (string exe in PriorityExes()) names.Add(Path.GetFileNameWithoutExtension(exe));
-                foreach (Process p in Process.GetProcesses())
-                {
-                    try { if (names.Contains(p.ProcessName)) return p.ProcessName; }
-                    catch { }
-                    finally { try { p.Dispose(); } catch { } }
-                }
-            }
-            catch { }
-            return null;
+            try { return VeilleJeu.JeuConnuParmi(VeilleJeu.NomsProcessus()); }
+            catch { return null; }
         }
 
-        public static string[] PriorityExes()
-        {
-            // Noms d'exécutables DISTINCTIFS uniquement (évite les faux positifs du MODE JEU AUTO).
-            return new[]
-            {
-                "cs2.exe",                                     // Counter-Strike 2
-                "VALORANT-Win64-Shipping.exe",                 // VALORANT
-                "FortniteClient-Win64-Shipping.exe",           // Fortnite
-                "Overwatch.exe",                               // Overwatch 2
-                "r5apex.exe", "r5apex_dx12.exe",               // Apex Legends (DX11 / DX12)
-                "cod.exe", "cod22-cod.exe", "cod23-cod.exe", "cod24-cod.exe", // Call of Duty (HQ / MWII / MWIII / BO6)
-                "League of Legends.exe",                       // League of Legends
-                "RocketLeague.exe",                            // Rocket League
-                "RainbowSix.exe", "RainbowSix_Vulkan.exe",     // Rainbow Six Siege (DX11 / Vulkan)
-                "dota2.exe",                                   // Dota 2
-                "hl2.exe",                                     // Team Fortress 2 / Source
-                "TslGame.exe",                                 // PUBG
-                "MarvelRivals.exe",                            // Marvel Rivals
-                "helldivers2.exe",                             // Helldivers 2
-                "destiny2.exe",                                // Destiny 2
-                "RustClient.exe",                              // Rust
-                "Warframe.x64.exe",                            // Warframe
-                "eldenring.exe",                               // Elden Ring
-                "GTA5.exe", "GTA5_Enhanced.exe",               // GTA V (Legacy / Enhanced)
-                "BF2042.exe",                                  // Battlefield 2042
-                "DiscoveryClient.exe",                         // The Finals
-                "Cyberpunk2077.exe",                           // Cyberpunk 2077
-                "bg3.exe", "bg3_dx11.exe",                     // Baldur's Gate 3
-                "Palworld-Win64-Shipping.exe",                 // Palworld
-                "PathOfExile.exe", "PathOfExileSteam.exe", "PathOfExile_x64.exe", // Path of Exile
-                "FSD-Win64-Shipping.exe",                      // Deep Rock Galactic
-                "DeadByDaylight-Win64-Shipping.exe",           // Dead by Daylight
-                "b1-Win64-Shipping.exe",                       // Black Myth: Wukong
-                "FactoryGame-Win64-Shipping.exe",              // Satisfactory
-                "RobloxPlayerBeta.exe"                        // Roblox (le JOUEUR ; jamais le Studio)
-            };
-        }
+        public static string[] PriorityExes() { return VeilleJeu.ExesPrioritaires(); }
 
         /// <summary>Exécutable(s) principal(aux) d'un jeu (pour la priorité CPU par jeu via IFEO), ou null
         /// si inconnu. Basé sur les noms distinctifs de PriorityExes.</summary>

@@ -1315,6 +1315,7 @@ namespace BTOptimizer
                 int uiErr = 0;
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestHwMonitor(ref uiErr);
+                TestVeilleJeu(ref uiErr);
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
@@ -2636,6 +2637,46 @@ namespace BTOptimizer
             m2.Dispose();
             if (concur != null) { err++; Console.WriteLine("  KO Dispose pendant Sample : " + concur.Message); }
             Console.WriteLine("  HwMonitor : constructeur " + ms + " ms, CPU " + cpu.ToString("0.0") + " %.");
+        }
+
+        // Veille de jeu : le minuteur de 2 s ne relève plus les processus sur le fil d'interface,
+        // un seul relevé à la fois, et la fermeture du tableau de bord pendant un relevé est sans erreur.
+        private static void TestVeilleJeu(ref int err)
+        {
+            Console.WriteLine("Veille de jeu (relevé hors fil d'interface)...");
+            try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+            Func<string, long> taille = f => { try { var fi = new System.IO.FileInfo(AppPaths.File(f)); return fi.Exists ? fi.Length : 0; } catch { return 0; } };
+            long errAvant = taille("bt-erreurs.txt"), techAvant = taille("bt-technique.txt");
+            DashboardForm dash = new DashboardForm();
+            dash.CreateControl();
+            try
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                for (int i = 0; i < 50; i++) dash.AutoTimer();
+                long ms = sw.ElapsedMilliseconds;
+                if (ms >= 50) { err++; Console.WriteLine("  KO 50 appels d'AutoTimer : " + ms + " ms sur le fil d'interface (attendu < 50)."); }
+                var fin = DateTime.UtcNow.AddSeconds(5);
+                while (DateTime.UtcNow < fin) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }   // laisse le vrai relevé finir
+
+                int lances = 0;
+                VeilleJeu.PrendPourTest = () =>
+                {
+                    System.Threading.Interlocked.Increment(ref lances);
+                    System.Threading.Thread.Sleep(3000);
+                    return new VeilleJeu.Releve { Noms = new string[0] };
+                };
+                dash.AutoTimer(); dash.AutoTimer(); dash.AutoTimer();
+                System.Threading.Thread.Sleep(200);
+                if (lances != 1) { err++; Console.WriteLine("  KO relevés lancés pour 3 ticks rapprochés : " + lances + " (attendu 1)."); }
+                dash.Dispose();                                  // pendant le relevé factice
+                fin = DateTime.UtcNow.AddSeconds(4);
+                while (DateTime.UtcNow < fin) { Application.DoEvents(); System.Threading.Thread.Sleep(10); }
+                Console.WriteLine("  AutoTimer : 50 appels en " + ms + " ms, " + lances + " relevé pour 3 ticks.");
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO veille de jeu : " + ex); }
+            finally { VeilleJeu.PrendPourTest = null; try { dash.Dispose(); } catch { } }
+            if (taille("bt-erreurs.txt") != errAvant) { err++; Console.WriteLine("  KO bt-erreurs.txt a grossi pendant la fermeture."); }
+            if (taille("bt-technique.txt") != techAvant) { err++; Console.WriteLine("  KO bt-technique.txt a grossi (échec de veille journalisé)."); }
         }
 
         private static void CaptureShellShots(string dir)

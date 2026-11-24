@@ -30,7 +30,10 @@ namespace BTOptimizer
         private static string CheminEtat { get { return AppPaths.File(FichierEtat); } }
 
         /// <summary>Non bloquant : sort tout de suite si un tour est en cours.</summary>
-        public static void Tick(Action<string, int> log)
+        public static void Tick(Action<string, int> log) { Tick(log, null); }
+
+        /// <summary>Même tour sur un relevé déjà pris (null : le tour relève lui-même les processus, en fond).</summary>
+        public static void Tick(Action<string, int> log, VeilleJeu.Releve r)
         {
             lock (_verrou)
             {
@@ -40,7 +43,7 @@ namespace BTOptimizer
             Action<string, int> journal = Journal(log);
             Task.Run(delegate
             {
-                try { Tour(journal); }
+                try { Tour(journal, r != null ? r.Noms : null); }
                 catch (Exception ex) { JournalTechnique.Echec("ProfilJeu.Tick", ex); }
                 finally { lock (_verrou) _occupe = false; }
             });
@@ -59,12 +62,13 @@ namespace BTOptimizer
             };
         }
 
-        private static void Tour(Action<string, int> log)
+        private static void Tour(Action<string, int> log, string[] noms)
         {
             Dictionary<string, Tuple<string, long>> profils = Sys.LoadGameAffinity();
             var exes = new List<KeyValuePair<string, string[]>>();
             foreach (string jeu in profils.Keys) exes.Add(new KeyValuePair<string, string[]>(jeu, GameScan.ExesFor(jeu)));
-            string detecte = JeuDetecte(exes, NomsProcessus());
+            ISet<string> releve = noms != null ? new HashSet<string>(noms, StringComparer.OrdinalIgnoreCase) : NomsProcessus();
+            string detecte = JeuDetecte(exes, releve);
 
             if (!_repris) { _repris = true; Reprend(detecte, log); }
 
