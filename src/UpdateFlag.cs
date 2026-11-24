@@ -75,6 +75,23 @@ namespace BTOptimizer
             catch { }
         }
 
+        private static string CheminNotif { get { return AppPaths.File("bt-maj-notifiee.txt"); } }
+
+        /// <summary>La notification Windows pour cette version a-t-elle déjà été montrée ?
+        /// La vérification a lieu toutes les 6 heures : sans cette mémoire, la même notification
+        /// reviendrait 4 fois par jour.</summary>
+        public static bool DoitNotifier(string version)
+        {
+            string d = null;
+            try { if (File.Exists(CheminNotif)) d = File.ReadAllText(CheminNotif); } catch { }
+            return MajLogique.ANotifier(version, d);
+        }
+
+        public static void MarqueNotifiee(string version)
+        {
+            try { if (!string.IsNullOrWhiteSpace(version)) File.WriteAllText(CheminNotif, version.Trim()); } catch { }
+        }
+
         public static void Clear()
         {
             try { if (File.Exists(Chemin)) File.Delete(Chemin); }

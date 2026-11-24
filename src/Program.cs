@@ -18,6 +18,24 @@ namespace BTOptimizer
 {
     internal static class Program
     {
+        private static Mutex _instance;
+
+        /// <summary>
+        /// Libère le verrou d'instance unique AVANT de lancer l'installateur de mise à jour.
+        /// L'installateur refuse de démarrer tant que ce verrou existe (AppMutex) : s'il était
+        /// lancé pendant les quelques centaines de millisecondes où ONYX se ferme, l'installation
+        /// silencieuse s'arrêterait sans rien dire. À appeler depuis le fil d'interface (le
+        /// propriétaire du verrou), juste avant de fermer l'application.
+        /// </summary>
+        internal static void LibereInstance()
+        {
+            var m = _instance;
+            _instance = null;
+            if (m == null) return;
+            try { m.ReleaseMutex(); } catch { }
+            try { m.Dispose(); } catch { }
+        }
+
         [STAThread]
         private static void Main(string[] args)
         {
@@ -36,6 +54,7 @@ namespace BTOptimizer
             bool isNew;
             using (var mutex = new Mutex(true, "BTOptimizer_SingleInstance", out isNew))
             {
+                if (isNew) _instance = mutex;
                 if (!isNew)
                 {
                     MessageBox.Show("ONYX est déjà ouvert (vérifiez la barre des tâches ou la zone de notification).",
@@ -1320,6 +1339,7 @@ namespace BTOptimizer
                 TestRetours(ref uiErr);
                 TestMinuteurs(ref uiErr);
                 TestAppelsBloquants(ref uiErr);
+                TestFenetreMaj(ref uiErr);
                 TestFermetureProcessus(ref uiErr);
                 TestMenusContextuels(ref uiErr);
                 TestShellUi(ref uiErr);
@@ -2676,6 +2696,96 @@ namespace BTOptimizer
             }
             catch (Exception ex) { err++; Console.WriteLine("  KO appels bloquants : " + ex.GetType().Name + " — " + ex.Message); }
             finally { try { dash.Dispose(); } catch { } if (hook != null) hook.SetValue(null, null); }
+        }
+
+        private static bool Attend(Func<bool> cond, int ms)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (!cond() && sw.ElapsedMilliseconds < ms) Pump(20);
+            return cond();
+        }
+
+        /// <summary>Fenêtre de mise à jour : à jour, disponible (notes nettoyées), téléchargement
+        /// annulable, puis lancement de l'installateur ; une seule fenêtre à la fois.</summary>
+        private static void TestFenetreMaj(ref int err)
+        {
+            Console.WriteLine("Fenêtre de mise à jour...");
+            var neuve = new Updater.Release
+            {
+                Ver = new Version(99, 0), Tag = "v99.0", Size = 1000,
+                Notes = "## Nouveautés\n- **Gros** gain\n\n## Installation\nTélécharge ONYX-Setup.exe",
+                AssetUrl = "https://github.com/destingood/onyx-releases/releases/download/v99.0/ONYX-Setup.exe",
+                AssetName = "ONYX-Setup.exe"
+            };
+            MajForm f = null, f2 = null;
+            try
+            {
+                // 1) Déjà à jour.
+                var ancienne = new Updater.Release { Ver = new Version(1, 0), Tag = "v1.0" };
+                f = new MajForm(() => Tuple.Create(ancienne, ""), (a, b) => null);
+                f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+                f.Show();
+                if (!Attend(() => f.Etat == "ajour", 3000)) { err++; Console.WriteLine("  KO maj : état « à jour » attendu, obtenu " + f.Etat); }
+                else if (f.LibellePrincipal != null) { err++; Console.WriteLine("  KO maj : bouton principal affiché alors qu'ONYX est à jour."); }
+                f.Dispose();
+
+                // 2) Disponible, puis téléchargement annulé.
+                var bloque = new System.Threading.ManualResetEventSlim(false);
+                string lance = null;
+                MajForm.TelechargePourTest = (rel, prog, tok) =>
+                {
+                    prog(500, 1000);
+                    while (!tok.IsCancellationRequested && !bloque.IsSet) System.Threading.Thread.Sleep(10);
+                    return tok.IsCancellationRequested ? Tuple.Create((string)null, "") : Tuple.Create("C:\\faux\\ONYX-Setup.exe", "");
+                };
+                f = new MajForm(() => Tuple.Create(neuve, ""), (fichier, rel) => { lance = fichier; return null; });
+                f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+                f.Show();
+                if (!Attend(() => f.Etat == "dispo", 3000)) { err++; Console.WriteLine("  KO maj : état « dispo » attendu, obtenu " + f.Etat); return; }
+                if (f.LibellePrincipal != "Mettre à jour") { err++; Console.WriteLine("  KO maj : bouton principal « " + f.LibellePrincipal + " »."); }
+                if (f.TexteNotes.Contains("**") || f.TexteNotes.Contains("##") || f.TexteNotes.Contains("Installation") || !f.TexteNotes.Contains("• Gros gain"))
+                { err++; Console.WriteLine("  KO maj : notes mal nettoyées : " + f.TexteNotes.Replace("\r\n", " | ")); }
+                f.ClicPrincipal();
+                if (!Attend(() => f.TexteDetail.Contains("50 %"), 3000)) { err++; Console.WriteLine("  KO maj : progression non affichée (« " + f.TexteDetail + " »)."); }
+                if (f.LibelleSecondaire != "Annuler") { err++; Console.WriteLine("  KO maj : pas de bouton « Annuler » pendant le téléchargement."); }
+                f.ClicSecondaire();
+                if (!Attend(() => f.Etat == "dispo", 3000) || !f.TexteDetail.Contains("annulé")) { err++; Console.WriteLine("  KO maj : annulation mal gérée (" + f.Etat + ", « " + f.TexteDetail + " »)."); }
+                if (lance != null) { err++; Console.WriteLine("  KO maj : installateur lancé après annulation."); }
+
+                // 3) Téléchargement terminé : l'installateur est lancé.
+                bloque.Set();
+                f.ClicPrincipal();
+                if (!Attend(() => lance != null, 3000)) { err++; Console.WriteLine("  KO maj : installateur non lancé après téléchargement (" + f.Etat + ")."); }
+                else if (f.Etat != "installation") { err++; Console.WriteLine("  KO maj : état « installation » attendu, obtenu " + f.Etat); }
+
+                // 4) Erreur de lancement : affichée, avec « Réessayer ».
+                f.Dispose();
+                f = new MajForm(() => Tuple.Create(neuve, ""), (fichier, rel) => "refusé");
+                f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+                f.Show();
+                Attend(() => f.Etat == "dispo", 3000);
+                f.ClicPrincipal();
+                if (!Attend(() => f.Etat == "erreur", 3000) || f.LibellePrincipal != "Réessayer" || !f.TexteDetail.Contains("refusé"))
+                { err++; Console.WriteLine("  KO maj : échec de lancement mal signalé (" + f.Etat + ", « " + f.TexteDetail + " »)."); }
+                f.Dispose();
+
+                // 5) Depuis le tableau de bord : une seule fenêtre, même après deux appels.
+                var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                var dash = new DashboardForm();
+                dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-20000, -20000);
+                DashboardForm.VerifMajPourTest = () => Tuple.Create(neuve, "");
+                try
+                {
+                    dash.Show(); Pump(200);
+                    var show = typeof(DashboardForm).GetMethod("ShowUpdateCheck", bf);
+                    show.Invoke(dash, null); show.Invoke(dash, null); Pump(100);
+                    int n = 0; foreach (Form o in Application.OpenForms) if (o is MajForm) { n++; f2 = (MajForm)o; }
+                    if (n != 1) { err++; Console.WriteLine("  KO maj : " + n + " fenêtre(s) de mise à jour ouvertes au lieu d'une."); }
+                }
+                finally { DashboardForm.VerifMajPourTest = null; try { if (f2 != null) f2.Dispose(); } catch { } try { dash.Dispose(); } catch { } }
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO fenêtre de mise à jour : " + ex.GetType().Name + " — " + ex.Message); }
+            finally { MajForm.TelechargePourTest = null; try { if (f != null) f.Dispose(); } catch { } }
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumThreadWindows(int threadId, EnumFen cb, IntPtr l);

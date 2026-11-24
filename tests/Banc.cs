@@ -113,6 +113,7 @@ namespace BTOptimizer.Tests
             DiscordImageTests.Tout();
             CachesApplisTests.Tout();
             SuiviTests.Tout();
+            MajLogiqueTests.Tout();
             ActusTests.Tout();
             GrilleCartesTests.Tout();
             VeilleJeuTests.Tout();

@@ -167,6 +167,9 @@ Name: "{autodesktop}\{#AppName}";        Filename: "{app}\{#AppExe}"; WorkingDir
 ; (code 740). runascurrentuser la lance avec le jeton (deja eleve) de l'installateur.
 Filename: "{app}\{#AppExe}"; Description: "Lancer {#AppName}"; WorkingDir: "{app}"; \
   Flags: nowait postinstall skipifsilent runascurrentuser
+; Mise a jour lancee PAR ONYX (/SILENT /RELANCE=1) : pas d'assistant, donc pas de case a cocher ;
+; ONYX est rouvert tout seul a la fin. winget (silencieux mais sans RELANCE) n'ouvre rien.
+Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Flags: nowait runascurrentuser; Check: RelanceDemandee
 
 [UninstallDelete]
 ; Nettoie les fichiers créés par l'app après coup (sauvegardes/état/traces).
@@ -261,3 +264,9 @@ begin
   end;
 end;
 #endif
+
+// Relance d'ONYX apres une mise a jour silencieuse demandee par ONYX lui-meme.
+function RelanceDemandee(): Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:RELANCE|0}') = '1');
+end;

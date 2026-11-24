@@ -5,6 +5,18 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.98 — Mises à jour en un clic
+
+- **Un clic, ONYX se rouvre tout seul.** La fenêtre de mise à jour montre les nouveautés
+  lisibles, télécharge avec une barre de progression (annulable), installe sans assistant,
+  puis relance ONYX. Plus de double confirmation.
+- **Installateur vérifié.** Taille et empreinte SHA256 contrôlées avant le lancement ; un
+  téléchargement raté ou annulé ne laisse rien derrière lui.
+- **Notifications utiles.** Vérification toutes les 6 heures au lieu d'une fois par jour,
+  une seule notification par version, et la bulle ouvre directement la mise à jour.
+- **Bulles corrigées.** Un clic sur une bulle ne déclenche plus les actions des alertes
+  précédentes du Gardien.
+
 ## v15.97 — Rapidité et fluidité
 
 - **Page Optimisations instantanée.** Liste peinte et virtualisée : ouverture 2,1 s → 141 ms,

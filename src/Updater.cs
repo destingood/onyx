@@ -95,6 +95,8 @@ namespace BTOptimizer
             public string AssetUrl;
             public string AssetName;
             public long Size;
+            /// <summary>Empreinte SHA256 annoncée (hex minuscules), ou null si la source n'en donne pas.</summary>
+            public string Sha256;
         }
 
         /// <summary>« v15.58 », « 15.58.0.0 », « ONYX 15.58 » → Version. null si illisible. PUR.</summary>
@@ -167,6 +169,8 @@ namespace BTOptimizer
                     }
                     JsonElement sz;
                     if (r.TryGetProperty("size", out sz) && sz.ValueKind == JsonValueKind.Number) rel.Size = sz.GetInt64();
+                    JsonElement h;
+                    if (r.TryGetProperty("sha256", out h) && h.ValueKind == JsonValueKind.String) rel.Sha256 = MajLogique.Sha256DuDigest(h.GetString());
                     return rel;
                 }
             }
@@ -193,7 +197,7 @@ namespace BTOptimizer
                     if (r.TryGetProperty("assets", out assets) && assets.ValueKind == JsonValueKind.Array)
                         foreach (var a in assets.EnumerateArray())
                         {
-                            JsonElement nm, url, sz;
+                            JsonElement nm, url, sz, dg;
                             if (!a.TryGetProperty("name", out nm) || nm.ValueKind != JsonValueKind.String) continue;
                             if (!a.TryGetProperty("browser_download_url", out url) || url.ValueKind != JsonValueKind.String) continue;
                             string name = nm.GetString();
@@ -204,6 +208,10 @@ namespace BTOptimizer
                             rel.AssetName = name;
                             rel.AssetUrl = url.GetString();
                             rel.Size = a.TryGetProperty("size", out sz) && sz.ValueKind == JsonValueKind.Number ? sz.GetInt64() : 0;
+                            // GitHub publie l'empreinte de chaque fichier (« sha256:… ») : elle prouve
+                            // que le fichier reçu est bien celui qui a été publié, octet pour octet.
+                            rel.Sha256 = a.TryGetProperty("digest", out dg) && dg.ValueKind == JsonValueKind.String
+                                ? MajLogique.Sha256DuDigest(dg.GetString()) : null;
                         }
                     return rel;
                 }
@@ -334,40 +342,103 @@ namespace BTOptimizer
         /// <summary>Télécharge l'installateur dans le dossier temporaire. Chemin, ou null.</summary>
         public static string Download(Release rel, Action<string, int> log)
         {
+            int dernier = -1;
+            string erreur;
+            return Download(rel, (fait, total) =>
+            {
+                if (log == null || total <= 0) return;
+                int pct = (int)(fait * 100 / total);
+                if (pct != dernier && pct % 5 == 0) { dernier = pct; log("Téléchargement… " + pct + " %", 0); }
+            }, System.Threading.CancellationToken.None, out erreur);
+        }
+
+        /// <summary>
+        /// Télécharge l'installateur dans %TEMP%\ONYX-maj. Le fichier est écrit sous « .part » et ne
+        /// prend son vrai nom qu'une fois la taille ET l'empreinte SHA256 vérifiées : un fichier
+        /// tronqué ou altéré n'est jamais lancé, et ne reste pas sur le disque.
+        /// Renvoie le chemin, ou null avec la raison dans 'erreur' (vide si annulé).
+        /// </summary>
+        public static string Download(Release rel, Action<long, long> progression,
+                                      System.Threading.CancellationToken annulation, out string erreur)
+        {
+            erreur = "Le lien de téléchargement n'est pas sûr : rien n'a été téléchargé.";
             if (rel == null || !IsTrustedUrl(rel.AssetUrl, ManifestUrl)) return null;
+            string part = null;
             try
             {
-                string dest = Path.Combine(Path.GetTempPath(), rel.AssetName ?? "ONYX-Setup.exe");
+                string dossier = Path.Combine(Path.GetTempPath(), "ONYX-maj");
+                Directory.CreateDirectory(dossier);
+                string nom = Path.GetFileName(rel.AssetName ?? "");
+                if (string.IsNullOrEmpty(nom)) nom = "ONYX-Setup.exe";
+                string dest = Path.Combine(dossier, nom);
+                part = dest + ".part";
+                long total = rel.Size;
                 using (var h = Http())
-                using (var resp = h.GetAsync(rel.AssetUrl, HttpCompletionOption.ResponseHeadersRead).Result)
                 {
-                    if (!resp.IsSuccessStatusCode) return null;
-                    using (var src = resp.Content.ReadAsStreamAsync().Result)
-                    using (var dst = new FileStream(dest, FileMode.Create, FileAccess.Write, FileShare.None))
+                    h.Timeout = System.Threading.Timeout.InfiniteTimeSpan;   // 58 Mo sur une connexion lente : pas de coupure à 20 s
+                    using (var resp = h.GetAsync(rel.AssetUrl, HttpCompletionOption.ResponseHeadersRead, annulation).Result)
                     {
-                        byte[] buf = new byte[131072];
-                        long done = 0; int n; int lastPct = -1;
-                        while ((n = src.Read(buf, 0, buf.Length)) > 0)
+                        if (!resp.IsSuccessStatusCode)
                         {
-                            dst.Write(buf, 0, n);
-                            done += n;
-                            if (log != null && rel.Size > 0)
+                            erreur = "Le serveur a répondu « " + (int)resp.StatusCode + " » : rien n'a été téléchargé.";
+                            return null;
+                        }
+                        if (total <= 0 && resp.Content.Headers.ContentLength.HasValue) total = resp.Content.Headers.ContentLength.Value;
+                        using (var src = resp.Content.ReadAsStreamAsync(annulation).Result)
+                        using (var dst = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            byte[] buf = new byte[131072];
+                            long fait = 0; int n;
+                            var montre = System.Diagnostics.Stopwatch.StartNew();
+                            while ((n = src.ReadAsync(buf, 0, buf.Length, annulation).Result) > 0)
                             {
-                                int pct = (int)(done * 100 / rel.Size);
-                                if (pct != lastPct && pct % 5 == 0) { lastPct = pct; log("Téléchargement… " + pct + " %", 0); }
+                                dst.Write(buf, 0, n);
+                                fait += n;
+                                if (progression != null && montre.ElapsedMilliseconds >= 100)
+                                {
+                                    montre.Restart();
+                                    progression(fait, total);
+                                }
                             }
+                            if (progression != null) progression(fait, total);
                         }
                     }
                 }
-                var fi = new FileInfo(dest);
-                if (!fi.Exists || fi.Length < 1024) return null;
-                if (rel.Size > 0 && Math.Abs(fi.Length - rel.Size) > 4096) return null;   // taille annoncée non respectée
+                var fi = new FileInfo(part);
+                if (!fi.Exists || fi.Length < 1024 || (rel.Size > 0 && fi.Length != rel.Size))
+                {
+                    erreur = "Le téléchargement est incomplet : rien n'a été installé.";
+                    SupprimeSansErreur(part);
+                    return null;
+                }
+                if (!MajLogique.EmpreinteOk(part, rel.Sha256))
+                {
+                    erreur = "Le fichier reçu ne correspond pas à celui qui a été publié (empreinte SHA256 différente) : "
+                           + "il a été supprimé, rien n'a été installé.";
+                    SupprimeSansErreur(part);
+                    return null;
+                }
+                SupprimeSansErreur(dest);
+                File.Move(part, dest);
+                erreur = "";
                 return dest;
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                SupprimeSansErreur(part);
+                bool annule = annulation.IsCancellationRequested;
+                erreur = annule ? "" : "Le téléchargement a échoué (" + (ex.InnerException ?? ex).GetType().Name
+                                      + ") : vérifie ta connexion. Rien n'a été installé.";
+                return null;
+            }
         }
 
-        // Vérification quotidienne discrète (jamais plus d'une fois par jour).
+        private static void SupprimeSansErreur(string chemin)
+        {
+            try { if (!string.IsNullOrEmpty(chemin) && File.Exists(chemin)) File.Delete(chemin); } catch { }
+        }
+
+        // Vérification discrète, toutes les 6 heures au plus (voir MajLogique.Intervalle).
         private static string StampPath { get { return AppPaths.File("bt-update-check.txt"); } }
 
         /// <summary>
@@ -383,20 +454,16 @@ namespace BTOptimizer
         ///
         /// Le marquage est donc séparé — voir MarqueVerifie, appelé seulement en cas de succès.
         /// </summary>
-        public static bool DueToday()
+        public static bool VerificationDue()
         {
-            try
-            {
-                string today = DateTime.Now.ToString("yyyyMMdd");
-                return !(File.Exists(StampPath) && File.ReadAllText(StampPath).Trim() == today);
-            }
+            try { return MajLogique.EstDue(File.Exists(StampPath) ? File.ReadAllText(StampPath) : null, DateTime.Now); }
             catch { return false; }
         }
 
         /// <summary>À appeler UNIQUEMENT quand la vérification a réellement abouti.</summary>
         public static void MarqueVerifie()
         {
-            try { File.WriteAllText(StampPath, DateTime.Now.ToString("yyyyMMdd")); }
+            try { File.WriteAllText(StampPath, MajLogique.Horodatage(DateTime.Now)); }
             catch { }
         }
     }

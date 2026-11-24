@@ -195,7 +195,7 @@ namespace BTOptimizer
             if (WindowState == FormWindowState.Minimized)
             {
                 Hide(); _tray.Visible = true;
-                if (!_trayShown) { _trayShown = true; _tray.ShowBalloonTip(2000, "ONYX", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
+                if (!_trayShown) { _trayShown = true; _actionBulle = RestoreFromTray; _tray.ShowBalloonTip(2000, "ONYX", "Toujours actif. Double-clic pour rouvrir.", ToolTipIcon.Info); }
                 return;
             }
             // Barre superposée (non dockée) : sa hauteur ne suit plus automatiquement la fenêtre.
@@ -390,66 +390,43 @@ namespace BTOptimizer
         /// <summary>Vérification des mises à jour d'ONYX, à la demande. Si une version plus récente
         /// existe, propose de télécharger l'installateur officiel — jamais sans clic.</summary>
         internal static Func<Tuple<Updater.Release, string>> VerifMajPourTest;   // harnais : remplace le réseau
-        private bool _majEnCours;
-        // Le réseau (jusqu'à 20 s) part en fond : l'interface ne gèle plus pendant la vérification.
+        internal static Func<string, string> LancePourTest;                         // harnais : remplace le lancement
+        private MajForm _majForm;
+
+        /// <summary>Ouvre la fenêtre de mise à jour (une seule à la fois). Elle s'affiche tout de
+        /// suite et interroge le réseau en fond : l'interface ne gèle jamais.</summary>
         private void ShowUpdateCheck()
         {
-            if (_majEnCours) return;
-            _majEnCours = true;
-            System.Threading.Tasks.Task.Run(() =>
+            if (_majForm != null && !_majForm.IsDisposed) { try { _majForm.Activate(); } catch { } return; }
+            if (!Visible) { try { RestoreFromTray(); } catch { } }
+            var hook = VerifMajPourTest;   // lu maintenant : le harnais peut le retirer avant la fin du fil
+            var f = new MajForm(() =>
             {
-                string status = "";
-                Updater.Release rel = null;
-                try
-                {
-                    if (VerifMajPourTest != null) { var t = VerifMajPourTest(); rel = t.Item1; status = t.Item2; }
-                    else rel = Updater.Check(out status);
-                }
-                catch (Exception ex) { status = "Échec : " + ex.Message; }
-                try { BeginInvoke((Action)(() => { _majEnCours = false; AfficheMaj(rel, status); })); } catch { }
-            });
+                if (hook != null) return hook();
+                string st; var r = Updater.Check(out st);
+                return Tuple.Create(r, st);
+            }, LanceInstallation);
+            _majForm = f;
+            f.FormClosed += (s, e) => { if (_majForm == f) _majForm = null; };
+            f.Show(this);
         }
 
-        private void AfficheMaj(Updater.Release rel, string status)
+        /// <summary>Lance l'installateur vérifié, sans assistant, puis ferme ONYX ; l'installateur
+        /// le rouvre à la fin (RELANCE=1). null si c'est parti, sinon le message d'erreur.</summary>
+        private string LanceInstallation(string file, Updater.Release rel)
         {
-            if (IsDisposed) return;
-            var cur = Updater.CurrentVersion();
-            string txt = Updater.Describe(cur, rel, status);
-            bool canInstall = rel != null && Updater.IsNewer(cur, rel.Ver) && Updater.IsTrustedUrl(rel.AssetUrl, Updater.ManifestUrl);
-            if (!canInstall)
+            if (LancePourTest != null) return LancePourTest(file);
+            try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
+            // Le verrou d'instance unique est libéré AVANT : l'installateur refuse de démarrer
+            // tant qu'il existe, même pendant les quelques instants où ONYX se ferme.
+            Program.LibereInstance();
+            try
             {
-                MessageBox.Show(this, txt, "ONYX — mises à jour", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file, MajLogique.ArgsSilencieux) { UseShellExecute = true });
             }
-            if (MessageBox.Show(this, txt + "\n\nTélécharger et installer maintenant ?", "ONYX — nouvelle version",
-                    MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                string file = null;
-                try { file = Updater.Download(rel, Log); } catch { }
-                try
-                {
-                    BeginInvoke((Action)(() =>
-                    {
-                        if (file == null)
-                        {
-                            MessageBox.Show(this, "Le téléchargement a échoué — rien n'a été installé, ta version actuelle est intacte.",
-                                "ONYX — mise à jour", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
-                        try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
-                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true }); }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(this, "Téléchargé, mais impossible de lancer l'installateur (" + ex.Message + ") :\n" + file,
-                                "ONYX — mise à jour", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
-                        Close();   // l'installateur prend le relais
-                    }));
-                }
-                catch { }
-            });
+            catch (Exception ex) { return ex.Message; }
+            try { BeginInvoke((Action)(() => { try { Close(); } catch { } })); } catch { }
+            return null;
         }
 
         /// <summary>Médecin des journaux Windows : traduit les erreurs enregistrées par Windows en
@@ -642,6 +619,7 @@ namespace BTOptimizer
                         {
                             _tray.Visible = true;
                             bool bad = al != null && al.Count > 0;
+                            _actionBulle = null;
                             _tray.BalloonTipTitle = bad ? "🛡 Gardien — " + al.Count + " alerte(s)" : "🛡 Gardien — tout va bien";
                             _tray.BalloonTipText = bad
                                 ? al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "")
@@ -722,7 +700,7 @@ namespace BTOptimizer
                     //   · le Gardien devait ne pas être encore passé aujourd'hui, alors qu'il a
                     //     son propre horodatage et peut l'avoir consommé lors d'un lancement
                     //     précédent.
-                    // Updater.DueToday() suffit à la limiter à une fois par jour.
+                    // Updater.VerificationDue() la limite à une fois toutes les 6 heures.
                     try { VerifieMiseAJour(); } catch { }
 
                     if (sos == null)
@@ -765,10 +743,7 @@ namespace BTOptimizer
                             // sans laisser de trace — on ne s'en sert que si le toast échoue.
                             if (!WinToast.Show(titre, corps))
                             {
-                                _tray.BalloonTipTitle = titre;
-                                _tray.BalloonTipText = corps;
-                                _tray.BalloonTipClicked += (s, e) => { try { RestoreFromTray(); ShowPage(6); } catch { } };
-                                _tray.ShowBalloonTip(10000);
+                                Bulle(titre, corps, 10000, () => { RestoreFromTray(); ShowPage(6); });
                             }
                         }
                         catch { }
@@ -787,16 +762,9 @@ namespace BTOptimizer
         {
             if (UpdateFlag.AAnnoncer() == null) return;   // déjà montrée pour cette version
             UpdateFlag.MarqueAnnonce();
-            if (MessageBox.Show(this,
-                    "Une nouvelle version d'ONYX est disponible : " + version + "\n\n"
-                    + "Tes réglages, ta mémoire du Copilote et ton journal sont CONSERVÉS par la mise à jour.\n\n"
-                    + "L'ouvrir maintenant ? (Sinon, le bandeau en haut de la fenêtre te le rappellera "
-                    + "tant qu'elle n'est pas installée — cette question ne reviendra pas pour cette version.)",
-                    "ONYX — mise à jour disponible",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-            {
-                try { ShowUpdateCheck(); } catch { }
-            }
+            // La fenêtre de mise à jour EST l'annonce : nouveautés, « Mettre à jour » ou « Plus tard ».
+            // Avant, une première boîte demandait « L'ouvrir ? », puis une seconde « Installer ? ».
+            try { ShowUpdateCheck(); } catch { }
         }
 
         /// <summary>
@@ -910,7 +878,7 @@ namespace BTOptimizer
         /// </summary>
         private void VerifieMiseAJour()
         {
-            if (!Updater.DueToday()) return;
+            if (!Updater.VerificationDue()) return;   // toutes les 6 heures au plus
 
             string st;
             Updater.Release nu;
@@ -946,19 +914,23 @@ namespace BTOptimizer
 
             // Notification DÉDIÉE, pas noyée dans « Gardien — N alertes » : une mise à jour n'est
             // pas une alerte de santé, et un titre générique se referme sans être lu.
+            // UNE fois par version : la vérification revient toutes les 6 heures, la notification
+            // non. Le bandeau dans l'app, lui, reste jusqu'à l'installation.
+            if (!UpdateFlag.DoitNotifier(dispo)) return;
+            UpdateFlag.MarqueNotifiee(dispo);
             try
             {
-                if (!WinToast.Show("🔄 Mise à jour d'ONYX disponible",
-                        "Version " + dispo + " — ouvre ONYX, puis menu ⋯ → « Vérifier les mises à jour »."))
+                if (!WinToast.Show("🔄 ONYX " + dispo + " est disponible",
+                        "Ouvre ONYX et clique sur « Mettre à jour maintenant » : un clic, ONYX se rouvre tout seul."))
                 {
                     BeginInvoke((Action)(() =>
                     {
                         try
                         {
                             _tray.Visible = true;
-                            _tray.BalloonTipTitle = "🔄 Mise à jour d'ONYX disponible";
-                            _tray.BalloonTipText = "Version " + dispo + " — menu ⋯ → « Vérifier les mises à jour ».";
-                            _tray.ShowBalloonTip(10000);
+                            // La bulle, elle, sait agir au clic : elle ouvre directement la mise à jour.
+                            Bulle("🔄 ONYX " + dispo + " est disponible", "Clique ici pour mettre à jour : ONYX se rouvre tout seul.",
+                                10000, () => { RestoreFromTray(); ShowUpdateCheck(); });
                         }
                         catch { }
                     }));
@@ -1162,12 +1134,27 @@ namespace BTOptimizer
             }
         }
 
+        private Action _actionBulle;
+
+        /// <summary>Bulle de la zone de notification, avec ce que fait un clic dessus (ou rien).</summary>
+        private void Bulle(string titre, string texte, int ms, Action auClic)
+        {
+            _actionBulle = auClic;
+            _tray.BalloonTipTitle = titre;
+            _tray.BalloonTipText = texte;
+            _tray.ShowBalloonTip(ms);
+        }
+
         private void BuildTray()
         {
             _tray = new NotifyIcon();
             try { _tray.Icon = Icon; } catch { }
             _tray.Text = "ONYX"; _tray.Visible = false;
             _tray.DoubleClick += (s, e) => RestoreFromTray();
+            // UN seul gestionnaire : chaque bulle pose sa propre action. Avant, chaque alerte du
+            // Gardien ajoutait un gestionnaire de plus, et un clic sur n'importe quelle bulle
+            // suivante les exécutait tous.
+            _tray.BalloonTipClicked += (s, e) => { var a = _actionBulle; _actionBulle = null; try { if (a != null) a(); } catch { } };
             var m = new ContextMenuStrip();
             m.Items.Add("Ouvrir ONYX  (Ctrl+Alt+O)", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
@@ -1784,9 +1771,7 @@ namespace BTOptimizer
             {
                 if (!WinToast.Show(titre, texte))
                 {
-                    _tray.BalloonTipTitle = titre;
-                    _tray.BalloonTipText = texte;
-                    _tray.ShowBalloonTip(10000);
+                    Bulle(titre, texte, 10000, null);
                 }
             }
             catch { }
