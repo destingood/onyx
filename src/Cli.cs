@@ -84,6 +84,8 @@ namespace BTOptimizer
                 List<Topologie.Proc> procs = Topologie.Lit();
                 log("Processeur : " + Topologie.Libelle(procs), 0);
                 log("Cœurs préférés pour le jeu : " + string.Join(",", Topologie.Preferes(procs)), 0);
+                List<int> autres = Topologie.Autres(procs);
+                log("Logiciels de fond pendant le jeu : " + (autres.Count > 0 ? string.Join(",", autres) : "laissés à Windows"), 0);
                 foreach (Topologie.Proc p in procs)
                     log("  logique " + p.Index + " : cœur " + p.Coeur + ", classe " + p.Efficacite + ", L3 n°" + p.L3 + " (" + (p.L3Octets / (1024 * 1024)) + " Mo)", 0);
                 return 0;

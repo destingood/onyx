@@ -22,6 +22,7 @@ namespace BTOptimizer
         {
             public string Jeu;          // jeu profilé en cours, null si aucun
             public string PlanOrigine;  // GUID du plan d'avant, null si ONYX n'a pas basculé
+            public bool Fond;           // logiciels de fond envoyés sur l'autre CCD, à rendre à Windows
         }
 
         /// <summary>Plan d'alimentation « Performances élevées » de Windows.</summary>
@@ -116,11 +117,46 @@ namespace BTOptimizer
             return null;
         }
 
+        /// <summary>
+        /// Logiciels de fond éloignés du CCD du jeu sur un X3D à deux CCD : navigateurs, vocal,
+        /// lanceurs, utilitaires de périphériques et de capteurs. Ils restent ouverts (vocal
+        /// compris) ; ils tournent seulement sur l'autre CCD, au lieu de partager le cache du jeu.
+        /// Hors liste exprès : Windows, l'audio, NVIDIA, le pilote AMD (amd3dvcacheUser).
+        /// </summary>
+        public static readonly string[] LogicielsDeFond =
+        {
+            "chrome", "msedge", "firefox", "opera", "opera_gx", "brave", "vivaldi",
+            "Discord", "Spotify", "Teams", "ms-teams", "slack", "WhatsApp", "Telegram",
+            "Battle.net", "steam", "steamwebhelper", "EpicGamesLauncher", "EpicWebHelper",
+            "EADesktop", "UbisoftConnect", "upc", "GalaxyClient", "RiotClientServices",
+            "iCUE", "lghub", "lghub_agent", "lghub_system_tray", "Razer Synapse 3", "RazerAppEngine",
+            "MSIAfterburner", "RTSS", "FanControl", "HWiNFO64", "SignalRgb", "OpenRGB",
+            "OneDrive", "Dropbox", "Docker Desktop", "com.docker.backend",
+        };
+
+        /// <summary>Noms (une fois chacun) des logiciels de fond vivants, sans les exécutables du
+        /// profil du jeu : un lanceur déclaré dans le profil reste avec le jeu.</summary>
+        public static List<string> AReleguer(IEnumerable<string> nomsVivants, IEnumerable<string> exesDuJeu)
+        {
+            var jeu = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (exesDuJeu != null)
+                foreach (string exe in exesDuJeu)
+                    if (!string.IsNullOrEmpty(exe)) jeu.Add(System.IO.Path.GetFileNameWithoutExtension(exe));
+            var connus = new HashSet<string>(LogicielsDeFond, StringComparer.OrdinalIgnoreCase);
+            var vus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var l = new List<string>();
+            if (nomsVivants == null) return l;
+            foreach (string n in nomsVivants)
+                if (!string.IsNullOrEmpty(n) && connus.Contains(n) && !jeu.Contains(n) && vus.Add(n)) l.Add(n);
+            return l;
+        }
+
         public static string EcritEtat(Etat e)
         {
             var sb = new StringBuilder();
             sb.Append("jeu=").Append(e.Jeu ?? "").Append('\n');
             if (e.PlanOrigine != null) sb.Append("plan=").Append(e.PlanOrigine).Append('\n');
+            if (e.Fond) sb.Append("fond=1").Append('\n');
             return sb.ToString();
         }
 
@@ -138,6 +174,7 @@ namespace BTOptimizer
                 if (val.Length == 0) continue;
                 if (cle == "jeu") e.Jeu = val;
                 else if (cle == "plan") e.PlanOrigine = val;
+                else if (cle == "fond") e.Fond = val == "1";
             }
             return e.Jeu == null ? null : e;
         }

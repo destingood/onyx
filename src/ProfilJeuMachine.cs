@@ -27,7 +27,63 @@ namespace BTOptimizer
         private static bool _occupe, _repris;
         private static Etat _etat;   // jeu profilé en cours (null : aucun)
 
+        // Logiciels de fond sur l'autre CCD (X3D) : processus déjà traités, et quand.
+        private static readonly HashSet<int> _vus = new HashSet<int>();
+        private static List<int> _autres;
+        private static DateTime _dernierBalayage;
+
         private static string CheminEtat { get { return AppPaths.File(FichierEtat); } }
+
+        /// <summary>
+        /// Envoie les logiciels de fond (et ONYX lui-même) sur l'autre CCD : le jeu garde pour lui
+        /// le CCD à V-Cache et son cache L3. Rien n'est fermé. Un processus n'est tenté qu'une
+        /// fois ; ceux lancés en cours de partie sont pris au balayage suivant.
+        /// </summary>
+        private static int Relegue(string jeu, List<int> autres)
+        {
+            _dernierBalayage = DateTime.UtcNow;
+            Process[] tous = new Process[0];
+            try { tous = Process.GetProcesses(); } catch { }
+            var noms = new string[tous.Length];
+            for (int i = 0; i < tous.Length; i++) { try { noms[i] = tous[i].ProcessName; } catch { } }
+            var cibles = new HashSet<string>(AReleguer(noms, GameScan.ExesFor(jeu)), StringComparer.OrdinalIgnoreCase);
+            int moi = -1;
+            try { using (var p = Process.GetCurrentProcess()) moi = p.Id; } catch { }
+            int n = 0;
+            for (int i = 0; i < tous.Length; i++)
+            {
+                try
+                {
+                    int pid = tous[i].Id;
+                    if (pid == moi || (noms[i] != null && cibles.Contains(noms[i])))
+                    {
+                        bool nouveau;
+                        lock (_vus) nouveau = _vus.Add(pid);
+                        if (nouveau && Topologie.AppliqueCpuSets(pid, autres, null)) n++;
+                    }
+                }
+                catch { }
+                tous[i].Dispose();
+            }
+            return n;
+        }
+
+        /// <summary>Rend à Windows le placement des logiciels de fond (liste connue et ONYX).</summary>
+        private static void Libere()
+        {
+            var connus = new HashSet<string>(LogicielsDeFond, StringComparer.OrdinalIgnoreCase);
+            int moi = -1;
+            try { using (var p = Process.GetCurrentProcess()) moi = p.Id; } catch { }
+            Process[] tous = new Process[0];
+            try { tous = Process.GetProcesses(); } catch { }
+            foreach (Process p in tous)
+            {
+                try { if (p.Id == moi || connus.Contains(p.ProcessName)) Topologie.AppliqueCpuSets(p.Id, null, null); } catch { }
+                p.Dispose();
+            }
+            lock (_vus) _vus.Clear();
+            _autres = null;
+        }
 
         /// <summary>Non bloquant : sort tout de suite si un tour est en cours.</summary>
         public static void Tick(Action<string, int> log) { Tick(log, null); }
@@ -79,6 +135,17 @@ namespace BTOptimizer
             {
                 case Geste.Appliquer: Applique(detecte, profils[detecte], log); break;
                 case Geste.Retirer: Retire(log); break;
+                case Geste.Rien:
+                    // Partie en cours : les logiciels ouverts depuis rejoignent l'autre CCD
+                    // (toutes les 10 s au plus, un relevé des processus coûte quelques ms).
+                    Etat e;
+                    lock (_verrou) e = _etat;
+                    if (e != null && e.Fond && (DateTime.UtcNow - _dernierBalayage).TotalSeconds >= 10)
+                    {
+                        if (_autres == null) _autres = Topologie.Autres(Topologie.Lit());   // état adopté après un redémarrage
+                        if (_autres.Count > 0) Relegue(e.Jeu, _autres);
+                    }
+                    break;
             }
         }
 
@@ -110,6 +177,7 @@ namespace BTOptimizer
                     log("Profil de " + f.Jeu + " repris après le redémarrage d'ONYX.", 0);
                     break;
                 case Reprendre.Retablir:
+                    if (f.Fond) Libere();
                     if (f.PlanOrigine != null)
                     {
                         Sys.SetActivePowerProfile(f.PlanOrigine);
@@ -124,10 +192,16 @@ namespace BTOptimizer
         {
             List<Process> procs = Processus(jeu);
             List<int> preferes = new List<int>();
+            List<int> autres = new List<int>();
             if (string.Equals(profil.Item1, "Auto", StringComparison.OrdinalIgnoreCase))
-                preferes = Topologie.Preferes(Topologie.Lit());
+            {
+                List<Topologie.Proc> topo = Topologie.Lit();
+                preferes = Topologie.Preferes(topo);
+                autres = Topologie.Autres(topo);
+            }
             long masque;
             Mode cible = Cible(profil.Item1, profil.Item2, preferes, out masque);
+            if (cible != Mode.CpuSets) autres = new List<int>();
 
             int poses = 0;
             foreach (Process p in procs)
@@ -144,9 +218,14 @@ namespace BTOptimizer
             // qui rétablit un plan déjà en place, jamais un plan Performances orphelin.
             string planActif = Sys.GetActivePowerProfile();
             bool bascule = DoitBasculer(planActif);
-            var e = new Etat { Jeu = jeu, PlanOrigine = bascule ? planActif : null };
+            var e = new Etat { Jeu = jeu, PlanOrigine = bascule ? planActif : null, Fond = autres.Count > 0 };
             EcritFichier(e);
             lock (_verrou) _etat = e;
+            // X3D à deux CCD : le reste part sur l'autre CCD. Le plan Performances que pose le
+            // profil empêche le pilote AMD de garer ce CCD ; sans ce geste, navigateur, vocal et
+            // lanceurs partageraient le cache du jeu.
+            int deplaces = 0;
+            if (autres.Count > 0) { _autres = autres; deplaces = Relegue(jeu, autres); }
             if (bascule)
             {
                 Sys.SetActivePowerProfile(PlanPerformances);
@@ -165,7 +244,8 @@ namespace BTOptimizer
                           : cible == Mode.Affinite ? "affinité manuelle"
                           : "cœurs laissés à Windows";
             log(jeu + " détecté : " + coeurs + " (" + poses + "/" + procs.Count + " processus), priorité Haute"
-                + (bascule ? ", plan Performances." : ", plan inchangé."), 1);
+                + (bascule ? ", plan Performances" : ", plan inchangé")
+                + (autres.Count > 0 ? ", " + deplaces + " logiciel(s) de fond sur l'autre CCD." : "."), 1);
         }
 
         /// <summary>Tous les processus vivants des exécutables du jeu (un lanceur + le jeu, par ex.).</summary>
@@ -186,6 +266,7 @@ namespace BTOptimizer
             Etat e;
             lock (_verrou) { e = _etat; _etat = null; }
             if (e == null) return;
+            if (e.Fond) Libere();
             if (e.PlanOrigine != null) Sys.SetActivePowerProfile(e.PlanOrigine);
             EffaceFichier();
             log(e.Jeu + " fermé" + (e.PlanOrigine != null ? " : plan d'alimentation d'origine rétabli." : "."), 0);

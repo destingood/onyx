@@ -58,6 +58,13 @@ namespace BTOptimizer.Tests
 
             Banc.Verifie("libellé hybride", true, Topologie.Libelle(hyb).StartsWith("Intel hybride"));
             Banc.Verifie("libellé X3D", true, Topologie.Libelle(x3d).StartsWith("X3D"));
+
+            // Logiciels de fond : l'autre CCD, sur X3D seulement.
+            Banc.Verifie("X3D : autres = CCD sans V-Cache", true, Egal(Topologie.Autres(x3d), Enumerable.Range(16, 16)));
+            Banc.Verifie("X3D inversé : autres = premier CCD", true, Egal(Topologie.Autres(x3dInv), Enumerable.Range(0, 16)));
+            Banc.Verifie("hybride : rien à déplacer (cœurs E trop lents pour le vocal et l'overlay)", true, Topologie.Autres(hyb).Count == 0);
+            Banc.Verifie("deux CCD de même cache : rien à déplacer", true, Topologie.Autres(deuxCcd).Count == 0);
+            Banc.Verifie("null : rien à déplacer", true, Topologie.Autres(null).Count == 0);
             Banc.Verifie("libellé homogène", true, Topologie.Libelle(smt).StartsWith("homogène"));
         }
     }

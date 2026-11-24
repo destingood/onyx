@@ -63,6 +63,18 @@ namespace BTOptimizer
             return garde.Select(p => p.Index).Distinct().OrderBy(i => i).ToList();
         }
 
+        /// <summary>
+        /// Processeurs où envoyer les logiciels de fond pendant le jeu : l'autre CCD d'un X3D, et
+        /// rien ailleurs. Sur Intel hybride, les cœurs E serviraient mal le vocal et les overlays ;
+        /// sur un processeur homogène, il ne resterait que le cœur 0, déjà chargé des interruptions.
+        /// </summary>
+        public static List<int> Autres(IList<Proc> procs)
+        {
+            if (Classe(procs) != Cas.X3D) return new List<int>();
+            var jeu = new HashSet<int>(Preferes(procs));
+            return procs.Select(p => p.Index).Where(i => !jeu.Contains(i)).Distinct().OrderBy(i => i).ToList();
+        }
+
         /// <summary>Phrase courte pour le journal et la commande -topologie.</summary>
         public static string Libelle(IList<Proc> procs)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BTOptimizer.Tests
 {
@@ -68,6 +69,22 @@ namespace BTOptimizer.Tests
             Banc.Verifie("état sans plan relu : plan null", true, sansPlan != null && sansPlan.PlanOrigine == null);
             Banc.Verifie("état vide : rien", true, ProfilJeu.LitEtat("") == null);
             Banc.Verifie("état sans jeu : rien", true, ProfilJeu.LitEtat("plan=abc\n") == null);
+
+            // Logiciels de fond déplacés hors du CCD du jeu : jamais fermés, jamais le jeu lui-même.
+            ProfilJeu.Etat avecFond = ProfilJeu.LitEtat(ProfilJeu.EcritEtat(new ProfilJeu.Etat { Jeu = "Overwatch 2", Fond = true }));
+            Banc.Verifie("état : logiciels de fond déplacés relu", true, avecFond != null && avecFond.Fond);
+            Banc.Verifie("état ancien (sans ligne fond) : rien de déplacé", true, !ProfilJeu.LitEtat("jeu=cs2\n").Fond);
+            var vivants = new[] { "Overwatch", "Battle.net", "chrome", "chrome", "Discord", "explorer", "nvcontainer", "amd3dvcacheUser", "lghub_agent", "audiodg" };
+            List<string> fond = ProfilJeu.AReleguer(vivants, new[] { @"C:\Jeux\Overwatch\Overwatch.exe" });
+            Banc.Verifie("fond : navigateur, vocal, lanceur et utilitaires", true,
+                fond.Contains("chrome") && fond.Contains("Discord") && fond.Contains("Battle.net") && fond.Contains("lghub_agent"));
+            Banc.Verifie("fond : un nom une seule fois", true, fond.Count(n => n == "chrome") == 1);
+            Banc.Verifie("fond : ni le jeu, ni Windows, ni NVIDIA, ni le pilote AMD", true,
+                !fond.Contains("Overwatch") && !fond.Contains("explorer") && !fond.Contains("nvcontainer") && !fond.Contains("amd3dvcacheUser") && !fond.Contains("audiodg"));
+            List<string> lanceurJeu = ProfilJeu.AReleguer(new[] { "Battle.net", "Discord" }, new[] { "Battle.net.exe", "Overwatch.exe" });
+            Banc.Verifie("fond : un exécutable du profil reste avec le jeu", true, !lanceurJeu.Contains("Battle.net") && lanceurJeu.Contains("Discord"));
+            Banc.Verifie("fond : casse ignorée", true, ProfilJeu.AReleguer(new[] { "DISCORD" }, null).Count == 1);
+            Banc.Verifie("fond : rien de vivant, rien à faire", true, ProfilJeu.AReleguer(null, null).Count == 0);
         }
     }
 }

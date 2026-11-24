@@ -770,20 +770,22 @@ namespace BTOptimizer
         {
             try
             {
+                var noms = new List<string>();
+                var dates = new List<DateTime>();
                 using (var s = new ManagementObjectSearcher("SELECT Name,DriverDate FROM Win32_VideoController"))
                 {
                     foreach (ManagementObject mo in s.Get())
                     {
-                        string name = Convert.ToString(mo["Name"]) ?? "";
-                        string low = name.ToLowerInvariant();
-                        if (low.Contains("microsoft") || low.Contains("basic") || low.Contains("parsec") || low.Contains("virtual")) continue;
                         string dd = Convert.ToString(mo["DriverDate"]);
                         if (dd == null || dd.Length < 8) continue;
                         int y = int.Parse(dd.Substring(0, 4)), m = int.Parse(dd.Substring(4, 2)), day = int.Parse(dd.Substring(6, 2));
-                        var date = new DateTime(y, m, day);
-                        return (int)(DateTime.Now - date).TotalDays;
+                        noms.Add(Convert.ToString(mo["Name"]) ?? "");
+                        dates.Add(new DateTime(y, m, day));
                     }
                 }
+                // La carte du jeu, pas l'iGPU que WMI liste souvent en premier.
+                int i = ConstatsMateriel.IndexCartePilote(noms);
+                if (i >= 0) return (int)(DateTime.Now - dates[i]).TotalDays;
             }
             catch { }
             return -1;

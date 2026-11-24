@@ -167,6 +167,19 @@ namespace BTOptimizer.Tests
             string tout = ConstatsMateriel.X3DSansParcage(R9950, false, "Performances élevées", true, true);
             Banc.Verifie("plusieurs causes : toutes citées dans un seul constat", true,
                 tout.Contains("pilote chipset AMD") && tout.Contains("Performances élevées") && tout.Contains("mode Jeu") && tout.Contains("Game DVR"));
+
+            // Âge du pilote : celui de la carte dédiée, pas de l'iGPU du processeur.
+            Banc.Verifie("pilote : la carte dédiée l'emporte sur l'iGPU listé avant", true,
+                ConstatsMateriel.IndexCartePilote(new[] { "AMD Radeon(TM) Graphics", "NVIDIA GeForce RTX 4080 SUPER" }) == 1);
+            Banc.Verifie("pilote : iGPU Intel puis carte dédiée", true,
+                ConstatsMateriel.IndexCartePilote(new[] { "Intel(R) UHD Graphics 770", "NVIDIA GeForce RTX 4070" }) == 1);
+            Banc.Verifie("pilote : iGPU seul → l'iGPU", true, ConstatsMateriel.IndexCartePilote(new[] { "AMD Radeon(TM) Graphics" }) == 0);
+            Banc.Verifie("pilote : adaptateurs virtuels écartés", true,
+                ConstatsMateriel.IndexCartePilote(new[] { "Microsoft Basic Display Adapter", "Parsec Virtual Display Adapter" }) == -1);
+            Banc.Verifie("pilote : virtuel puis dédiée", true,
+                ConstatsMateriel.IndexCartePilote(new[] { "Parsec Virtual Display Adapter", "AMD Radeon RX 7800 XT" }) == 1);
+            Banc.Verifie("pilote : liste vide ou null", true,
+                ConstatsMateriel.IndexCartePilote(new string[0]) == -1 && ConstatsMateriel.IndexCartePilote(null) == -1);
         }
     }
 }

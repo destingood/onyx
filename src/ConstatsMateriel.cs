@@ -164,6 +164,24 @@ namespace BTOptimizer
         // variante au nom inconnu (suffixe après X3D) n'est pas reconnue : on n'extrapole pas.
         private static readonly Regex X3D2Ccd = new Regex(@"Ryzen\s+9\s+(?:PRO\s+)?[79]9[05]0X3D\b", RegexOptions.IgnoreCase);
 
+        /// <summary>Carte dont l'âge du pilote compte : la première carte dédiée, sinon la première
+        /// non virtuelle ; −1 si aucune. WMI liste souvent l'iGPU du processeur en premier (Ryzen
+        /// 7000/9000) : son pilote, rarement mis à jour, faisait annoncer un « pilote GPU ancien »
+        /// alors que celui de la carte du jeu était récent.</summary>
+        public static int IndexCartePilote(System.Collections.Generic.IList<string> noms)
+        {
+            if (noms == null) return -1;
+            int repli = -1;
+            for (int i = 0; i < noms.Count; i++)
+            {
+                string low = (noms[i] ?? "").ToLowerInvariant();
+                if (low.Length == 0 || low.Contains("microsoft") || low.Contains("basic") || low.Contains("parsec") || low.Contains("virtual")) continue;
+                if (!ModeXbox.EstIntegree(noms[i])) return i;
+                if (repli < 0) repli = i;
+            }
+            return repli;
+        }
+
         /// <summary>Ryzen X3D à deux CCD, où le pilote AMD gare pendant un jeu le CCD sans V-Cache.</summary>
         public static bool X3DDeuxCcd(string cpu)
         {
