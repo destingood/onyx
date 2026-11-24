@@ -36,7 +36,7 @@ namespace BTOptimizer
             string csv = Path.Combine(Path.GetTempPath(), "onyx-latence-" + Guid.NewGuid().ToString("N") + ".csv");
             string cible = string.IsNullOrEmpty(exe) ? "--exclude dwm.exe" : "--process_name \"" + exe + "\"";
             string commun = cible + " --output_file \"" + csv + "\" --timed " + secondes
-                          + " --terminate_after_timed --stop_existing_session";
+                          + " --terminate_after_timed --stop_existing_session --no_console_stats";
             try
             {
                 NativeResult r = Sys.Run(outil, commun + " --track_pc_latency", (secondes + 20) * 1000);
@@ -44,8 +44,15 @@ namespace BTOptimizer
                 if (!File.Exists(csv)) r = Sys.Run(outil, commun, (secondes + 20) * 1000);
                 if (!File.Exists(csv))
                 {
-                    erreur = "PresentMon n'a rien enregistré (code " + r.ExitCode + ")."
-                           + (string.IsNullOrEmpty(r.Output) ? "" : " " + r.Output.Trim().Split('\n')[0]);
+                    string sortie = r.Output ?? "";
+                    if (sortie.IndexOf("access denied", StringComparison.OrdinalIgnoreCase) >= 0)
+                        erreur = "Mesure refusée par Windows : ONYX doit tourner en administrateur.";
+                    else
+                    {
+                        erreur = "PresentMon n'a rien enregistré (code " + r.ExitCode + ").";
+                        foreach (string l in sortie.Split('\n'))
+                            if (l.TrimStart().StartsWith("error", StringComparison.OrdinalIgnoreCase)) { erreur += " " + l.Trim(); break; }
+                    }
                     return null;
                 }
                 LatenceReelle.Releve rel = LatenceReelle.Analyse(File.ReadAllText(csv), exe);
