@@ -98,6 +98,8 @@ namespace BTOptimizer
             {
                 using (var mon = new HwMonitor())
                 {
+                    mon.Sample();                                        // amorce : le % CPU se mesure entre deux relevés
+                    System.Threading.Thread.Sleep(300);
                     HwSample s = mon.Sample();
                     sb.Append("• Processeur : ").Append(s.CpuLoad < 0 ? "n/d" : s.CpuLoad.ToString("0") + " % de charge");
                     if (!double.IsNaN(s.CpuTempC)) sb.Append(" · ").Append(s.CpuTempC.ToString("0")).Append(" °C");

@@ -1314,6 +1314,7 @@ namespace BTOptimizer
             {
                 int uiErr = 0;
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
+                TestHwMonitor(ref uiErr);
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
@@ -2610,6 +2611,31 @@ namespace BTOptimizer
                 }
                 bitmap.Save(System.IO.Path.Combine(dir, name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
             }
+        }
+
+        // HwMonitor : constructeur instantané (PDH amorcé au premier Sample, hors fil d'interface),
+        // mesure CPU valide au 2e échantillon, Dispose sûr sans Sample et pendant un Sample.
+        private static void TestHwMonitor(ref int err)
+        {
+            Console.WriteLine("HwMonitor (amorçage PDH différé)...");
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var m = new HwMonitor();
+            long ms = sw.ElapsedMilliseconds;
+            if (ms >= 20) { err++; Console.WriteLine("  KO constructeur HwMonitor : " + ms + " ms (attendu < 20)."); }
+            try { m.Dispose(); } catch (Exception ex) { err++; Console.WriteLine("  KO Dispose sans Sample : " + ex.Message); }
+            var m2 = new HwMonitor();
+            double cpu = -2;
+            System.Threading.Tasks.Task.Run(() => { m2.Sample(); System.Threading.Thread.Sleep(300); cpu = m2.Sample().CpuLoad; }).Wait();
+            if (cpu < 0 || cpu > 100) { err++; Console.WriteLine("  KO CPU au 2e échantillon : " + cpu); }
+            var m3 = new HwMonitor();
+            Exception concur = null;
+            var t = System.Threading.Tasks.Task.Run(() => { try { for (int i = 0; i < 20; i++) m3.Sample(); } catch (Exception ex) { concur = ex; } });
+            System.Threading.Thread.Sleep(5);
+            try { m3.Dispose(); } catch (Exception ex) { concur = ex; }
+            t.Wait();
+            m2.Dispose();
+            if (concur != null) { err++; Console.WriteLine("  KO Dispose pendant Sample : " + concur.Message); }
+            Console.WriteLine("  HwMonitor : constructeur " + ms + " ms, CPU " + cpu.ToString("0.0") + " %.");
         }
 
         private static void CaptureShellShots(string dir)

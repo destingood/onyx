@@ -140,17 +140,25 @@ namespace BTOptimizer
 
         private readonly string _nvsmi;
 
+        // Le constructeur ne touche pas à PDH (~240 ms à l'ouverture de la requête) : il est appelé
+        // sur le fil d'interface. L'amorçage se fait au premier Sample(), appelé en fond.
         public HwMonitor()
         {
-            if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out _query) == 0)
-            {
-                if (PdhAddEnglishCounter(_query, @"\Processor(_Total)\% Processor Time", IntPtr.Zero, out _cpu) == 0)
-                {
-                    PdhCollectQueryData(_query); // amorçage
-                    _pdhReady = true;
-                }
-            }
             _nvsmi = FindNvidiaSmi();
+        }
+
+        private readonly object _pdhVerrou = new object();
+        private bool _amorce, _ferme;
+
+        // Ouvre la requête PDH et prend le premier relevé (le % CPU se calcule entre deux relevés).
+        // Appelée sous _pdhVerrou.
+        private void Amorce()
+        {
+            _amorce = true;
+            if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out _query) != 0) { _query = IntPtr.Zero; return; }
+            if (PdhAddEnglishCounter(_query, @"\Processor(_Total)\% Processor Time", IntPtr.Zero, out _cpu) != 0) return;
+            PdhCollectQueryData(_query);
+            _pdhReady = true;
         }
 
         public bool HasGpu { get { return _nvsmi != null; } }
@@ -160,11 +168,15 @@ namespace BTOptimizer
             var s = new HwSample();
             s.TimerMs = Native.CurrentTimerMs();
 
-            if (_pdhReady && PdhCollectQueryData(_query) == 0)
+            lock (_pdhVerrou)
             {
-                PdhValue v;
-                if (PdhGetFormattedCounterValue(_cpu, PDH_FMT_DOUBLE, IntPtr.Zero, out v) == 0 && v.CStatus == 0)
-                    s.CpuLoad = v.Value;
+                if (!_amorce && !_ferme) Amorce();
+                if (_pdhReady && PdhCollectQueryData(_query) == 0)
+                {
+                    PdhValue v;
+                    if (PdhGetFormattedCounterValue(_cpu, PDH_FMT_DOUBLE, IntPtr.Zero, out v) == 0 && v.CStatus == 0)
+                        s.CpuLoad = v.Value;
+                }
             }
 
             var mem = new MEMORYSTATUSEX();
@@ -362,8 +374,12 @@ namespace BTOptimizer
             // Fermer dès que le handle est ouvert — même si l'ajout du compteur CPU a échoué
             // (sinon _pdhReady reste faux et le handle PDH fuit à chaque construction, sur les
             // Windows « débloatés » où les compteurs de perf sont parfois corrompus).
-            if (_query != IntPtr.Zero) { PdhCloseQuery(_query); _query = IntPtr.Zero; }
-            _pdhReady = false;
+            lock (_pdhVerrou)
+            {
+                _ferme = true;
+                if (_query != IntPtr.Zero) { PdhCloseQuery(_query); _query = IntPtr.Zero; }
+                _pdhReady = false;
+            }
         }
     }
 }
