@@ -5,6 +5,21 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.02 — Le tableau de bord lit la bonne carte graphique
+
+- **Le tableau de bord ne lance plus `nvidia-smi.exe` en boucle sur les PC qui ont deux puces
+  graphiques.** Cas constaté : un Ryzen 9000 (puce Radeon intégrée) avec une carte NVIDIA. ONYX
+  lisait la première puce listée, ici la puce intégrée au processeur, qui n'expose aucun capteur.
+  Faute de température, il se rabattait sur l'outil `nvidia-smi.exe` à chaque rafraîchissement :
+  20 processus lancés par minute, relevés dans une trace noyau sur le PC de test, tant que le
+  tableau de bord restait affiché. ONYX relève maintenant toutes les puces et garde celle qui a
+  les capteurs les plus complets, puis celle qui a le plus de mémoire vidéo.
+- **Mesuré sur le PC de test (Ryzen 9 9950X3D + RTX 4080 SUPER) :** 0 `nvidia-smi.exe` en 60 s
+  après le correctif. L'effet sur la latence n'a pas été mesuré.
+- **Profil NVIDIA : « Rétablir » remet le vrai mode d'alimentation d'usine.** Il écrivait
+  « Adaptatif » (0) en se présentant comme un retour aux réglages d'usine ; la valeur d'usine du
+  pilote est « Normal » (5).
+
 ## v16.01 — L'état minimal du processeur dans les presets
 
 - **« État minimal du processeur à 100 % » est maintenant coché par Recommandé, eSport, le mode
