@@ -33,6 +33,14 @@ namespace BTOptimizer
             string outil = Outil();
             if (outil == null) { erreur = "PresentMon introuvable (attendu dans tools\\presentmon\\)."; return null; }
             secondes = Math.Max(5, Math.Min(120, secondes));
+            if (!string.IsNullOrEmpty(exe))
+            {
+                string nom = Path.GetFileNameWithoutExtension(exe);
+                System.Diagnostics.Process[] ps = System.Diagnostics.Process.GetProcessesByName(nom);
+                bool lance = ps.Length > 0;
+                foreach (var p in ps) p.Dispose();
+                if (!lance) { erreur = exe + " n'est pas lancé : lance une partie, puis mesure."; return null; }
+            }
             string csv = Path.Combine(Path.GetTempPath(), "onyx-latence-" + Guid.NewGuid().ToString("N") + ".csv");
             string cible = string.IsNullOrEmpty(exe) ? "--exclude dwm.exe" : "--process_name \"" + exe + "\"";
             string commun = cible + " --output_file \"" + csv + "\" --timed " + secondes
