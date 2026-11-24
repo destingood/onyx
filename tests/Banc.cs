@@ -95,6 +95,7 @@ namespace BTOptimizer.Tests
             ModeXboxTests.Tout();
             IntegriteMemoireTests.Tout();
             ReflexJeuxTests.Tout();
+            CoherenceFpsTests.Tout();
             EtatOrigineTests.Tout();
             MsiConditionnelTests.Tout();
             EfficaciteTests.Tout();

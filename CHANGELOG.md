@@ -5,6 +5,21 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.00 — Le plafond FPS que tu as vraiment
+
+- **ONYX vérifie que ton plafond de FPS est atteignable.** Il croise l'écran, le panneau NVIDIA
+  (V-Sync, limiteur d'images, G-SYNC, lus en lecture seule par NVAPI) et les réglages
+  d'Overwatch (plafond, rafraîchissement, Reflex). Exemple : V-Sync forcé + G-SYNC + Reflex sur
+  un écran 500 Hz plafonne tout seul à environ 430 FPS, même si le jeu en demande 600. ONYX le dit,
+  chiffre l'écart en ms et indique le réglage à changer. Autres cas signalés : jeu réglé sous le
+  rafraîchissement de l'écran, limiteur du pilote plus bas que le plafond du jeu, V-Sync forcé
+  sans G-SYNC.
+- Visible dans le diagnostic, sur la page « Objectif 500 FPS » (V-Sync et limiteur lus dans le
+  pilote au lieu d'un conseil générique), et dans le journal du mode Automatique au lancement
+  d'Overwatch.
+- Nouvelle commande `-coherence` : état lu dans le pilote NVIDIA et constats, dans
+  `bt-optimizer-log.txt`.
+
 ## v15.99 — Le CCD à V-Cache rien que pour le jeu
 
 - **Ryzen X3D à deux CCD : le jeu garde son cache pour lui.** Pendant un jeu profilé en mode

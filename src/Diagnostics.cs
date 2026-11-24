@@ -229,6 +229,9 @@ namespace BTOptimizer
                 }
             }
             catch { }
+            // Plafond FPS réellement atteignable (V-Sync pilote + G-SYNC + Reflex, rafraîchissement).
+            try { foreach (string c in CoherenceOverwatch()) f.Add(new Finding(1, c)); }
+            catch { }
 
             // « SERVICE HÔTE » QUI CONSOMME : on nomme le service, pas le conteneur. Dire
             // « svchost mange du CPU » n'aide personne — c'est un conteneur, et c'est le service
@@ -709,6 +712,32 @@ namespace BTOptimizer
                     return sr.ReadToEnd();
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Overwatch : le plafond FPS demandé est-il atteignable avec l'écran et le panneau NVIDIA
+        /// tels qu'ils sont ? Lecture seule (fichier du jeu, NVAPI). Liste vide si Overwatch n'est
+        /// pas installé ou si l'écran est illisible.
+        /// </summary>
+        internal static System.Collections.Generic.List<string> CoherenceOverwatch()
+        {
+            var vide = new System.Collections.Generic.List<string>();
+            string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            CoherenceFps.ReglagesJeu ow = CoherenceFps.LitOverwatch(LitPartage(System.IO.Path.Combine(docs, @"Overwatch\Settings\Settings_v0.ini")));
+            if (ow == null) return vide;
+            int hz = 0;
+            foreach (DisplayInfo.DisplayMode m in DisplayInfo.Query())
+                if (m.Primary || hz == 0) hz = m.CurrentHz;
+            var c = new CoherenceFps.Contexte { Jeu = "Overwatch", HzEcran = hz, HzJeu = ow.Hz, Plafond = ow.Plafond, Reflex = ow.Reflex };
+            GpuDrv carte = GpuDriver();
+            if (carte != null && ReflexJeux.Marque(carte.Name) == "nvidia")
+            {
+                NvDrs.Lecture l = NvDrs.Lit("Overwatch.exe");
+                c.VSync = CoherenceFps.DepuisPilote(l.VSync);
+                if (l.Limiteur != null) c.LimiteurPilote = (int)l.Limiteur.Value;
+                if (l.GSync != null) c.GSync = l.GSync.Value != 0;
+            }
+            return CoherenceFps.Constats(c);
         }
 
         /// <summary>Noms de toutes les cartes d'affichage réelles (WMI, mêmes exclusions que

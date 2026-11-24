@@ -246,6 +246,10 @@ namespace BTOptimizer
             log(jeu + " détecté : " + coeurs + " (" + poses + "/" + procs.Count + " processus), priorité Haute"
                 + (bascule ? ", plan Performances" : ", plan inchangé")
                 + (autres.Count > 0 ? ", " + deplaces + " logiciel(s) de fond sur l'autre CCD." : "."), 1);
+
+            // Plafond FPS réellement atteignable (lecture seule : fichier du jeu, panneau NVIDIA, écran).
+            if (jeu.StartsWith("Overwatch", StringComparison.OrdinalIgnoreCase))
+                try { foreach (string c in Diagnostics.CoherenceOverwatch()) log(c, 2); } catch { }
         }
 
         /// <summary>Tous les processus vivants des exécutables du jeu (un lanceur + le jeu, par ex.).</summary>

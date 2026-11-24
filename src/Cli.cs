@@ -91,6 +91,20 @@ namespace BTOptimizer
                 return 0;
             }
 
+            if (string.Equals(args[0], "-coherence", StringComparison.OrdinalIgnoreCase))
+            {
+                NvDrs.Lecture l = NvDrs.Lit("Overwatch.exe");
+                log("Pilote NVIDIA (Overwatch.exe" + (l.ProfilJeu ? ", profil du jeu" : ", profil global") + ") : V-Sync "
+                    + CoherenceFps.DepuisPilote(l.VSync) + (l.VSync != null ? " (0x" + l.VSync.Value.ToString("X8") + ")" : "")
+                    + ", limiteur " + (l.Limiteur == null ? "?" : l.Limiteur.Value.ToString()) + ", G-SYNC global "
+                    + (l.GSync == null ? "?" : l.GSync.Value.ToString()) + (l.Motif != null ? " — " + l.Motif : "") + (l.DernierCode != 0 ? " (code NVAPI " + l.DernierCode + ", profil du jeu " + l.CodeJeu + ")" : ""), 0);
+                log("Lectures NVAPI (id:code=valeur) : " + l.Trace, 0);
+                List<string> constats = Diagnostics.CoherenceOverwatch();
+                if (constats.Count == 0) log("Aucune incohérence FPS / rafraîchissement trouvée.", 1);
+                foreach (string c in constats) log(c, 2);
+                return 0;
+            }
+
             if (string.Equals(args[0], "-allerretour", StringComparison.OrdinalIgnoreCase))
             {
                 // Garde-fou AVANT tout le reste : ce test applique les réglages pour de vrai.
@@ -124,7 +138,7 @@ namespace BTOptimizer
             bool revert = string.Equals(args[0], "-revert", StringComparison.OrdinalIgnoreCase);
             if (!apply && !revert)
             {
-                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove, -allerretour, -topologie ou -gpuoc).", 3);
+                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove, -allerretour, -topologie, -coherence ou -gpuoc).", 3);
                 return 2;
             }
             string mode = args.Length > 1 ? args[1].ToLowerInvariant() : "profile";

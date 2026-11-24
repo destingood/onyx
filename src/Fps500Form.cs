@@ -260,11 +260,36 @@ namespace BTOptimizer
             Add(gGames, 2, "Jeu absent de la liste ?",
                 "Cherche « limite de FPS / frame rate cap » et « V-Sync » dans ses options vidéo — le déblocage est toujours à cet endroit.");
 
+            try
+            {
+                foreach (string c in Diagnostics.CoherenceOverwatch()) Add(gGames, 1, "Overwatch — plafond réellement atteignable", c);
+            }
+            catch { }
+
             // ---- 4. Pilote GPU ----
-            Add(gDriver, 2, "NVIDIA — Synchronisation verticale",
-                "Panneau NVIDIA → Gérer les paramètres 3D : « Synchronisation verticale : Désactivée » (sinon FPS bloqués sur le Hz).");
-            Add(gDriver, 2, "NVIDIA — Fréquence d'images max",
-                "« Fréquence d'images max : Désactivée » — aucun limiteur côté pilote. « Mode de gestion de l'alimentation : Performances maximales ». « Latence faible : Ultra » si le jeu n'a pas Reflex.");
+            NvDrs.Lecture nv = null;
+            try
+            {
+                Diagnostics.GpuDrv carte = Diagnostics.GpuDriver();
+                if (carte != null && ReflexJeux.Marque(carte.Name) == "nvidia") nv = NvDrs.Lit(null);
+            }
+            catch { }
+            CoherenceFps.VSync vs = nv == null ? CoherenceFps.VSync.Inconnu : CoherenceFps.DepuisPilote(nv.VSync);
+            if (vs == CoherenceFps.VSync.Inconnu)
+                Add(gDriver, 2, "NVIDIA — Synchronisation verticale",
+                    "Panneau NVIDIA → Gérer les paramètres 3D : « Synchronisation verticale : Désactivée » (sinon FPS bloqués sur le Hz).");
+            else
+                AddCheck(gDriver, vs != CoherenceFps.VSync.ForceOn, "NVIDIA — Synchronisation verticale (lue dans le pilote)",
+                    vs == CoherenceFps.VSync.ForceOff ? "Désactivée partout." : "Laissée au jeu : règle-la dans chaque jeu.",
+                    "Forcée dans le panneau NVIDIA : FPS bloqués sous le rafraîchissement (avec Reflex + G-SYNC : ≈ "
+                    + CoherenceFps.CapReflex(HzEcran()) + " FPS). Mets-la sur « Désactivée » pour viser 500 FPS.");
+            if (nv != null && nv.Limiteur != null)
+                AddCheck(gDriver, nv.Limiteur.Value == 0, "NVIDIA — Fréquence d'images max (lue dans le pilote)",
+                    "Désactivée : aucun limiteur côté pilote.",
+                    "Réglée à " + nv.Limiteur.Value + " FPS dans le panneau NVIDIA : c'est un plafond pour tous les jeux. Désactive-la pour viser 500 FPS.");
+            else
+                Add(gDriver, 2, "NVIDIA — Fréquence d'images max",
+                    "« Fréquence d'images max : Désactivée » — aucun limiteur côté pilote. « Mode de gestion de l'alimentation : Performances maximales ». « Latence faible : Ultra » si le jeu n'a pas Reflex.");
             Add(gDriver, 2, "AMD Radeon",
                 "Anti-Lag : Activé. Radeon Chill, FRTC et « cible de fréquence » : DÉSACTIVÉS (ce sont des limiteurs de FPS).");
             Add(gDriver, 2, "Overlays",
@@ -276,6 +301,14 @@ namespace BTOptimizer
             _btnMaxHz.Text = _below != null ? ("⬆ Passer à " + _below.MaxHz + " Hz") : "⬆ Écran déjà au max";
 
             Cursor = Cursors.Default;
+        }
+
+        private static int HzEcran()
+        {
+            int hz = 0;
+            try { foreach (DisplayInfo.DisplayMode m in DisplayInfo.Query()) if (m.Primary || hz == 0) hz = m.CurrentHz; }
+            catch { }
+            return hz;
         }
 
         private void AddCheck(ListViewGroup g, bool ok, string name, string okText, string fixText)
