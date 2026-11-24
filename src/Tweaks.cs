@@ -1581,9 +1581,9 @@ namespace BTOptimizer
             list.Add(new Tweak
             {
                 Id = "cpu_idle_disable", Category = Cat.Alim,
-                Risque = Risque.AnnulationNonGarantie,
+                Risque = Risque.AnnulationNonGarantie, Preuve = NiveauPreuve.NonMesure,
                 Name = "Désactiver les états de repos du CPU (C-States) — EXPÉRIMENTAL",
-                Desc = "Le CPU ne s'endort jamais : latence d'interruption minimale, mais chaleur/consommation en forte hausse. À réserver à un desktop bien refroidi. « Rétablir » réactive le repos. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
+                Desc = "Le CPU ne s'endort jamais. Gain de latence non démontré : sur le PC de test (Ryzen 9 9950X3D, au bureau, un seul essai), la durée des interruptions n'a pas baissé, le processeur est passé de 49 W à 171 W et un cœur seul a calculé 9 % moins vite. À réserver à un essai mesuré, sur un desktop bien refroidi. « Rétablir » réactive le repos. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
                 Apply  = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1, 1),
                 Revert = () => Sys.SetPowerValue(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 0, 0),
                 Check  = () => Sys.PowerAcEquals(SubProc, "5d76a2ca-e8c0-402f-a133-2158492d58ad", 1)

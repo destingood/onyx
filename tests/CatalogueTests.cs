@@ -67,6 +67,16 @@ namespace BTOptimizer.Tests
             Banc.Verifie("gpu_coeur_dedie : gain de latence annoncé comme non mesuré", true,
                 coeur.Contains("Preuve = NiveauPreuve.NonMesure") && coeur.Contains("non mesuré"));
 
+            // Mesure du 25/11/2026 sur le PC de test : sans veille, la durée des interruptions n'a pas baissé,
+            // le processeur est passé de 49 à 171 W et un cœur seul a calculé 9 % moins vite.
+            string veille = BlocDe(src, "cpu_idle_disable");
+            Banc.Verifie("cpu_idle_disable : ne promet plus une latence d'interruption minimale", false,
+                veille.Contains("latence d'interruption minimale"));
+            Banc.Verifie("cpu_idle_disable : gain annoncé comme non démontré, coût mesuré cité", true,
+                veille.Contains("Preuve = NiveauPreuve.NonMesure") && veille.Contains("non démontré") && veille.Contains("171 W"));
+            Banc.Verifie("cpu_idle_disable : toujours annoncé « jamais coché automatiquement »", true,
+                veille.Contains("JAMAIS"));
+
             // « Rétablir » du profil NVIDIA : valeur d'usine du mode d'alimentation = 5
             // (PREFERRED_PSTATE_DEFAULT = OPTIMAL_POWER, « Normal », NvApiDriverSettings.h), pas 0 (Adaptatif).
             string nv = Source("NvProfile.cs") ?? "";
