@@ -97,6 +97,7 @@
     <Compile Include="..\src\Actus.cs" />
     <Compile Include="..\src\GrilleCartes.cs" />
     <Compile Include="..\src\VeilleJeu.cs" />
+    <Compile Include="..\src\ChoixGpu.cs" />
     <!-- Machine (HTTP, cache) : compilé pour le test réseau à la demande seulement (argument « reseau »). -->
     <Compile Include="..\src\OffresReseau.cs" />
   </ItemGroup>

@@ -1,17 +1,9 @@
 using System;
+using System.Collections.Generic;
 using LibreHardwareMonitor.Hardware;
 
 namespace BTOptimizer
 {
-    /// <summary>Relevé GPU complet (tous constructeurs), lu nativement.</summary>
-    internal class GpuReading
-    {
-        public bool Ok;
-        public string Name;
-        public double TempC = double.NaN, LoadPct = double.NaN, CoreMhz = double.NaN, MemMhz = double.NaN, PowerW = double.NaN;
-        public long VramUsedMB = -1, VramTotalMB = -1;
-    }
-
     /// <summary>
     /// Capteurs GPU NATIFS, tous constructeurs, via LibreHardwareMonitorLib en mode « GPU SEUL ».
     /// Important : on n'active QUE le GPU (CPU / carte mère / etc. désactivés) — donc le pilote
@@ -52,17 +44,21 @@ namespace BTOptimizer
         /// Instance LHM ouverte une seule fois puis réutilisée. À appeler en arrière-plan.</summary>
         public static GpuReading Read()
         {
-            var r = new GpuReading();
             lock (_lock)
             {
-                if (_failed) return r;
+                if (_failed) return new GpuReading();
                 try
                 {
                     EnsureOpen();
+                    // TOUS les GPU sont relevés, puis ChoixGpu tranche : le premier listé peut être
+                    // la puce intégrée au processeur, sans capteur (voir ChoixGpu).
+                    var gpus = new List<GpuReading>();
                     foreach (IHardware hw in _computer.Hardware)
                     {
                         if (!IsGpu(hw.HardwareType)) continue;
                         hw.Update();
+                        var r = new GpuReading();
+                        gpus.Add(r);
                         r.Name = hw.Name; r.Ok = true;
                         foreach (ISensor s in hw.Sensors)
                         {
@@ -92,9 +88,8 @@ namespace BTOptimizer
                                     break;
                             }
                         }
-                        break;   // premier GPU dédié suffit
                     }
-                    return r;
+                    return ChoixGpu.Meilleur(gpus) ?? new GpuReading();
                 }
                 catch
                 {
