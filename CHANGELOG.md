@@ -7,6 +7,13 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 
 ## v16.00 — Le plafond FPS que tu as vraiment
 
+- **Mesure de ta latence réelle, de ton clic à l'image affichée.** Bouton « ⏱ Mesurer ma latence »
+  sur la page « Objectif 500 FPS » : 20 secondes de jeu, et ONYX donne la latence médiane et au
+  95e centile (PresentMon d'Intel, sans injection dans le jeu), plus la « PC Latency » des jeux
+  Reflex. Chaque mesure est comparée à la précédente : gain, perte ou « dans le bruit » (seuil
+  prudent : 0,5 ms ou 5 %). C'est la seule façon de savoir quel réglage fait gagner chez toi —
+  aucun guide d'optimisation ne publie de mesure contrôlée. Hors périmètre : la souris et la dalle
+  de l'écran. Commande `-latence [jeu.exe] [secondes]`.
 - **ONYX vérifie que ton plafond de FPS est atteignable.** Il croise l'écran, le panneau NVIDIA
   (V-Sync, limiteur d'images, G-SYNC, lus en lecture seule par NVAPI) et les réglages
   d'Overwatch (plafond, rafraîchissement, Reflex). Exemple : V-Sync forcé + G-SYNC + Reflex sur

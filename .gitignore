@@ -80,3 +80,4 @@ installer/Output/
 
 # Dossier de livraison recree a chaque compilation de l'installateur
 build/
+tools/presentmon/

@@ -150,6 +150,9 @@ Source: "{#Src}\*"; DestDir: "{app}"; \
 ; Profil de capture latence DPC/ISR (utilisé par la mesure ETW).
 Source: "..\tools\dpc-trace.wprp"; DestDir: "{app}\tools"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
 
+; PresentMon (Intel, licence MIT, LICENSE livré à côté) : mesure de la latence réelle entrée → affichage.
+Source: "..\tools\presentmon\*"; DestDir: "{app}\tools\presentmon"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
+
 ; Composant NVIDIA optionnel. nvidiaProfileInspector est un outil tiers :
 ; vérifiez ses droits de redistribution avant toute diffusion commerciale.
 ; (les symboles de débogage de l'outil tiers ne servent à personne : on ne les livre pas)

@@ -105,6 +105,17 @@ namespace BTOptimizer
                 return 0;
             }
 
+            if (string.Equals(args[0], "-latence", StringComparison.OrdinalIgnoreCase))
+            {
+                // -latence [jeu.exe] [secondes] : latence réelle entrée → affichage (PresentMon).
+                string jeu = null; int sec = 20, n;
+                for (int i = 1; i < args.Length; i++)
+                    if (int.TryParse(args[i], out n)) sec = n; else jeu = args[i];
+                string t = LatenceMesure.MesureEtCompare(jeu, sec);
+                foreach (string l in t.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)) log(l, 0);
+                return LatenceMesure.Outil() == null ? 3 : 0;
+            }
+
             if (string.Equals(args[0], "-allerretour", StringComparison.OrdinalIgnoreCase))
             {
                 // Garde-fou AVANT tout le reste : ce test applique les réglages pour de vrai.
@@ -138,7 +149,7 @@ namespace BTOptimizer
             bool revert = string.Equals(args[0], "-revert", StringComparison.OrdinalIgnoreCase);
             if (!apply && !revert)
             {
-                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove, -allerretour, -topologie, -coherence ou -gpuoc).", 3);
+                log("Argument inconnu : " + args[0] + " (attendu : -apply, -revert, -prove, -allerretour, -topologie, -coherence, -latence ou -gpuoc).", 3);
                 return 2;
             }
             string mode = args.Length > 1 ? args[1].ToLowerInvariant() : "profile";

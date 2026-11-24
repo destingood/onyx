@@ -15,7 +15,7 @@ namespace BTOptimizer
     {
         private readonly Action<string, int> _log;
         private ListView _list;
-        private Button _btnPack, _btnMaxHz;
+        private Button _btnPack, _btnMaxHz, _btnLatence;
         private List<Font> _ownedFonts;
         private Font _bold;
         private DisplayInfo.DisplayMode _below;   // premier écran sous sa fréquence max
@@ -83,15 +83,15 @@ namespace BTOptimizer
             _btnPack.FlatAppearance.BorderSize = 0;
             _btnPack.Click += (s, e) => { ApplyPackRequested = true; Close(); };
 
-            _btnMaxHz = MakeBtn("⬆ Écran → fréquence max", 170, DockStyle.Left);
+            _btnMaxHz = MakeBtn("⬆ Fréquence max", 130, DockStyle.Left);
             _btnMaxHz.Click += OnForceMaxHz;
 
             var fps = MakeBtn("Compteur FPS...", 115, DockStyle.Left);
             fps.Click += (s, e) => { using (var f = new FpsMonForm(_log)) f.ShowDialog(this); };
 
-            var scr = MakeBtn("Réglages écran...", 125, DockStyle.Left);
+            var scr = MakeBtn("Écran...", 80, DockStyle.Left);
             scr.Click += (s, e) => Shell("ms-settings:display-advanced", "ms-settings:display");
-            var gpu = MakeBtn("Panneau NVIDIA...", 125, DockStyle.Left);
+            var gpu = MakeBtn("NVIDIA...", 85, DockStyle.Left);
             // Même correctif que dans le guide Streamer : « nvcpl.cpl » n'existe plus.
             gpu.Click += (s, e) =>
             {
@@ -100,13 +100,15 @@ namespace BTOptimizer
                         + "Ouvre-le par un clic droit sur le bureau, ou depuis le menu Démarrer.",
                         "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
+            _btnLatence = MakeBtn("⏱ Mesurer ma latence", 150, DockStyle.Left);
+            _btnLatence.Click += OnMesureLatence;
             var refresh = MakeBtn("Rafraîchir", 85, DockStyle.Left);
             refresh.Click += (s, e) => Reload();
             var close = MakeBtn("Fermer", 80, DockStyle.Right);
             close.Click += (s, e) => Close();
 
             bottom.Controls.Add(new Label { Dock = DockStyle.Fill });
-            bottom.Controls.Add(refresh); bottom.Controls.Add(gpu); bottom.Controls.Add(scr);
+            bottom.Controls.Add(refresh); bottom.Controls.Add(_btnLatence); bottom.Controls.Add(gpu); bottom.Controls.Add(scr);
             bottom.Controls.Add(_btnMaxHz); bottom.Controls.Add(_btnPack);
             bottom.Controls.Add(close);
 
@@ -120,6 +122,43 @@ namespace BTOptimizer
             Controls.SetChildIndex(bottom, 1);
 
             Theme.Apply(this);
+        }
+
+        /// <summary>Latence réelle entrée → affichage, mesurée par PresentMon pendant que tu joues ;
+        /// comparée à la mesure précédente pour dire si le dernier réglage changé fait gagner.</summary>
+        private void OnMesureLatence(object sender, EventArgs e)
+        {
+            if (LatenceMesure.Outil() == null)
+            {
+                MessageBox.Show(this, "L'outil de mesure (PresentMon) n'est pas installé avec cette version d'ONYX.",
+                    "ONYX — latence", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (MessageBox.Show(this, "Lance ton jeu et joue normalement : bouge la souris, tire, déplace-toi.\n\n"
+                    + "La mesure démarre 10 secondes après « OK » et dure 20 secondes. Elle donne la latence du PC, "
+                    + "de ton clic à l'image affichée (hors souris et dalle de l'écran).\n\n"
+                    + "Pour tester un réglage : mesure, change UN réglage, mesure à nouveau.",
+                    "ONYX — mesurer ma latence", MessageBoxButtons.OKCancel, MessageBoxIcon.Information) != DialogResult.OK) return;
+            _btnLatence.Enabled = false;
+            _btnLatence.Text = "Mesure en cours…";
+            var t = new System.Threading.Thread(() =>
+            {
+                string res;
+                try { System.Threading.Thread.Sleep(10000); res = LatenceMesure.MesureEtCompare(null, 20); }
+                catch (Exception ex) { res = "Mesure impossible (" + ex.Message + ")."; }
+                if (_log != null) try { _log("Latence réelle : " + res.Replace("\r\n", " "), 0); } catch { }
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        _btnLatence.Enabled = true;
+                        _btnLatence.Text = "⏱ Mesurer ma latence";
+                        MessageBox.Show(this, res, "ONYX — latence réelle", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }));
+                }
+                catch { }   // fenêtre fermée pendant la mesure
+            }) { IsBackground = true, Name = "ONYX-latence" };
+            t.Start();
         }
 
         private static Button MakeBtn(string text, int w, DockStyle dock)
@@ -179,7 +218,7 @@ namespace BTOptimizer
                         if (_below == null || d.Primary) _below = d;
                         Add(gScreen, 1, label,
                             d.CurrentHz + " Hz alors qu'il gère " + d.MaxHz + " Hz en " + d.Width + "×" + d.Height
-                            + " — clique « ⬆ Écran → fréquence max » ci-dessous.");
+                            + " — clique « ⬆ Fréquence max » ci-dessous.");
                     }
                     else
                         Add(gScreen, 0, label, "À sa fréquence max : " + d.CurrentHz + " Hz (" + d.Width + "×" + d.Height + ").");
