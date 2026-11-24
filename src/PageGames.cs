@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -33,6 +33,9 @@ namespace BTOptimizer
         private string _subtitle = "Analyse des jeux installés…";
         private List<GameScan.GameInfo> _all;
         private bool _loaded;
+        internal int RendusPourTest;
+        private string _signatureRendu;
+        private object _allRendu, _spaceRendu;
         private ScrollWheelFilter _wheel;
 
         public PageGames(DashboardForm host) : base(host)
@@ -374,6 +377,15 @@ namespace BTOptimizer
                 foreach (var game in visible) { var info = SpaceInfo(game); if (info != null) total += info.SizeMB; }
                 _results.Text += " · " + Go(total) + " mesurés";
             }
+            // Rien de ce que montrent les tuiles n'a changé (retour sur la page, filtre sans effet) :
+            // on garde les cartes, leurs jaquettes et la position de défilement.
+            var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-");
+            foreach (var game in visible) sig.Append('|').Append(game.Name);
+            string signature = sig.ToString();
+            if (signature == _signatureRendu && ReferenceEquals(_all, _allRendu) && ReferenceEquals(_spaceData, _spaceRendu) && _flow.Controls.Count > 0)
+            { Invalidate(); return; }
+            _signatureRendu = signature; _allRendu = _all; _spaceRendu = _spaceData;
+            RendusPourTest++;
             _flow.SuspendLayout();
             var old = new Control[_flow.Controls.Count]; _flow.Controls.CopyTo(old, 0);
             _flow.Controls.Clear(); _flow.AutoScrollPosition = Point.Empty;

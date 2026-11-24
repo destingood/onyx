@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -128,22 +128,35 @@ namespace BTOptimizer
             else { _vs.Value = 0; _vs.Visible = false; }
         }
 
+        internal int MesuresDescPourTest;
+
         private int[] Mesures(Tweak t, int w)
         {
             int[] m;
             if (_mesures.TryGetValue(Cle(t), out m)) return m;
             int nameW = Math.Max(80, w - 138);
             int nameH = Math.Max(40, TextRenderer.MeasureText(t.Name ?? "", FpsUi.H3, new Size(nameW, 0), Wrap).Height);
-            int pleine = Math.Max(48, TextRenderer.MeasureText(t.Desc ?? "", FpsUi.Body, new Size(Math.Max(1, w - 32), 0), Wrap).Height + 4);
-            m = new[] { nameH, pleine };
+            m = new[] { nameH, -1 };   // description : mesurée à la première peinture ou au dépliage
             _mesures[Cle(t)] = m;
             return m;
+        }
+
+        /// <summary>Hauteur de la description entière. Mesurée seulement quand la carte est peinte
+        /// ou dépliée : la mesurer pour les 210 cartes coûtait ~40 ms à l'ouverture de la page.</summary>
+        private int Pleine(Tweak t, int[] m, int w)
+        {
+            if (m[1] < 0)
+            {
+                m[1] = Math.Max(48, TextRenderer.MeasureText(t.Desc ?? "", FpsUi.Body, new Size(Math.Max(1, w - 32), 0), Wrap).Height + 4);
+                MesuresDescPourTest++;
+            }
+            return m[1];
         }
 
         private int Hauteur(Tweak t, int w)
         {
             int[] m = Mesures(t, w);
-            int descH = _deplies.Contains(Cle(t)) ? Math.Max(DescCompacte, m[1]) : DescCompacte;
+            int descH = _deplies.Contains(Cle(t)) ? Math.Max(DescCompacte, Pleine(t, m, w)) : DescCompacte;
             return 16 + m[0] + 8 + descH + 16 + 46;
         }
 
@@ -162,14 +175,14 @@ namespace BTOptimizer
             Rectangle r = RectCarte(index);
             int w = r.Width;
             int[] m = Mesures(t, w);
-            int descH = _deplies.Contains(Cle(t)) ? Math.Max(DescCompacte, m[1]) : DescCompacte;
+            int descH = _deplies.Contains(Cle(t)) ? Math.Max(DescCompacte, Pleine(t, m, w)) : DescCompacte;
             var g = new Geo { Carte = r };
             g.Nom = new Rectangle(r.X + 60, r.Y + 16, Math.Max(80, w - 138), m[0]);
             g.Interrupteur = new Rectangle(r.X + w - 62, r.Y + 16, 46, 24);
             g.Desc = new Rectangle(r.X + 16, g.Nom.Bottom + 8, w - 32, descH);
             int bas = g.Desc.Bottom + 16;
             g.Statut = new Rectangle(r.X + 16, bas, Math.Max(1, w - 158), 36);
-            g.ADetails = m[1] > DescCompacte;
+            g.ADetails = Pleine(t, m, w) > DescCompacte;
             g.Details = new Rectangle(r.X + w - 126, bas - 2, 110, 32);
             return g;
         }

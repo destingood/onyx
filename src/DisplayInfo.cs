@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -85,6 +85,39 @@ namespace BTOptimizer
             return "Écran " + index;
         }
 
+        internal static int EnumerationsPourTest;
+        private static readonly Dictionary<string, int> _maxConnus = new Dictionary<string, int>();
+
+        /// <summary>
+        /// Fréquence maximale d'un écran à une résolution, mise en cache : énumérer tous les modes
+        /// prend le verrou d'affichage de Windows, et toutes les peintures de l'appli ralentissent
+        /// pendant ce temps (~50 ms à l'ouverture du Copilote). La liste des modes ne change pas
+        /// sans changer d'écran ; une autre résolution donne une autre clé.
+        /// </summary>
+        private static int MaxSupporte(string device, int w, int h)
+        {
+            string cle = device + "|" + w + "x" + h;
+            lock (_maxConnus)
+            {
+                int max;
+                if (_maxConnus.TryGetValue(cle, out max)) return max;
+                EnumerationsPourTest++;
+                max = 0;
+                DEVMODE m = NewDevMode();
+                for (int i = 0; EnumDisplaySettings(device, i, ref m); i++)
+                {
+                    if ((int)m.dmPelsWidth == w && (int)m.dmPelsHeight == h && (int)m.dmDisplayFrequency > max)
+                        max = (int)m.dmDisplayFrequency;
+                    m = NewDevMode();
+                }
+                _maxConnus[cle] = max;
+                return max;
+            }
+        }
+
+        /// <summary>Oublie les modes connus (écran branché ou changé).</summary>
+        internal static void OublieModes() { lock (_maxConnus) _maxConnus.Clear(); }
+
         public static List<DisplayMode> Query()
         {
             var list = new List<DisplayMode>();
@@ -100,14 +133,7 @@ namespace BTOptimizer
                         int w = (int)cur.dmPelsWidth, h = (int)cur.dmPelsHeight, hz = (int)cur.dmDisplayFrequency;
                         if (w <= 0 || h <= 0 || hz <= 0) { idx++; continue; }
 
-                        int max = hz;
-                        DEVMODE m = NewDevMode();
-                        for (int i = 0; EnumDisplaySettings(sc.DeviceName, i, ref m); i++)
-                        {
-                            if ((int)m.dmPelsWidth == w && (int)m.dmPelsHeight == h && (int)m.dmDisplayFrequency > max)
-                                max = (int)m.dmDisplayFrequency;
-                            m = NewDevMode();
-                        }
+                        int max = Math.Max(hz, MaxSupporte(sc.DeviceName, w, h));
 
                         list.Add(new DisplayMode
                         {

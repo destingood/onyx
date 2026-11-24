@@ -29,6 +29,7 @@ namespace BTOptimizer
         private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
         private ContextMenuStrip _toolsMenu;
         private Timer _sysTimer;
+        private Timer _precree;
         /// <summary>Rattrapage des taches reseau ratees au demarrage (voir sa mise en place).
         /// Ne fait rien une fois qu elles ont abouti : leurs compteurs quotidiens s en chargent.</summary>
         private Timer _rattrapage;
@@ -36,6 +37,9 @@ namespace BTOptimizer
 
         public DashboardForm()
         {
+            // Modes d'écran lus pendant la construction, avant toute peinture : leur énumération
+            // bloque l'affichage, et le Copilote en a besoin dès son ouverture.
+            System.Threading.Tasks.Task.Run(() => { try { DisplayInfo.Query(); } catch { } });
             Text = "ONYX — Windows & Gaming";
             ClientSize = new Size(1360, 820);
             MinimumSize = new Size(1040, 680);
@@ -110,6 +114,9 @@ namespace BTOptimizer
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
             _sysTimer = new Timer(); _sysTimer.Interval = 2000; _sysTimer.Tick += (s, e) => AutoTimer(); _sysTimer.Start();
+            // Les contrôles ajoutés à une page masquée (flux chargés en fond) n'ont pas de handle :
+            // sans ceci, Windows les crée tous au réaffichage (150 ms et plus sur Bons plans).
+            _precree = new Timer { Interval = 100 }; _precree.Tick += (s, e) => PrecreeHandles(); _precree.Start();
             try { DiscordPresence.StartIfEnabled(); } catch { }   // présence Discord (parité FPSDoctor)
             try { Audience.PingSiActive(); } catch { }            // comptage des installations (voir Audience)
 
@@ -1310,6 +1317,7 @@ namespace BTOptimizer
         {
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) ToggleBoost();
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdShow) ToggleShell();
+            if (m.Msg == 0x007E) DisplayInfo.OublieModes();   // WM_DISPLAYCHANGE : écran changé, modes à relire
             base.WndProc(ref m);
         }
 
@@ -1340,6 +1348,7 @@ namespace BTOptimizer
             try { Crosshair.Hide(); } catch { }
             try { StatsOverlayManager.Hide(); } catch { }
             try { if (_sysTimer != null) _sysTimer.Stop(); } catch { }
+            try { if (_precree != null) _precree.Stop(); } catch { }
             try { if (_rattrapage != null) { _rattrapage.Stop(); _rattrapage.Dispose(); _rattrapage = null; } } catch { }
             try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { }
         }
@@ -1641,6 +1650,7 @@ namespace BTOptimizer
         public void ShowPage(int idx)
         {
             if (idx < 0 || idx >= _pages.Length) return;
+            _dernierePage = Environment.TickCount64;
 
             if (_pages[idx] == null)
             {
@@ -1854,6 +1864,37 @@ namespace BTOptimizer
         public void Goto(int idx) { ShowPage(idx); }
 
         /// <summary>Page déjà créée à cet index (ou null) — pour le harnais de test visuel.</summary>
+        /// <summary>
+        /// Crée, au repos et par tranches de 8 ms au plus, les handles manquants des pages masquées,
+        /// pour que leur réaffichage ne paie pas la création de centaines de fenêtres d'un coup.
+        /// </summary>
+        private long _dernierePage;
+
+        internal void PrecreeHandles()
+        {
+            if (!Visible || WindowState == FormWindowState.Minimized || IsDisposed) return;
+            // Pas pendant l'arrivée sur une page : elle a la main sur ses premières peintures.
+            if (Environment.TickCount64 - _dernierePage < 500) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                foreach (FpsPage page in _pages)
+                    if (page != null && !page.IsDisposed && !page.Visible && page.IsHandleCreated && Precree(page, sw)) return;
+            }
+            catch (InvalidOperationException) { }   // collection modifiée pendant le parcours : reprise au tick suivant
+        }
+
+        private static bool Precree(Control parent, System.Diagnostics.Stopwatch sw)
+        {
+            foreach (Control c in parent.Controls)
+            {
+                if (c.IsDisposed) continue;
+                if (!c.IsHandleCreated) { IntPtr h = c.Handle; if (sw.ElapsedMilliseconds >= 8) return true; }
+                if (c.HasChildren && Precree(c, sw)) return true;
+            }
+            return false;
+        }
+
         internal FpsPage PageAt(int idx) { return idx >= 0 && idx < _pages.Length ? _pages[idx] : null; }
 
         /// <summary>Génère un rapport de santé HTML (état + optimisations actives + matériel),
@@ -2070,6 +2111,7 @@ namespace BTOptimizer
 
     internal class NavCell : Panel
     {
+        private static ToolTip _infobulle;
         private readonly string _glyph;
         private bool _active, _hover, _expanded;
         private int _badge;
@@ -2109,7 +2151,8 @@ namespace BTOptimizer
             // arrondi reste à l'écran et on obtient des traînées pendant l'animation.
             BackColor = FpsUi.RailBg;
             Cursor = Cursors.Hand;
-            var tt = new ToolTip(); tt.SetToolTip(this, tip);
+            // Info-bulle partagée par toutes les cellules : une fenêtre de moins par cellule.
+            (_infobulle ?? (_infobulle = new ToolTip())).SetToolTip(this, tip);
             MouseEnter += (s, e) => { _hover = true; Invalidate(); };
             MouseLeave += (s, e) => { _hover = false; Invalidate(); };
         }

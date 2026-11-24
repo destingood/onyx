@@ -29,6 +29,9 @@ namespace BTOptimizer
         private const string TexteMax = "50 jeux suivis au maximum : retire-en un d'abord.";
         private const string TexteErreur = "Source indisponible pour l'instant.";
 
+        // Une seule info-bulle pour toutes les cartes : chaque ToolTip est une fenêtre, et une
+        // fenêtre par carte coûtait à la création et à chaque changement de focus.
+        internal readonly ToolTip Infobulles = new ToolTip();
         private readonly PartnerBanner _partner = new PartnerBanner();
         private readonly Button _support;
         private readonly TextBox _search;
@@ -368,13 +371,13 @@ namespace BTOptimizer
             _cat.Enabled = prixActif;
             _lPrix.Visible = prixActif;
             foreach (var pill in _pilules) pill.Visible = prixActif;
-            _lCat.Visible = _cat.Visible = prixActif;
+            _lCat.Visible = prixActif;   // listes natives jamais montrées (boutons de choix) : les afficher un instant créait leur fenêtre
             _context.Visible = !prixActif;
             _context.Text = _onglet == OngletFavoris ? "Tes offres enregistrées, réunies au même endroit. Les prix actuels sont disponibles sur la boutique." : "Jeux et contenus offerts : consulte les plateformes et la date de fin avant de les récupérer.";
             bool plateforme = _onglet == OngletGratuits;   // une seule plateforme ailleurs (Steam) ; Favoris : texte seul
-            _lPlat.Visible = _plat.Visible = plateforme;
+            _lPlat.Visible = plateforme;
             bool tri = _onglet == OngletPromos || _onglet == OngletNouveautes;
-            _lTri.Visible = _tri.Visible = tri;
+            _lTri.Visible = tri;
             _verifier.Visible = _installes.Visible = _onglet == OngletSuivis;
             _stores.Visible = _onglet == OngletPromos;
             _categoryChoice.Visible = prixActif; _platformChoice.Visible = plateforme; _sortChoice.Visible = tri;
@@ -923,7 +926,7 @@ namespace BTOptimizer
             private readonly Offre _o;
             private readonly Button _open, _compare, _favorite, _follow;
             private readonly LinkLabel _instantGaming;
-            private readonly ToolTip _tips = new ToolTip();
+            private ToolTip _tips { get { return _page.Infobulles; } }
             private bool _hover;
             // Le cadre suit le format horizontal des jaquettes au lieu d'une hauteur fixe.
             private static int ImageHeight(int width) { return (int)Math.Round((width - 16) * 9.0 / 16); }
@@ -997,7 +1000,13 @@ namespace BTOptimizer
             {
                 try { if (!IsDisposed && IsHandleCreated) BeginInvoke((Action)(() => { if (!IsDisposed) Invalidate(); })); } catch { }
             }
-            protected override void Dispose(bool disposing) { if (disposing) _tips.Dispose(); base.Dispose(disposing); }
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                    foreach (Control c in new Control[] { this, _open, _compare, _favorite, _follow, _instantGaming })
+                        if (c != null) _tips.SetToolTip(c, null);
+                base.Dispose(disposing);
+            }
             private static void Cover(Graphics g, Image image, Rectangle target)
             {
                 Rectangle destination = DealArtwork.Fit(image.Size, target);

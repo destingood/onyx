@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
@@ -1316,6 +1317,7 @@ namespace BTOptimizer
                 try { Console.WriteLine("  " + Fonts.Diagnostic()); } catch { }
                 TestHwMonitor(ref uiErr);
                 TestVeilleJeu(ref uiErr);
+                TestRetours(ref uiErr);
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
@@ -2641,6 +2643,124 @@ namespace BTOptimizer
 
         // Veille de jeu : le minuteur de 2 s ne relève plus les processus sur le fil d'interface,
         // un seul relevé à la fois, et la fermeture du tableau de bord pendant un relevé est sans erreur.
+        private static void TestRetours(ref int err)
+        {
+            Console.WriteLine("Retours de page (pas de reconstruction)...");
+            var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            Func<object, string, object> champ = (o, n) => o.GetType().GetField(n, bf).GetValue(o);
+            Func<Control, int> sansHandle = null;
+            sansHandle = c => { int n = c.IsHandleCreated ? 0 : 1; foreach (Control k in c.Controls) n += sansHandle(k); return n; };
+            var dash = new DashboardForm();
+            dash.StartPosition = FormStartPosition.Manual;
+            dash.Location = new System.Drawing.Point(-20000, -20000);
+            try
+            {
+                dash.Show(); dash.ClientSize = new System.Drawing.Size(1360, 820); Pump(450);
+                foreach (int p in new[] { 2, 10, 9, 6 }) { dash.Goto(p); Pump(300); }
+                Pump(8000);   // chargements (jeux, flux, offres) puis repos
+
+                // Écrans : la liste des modes ne change pas d'un appel à l'autre ; l'énumérer
+                // bloque l'affichage (peintures ralenties pendant ~50 ms).
+                var ecrans1 = DisplayInfo.Query();
+                int en0 = DisplayInfo.EnumerationsPourTest;
+                var ecrans2 = DisplayInfo.Query();
+                if (DisplayInfo.EnumerationsPourTest != en0) { err++; Console.WriteLine("  KO DisplayInfo.Query réénumère les modes à chaque appel."); }
+                if (ecrans1.Count != ecrans2.Count || ecrans1.Where((d, i) => d.MaxHz != ecrans2[i].MaxHz || d.CurrentHz != ecrans2[i].CurrentHz).Any())
+                { err++; Console.WriteLine("  KO DisplayInfo.Query : deux appels de suite ne donnent pas les mêmes écrans."); }
+
+                // Info-bulles : une fenêtre par ToolTip ; une par carte ou par cellule du rail
+                // coûtait ~1,5 ms chacune à chaque changement de focus.
+                var bulles = new System.Collections.Generic.HashSet<object>();
+                Action<Control> chercheBulles = null;
+                chercheBulles = c =>
+                {
+                    foreach (var f in c.GetType().GetFields(bf | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public))
+                        if (f.FieldType == typeof(ToolTip) && f.GetValue(f.IsStatic ? null : c) is ToolTip t) bulles.Add(t);
+                    foreach (var pr in c.GetType().GetProperties(bf))
+                        if (pr.PropertyType == typeof(ToolTip) && pr.GetIndexParameters().Length == 0) { try { if (pr.GetValue(c) is ToolTip t) bulles.Add(t); } catch { } }
+                    foreach (Control k in c.Controls) chercheBulles(k);
+                };
+                chercheBulles(dash);
+                if (bulles.Count > 12) { err++; Console.WriteLine("  KO " + bulles.Count + " info-bulles distinctes dans la fenêtre (une par carte ou par cellule ?)."); }
+
+                // Pages masquées : leurs contrôles ont un handle avant d'être réaffichées.
+                foreach (int p in new[] { 2, 10, 9 })
+                {
+                    int n = sansHandle(dash.PageAt(p));
+                    if (n > 0) { err++; Console.WriteLine("  KO page " + p + " : " + n + " contrôle(s) sans handle après le repos (création différée à l'affichage)."); }
+                }
+
+                // Jeux : aucun rendu au retour ; un jeu masqué disparaît.
+                var jeux = (PageGames)dash.PageAt(2);
+                int r0 = jeux.RendusPourTest;
+                dash.Goto(0); Pump(100); dash.Goto(2); Pump(100);
+                if (jeux.RendusPourTest != r0) { err++; Console.WriteLine("  KO Jeux : " + (jeux.RendusPourTest - r0) + " reconstruction(s) au retour (attendu 0)."); }
+                var flowJeux = (Control)champ(jeux, "_flow");
+                GameScan.GameInfo g = null;
+                foreach (Control c in flowJeux.Controls) if (c.Tag is GameScan.GameInfo gi) { g = gi; break; }
+                if (g == null) Console.WriteLine("  (aucun jeu affiché : masquage non testé)");
+                else
+                {
+                    bool etait = GameHidden.IsHidden(g.Name);
+                    try
+                    {
+                        GameHidden.SetHidden(g.Name, true);
+                        dash.Goto(0); Pump(100); dash.Goto(2); Pump(100);
+                        if (jeux.RendusPourTest != r0 + 1) { err++; Console.WriteLine("  KO Jeux : " + (jeux.RendusPourTest - r0) + " reconstruction(s) après masquage (attendu 1)."); }
+                        foreach (Control c in flowJeux.Controls)
+                            if (ReferenceEquals(c.Tag, g)) { err++; Console.WriteLine("  KO Jeux : la tuile masquée est toujours affichée."); break; }
+                    }
+                    finally { GameHidden.SetHidden(g.Name, etait); }
+                }
+
+                // Actus : ni affichage ni rechargement au retour ; un suivi ajouté recharge.
+                var actus = (PageActus)dash.PageAt(10);
+                int a0 = actus.AffichagesPourTest, c0 = actus.RechargesPourTest;
+                dash.Goto(0); Pump(100); dash.Goto(10); Pump(100);
+                if (actus.AffichagesPourTest != a0) { err++; Console.WriteLine("  KO Actus : " + (actus.AffichagesPourTest - a0) + " reconstruction(s) au retour (attendu 0)."); }
+                if (actus.RechargesPourTest != c0) { err++; Console.WriteLine("  KO Actus : rechargement au retour sans changement."); }
+                int id = 440; while (Magasin.Suivis.Any(j => j != null && j.AppId == id)) id++;
+                var ajout = new JeuSuivi { AppId = id, Nom = "Test retour" };
+                Magasin.Suivis.Add(ajout);
+                try
+                {
+                    dash.Goto(0); Pump(100); dash.Goto(10); Pump(100);
+                    if (actus.RechargesPourTest != c0 + 1) { err++; Console.WriteLine("  KO Actus : suivi ajouté sans rechargement."); }
+                }
+                finally { Magasin.Suivis.Remove(ajout); }
+
+                // Bons plans : mêmes contrôles au retour ; alerte non vue → onglet Suivis.
+                var bons = dash.PageAt(9);
+                var avant = new System.Collections.Generic.List<Control>(); Action<Control> liste = null;
+                liste = c => { foreach (Control k in c.Controls) { avant.Add(k); liste(k); } };
+                liste(bons);
+                dash.Goto(0); Pump(100); dash.Goto(9); Pump(100);
+                var apres = new System.Collections.Generic.List<Control>(); var tmp = avant; avant = apres; liste(bons); avant = tmp;
+                if (apres.Count != avant.Count || apres.Where((c, i) => !ReferenceEquals(c, avant[i])).Any())
+                { err++; Console.WriteLine("  KO Bons plans : contrôles recréés au retour (" + avant.Count + " → " + apres.Count + ")."); }
+                var alertes = typeof(SuiviVeille).GetProperty("AlertesNonVues", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                int alertesAvant = SuiviVeille.AlertesNonVues;
+                try
+                {
+                    alertes.SetValue(null, 1);
+                    dash.Goto(0); Pump(100); dash.Goto(9); Pump(100);
+                    if ((int)champ(bons, "_onglet") != 3) { err++; Console.WriteLine("  KO Bons plans : alerte non vue sans l'onglet Suivis."); }
+                }
+                finally { alertes.SetValue(null, alertesAvant); }
+
+                // Consultation : focus sur la saisie, accueil non dupliqué.
+                var conso = dash.PageAt(6);
+                var flowC = (Control)champ(conso, "_flow"); var input = (Control)champ(conso, "_input");
+                int nC = flowC.Controls.Count;
+                dash.Goto(0); Pump(100); dash.Goto(6); Pump(100);
+                if (!input.Focused && dash.ActiveControl != input) { err++; Console.WriteLine("  KO Consultation : la saisie n'a pas le focus au retour."); }
+                if (flowC.Controls.Count != nC) { err++; Console.WriteLine("  KO Consultation : " + nC + " → " + flowC.Controls.Count + " éléments au retour (accueil dupliqué ?)."); }
+                Console.WriteLine("  Retours vérifiés (Jeux, Actus, Bons plans, Consultation).");
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO retours de page : " + ex); }
+            finally { try { dash.Dispose(); } catch { } }
+        }
+
         private static void TestVeilleJeu(ref int err)
         {
             Console.WriteLine("Veille de jeu (relevé hors fil d'interface)...");
@@ -2909,6 +3029,8 @@ namespace BTOptimizer
             var liste = (TweakListe)trouves[0];
             int attendu = Catalog.All().Count;
             if (liste.Nombre != attendu) throw new InvalidOperationException("Liste : " + liste.Nombre + " cartes au lieu de " + attendu + ".");
+            // Ouverture : seules les descriptions peintes ou dépliées sont mesurées (~0,2 ms chacune).
+            if (liste.MesuresDescPourTest >= liste.Nombre) throw new InvalidOperationException("Liste : " + liste.MesuresDescPourTest + " descriptions mesurées pour " + liste.Nombre + " cartes (toutes, même hors de vue).");
             int descendants = 0; foreach (Control c in Descendants(page)) descendants++;
             if (descendants >= 40) throw new InvalidOperationException("Page Optimisations : " + descendants + " contrôles (attendu < 40).");
             var derniere = liste.RectCarte(liste.Nombre - 1);
