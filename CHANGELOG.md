@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## Prochaine version — Le CCD à V-Cache rien que pour le jeu
+## v15.99 — Le CCD à V-Cache rien que pour le jeu
 
 - **Ryzen X3D à deux CCD : le jeu garde son cache pour lui.** Pendant un jeu profilé en mode
   Automatique, navigateurs, vocal (Discord reste ouvert), lanceurs et utilitaires (iCUE, G HUB,
