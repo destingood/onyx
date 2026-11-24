@@ -5,6 +5,30 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v15.97 — Rapidité et fluidité
+
+- **Page Optimisations instantanée.** Liste peinte et virtualisée : ouverture 2,1 s → 141 ms,
+  recherche 377 → 1 ms par frappe.
+- **Retours de page sans attente.** Jeux, Bons plans, Actus et Copilote ne se reconstruisent
+  plus quand rien n'a changé.
+- **Moins de travail en fond.** Capteurs amorcés au premier relevé, un seul relevé des
+  processus par cycle de veille, rafraîchissement suspendu dans la zone de notification.
+- **Plus de gels.** « Vérifier les mises à jour » et « Fermer l'application » ne figent plus
+  la fenêtre.
+
+| Mesure (ms) | Avant | Après |
+|---|---:|---:|
+| Optimisations — ouverture | 2 064–2 174 | 70–141 |
+| Optimisations — retour | 648–709 | 7 |
+| Optimisations — recherche | 377 | 1,1 |
+| Jeux — retour | 212 | 17 |
+| Bons plans — retour | 172 | 11 |
+| Actus — retour | 330 | 3 |
+| Copilote — peinture | 79 | 15 |
+| Capteurs — démarrage | 237–249 | 0,3 |
+| Gels de l'interface (banc) | 49 | 1 |
+| Fuites GDI / USER (20 tours) | — | 0 / 0 |
+
 ## v15.96 — Menus Bons plans stables et liens affiliés discrets
 
 - **Plus de plantage des menus.** Catégorie, Plateforme et Tri dans Bons plans ne font
