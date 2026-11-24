@@ -98,6 +98,8 @@
     <Compile Include="..\src\GrilleCartes.cs" />
     <Compile Include="..\src\VeilleJeu.cs" />
     <Compile Include="..\src\ChoixGpu.cs" />
+    <!-- Carte graphique sur un cœur dédié : choix du cœur, masque, cohabitation (pur). Le registre vit dans IrqTuning.cs. -->
+    <Compile Include="..\src\CoeurDedie.cs" />
     <!-- Machine (HTTP, cache) : compilé pour le test réseau à la demande seulement (argument « reseau »). -->
     <Compile Include="..\src\OffresReseau.cs" />
   </ItemGroup>

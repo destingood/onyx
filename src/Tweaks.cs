@@ -124,7 +124,8 @@ namespace BTOptimizer
                      + "tombaient donc là où Windows les met, en pratique le cœur 0, celui-là même où tourne le fil "
                      + "principal du jeu. Ce réglage demande à Windows de les étaler sur tous les cœurs. "
                      + "Le mécanisme d'interruption n'est PAS modifié (contrairement à MSI) : c'est exactement le "
-                     + "réglage déjà appliqué à l'audio, sur d'autres périphériques. Effet au redémarrage. "
+                     + "réglage déjà appliqué à l'audio, sur d'autres périphériques. Une carte graphique placée sur "
+                     + "un cœur dédié (réglage voisin) n'est pas touchée. Effet au redémarrage. "
                      + "« Rétablir » rend la main à Windows. Hors du préréglage Recommandé : il touche la carte "
                      + "graphique et exige un redémarrage, deux raisons de le choisir plutôt que de le subir.",
                 Apply = () =>
@@ -193,19 +194,50 @@ namespace BTOptimizer
                 Check = () => IrqTuning.EtatPrioriteGraphique()
             });
 
-            // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
-            // pilotes audio démarrent sans son en MSI. Hors presets, avertissement explicite.
+            // Là où « répartir » ne peut rien (carte à vecteur unique), on DÉSIGNE le cœur. Coché par
+            // tous les presets depuis la 16.03 (décision du 24/11/2026). Ce réglage gagne sur la
+            // répartition, qui ne touche plus une carte épinglée (CoeurDedie.ARepartir).
             list.Add(new Tweak
             {
-                Id = "audio_msi", Category = Cat.Audio, Reboot = true,
+                Id = "gpu_coeur_dedie", Category = Cat.Gpu, Recommended = true, Esport = true, Reboot = true,
+                Preuve = NiveauPreuve.NonMesure,
+                Name = "Carte graphique : interruptions sur un cœur dédié",
+                Desc = "Beaucoup de cartes graphiques n'exposent qu'un seul vecteur d'interruption : « répartir » "
+                     + "n'y change rien, et tout leur travail noyau tombe sur le cœur 0, celui du fil principal du "
+                     + "jeu. Ce réglage désigne à Windows UN cœur pour la carte graphique, choisi d'après ton "
+                     + "processeur : le dernier cœur du CCD V-Cache sur un Ryzen X3D à deux CCD, le dernier cœur P "
+                     + "sur un Intel hybride, le dernier cœur ailleurs. Sur le PC de test (Ryzen 9 9950X3D, RTX "
+                     + "4080 SUPER), 65 % des travaux différés de la machine tombent sur ce cœur au lieu du "
+                     + "cœur 0 après redémarrage. HONNÊTETÉ : c'est le DÉPLACEMENT qui est constaté, sur un seul PC ; le gain "
+                     + "en latence ressentie est non mesuré. Le mécanisme d'interruption et le pilote ne sont pas "
+                     + "touchés. Effet au redémarrage. « Rétablir » rend le choix du cœur à Windows.",
+                Apply = () =>
+                {
+                    IrqTuning.Resultat r = IrqTuning.EpinglerGraphique(null);
+                    if (r.Total > 0 && r.Ok == 0)
+                        throw new InvalidOperationException("la carte graphique n'a pas accepté l'écriture (clé protégée par le système).");
+                },
+                Revert = () => IrqTuning.NePlusEpinglerGraphique(null),
+                Check = () => IrqTuning.EtatEpingleGraphique()
+            });
+
+            // Le même sujet, mais en changeant le MÉCANISME. Gain supérieur, risque réel : certains
+            // pilotes audio démarrent sans son en MSI. Coché par tous les presets depuis la 16.03
+            // (décision du 24/11/2026, après essai concluant sur le PC de test) ; le risque reste
+            // annoncé dans le nom et la description, avec la marche arrière.
+            list.Add(new Tweak
+            {
+                Id = "audio_msi", Category = Cat.Audio, Recommended = true, Esport = true, Reboot = true,
                 Risque = Risque.Fonction,
                 Preuve = NiveauPreuve.Mesure,
                 Name = "⚠ Interruptions audio par message (MSI) — RISQUE de perte de son",
                 Desc = "Fait passer les contrôleurs audio des interruptions par ligne (ancien mécanisme, qui se "
                      + "concentre sur le cœur 0) aux interruptions par message. Gain de latence supérieur à la simple "
-                     + "répartition. MAIS : certains pilotes audio gèrent mal MSI et démarrent SANS SON. C'est "
-                     + "réversible en décochant puis en redémarrant — sauf qu'il faut le faire sans entendre le PC. "
-                     + "Ne prends ce réglage que si tu sais revenir en arrière à l'aveugle.",
+                     + "répartition. MAIS : certains pilotes audio gèrent mal MSI et démarrent SANS SON. "
+                     + "Vérifié sur un seul PC (son intact après redémarrage, pilote audio disparu du relevé des "
+                     + "interruptions) : rien ne garantit le même résultat sur le tien. Si le son disparaît après "
+                     + "le redémarrage : décoche ce réglage puis redémarre, ou lance "
+                     + "« BTOptimizer.exe -revert ids=audio_msi » puis redémarre — la manœuvre se fait sans entendre le PC.",
                 Apply = () =>
                 {
                     IrqTuning.Resultat r = IrqTuning.ActiverMsi(null);
@@ -526,9 +558,16 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
-                Id = "mpo_off", Category = Cat.Gpu, Esport = true, Reboot = true,
+                // Hors de tout preset depuis la 16.03 : c'est un correctif d'affichage, pas un gain.
+                // Sur le PC de test, son effet sur le temps du pilote graphique n'a pas pu être
+                // tranché (deux outils de mesure se contredisent). Voir aussi LeviersLatence.
+                Id = "mpo_off", Category = Cat.Gpu, Reboot = true,
+                Preuve = NiveauPreuve.NonMesure,
                 Name = "Désactiver le MultiPlane Overlay (MPO)",
-                Desc = "Corrige scintillements, stutter et frame pacing irrégulier liés au MPO sur certains écrans/GPU (fix historiquement conseillé par NVIDIA).",
+                Desc = "Corrige scintillements, stutter et frame pacing irrégulier liés au MPO sur certains écrans/GPU "
+                     + "(fix historiquement conseillé par NVIDIA). À cocher seulement si tu as ces symptômes : sans "
+                     + "MPO, Windows compose toute l'image par le chemin de rendu de la carte graphique. Effet sur la "
+                     + "latence non tranché sur le PC de test, donc dans aucun preset.",
                 BackupKeys = new[] { @"HKLM\SOFTWARE\Microsoft\Windows\Dwm" },
                 Apply = () => Sys.SetMachine(@"SOFTWARE\Microsoft\Windows\Dwm", "OverlayTestMode", 5, RegistryValueKind.DWord),
                 Revert = () => Sys.DelMachine(@"SOFTWARE\Microsoft\Windows\Dwm", "OverlayTestMode"),

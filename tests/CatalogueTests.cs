@@ -46,6 +46,27 @@ namespace BTOptimizer.Tests
             Banc.Verifie("mode Auto : proc_min_100 toujours écarté sur portable", true,
                 Regex.IsMatch(materiel, @"if \(hw\.IsLaptop\)\s*\{\s*ids\.Remove\(""proc_min_100""\);"));
 
+            // Décision de Lucas du 24/11/2026 : ce qui a marché sur son PC entre dans tous les presets.
+            string msi = BlocDe(src, "audio_msi");
+            Banc.Verifie("audio_msi : coché par Recommandé et eSport", true,
+                msi.Contains("Recommended = true") && msi.Contains("Esport = true"));
+            Banc.Verifie("audio_msi : risque de perte de son toujours annoncé", true,
+                msi.Contains("Risque = Risque.Fonction") && msi.Contains("SANS SON"));
+            Banc.Verifie("audio_msi : dit qu'il est vérifié sur un seul PC et comment revenir", true,
+                msi.Contains("un seul PC") && msi.Contains("-revert ids=audio_msi"));
+            Banc.Verifie("audio_msi : ne s'annonce plus hors des presets", false,
+                msi.Contains("Ne prends ce réglage que si") || (Source("IrqTuning.cs") ?? "").Contains("Jamais dans un preset"));
+            string mpo = BlocDe(src, "mpo_off");
+            Banc.Verifie("mpo_off : dans aucun preset", false,
+                mpo.Contains("Esport = true") || mpo.Contains("Recommended = true"));
+            Banc.Verifie("mpo_off : effet sur la latence annoncé comme non tranché", true,
+                mpo.Contains("Preuve = NiveauPreuve.NonMesure") && mpo.Contains("non tranché"));
+            string coeur = BlocDe(src, "gpu_coeur_dedie");
+            Banc.Verifie("gpu_coeur_dedie : coché par Recommandé et eSport, effet au redémarrage", true,
+                coeur.Contains("Recommended = true") && coeur.Contains("Esport = true") && coeur.Contains("Reboot = true"));
+            Banc.Verifie("gpu_coeur_dedie : gain de latence annoncé comme non mesuré", true,
+                coeur.Contains("Preuve = NiveauPreuve.NonMesure") && coeur.Contains("non mesuré"));
+
             // « Rétablir » du profil NVIDIA : valeur d'usine du mode d'alimentation = 5
             // (PREFERRED_PSTATE_DEFAULT = OPTIMAL_POWER, « Normal », NvApiDriverSettings.h), pas 0 (Adaptatif).
             string nv = Source("NvProfile.cs") ?? "";

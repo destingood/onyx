@@ -47,6 +47,36 @@ namespace BTOptimizer
             return int.TryParse(chiffres.Substring(chiffres.Length - 5), out v) ? v : -1;
         }
 
+        /// <summary>
+        /// Logiciel de carte mère qui coûte du temps noyau en arrière-plan, ou null.
+        ///
+        /// Gigabyte Control Center (GCC.exe) : sur la machine de test (carte Gigabyte B850,
+        /// 24/11/2026), il interrogeait sans arrêt le contrôleur RGB par USB. Relevés LatencyMon de
+        /// 60 s au bureau, avant puis après sa désinstallation : Wdf01000.sys de 8 358 à 367
+        /// interruptions et de 51,53 ms à 6,10 ms. Un seul PC mesuré.
+        ///
+        /// Le nom seul ne suffit pas (« gcc.exe » est aussi le compilateur GNU) : il faut le chemin
+        /// d'installation Gigabyte. Chemin illisible : on se tait.
+        /// </summary>
+        public static string LogicielCarteMere(System.Collections.Generic.IList<string> processus,
+                                               System.Collections.Generic.IList<string> chemins)
+        {
+            if (processus == null || chemins == null) return null;
+            for (int i = 0; i < processus.Count && i < chemins.Count; i++)
+            {
+                string nom = processus[i] ?? "";
+                if (nom.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) nom = nom.Substring(0, nom.Length - 4);
+                if (!nom.Equals("GCC", StringComparison.OrdinalIgnoreCase)) continue;
+                if (chemins[i] == null || chemins[i].IndexOf(@"\GIGABYTE\", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                return "Gigabyte Control Center tourne en arrière-plan. Sur le PC de test, il interrogeait sans arrêt "
+                     + "le contrôleur RGB de la carte mère par USB : après sa désinstallation, le temps noyau du "
+                     + "pilote Wdf01000.sys (par lequel passe l'USB) est tombé de 51,5 ms à 6,1 ms sur 60 s au "
+                     + "bureau (un seul PC mesuré). Ferme-le avant de jouer, ou désinstalle-le si tu ne t'en sers "
+                     + "pas. ONYX ne le ferme pas à ta place.";
+            }
+            return null;
+        }
+
         /// <summary>Premier problème connu qui s'applique, ou null.</summary>
         public static string Constat(int build, int ubr, string gpu, string versionPilote)
         {

@@ -33,6 +33,23 @@ namespace BTOptimizer.Tests
             Banc.Verifie("carte AMD : rien", true, ProblemesConnus.Constat(26200, 6899, "AMD Radeon RX 7900 XT", "32.0.15.8180") == null);
             Banc.Verifie("pilote illisible : rien (pas d'affirmation sans lecture)", true,
                 ProblemesConnus.Constat(26200, 6899, Rtx, "") == null);
+
+            // ---- Gigabyte Control Center en arrière-plan (mesuré sur la machine de test, 24/11/2026)
+            const string Gcc = @"C:\Program Files\GIGABYTE\Control Center\GCC.exe";
+            string g = ProblemesConnus.LogicielCarteMere(new[] { "explorer", "GCC" }, new[] { @"C:\Windows\explorer.exe", Gcc });
+            Banc.Verifie("GCC.exe de Gigabyte en cours : signalé, nommé, avec la mesure et le conseil", true,
+                g != null && g.Contains("Gigabyte Control Center") && g.Contains("51,5 ms") && g.Contains("Ferme-le"));
+            Banc.Verifie("nom donné avec .exe : signalé aussi", true,
+                ProblemesConnus.LogicielCarteMere(new[] { "gcc.exe" }, new[] { Gcc.ToLowerInvariant() }) != null);
+            Banc.Verifie("gcc.exe du compilateur GNU : rien", true,
+                ProblemesConnus.LogicielCarteMere(new[] { "gcc" }, new[] { @"C:\msys64\mingw64\bin\gcc.exe" }) == null);
+            Banc.Verifie("GCC au chemin illisible : rien (pas d'affirmation sans lecture)", true,
+                ProblemesConnus.LogicielCarteMere(new[] { "GCC" }, new string[] { null }) == null);
+            Banc.Verifie("GCC sans liste de chemins : rien", true,
+                ProblemesConnus.LogicielCarteMere(new[] { "GCC" }, null) == null);
+            Banc.Verifie("aucun processus Gigabyte : rien", true,
+                ProblemesConnus.LogicielCarteMere(new[] { "explorer" }, new[] { @"C:\Windows\explorer.exe" }) == null);
+            Banc.Verifie("liste absente : rien", true, ProblemesConnus.LogicielCarteMere(null, null) == null);
         }
     }
 }

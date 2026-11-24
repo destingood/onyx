@@ -119,6 +119,7 @@ namespace BTOptimizer.Tests
             ActusTests.Tout();
             GrilleCartesTests.Tout();
             ChoixGpuTests.Tout();
+            CoeurDedieTests.Tout();
             VeilleJeuTests.Tout();
             return Banc.Bilan();
         }

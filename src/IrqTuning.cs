@@ -22,8 +22,8 @@ namespace BTOptimizer
     ///
     ///  • PASSER EN MSI (interruptions par message au lieu de par ligne). Gain supérieur, mais
     ///    RISQUE RÉEL sur l'audio : certains pilotes gèrent mal MSI et démarrent sans son. C'est
-    ///    réversible, mais la manœuvre se fait à l'aveugle si le son a disparu. Jamais dans un
-    ///    preset, et l'avertissement est explicite.
+    ///    réversible, mais la manœuvre se fait à l'aveugle si le son a disparu. Coché par les
+    ///    presets depuis la 16.03 (un seul PC vérifié) ; l'avertissement reste explicite.
     ///
     /// Comme pour la veille USB, ces valeurs vivent sous HKLM\SYSTEM\CurrentControlSet\Enum, dont
     /// les permissions appartiennent souvent à SYSTEM : on TENTE, on COMPTE, et on rapporte le vrai
@@ -75,6 +75,8 @@ namespace BTOptimizer
             public int? Msi;          // 1 = MSI, 0 = ligne, null = non défini
             public int? Politique;    // DevicePolicy, null si absente
             public int? Priorite;     // DevicePriority, null si absente
+            public byte[] Masque;     // AssignmentSetOverride, null si absent
+            public bool Epingle { get { return CoeurDedie.Epingle(Politique, Masque); } }
         }
 
         /// <summary>Un nom désigne-t-il un contrôleur audio ? PUR (FR et EN).</summary>
@@ -132,7 +134,9 @@ namespace BTOptimizer
             var uniques = new List<string>();
             foreach (Peripherique p in GrosProducteurs())
             {
-                if (PeutRepartir(Vecteurs(p.InstanceId))) eligibles.Add(p);
+                // Une carte épinglée sur un cœur dédié garde sa politique : voir CoeurDedie.ARepartir.
+                if (p.Epingle) continue;
+                if (CoeurDedie.ARepartir(Vecteurs(p.InstanceId), false)) eligibles.Add(p);
                 else uniques.Add(p.Nom);
             }
 
@@ -155,12 +159,126 @@ namespace BTOptimizer
         /// <summary>Rend la main à Windows sur les gros producteurs.</summary>
         public static Resultat NePlusRepartirProducteurs(Action<string, int> log)
         {
-            return Ecrit(GrosProducteurs(), SousCleAffinite, "DevicePolicy", null, log);
+            // Sauf les cartes épinglées : leur politique appartient au réglage « cœur dédié ».
+            var cibles = new List<Peripherique>();
+            foreach (Peripherique p in GrosProducteurs())
+                if (!p.Epingle) cibles.Add(p);
+            return Ecrit(cibles, SousCleAffinite, "DevicePolicy", null, log);
         }
 
+        /// <summary>État jugé sur les SEULS périphériques que la répartition peut traiter : ni les
+        /// cartes épinglées, ni les périphériques à vecteur unique (jamais écrits par Apply — les
+        /// attendre faisait afficher « non appliqué » pour toujours).</summary>
         public static bool? EtatRepartitionProducteurs()
         {
-            return Etat(GrosProducteurs(), delegate (Peripherique p) { return p.Politique == PolitiqueRepartie; });
+            var concernes = new List<Peripherique>();
+            foreach (Peripherique p in GrosProducteurs())
+                if (CoeurDedie.ARepartir(Vecteurs(p.InstanceId), p.Epingle)) concernes.Add(p);
+            return Etat(concernes, delegate (Peripherique p) { return p.Politique == PolitiqueRepartie; });
+        }
+
+        // ------------------------------------------------------------------
+        //  Carte graphique sur un cœur dédié (décision pure : CoeurDedie.cs)
+        // ------------------------------------------------------------------
+
+        /// <summary>Cartes graphiques à épingler : les cartes dédiées, sinon la puce intégrée.</summary>
+        public static List<Peripherique> CartesAEpingler()
+        {
+            List<Peripherique> toutes = Graphiques();
+            var noms = new List<string>();
+            foreach (Peripherique p in toutes) noms.Add(p.Nom);
+            var res = new List<Peripherique>();
+            foreach (int i in CoeurDedie.Cartes(noms)) res.Add(toutes[i]);
+            return res;
+        }
+
+        /// <summary>Masque du cœur choisi pour cette machine, null si la topologie ne permet aucun choix.</summary>
+        private static byte[] MasqueCoeurDedie(out int logique)
+        {
+            logique = CoeurDedie.Choisit(Topologie.Lit());
+            return CoeurDedie.Masque(logique);
+        }
+
+        /// <summary>Envoie les interruptions de la carte graphique sur un seul cœur, choisi d'après
+        /// le processeur. Le mécanisme d'interruption et le pilote ne sont pas touchés.</summary>
+        public static Resultat EpinglerGraphique(Action<string, int> log)
+        {
+            var r = new Resultat();
+            int logique;
+            byte[] masque = MasqueCoeurDedie(out logique);
+            if (masque == null)
+            {
+                if (log != null) log("Processeur non reconnu (un seul cœur, ou plus de 64 processeurs logiques) : "
+                                   + "aucun cœur choisi, rien n'est écrit.", 2);
+                return r;
+            }
+            foreach (Peripherique p in CartesAEpingler())
+            {
+                r.Total++;
+                try
+                {
+                    string sousCle = EnumBase + p.InstanceId + SousCleAffinite;
+                    EtatOrigineMachine.AvantCle(Registry.LocalMachine, sousCle);
+                    using (RegistryKey k = Registry.LocalMachine.CreateSubKey(sousCle, true))
+                    {
+                        if (k == null) { r.Refuse++; continue; }
+                        EtatOrigineMachine.AvantValeur(k, "AssignmentSetOverride");
+                        EtatOrigineMachine.AvantValeur(k, "DevicePolicy");
+                        k.SetValue("AssignmentSetOverride", masque, RegistryValueKind.Binary);
+                        k.SetValue("DevicePolicy", CoeurDedie.PolitiqueChoisie, RegistryValueKind.DWord);
+                        r.Ok++;
+                    }
+                }
+                catch { r.Refuse++; }
+            }
+            if (log != null && r.Total > 0)
+            {
+                if (r.Refuse == 0) log(r.Ok + " carte(s) graphique(s) sur le processeur logique " + logique
+                                     + ". Effet au prochain redémarrage.", 1);
+                else log(r.Ok + "/" + r.Total + " carte(s) traitée(s) — " + r.Refuse
+                       + " ont refusé l'écriture (clés protégées par le système).", 2);
+            }
+            return r;
+        }
+
+        /// <summary>Rend la main à Windows sur les cartes épinglées (une carte seulement répartie n'est pas touchée).</summary>
+        public static Resultat NePlusEpinglerGraphique(Action<string, int> log)
+        {
+            var r = new Resultat();
+            foreach (Peripherique p in CartesAEpingler())
+            {
+                if (!p.Epingle) continue;
+                r.Total++;
+                try
+                {
+                    using (RegistryKey k = Registry.LocalMachine.OpenSubKey(EnumBase + p.InstanceId + SousCleAffinite, true))
+                    {
+                        if (k == null) { r.Refuse++; continue; }
+                        EtatOrigineMachine.AvantValeur(k, "AssignmentSetOverride");
+                        EtatOrigineMachine.AvantValeur(k, "DevicePolicy");
+                        k.DeleteValue("AssignmentSetOverride", false);
+                        k.DeleteValue("DevicePolicy", false);
+                        r.Ok++;
+                    }
+                }
+                catch { r.Refuse++; }
+            }
+            if (log != null && r.Total > 0)
+                log(r.Ok + "/" + r.Total + " carte(s) graphique(s) rendue(s) à Windows. Effet au prochain redémarrage.", r.Refuse == 0 ? 1 : 2);
+            return r;
+        }
+
+        /// <summary>true = chaque carte visée est épinglée sur le cœur choisi pour cette machine ;
+        /// null = aucune carte, ou processeur non reconnu : on ne conclut rien.</summary>
+        public static bool? EtatEpingleGraphique()
+        {
+            int logique;
+            byte[] attendu = MasqueCoeurDedie(out logique);
+            if (attendu == null) return null;
+            return Etat(CartesAEpingler(), delegate (Peripherique p)
+            {
+                return p.Epingle && CoeurDedie.MemeMasque(p.Masque, attendu);
+            });
         }
 
         /// <summary>Priorité d'interruption « haute » (IRQ_PRIORITY_HIGH).</summary>
@@ -231,7 +349,8 @@ namespace BTOptimizer
                             InstanceId = id,
                             Msi = LitDword(EnumBase + id + SousCleMsi, "MSISupported"),
                             Politique = LitDword(EnumBase + id + SousCleAffinite, "DevicePolicy"),
-                            Priorite = LitDword(EnumBase + id + SousCleAffinite, "DevicePriority")
+                            Priorite = LitDword(EnumBase + id + SousCleAffinite, "DevicePriority"),
+                            Masque = LitBinaire(EnumBase + id + SousCleAffinite, "AssignmentSetOverride")
                         });
                     }
             }
@@ -250,6 +369,16 @@ namespace BTOptimizer
                     if (v == null) return null;
                     return Convert.ToInt32(v);
                 }
+            }
+            catch { return null; }
+        }
+
+        private static byte[] LitBinaire(string sousCle, string nom)
+        {
+            try
+            {
+                using (RegistryKey k = Registry.LocalMachine.OpenSubKey(sousCle, false))
+                    return k == null ? null : k.GetValue(nom) as byte[];
             }
             catch { return null; }
         }

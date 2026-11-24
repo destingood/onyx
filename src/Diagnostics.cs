@@ -87,6 +87,24 @@ namespace BTOptimizer
             else if (ram.SpeedRunning > 0)
                 f.Add(new Finding(0, "RAM à sa vitesse nominale (" + ram.SpeedRunning + " MT/s)."));
 
+            // Logiciel de carte mère coûteux en arrière-plan (logique et mesure dans ProblemesConnus).
+            try
+            {
+                var noms = new List<string>();
+                var chemins = new List<string>();
+                foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcessesByName("GCC"))
+                    using (p)
+                    {
+                        string chemin = null;
+                        try { chemin = p.MainModule.FileName; } catch { }
+                        noms.Add(p.ProcessName);
+                        chemins.Add(chemin);
+                    }
+                string fond = ProblemesConnus.LogicielCarteMere(noms, chemins);
+                if (fond != null) f.Add(new Finding(1, fond));
+            }
+            catch { }
+
             // Constats matériels sans correction automatique (logique dans ConstatsMateriel).
             try
             {
