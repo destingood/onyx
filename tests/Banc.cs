@@ -114,6 +114,7 @@ namespace BTOptimizer.Tests
             CachesApplisTests.Tout();
             SuiviTests.Tout();
             ActusTests.Tout();
+            GrilleCartesTests.Tout();
             return Banc.Bilan();
         }
     }

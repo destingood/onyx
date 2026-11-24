@@ -2633,25 +2633,7 @@ namespace BTOptimizer
                     Pump(names[p] == "Jeux" ? 3000 : (names[p] == "Stockage" ? 25000 : 350));
                     if (p == 1)
                     {
-                        // Exerce l'interaction réelle des nouvelles cartes, sans appliquer un réglage.
-                        bool checkedDetails = false;
-                        foreach (Control description in dash.PageAt(p).Controls.Find("description", true))
-                        {
-                            if (description.Text.Length < 350) continue;
-                            var details = description.Parent.Controls["details"] as Button;
-                            if (details == null) continue;
-                            int collapsed = description.Height;
-                            details.PerformClick();
-                            if (description.Height <= collapsed)
-                                throw new InvalidOperationException("Le détail de l'optimisation ne se déplie pas.");
-                            details.PerformClick();
-                            if (description.Height != collapsed)
-                                throw new InvalidOperationException("La carte ne retrouve pas sa hauteur compacte.");
-                            checkedDetails = true;
-                            break;
-                        }
-                        if (!checkedDetails) throw new InvalidOperationException("Aucune carte détaillée vérifiée.");
-                        Console.WriteLine("  Cartes dépliables OK à " + sz.Width + "x" + sz.Height);
+                        VerifieListeOptimisations(dash, sz);
                     }
                     if (p == 4)
                     {
@@ -2849,6 +2831,47 @@ namespace BTOptimizer
             return ko;
         }
 
+        /// <summary>Page Optimisations : une seule liste peinte (pas un contrôle par carte), toutes les
+        /// optimisations présentes, cartes entières à cette taille, dépliage, recherche vide, accessibilité.
+        /// Lève une exception à la première anomalie. N'applique aucun réglage.</summary>
+        private static void VerifieListeOptimisations(DashboardForm dash, System.Drawing.Size sz)
+        {
+            Control page = dash.PageAt(1);
+            Control[] trouves = page.Controls.Find("tweak-liste", true);
+            if (trouves.Length != 1 || !(trouves[0] is TweakListe)) throw new InvalidOperationException("Liste des optimisations absente.");
+            var liste = (TweakListe)trouves[0];
+            int attendu = Catalog.All().Count;
+            if (liste.Nombre != attendu) throw new InvalidOperationException("Liste : " + liste.Nombre + " cartes au lieu de " + attendu + ".");
+            int descendants = 0; foreach (Control c in Descendants(page)) descendants++;
+            if (descendants >= 40) throw new InvalidOperationException("Page Optimisations : " + descendants + " contrôles (attendu < 40).");
+            var derniere = liste.RectCarte(liste.Nombre - 1);
+            if (derniere.Width < 284 || derniere.Left < 0 || derniere.Right > liste.ClientSize.Width)
+                throw new InvalidOperationException("Carte coupée à " + sz.Width + "x" + sz.Height + " : " + derniere + " dans " + liste.ClientSize + ".");
+            int idx = -1;
+            for (int i = 0; i < liste.Nombre && idx < 0; i++) if ((liste.At(i).Desc ?? "").Length >= 350) idx = i;
+            if (idx < 0) throw new InvalidOperationException("Aucune carte détaillée vérifiée.");
+            int compacte = liste.RectCarte(idx).Height;
+            liste.TestClicDetails(idx);
+            if (!liste.Deplie(idx) || liste.RectCarte(idx).Height <= compacte) throw new InvalidOperationException("Le détail de l'optimisation ne se déplie pas.");
+            liste.TestClicDetails(idx);
+            if (liste.Deplie(idx) || liste.RectCarte(idx).Height != compacte) throw new InvalidOperationException("La carte ne retrouve pas sa hauteur compacte.");
+            TextBox recherche = null;
+            foreach (Control c in Descendants(page))
+                if (c is TextBox t && (t.PlaceholderText ?? "").StartsWith("Rechercher une optimisation", StringComparison.Ordinal)) { recherche = t; break; }
+            if (recherche == null) throw new InvalidOperationException("Champ de recherche absent.");
+            recherche.Text = "zzzzqq"; Application.DoEvents();
+            if (liste.Nombre != 0) throw new InvalidOperationException("Recherche sans résultat : " + liste.Nombre + " cartes.");
+            using (var bmp = new System.Drawing.Bitmap(Math.Max(1, liste.Width), Math.Max(1, liste.Height)))
+                liste.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height));   // liste vide : peinture sans exception
+            recherche.Text = ""; Application.DoEvents();
+            if (liste.Nombre != attendu) throw new InvalidOperationException("Recherche effacée : " + liste.Nombre + " cartes au lieu de " + attendu + ".");
+            AccessibleObject acc = liste.AccessibilityObject;
+            if (acc.GetChildCount() != liste.Nombre) throw new InvalidOperationException("Accessibilité : " + acc.GetChildCount() + " enfants.");
+            AccessibleObject premiere = acc.GetChild(0);
+            if (premiere.Role != AccessibleRole.CheckButton || string.IsNullOrEmpty(premiere.Name)) throw new InvalidOperationException("Accessibilité : carte sans rôle ou sans nom.");
+            Console.WriteLine("  Liste des optimisations OK à " + sz.Width + "x" + sz.Height + " (" + attendu + " cartes, " + descendants + " contrôles).");
+        }
+
         /// <summary>Construit le shell ONYX et rend ses onze pages hors-écran, à trois
         /// tailles de fenêtre (min / défaut / large), en forçant le layout réel (Goto→OnShown) et
         /// la peinture (DrawToBitmap→OnPaint). Détecte tout crash de construction/layout/peinture
@@ -2880,6 +2903,7 @@ namespace BTOptimizer
                     {
                         dash.Goto(p);                  // CreatePage + OnShown, chaîne de parents réelle
                         Application.DoEvents();
+                        if (p == 1) VerifieListeOptimisations(dash, sz);
                         int bw = Math.Max(1, dash.Width), bh = Math.Max(1, dash.Height);
                         using (var bmp = new System.Drawing.Bitmap(bw, bh))
                             dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, bw, bh)); // exerce OnPaint (détecte les crashes)

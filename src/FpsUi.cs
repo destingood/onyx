@@ -307,21 +307,27 @@ namespace BTOptimizer
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
+            Dessine(e.Graphics, new Rectangle(0, 0, Width, Height), _on, _locked || !Enabled, Focused && ShowFocusCues);
+        }
+
+        /// <summary>Dessin de l'interrupteur dans « zone » (46 × 24 en usage normal). Partagé avec
+        /// les listes peintes (Optimisations) pour un rendu identique sans un contrôle par carte.</summary>
+        internal static void Dessine(Graphics g, Rectangle zone, bool on, bool grise, bool focus)
+        {
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            var r = new RectangleF(1, 1, Width - 2, Height - 2);
-            Color track = _on ? FpsUi.Gold : FpsUi.Border;
-            if (_locked || !Enabled) track = FpsUi.CardHi;
+            var r = new RectangleF(zone.X + 1, zone.Y + 1, zone.Width - 2, zone.Height - 2);
+            Color track = on ? FpsUi.Gold : FpsUi.Border;
+            if (grise) track = FpsUi.CardHi;
             using (var path = FpsUi.Round(r, r.Height / 2f))
             using (var br = new SolidBrush(track))
                 g.FillPath(br, path);
 
-            int d = Height - 8;
-            int kx = _on ? Width - d - 4 : 4;
-            Color knob = _on ? FpsUi.BgMain : FpsUi.Dim;
+            int d = zone.Height - 8;
+            int kx = on ? zone.Width - d - 4 : 4;
+            Color knob = on ? FpsUi.BgMain : FpsUi.Dim;
             using (var br = new SolidBrush(knob))
-                g.FillEllipse(br, kx, 4, d, d);
-            if (Focused && ShowFocusCues)
+                g.FillEllipse(br, zone.X + kx, zone.Y + 4, d, d);
+            if (focus)
                 using (var path = FpsUi.Round(r, r.Height / 2f))
                 using (var pen = new Pen(FpsUi.Ink)) g.DrawPath(pen, path);
         }

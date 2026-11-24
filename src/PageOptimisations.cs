@@ -7,15 +7,15 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     // Page Optimisations : cartes a interrupteurs (par categorie), cablees au
-    // moteur reel (Engine.Run applique/retablit chaque optimisation).
+    // moteur reel (Engine.Run applique/retablit chaque optimisation). Les cartes sont
+    // peintes par un seul controle virtualise (TweakListe) : ouverture < 150 ms.
     internal class PageOptimisations : FpsPage
     {
         private readonly List<Tweak> _tweaks;
-        private FlowLayoutPanel _flow;
+        private TweakListe _liste;
         private Panel _chips;
         private string _filter = null; // null = tout
         private readonly List<Button> _chipBtns = new List<Button>();
-        private readonly Dictionary<string, ToggleSwitch> _toggles = new Dictionary<string, ToggleSwitch>();
         private bool _built;
         private bool _statesLoaded;
         private TextBox _search;
@@ -41,11 +41,9 @@ namespace BTOptimizer
             _chips.BackColor = Color.Transparent;
             Controls.Add(_chips);
 
-            _flow = new BufferedFlow();
-            _flow.AutoScroll = true;
-            _flow.BackColor = Color.Transparent;
-            _flow.Padding = new Padding(0, 4, 0, 20);
-            Controls.Add(_flow);
+            _liste = new TweakListe();
+            _liste.Bascule += OnToggle;
+            Controls.Add(_liste);
 
             _search = new TextBox();
             try { _search.PlaceholderText = "Rechercher une optimisation…"; } catch { }
@@ -180,95 +178,20 @@ namespace BTOptimizer
 
         private void Populate()
         {
-            _flow.SuspendLayout();
-            var old = new Control[_flow.Controls.Count];
-            _flow.Controls.CopyTo(old, 0);
-            _flow.Controls.Clear();
-            _toggles.Clear();
+            var visibles = new List<Tweak>();
             foreach (Tweak t in _tweaks)
             {
                 if (_filter != null && t.Category != _filter) continue;
                 if (!Match(t)) continue;
-                _flow.Controls.Add(MakeCard(t));
+                visibles.Add(t);
             }
-            LayoutCards();
-            _flow.ResumeLayout();
-            foreach (Control c in old) { try { c.Dispose(); } catch { } }  // libère les handles GDI des anciennes cartes
+            _liste.Definir(visibles);
+            Invalidate(new Rectangle(0, 0, ClientSize.Width, 90));   // sous-titre (compteur)
         }
 
-        private Control MakeCard(Tweak t)
+        private void OnToggle(Tweak t, bool apply)
         {
-            const int pad = 16, nameW = 258, descW = 316;
-            var card = new Panel();
-            card.Margin = new Padding(0, 0, 16, 16);
-            card.BackColor = Color.Transparent;
-            card.Paint += (s, e) =>
-            {
-                var toggle = card.Controls["toggle"] as ToggleSwitch;
-                bool active = toggle != null && toggle.On;
-                OnyxDesign.PaintCard(e.Graphics, card.ClientRectangle, FpsUi.Card, active ? OnyxDesign.Edge : FpsUi.Border, 12);
-                int icon = t.Category == Cat.Gpu ? NavIcons.Jeux : t.Category == Cat.Stockage ? NavIcons.Stockage
-                    : t.Category == Cat.Alim ? NavIcons.Optimisations : NavIcons.Systeme;
-                OnyxDesign.IconWell(e.Graphics, icon, new Rectangle(16, 16, 32, 32), active);
-            };
-
-            // Hauteurs mesurées (retour à la ligne) : la carte s'adapte au texte au lieu de le rogner.
-            var wrap = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
-            int nameH = TextRenderer.MeasureText(t.Name ?? "", FpsUi.H3, new Size(nameW, 0), wrap).Height;
-            if (nameH < 40) nameH = 40;
-            var name = new Label();
-            name.Name = "title"; name.UseMnemonic = false;
-            name.Text = t.Name;
-            name.Font = FpsUi.H3; name.ForeColor = FpsUi.Ink; name.BackColor = Color.Transparent;
-            name.SetBounds(pad, 14, nameW, nameH);
-
-            int descY = 14 + nameH + 6;
-            int descH = TextRenderer.MeasureText(t.Desc ?? "", FpsUi.Small, new Size(descW, 0), wrap).Height + 2;
-            if (descH < 34) descH = 34;
-            var desc = new Label();
-            desc.Name = "description"; desc.UseMnemonic = false;
-            desc.Text = t.Desc; desc.Font = FpsUi.Body; desc.ForeColor = FpsUi.Dim; desc.BackColor = Color.Transparent;
-            desc.AutoEllipsis = true;
-            desc.Tag = false;
-            desc.SetBounds(pad, descY, descW, descH);
-
-            var tog = new ToggleSwitch();
-            tog.Name = "toggle";
-            tog.AccessibleName = t.Name;
-            tog.Location = new Point(288, 16);
-            tog.Toggled += (s, e) => { card.Invalidate(); OnToggle(t, tog); };
-            _toggles[t.Id] = tog;
-
-            card.Controls.Add(name); card.Controls.Add(desc); card.Controls.Add(tog);
-
-            string status = t.Risque == Risque.Securite ? "Protection réduite"
-                : t.Risque == Risque.Fonction ? "Fonction Windows modifiée"
-                : t.Risque == Risque.AnnulationNonGarantie ? "Rétablissement à vérifier"
-                : t.Recommended ? "Recommandé" : "Au choix";
-            if (t.Reboot) status += " · Redémarrage";
-            var badge = FpsUi.Text(status, FpsUi.Tiny, t.Risque != Risque.Aucun || t.Reboot ? FpsUi.Warn : FpsUi.Dim);
-            badge.Name = "status"; badge.AutoSize = false;
-            card.Controls.Add(badge);
-            var details = OnyxDesign.Button("Détails ↓");
-            details.Name = "details";
-            details.AccessibleName = "Détails : " + t.Name;
-            details.Click += (s, e) =>
-            {
-                bool expanded = !(bool)desc.Tag;
-                desc.Tag = expanded;
-                details.Text = expanded ? "Réduire ↑" : "Détails ↓";
-                LayoutCards();
-            };
-            card.Controls.Add(details);
-            card.Size = new Size(348, 200);
-            OnyxDesign.HoverCard(card);
-            return card;
-        }
-
-        private void OnToggle(Tweak t, ToggleSwitch tog)
-        {
-            bool apply = tog.On;
-            tog.Enabled = false;
+            _liste.Occupe(t.Id, true);
             var list = new List<Tweak>(); list.Add(t);
             Task.Run(() =>
             {
@@ -276,26 +199,26 @@ namespace BTOptimizer
                 try { AppStats.Invalidate(); } catch { }  // une opti a changé : invalide le cache partagé
                 bool? st = null; try { st = t.Check != null ? t.Check() : (bool?)apply; } catch { }
                 bool final = st ?? apply;
-                try { BeginInvoke((Action)(() => { tog.On = final; tog.Enabled = true; tog.Parent.Invalidate(); Invalidate(); })); } catch { }
+                try { BeginInvoke((Action)(() => { _liste.Etat(t.Id, final); _liste.Occupe(t.Id, false); Invalidate(new Rectangle(0, 0, ClientSize.Width, 90)); })); } catch { }
             });
         }
 
         private void RefreshStatesAsync()
         {
-            var snapshot = new List<Tweak>(_toggles.Keys.Count);
-            foreach (Tweak t in _tweaks) if (_toggles.ContainsKey(t.Id)) snapshot.Add(t);
+            var snapshot = new List<Tweak>(_liste.Nombre);
+            for (int i = 0; i < _liste.Nombre; i++) snapshot.Add(_liste.At(i));
             Task.Run(() =>
             {
                 var res = new Dictionary<string, bool>();
                 foreach (Tweak t in snapshot) { bool? st = null; try { st = t.Check != null ? t.Check() : null; } catch { } if (st.HasValue) res[t.Id] = st.Value; }
-                try { BeginInvoke((Action)(() => { foreach (var kv in res) if (_toggles.ContainsKey(kv.Key)) { _toggles[kv.Key].On = kv.Value; _toggles[kv.Key].Parent.Invalidate(); } _statesLoaded = true; Invalidate(); })); }
+                try { BeginInvoke((Action)(() => { foreach (var kv in res) _liste.Etat(kv.Key, kv.Value); _statesLoaded = true; _liste.EtatsCharges(); Invalidate(new Rectangle(0, 0, ClientSize.Width, 90)); })); }
                 catch { }
             });
         }
 
         private void DoLayout()
         {
-            if (_flow == null) return;
+            if (_liste == null) return;
             int right = ClientSize.Width - 34;
             int y = Host != null ? Host.ContentTop(96) : 96;
             _search.SetBounds(right - 260, 24, 260, 26);
@@ -321,43 +244,8 @@ namespace BTOptimizer
             }
             _chips.SetBounds(34, y, chipWidth, chipY + 32);
             int ft = _chips.Bottom + 16;
-            _flow.SetBounds(34, ft, ClientSize.Width - 50, Math.Max(80, ClientSize.Height - ft - 16));
-            LayoutCards();
-        }
-
-        private void LayoutCards()
-        {
-            int available = Math.Max(300, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth);
-            int columns = Math.Max(1, available / 360);
-            int width = available / columns - 16;
-            _flow.SuspendLayout();
-            foreach (Control card in _flow.Controls)
-            {
-                var name = card.Controls["title"];
-                var desc = card.Controls["description"];
-                var toggle = card.Controls["toggle"];
-                if (name == null || desc == null || toggle == null) continue;
-                var flags = TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
-                int nameW = Math.Max(80, width - 138);
-                int nameH = Math.Max(40, TextRenderer.MeasureText(name.Text, name.Font, new Size(nameW, 0), flags).Height);
-                name.SetBounds(60, 16, nameW, nameH);
-                toggle.Location = new Point(width - 62, 16);
-                int fullHeight = Math.Max(48, TextRenderer.MeasureText(desc.Text, desc.Font, new Size(width - 32, 0), flags).Height + 4);
-                bool expanded = desc.Tag is bool && (bool)desc.Tag;
-                int descH = expanded ? Math.Max(52, fullHeight) : 52;
-                desc.SetBounds(16, name.Bottom + 8, width - 32, descH);
-                int bottom = desc.Bottom + 16;
-                var status = card.Controls["status"];
-                if (status != null) status.SetBounds(16, bottom, width - 158, 36);
-                var details = card.Controls["details"];
-                if (details != null)
-                {
-                    details.Visible = fullHeight > 52;
-                    details.SetBounds(width - 126, bottom - 2, 110, 32);
-                }
-                card.Size = new Size(width, bottom + 46);
-            }
-            _flow.ResumeLayout();
+            var cible = new Rectangle(34, ft, ClientSize.Width - 50, Math.Max(80, ClientSize.Height - ft - 16));
+            if (_liste.Bounds != cible) _liste.Bounds = cible;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -369,12 +257,12 @@ namespace BTOptimizer
         // Sous-titre vivant : nombre d'optimisations actives (vue complète) ou nombre affiché (vue filtrée).
         private string Subtitle()
         {
-            if (!_built || _flow == null) return null;
-            int shown = _flow.Controls.Count;
+            if (!_built || _liste == null) return null;
+            int shown = _liste.Nombre;
             if (_filter == null && _query.Length == 0)
             {
                 if (!_statesLoaded) return shown + " optimisations";
-                int active = 0; foreach (var kv in _toggles) if (kv.Value.On) active++;
+                int active = _liste.Actives();
                 return active + " / " + shown + " optimisations actives";
             }
             string s = shown + (shown > 1 ? " optimisations affichées" : " optimisation affichée");
