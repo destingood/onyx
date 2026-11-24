@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -77,6 +77,12 @@ namespace BTOptimizer
                 try { BeginInvoke((Action)(() => { _stats = stats; _configuration.Invalidate(); })); } catch { }
             });
             Sample(); _timer.Start();
+        }
+        internal bool MinuteurActif { get { return _timer.Enabled; } }
+        public override void OnFenetreVisible(bool visible)
+        {
+            if (_disposed) return;
+            if (visible && Visible) { Sample(); _timer.Start(); } else _timer.Stop();
         }
         protected override void OnVisibleChanged(EventArgs e)
         {

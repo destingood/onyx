@@ -1313,6 +1313,14 @@ namespace BTOptimizer
             try { RegisterHotKey(Handle, HotkeyIdShow, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'O'); } catch { }
         }
 
+        // Hide()/Show() (zone de notification) ne déclenchent pas OnVisibleChanged ici : seul
+        // SetVisibleCore passe à coup sûr.
+        protected override void SetVisibleCore(bool value)
+        {
+            base.SetVisibleCore(value);
+            try { if (_current >= 0 && _current < _pages.Length && _pages[_current] != null) _pages[_current].OnFenetreVisible(value); } catch { }
+        }
+
         protected override void WndProc(ref Message m)
         {
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) ToggleBoost();
@@ -2023,6 +2031,10 @@ namespace BTOptimizer
         public void SetTools(params ToolItem[] tools) { Tools = tools; }
 
         public virtual void OnShown() { }
+
+        /// <summary>La fenêtre est cachée (zone de notification) ou réaffichée. Windows ne le
+        /// signale pas aux pages par OnVisibleChanged : celles qui rafraîchissent s'y règlent.</summary>
+        public virtual void OnFenetreVisible(bool visible) { }
 
         /// <summary>Hiérarchie commune : titre lisible, puis description secondaire.</summary>
         protected void PaintTitle(Graphics g, string title, string subtitle)

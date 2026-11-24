@@ -1318,6 +1318,7 @@ namespace BTOptimizer
                 TestHwMonitor(ref uiErr);
                 TestVeilleJeu(ref uiErr);
                 TestRetours(ref uiErr);
+                TestMinuteurs(ref uiErr);
                 TestShellUi(ref uiErr);
                 TestMenuForms(ref uiErr);
                 if (Environment.GetEnvironmentVariable("BT_MONET_UI") == "1")
@@ -2643,6 +2644,36 @@ namespace BTOptimizer
 
         // Veille de jeu : le minuteur de 2 s ne relève plus les processus sur le fil d'interface,
         // un seul relevé à la fois, et la fermeture du tableau de bord pendant un relevé est sans erreur.
+        /// <summary>Retour de la zone de notification : la page affichée reprend son
+        /// rafraîchissement ; une page cachée garde son minuteur arrêté.</summary>
+        private static void TestMinuteurs(ref int err)
+        {
+            Console.WriteLine("Minuteurs au retour de la zone de notification...");
+            var dash = new DashboardForm();
+            dash.StartPosition = FormStartPosition.Manual;
+            dash.Location = new System.Drawing.Point(-20000, -20000);
+            try
+            {
+                dash.Show(); Pump(300);
+                foreach (int p in new[] { 0, 7 })
+                {
+                    dash.Goto(p); Pump(200);
+                    var page = dash.PageAt(p);
+                    Func<bool> actif = () => (bool)page.GetType().GetProperty("MinuteurActif", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(page);
+                    if (!actif()) { err++; Console.WriteLine("  KO page " + p + " : minuteur arrêté à l'affichage."); }
+                    dash.Hide(); Pump(100);
+                    if (actif()) { err++; Console.WriteLine("  KO page " + p + " : minuteur actif fenêtre cachée."); }
+                    dash.Show(); Pump(100);
+                    if (!actif()) { err++; Console.WriteLine("  KO page " + p + " : minuteur arrêté après retour."); }
+                }
+                var dashboard = dash.PageAt(0);
+                bool actifDash = (bool)dashboard.GetType().GetProperty("MinuteurActif", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(dashboard);
+                if (actifDash) { err++; Console.WriteLine("  KO Dashboard non courant : minuteur relancé par le retour de la fenêtre."); }
+            }
+            catch (Exception ex) { err++; Console.WriteLine("  KO minuteurs : " + ex.GetType().Name + " — " + ex.Message); }
+            finally { try { dash.Dispose(); } catch { } }
+        }
+
         private static void TestRetours(ref int err)
         {
             Console.WriteLine("Retours de page (pas de reconstruction)...");

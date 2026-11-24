@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -115,6 +115,12 @@ namespace BTOptimizer
             RefreshDisplay();
         }
         public override void OnShown() { DoLayout(); if (!_paused) { Sample(); _timer.Start(); } }
+        internal bool MinuteurActif { get { return _timer.Enabled; } }
+        public override void OnFenetreVisible(bool visible)
+        {
+            if (_disposed) return;
+            if (visible && Visible && !_paused) { Sample(); _timer.Start(); } else _timer.Stop();
+        }
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e); if (!Visible) _timer.Stop();
