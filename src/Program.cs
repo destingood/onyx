@@ -141,6 +141,16 @@ namespace BTOptimizer
                 Environment.Exit(0);
             }
 
+            // BT_PERF=1 : chronomètre le démarrage du shell et chaque page (1re ouverture, retour,
+            // peinture), hors écran. Une ligne « PERF;étape;ms » par mesure — sert de référence
+            // avant/après pour tout travail de fluidité. Lecture seule.
+            if (Environment.GetEnvironmentVariable("BT_PERF") == "1")
+            {
+                try { Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); } catch { }
+                int horsBudget = MesurePerf();
+                Environment.Exit(Environment.GetEnvironmentVariable("BT_PERF_BUDGET") == "1" && horsBudget > 0 ? 1 : 0);
+            }
+
             // BT_FORMSHOT=Nom1,Nom2 : capture chaque fenêtre nommée du menu ⋯ hors-écran (une par
             // une, avec log de progression pour repérer un éventuel blocage). BT_UISHOT=<dossier>.
             string fshot = Environment.GetEnvironmentVariable("BT_FORMSHOT");
@@ -2739,6 +2749,104 @@ namespace BTOptimizer
                 Pump(120);
             }
             Console.WriteLine("  Captures écrites dans " + dir);
+        }
+
+        /// <summary>BT_PERF=1 : temps du démarrage du shell et de chaque page, en millisecondes.
+        /// « creation » = 1re ouverture (CreatePage + OnShown), « retour » = réaffichage d'une page
+        /// déjà construite, « peinture » = un rendu complet de la fenêtre (DrawToBitmap).</summary>
+        [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int GetGuiResources(IntPtr hProcess, int uiFlags);
+
+        /// <summary>Budget en ms (en objets pour les fuites) d'une étape du banc BT_PERF.</summary>
+        internal static double Budget(string etape)
+        {
+            if (etape == "hwmonitor.constructeur") return 5;
+            if (etape == "gels") return 0;
+            if (etape.StartsWith("fuite.", StringComparison.Ordinal)) return 50;
+            if (etape == "Optimisations.recherche") return 30;
+            if (etape.EndsWith(".creation", StringComparison.Ordinal)) return etape.StartsWith("Optimisations", StringComparison.Ordinal) ? 150 : 100;
+            if (etape.EndsWith(".suite", StringComparison.Ordinal) || etape.EndsWith(".retour", StringComparison.Ordinal)) return 30;
+            if (etape.EndsWith(".peinture", StringComparison.Ordinal)) return 35;
+            return double.MaxValue;
+        }
+
+        private static System.Collections.Generic.IEnumerable<Control> Descendants(Control c)
+        {
+            foreach (Control e in c.Controls) { yield return e; foreach (Control f in Descendants(e)) yield return f; }
+        }
+
+        /// <summary>Renvoie le nombre d'étapes hors budget (lignes « PERF-KO » si BT_PERF_BUDGET=1).</summary>
+        private static int MesurePerf()
+        {
+            string[] names = { "Dashboard", "Optimisations", "Jeux", "Check Up+", "Laboratoire", "Collection", "Consultation", "Système", "Stockage", "Bons plans", "Actus" };
+            bool budget = Environment.GetEnvironmentVariable("BT_PERF_BUDGET") == "1";
+            int ko = 0;
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            Action<string, double> rapporte = (etape, v) =>
+            {
+                Console.WriteLine("PERF;" + etape + ";" + v.ToString("0.0", inv));
+                double max = Budget(etape);
+                if (v > max) { ko++; if (budget) Console.WriteLine("PERF-KO;" + etape + ";" + v.ToString("0.0", inv) + ";" + max.ToString("0", inv)); }
+            };
+            Action<string> note = etape => { rapporte(etape, sw.Elapsed.TotalMilliseconds); sw.Restart(); };
+            // Suspects mesurés seuls : ce qui tourne sur le fil d'interface au démarrage ou toutes les 2 s.
+            Catalog.All(); note("catalogue.premier");
+            Catalog.All(); note("catalogue.suivant");
+            using (new HwMonitor()) note("hwmonitor.constructeur");
+            for (int i = 0; i < 20; i++) GameScan.RunningKnownGame();
+            rapporte("jeuconnu.moyenne", sw.Elapsed.TotalMilliseconds / 20); sw.Restart();
+            for (int i = 0; i < 20; i++) Native.IsGameFullscreen();
+            rapporte("pleinecran.moyenne", sw.Elapsed.TotalMilliseconds / 20); sw.Restart();
+            var dash = new DashboardForm(); note("shell.constructeur");
+            dash.CreateControl(); note("shell.handle");
+            dash.ClientSize = new System.Drawing.Size(1360, 820);
+            // BT_PERF_VISIBLE=1 : fenêtre réellement affichée (loin hors de l'écran), pour que les
+            // handles Windows des contrôles soient créés comme chez l'utilisateur.
+            if (Environment.GetEnvironmentVariable("BT_PERF_VISIBLE") == "1")
+            {
+                dash.StartPosition = FormStartPosition.Manual; dash.Location = new System.Drawing.Point(-20000, -20000);
+                dash.ShowInTaskbar = false; dash.Show(); Application.DoEvents(); note("shell.affichage");
+            }
+            SentinelleGel.Demarre(dash, 100);
+            for (int p = 0; p < names.Length; p++)
+            {
+                sw.Restart(); dash.Goto(p); note(names[p] + ".creation");
+                Application.DoEvents(); note(names[p] + ".suite");   // travail différé posté au fil d'interface
+                using (var bmp = new System.Drawing.Bitmap(dash.Width, dash.Height))
+                { dash.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, dash.Width, dash.Height)); note(names[p] + ".peinture"); }
+            }
+            // Laisse arriver les résultats asynchrones (réseau, scans) avant de mesurer les retours,
+            // sinon leur rendu est compté dans le retour d'une autre page.
+            var calme = System.Diagnostics.Stopwatch.StartNew();
+            while (calme.ElapsedMilliseconds < 6000) { Application.DoEvents(); System.Threading.Thread.Sleep(15); }
+            for (int p = 0; p < names.Length; p++)
+            {
+                sw.Restart(); dash.Goto(p); note(names[p] + ".retour");
+                Application.DoEvents(); note(names[p] + ".retour.suite");
+            }
+            // Frappe dans la recherche d'Optimisations (« dns »), rendu compris.
+            dash.Goto(1); Application.DoEvents();
+            TextBox recherche = null;
+            foreach (Control c in Descendants(dash))
+                if (c is TextBox t && (t.PlaceholderText ?? "").StartsWith("Rechercher une optimisation", StringComparison.Ordinal)) { recherche = t; break; }
+            if (recherche != null)
+            {
+                sw.Restart(); recherche.Text = "dns"; Application.DoEvents(); note("Optimisations.recherche");
+                recherche.Text = ""; Application.DoEvents();
+            }
+            else Console.WriteLine("PERF;Optimisations.recherche;absente");
+            // Fuites : 20 tours des 11 pages, objets GDI et USER gagnés.
+            IntPtr moi = System.Diagnostics.Process.GetCurrentProcess().Handle;
+            for (int p = 0; p < names.Length; p++) { dash.Goto(p); Application.DoEvents(); }   // tour d'échauffement : caches remplis
+            GC.Collect(); GC.WaitForPendingFinalizers(); Application.DoEvents();
+            int gdi0 = GetGuiResources(moi, 0), user0 = GetGuiResources(moi, 1);
+            for (int tour = 0; tour < 20; tour++) for (int p = 0; p < names.Length; p++) { dash.Goto(p); Application.DoEvents(); }
+            GC.Collect(); GC.WaitForPendingFinalizers(); Application.DoEvents();
+            rapporte("fuite.gdi", GetGuiResources(moi, 0) - gdi0);
+            rapporte("fuite.user", GetGuiResources(moi, 1) - user0);
+            rapporte("gels", SentinelleGel.Arrete());
+            try { dash.Dispose(); } catch { }
+            return ko;
         }
 
         /// <summary>Construit le shell ONYX et rend ses onze pages hors-écran, à trois
