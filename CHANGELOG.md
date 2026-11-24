@@ -5,6 +5,30 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.03 — L'audio en MSI et un cœur dédié à la carte graphique dans les presets
+
+- **« Interruptions audio par message (MSI) » est maintenant coché par Recommandé, eSport, le mode
+  Automatique (sauf le niveau Prudent, qui écarte les réglages à redémarrage) et ⚡ 1 clic.**
+  ⚠ Sur un pilote audio qui gère mal ce mode, le PC peut rester sans son après le redémarrage.
+  Vérifié sur un seul PC (son intact, le pilote audio n'apparaît plus dans LatencyMon). Marche
+  arrière : bouton « Rétablir », ou `BTOptimizer.exe -revert ids=audio_msi`.
+- **Nouveau réglage : « Carte graphique : interruptions sur un cœur dédié », coché par tous les
+  presets.** ONYX place les interruptions de la carte graphique dédiée sur le dernier cœur réservé
+  au jeu : dernier cœur du CCD V-Cache sur un Ryzen X3D à deux CCD, dernier cœur P sur un Intel
+  hybride, dernier cœur sinon. Effet au redémarrage. Constaté sur le PC de test : 65 % des DPC
+  passent du cœur 0 au cœur choisi. Le gain de latence n'est pas mesuré, et le choix du cœur n'a
+  été essayé que sur ce PC.
+- **« Répartir les interruptions » laisse ce cœur dédié en place.** Les deux réglages peuvent
+  rester cochés ensemble. Son état ne s'affiche plus « non appliqué » à cause des périphériques
+  à vecteur unique, qu'il n'écrit jamais.
+- **« Désactiver le MPO » n'est plus dans le preset eSport.** Son effet sur la latence n'est pas
+  tranché sur le PC de test (deux outils de mesure se contredisent). Il reste cochable à la main
+  en cas de scintillement ou de saccades liés au MPO.
+- **Diagnostic : alerte quand Gigabyte Control Center tourne.** Sur le PC de test, il interrogeait
+  sans arrêt le contrôleur RGB par USB : après sa désinstallation, le temps noyau du pilote
+  `Wdf01000.sys` est tombé de 51,5 ms à 6,1 ms sur 60 s au bureau (un seul PC mesuré). ONYX le
+  signale et ne le ferme pas à ta place.
+
 ## v16.02 — Le tableau de bord lit la bonne carte graphique
 
 - **Le tableau de bord ne lance plus `nvidia-smi.exe` en boucle sur les PC qui ont deux puces
