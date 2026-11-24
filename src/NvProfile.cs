@@ -39,7 +39,10 @@ namespace BTOptimizer
         // Identifiants NVAPI (les mêmes que ceux qu'utilise nvidiaProfileInspector).
         private const int IdCplState = 390467;      // 0 = Off, 1 = On, 2 = Ultra
         private const int IdPreRendered = 8102046;  // 0 = laisser l'application décider
-        private const int IdPowerMode = 274197361;  // 1 = privilégier les performances maximales
+        private const int IdPowerMode = 274197361;  // 0x1057EB71 PREFERRED_PSTATE : 1 = privilégier les performances maximales
+        // Valeur d'usine du pilote : PREFERRED_PSTATE_DEFAULT = OPTIMAL_POWER (5), « Normal » dans le panneau
+        // (NvApiDriverSettings.h, dépôt NVIDIA/nvapi). 0 = Adaptatif, qui n'est PAS le réglage d'usine.
+        private const int PowerModeUsine = 5;
         private const int IdUllEnabled = 277041152; // 0/1
 
         /// <summary>Contenu .nip d'un profil. PUR → testable sans pilote ni matériel.</summary>
@@ -83,7 +86,7 @@ namespace BTOptimizer
             // Omettre ne rétablit rien — nvidiaProfileInspector n'applique que ce qu'on lui
             // donne. « Retire() » laissait donc la carte en performances maximales pour
             // toujours, en annonçant un retour aux réglages d'usine.
-            if (kind == Kind.Defaut) sb.Append(Setting("Power management mode", IdPowerMode, 0));
+            if (kind == Kind.Defaut) sb.Append(Setting("Power management mode", IdPowerMode, PowerModeUsine));
             sb.Append("    </Settings>\r\n    <ExecutableFindFiles />\r\n  </Profile>\r\n</ArrayOfProfile>");
             return sb.ToString();
         }

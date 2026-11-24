@@ -46,6 +46,13 @@ namespace BTOptimizer.Tests
             Banc.Verifie("mode Auto : proc_min_100 toujours écarté sur portable", true,
                 Regex.IsMatch(materiel, @"if \(hw\.IsLaptop\)\s*\{\s*ids\.Remove\(""proc_min_100""\);"));
 
+            // « Rétablir » du profil NVIDIA : valeur d'usine du mode d'alimentation = 5
+            // (PREFERRED_PSTATE_DEFAULT = OPTIMAL_POWER, « Normal », NvApiDriverSettings.h), pas 0 (Adaptatif).
+            string nv = Source("NvProfile.cs") ?? "";
+            Banc.Verifie("profil NVIDIA Défaut : mode d'alimentation remis à 5 (usine)", true,
+                Regex.IsMatch(nv, @"kind == Kind\.Defaut\) sb\.Append\(Setting\(""Power management mode"", IdPowerMode, PowerModeUsine\)\)")
+                && nv.Contains("PowerModeUsine = 5;"));
+
             Surete(src);
         }
 
