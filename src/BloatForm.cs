@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -306,15 +306,27 @@ namespace BTOptimizer
                     + "Réversible : tu pourras le relancer. Enregistre ton travail dans cette appli avant.",
                     "Fermer l'application", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
-            try
+            FermeProcessus(r.Pid, r.Name);
+        }
+
+        // L'attente de fermeture (jusqu'à 1,5 s) part en fond : la fenêtre ne gèle plus.
+        internal void FermeProcessus(int pid, string nom)
+        {
+            Task.Run(() =>
             {
-                Process p = Process.GetProcessById(r.Pid);
-                p.CloseMainWindow();
-                if (!p.WaitForExit(1500)) p.Kill();
-                if (_log != null) _log("Application fermée : " + r.Name + " (PID " + r.Pid + ").", 1);
-            }
-            catch (Exception ex) { if (_log != null) _log("Fermeture impossible : " + ex.Message, 2); }
-            Scan();
+                string msg; int niveau;
+                try
+                {
+                    using (Process p = Process.GetProcessById(pid))
+                    {
+                        p.CloseMainWindow();
+                        if (!p.WaitForExit(1500)) p.Kill();
+                    }
+                    msg = "Application fermée : " + nom + " (PID " + pid + ")."; niveau = 1;
+                }
+                catch (Exception ex) { msg = "Fermeture impossible : " + ex.Message; niveau = 2; }
+                try { BeginInvoke((Action)(() => { if (_log != null) _log(msg, niveau); Scan(); })); } catch { }
+            });
         }
     }
 }
