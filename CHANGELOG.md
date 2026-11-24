@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.01 — L'état minimal du processeur dans les presets
+
+- **« État minimal du processeur à 100 % » est maintenant coché par Recommandé, eSport, le mode
+  Automatique (tous niveaux) et ⚡ 1 clic.** Depuis la v14.4, ce réglage restait manuel à cause de
+  la chaleur. Il garde ton plan d'alimentation (utile sur Ryzen X3D à deux CCD, où AMD demande le
+  plan Équilibré) et empêche seulement le processeur de redescendre en fréquence.
+- **Sur secteur seulement.** Sur batterie, la valeur reste à 5 % ; le mode Automatique l'écarte
+  toujours sur portable. « Rétablir » remet 5 %.
+- **Ce qu'il coûte, et ce qu'on sait du gain.** Processeur plus chaud et ventilateurs plus présents
+  au repos. Gain non démontré : sur le PC de test (Ryzen 9 9950X3D), la durée moyenne d'un DPC n'a
+  pas bougé. Mesure avant et après avec « ⏱ Latence en direct » ou « ⏱ Mesurer ma latence ».
+- Les C-States coupés (`cpu_idle_disable`) restent strictement manuels.
+
 ## v16.00 — Le plafond FPS que tu as vraiment
 
 - **Mesure de ta latence réelle, de ton clic à l'image affichée.** Bouton « ⏱ Mesurer ma latence »

@@ -192,14 +192,16 @@ namespace BTOptimizer
         public const int LevelPrudent = 0, LevelBalanced = 1, LevelAggressive = 2;
 
         /// <summary>
-        /// Réglages EXPÉRIMENTAUX / haute chaleur (état CPU 100 % permanent, C-States off) :
+        /// Réglages EXPÉRIMENTAUX / haute chaleur (C-States off) :
         /// JAMAIS inclus dans une sélection automatique — ni Auto (Prudent/Équilibré/Agressif),
         /// ni ⚡ TOUT OPTIMISER, ni preset eSport, ni packs Latence/500 FPS, ni Benchmark.
         /// L'utilisateur doit les cocher lui-même (demande explicite). Restent disponibles à la
-        /// main, via « Tout cocher », et — pour l'état 100 % — via le bouton « Boost CPU maximal »
-        /// de l'overclock (qui les affiche noir sur blanc avant application).
+        /// main et via « Tout cocher ».
+        /// L'état minimal du processeur à 100 % (proc_min_100) en faisait partie depuis la v14.4 ;
+        /// il est coché par tous les presets depuis la 16.01 (décision du 24/11/2026), sur secteur
+        /// seulement, et reste écarté du mode Auto sur portable.
         /// </summary>
-        public static readonly string[] NeverAuto = { "proc_min_100", "cpu_idle_disable" };
+        public static readonly string[] NeverAuto = { "cpu_idle_disable" };
 
         // Extras sûrs et réversibles ajoutés au niveau Agressif (le matériel filtre ensuite).
         private static readonly string[] AggroExtras =

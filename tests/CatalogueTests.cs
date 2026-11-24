@@ -31,6 +31,21 @@ namespace BTOptimizer.Tests
                 Banc.Verifie(id + " : effet non démontré annoncé", true, d.Success && d.Groups[1].Value.Contains("non démontré"));
             }
 
+            // Décision de Lucas du 24/11/2026 : l'état minimal du processeur à 100 % est coché par tous les
+            // presets. Sur batterie, 5 % : un portable débranché ne chauffe pas pour rien.
+            string min = BlocDe(src, "proc_min_100");
+            Banc.Verifie("proc_min_100 : coché par Recommandé et eSport", true,
+                min.Contains("Recommended = true") && min.Contains("Esport = true"));
+            Banc.Verifie("proc_min_100 : 100 % sur secteur, 5 % sur batterie", true, min.Contains(", 100, 5)"));
+            Banc.Verifie("proc_min_100 : ne s'annonce plus « jamais coché »", false, min.Contains("JAMAIS"));
+            Banc.Verifie("proc_min_100 : coût annoncé, gain non démontré", true,
+                min.Contains("non démontré") && min.Contains("chaleur"));
+            string materiel = Source("Hardware.cs") ?? "";
+            Banc.Verifie("mode Auto : seuls les C-States restent manuels", true,
+                materiel.Contains("NeverAuto = { \"cpu_idle_disable\" };"));
+            Banc.Verifie("mode Auto : proc_min_100 toujours écarté sur portable", true,
+                Regex.IsMatch(materiel, @"if \(hw\.IsLaptop\)\s*\{\s*ids\.Remove\(""proc_min_100""\);"));
+
             Surete(src);
         }
 
@@ -124,11 +139,11 @@ namespace BTOptimizer.Tests
                 yield return (m.Groups[1].Value, m.Value);
         }
 
-        private static string Source()
+        private static string Source(string nom = "Tweaks.cs")
         {
             for (DirectoryInfo d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
             {
-                string f = Path.Combine(d.FullName, "src", "Tweaks.cs");
+                string f = Path.Combine(d.FullName, "src", nom);
                 if (File.Exists(f)) return File.ReadAllText(f);
             }
             return null;

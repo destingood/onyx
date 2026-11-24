@@ -1530,11 +1530,11 @@ namespace BTOptimizer
             // ---- Alimentation & CPU (avancé) ----
             list.Add(new Tweak
             {
-                Id = "proc_min_100", Category = Cat.Alim,
+                Id = "proc_min_100", Category = Cat.Alim, Recommended = true, Esport = true,
                 Risque = Risque.AnnulationNonGarantie,
                 Name = "État minimal du processeur à 100 % (pas de sous-cadençage)",
-                Desc = "Le CPU reste à pleine fréquence au lieu de descendre puis remonter : supprime la latence de montée en régime. Consomme plus au repos. « Rétablir » remet 5 %. JAMAIS coché automatiquement (ni Auto, ni ⚡ TOUT OPTIMISER, ni packs) : à activer soi-même.",
-                Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 100),
+                Desc = "Le CPU reste à pleine fréquence sur secteur au lieu de descendre puis remonter, sans changer de plan d'alimentation. Gain non démontré : à mesurer chez toi. Coût : chaleur, consommation et ventilation en hausse au repos. Sur batterie, la valeur reste à 5 %. « Rétablir » remet 5 %.",
+                Apply  = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100, 5),
                 Revert = () => Sys.SetPowerValue(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 5, 5),
                 Check  = () => Sys.PowerAcEquals(SubProc, "893dee8e-2bef-41e0-89c6-b55d0929964c", 100)
             });
