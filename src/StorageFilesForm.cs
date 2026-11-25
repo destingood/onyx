@@ -23,6 +23,7 @@ namespace BTOptimizer
         private Button _btnRecycle, _btnReveal, _btnIgnore, _btnScan, _btnClose;
         private List<Storage.StorageItem> _items;
         private readonly bool _selfScan;   // vrai = la fenêtre balaye elle-même (ouverte depuis un menu)
+        private readonly string _cat;      // catégorie affichée (Id de module), null = toutes
         private bool _partial;
         private int _sortCol = 2;
         private bool _sortAsc;
@@ -33,7 +34,13 @@ namespace BTOptimizer
         /// <summary>Liste NON nulle = affichée telle quelle (la page Stockage a déjà balayé, et le
         /// harnais construit la fenêtre sans lancer d'analyse). Null = la fenêtre balaye elle-même.</summary>
         public StorageFilesForm(Action<string, int> log, List<Storage.StorageItem> preloaded)
+            : this(log, preloaded, null) { }
+
+        /// <summary><paramref name="cat"/> : ne montrer qu'une catégorie (aussi après « Analyser à
+        /// nouveau », qui sinon mélangeait toutes les catégories dans la fenêtre d'une seule).</summary>
+        public StorageFilesForm(Action<string, int> log, List<Storage.StorageItem> preloaded, string cat)
         {
+            _cat = cat;
             _log = log ?? delegate { };
             _items = preloaded;
             _selfScan = preloaded == null;
@@ -45,7 +52,7 @@ namespace BTOptimizer
 
         private void Build()
         {
-            Text = "ONYX — Vidéos, archives & gros fichiers";
+            Text = _cat == null ? "ONYX — Gros fichiers de tous types" : "ONYX — Gros fichiers : " + Storage.CatLabel(_cat);
             ClientSize = new Size(920, 570);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -57,7 +64,7 @@ namespace BTOptimizer
             var banner = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = Color.FromArgb(28, 30, 38) };
             banner.Controls.Add(new Label
             {
-                Text = "  🎬 Gros fichiers — vidéos, archives, et tout le reste. Suppression = corbeille, récupérable.",
+                Text = "  🎬 Gros fichiers de tous types, reconnus par leur contenu. Suppression = corbeille, récupérable.",
                 Dock = DockStyle.Fill,
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 12f),
@@ -100,10 +107,10 @@ namespace BTOptimizer
                 Font = new Font("Segoe UI", 9.5f)
             };
             _list.Columns.Add("Fichier", 280);
-            _list.Columns.Add("Type", 80);
+            _list.Columns.Add("Type", 150);
             _list.Columns.Add("Taille", 90, HorizontalAlignment.Right);
             _list.Columns.Add("Modifié", 110);
-            _list.Columns.Add("Dossier", 320);
+            _list.Columns.Add("Dossier", 250);
             _list.ColumnClick += OnColumnClick;
             _list.DoubleClick += (s, e) => { var it = Sel(); if (it != null && it.Count > 0) Storage.RevealFile(it[0].Key); };
             Controls.Add(_list);
@@ -160,7 +167,7 @@ namespace BTOptimizer
                     List<Storage.FileEntry> files = Storage.ScanBigFiles(st.MinFileMB, Storage.AppRoots(), out partial);
                     foreach (Storage.FileEntry f in files)
                     {
-                        if (st.IsIgnored(f.Path)) continue;
+                        if (st.IsIgnored(f.Path) || (_cat != null && f.Cat != _cat)) continue;
                         items.Add(Storage.FileToItem(f));
                         if (items.Count >= 300) break;
                     }
@@ -175,9 +182,7 @@ namespace BTOptimizer
         {
             var f = s.Tag as Storage.FileEntry;
             if (f == null) return "—";
-            if (f.Cat == "videos") return "Vidéo";
-            if (f.Cat == "archives") return "Archive";
-            return "Autre";
+            return string.IsNullOrEmpty(f.Nature) ? Storage.CatLabel(f.Cat) : f.Nature;
         }
 
         private void Populate(List<Storage.StorageItem> items)
@@ -273,10 +278,11 @@ namespace BTOptimizer
             SetBusy(true);
             var paths = new List<string>();
             foreach (Storage.StorageItem s in sel) paths.Add(s.Key);
+            IntPtr owner = Handle;   // l'avertissement « trop gros pour la corbeille » s'affiche devant cette fenêtre
 
             Task.Run(delegate
             {
-                Storage.RecycleFiles(paths);
+                Storage.RecycleFiles(paths, owner);
                 // Le gain annoncé est VÉRIFIÉ : seuls les fichiers réellement partis comptent.
                 long freed = 0;
                 var gone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -297,9 +303,11 @@ namespace BTOptimizer
                         try { AppStats.Invalidate(); } catch { }
                         MessageBox.Show(this,
                             gone.Count > 0
-                                ? "✨ " + gone.Count + " fichier(s) à la corbeille — " + Storage.Human(freedDone) + " récupérables sur le disque."
+                                ? "✨ " + gone.Count + " fichier(s) supprimé(s) — " + Storage.Human(freedDone) + "."
+                                  + (gone.Count < sel.Count ? "\n" + (sel.Count - gone.Count) + " fichier(s) n'ont pas pu partir (ouverts ailleurs, chemin trop long ou refus)." : "")
+                                  + "\n\nIls sont dans la corbeille Windows, sauf ceux que Windows a proposé de supprimer définitivement (trop gros pour elle) si tu as accepté."
                                   + "\n\n(L'espace revient vraiment quand la corbeille est vidée : module ♻ Corbeille de la page Stockage.)"
-                                : "Aucun fichier n'a pu partir (verrouillé ou déjà déplacé).",
+                                : "Aucun fichier n'a pu partir (ouvert dans une autre application, chemin trop long, ou suppression annulée).",
                             "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }));
                 }

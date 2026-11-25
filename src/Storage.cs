@@ -115,10 +115,16 @@ namespace BTOptimizer
                              Desc = "Gros et pas lancés depuis des mois : c'est presque toujours là que dorment les dizaines de Go." },
                 new Module { Id = "videos",  Glyph = "🎬", Name = "Vidéos & films", Safety = SafePerso, Browse = true,
                              Desc = "Les vidéos les plus lourdes de tes disques (captures, rushes, films). Suppression = corbeille Windows, récupérable." },
-                new Module { Id = "archives", Glyph = "🗜", Name = "Archives & images disque", Safety = SafePerso, Browse = true,
-                             Desc = "zip, rar, 7z, iso… Souvent déjà extraites : l'original dort en double." },
+                new Module { Id = "audio",   Glyph = "🎵", Name = "Musique & sons", Safety = SafePerso, Browse = true,
+                             Desc = "Albums sans perte (flac, wav), enregistrements, projets audio et banques de sons." },
+                new Module { Id = "images",  Glyph = "🖼", Name = "Photos & images", Safety = SafePerso, Browse = true,
+                             Desc = "Photos RAW, retouches (psd), panoramas, rendus. Reconnues même sans la bonne extension." },
+                new Module { Id = "archives", Glyph = "🗜", Name = "Archives, images disque & VM", Safety = SafePerso, Browse = true,
+                             Desc = "zip, rar, 7z, iso, disques de machines virtuelles, sauvegardes. Souvent déjà extraites ou périmées." },
+                new Module { Id = "installers", Glyph = "💿", Name = "Installeurs & programmes", Safety = SafePerso, Browse = true,
+                             Desc = "Setups déjà installés qui dorment dans Téléchargements : exe, msi, msix, apk…" },
                 new Module { Id = "bigfiles", Glyph = "🧱", Name = "Autres gros fichiers", Safety = SafePerso, Browse = true,
-                             Desc = "Tout le reste au-dessus du seuil réglable : installeurs, exports, disques virtuels…" },
+                             Desc = "Tout le reste, avec sa nature réelle : documents, bases, modèles 3D ou d'IA, vidages mémoire, téléchargements inachevés…" },
                 new Module { Id = "folders", Glyph = "📁", Name = "Tes dossiers les plus lourds", Safety = SafePerso, Browse = true,
                              Desc = "Téléchargements, Vidéos, Bureau, Documents. Montrés pour info — je n'y touche JAMAIS." },
             };
@@ -189,9 +195,12 @@ namespace BTOptimizer
                 case "apps": FillApps(m, st, null); break;
                 case "games": FillGames(m, st); break;
                 case "videos":
+                case "audio":
+                case "images":
                 case "archives":
+                case "installers":
                 case "bigfiles":
-                    FillFiles(m, files.Value, st);   // un seul balayage disque pour les trois
+                    FillFiles(m, files.Value, st);   // un seul balayage disque pour toutes les catégories
                     break;
                 case "folders": FillFolders(m, st); break;
             }
@@ -533,7 +542,8 @@ namespace BTOptimizer
         internal class FileEntry
         {
             public string Path, Dir, Name, Ext;
-            public string Cat;             // videos | archives | bigfiles (= l'Id du module)
+            public string Cat;             // Id du module : videos | audio | images | archives | installers | bigfiles
+            public string Nature;          // libellé précis (« Photo RAW », « Disque de machine virtuelle »…)
             public long SizeMB;
             public DateTime Modified;      // MinValue = inconnue
 
@@ -553,17 +563,23 @@ namespace BTOptimizer
             }
         }
 
-        private static readonly HashSet<string> VideoExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        /// <summary>Libellé court d'une catégorie, pour les listes.</summary>
+        public static string CatLabel(string cat)
         {
-            ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".webm", ".flv", ".m4v",
-            ".mpg", ".mpeg", ".ts", ".m2ts", ".vob", ".3gp"
-        };
+            switch (cat)
+            {
+                case TypesFichiers.Videos: return "Vidéo";
+                case TypesFichiers.Audio: return "Audio";
+                case TypesFichiers.Images: return "Image";
+                case TypesFichiers.Archives: return "Archive";
+                case TypesFichiers.Installeurs: return "Installeur";
+                default: return "Autre";
+            }
+        }
 
-        private static readonly HashSet<string> ArchiveExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".zip", ".rar", ".7z", ".iso", ".tar", ".gz", ".bz2", ".xz", ".tgz",
-            ".cab", ".img", ".vhd", ".vhdx", ".wim"
-        };
+        // Au-delà, la détection par le contenu cède la place à l'extension seule : le balayage reste
+        // borné même sur un disque plein de fichiers sans extension.
+        private const int SondesMax = 2000;
 
         // Dossiers jamais parcourus : le système (couvert par les modules Windows), les
         // bibliothèques de jeux (couvertes par « Jeux dormants » — supprimer un fichier DANS un
@@ -605,20 +621,48 @@ namespace BTOptimizer
 
             partial = false;
             var list = new List<FileEntry>();
+            var vus = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   // un même volume monté deux fois (subst)
             for (int i = 0; i < drives.Count; i++)
             {
                 if (coupe[i]) partial = true;
                 if (parDisque[i] == null) continue;
                 foreach (DiskWalk.Fichier f in parDisque[i])
-                    list.Add(new FileEntry
-                    {
-                        Path = f.Path, Dir = f.Dir, Name = f.Name, Ext = f.Ext,
-                        Cat = VideoExt.Contains(f.Ext) ? "videos" : ArchiveExt.Contains(f.Ext) ? "archives" : "bigfiles",
-                        SizeMB = f.Bytes / 1048576, Modified = f.Modified
-                    });
+                    if (vus.Add(f.Path))
+                        list.Add(new FileEntry
+                        {
+                            Path = f.Path, Dir = f.Dir, Name = f.Name, Ext = f.Ext,
+                            SizeMB = f.Bytes / 1048576, Modified = f.Modified
+                        });
             }
             list.Sort(delegate (FileEntry a, FileEntry b) { return b.SizeMB.CompareTo(a.SizeMB); });
+            Classe(list);
             return list;
+        }
+
+        /// <summary>Range chaque fichier dans sa catégorie : extension quand elle est fiable, contenu
+        /// sinon (les plus gros d'abord, <see cref="SondesMax"/> lectures au plus, 4 en parallèle).</summary>
+        internal static void Classe(List<FileEntry> list)
+        {
+            var aSonder = new List<FileEntry>();
+            foreach (FileEntry f in list)
+            {
+                if (TypesFichiers.DoitSonder(f.Ext) && aSonder.Count < SondesMax) { aSonder.Add(f); continue; }
+                Range(f, TypesFichiers.ParExtension(f.Ext));
+            }
+            try
+            {
+                Parallel.ForEach(aSonder, new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                    delegate (FileEntry f) { Range(f, TypesFichiers.Detecte(f.Path, f.Ext)); });
+            }
+            catch { }
+            foreach (FileEntry f in aSonder) if (f.Cat == null) Range(f, TypesFichiers.ParExtension(f.Ext));
+        }
+
+        private static void Range(FileEntry f, TypesFichiers.Type t)
+        {
+            if (t.Connu) { f.Cat = t.Cat; f.Nature = t.Nature; return; }
+            TypesFichiers.Type i = TypesFichiers.Inconnu(f.Ext);
+            f.Cat = i.Cat; f.Nature = i.Nature;
         }
 
         internal static StorageItem FileToItem(FileEntry f)
@@ -628,7 +672,8 @@ namespace BTOptimizer
             {
                 ModuleId = f.Cat, Key = f.Path, Name = f.Name, Path = f.Dir,
                 SizeMB = f.SizeMB, Safety = SafePerso, Tag = f,
-                Detail = f.Dir + (f.AgeText.Length > 0 ? "  ·  modifié " + f.AgeText : ""),
+                Detail = (string.IsNullOrEmpty(f.Nature) ? "" : f.Nature + "  ·  ") + f.Dir
+                         + (f.AgeText.Length > 0 ? "  ·  modifié " + f.AgeText : ""),
                 OpenLabel = "Ouvrir l'emplacement",
                 Open = delegate { RevealFile(cap.Path); }
             };
@@ -669,20 +714,41 @@ namespace BTOptimizer
         /// File.Delete direct sur les données de l'utilisateur.</summary>
         public static bool RecycleFiles(IEnumerable<string> paths)
         {
+            return RecycleFiles(paths, IntPtr.Zero);
+        }
+
+        /// <summary>Comme ci-dessus, avec la fenêtre propriétaire des éventuels avertissements.
+        /// Un fichier PLUS GROS que la corbeille (ou sur un disque où elle est coupée) serait
+        /// sinon détruit définitivement sans un mot : FOF_WANTNUKEWARNING fait poser la question
+        /// par Windows dans ce cas précis, et seulement lui. Appel sur un fil STA dédié : la boîte
+        /// de dialogue du Shell ne doit pas naître sur un fil du pool.</summary>
+        public static bool RecycleFiles(IEnumerable<string> paths, IntPtr owner)
+        {
             var sb = new StringBuilder();
             foreach (string p in paths)
-                if (!string.IsNullOrEmpty(p)) sb.Append(p).Append('\0');
+                if (!string.IsNullOrEmpty(p) && File.Exists(p)) sb.Append(System.IO.Path.GetFullPath(p)).Append('\0');
             if (sb.Length == 0) return true;
             sb.Append('\0');   // liste doublement terminée par NUL, exigence de l'API
 
             var op = new SHFILEOPSTRUCTW
             {
-                wFunc = 3,                          // FO_DELETE
+                hwnd = owner,
+                wFunc = 3,                                   // FO_DELETE
                 pFrom = sb.ToString(),
-                fFlags = 0x40 | 0x10 | 0x4 | 0x400  // ALLOWUNDO | NOCONFIRMATION | SILENT | NOERRORUI
+                // ALLOWUNDO | NOCONFIRMATION | SILENT | NOERRORUI | WANTNUKEWARNING
+                fFlags = (ushort)(0x40 | 0x10 | 0x4 | 0x400 | 0x4000)
             };
-            try { return SHFileOperationW(ref op) == 0 && !op.fAnyOperationsAborted; }
-            catch { return false; }
+            bool ok = false;
+            var t = new Thread(delegate ()
+            {
+                try { ok = SHFileOperationW(ref op) == 0 && !op.fAnyOperationsAborted; }
+                catch { ok = false; }
+            });
+            t.IsBackground = true;
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join();
+            return ok;
         }
 
         // ------------------------------------------------------------------
@@ -930,7 +996,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string AppCachePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-appsize.txt"); }
+            get { return AppPaths.File("bt-appsize.txt"); }
         }
 
         private static long CachedDirMB(string dir, Dictionary<string, string> cache)
@@ -975,7 +1041,7 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         private static string DismCachePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-storage-dism.txt"); }
+            get { return AppPaths.File("bt-storage-dism.txt"); }
         }
 
         // DISM /AnalyzeComponentStore coûte 10 à 60 secondes : son verdict est mis en cache 24 h.
@@ -1183,7 +1249,7 @@ namespace BTOptimizer
 
         public static string ConfigPath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bt-stockage.txt"); }
+            get { return AppPaths.File("bt-stockage.txt"); }
         }
 
         public bool IsEnabled(string moduleId) { return !_off.Contains(moduleId ?? ""); }
@@ -1213,7 +1279,9 @@ namespace BTOptimizer
                 sb.Append("alerte=").Append(AlertPct).Append('\n');
                 sb.Append("minfile=").Append(MinFileMB).Append('\n');
                 sb.Append("off=").Append(string.Join(";", new List<string>(_off).ToArray())).Append('\n');
-                sb.Append("ignore=").Append(string.Join(";", new List<string>(_ignored).ToArray())).Append('\n');
+                // Une ligne par élément ignoré : un « ; » est permis dans un nom de fichier Windows,
+                // l'ancienne liste séparée par « ; » coupait ces chemins en morceaux.
+                foreach (string ig in _ignored) sb.Append("ignore1=").Append(ig).Append('\n');
                 File.WriteAllText(ConfigPath, sb.ToString());
             }
             catch { }
@@ -1235,7 +1303,8 @@ namespace BTOptimizer
                     else if (k == "alerte") { int n; if (int.TryParse(v, out n)) s.AlertPct = Math.Max(0, Math.Min(50, n)); }
                     else if (k == "minfile") { int n; if (int.TryParse(v, out n)) s.MinFileMB = Math.Max(50, Math.Min(4096, n)); }
                     else if (k == "off") foreach (string id in v.Split(';')) if (id.Length > 0) s._off.Add(id);
-                    else if (k == "ignore") foreach (string p in v.Split(';')) if (p.Length > 0) s._ignored.Add(p);
+                    else if (k == "ignore1") { if (v.Length > 0) s._ignored.Add(v); }
+                    else if (k == "ignore") foreach (string p in v.Split(';')) if (p.Length > 0) s._ignored.Add(p);   // ancien format
                 }
             }
             catch { }

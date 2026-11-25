@@ -271,12 +271,11 @@ namespace BTOptimizer
                     return Say("Rien au-dessus de " + st.MinFileMB + " Mo hors applications et jeux — ton espace part ailleurs. "
                              + "Dis « libère de l'espace » pour le grand bilan.");
 
-                long vid = 0, arc = 0, oth = 0;
+                var parCat = new Dictionary<string, long>();
                 foreach (Storage.FileEntry f in files)
                 {
-                    if (f.Cat == "videos") vid += f.SizeMB;
-                    else if (f.Cat == "archives") arc += f.SizeMB;
-                    else oth += f.SizeMB;
+                    string c = f.Cat ?? "bigfiles";
+                    long cur; parCat.TryGetValue(c, out cur); parCat[c] = cur + f.SizeMB;
                 }
 
                 var sb = new StringBuilder();
@@ -285,14 +284,22 @@ namespace BTOptimizer
                 foreach (Storage.FileEntry f in files)
                 {
                     if (n >= 8) break;
-                    string cat = f.Cat == "videos" ? "vidéo" : f.Cat == "archives" ? "archive" : "fichier";
+                    string cat = (string.IsNullOrEmpty(f.Nature) ? Storage.CatLabel(f.Cat) : f.Nature).ToLowerInvariant();
                     sb.Append(n + 1).Append(". ").Append(f.Name).Append("  —  ").Append(f.SizeText)
                       .Append("  (").Append(cat).Append(", ").Append(f.Dir).Append(")\n");
                     n++;
                 }
-                sb.Append("\nPar domaine : 🎬 vidéos ").Append(Human(vid))
-                  .Append(" · 🗜 archives ").Append(Human(arc))
-                  .Append(" · 🧱 autres ").Append(Human(oth)).Append('.');
+                sb.Append("\nPar domaine :");
+                string sep = " ";
+                foreach (string[] d in new[] { new[] { "videos", "🎬 vidéos" }, new[] { "audio", "🎵 audio" }, new[] { "images", "🖼 images" },
+                                               new[] { "archives", "🗜 archives & VM" }, new[] { "installers", "💿 installeurs" }, new[] { "bigfiles", "🧱 autres" } })
+                {
+                    long mb;
+                    if (!parCat.TryGetValue(d[0], out mb) || mb <= 0) continue;
+                    sb.Append(sep).Append(d[1]).Append(' ').Append(Human(mb));
+                    sep = " · ";
+                }
+                sb.Append('.');
                 if (partial) sb.Append("\n(Balayage plafonné dans le temps : les plus gros sont là — relance pour creuser.)");
                 sb.Append("\n\nGestion en un clic dans 💽 Stockage : tout part à la CORBEILLE Windows, donc récupérable.");
                 var r = Say(sb.ToString());

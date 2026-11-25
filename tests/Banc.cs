@@ -88,6 +88,7 @@ namespace BTOptimizer.Tests
             CompetitionTests.Tout();
             CatalogueTests.Tout();
             DiskWalkTests.Tout();
+            TypesFichiersTests.Tout();
             SuiviParalleleTests.Tout();
             ConstatsMaterielTests.Tout();
             ProblemesConnusTests.Tout();

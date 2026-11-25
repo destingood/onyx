@@ -476,7 +476,10 @@ namespace BTOptimizer
                 case "apps": return n > 0 ? "Voir les " + n + " applications…" : "Voir les applications…";
                 case "games": return "Ouvrir les jeux dormants…";
                 case "videos": return n > 0 ? "Gérer les " + n + " plus grosses vidéos…" : "Aucune vidéo au-dessus du seuil";
+                case "audio": return n > 0 ? "Gérer les " + n + " fichiers audio…" : "Aucun fichier audio au-dessus du seuil";
+                case "images": return n > 0 ? "Gérer les " + n + " images…" : "Aucune image au-dessus du seuil";
                 case "archives": return n > 0 ? "Gérer les " + n + " archives…" : "Aucune archive au-dessus du seuil";
+                case "installers": return n > 0 ? "Gérer les " + n + " installeurs…" : "Aucun installeur au-dessus du seuil";
                 case "bigfiles": return n > 0 ? "Gérer les " + n + " gros fichiers…" : "Rien au-dessus du seuil";
                 default: return n > 0 ? "Ouvrir « " + m.Items[0].Name + " »…" : "Ouvrir mes dossiers…";
             }
@@ -493,15 +496,20 @@ namespace BTOptimizer
                 return;
             }
             if (m.Id == "games") { Host.OpenDialog(new DormantGamesForm(Host.Log)); Scan(); return; }
-            if (m.Id == "videos" || m.Id == "archives" || m.Id == "bigfiles")
+            if (IsFileModule(m.Id))
             {
                 // La fenêtre reçoit les éléments déjà balayés (pas de re-balayage), puis la page
                 // se remet à jour : des fichiers ont pu partir à la corbeille.
-                Host.OpenDialog(new StorageFilesForm(Host.Log, new List<Storage.StorageItem>(m.Items)));
+                Host.OpenDialog(new StorageFilesForm(Host.Log, new List<Storage.StorageItem>(m.Items), m.Id));
                 Scan();
                 return;
             }
             if (m.Items.Count > 0 && m.Items[0].Open != null) m.Items[0].Open();
+        }
+
+        private static bool IsFileModule(string id)
+        {
+            return id == "videos" || id == "audio" || id == "images" || id == "archives" || id == "installers" || id == "bigfiles";
         }
 
         private static string Trim(string s, int max)
