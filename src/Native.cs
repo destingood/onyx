@@ -69,6 +69,9 @@ namespace BTOptimizer
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder nom, int max);
+
         /// <summary>PID du processus qui possède la fenêtre au premier plan (0 si indisponible).
         /// Sert à épargner ce que l'utilisateur est en train de regarder.</summary>
         public static int ForegroundPid()
@@ -137,7 +140,9 @@ namespace BTOptimizer
             finally { if (h != IntPtr.Zero) { try { CloseHandle(h); } catch { } } }
         }
 
-        /// <summary>Vrai si la fenêtre au premier plan couvre tout son écran (jeu plein écran / borderless).</summary>
+        /// <summary>Vrai si la fenêtre au premier plan couvre tout son écran ET peut être un jeu
+        /// (plein écran / borderless). Le tri entre un jeu et une application qui occupe l'écran
+        /// est fait par <see cref="VeilleJeu.PleinEcranDeJeu"/>, testé au banc.</summary>
         public static bool IsGameFullscreen()
         {
             try
@@ -153,12 +158,10 @@ namespace BTOptimizer
                 GetWindowThreadProcessId(h, out pid);
                 if (pid == 0) return false;
                 if (pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id) return false;
-                string name = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName.ToLowerInvariant();
-                // Surfaces systèmes qui occupent l'écran sans être des jeux.
-                if (name == "explorer" || name == "searchhost" || name == "lockapp" ||
-                    name == "shellexperiencehost" || name == "startmenuexperiencehost" ||
-                    name == "dwm" || name == "idle") return false;
-                return true;
+                string name = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName;
+                var classe = new System.Text.StringBuilder(128);
+                GetClassName(h, classe, classe.Capacity);
+                return VeilleJeu.PleinEcranDeJeu(name, classe.ToString(), true);
             }
             catch { return false; }
         }

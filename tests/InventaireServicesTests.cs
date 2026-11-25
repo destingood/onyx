@@ -172,6 +172,9 @@ namespace BTOptimizer.Tests
             Banc.Verifie("l'indexation est suspendable, pas inutile",
                 true, Svc("WSearch", SousWindows, true, 2).Verdict == InventaireServices.Verdict.Suspendable);
 
+            Banc.Verifie("le conteneur NVIDIA (superposition, enregistrement) est utile, pas suspendable",
+                true, Svc("NvContainerLocalSystem", SousTiers, true, 2).Verdict == InventaireServices.Verdict.Utile);
+
             // Deux services que les listes populaires font couper, et qu'ONYX garde : l'un fait
             // démarrer les vieux jeux, l'autre alimente sa propre analyse de plantage.
             Banc.Verifie("l'assistant de compatibilité est gardé",

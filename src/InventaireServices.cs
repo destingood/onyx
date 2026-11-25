@@ -138,6 +138,7 @@ namespace BTOptimizer
         /// évite de reproduire. Ils apparaissent dans le tableau, mais jamais cochés.</summary>
         private static readonly string[][] Utiles =
         {
+            new[] { "NvContainerLocalSystem", "conteneur NVIDIA : il porte la superposition, l'enregistrement et l'application NVIDIA. L'arrêter en pleine partie coupe ces fonctions" },
             new[] { "PcaSvc", "l'assistant de compatibilité : c'est lui qui fait démarrer les vieux jeux. Le couper ne rend rien de mesurable et casse un jour un lancement" },
             new[] { "WerSvc", "les rapports d'erreur : ONYX les lit pour expliquer les plantages. Désactivé, l'analyse de plantage n'a plus rien à lire" },
             new[] { "DPS", "diagnostics système : les dépanneurs Windows et plusieurs relevés d'ONYX passent par lui" },
@@ -157,7 +158,7 @@ namespace BTOptimizer
         private static readonly string[][] Suspendables =
         {
             new[] { "SysMain", "préchargement disque : utile au démarrage, inutile pendant une partie déjà chargée. À NE PAS désactiver sur disque mécanique" },
-            new[] { "WSearch", "indexation des fichiers : lit le disque en arrière-plan, exactement pendant qu'un jeu le lit aussi" },
+            new[] { "WSearch", "indexation des fichiers : lit le disque en arrière-plan. Le Mode Jeu ne l'arrête plus : Windows le relance en quelques secondes et l'indexation repart ; pour s'en passer, le désactiver (réglage dédié)" },
             new[] { "Spooler", "spouleur d'impression : rien à imprimer pendant une partie" },
             new[] { "PrintNotify", "notifications d'impression" },
             new[] { "DoSvc", "optimisation de livraison : télécharge et PARTAGE des mises à jour sur le réseau, ce qui se voit sur le ping" },
@@ -165,8 +166,7 @@ namespace BTOptimizer
             new[] { "SSDPSRV", "découverte des appareils du réseau (UPnP)" },
             new[] { "upnphost", "hôte UPnP" },
             new[] { "TabletInputService", "saisie tactile et stylet" },
-            new[] { "NvTelemetryContainer", "télémétrie NVIDIA — à ne pas confondre avec le conteneur d'affichage, lui indispensable" },
-            new[] { "NvContainerLocalSystem", "conteneur de service NVIDIA (superposition, relevés) : interroge les capteurs pendant la partie" }
+            new[] { "NvTelemetryContainer", "télémétrie NVIDIA — à ne pas confondre avec le conteneur d'affichage, lui indispensable" }
         };
 
         /// <summary>

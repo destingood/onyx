@@ -97,6 +97,7 @@
     <Compile Include="..\src\Actus.cs" />
     <Compile Include="..\src\GrilleCartes.cs" />
     <Compile Include="..\src\VeilleJeu.cs" />
+    <Compile Include="..\src\ModeJeuRegles.cs" />
     <Compile Include="..\src\ChoixGpu.cs" />
     <!-- Carte graphique sur un cœur dédié : choix du cœur, masque, cohabitation (pur). Le registre vit dans IrqTuning.cs. -->
     <Compile Include="..\src\CoeurDedie.cs" />

@@ -46,7 +46,7 @@ namespace BTOptimizer
 
             Controls.Add(new Label
             {
-                Text = "Le Mode Jeu (Ctrl+Alt+G) libère la RAM, force le timer 1 ms, suspend TEMPORAIREMENT ces "
+                Text = "Le Mode Jeu (Ctrl+Alt+G) libère la RAM si elle manque, force le timer 1 ms, suspend TEMPORAIREMENT ces "
                      + "services de fond (relancés à la désactivation) et passe en mode Efficacité les familles d'applications cochées "
                      + "(rien n'est fermé, la priorité d'origine est rendue à la sortie). Décoche ce que tu "
                      + "veux GARDER. Ton choix est mémorisé.",

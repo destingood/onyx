@@ -47,7 +47,9 @@ namespace BTOptimizer
             {
                 var l = new List<string>(Socle);
                 foreach (string s in Decouverts()) if (!l.Contains(s)) l.Add(s);
-                return l.ToArray();
+                // Une liste écrite par une version précédente peut encore nommer un service
+                // qu'on ne suspend plus : le filtre s'applique à la lecture, pas à l'écriture.
+                return ModeJeuRegles.Suspendables(l);
             }
         }
 
@@ -123,7 +125,7 @@ namespace BTOptimizer
         /// </summary>
         private static string[] Construit()
         {
-            var l = new List<string> { "SysMain", "WSearch", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice" };
+            var l = new List<string> { "SysMain", "Spooler", "DiagTrack", "WMPNetworkSvc", "MapsBroker", "dmwappushservice" };
             foreach (string s in SondesMaterielles.ServicesSondes) if (!l.Contains(s)) l.Add(s);
             return l.ToArray();
         }
@@ -267,18 +269,29 @@ namespace BTOptimizer
                     if (log != null) log("Applications de fond : " + ex.Message, 2);
                 }
 
-                // --- 3. Mémoire, en épargnant le jeu ---------------------------------------
+                // --- 3. Mémoire, en épargnant le jeu — SEULEMENT si elle manque -------------
+                // Vider tous les processus quand la mémoire est large coûte au lieu de rapporter :
+                // les pages partent dans le fichier d'échange puis reviennent par fautes de page,
+                // en pleine partie (voir ModeJeuRegles).
                 // Isolé : une exception ici laisserait IsActive à faux, et Deactivate ne rétablirait
                 // plus les processus déjà mis en Efficacité.
-                long freed = 0;
-                try { freed = Sys.CleanMemory(log, proteges); } catch { }
+                long freed = 0, totalMo = 0, dispoMo = 0;
+                bool vide = false;
+                try { totalMo = NativeMem.TotalPhysMB(); dispoMo = totalMo - NativeMem.UsedPhysMB(); } catch { }
+                if (ModeJeuRegles.MemoireACourt(dispoMo, totalMo))
+                {
+                    vide = true;
+                    try { freed = Sys.CleanMemory(log, proteges); } catch { }
+                }
 
                 IsActive = true;
                 try { BadgeStore.MarkBoostUsed(); BadgeCatalog.EvaluateEvents(); } catch { }   // badge « Mode Jeu » (+ toast)
 
                 if (log != null)
                 {
-                    log("Mode Jeu ACTIVÉ : timer 1 ms, ~" + Math.Max(0, freed) + " Mo RAM libérés, "
+                    log("Mode Jeu ACTIVÉ : timer 1 ms, "
+                        + (vide ? "~" + Math.Max(0, freed) + " Mo RAM libérés, "
+                                : "mémoire laissée en place (" + (dispoMo / 1024) + " Go disponibles), ")
                         + _stopped.Count + " service(s) de fond suspendu(s).", 1);
                     if (res != null)
                         log(Efficacite.Texte(res.Mis, res.Deja, res.Refus, res.ServicesArretes.Count), res.Refus > 0 ? 2 : 1);

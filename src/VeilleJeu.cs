@@ -15,6 +15,38 @@ namespace BTOptimizer
         /// processus ou null), noms distincts de tous les processus.</summary>
         public sealed class Releve { public bool PleinEcran; public string JeuConnu; public string[] Noms; }
 
+        /// <summary>Processus qui peuvent couvrir un écran sans être des jeux : surfaces de Windows,
+        /// outils de capture, lecteurs vidéo, présentation, bureau à distance.</summary>
+        private static readonly HashSet<string> PasDesJeux = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "explorer", "searchhost", "lockapp", "shellexperiencehost", "startmenuexperiencehost", "dwm", "idle",
+            "snippingtool", "screenclippinghost", "sharex", "lightshot",
+            "vlc", "mpc-hc", "mpc-hc64", "mpc-be64", "mpv", "potplayermini64", "wmplayer",
+            "microsoft.media.player", "video.ui",
+            "powerpnt", "mstsc"
+        };
+
+        /// <summary>
+        /// PUR : la fenêtre au premier plan est-elle le plein écran d'un JEU ?
+        ///
+        /// Couvrir son écran ne suffit pas. Mesuré le 25/11/2026 : l'appli Claude en plein écran
+        /// sur un deuxième écran enclenchait le Mode Jeu auto à chaque fois qu'on y travaillait.
+        /// Les navigateurs et les applis bâties dessus (Claude, Discord, VS Code…) partagent la
+        /// classe de fenêtre « Chrome_WidgetWin » : c'est elle qu'on écarte, plutôt qu'une liste
+        /// de noms qui ne serait jamais à jour. Un jeu listé reste reconnu par son nom
+        /// (<see cref="JeuConnuParmi"/>), quelle que soit sa fenêtre.
+        /// </summary>
+        public static bool PleinEcranDeJeu(string processus, string classe, bool couvreEcran)
+        {
+            if (!couvreEcran || string.IsNullOrEmpty(processus)) return false;
+            if (PasDesJeux.Contains(processus.Trim())) return false;
+            if (classe != null
+                && (classe.StartsWith("Chrome_WidgetWin", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(classe, "MozillaWindowClass", StringComparison.OrdinalIgnoreCase)))
+                return false;
+            return true;
+        }
+
         private static HashSet<string> _connus;
 
         /// <summary>Noms des exécutables des jeux reconnus par le MODE JEU AUTO.</summary>

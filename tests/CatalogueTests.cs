@@ -177,7 +177,7 @@ namespace BTOptimizer.Tests
                 yield return (m.Groups[1].Value, m.Value);
         }
 
-        private static string Source(string nom = "Tweaks.cs")
+        internal static string Source(string nom = "Tweaks.cs")
         {
             for (DirectoryInfo d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
             {

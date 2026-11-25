@@ -156,7 +156,7 @@ namespace BTOptimizer
             res.Add(new CheckResult("Timer Windows 1 ms", Native.TimerActive,
                 Native.TimerActive ? "actif" : "inactif — coche « Timer 1 ms » (ou il s'activera seul en jeu si Timer AUTO est coché)"));
 
-            res.Add(new CheckResult("MODE JEU (services suspendus, RAM libérée)", GameBoost.IsActive,
+            res.Add(new CheckResult("MODE JEU (services suspendus, RAM libérée si elle manque)", GameBoost.IsActive,
                 GameBoost.IsActive ? "actif" : "inactif — bouton ci-dessous ou Ctrl+Alt+G"));
 
             int nvl = CrashScan.GpuDriverErrors(1);
