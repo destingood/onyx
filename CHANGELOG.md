@@ -5,6 +5,33 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.04 — Stockage : doublons, types de fichiers et place par disque ; Mode Jeu auto plus juste
+
+- **Nouveau module « Fichiers & jeux en double » (page Stockage).** Les copies sont reconnues par
+  leur contenu, pas par leur nom. Avant la mise à la corbeille, chaque copie est comparée octet par
+  octet à l'exemplaire gardé, qui n'est jamais touché. Ne sont jamais proposés : les fichiers des
+  jeux installés, l'intérieur des logiciels (moteurs, caches, modèles d'IA), les DLL, les données de
+  jeu, les fichiers de développement et les polices. Un dossier copié en entier est signalé comme
+  dossier en double, sans suppression fichier par fichier. Les jeux installés deux fois (deux
+  lanceurs, ou dossier dupliqué) sont listés, à désinstaller par leur lanceur.
+- **Stockage : voir par disque ce qui prend la place.** Chaque carte de volume montre une barre de
+  répartition et les 3 plus gros éléments de la racine. Un clic ouvre la liste triée, avec descente
+  dans les dossiers et ouverture dans l'Explorateur (lecture seule).
+- **Stockage : tous les types de fichiers reconnus.** Quand l'extension manque, est inconnue ou
+  ambiguë (.ts, .bin, .dat, .img…), ONYX lit la signature du fichier. Les DLL ne passent plus pour
+  des installeurs. Nouvelles catégories : musique & sons, photos & images, installeurs.
+- **Corbeille : plus de suppression définitive silencieuse.** Un fichier trop gros pour la
+  corbeille était détruit sans avertissement ; Windows demande maintenant confirmation. Autres
+  correctifs : un « ; » dans un chemin ne casse plus la liste des éléments ignorés, et un même
+  fichier vu par deux lettres de lecteur n'est compté qu'une fois.
+- **Mode Jeu auto : il ne s'enclenche plus hors jeu.** Un navigateur, Discord, VS Code ou l'appli
+  Claude en plein écran sur un autre écran étaient pris pour un jeu. La mémoire n'est plus vidée
+  que sous 20 % de mémoire disponible, et Windows Search et le conteneur NVIDIA ne sont plus
+  suspendus. Non essayé en jeu.
+- **« Processeur jamais en veille » (C-States) : la description ne promet plus une latence
+  minimale.** Mesuré sur le PC de test : durée des interruptions inchangée, processeur de 49 W à
+  171 W au bureau. Le réglage reste hors des presets.
+
 ## v16.03 — L'audio en MSI et un cœur dédié à la carte graphique dans les presets
 
 - **« Interruptions audio par message (MSI) » est maintenant coché par Recommandé, eSport, le mode
