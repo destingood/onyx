@@ -624,6 +624,12 @@ namespace BTOptimizer
             public int FreePct { get { return TotalMB > 0 ? (int)Math.Round(FreeMB * 100.0 / TotalMB) : 0; } }
             public bool IsSystem;
 
+            /// <summary>Ce qui occupe le disque, enfant de la racine par enfant (null = pas encore
+            /// mesuré). <c>PartsPartial</c> : mesure coupée ou un dossier refusé, chiffres minimaux.</summary>
+            public List<DiskWalk.Part> Parts;
+            public bool PartsPartial;
+            public string Root { get { return Letter + "\\"; } }
+
             /// <summary>0 = confortable, 1 = ça se remplit, 2 = critique. Mêmes seuils que « Jeux &amp;
             /// disques » — mais la règle absolue (« moins de 15 Go libres ») ne vaut QUE pour un vrai
             /// disque de travail : appliquée à une partition de 256 Mo, elle la déclarait toujours
@@ -675,6 +681,51 @@ namespace BTOptimizer
                 return string.Compare(a.Letter, b.Letter, StringComparison.OrdinalIgnoreCase);
             });
             return list;
+        }
+
+        /// <summary>Mesure ce qui occupe chaque disque (Users, Windows, SteamLibrary, pagefile.sys…).
+        /// Les disques sont mesurés en même temps ; <paramref name="ready"/> est appelé dès qu'un
+        /// disque est fini, depuis un fil de travail.</summary>
+        public static void MeasureDrives(List<DriveView> drives, CancellationToken ct, Action<DriveView> ready)
+        {
+            var tasks = new List<Task>();
+            foreach (DriveView d in drives)
+            {
+                DriveView drive = d;
+                tasks.Add(Task.Run(delegate
+                {
+                    List<DiskWalk.Part> parts = DiskWalk.Repartition(drive.Root, ct, 180000);
+                    if (ct.IsCancellationRequested) return;
+                    bool partial = false;
+                    foreach (DiskWalk.Part p in parts) if (p.Partial || p.Denied) partial = true;
+                    drive.PartsPartial = partial;
+                    drive.Parts = parts;
+                    if (ready != null) ready(drive);
+                }));
+            }
+            try { Task.WaitAll(tasks.ToArray()); } catch { }
+        }
+
+        /// <summary>Nom compréhensible d'un élément de la racine d'un disque ; ailleurs, son nom tel quel.</summary>
+        public static string PartName(DiskWalk.Part p, bool atRoot)
+        {
+            if (!atRoot) return p.Name;
+            switch (p.Name.ToLowerInvariant())
+            {
+                case "users": return "Utilisateurs";
+                case "windows": return "Windows";
+                case "program files": return "Programmes";
+                case "program files (x86)": return "Programmes 32 bits";
+                case "programdata": return "Données des programmes";
+                case "pagefile.sys": return "Fichier d’échange";
+                case "hiberfil.sys": return "Veille prolongée";
+                case "swapfile.sys": return "Fichier d’échange des applis";
+                case "$recycle.bin": return "Corbeille";
+                case "system volume information": return "Points de restauration";
+                case "windows.old": return "Ancien Windows";
+                case "$windows.~bt": case "$windows.~ws": return "Fichiers de mise à niveau Windows";
+                default: return p.Name;
+            }
         }
 
         /// <summary>Le disque système, ou null s'il n'est pas lisible.</summary>

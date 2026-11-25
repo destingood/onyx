@@ -2223,6 +2223,23 @@ namespace BTOptimizer
             ShotStorage(dash, dir, "2-fin-defilee");
             ps.ScrollTo(0); Pump(300);
             ShotStorage(dash, dir, "3-fin-haut");
+            // Répartition de chaque disque : mesurée en arrière-plan, parfois après les modules.
+            while (ps.DisquesMesures < ps.DisquesAffiches && sw.ElapsedMilliseconds < 240000) Pump(200);
+            Console.WriteLine("repartition : " + ps.DisquesMesures + " / " + ps.DisquesAffiches + " disques mesures a " + sw.ElapsedMilliseconds + " ms");
+            Pump(300);
+            ShotStorage(dash, dir, "4-repartition");
+            var disque = ps.PremierDisque;
+            if (disque != null) CaptureFormShot(dir, "stockage-5-detail-" + disque.Letter.TrimEnd(':'), new DriveUsageForm(disque));
+            // Descente dans un dossier : mesuré à la demande, puis affiché.
+            var sous = new DriveUsageForm(disque);
+            sous.StartPosition = System.Windows.Forms.FormStartPosition.Manual; sous.Location = new System.Drawing.Point(-5000, -5000);
+            sous.Show(); Pump(200);
+            sous.Entrer(System.IO.Path.Combine(disque.Root, "Program Files"));
+            var t = System.Diagnostics.Stopwatch.StartNew();
+            while (!sous.Pret && t.ElapsedMilliseconds < 60000) Pump(100);
+            Console.WriteLine("descente Program Files : " + (sous.Pret ? "mesuree en " + t.ElapsedMilliseconds + " ms" : "KO pas de resultat"));
+            sous.Hide();
+            CaptureFormShot(dir, "stockage-6-descente", sous);
             try { dash.Hide(); dash.Dispose(); } catch { }
         }
 

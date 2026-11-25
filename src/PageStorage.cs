@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -43,6 +44,10 @@ namespace BTOptimizer
 
         private bool _scanned, _busy;
         private bool _rescan;   // une analyse demandée pendant qu'une autre tourne : relancée à la fin
+        private CancellationTokenSource _measure;   // mesure « ce qui occupe chaque disque » en cours
+        private readonly List<Rectangle> _driveRects = new List<Rectangle>();
+        private const int DriveCardH = 232;
+        private static readonly Color[] PartColors = { FpsUi.Gold, FpsUi.Violet, FpsUi.Ok, Color.FromArgb(96, 165, 250) };
 
         private const int CardCleanH = 244, CardBrowseH = 272, Gap = 16, PadX = 34;
 
@@ -87,6 +92,8 @@ namespace BTOptimizer
             _drives = new BufferedPanel();
             _drives.BackColor = Color.Transparent;
             _drives.Paint += PaintDrives;
+            _drives.MouseMove += (s, e) => _drives.Cursor = DriveAt(e.Location) != null ? Cursors.Hand : Cursors.Default;
+            _drives.MouseClick += (s, e) => { var d = DriveAt(e.Location); if (d != null) OpenDrive(d); };
             _content.Controls.Add(_drives);
 
             // Pas d'emoji ici : les boutons sont en Ubuntu, qui n'a pas de repli emoji (carré tofu).
@@ -272,7 +279,7 @@ namespace BTOptimizer
         private int DrivesHeight(int width)
         {
             int columns = width >= 1040 ? 4 : width >= 640 ? 2 : 1;
-            return 32 + Math.Max(1, (_drivesData.Count + columns - 1) / columns) * 120;
+            return 32 + Math.Max(1, (_drivesData.Count + columns - 1) / columns) * (DriveCardH + 12);
         }
 
         // ------------------------------------------------------------------
@@ -300,6 +307,7 @@ namespace BTOptimizer
                 try { drives = Storage.Drives(); } catch { }
                 try { BeginInvoke((Action)(() => { _drivesData = drives; if (_drives != null) { _drives.Invalidate(); LayoutCards(); } })); }
                 catch { }
+                StartMeasure(drives);
 
                 List<Storage.Module> mods = new List<Storage.Module>();
                 try
@@ -326,6 +334,41 @@ namespace BTOptimizer
                 catch { }
                 try { BeginInvoke((Action)(() => Populate(mods))); } catch { }
             });
+        }
+
+        /// <summary>Mesure, en arrière-plan et en même temps que les modules, ce qui occupe chaque
+        /// disque. Une nouvelle analyse annule la précédente.</summary>
+        private void StartMeasure(List<Storage.DriveView> drives)
+        {
+            var cts = new CancellationTokenSource();
+            CancellationTokenSource old = Interlocked.Exchange(ref _measure, cts);
+            if (old != null) { try { old.Cancel(); } catch { } }
+            CancellationToken ct = cts.Token;
+            Task.Run(delegate
+            {
+                Storage.MeasureDrives(drives, ct, delegate (Storage.DriveView d)
+                {
+                    try { if (IsHandleCreated && !ct.IsCancellationRequested) BeginInvoke((Action)(() => { if (_drives != null) _drives.Invalidate(); })); }
+                    catch { }
+                });
+            });
+        }
+
+        /// <summary>Disques dont la répartition est mesurée (harnais de test).</summary>
+        internal int DisquesMesures { get { int n = 0; foreach (var d in _drivesData) if (d.Parts != null) n++; return n; } }
+        internal int DisquesAffiches { get { return _drivesData.Count; } }
+        internal Storage.DriveView PremierDisque { get { return _drivesData.Count > 0 ? _drivesData[0] : null; } }
+
+        private Storage.DriveView DriveAt(Point p)
+        {
+            for (int i = 0; i < _driveRects.Count && i < _drivesData.Count; i++)
+                if (_driveRects[i].Contains(p)) return _drivesData[i];
+            return null;
+        }
+
+        private void OpenDrive(Storage.DriveView d)
+        {
+            Host.OpenDialog(new DriveUsageForm(d));
         }
 
         private void Populate(List<Storage.Module> mods)
@@ -648,11 +691,13 @@ namespace BTOptimizer
             }
             int columns = _drives.Width >= 1040 ? 4 : _drives.Width >= 640 ? 2 : 1;
             int width = (_drives.Width - (columns - 1) * 12) / columns;
+            _driveRects.Clear();
             for (int i = 0; i < _drivesData.Count; i++)
             {
-                var drive = _drivesData[i]; int x = (i % columns) * (width + 12), y = 32 + (i / columns) * 120;
+                var drive = _drivesData[i]; int x = (i % columns) * (width + 12), y = 32 + (i / columns) * (DriveCardH + 12);
                 Color level = drive.Level == 2 ? FpsUi.Err : drive.Level == 1 ? FpsUi.Warn : FpsUi.Gold;
-                OnyxDesign.PaintCard(g, new Rectangle(x, y, width, 108), FpsUi.Card, drive.IsSystem ? OnyxDesign.Edge : FpsUi.Border, 12);
+                _driveRects.Add(new Rectangle(x, y, width, DriveCardH));
+                OnyxDesign.PaintCard(g, new Rectangle(x, y, width, DriveCardH), FpsUi.Card, drive.IsSystem ? OnyxDesign.Edge : FpsUi.Border, 12);
                 var ring = new Rectangle(x + 16, y + 19, 48, 48);
                 using (var pen = new Pen(FpsUi.Border, 4)) g.DrawEllipse(pen, ring);
                 float used = drive.TotalMB > 0 ? (float)drive.UsedMB / drive.TotalMB : 0;
@@ -663,7 +708,51 @@ namespace BTOptimizer
                 OnyxDesign.Text(g, drive.Letter + (drive.IsSystem ? " · Système" : " · " + drive.Label), FpsUi.H3, FpsUi.Ink, new Rectangle(x + 82, y + 18, width - 98, 24));
                 OnyxDesign.Text(g, Storage.Human(drive.FreeMB) + " libres", FpsUi.H3, level, new Rectangle(x + 82, y + 47, width - 98, 22));
                 OnyxDesign.Text(g, "sur " + Storage.Human(drive.TotalMB), FpsUi.Small, FpsUi.Dim, new Rectangle(x + 82, y + 77, width - 98, 18));
+                PaintBreakdown(g, drive, new Rectangle(x + 18, y + 108, width - 36, DriveCardH - 120));
             }
+        }
+
+        /// <summary>Ce qui occupe le disque : une barre (les 4 plus gros en couleur, le reste en
+        /// gris, l'espace libre en fond) et les 3 plus gros éléments avec leur taille.</summary>
+        private void PaintBreakdown(Graphics g, Storage.DriveView drive, Rectangle r)
+        {
+            List<DiskWalk.Part> parts = drive.Parts;
+            var bar = new Rectangle(r.X, r.Y, r.Width, 8);
+            using (var path = FpsUi.Round(bar, 4))
+            {
+                using (var b = new SolidBrush(FpsUi.Border)) g.FillPath(b, path);
+                if (parts != null && drive.TotalMB > 0)
+                {
+                    Region clip = g.Clip; g.SetClip(path, CombineMode.Intersect);
+                    double total = drive.TotalMB * 1048576.0, x = bar.X;
+                    long rest = 0;
+                    for (int i = 0; i < parts.Count; i++)
+                    {
+                        if (i >= PartColors.Length) { rest += parts[i].Bytes; continue; }
+                        double w = bar.Width * parts[i].Bytes / total;
+                        using (var b = new SolidBrush(PartColors[i])) g.FillRectangle(b, (float)x, bar.Y, (float)w + .5f, bar.Height);
+                        x += w;
+                    }
+                    using (var b = new SolidBrush(FpsUi.Dim2)) g.FillRectangle(b, (float)x, bar.Y, (float)(bar.Width * rest / total), bar.Height);
+                    g.Clip = clip;
+                }
+            }
+            if (parts == null)
+            {
+                OnyxDesign.Text(g, "Mesure de ce qui occupe le disque…", FpsUi.Small, FpsUi.Dim2, new Rectangle(r.X, r.Y + 18, r.Width, 20));
+                return;
+            }
+            int y = r.Y + 18, shown = 0;
+            foreach (DiskWalk.Part p in parts)
+            {
+                if (shown == 3 || p.Bytes < 1048576) break;
+                using (var b = new SolidBrush(PartColors[shown])) g.FillEllipse(b, r.X, y + 6, 8, 8);
+                OnyxDesign.Text(g, Storage.PartName(p, true), FpsUi.Small, FpsUi.Ink, new Rectangle(r.X + 16, y, r.Width - 92, 20));
+                TextRenderer.DrawText(g, Storage.Human(p.Bytes / 1048576), FpsUi.Small, new Rectangle(r.Right - 76, y, 76, 20), FpsUi.Dim,
+                    TextFormatFlags.Right | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                y += 22; shown++;
+            }
+            OnyxDesign.Text(g, "Voir tout le détail  ›", FpsUi.Small, FpsUi.Gold, new Rectangle(r.X, r.Y + 18 + 3 * 22 + 6, r.Width, 20));
         }
 
         private void PaintSelection(object sender, PaintEventArgs e)
@@ -713,6 +802,7 @@ namespace BTOptimizer
         protected override void Dispose(bool disposing)
         {
             if (disposing && _wheel != null) { Application.RemoveMessageFilter(_wheel); _wheel = null; }
+            if (disposing) { var m = Interlocked.Exchange(ref _measure, null); if (m != null) { try { m.Cancel(); } catch { } } }
             base.Dispose(disposing);
         }
     }

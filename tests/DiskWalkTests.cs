@@ -57,6 +57,22 @@ namespace BTOptimizer.Tests
 
                 List<DiskWalk.Fichier> absent = DiskWalk.GrosFichiers(Path.Combine(racine, "absent"), Mo(1), noms, exclus, 0, 5000, out partiel);
                 Banc.Verifie("gros fichiers : racine absente = liste vide", true, absent.Count == 0);
+
+                // Répartition (carte de chaque disque) : chaque enfant direct, sous-arborescence comprise.
+                List<DiskWalk.Part> parts = DiskWalk.Repartition(racine, System.Threading.CancellationToken.None, 0);
+                long somme = 0; foreach (DiskWalk.Part p in parts) somme += p.Bytes;
+                Banc.Verifie("répartition : 9 enfants directs (" + parts.Count + ")", true, parts.Count == 9);
+                Banc.Verifie("répartition : la somme égale la taille totale (" + somme + " / " + attendu + ")", true, somme == attendu);
+                Banc.Verifie("répartition : « sub » en tête, jonction ignorée (" + parts[0].Name + " " + parts[0].Bytes + ")", true,
+                    parts[0].Name == "sub" && parts[0].IsDir && parts[0].Bytes == 2000 + 3000 + Mo(3) && !parts[0].Partial);
+                bool trie = true; for (int i = 1; i < parts.Count; i++) if (parts[i].Bytes > parts[i - 1].Bytes) trie = false;
+                Banc.Verifie("répartition : du plus gros au plus petit", true, trie);
+                DiskWalk.Part cache = parts.Find(p => p.Name == "cache.bin");
+                Banc.Verifie("répartition : fichier caché compté", true, cache != null && !cache.IsDir && cache.Bytes == Mo(2));
+                var annule = new System.Threading.CancellationTokenSource(); annule.Cancel();
+                List<DiskWalk.Part> coupees = DiskWalk.Repartition(racine, annule.Token, 0);
+                Banc.Verifie("répartition : annulation signalée comme mesure partielle", true, coupees.Exists(p => p.IsDir && p.Partial));
+                Banc.Verifie("répartition : dossier absent = vide", true, DiskWalk.Repartition(Path.Combine(racine, "absent"), System.Threading.CancellationToken.None, 0).Count == 0);
             }
             finally
             {
