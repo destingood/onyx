@@ -125,6 +125,8 @@ namespace BTOptimizer
                              Desc = "Setups déjà installés qui dorment dans Téléchargements : exe, msi, msix, apk…" },
                 new Module { Id = "bigfiles", Glyph = "🧱", Name = "Autres gros fichiers", Safety = SafePerso, Browse = true,
                              Desc = "Tout le reste, avec sa nature réelle : documents, bases, modèles 3D ou d'IA, vidages mémoire, téléchargements inachevés…" },
+                new Module { Id = "doublons", Glyph = "📑", Name = "Fichiers & jeux en double", Safety = SafePerso, Browse = true,
+                             Desc = "Copies identiques d'un même fichier (reconnues par leur contenu, pas par leur nom) et jeux installés deux fois. Un exemplaire est toujours gardé." },
                 new Module { Id = "folders", Glyph = "📁", Name = "Tes dossiers les plus lourds", Safety = SafePerso, Browse = true,
                              Desc = "Téléchargements, Vidéos, Bureau, Documents. Montrés pour info — je n'y touche JAMAIS." },
             };
@@ -155,6 +157,7 @@ namespace BTOptimizer
             // partagent un balayage l'attendent ensemble (Lazy : un seul calcul, thread-safe).
             var targets = new Lazy<List<Sys.CleanTarget>>(Sys.CleanTargets);
             var files = new Lazy<List<FileEntry>>(delegate { bool part; return ScanBigFiles(st.MinFileMB, AppRoots(), out part); });
+            var games = new Lazy<List<DormantGames.Entry>>(JeuxInstalles);   // « Jeux dormants » et doublons
             var suivi = new SuiviParallele<Module>(mods);
             object verrou = new object();
             var taches = new Task[total];
@@ -164,7 +167,7 @@ namespace BTOptimizer
                 int idx = i;
                 taches[i] = Task.Factory.StartNew(delegate
                 {
-                    if (st.IsEnabled(m.Id)) { try { Fill(m, st, targets, files); } catch { } }
+                    if (st.IsEnabled(m.Id)) { try { Fill(m, st, targets, files, games); } catch { } }
                     // Sous verrou : les annonces partent dans l'ordre des fins, jamais un état plus
                     // ancien après un plus récent.
                     lock (verrou)
@@ -181,7 +184,8 @@ namespace BTOptimizer
             return mods;
         }
 
-        private static void Fill(Module m, StorageSettings st, Lazy<List<Sys.CleanTarget>> targets, Lazy<List<FileEntry>> files)
+        private static void Fill(Module m, StorageSettings st, Lazy<List<Sys.CleanTarget>> targets, Lazy<List<FileEntry>> files,
+                                 Lazy<List<DormantGames.Entry>> games)
         {
             switch (m.Id)
             {
@@ -193,7 +197,8 @@ namespace BTOptimizer
                     break;
                 case "winsys": FillWindows(m, st); break;
                 case "apps": FillApps(m, st, null); break;
-                case "games": FillGames(m, st); break;
+                case "games": FillGames(m, st, games.Value); break;
+                case "doublons": FillDoublons(m, ChercheDoublons(files.Value, games.Value, st)); break;
                 case "videos":
                 case "audio":
                 case "images":
@@ -354,10 +359,14 @@ namespace BTOptimizer
         }
 
         // --- jeux dormants : on ne garde que l'espace réellement « dormant » ---
-        private static void FillGames(Module m, StorageSettings st)
+        private static List<DormantGames.Entry> JeuxInstalles()
         {
-            List<DormantGames.Entry> games;
-            try { games = DormantGames.Scan(null); } catch { return; }
+            try { return DormantGames.Scan(null) ?? new List<DormantGames.Entry>(); }
+            catch { return new List<DormantGames.Entry>(); }
+        }
+
+        private static void FillGames(Module m, StorageSettings st, List<DormantGames.Entry> games)
+        {
             foreach (DormantGames.Entry e in games)
             {
                 if (!e.IsDormant || e.SizeMB <= 0) continue;
@@ -384,6 +393,145 @@ namespace BTOptimizer
                 m.Items.Add(FileToItem(f));
                 if (++kept >= 60) break;   // les 60 plus gros suffisent : au-delà c'est du bruit
             }
+        }
+
+        // --- doublons : fichiers au contenu identique, jeux installés deux fois ---
+        internal sealed class DoublonsTrouves
+        {
+            public List<Doublons.Groupe> Fichiers = new List<Doublons.Groupe>();
+            public List<Doublons.JeuDouble> Jeux = new List<Doublons.JeuDouble>();
+            public List<Doublons.DossierDouble> Dossiers = new List<Doublons.DossierDouble>();
+        }
+
+        /// <summary>Doublons parmi les gros fichiers déjà balayés. Les gros fichiers DES JEUX
+        /// installés servent de référence : une sauvegarde d'un jeu copiée ailleurs est une copie
+        /// en trop ; le fichier du jeu, lui, n'est jamais proposé. Un fichier écarté (« ne plus me
+        /// proposer ») est traité pareil : gardé, jamais proposé.</summary>
+        public static DoublonsTrouves ChercheDoublons(List<FileEntry> files, List<DormantGames.Entry> games, StorageSettings st)
+        {
+            var r = new DoublonsTrouves();
+            if (st == null) st = StorageSettings.Load();
+            var copies = new List<Doublons.Copie>();
+            var tailles = new HashSet<long>();
+            if (files != null)
+                foreach (FileEntry f in files)
+                {
+                    if (f.Bytes <= 0) continue;
+                    copies.Add(new Doublons.Copie
+                    {
+                        Path = f.Path, Dir = f.Dir, Name = f.Name, Nature = f.Nature,
+                        Bytes = f.Bytes, Modified = f.Modified, Reference = st.IsIgnored(f.Path)
+                    });
+                    tailles.Add(f.Bytes);
+                }
+
+            var installs = new List<Doublons.Install>();
+            var dossiers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);   // dossier → nom du jeu
+            if (games != null)
+                foreach (DormantGames.Entry e in games)
+                {
+                    if (string.IsNullOrEmpty(e.InstallDir)) continue;
+                    installs.Add(new Doublons.Install { Nom = e.Name, Lanceur = e.Launcher, Dossier = e.InstallDir, MB = e.SizeMB, Tag = e });
+                    if (!dossiers.ContainsKey(e.InstallDir)) dossiers[e.InstallDir] = e.Name;
+                }
+
+            if (tailles.Count > 0 && dossiers.Count > 0)
+            {
+                long minBytes = (long)Math.Max(1, st.MinFileMB) * 1048576L;
+                object verrou = new object();
+                try
+                {
+                    Parallel.ForEach(dossiers, new ParallelOptions { MaxDegreeOfParallelism = 4 }, delegate (KeyValuePair<string, string> d)
+                    {
+                        bool p;
+                        List<DiskWalk.Fichier> l = DiskWalk.GrosFichiers(d.Key, minBytes, null, null, 4000, 3000, out p);
+                        lock (verrou)
+                            foreach (DiskWalk.Fichier x in l)
+                                if (tailles.Contains(x.Bytes))   // seule une taille partagée peut faire un doublon
+                                    copies.Add(new Doublons.Copie
+                                    {
+                                        Path = x.Path, Dir = x.Dir, Name = x.Name, Bytes = x.Bytes,
+                                        Modified = x.Modified, Reference = true, Origine = d.Value
+                                    });
+                    });
+                }
+                catch { }
+            }
+
+            Doublons.Resultat res = Doublons.Analyse(copies);
+            r.Fichiers = res.Groupes;
+            foreach (Doublons.DossierDouble d in res.Dossiers)
+                if (!st.IsIgnored(CleDossier(d))) r.Dossiers.Add(d);
+            foreach (Doublons.JeuDouble j in Doublons.JeuxEnDouble(installs))
+                if (!st.IsIgnored("jeu-double:" + j.Nom)) r.Jeux.Add(j);
+            return r;
+        }
+
+        internal static string CleDossier(Doublons.DossierDouble d)
+        {
+            return "dossier-double:" + d.A + "|" + d.B;
+        }
+
+        /// <summary>Un élément par groupe de copies, puis un par jeu installé plusieurs fois.
+        /// Tag = <see cref="Doublons.Groupe"/> ou <see cref="Doublons.JeuDouble"/>. Rien n'est
+        /// libérable en lot : le tri se fait dans la fenêtre dédiée.</summary>
+        public static List<StorageItem> DoublonsItems(DoublonsTrouves d)
+        {
+            var items = new List<StorageItem>();
+            if (d == null) return items;
+            foreach (Doublons.Groupe g in d.Fichiers)
+            {
+                Doublons.Copie k = g.Gardee;
+                if (k == null) continue;
+                string cap = k.Path;
+                items.Add(new StorageItem
+                {
+                    ModuleId = "doublons", Key = "doublon:" + k.Path, Name = k.Name, Path = k.Dir,
+                    SizeMB = g.RecuperableBytes / 1048576, Safety = SafePerso, Tag = g,
+                    Detail = g.Copies.Count + " exemplaires identiques"
+                             + (k.Reference && k.Origine != null ? " · l'original appartient à " + k.Origine : "")
+                             + " · gardé : " + k.Dir,
+                    OpenLabel = "Ouvrir l'emplacement",
+                    Open = delegate { RevealFile(cap); }
+                });
+            }
+            foreach (Doublons.DossierDouble x in d.Dossiers)
+            {
+                string a = x.A;
+                string nom = a;
+                try { nom = System.IO.Path.GetFileName(a.TrimEnd('\\')); } catch { }
+                items.Add(new StorageItem
+                {
+                    ModuleId = "doublons", Key = CleDossier(x), Name = "📁 " + nom + " — dossier présent deux fois",
+                    Path = a, SizeMB = x.Bytes / 1048576, Safety = SafePerso, Tag = x,
+                    Detail = x.A + "  ⇄  " + x.B + " · " + x.Fichiers + " gros fichier(s) identique(s), rangés pareil",
+                    OpenLabel = "Ouvrir le dossier",
+                    Open = delegate { OpenFolder(a); }
+                });
+            }
+            foreach (Doublons.JeuDouble j in d.Jeux)
+            {
+                var det = new System.Text.StringBuilder();
+                foreach (Doublons.Install i in j.Installs)
+                {
+                    if (det.Length > 0) det.Append("  ·  ");
+                    det.Append(string.IsNullOrEmpty(i.Lanceur) ? "?" : i.Lanceur).Append(" : ").Append(i.Dossier);
+                }
+                string dir = j.Installs[0].Dossier;
+                items.Add(new StorageItem
+                {
+                    ModuleId = "doublons", Key = "jeu-double:" + j.Nom, Name = j.Nom + " — installé " + j.Installs.Count + " fois",
+                    Path = dir, SizeMB = j.RecuperableMB, Safety = SafePerso, Tag = j, Detail = det.ToString(),
+                    OpenLabel = "Ouvrir le dossier",
+                    Open = delegate { OpenFolder(dir); }
+                });
+            }
+            return items;
+        }
+
+        private static void FillDoublons(Module m, DoublonsTrouves d)
+        {
+            foreach (StorageItem it in DoublonsItems(d)) m.Items.Add(it);
         }
 
         // --- dossiers personnels : montrés, jamais touchés ---
@@ -545,6 +693,7 @@ namespace BTOptimizer
             public string Cat;             // Id du module : videos | audio | images | archives | installers | bigfiles
             public string Nature;          // libellé précis (« Photo RAW », « Disque de machine virtuelle »…)
             public long SizeMB;
+            public long Bytes;             // taille exacte : base de la recherche de doublons
             public DateTime Modified;      // MinValue = inconnue
 
             public string SizeText { get { return Human(SizeMB); } }
@@ -631,7 +780,7 @@ namespace BTOptimizer
                         list.Add(new FileEntry
                         {
                             Path = f.Path, Dir = f.Dir, Name = f.Name, Ext = f.Ext,
-                            SizeMB = f.Bytes / 1048576, Modified = f.Modified
+                            SizeMB = f.Bytes / 1048576, Bytes = f.Bytes, Modified = f.Modified
                         });
             }
             list.Sort(delegate (FileEntry a, FileEntry b) { return b.SizeMB.CompareTo(a.SizeMB); });

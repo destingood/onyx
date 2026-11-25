@@ -61,6 +61,7 @@
     <Compile Include="..\src\MajLogique.cs" />
     <Compile Include="..\src\DiskWalk.cs" />
     <Compile Include="..\src\TypesFichiers.cs" />
+    <Compile Include="..\src\Doublons.cs" />
     <Compile Include="..\src\SuiviParallele.cs" />
     <Compile Include="..\src\ConstatsMateriel.cs" />
     <Compile Include="..\src\ProblemesConnus.cs" />

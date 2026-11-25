@@ -475,6 +475,7 @@ namespace BTOptimizer
             {
                 case "apps": return n > 0 ? "Voir les " + n + " applications…" : "Voir les applications…";
                 case "games": return "Ouvrir les jeux dormants…";
+                case "doublons": return n > 0 ? "Trier les " + n + " doublons…" : "Aucun doublon au-dessus du seuil";
                 case "videos": return n > 0 ? "Gérer les " + n + " plus grosses vidéos…" : "Aucune vidéo au-dessus du seuil";
                 case "audio": return n > 0 ? "Gérer les " + n + " fichiers audio…" : "Aucun fichier audio au-dessus du seuil";
                 case "images": return n > 0 ? "Gérer les " + n + " images…" : "Aucune image au-dessus du seuil";
@@ -496,6 +497,13 @@ namespace BTOptimizer
                 return;
             }
             if (m.Id == "games") { Host.OpenDialog(new DormantGamesForm(Host.Log)); Scan(); return; }
+            if (m.Id == "doublons")
+            {
+                if (m.Items.Count == 0) return;
+                Host.OpenDialog(new StorageDoublonsForm(Host.Log, new List<Storage.StorageItem>(m.Items)));
+                Scan();   // des copies ont pu partir à la corbeille
+                return;
+            }
             if (IsFileModule(m.Id))
             {
                 // La fenêtre reçoit les éléments déjà balayés (pas de re-balayage), puis la page
