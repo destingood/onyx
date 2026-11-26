@@ -70,6 +70,7 @@
     <Compile Include="..\src\IntegriteMemoire.cs" />
     <Compile Include="..\src\ReflexJeux.cs" />
     <Compile Include="..\src\CoherenceFps.cs" />
+    <Compile Include="..\src\JournalJeu.cs" />
     <Compile Include="..\src\LatenceReelle.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />
     <Compile Include="..\src\MsiConditionnel.cs" />

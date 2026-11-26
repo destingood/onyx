@@ -124,6 +124,7 @@ namespace BTOptimizer.Tests
             CoeurDedieTests.Tout();
             VeilleJeuTests.Tout();
             ModeJeuReglesTests.Tout();
+            JournalJeuTests.Tout();
             return Banc.Bilan();
         }
     }
