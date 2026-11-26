@@ -126,6 +126,7 @@ namespace BTOptimizer.Tests
             ModeJeuReglesTests.Tout();
             JournalJeuTests.Tout();
             ListeSouhaitsTests.Tout();
+            ReglagesFortniteTests.Tout();
             return Banc.Bilan();
         }
     }
