@@ -78,6 +78,61 @@ namespace BTOptimizer
             return Reecrit(iniActuel, changements, (c, actuel) => Pareil(actuel, c.Apres) ? c.Avant : null);
         }
 
+        /// <summary>
+        /// État enregistré + nouveaux changements (deuxième préréglage appliqué par-dessus le premier) :
+        /// Avant reste la valeur d'ORIGINE, Apres devient la nouvelle ; une clé revenue à son origine
+        /// sort de l'état. « Rétablir » ramène donc toujours au fichier d'avant le premier préréglage.
+        /// </summary>
+        public static List<Changement> Fusionne(List<Changement> etat, List<Changement> nouveaux)
+        {
+            var res = new List<Changement>();
+            if (etat != null) foreach (Changement e in etat) if (e != null) res.Add(new Changement { Section = e.Section, Cle = e.Cle, Avant = e.Avant, Apres = e.Apres });
+            if (nouveaux == null) return res;
+            foreach (Changement n in nouveaux)
+            {
+                if (n == null) continue;
+                Changement e = res.Find(x => Id(x.Section, x.Cle) == Id(n.Section, n.Cle));
+                if (e == null) { res.Add(new Changement { Section = n.Section, Cle = n.Cle, Avant = n.Avant, Apres = n.Apres }); continue; }
+                e.Apres = n.Apres;
+                if (Pareil(e.Avant, e.Apres)) res.Remove(e);
+            }
+            return res;
+        }
+
+        private static readonly Dictionary<string, string> Noms = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "sg.ViewDistanceQuality", "Distance d'affichage" }, { "sg.AntiAliasingQuality", "Anticrénelage" },
+            { "sg.ShadowQuality", "Ombres" }, { "sg.GlobalIlluminationQuality", "Illumination globale" },
+            { "sg.ReflectionQuality", "Réflexions" }, { "sg.PostProcessQuality", "Post-traitement" },
+            { "sg.TextureQuality", "Textures" }, { "sg.EffectsQuality", "Effets" }, { "sg.FoliageQuality", "Feuillage" },
+            { "sg.ShadingQuality", "Ombrage" }, { "sg.LandscapeQuality", "Terrain" },
+            { "bMotionBlur", "Flou de mouvement" }, { "bUseVSync", "Synchronisation verticale" }, { "bUseNanite", "Maillages Nanite" },
+        };
+
+        private static readonly string[] Crans = { "Bas", "Moyen", "Élevé", "Épique" };
+
+        public static string Libelle(string cle)
+        {
+            string n;
+            return cle != null && Noms.TryGetValue(cle, out n) ? n : cle;
+        }
+
+        private static string Valeur(string v)
+        {
+            string t = (v ?? "").Trim();
+            int i;
+            if (int.TryParse(t, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out i) && i >= 0 && i < Crans.Length) return Crans[i];
+            if (string.Equals(t, "True", StringComparison.OrdinalIgnoreCase)) return "activé";
+            if (string.Equals(t, "False", StringComparison.OrdinalIgnoreCase)) return "désactivé";
+            return t;
+        }
+
+        /// <summary>« Ombres : Épique → Bas ».</summary>
+        public static string Ligne(Changement c)
+        {
+            return c == null ? "" : Libelle(c.Cle) + " : " + Valeur(c.Avant) + " → " + Valeur(c.Apres);
+        }
+
         public static List<Changement> Lire(string texte)
         {
             var res = new List<Changement>();

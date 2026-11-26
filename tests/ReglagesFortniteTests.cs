@@ -79,7 +79,17 @@ namespace BTOptimizer.Tests
                 ReglagesFortnite.Prevoit(Ini, ReglagesFortnite.Mode.Qualite, out absentes).Exists(x => x.Cle == "sg.ShadowQuality" && x.Apres == "3")
                 && !ReglagesFortnite.Prevoit(Ini, ReglagesFortnite.Mode.Qualite, out absentes).Exists(x => x.Cle == "bUseNanite"));
 
-            List<ReglagesFortnite.Changement> lu = ReglagesFortnite.Lire(ReglagesFortnite.Ecrire(c));
+            // Deux préréglages à la suite : Rétablir ramène au fichier d'origine.
+            List<ReglagesFortnite.Changement> qualite = ReglagesFortnite.Prevoit(apres, ReglagesFortnite.Mode.Qualite, out absentes);
+            List<ReglagesFortnite.Changement> etat = ReglagesFortnite.Fusionne(c, qualite);
+            string deuxFois = ReglagesFortnite.Applique(apres, qualite);
+            Banc.Egal("deux préréglages puis rétablir : fichier d'origine", Ini, ReglagesFortnite.Retablit(deuxFois, etat));
+            Banc.Verifie("fusion : clé revenue à son origine retirée de l'état (Nanite)", true, !etat.Exists(x => x.Cle == "bUseNanite"));
+            Banc.Egal("ligne lisible", "Textures : Épique → Bas", ReglagesFortnite.Ligne(new ReglagesFortnite.Changement { Cle = "sg.TextureQuality", Avant = "3", Apres = "0" }));
+            Banc.Egal("ligne lisible : booléen", "Synchronisation verticale : activé → désactivé",
+                ReglagesFortnite.Ligne(new ReglagesFortnite.Changement { Cle = "bUseVSync", Avant = "True", Apres = "False" }));
+
+            List<ReglagesFortnite.Changement> lu =ReglagesFortnite.Lire(ReglagesFortnite.Ecrire(c));
             bool pareil = lu.Count == c.Count;
             for (int i = 0; pareil && i < c.Count; i++)
                 pareil = lu[i].Section == c[i].Section && lu[i].Cle == c[i].Cle && lu[i].Avant == c[i].Avant && lu[i].Apres == c[i].Apres;
