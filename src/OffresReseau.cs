@@ -60,7 +60,7 @@ namespace BTOptimizer
             f = f ?? new Offres.Filtre();
             try
             {
-                string url = OffresSources.UrlRechercheSteam(f.Texte, f.Tag, f.PlafondCts, promos, nouveautes, debut);
+                string url = OffresSources.UrlRechercheSteam(f.Texte, f.Tag, f.PrixMinCts, f.PlafondCts, promos, nouveautes, debut);
                 var r = await Lit(url, 30).ConfigureAwait(false);
                 if (r.Texte == null) { Erreurs["steam"] = true; return new List<Offre>(); }
                 var ids = OffresSources.IdsRechercheSteam(r.Texte);
@@ -117,15 +117,25 @@ namespace BTOptimizer
         /// Promos de "gog", "nintendo", "itch" ou "cheapshark" (stores idsCheapShark), page 0, 1, 2…
         /// Le texte est cherché par le store (itch.io : filtré ici, son flux n'a qu'une page).
         /// </summary>
-        public static async Task<PageStore> PromosStore(string source, string texte, int page, string idsCheapShark)
+        public static Task<PageStore> PromosStore(string source, string texte, int page, string idsCheapShark)
+        {
+            return PromosStore(source, texte, page, idsCheapShark, true, -1, -1, 0m);
+        }
+
+        /// <summary>
+        /// promos faux : jeux au prix normal compris. minCts/maxCts : tranche en centimes d'euro (-1 : sans borne),
+        /// envoyée au store pour dégrossir ; CheapShark la reçoit en dollars si le taux est connu. Le filtre exact reste à l'appelant.
+        /// </summary>
+        public static async Task<PageStore> PromosStore(string source, string texte, int page, string idsCheapShark, bool promos, int minCts, int maxCts, decimal tauxUsd)
         {
             var res = new PageStore();
             try
             {
-                string url = source == "gog" ? OffresSources.UrlGog(texte, page + 1)
-                    : source == "nintendo" ? OffresSources.UrlNintendo(texte, page * OffresSources.ParPageNintendo)
-                    : source == "itch" ? (page == 0 ? OffresSources.UrlItch : null)
-                    : source == "cheapshark" && !string.IsNullOrEmpty(idsCheapShark) ? OffresSources.UrlCheapShark(idsCheapShark, texte, page)
+                int minUsd = OffresSources.EnDollars(minCts, tauxUsd), maxUsd = OffresSources.EnDollars(maxCts, tauxUsd);
+                string url = source == "gog" ? OffresSources.UrlGog(texte, page + 1, promos, minCts, maxCts)
+                    : source == "nintendo" ? OffresSources.UrlNintendo(texte, page * OffresSources.ParPageNintendo, promos, minCts, maxCts)
+                    : source == "itch" ? (page == 0 ? (promos ? OffresSources.UrlItch : OffresSources.UrlItchTous) : null)
+                    : source == "cheapshark" && !string.IsNullOrEmpty(idsCheapShark) ? OffresSources.UrlCheapShark(idsCheapShark, texte, page, promos, minUsd, maxUsd)
                     : null;
                 if (url == null) { res.Fini = true; return res; }
                 var r = await Lit(url, 30).ConfigureAwait(false);
@@ -143,7 +153,7 @@ namespace BTOptimizer
                     if (urlPrix != null)
                     {
                         var p = await Lit(urlPrix, 30).ConfigureAwait(false);
-                        if (p.Texte != null) l = OffresSources.AppliquePrixNintendo(l, p.Texte);
+                        if (p.Texte != null) l = OffresSources.AppliquePrixNintendo(l, p.Texte, promos);
                     }
                 }
                 if (source == "itch" && !string.IsNullOrWhiteSpace(texte)) l = Offres.Filtrer(l, new Offres.Filtre { Texte = texte });
@@ -192,6 +202,17 @@ namespace BTOptimizer
         }
 
         public const string UrlBce = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+
+        /// <summary>Dollars pour 1 euro (BCE, cache 12 h) ; 0 si indisponible.</summary>
+        public static async Task<decimal> TauxUsd()
+        {
+            try
+            {
+                DateTime jour;
+                return OffresSources.TauxUsd(await Texte(UrlBce, 12 * 60).ConfigureAwait(false), out jour);
+            }
+            catch { return 0m; }
+        }
 
         public static async Task<ComparatifJeu> Comparatif(Offre o)
         {

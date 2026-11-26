@@ -45,16 +45,40 @@ namespace BTOptimizer
         /// </summary>
         public static string UrlRechercheSteam(string texte, int tag, int plafondCts, bool promos, bool nouveautes, int debut)
         {
+            return UrlRechercheSteam(texte, tag, -1, plafondCts, promos, nouveautes, debut);
+        }
+
+        /// <summary>
+        /// Tranche à borne basse (ex. 10 – 20 €) : Steam n'a pas de prix minimum, la recherche part donc du plus cher
+        /// sous le plafond (Price_DESC) et s'arrête quand les prix passent sous la borne (TriPrixDecroissantSteam).
+        /// Steam ignore maxprice au-delà de 40 (vérifié le 26/11/2026) : « Plus de 40 € » est filtré ici seulement.
+        /// </summary>
+        public static string UrlRechercheSteam(string texte, int tag, int minCts, int plafondCts, bool promos, bool nouveautes, int debut)
+        {
             var sb = new StringBuilder(BaseRechercheSteam);
             sb.Append(Math.Max(0, debut).ToString(CultureInfo.InvariantCulture));
             if (promos) sb.Append("&specials=1");
             if (nouveautes) sb.Append("&sort_by=Released_DESC");
+            else if (TriPrixDecroissantSteam(minCts, plafondCts)) sb.Append("&sort_by=Price_DESC");
             if (tag > 0) sb.Append("&tags=").Append(tag.ToString(CultureInfo.InvariantCulture));
             if (!string.IsNullOrWhiteSpace(texte)) sb.Append("&term=").Append(Uri.EscapeDataString(texte.Trim()));
-            if (plafondCts == 100 || plafondCts == 500) sb.Append("&maxprice=5");
-            else if (plafondCts == 1000) sb.Append("&maxprice=10");
-            else if (plafondCts == 2000) sb.Append("&maxprice=20");
+            int max = MaxPriceSteam(plafondCts);
+            if (plafondCts == 0) sb.Append("&maxprice=free");   // « Gratuit » hors promos (Nouveautés, Tous les jeux)
+            else if (max > 0) sb.Append("&maxprice=").Append(max.ToString(CultureInfo.InvariantCulture));
             return sb.ToString();
+        }
+
+        /// <summary>Plafond en euros → valeur maxprice de Steam (multiple de 5, de 5 à 40) ; 0 : aucune.</summary>
+        private static int MaxPriceSteam(int plafondCts)
+        {
+            if (plafondCts <= 0 || plafondCts > 4000) return 0;
+            return Math.Max(5, (plafondCts + 499) / 500 * 5);
+        }
+
+        /// <summary>Vrai si la recherche Steam est triée du plus cher au moins cher (tranche à borne basse et plafond reconnu).</summary>
+        public static bool TriPrixDecroissantSteam(int minCts, int plafondCts)
+        {
+            return minCts > 0 && MaxPriceSteam(plafondCts) > 0;
         }
 
         /// <summary>La recherche ne donne ni identifiant ni prix : l'identifiant se lit dans l'URL de la vignette.</summary>
@@ -462,7 +486,6 @@ namespace BTOptimizer
             new Boutique("gog", "GOG", 0),
             new Boutique("nintendo", "Nintendo eShop", 0),
             new Boutique("epic", "Epic Games Store", 25),
-            new Boutique("humble", "Humble Store", 11),
             new Boutique("fanatical", "Fanatical", 15),
             new Boutique("gmg", "Green Man Gaming", 3),
             new Boutique("ubisoft", "Ubisoft Store", 13),
@@ -523,11 +546,17 @@ namespace BTOptimizer
 
         public const int ParPageGog = 48;
 
-        public static string UrlGog(string texte, int page)
+        public static string UrlGog(string texte, int page) { return UrlGog(texte, page, true, -1, -1); }
+
+        /// <summary>promos faux : tout le catalogue. Tranche : price=between:a,b en euros entiers (dégrossissage, filtre exact ensuite).</summary>
+        public static string UrlGog(string texte, int page, bool promos, int minCts, int maxCts)
         {
             string url = "https://catalog.gog.com/v1/catalog?limit=" + ParPageGog.ToString(CultureInfo.InvariantCulture)
-                + "&order=desc:trending&discounted=eq:true&productType=in:game,pack&page=" + Math.Max(1, page).ToString(CultureInfo.InvariantCulture)
+                + "&order=desc:trending" + (promos ? "&discounted=eq:true" : "") + "&productType=in:game,pack&page=" + Math.Max(1, page).ToString(CultureInfo.InvariantCulture)
                 + "&countryCode=FR&locale=fr-FR&currencyCode=EUR";
+            if (minCts > 0 || maxCts >= 0)
+                url += "&price=between:" + Math.Max(0, minCts / 100).ToString(CultureInfo.InvariantCulture) + ","
+                    + (maxCts >= 0 ? ((maxCts + 99) / 100).ToString(CultureInfo.InvariantCulture) : "100000");
             if (!string.IsNullOrWhiteSpace(texte)) url += "&query=like:" + Uri.EscapeDataString(texte.Trim());
             return url;
         }
@@ -572,12 +601,27 @@ namespace BTOptimizer
         public const int ParPageCheapShark = 60;
         private static readonly Regex DealSur = new Regex(@"^[A-Za-z0-9%._-]{1,200}$", RegexOptions.CultureInvariant);
 
-        public static string UrlCheapShark(string idsStores, string texte, int page)
+        public static string UrlCheapShark(string idsStores, string texte, int page) { return UrlCheapShark(idsStores, texte, page, true, -1, -1); }
+
+        /// <summary>
+        /// promos faux : jeux au prix normal compris (onSale=0). Bornes en centimes de DOLLAR (converties par l'appelant) :
+        /// lowerPrice/upperPrice en dollars entiers, élargis vers l'extérieur ; CheapShark lit upperPrice=50 comme « sans limite ».
+        /// </summary>
+        public static string UrlCheapShark(string idsStores, string texte, int page, bool promos, int minUsdCts, int maxUsdCts)
         {
-            string url = "https://www.cheapshark.com/api/1.0/deals?storeID=" + idsStores + "&onSale=1&pageSize=" + ParPageCheapShark.ToString(CultureInfo.InvariantCulture)
+            string url = "https://www.cheapshark.com/api/1.0/deals?storeID=" + idsStores + "&onSale=" + (promos ? "1" : "0") + "&pageSize=" + ParPageCheapShark.ToString(CultureInfo.InvariantCulture)
                 + "&pageNumber=" + Math.Max(0, page).ToString(CultureInfo.InvariantCulture) + "&sortBy=Deal%20Rating";
+            if (minUsdCts > 0) url += "&lowerPrice=" + (minUsdCts / 100).ToString(CultureInfo.InvariantCulture);
+            if (maxUsdCts >= 0 && maxUsdCts < 5000) url += "&upperPrice=" + ((maxUsdCts + 99) / 100).ToString(CultureInfo.InvariantCulture);
             if (!string.IsNullOrWhiteSpace(texte)) url += "&title=" + Uri.EscapeDataString(texte.Trim());
             return url;
+        }
+
+        /// <summary>Centimes d'euro → centimes de dollar au taux BCE ; -1 si borne absente ou taux inconnu.</summary>
+        public static int EnDollars(int centimesEur, decimal tauxUsd)
+        {
+            if (centimesEur < 0 || tauxUsd <= 0m) return -1;
+            return (int)Math.Round(centimesEur * tauxUsd, MidpointRounding.AwayFromZero);
         }
 
         public static List<Offre> PromosCheapShark(string json)
@@ -829,7 +873,10 @@ namespace BTOptimizer
         public const int ParPageNintendo = 48;
 
         /// <summary>Recherche Nintendo (Solr) : seuls lettres, chiffres et espaces passent dans la requête.</summary>
-        public static string UrlNintendo(string texte, int debut)
+        public static string UrlNintendo(string texte, int debut) { return UrlNintendo(texte, debut, true, -1, -1); }
+
+        /// <summary>promos faux : tout le catalogue. Tranche : price_lowest_f:[a TO b] en euros entiers (dégrossissage).</summary>
+        public static string UrlNintendo(string texte, int debut, bool promos, int minCts, int maxCts)
         {
             var mots = new List<string>();
             var sb = new StringBuilder();
@@ -839,7 +886,11 @@ namespace BTOptimizer
                 if (sb.Length > 0) { mots.Add(Uri.EscapeDataString(sb.ToString())); sb.Clear(); }
             }
             string q = mots.Count == 0 ? "*" : string.Join("%20", mots);
-            return "https://searching.nintendo-europe.com/fr/select?q=" + q + "&fq=type:GAME%20AND%20price_has_discount_b:true&rows="
+            string fq = "type:GAME" + (promos ? "%20AND%20price_has_discount_b:true" : "");
+            if (minCts > 0 || maxCts >= 0)
+                fq += "%20AND%20price_lowest_f:%5B" + Math.Max(0, minCts / 100).ToString(CultureInfo.InvariantCulture) + "%20TO%20"
+                    + (maxCts >= 0 ? ((maxCts + 99) / 100).ToString(CultureInfo.InvariantCulture) : "*") + "%5D";
+            return "https://searching.nintendo-europe.com/fr/select?q=" + q + "&fq=" + fq + "&rows="
                 + ParPageNintendo.ToString(CultureInfo.InvariantCulture) + "&start=" + Math.Max(0, debut).ToString(CultureInfo.InvariantCulture)
                 + (mots.Count == 0 ? "&sort=change_date%20desc" : "") + "&wt=json";
         }
@@ -860,6 +911,8 @@ namespace BTOptimizer
                     string url = "https://www.nintendo.com" + chemin.Trim();
                     if (!Offres.LienSur(url)) continue;
                     int cts = Montant(Chaine(d, "price_discounted_f")), origine = Montant(Chaine(d, "price_regular_f"));
+                    if (cts < 0) cts = Montant(Chaine(d, "price_lowest_f"));   // hors promo : pas de prix remisé
+                    if (cts < 0) cts = origine;
                     if (cts < 0) continue;
                     string nsuid = PremiereChaine(d, "nsuid_txt"), fs = Chaine(d, "fs_id");
                     string id = ChiffresSeuls(nsuid) ? nsuid : ChiffresSeuls(fs) ? "fs" + fs : null;
@@ -890,7 +943,10 @@ namespace BTOptimizer
         /// Copies des offres avec le prix réel ; une offre dont la promo est finie est retirée.
         /// Réponse illisible ou offre absente de la réponse : prix de l'index gardé.
         /// </summary>
-        public static List<Offre> AppliquePrixNintendo(List<Offre> offres, string json)
+        public static List<Offre> AppliquePrixNintendo(List<Offre> offres, string json) { return AppliquePrixNintendo(offres, json, true); }
+
+        /// <summary>promosSeules faux : un jeu hors promo est gardé au prix normal (remise 0, sans date de fin).</summary>
+        public static List<Offre> AppliquePrixNintendo(List<Offre> offres, string json, bool promosSeules)
         {
             var res = new List<Offre>();
             var prix = new Dictionary<string, JsonElement>();
@@ -910,7 +966,14 @@ namespace BTOptimizer
                     Offre c = o.Copie();
                     JsonElement p, remise, normal;
                     if (!prix.TryGetValue(o.Id ?? "", out p)) { res.Add(c); continue; }
-                    if (Chaine(p, "sales_status") != "onsale" || !Prop(p, "discount_price", out remise)) continue;
+                    if (Chaine(p, "sales_status") != "onsale" || !Prop(p, "discount_price", out remise))
+                    {
+                        if (promosSeules) continue;
+                        int normalCts = Prop(p, "regular_price", out normal) ? Montant(Chaine(normal, "raw_value")) : -1;
+                        if (normalCts >= 0) { c.PrixCts = normalCts; c.PrixOrigineCts = normalCts; c.Remise = 0; c.Fin = null; }
+                        res.Add(c);
+                        continue;
+                    }
                     int cts = Montant(Chaine(remise, "raw_value"));
                     if (cts < 0) continue;
                     c.PrixCts = cts;
@@ -927,6 +990,8 @@ namespace BTOptimizer
         // ---------------------------------------------------------------- itch.io (flux RSS)
 
         public const string UrlItch = "https://itch.io/games/on-sale.xml";
+        /// <summary>Hors promo : meilleures ventes (même format de flux, relevé le 26/11/2026).</summary>
+        public const string UrlItchTous = "https://itch.io/games/top-sellers.xml";
 
         public static List<Offre> PromosItch(string xml)
         {

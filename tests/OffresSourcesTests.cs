@@ -46,6 +46,11 @@ namespace BTOptimizer.Tests
             Banc.Verifie("URL : options", true, u.Contains("&specials=1") && u.Contains("&tags=19") && u.Contains("&maxprice=10") && u.Contains("&term=elden%20ring") && !u.Contains("sort_by"));
             Banc.Verifie("URL : 1 € max demande 5 au serveur", true, OffresSources.UrlRechercheSteam(null, 0, 100, true, false, 0).Contains("&maxprice=5"));
             Banc.Verifie("URL : nouveautés sans plafond", true, OffresSources.UrlRechercheSteam("", 0, -1, false, true, 0).Contains("&sort_by=Released_DESC") && !OffresSources.UrlRechercheSteam("", 0, -1, false, true, 0).Contains("maxprice") && !OffresSources.UrlRechercheSteam("", 0, -1, false, true, 0).Contains("specials"));
+            string tr = OffresSources.UrlRechercheSteam(null, 0, 1000, 2000, false, false, 0);
+            Banc.Verifie("URL : tranche 10 – 20 € tous les jeux → plus cher d'abord, sous 20", true, tr.Contains("&sort_by=Price_DESC") && tr.Contains("&maxprice=20") && !tr.Contains("specials"));
+            string tr40 = OffresSources.UrlRechercheSteam(null, 0, 4000, -1, true, false, 0);
+            Banc.Verifie("URL : Plus de 40 € sans maxprice ni tri par prix (Steam ignore maxprice > 40)", true, !tr40.Contains("maxprice") && !tr40.Contains("sort_by") && OffresSources.UrlRechercheSteam(null, 0, 2000, 4000, true, false, 0).Contains("&maxprice=40"));
+            Banc.Verifie("URL : Gratuit → maxprice=free", true, OffresSources.UrlRechercheSteam(null, 0, -1, 0, false, true, 0).Contains("&maxprice=free"));
             var ids = OffresSources.IdsRechercheSteam(Recherche);
             Banc.Verifie("identifiants : lot et doublon écartés", true, ids.Count == 2 && ids[0] == 227300 && ids[1] == 2909400);
             Banc.Verifie("identifiants : HTML à la place du JSON", true, OffresSources.IdsRechercheSteam("<html>").Count == 0 && OffresSources.IdsRechercheSteam(null).Count == 0);

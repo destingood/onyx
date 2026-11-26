@@ -10,8 +10,8 @@ using System.Windows.Forms;
 namespace BTOptimizer
 {
     /// <summary>
-    /// Page « Bons plans » : promos de 15 stores au choix (Steam, GOG, Nintendo, itch.io, et via CheapShark
-    /// Epic, Humble, Fanatical…), nouveautés Steam, jeux gratuits (Epic, GamerPower), jeux suivis et favoris. Rien n'est chargé avant la première ouverture ; chaque chargement porte
+    /// Page « Bons plans » : promos (ou tout le catalogue) de 14 stores au choix (Steam, GOG, Nintendo, itch.io, et via CheapShark
+    /// Epic, Fanatical, Ubisoft…), nouveautés Steam, jeux gratuits (Epic, GamerPower), jeux suivis et favoris. Rien n'est chargé avant la première ouverture ; chaque chargement porte
     /// un numéro de génération et une réponse arrivée après un changement de filtre est ignorée.
     /// </summary>
     internal sealed class PageBonsPlans : FpsPage
@@ -19,11 +19,13 @@ namespace BTOptimizer
         private const int OngletPromos = 0, OngletGratuits = 1, OngletNouveautes = 2, OngletSuivis = 3, OngletFavoris = 4;
         private const int ParPage = 24, LotsMax = 3, PasSteam = 50;
         private static readonly string[] NomsOnglets = { "Promos", "Gratuits", "Nouveautés", "Suivis", "Favoris" };
-        private static readonly int[] Plafonds = { -1, 0, 100, 500, 1000, 2000 };
+        private static readonly Offres.Tranche[] Tranches = Offres.Tranches;
+        private static readonly string[] ModesOffres = { "En promo", "Tous les jeux" };
         private static readonly KeyValuePair<string, string>[] Tris =
         {
             new KeyValuePair<string, string>("Remise", "remise"),
-            new KeyValuePair<string, string>("Prix", "prix"),
+            new KeyValuePair<string, string>("Prix ↑", "prix"),
+            new KeyValuePair<string, string>("Prix ↓", "prixdesc"),
             new KeyValuePair<string, string>("Récents", "recent"),
             new KeyValuePair<string, string>("Nom", "nom"),
         };
@@ -37,10 +39,10 @@ namespace BTOptimizer
         private readonly Button _support;
         private readonly TextBox _search;
         private readonly Button[] _onglets = new Button[NomsOnglets.Length];
-        private readonly Button[] _pilules = new Button[Plafonds.Length];
-        private readonly Label _lPrix, _lCat, _lPlat, _lTri, _etat, _numPage, _info;
-        private readonly ComboBox _cat, _plat, _tri;
-        private readonly Button _categoryChoice, _platformChoice, _sortChoice;
+        private readonly Button[] _pilules = new Button[Tranches.Length];
+        private readonly Label _lPrix, _lCat, _lPlat, _lTri, _lOffres, _etat, _numPage, _info;
+        private readonly ComboBox _cat, _plat, _tri, _offres;
+        private readonly Button _categoryChoice, _platformChoice, _sortChoice, _offresChoice;
         private readonly Button _verifier, _installes, _souhaits, _reessayer, _prec, _suiv;
         private readonly Button _stores;
         private readonly ContextMenuStrip _menuStores;
@@ -55,7 +57,8 @@ namespace BTOptimizer
         private readonly BufferedPanel _filters = new BufferedPanel(), _searchBox = new BufferedPanel();
         private readonly Label _context = new Label(), _resultsLabel = new Label();
 
-        private int _onglet, _plafond = -1, _generation, _pageIdx, _debutSteam;
+        private int _onglet, _tranche, _generation, _pageIdx, _debutSteam;   // _tranche : index dans Tranches (0 : Tous)
+        private decimal _tauxUsd;   // dollars pour 1 euro (BCE) ; 0 tant qu'inconnu
         private bool _charge, _occupe, _steamFini, _majCombos;
         private List<Offre> _resultats = new List<Offre>();
         private List<Offre> _gratuitsBruts;
@@ -98,10 +101,10 @@ namespace BTOptimizer
             for (int i = 0; i < _pilules.Length; i++)
             {
                 int k = i;
-                _pilules[i] = OnyxDesign.Button(Offres.LibellePlafond(Plafonds[i]));
+                _pilules[i] = OnyxDesign.Button(Tranches[i].Libelle);
                 _pilules[i].Height = 28;
                 _pilules[i].Width = TextRenderer.MeasureText(_pilules[i].Text, FpsUi.Small).Width + 20;
-                _pilules[i].Click += (s, e) => ChoisitPlafond(Plafonds[k]);
+                _pilules[i].Click += (s, e) => ChoisitTranche(k);
                 Controls.Add(_pilules[i]);
             }
 
@@ -111,7 +114,10 @@ namespace BTOptimizer
             _plat = Liste(130, new[] { "Toutes" }.Concat(Offres.Plateformes));
             _lTri = Etiquette("Tri");
             _tri = Liste(110, Tris.Select(t => t.Key));
+            _lOffres = Etiquette("Offres");
+            _offres = Liste(130, ModesOffres);
             _categoryChoice = Choice(_cat, "Catégorie de jeu"); _platformChoice = Choice(_plat, "Plateforme"); _sortChoice = Choice(_tri, "Trier les offres");
+            _offresChoice = Choice(_offres, "Jeux en promo seulement, ou tous les jeux");
 
             _stores = OnyxDesign.Button("Stores");
             _stores.Height = 28;
@@ -172,7 +178,7 @@ namespace BTOptimizer
 
             _pied = new LinkLabel
             {
-                Text = "Prix : Steam, GOG, Nintendo eShop, itch.io, CheapShark (autres stores, prix US) · Jeux gratuits : Epic Games Store, GamerPower.com",
+                Text = "Prix : Steam, GOG, Nintendo eShop, itch.io, CheapShark (autres stores, prix US classés en euros au taux BCE) · Jeux gratuits : Epic Games Store, GamerPower.com",
                 Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2, BackColor = FpsUi.BgMain,
                 LinkColor = FpsUi.GoldDim, ActiveLinkColor = FpsUi.Gold, VisitedLinkColor = FpsUi.GoldDim,
                 LinkBehavior = LinkBehavior.HoverUnderline, AutoSize = false,
@@ -191,15 +197,16 @@ namespace BTOptimizer
             Controls.Add(_mention);
 
             _majCombos = true;
-            _cat.SelectedIndex = 0; _plat.SelectedIndex = 0; _tri.SelectedIndex = 0;
+            _cat.SelectedIndex = 0; _plat.SelectedIndex = 0; _tri.SelectedIndex = 0; _offres.SelectedIndex = 0;
             _majCombos = false; SyncChoices();
             _cat.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
             _plat.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
             _tri.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
+            _offres.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) { MajOnglets(); Recharge(); } };
 
-            foreach (Control control in new Control[] { _lPrix, _lCat, _lPlat, _lTri, _cat, _plat, _tri, _stores, _verifier, _installes, _souhaits }) _filters.Controls.Add(control);
+            foreach (Control control in new Control[] { _lPrix, _lCat, _lPlat, _lTri, _lOffres, _cat, _plat, _tri, _offres, _stores, _verifier, _installes, _souhaits }) _filters.Controls.Add(control);
             foreach (var pill in _pilules) _filters.Controls.Add(pill);
-            _cat.AccessibleName = "Catégorie de jeu"; _plat.AccessibleName = "Plateforme"; _tri.AccessibleName = "Trier les offres";
+            _cat.AccessibleName = "Catégorie de jeu"; _plat.AccessibleName = "Plateforme"; _tri.AccessibleName = "Trier les offres"; _offres.AccessibleName = "Offres affichées";
             MajOnglets();
             _partner.VisibilityChanged += DoLayout;
             Resize += (s, e) => DoLayout();
@@ -287,6 +294,7 @@ namespace BTOptimizer
             _categoryChoice.Text = (_cat.SelectedItem ?? "Toutes").ToString() + "   ▾";
             _platformChoice.Text = (_plat.SelectedItem ?? "Toutes").ToString() + "   ▾";
             _sortChoice.Text = (_tri.SelectedItem ?? "Remise").ToString() + "   ▾";
+            _offresChoice.Text = (_offres.SelectedItem ?? ModesOffres[0]).ToString() + "   ▾";
         }
 
         private static void Lien(LinkLabel l, string mot, string url)
@@ -311,6 +319,7 @@ namespace BTOptimizer
             _stores.SetBounds(width - 196, 14, 178, 32);
             _lCat.SetBounds(18, row + 5, 76, 22); _categoryChoice.SetBounds(100, row, 210, 30);
             _lTri.SetBounds(338, row + 5, 28, 22); _sortChoice.SetBounds(378, row, 190, 30);
+            _lOffres.SetBounds(592, row + 5, 52, 22); _offresChoice.SetBounds(648, row, 180, 30);
             _lPlat.SetBounds(18, row + 5, 80, 22); _platformChoice.SetBounds(100, row, 236, 30);
             _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
             // Le choix de catégorie occupe 100 → 310 sur la même ligne : le bouton ne déborde jamais dessus.
@@ -374,7 +383,7 @@ namespace BTOptimizer
             for (int i = 0; i < _pilules.Length; i++)
             {
                 _pilules[i].Enabled = prixActif;
-                Style(_pilules[i], prixActif && Plafonds[i] == _plafond);
+                Style(_pilules[i], prixActif && i == _tranche);
             }
             _cat.Enabled = prixActif;
             _lPrix.Visible = prixActif;
@@ -388,8 +397,9 @@ namespace BTOptimizer
             _lTri.Visible = tri;
             _verifier.Visible = _installes.Visible = _souhaits.Visible = _onglet == OngletSuivis;
             _stores.Visible = _onglet == OngletPromos;
+            _lOffres.Visible = _offresChoice.Visible = _onglet == OngletPromos;
             _categoryChoice.Visible = prixActif; _platformChoice.Visible = plateforme; _sortChoice.Visible = tri;
-            _cat.Visible = _plat.Visible = _tri.Visible = false;
+            _cat.Visible = _plat.Visible = _tri.Visible = _offres.Visible = false;
             SyncChoices();
             Style(_stores, _onglet == OngletPromos && Magasin.Boutiques.Count < OffresSources.Boutiques.Length);
             DoLayout();
@@ -448,24 +458,28 @@ namespace BTOptimizer
         private void ChoisitOnglet(int i)
         {
             _onglet = i;
-            // « Gratuit » n'existe pas en Promos (il mène à Gratuits) : un plafond 0 venu des Nouveautés est levé.
-            if (i == OngletPromos && _plafond == 0) _plafond = -1;
+            // « Gratuit » n'existe pas en promos seules (il mène à Gratuits) : une tranche « Gratuit » venue d'ailleurs est levée.
+            if (i == OngletPromos && PromosSeules() && Tranches[_tranche].MaxCts == 0) _tranche = 0;
             if (i == OngletSuivis) SuiviVeille.MarqueVues();
             _majCombos = true;
-            _tri.SelectedIndex = i == OngletNouveautes ? 2 : 0;   // « recent » pour les nouveautés, « remise » sinon
+            _tri.SelectedIndex = Array.FindIndex(Tris, t => t.Value == (i == OngletNouveautes ? "recent" : "remise"));
             _majCombos = false;
             MajOnglets();
             Recharge();
         }
 
-        private void ChoisitPlafond(int cts)
+        private void ChoisitTranche(int i)
         {
-            // Steam n'a pas de filtre « gratuit en promo » : « Gratuit » mène aux jeux gratuits.
-            if (cts == 0 && _onglet == OngletPromos) { ChoisitOnglet(OngletGratuits); return; }
-            _plafond = cts;
+            if (i < 0 || i >= Tranches.Length) return;
+            // Steam n'a pas de filtre « gratuit en promo » : en promos seules, « Gratuit » mène aux jeux gratuits.
+            if (Tranches[i].MaxCts == 0 && _onglet == OngletPromos && PromosSeules()) { ChoisitOnglet(OngletGratuits); return; }
+            _tranche = i;
             MajOnglets();
             Recharge();
         }
+
+        /// <summary>Onglet Promos : vrai si seuls les jeux en promo sont cherchés (faux : « Tous les jeux », prix normal compris).</summary>
+        private bool PromosSeules() { return _offres.SelectedIndex <= 0; }
 
         private string Texte() { return (_search.Text ?? "").Trim(); }
 
@@ -475,7 +489,9 @@ namespace BTOptimizer
             return new Offres.Filtre
             {
                 Texte = Texte(),
-                PlafondCts = _plafond,
+                PlafondCts = Tranches[_tranche].MaxCts,
+                PrixMinCts = Tranches[_tranche].MinCts,
+                TauxUsd = _tauxUsd,
                 Tag = c > 0 && c <= Offres.Categories.Length ? Offres.Categories[c - 1].Value : 0,
                 Plateforme = p > 0 && p <= Offres.Plateformes.Length ? Offres.Plateformes[p - 1] : null,
             };
@@ -562,8 +578,9 @@ namespace BTOptimizer
         private void ChargeSteam(int gen, bool suite)
         {
             Offres.Filtre f = FiltreCourant();
-            bool promos = _onglet == OngletPromos, nouveautes = _onglet == OngletNouveautes;
-            string tri = promos || nouveautes ? TriCourant() : null;   // Suivis : ordre de pertinence de Steam
+            bool onglPromos = _onglet == OngletPromos, nouveautes = _onglet == OngletNouveautes;
+            bool promos = onglPromos && PromosSeules();   // « Tous les jeux » : prix normal compris
+            string tri = onglPromos || nouveautes ? TriCourant() : null;   // Suivis : ordre de pertinence de Steam
             List<string> sources = SourcesActives(f).Where(x => !_finis.Contains(x)).ToList();
             if (sources.Count == 0) { _steamFini = true; if (!suite) Affiche(false); else MajPagination(); return; }
             string ids = OffresSources.IdsCheapShark(Magasin.Boutiques);
@@ -580,8 +597,12 @@ namespace BTOptimizer
                 var finis = new List<string>();
                 var echecs = new List<string>();
                 int d = debut;
+                // Taux BCE (cache 12 h) : les prix en dollars entrent dans les tranches et le tri en euros.
+                decimal taux = f.TauxUsd > 0m ? f.TauxUsd : await OffresReseau.TauxUsd().ConfigureAwait(false);
+                f.TauxUsd = taux;
+                bool descSteam = !nouveautes && OffresSources.TriPrixDecroissantSteam(f.PrixMinCts, f.PlafondCts);
                 List<string> autres = sources.Where(x => x != "steam").ToList();
-                var taches = autres.Select(x => OffresReseau.PromosStore(x, f.Texte, pages[x], ids)).ToList();
+                var taches = autres.Select(x => OffresReseau.PromosStore(x, f.Texte, pages[x], ids, promos, f.PrixMinCts, f.PlafondCts, taux)).ToList();
                 if (sources.Contains("steam"))
                 {
                     bool fini = false;
@@ -593,8 +614,11 @@ namespace BTOptimizer
                             d += PasSteam;
                             // Liste vide : fin des résultats, sauf si Steam n'a pas répondu (« Suivant » reste possible).
                             if (brut.Count == 0) { fini = !OffresReseau.DerniereErreur("steam"); break; }
-                            // Filtre local : le plafond seulement (texte et catégorie sont appliqués par Steam).
-                            foreach (Offre o in brut) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
+                            // Filtre local : la tranche seulement (texte et catégorie sont appliqués par Steam).
+                            foreach (Offre o in brut) if (Offres.DansPrix(o, f.PrixMinCts, f.PlafondCts, taux)) nouveaux.Add(o);
+                            // Recherche du plus cher au moins cher : passée sous la borne basse, la suite ne rentre plus dans la tranche.
+                            Offre der = brut[brut.Count - 1];
+                            if (descSteam && der.PrixCts >= 0 && der.PrixCts <= f.PrixMinCts) { fini = true; break; }
                             if (deja + nouveaux.Count >= besoin) break;
                         }
                     }
@@ -606,7 +630,7 @@ namespace BTOptimizer
                 {
                     OffresReseau.PageStore p;
                     try { p = await taches[i].ConfigureAwait(false); } catch { p = new OffresReseau.PageStore { Echec = true }; }
-                    foreach (Offre o in p.Offres) if (Offres.SousPlafond(o, f.PlafondCts)) nouveaux.Add(o);
+                    foreach (Offre o in p.Offres) if (Offres.DansPrix(o, f.PrixMinCts, f.PlafondCts, taux)) nouveaux.Add(o);
                     if (p.Fini) finis.Add(autres[i]);
                     if (p.Echec) echecs.Add(autres[i]);
                 }
@@ -614,18 +638,21 @@ namespace BTOptimizer
                 {
                     _occupe = false;
                     _debutSteam = d;
+                    if (taux > 0m) _tauxUsd = taux;
                     foreach (string x in autres) _pagesStores[x] = pages[x] + 1;
                     foreach (string x in finis) _finis.Add(x);
                     _steamFini = SourcesActives(f).All(x => _finis.Contains(x));
                     var vus = new HashSet<string>(_resultats.Select(o => o.Cle));
                     List<Offre> ajout = nouveaux.Where(o => vus.Add(o.Cle)).ToList();
-                    if (tri != null) ajout = Offres.Trier(ajout, tri);
+                    if (tri != null) ajout = Offres.Trier(ajout, tri, taux);
                     _resultats.AddRange(ajout);
                     if (suite && _resultats.Count > (_pageIdx + 1) * ParPage) _pageIdx++;
                     bool rien = echecs.Count == sources.Count && _resultats.Count == 0;
                     Affiche(rien);
                     if (!rien && echecs.Count > 0) _info.Text = "Sans réponse : " + string.Join(", ", echecs.Select(NomSource)) + ". Réessayez avec « Suivant ».";
-                    else if (!suite && promos && f.Tag > 0) _info.Text = "Catégorie choisie : promos Steam seulement.";
+                    else if (!suite && onglPromos && f.Tag > 0) _info.Text = "Catégorie choisie : Steam seulement (les autres stores n'ont pas de catégories).";
+                    else if (!suite && taux <= 0m && f.PlafondCts != -1 && SourcesActives(f).Any(x => x == "cheapshark" || x == "itch"))
+                        _info.Text = "Taux du dollar indisponible : les prix en dollars ne sont pas classés par tranche.";
                 });
             });
         }
@@ -887,7 +914,9 @@ namespace BTOptimizer
             _prec.Enabled = !_occupe && _pageIdx > 0;
             _suiv.Enabled = !_occupe && (plusLocal || (OngletSteam() && !_steamFini && _resultats.Count > 0));
             if (!_occupe) _numPage.Text = "Page " + (_pageIdx + 1).ToString(CultureInfo.InvariantCulture);
-            _resultsLabel.Text = _occupe ? "RECHERCHE DES OFFRES…" : NomsOnglets[_onglet].ToUpperInvariant() + "    /    " + _resultats.Count + (_resultats.Count == 1 ? " offre chargée" : " offres chargées");
+            string titre = _onglet == OngletPromos && !PromosSeules() ? "TOUS LES JEUX" : NomsOnglets[_onglet].ToUpperInvariant();
+            if (_tranche > 0 && _onglet != OngletGratuits && _onglet != OngletFavoris) titre += " · " + Tranches[_tranche].Libelle.ToUpperInvariant();
+            _resultsLabel.Text = _occupe ? "RECHERCHE DES OFFRES…" : titre + "    /    " + _resultats.Count + (_resultats.Count == 1 ? " jeu chargé" : " jeux chargés");
         }
 
 #if BTTEST
@@ -915,6 +944,14 @@ namespace BTOptimizer
         {
             if (!ClientRectangle.Contains(_filters.Bounds) || _viewport.Bottom > _prec.Top)
                 throw new InvalidOperationException("Filtres ou pagination hors de la page.");
+            // Tranches de prix, Boutiques, choix Offres… : rien ne déborde ni ne se chevauche dans le bandeau.
+            var filtres = _filters.Controls.Cast<Control>().Where(c => c.Visible && c.Width > 0).ToList();
+            foreach (Control c in filtres)
+            {
+                if (!_filters.ClientRectangle.Contains(c.Bounds)) throw new InvalidOperationException("Filtre hors du bandeau : " + c.Text);
+                foreach (Control other in filtres)
+                    if (c != other && c.Bounds.IntersectsWith(other.Bounds)) throw new InvalidOperationException("Filtres superposés : " + c.Text + " / " + other.Text);
+            }
             foreach (Carte card in _flow.Controls)
             {
                 foreach (Control control in card.Controls)

@@ -5,7 +5,7 @@ using System.Linq;
 namespace BTOptimizer.Tests
 {
     /// <summary>
-    /// Bons plans multi-stores : GOG, CheapShark (Fanatical, Humble, Epic…), Nintendo eShop, itch.io,
+    /// Bons plans multi-stores : GOG, CheapShark (Fanatical, Epic, Ubisoft…), Nintendo eShop, itch.io,
     /// prix en dollars, choix des stores (formes réelles relevées le 21/11/2026, raccourcies).
     /// </summary>
     internal static class BoutiquesTests
@@ -56,14 +56,14 @@ namespace BTOptimizer.Tests
 
             // Catalogue des stores.
             var cles = OffresSources.Boutiques.Select(b => b.Cle).ToList();
-            Banc.Verifie("catalogue : 15 stores, clés uniques", true, cles.Count == 15 && cles.Distinct().Count() == 15 && cles[0] == "steam");
+            Banc.Verifie("catalogue : 14 stores, clés uniques", true, cles.Count == 14 && cles.Distinct().Count() == 14 && cles[0] == "steam");
             Banc.Verifie("catalogue : noms affichés", true, OffresSources.NomBoutique("fanatical") == "Fanatical" && OffresSources.NomBoutique("epic") == "Epic Games Store" && OffresSources.NomBoutique("gamerpower") == "GamerPower" && OffresSources.NomBoutique("xyz") == "xyz" && OffresSources.NomBoutique(null) == "");
-            Banc.Verifie("choix : absent ou illisible → tous", true, OffresSources.LitChoixBoutiques(null).Count == 15 && OffresSources.LitChoixBoutiques("").Count == 15 && OffresSources.LitChoixBoutiques("n'importe quoi").Count == 15);
+            Banc.Verifie("choix : absent ou illisible → tous", true, OffresSources.LitChoixBoutiques(null).Count == 14 && OffresSources.LitChoixBoutiques("").Count == 14 && OffresSources.LitChoixBoutiques("n'importe quoi").Count == 14);
             var choix = OffresSources.LitChoixBoutiques("v1\nsteam\ngog\ninconnu\nfanatical\n");
             Banc.Verifie("choix : clés connues seulement", true, choix.Count == 3 && choix.Contains("steam") && choix.Contains("fanatical") && !choix.Contains("inconnu"));
             Banc.Verifie("choix : aucun store reste aucun", true, OffresSources.LitChoixBoutiques(OffresSources.EcritChoixBoutiques(new HashSet<string>())).Count == 0);
             Banc.Verifie("choix : aller-retour dans l'ordre du catalogue", true, OffresSources.EcritChoixBoutiques(new HashSet<string> { "itch", "steam", "gog" }) == "v1\nsteam\ngog\nitch\n");
-            Banc.Verifie("CheapShark : identifiants des stores choisis", true, OffresSources.IdsCheapShark(new HashSet<string> { "steam", "fanatical", "epic", "humble" }) == "11,15,25" && OffresSources.IdsCheapShark(new HashSet<string> { "steam", "gog" }) == "");
+            Banc.Verifie("CheapShark : identifiants des stores choisis", true, OffresSources.IdsCheapShark(new HashSet<string> { "steam", "fanatical", "epic", "ubisoft" }) == "13,15,25" && OffresSources.IdsCheapShark(new HashSet<string> { "steam", "gog" }) == "");
 
             // GOG (euros).
             Banc.Verifie("GOG : URL", true, OffresSources.UrlGog(null, 1) == "https://catalog.gog.com/v1/catalog?limit=48&order=desc:trending&discounted=eq:true&productType=in:game,pack&page=1&countryCode=FR&locale=fr-FR&currencyCode=EUR"
@@ -92,6 +92,13 @@ namespace BTOptimizer.Tests
             // Nintendo eShop (euros).
             Banc.Verifie("Nintendo : URL", true, OffresSources.UrlNintendo(null, 0) == "https://searching.nintendo-europe.com/fr/select?q=*&fq=type:GAME%20AND%20price_has_discount_b:true&rows=48&start=0&sort=change_date%20desc&wt=json"
                 && OffresSources.UrlNintendo("Mario \"Kart\" : 8!", 96).StartsWith("https://searching.nintendo-europe.com/fr/select?q=Mario%20Kart%208&") && OffresSources.UrlNintendo("Mario", 96).Contains("&start=96&"));
+            Banc.Verifie("Tous les jeux et tranche : GOG, CheapShark, Nintendo", true,
+                OffresSources.UrlGog(null, 1, false, 500, 1000).Contains("&order=desc:trending&productType=") && OffresSources.UrlGog(null, 1, false, 500, 1000).Contains("&price=between:5,10")
+                && OffresSources.UrlGog(null, 1, true, 4000, -1).Contains("&discounted=eq:true") && OffresSources.UrlGog(null, 1, true, 4000, -1).Contains("&price=between:40,100000")
+                && OffresSources.UrlCheapShark("15", null, 0, false, 550, 1100).Contains("&onSale=0&") && OffresSources.UrlCheapShark("15", null, 0, false, 550, 1100).Contains("&lowerPrice=5&upperPrice=11")
+                && !OffresSources.UrlCheapShark("15", null, 0, true, 4400, -1).Contains("upperPrice") && OffresSources.EnDollars(1000, 1.1m) == 1100 && OffresSources.EnDollars(-1, 1.1m) == -1
+                && OffresSources.UrlNintendo(null, 0, false, 100, 500).Contains("&fq=type:GAME%20AND%20price_lowest_f:%5B1%20TO%205%5D&")
+                && OffresSources.UrlNintendo(null, 0, true, 4000, -1).Contains("price_has_discount_b:true%20AND%20price_lowest_f:%5B40%20TO%20*%5D"));
             var nin = OffresSources.PromosNintendo(Nin);
             Banc.Verifie("Nintendo : lien externe et prix absent écartés", true, nin.Count == 2);
             Banc.Verifie("Nintendo : offre complète", true, nin[0].Source == "nintendo" && nin[0].Id == "70010000138342" && nin[0].PrixCts == 959 && nin[0].PrixOrigineCts == 1199 && nin[0].Remise == 20

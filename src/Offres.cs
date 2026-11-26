@@ -35,7 +35,31 @@ namespace BTOptimizer
     /// </summary>
     internal static class Offres
     {
-        public sealed class Filtre { public string Texte; public int PlafondCts = -1; public int Tag; public string Plateforme; }
+        /// <summary>
+        /// PlafondCts : prix maximum inclusif (-1 : aucun) ; PrixMinCts : prix minimum exclusif (-1 : aucun) ;
+        /// TauxUsd : dollars pour 1 euro (BCE), 0 si inconnu — sert à placer les prix en dollars dans une tranche.
+        /// </summary>
+        public sealed class Filtre { public string Texte; public int PlafondCts = -1, PrixMinCts = -1; public decimal TauxUsd; public int Tag; public string Plateforme; }
+
+        /// <summary>Une tranche de prix : au-dessus de MinCts (exclusif, -1 : aucun) et jusqu'à MaxCts (inclusif, -1 : aucun).</summary>
+        public sealed class Tranche
+        {
+            public readonly string Libelle; public readonly int MinCts, MaxCts;
+            public Tranche(string libelle, int minCts, int maxCts) { Libelle = libelle; MinCts = minCts; MaxCts = maxCts; }
+        }
+
+        /// <summary>Tranches exclusives : « 5 – 10 € » ne montre pas les jeux à 1 €. Une borne haute est incluse (5 € est dans « 1 – 5 € »).</summary>
+        public static readonly Tranche[] Tranches =
+        {
+            new Tranche("Tous", -1, -1),
+            new Tranche("Gratuit", -1, 0),
+            new Tranche("Moins de 1 €", 0, 100),
+            new Tranche("1 – 5 €", 100, 500),
+            new Tranche("5 – 10 €", 500, 1000),
+            new Tranche("10 – 20 €", 1000, 2000),
+            new Tranche("20 – 40 €", 2000, 4000),
+            new Tranche("Plus de 40 €", 4000, -1),
+        };
 
         public static readonly int[] PlafondsCts = { 0, 100, 500, 1000, 2000 };
 
@@ -101,6 +125,31 @@ namespace BTOptimizer
             return o.PrixCts <= plafondCts;
         }
 
+        /// <summary>Prix en centimes d'euro : dollars convertis au taux BCE (dollars pour 1 euro) ; -1 si inconnu ou taux absent.</summary>
+        public static int PrixEnEuros(Offre o, decimal tauxUsd)
+        {
+            if (o == null || o.PrixCts < 0) return -1;
+            if (o.Devise != "USD" || o.PrixCts == 0) return o.PrixCts;
+            if (tauxUsd <= 0m) return -1;
+            return (int)Math.Round(o.PrixCts / tauxUsd, MidpointRounding.AwayFromZero);
+        }
+
+        /// <summary>
+        /// Prix dans la tranche ]minCts ; maxCts] (-1 : borne absente). Un prix inconnu n'entre dans aucune tranche bornée.
+        /// Dollars : convertis si le taux est connu ; sinon soumis seulement à « Gratuit », comme SousPlafond.
+        /// </summary>
+        public static bool DansPrix(Offre o, int minCts, int maxCts, decimal tauxUsd)
+        {
+            if (minCts < 0 && maxCts < 0) return true;
+            if (o == null || o.PrixCts < 0) return false;
+            if (o.Devise == "USD" && o.PrixCts > 0 && tauxUsd <= 0m) return maxCts != 0;
+            int eur = PrixEnEuros(o, tauxUsd);
+            if (eur < 0) return false;
+            if (maxCts >= 0 && eur > maxCts) return false;
+            if (minCts >= 0 && eur <= minCts) return false;
+            return true;
+        }
+
         /// <summary>Minuscules, sans accents, lettres et chiffres seulement (« Épée & Bouclier » → « epeebouclier »).</summary>
         public static string NomNormalise(string nom)
         {
@@ -133,7 +182,7 @@ namespace BTOptimizer
             {
                 if (o == null || string.IsNullOrWhiteSpace(o.Nom)) continue;
                 if (texte.Length > 0 && !NomNormalise(o.Nom).Contains(texte)) continue;
-                if (!SousPlafond(o, f.PlafondCts)) continue;
+                if (!DansPrix(o, f.PrixMinCts, f.PlafondCts, f.TauxUsd)) continue;
                 if (f.Tag > 0 && (o.Tags == null || Array.IndexOf(o.Tags, f.Tag) < 0)) continue;
                 if (!string.IsNullOrEmpty(f.Plateforme)
                     && (o.Plateformes == null || !o.Plateformes.Any(p => string.Equals(p, f.Plateforme, StringComparison.OrdinalIgnoreCase))))
@@ -144,13 +193,19 @@ namespace BTOptimizer
         }
 
         /// <summary>Tri stable : « remise » (défaut), « prix », « recent », « nom ».</summary>
-        public static List<Offre> Trier(List<Offre> offres, string tri)
+        public static List<Offre> Trier(List<Offre> offres, string tri) { return Trier(offres, tri, 0m); }
+
+        /// <summary>« prix » (croissant) et « prixdesc » comparent en euros : dollars convertis au taux donné (0 : tels quels).</summary>
+        public static List<Offre> Trier(List<Offre> offres, string tri, decimal tauxUsd)
         {
             if (offres == null) return new List<Offre>();
+            Func<Offre, int> eur = o => tauxUsd > 0m ? PrixEnEuros(o, tauxUsd) : o.PrixCts;
             switch (tri)
             {
                 case "prix":
-                    return offres.OrderBy(o => o.PrixCts < 0 ? 1 : 0).ThenBy(o => o.PrixCts).ToList();
+                    return offres.OrderBy(o => eur(o) < 0 ? 1 : 0).ThenBy(eur).ToList();
+                case "prixdesc":
+                    return offres.OrderBy(o => eur(o) < 0 ? 1 : 0).ThenByDescending(eur).ToList();
                 case "recent":
                     return offres.OrderBy(o => o.Sortie.HasValue ? 0 : 1).ThenByDescending(o => o.Sortie ?? DateTime.MinValue).ToList();
                 case "nom":
