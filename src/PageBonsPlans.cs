@@ -178,7 +178,8 @@ namespace BTOptimizer
 
             _pied = new LinkLabel
             {
-                Text = "Prix : Steam, GOG, Nintendo eShop, itch.io, CheapShark (autres stores, prix US classés en euros au taux BCE) · Jeux gratuits : Epic Games Store, GamerPower.com",
+                // Battle.net n'a aucune source de prix publique : simple lien vers sa boutique.
+                Text = "Prix : Steam, GOG, Nintendo eShop, itch.io, CheapShark (prix US convertis au taux BCE) · Gratuits : Epic Games Store, GamerPower.com · Battle.net : prix sur sa boutique",
                 Font = FpsUi.Tiny, ForeColor = FpsUi.Dim2, BackColor = FpsUi.BgMain,
                 LinkColor = FpsUi.GoldDim, ActiveLinkColor = FpsUi.Gold, VisitedLinkColor = FpsUi.GoldDim,
                 LinkBehavior = LinkBehavior.HoverUnderline, AutoSize = false,
@@ -190,6 +191,7 @@ namespace BTOptimizer
             Lien(_pied, "Nintendo eShop", "https://www.nintendo.com/fr-fr/");
             Lien(_pied, "itch.io", "https://itch.io");
             Lien(_pied, "CheapShark", "https://www.cheapshark.com");
+            Lien(_pied, "Battle.net", "https://eu.shop.battle.net/fr-fr");
             _pied.LinkClicked += (s, e) => Ouvre(e.Link.LinkData as string);
             Controls.Add(_pied);
             // Une seule mention d'affiliation pour toute la page, à la place d'un badge sur chaque lien.
@@ -944,6 +946,8 @@ namespace BTOptimizer
         {
             if (!ClientRectangle.Contains(_filters.Bounds) || _viewport.Bottom > _prec.Top)
                 throw new InvalidOperationException("Filtres ou pagination hors de la page.");
+            if (TextRenderer.MeasureText(_pied.Text, _pied.Font).Width > _pied.Width || _pied.Links.Count != 8)
+                throw new InvalidOperationException("Pied de page coupé ou lien manquant.");
             // Tranches de prix, Boutiques, choix Offres… : rien ne déborde ni ne se chevauche dans le bandeau.
             var filtres = _filters.Controls.Cast<Control>().Where(c => c.Visible && c.Width > 0).ToList();
             foreach (Control c in filtres)
