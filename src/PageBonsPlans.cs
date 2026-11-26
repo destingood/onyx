@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +41,7 @@ namespace BTOptimizer
         private readonly Label _lPrix, _lCat, _lPlat, _lTri, _etat, _numPage, _info;
         private readonly ComboBox _cat, _plat, _tri;
         private readonly Button _categoryChoice, _platformChoice, _sortChoice;
-        private readonly Button _verifier, _installes, _reessayer, _prec, _suiv;
+        private readonly Button _verifier, _installes, _souhaits, _reessayer, _prec, _suiv;
         private readonly Button _stores;
         private readonly ContextMenuStrip _menuStores;
         private bool _storesChanges;
@@ -137,6 +138,10 @@ namespace BTOptimizer
             _installes.Height = 28; _installes.Width = 190;
             _installes.Click += (s, e) => SuitInstalles();
             Controls.Add(_installes);
+            _souhaits = OnyxDesign.Button("Importer ma liste de souhaits Steam");
+            _souhaits.Height = 28; _souhaits.Width = 250;
+            _souhaits.Click += (s, e) => ImporteSouhaits();
+            Controls.Add(_souhaits);
 
             _flow = new BufferedFlow();
             _flow.AutoScroll = false;
@@ -192,7 +197,7 @@ namespace BTOptimizer
             _plat.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
             _tri.SelectedIndexChanged += (s, e) => { SyncChoices(); if (!_majCombos) Recharge(); };
 
-            foreach (Control control in new Control[] { _lPrix, _lCat, _lPlat, _lTri, _cat, _plat, _tri, _stores, _verifier, _installes }) _filters.Controls.Add(control);
+            foreach (Control control in new Control[] { _lPrix, _lCat, _lPlat, _lTri, _cat, _plat, _tri, _stores, _verifier, _installes, _souhaits }) _filters.Controls.Add(control);
             foreach (var pill in _pilules) _filters.Controls.Add(pill);
             _cat.AccessibleName = "Catégorie de jeu"; _plat.AccessibleName = "Plateforme"; _tri.AccessibleName = "Trier les offres";
             MajOnglets();
@@ -308,6 +313,7 @@ namespace BTOptimizer
             _lTri.SetBounds(338, row + 5, 28, 22); _sortChoice.SetBounds(378, row, 190, 30);
             _lPlat.SetBounds(18, row + 5, 80, 22); _platformChoice.SetBounds(100, row, 236, 30);
             _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
+            _souhaits.SetBounds(width - 636, row, 250, 30);
             _context.SetBounds(18, 14, width - 36, 30);
             _resultsLabel.SetBounds(34, 244, width, 22);
             _partner.SetBounds(34, 276, width, 76);
@@ -378,7 +384,7 @@ namespace BTOptimizer
             _lPlat.Visible = plateforme;
             bool tri = _onglet == OngletPromos || _onglet == OngletNouveautes;
             _lTri.Visible = tri;
-            _verifier.Visible = _installes.Visible = _onglet == OngletSuivis;
+            _verifier.Visible = _installes.Visible = _souhaits.Visible = _onglet == OngletSuivis;
             _stores.Visible = _onglet == OngletPromos;
             _categoryChoice.Visible = prixActif; _platformChoice.Visible = plateforme; _sortChoice.Visible = tri;
             _cat.Visible = _plat.Visible = _tri.Visible = false;
@@ -750,6 +756,56 @@ namespace BTOptimizer
                         : n.ToString(CultureInfo.InvariantCulture) + (n > 1 ? " jeux ajoutés aux suivis." : " jeu ajouté aux suivis.");
                     if (_onglet == OngletSuivis && Texte().Length == 0) Recharge();
                     _info.Text = t;
+                });
+            });
+        }
+
+        private const string TexteSouhaitsVide = "Liste vide ou profil privé : Steam > Profil > Modifier le profil > Confidentialité > Détails du jeu : Public.";
+
+        /// <summary>Liste de souhaits du compte Steam de ce PC → suivis. Seul le SteamID part, et vers Steam.</summary>
+        private void ImporteSouhaits()
+        {
+            _souhaits.Enabled = false;
+            _info.Text = "Lecture de la liste de souhaits Steam…";
+            Task.Run(async () =>
+            {
+                string message = null; List<int> ids = new List<int>(); var noms = new Dictionary<int, string>();
+                try
+                {
+                    string steam = SteamGames.SteamPath();
+                    string vdf = steam == null ? null : Path.Combine(steam, "config", "loginusers.vdf");
+                    string url = ListeSouhaits.Url(vdf != null && File.Exists(vdf) ? ListeSouhaits.SteamId64(File.ReadAllText(vdf)) : null);
+                    if (url == null) message = "Aucun compte Steam trouvé sur ce PC (connecte-toi une fois à Steam).";
+                    else
+                    {
+                        string json = await OffresReseau.Texte(url, 0).ConfigureAwait(false);
+                        if (json == null) message = TexteErreur;
+                        else
+                        {
+                            ids = ListeSouhaits.AppIds(json);
+                            if (ids.Count == 0) message = TexteSouhaitsVide;
+                            else
+                            {
+                                // Noms par les fiches Steam (cache 30 min) ; sans fiche, « Jeu <appid> » jusqu'au prochain contrôle.
+                                List<Offre> fiches = await OffresReseau.FichesSteam(ids.Take(Suivi.Max * 2), 30).ConfigureAwait(false);
+                                foreach (Offre f in fiches) if (f != null && f.SteamAppId > 0 && !string.IsNullOrWhiteSpace(f.Nom)) noms[f.SteamAppId] = f.Nom;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex) { JournalTechnique.Echec("PageBonsPlans.ImporteSouhaits", ex); message = TexteErreur; }
+                Retour(-1, () =>
+                {
+                    _souhaits.Enabled = true;
+                    if (message == null)
+                    {
+                        int ajoutes, deja, laisses;
+                        ListeSouhaits.Importe(Magasin.Suivis, ids, noms, out ajoutes, out deja, out laisses);
+                        if (ajoutes > 0) Magasin.SauveSuivis();
+                        message = ListeSouhaits.Compte(ajoutes, deja, laisses);
+                        if (_onglet == OngletSuivis && Texte().Length == 0) Recharge();
+                    }
+                    _info.Text = message;
                 });
             });
         }

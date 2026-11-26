@@ -125,6 +125,7 @@ namespace BTOptimizer.Tests
             VeilleJeuTests.Tout();
             ModeJeuReglesTests.Tout();
             JournalJeuTests.Tout();
+            ListeSouhaitsTests.Tout();
             return Banc.Bilan();
         }
     }
