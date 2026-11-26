@@ -74,6 +74,7 @@
     <Compile Include="..\src\ListeSouhaits.cs" />
     <Compile Include="..\src\ReglagesFortnite.cs" />
     <Compile Include="..\src\Clips.cs" />
+    <Compile Include="..\src\CaptureFond.cs" />
     <Compile Include="..\src\LatenceReelle.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />
     <Compile Include="..\src\MsiConditionnel.cs" />

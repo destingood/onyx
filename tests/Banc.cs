@@ -128,6 +128,7 @@ namespace BTOptimizer.Tests
             ListeSouhaitsTests.Tout();
             ReglagesFortniteTests.Tout();
             ClipsTests.Tout();
+            CaptureFondTests.Tout();
             return Banc.Bilan();
         }
     }

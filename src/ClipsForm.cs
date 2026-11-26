@@ -80,13 +80,15 @@ namespace BTOptimizer
             Resize += (s, e) => Place();
             FormClosed += (s, e) => { _ferme = true; foreach (Image i in _images.Images) i.Dispose(); };
             Shown += (s, e) => Charge();
+            FormClosing += (s, e) => _stop = true;
+            ConstruitCapture();
             Place();
             MajBoutons();
         }
 
         /// <summary>Bandeau du haut (note, puis réglages de capture) : la liste commence sous lui.</summary>
         private readonly Panel Haut;
-        private int HautH = 44;
+        private const int HautH = 150;
 
         private Button Bouton(string texte, EventHandler clic)
         {
@@ -101,6 +103,7 @@ namespace BTOptimizer
             int W = ClientSize.Width, H = ClientSize.Height, m = 20;
             Haut.SetBounds(m, 14, W - 2 * m, HautH);
             foreach (Control c in Haut.Controls) if (c.Name == "clips-note") c.Width = Haut.Width;
+            PlaceCapture();
             int y = 14 + HautH + 10, bas = H - 96;
             _jeux.SetBounds(m, y, 200, bas - y);
             _liste.SetBounds(m + 212, y, W - 2 * m - 212, bas - y);
@@ -280,6 +283,148 @@ namespace BTOptimizer
             int restants = chemins.FindAll(File.Exists).Count;
             _etat.Text = ok && restants == 0 ? quoi + " à la Corbeille." : "Corbeille : " + (chemins.Count - restants) + " sur " + chemins.Count + " déplacés.";
             Charge();
+        }
+
+        // ------------------------------------------------------------------ capture des 30 dernières secondes
+
+        private const string FichierMesure = "bt-clips-fond-avant.txt";
+        private Label _capEtat, _capAide;
+        private Button _capAction, _capMesure;
+        private volatile bool _stop, _occupe;
+
+        private void ConstruitCapture()
+        {
+            Haut.Controls.Add(new Label { Text = "ENREGISTRER CE QUI S'EST PASSÉ", Name = "cap-titre", ForeColor = FpsUi.Gold, Font = FpsUi.Small, AutoSize = false });
+            _capEtat = new Label { ForeColor = FpsUi.Ink, Font = FpsUi.Small, AutoSize = false };
+            _capAide = new Label { ForeColor = FpsUi.Dim, Font = FpsUi.Small, AutoSize = false };
+            _capAction = OnyxDesign.Button("Activer");
+            _capAction.Click += (s, e) => ActionCapture();
+            _capMesure = OnyxDesign.Button("Mesurer le coût en jeu");
+            _capMesure.Click += (s, e) => MesureCout();
+            Haut.Controls.Add(_capEtat); Haut.Controls.Add(_capAide); Haut.Controls.Add(_capAction); Haut.Controls.Add(_capMesure);
+            MajCapture();
+        }
+
+        private void PlaceCapture()
+        {
+            if (_capEtat == null) return;
+            int w = Haut.Width, bw = 250;
+            foreach (Control c in Haut.Controls) if (c.Name == "cap-titre") c.SetBounds(0, 48, w - bw - 12, 18);
+            _capEtat.SetBounds(0, 68, w - bw - 12, 44);
+            _capAide.SetBounds(0, 114, w - bw - 12, 34);
+            _capAction.SetBounds(w - bw, 52, bw, 34);
+            _capMesure.SetBounds(w - bw, 94, bw, 34);
+        }
+
+        private static Tweak Reglage(string id) { return Catalog.All().Find(x => x.Id == id); }
+
+        private void MajCapture()
+        {
+            CaptureFond.Etat e = CaptureFond.Lit();
+            List<string> bloqueurs = CaptureFond.BloqueursAppliques();
+            bool parOnyx = CaptureFond.AppliqueParOnyx();
+            _capEtat.Text = CaptureFond.Explique(e, bloqueurs.Count > 0);
+            if (bloqueurs.Count > 0) _capAction.Text = "Rétablir « Désactiver Game DVR »";
+            else if (e == CaptureFond.Etat.Active) _capAction.Text = parOnyx ? "Rétablir" : "Déjà active";
+            else if (e == CaptureFond.Etat.BloqueeParStrategie) _capAction.Text = "Bloquée";
+            else _capAction.Text = "Activer";
+            _capAction.Enabled = !_occupe && (bloqueurs.Count > 0 || e == CaptureFond.Etat.Coupee || (e == CaptureFond.Etat.Active && parOnyx));
+            bool avant = Preuve.LitJeu(LitMesure()) != null;
+            _capMesure.Text = _occupe ? "Patiente…" : avant ? "Mesurer le coût (après)" : "Mesurer le coût (avant)";
+            _capMesure.Enabled = !_occupe;
+            _capAide.Text = "Raccourci : Win+Alt+G enregistre les 30 dernières secondes, Win+Alt+R lance ou arrête un enregistrement."
+                + (CaptureFond.NvidiaApp() ? " Relecture instantanée NVIDIA : Alt+Z puis Alt+F10 (réglée dans l'appli NVIDIA, ONYX ne la pilote pas)." : "");
+        }
+
+        private void ActionCapture()
+        {
+            List<string> bloqueurs = CaptureFond.BloqueursAppliques();
+            var lot = new List<Tweak>();
+            bool appliquer;
+            if (bloqueurs.Count > 0)
+            {
+                if (MessageBox.Show(this, "Rétablir « Désactiver Game DVR » : la Game Bar pourra de nouveau capturer, et ce réglage ne sera plus appliqué. Continuer ?",
+                        "ONYX — Clips", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+                foreach (string id in bloqueurs) { Tweak b = Reglage(id); if (b != null) lot.Add(b); }
+                appliquer = false;
+            }
+            else
+            {
+                Tweak t = Reglage(CaptureFond.IdReglage);
+                if (t == null) return;
+                lot.Add(t);
+                appliquer = CaptureFond.Lit() != CaptureFond.Etat.Active;
+            }
+            if (lot.Count == 0) return;
+            _occupe = true; MajCapture();
+            var journal = new List<string>();
+            Task.Run(() =>
+            {
+                EngineResult r = null;
+                try { r = Engine.Run(lot, appliquer, true, false, (m, n) => { if (n >= 2) lock (journal) journal.Add(m); }); }
+                catch (Exception ex) { lock (journal) journal.Add(ex.Message); }
+                try
+                {
+                    if (!_ferme) BeginInvoke((Action)(() =>
+                    {
+                        _occupe = false;
+                        MajCapture();
+                        _etat.Text = r != null && r.Ko == 0 && !r.PrepFailed
+                            ? (appliquer ? "Capture allumée : " : "Rétabli : ") + string.Join(", ", lot.ConvertAll(x => x.Name)) + "."
+                            : "Rien n'a changé : " + string.Join(" ", journal);
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        private static string LitMesure()
+        {
+            try { string p = AppPaths.File(FichierMesure); return File.Exists(p) ? File.ReadAllText(p) : null; } catch { return null; }
+        }
+
+        private void Log(string texte, int niveau)
+        {
+            try { if (!_ferme) BeginInvoke((Action)(() => { if (!_ferme) _etat.Text = texte; })); } catch { }
+        }
+
+        /// <summary>Mesure de 60 s en jeu (PreuveJeu), avant puis après : seul moyen de chiffrer le coût.</summary>
+        private void MesureCout()
+        {
+            Preuve.MesureJeu avant = Preuve.LitJeu(LitMesure());
+            _occupe = true; _stop = false; MajCapture();
+            Task.Run(() =>
+            {
+                Preuve.MesureJeu m = null;
+                try { m = PreuveJeu.Mesure(Log, () => _stop, avant != null ? avant.Jeu : null); }
+                catch (Exception ex) { Log("Erreur : " + ex.Message, 3); }
+                try { if (!_ferme) BeginInvoke((Action)(() => FinMesure(avant, m))); } catch { }
+            });
+        }
+
+        private void FinMesure(Preuve.MesureJeu avant, Preuve.MesureJeu m)
+        {
+            _occupe = false;
+            if (m == null) _etat.Text = "Mesure interrompue ou indisponible : rien n'est comparé.";
+            else if (!Preuve.JeuValide(m)) _etat.Text = "Mesure non retenue : trop courte ou trop peu d'images. Recommence.";
+            else if (avant == null)
+            {
+                try
+                {
+                    File.WriteAllText(AppPaths.File(FichierMesure), Preuve.EcritJeu(m), new System.Text.UTF8Encoding(false));
+                    _etat.Text = "Mesure « avant » : " + m.Resume() + ". Change l'état de la capture, puis « Mesurer le coût (après) » dans une scène comparable.";
+                }
+                catch (Exception ex) { _etat.Text = "Mesure « avant » non enregistrée : " + ex.Message; }
+            }
+            else
+            {
+                Preuve.Verdict v = Preuve.JugeJeu(avant, m);
+                MessageBox.Show(this, "Avant : " + avant.Resume() + "\nAprès : " + m.Resume() + "\n" + Preuve.RapportJeu(avant, m) + "\nVerdict : " + Preuve.Libelle(v),
+                    "ONYX — Coût de la capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _etat.Text = "Comparaison terminée.";
+                try { File.Delete(AppPaths.File(FichierMesure)); } catch { }
+            }
+            MajCapture();
         }
 
         private void Ajoute()

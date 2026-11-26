@@ -558,6 +558,28 @@ namespace BTOptimizer
 
             list.Add(new Tweak
             {
+                // L'inverse de gamedvr_off : jamais dans un préréglage. Refusé tant que la capture est
+                // coupée par ONYX ou par une stratégie (il ne servirait à rien et laisserait croire l'inverse).
+                Id = CaptureFond.IdReglage, Category = Cat.Gpu,
+                Name = "Garder les 30 dernières secondes (Win+Alt+G)",
+                Desc = "Windows garde en mémoire les 30 dernières secondes. Coût non mesuré sur ton PC : mesure-le.",
+                BackupKeys = new[] { @"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" },
+                Apply = () =>
+                {
+                    string refus = CaptureFond.Refus();
+                    if (refus != null) throw new InvalidOperationException(refus);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "AppCaptureEnabled", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "HistoricalCaptureEnabled", 1, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "HistoricalBufferLength", 30, RegistryValueKind.DWord);
+                    Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "HistoricalBufferLengthUnit", 1, RegistryValueKind.DWord);   // 1 = secondes
+                },
+                // Repli si l'état d'origine manque : « coupé », le réglage par défaut de Windows.
+                Revert = () => Sys.SetUser(@"Software\Microsoft\Windows\CurrentVersion\GameDVR", "HistoricalCaptureEnabled", 0, RegistryValueKind.DWord),
+                Check = () => CaptureFond.Lit() == CaptureFond.Etat.Active
+            });
+
+            list.Add(new Tweak
+            {
                 // Hors de tout preset depuis la 16.03 : c'est un correctif d'affichage, pas un gain.
                 // Sur le PC de test, son effet sur le temps du pilote graphique n'a pas pu être
                 // tranché (deux outils de mesure se contredisent). Voir aussi LeviersLatence.
