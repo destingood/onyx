@@ -130,6 +130,8 @@ namespace BTOptimizer.Tests
             ClipsTests.Tout();
             CaptureFondTests.Tout();
             RappelNettoyageTests.Tout();
+            TriJeuxTests.Tout();
+            OffresMasqueesTests.Tout();
             return Banc.Bilan();
         }
     }

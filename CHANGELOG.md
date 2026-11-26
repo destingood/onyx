@@ -5,6 +5,16 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.06 — Jeux favoris et joués récemment ; bons plans « J'ai déjà ce jeu »
+
+- **Jeux : favoris ★ et tri « Joués récemment ».** Un clic droit sur un jeu le met en favori : il
+  passe en tête de la bibliothèque. Le bouton « Joués récemment » range les jeux par dernière
+  partie notée par ONYX ; les jeux jamais vus au journal passent à la fin.
+- **Bons plans : « J'ai déjà ce jeu » / « Pas pour moi ».** Le bouton « ⋯ » d'une offre masque ce
+  jeu des promotions, des nouveautés et des jeux gratuits, sur toutes les boutiques et dans toutes
+  ses éditions. Tes favoris et tes jeux suivis restent affichés. Pour réafficher un jeu masqué, ou
+  tous à la fois, ouvre « Boutiques » puis « Jeux masqués ».
+
 ## v16.05 — Temps de jeu, liste de souhaits Steam, préréglages Fortnite, clips, rappel de nettoyage
 
 - **Temps de jeu.** ONYX note chaque partie (début, durée) et l'affiche dans Jeux, sur la fiche du

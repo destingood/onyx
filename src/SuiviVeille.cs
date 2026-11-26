@@ -15,10 +15,15 @@ namespace BTOptimizer
     /// </summary>
     internal static class Magasin
     {
-        private const string FichierSuivis = "bt-suivis.txt", FichierJeux = "bt-favoris-jeux.txt", FichierActus = "bt-favoris-actus.txt", FichierBoutiques = "bt-boutiques.txt";
+        private const string FichierSuivis = "bt-suivis.txt", FichierJeux = "bt-favoris-jeux.txt", FichierActus = "bt-favoris-actus.txt", FichierBoutiques = "bt-boutiques.txt", FichierMasques = "bt-bons-plans-masques.txt";
         private static List<JeuSuivi> _suivis;
         private static List<Favori> _favorisJeux, _favorisActus;
         private static HashSet<string> _boutiques;
+        private static List<OffresMasquees.Masque> _masques;
+
+        /// <summary>Jeux masqués des bons plans (« J'ai déjà ce jeu » / « Pas pour moi »).</summary>
+        public static List<OffresMasquees.Masque> Masques { get { return _masques ?? (_masques = OffresMasquees.Lire(Lit(FichierMasques))); } }
+        public static void SauveMasques() { Ecrit(FichierMasques, OffresMasquees.Ecrire(Masques)); }
 
         /// <summary>Levé après chaque sauvegarde (thread d'interface).</summary>
         public static event Action Change;

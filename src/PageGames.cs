@@ -28,6 +28,10 @@ namespace BTOptimizer
         // Mode « Espace » : retrie la bibliothèque par espace DORMANT (taille × temps sans jouer)
         // et affiche taille + dernière partie sur chaque tuile, au lieu du simple « DÉTECTÉ ».
         private bool _spaceMode, _spaceLoading;
+        // Mode « Joués récemment » : dernière partie du journal en tête (favoris ★ toujours avant).
+        private Button _recents;
+        private bool _recentMode;
+        private readonly ContextMenuStrip _cardMenu = new ContextMenuStrip();
         private Dictionary<string, DormantGames.Entry> _spaceData;
         private Dictionary<string, int> _spaceRank;
         private string _query = "";
@@ -49,6 +53,7 @@ namespace BTOptimizer
         // Temps de jeu des tuiles : copie du journal, et texte déjà calculé par carte.
         private List<JournalJeu.Partie> _journal;
         private readonly Dictionary<GameScan.GameInfo, string> _tempsJeu = new Dictionary<GameScan.GameInfo, string>();
+        private readonly Dictionary<GameScan.GameInfo, DateTime?> _derniere = new Dictionary<GameScan.GameInfo, DateTime?>();
 
         /// <summary>Une partie vient d'être close (fil de fond) : on relit le journal et on repeint.</summary>
         private void JournalChange()
@@ -58,7 +63,8 @@ namespace BTOptimizer
                 if (IsDisposed || !IsHandleCreated) return;
                 BeginInvoke((Action)(() =>
                 {
-                    _journal = null; _tempsJeu.Clear();
+                    _journal = null; _tempsJeu.Clear(); _derniere.Clear();
+                    if (_recentMode) Render();
                     if (_flow != null) foreach (Control c in _flow.Controls) c.Invalidate();
                 }));
             }
@@ -69,6 +75,16 @@ namespace BTOptimizer
         internal static List<JournalJeu.Partie> PartiesDe(List<JournalJeu.Partie> toutes, GameScan.GameInfo g)
         {
             return JournalJeu.Filtre(toutes, n => BibliothequeJeux.MemeJeu(g.Name, g.SteamId, g.Keywords, n, 0));
+        }
+
+        private DateTime? Derniere(GameScan.GameInfo g)
+        {
+            DateTime? d;
+            if (_derniere.TryGetValue(g, out d)) return d;
+            if (_journal == null) _journal = JournalJeu.Parties;
+            d = JournalJeu.DernierePartie(PartiesDe(_journal, g), null);
+            _derniere[g] = d;
+            return d;
         }
 
         private string TempsJeu(GameScan.GameInfo g)
@@ -104,6 +120,14 @@ namespace BTOptimizer
             _space.Width = 128; _space.Height = 34;
             _space.Click += (s, e) => ToggleSpace();
             Controls.Add(_space);
+
+            _recents = OnyxDesign.Button("Joués récemment");
+            _recents.Name = "games-recents";
+            _recents.AccessibleName = "Trier par dernière partie";
+            _recents.Click += (s, e) => { _recentMode = !_recentMode; if (_recentMode) { _spaceMode = false; _space.Text = "Trier par espace"; } Render(); };
+            Controls.Add(_recents);
+            _cardMenu.BackColor = FpsUi.Card; _cardMenu.ForeColor = FpsUi.Ink;
+            _cardMenu.Font = FpsUi.Body; _cardMenu.ShowImageMargin = false;
 
             _installed = OnyxDesign.Button("Sur mon PC");
             _catalogue = OnyxDesign.Button("Catalogue");
@@ -152,7 +176,7 @@ namespace BTOptimizer
         {
             DoLayout();
             UpdateModeButton();
-            _journal = null; _tempsJeu.Clear();   // « il y a N j » bouge avec la date
+            _journal = null; _tempsJeu.Clear(); _derniere.Clear();   // « il y a N j » bouge avec la date
             // Deja charge : on redessine quand meme, pour repercuter un masquage fait depuis la
             // fiche d'un jeu (sinon la tuile resterait visible jusqu'au prochain lancement).
             if (_loaded) { Render(); if (_detail != null) Host.SetPageToolsVisible(false); return; }
@@ -307,6 +331,7 @@ namespace BTOptimizer
         private void ToggleSpace()
         {
             _spaceMode = !_spaceMode;
+            if (_spaceMode) _recentMode = false;
             if (_space != null) _space.Text = _spaceMode ? "Tri : espace ↓" : "Trier par espace";
 
             if (_spaceMode && _spaceData == null && !_spaceLoading)
@@ -414,19 +439,27 @@ namespace BTOptimizer
                 if (game.Detected) installed++; else catalogue++;
                 if (game.Detected == !_catalogueMode && Match(game)) visible.Add(game);
             }
+            bool recents = _recentMode && !_catalogueMode;
+            var cles = new Dictionary<GameScan.GameInfo, TriJeux.Entree>();
+            foreach (var game in visible)
+                cles[game] = new TriJeux.Entree { Nom = game.Name, Favori = JeuxFavoris.Est(game.Name), Derniere = recents && game.Detected ? Derniere(game) : null };
             visible.Sort((a, b) =>
             {
                 int rank = _spaceMode && !_catalogueMode ? SpaceRank(a).CompareTo(SpaceRank(b)) : 0;
-                return rank != 0 ? rank : StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name);
+                return rank != 0 ? rank : TriJeux.Compare(cles[a], cles[b], recents);
             });
             _installed.Text = "Sur mon PC · " + installed; _catalogue.Text = "Catalogue · " + catalogue;
             StyleFilter(_installed, !_catalogueMode); StyleFilter(_catalogue, _catalogueMode);
             StyleFilter(_space, _spaceMode && !_catalogueMode);
             _space.Enabled = !_catalogueMode;
+            StyleFilter(_recents, recents);
+            _recents.Enabled = !_catalogueMode;
             _subtitle = installed + (installed == 1 ? " jeu détecté" : " jeux détectés") + " · Tes jeux, leurs réglages et leurs performances.";
             _results.Text = visible.Count + (visible.Count == 1 ? " jeu" : " jeux")
                 + (_catalogueMode ? " dans le catalogue · Non détectés sur ce PC" : " sur ton PC")
-                + (_spaceMode && !_catalogueMode ? (_spaceLoading ? " · Analyse de l’espace…" : " · Tri par espace récupérable") : " · Par ordre alphabétique");
+                + (_spaceMode && !_catalogueMode ? (_spaceLoading ? " · Analyse de l’espace…" : " · Tri par espace récupérable")
+                   : recents ? " · Joués récemment (journal d’ONYX)" : " · Par ordre alphabétique")
+                + " · Clic droit sur un jeu : ★ favori";
             if (_spaceMode && !_catalogueMode && !_spaceLoading && _spaceData != null)
             {
                 long total = 0;
@@ -435,8 +468,8 @@ namespace BTOptimizer
             }
             // Rien de ce que montrent les tuiles n'a changé (retour sur la page, filtre sans effet) :
             // on garde les cartes, leurs jaquettes et la position de défilement.
-            var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-");
-            foreach (var game in visible) sig.Append('|').Append(game.Name);
+            var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-").Append(recents ? "r" : "-");
+            foreach (var game in visible) sig.Append('|').Append(game.Name).Append(cles[game].Favori ? "*" : "");
             string signature = sig.ToString();
             if (signature == _signatureRendu && ReferenceEquals(_all, _allRendu) && ReferenceEquals(_spaceData, _spaceRendu) && _flow.Controls.Count > 0)
             { Invalidate(); return; }
@@ -524,6 +557,13 @@ namespace BTOptimizer
                 using (var path = FpsUi.Round(chip, 6))
                 using (var fill = new SolidBrush(Color.FromArgb(225, FpsUi.RailBg))) gr.FillPath(fill, path);
                 TextRenderer.DrawText(gr, store, FpsUi.Tiny, chip, FpsUi.Ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                if (JeuxFavoris.Est(game.Name))
+                {
+                    var star = new Rectangle(card.Width - 40, 12, 28, 23);
+                    using (var path = FpsUi.Round(star, 6))
+                    using (var fill = new SolidBrush(Color.FromArgb(225, FpsUi.RailBg))) gr.FillPath(fill, path);
+                    TextRenderer.DrawText(gr, "★", FpsUi.Small, star, FpsUi.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                }
                 if (card.Hot || card.Focused)
                 {
                     var action = new Rectangle(12, artHeight - 40, card.Width - 24, 30);
@@ -539,7 +579,22 @@ namespace BTOptimizer
             };
             _tips.SetToolTip(card, game.Name + " — ouvrir la fiche et les réglages");
             card.Click += (s, e) => OpenDetail(game);
+            card.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
             return card;
+        }
+
+        /// <summary>Clic droit sur une tuile : favori ★ (en tête de la bibliothèque).</summary>
+        private void MenuCarte(Control card, GameScan.GameInfo game, Point ou)
+        {
+            bool fav = JeuxFavoris.Est(game.Name);
+            _cardMenu.Items.Clear();
+            var it = new ToolStripMenuItem(fav ? "Retirer des favoris" : "★ Ajouter aux favoris");
+            it.Click += (s, e) => { JeuxFavoris.Bascule(game.Name); Render(); };
+            _cardMenu.Items.Add(it);
+            var open = new ToolStripMenuItem("Ouvrir la fiche");
+            open.Click += (s, e) => OpenDetail(game);
+            _cardMenu.Items.Add(open);
+            _cardMenu.Show(card, ou);
         }
 
         private sealed class GameTile : Button
@@ -749,9 +804,10 @@ namespace BTOptimizer
             _clips.SetBounds(_prio.Left - 112, 20, 100, 36);
             _installed.SetBounds(34, row, 142, 36); _catalogue.SetBounds(184, row, 136, 36);
             _space.SetBounds(332, row, 132, 36);
+            _recents.SetBounds(472, row, 150, 36);
             _searchBox.SetBounds(right - 230, row, 230, 36);
             _search.SetBounds(12, 9, 206, 20);
-            _platform.SetBounds(478, row, Math.Max(120, _searchBox.Left - 490), 36);
+            _platform.SetBounds(630, row, Math.Max(120, _searchBox.Left - 642), 36);
             _results.SetBounds(34, row + 52, right - 34, 24);
             _flow.SetBounds(34, row + 86, ClientSize.Width - 52, Math.Max(100, ClientSize.Height - row - 102));
             _flow.SuspendLayout(); LayoutCards(); _flow.ResumeLayout();
@@ -767,7 +823,7 @@ namespace BTOptimizer
         protected override void Dispose(bool disposing)
         {
             if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
-            if (disposing) { _tips.Dispose(); _platformMenu.Dispose(); }
+            if (disposing) { _tips.Dispose(); _platformMenu.Dispose(); _cardMenu.Dispose(); }
             base.Dispose(disposing);
         }
     }

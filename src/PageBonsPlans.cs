@@ -47,6 +47,9 @@ namespace BTOptimizer
         private readonly Button _stores;
         private readonly ContextMenuStrip _menuStores;
         private bool _storesChanges;
+        private int _masquesRetires;   // offres retirées par « J'ai déjà » / « Pas pour moi » depuis le dernier chargement
+        private readonly ContextMenuStrip _menuCarte = new ContextMenuStrip { Font = FpsUi.Body, ShowImageMargin = false };
+        private bool OngletMasquable { get { return _onglet != OngletSuivis && _onglet != OngletFavoris; } }
         private readonly Dictionary<string, int> _pagesStores = new Dictionary<string, int>();   // prochaine page par store
         private readonly HashSet<string> _finis = new HashSet<string>();   // stores sans page suivante
         private readonly BufferedFlow _flow;
@@ -425,6 +428,7 @@ namespace BTOptimizer
             rien.Click += (s, e) => CocheTout(false);
             _menuStores.Items.Add(tout);
             _menuStores.Items.Add(rien);
+            AjouteMasques();
             _menuStores.Items.Add(new ToolStripSeparator());
             foreach (OffresSources.Boutique b in OffresSources.Boutiques)
             {
@@ -519,6 +523,7 @@ namespace BTOptimizer
             _pagesStores.Clear(); _finis.Clear();
             _resultats = new List<Offre>();
             _info.Text = "";
+            _masquesRetires = 0;
             switch (_onglet)
             {
                 case OngletGratuits: ChargeGratuits(_generation); break;
@@ -852,6 +857,61 @@ namespace BTOptimizer
             if (_onglet == OngletFavoris) Recharge();
         }
 
+        /// <summary>Entrée « Jeux masqués » du menu Boutiques : tout réafficher, ou un jeu à la fois.</summary>
+        private void AjouteMasques()
+        {
+            List<OffresMasquees.Masque> l = Magasin.Masques;
+            if (l.Count == 0) return;
+            var racine = new ToolStripMenuItem("Jeux masqués (" + l.Count + ")");
+            var tous = new ToolStripMenuItem("Tout réafficher");
+            tous.Click += (s, e) => { l.Clear(); Magasin.SauveMasques(); if (OngletMasquable) Recharge(); };
+            racine.DropDownItems.Add(tous);
+            racine.DropDownItems.Add(new ToolStripSeparator());
+            foreach (OffresMasquees.Masque m in l.OrderByDescending(x => x.Quand).Take(40))
+            {
+                string cle = m.Cle;
+                var it = new ToolStripMenuItem("Réafficher " + m.Nom + (m.Raison == OffresMasquees.Possede ? "   · déjà possédé" : "   · pas pour moi"));
+                it.Click += (s, e) => { OffresMasquees.Retire(l, cle); Magasin.SauveMasques(); if (OngletMasquable) Recharge(); };
+                racine.DropDownItems.Add(it);
+            }
+            _menuStores.Items.Add(racine);
+        }
+
+        /// <summary>Menu « ⋯ » d'une carte : masquer le jeu des bons plans, sur toutes les boutiques.</summary>
+        internal void MenuMasquer(Control ancre, Offre o)
+        {
+            if (o == null || !OngletMasquable) return;
+            _menuCarte.Items.Clear();
+            var deja = new ToolStripMenuItem("J’ai déjà ce jeu");
+            deja.Click += (s, e) => Masque(o, OffresMasquees.Possede);
+            var pas = new ToolStripMenuItem("Pas pour moi");
+            pas.Click += (s, e) => Masque(o, OffresMasquees.PasPourMoi);
+            _menuCarte.Items.Add(deja); _menuCarte.Items.Add(pas);
+            _menuCarte.Items.Add(new ToolStripSeparator());
+            _menuCarte.Items.Add(new ToolStripMenuItem("Réaffichable depuis « Boutiques »") { Enabled = false });
+            _menuCarte.Show(ancre, new Point(0, ancre.Height + 2));
+        }
+
+        private void Masque(Offre o, string raison)
+        {
+            if (!OffresMasquees.Ajoute(Magasin.Masques, o.Nom, raison, DateTime.Now)) return;
+            Magasin.SauveMasques();
+            // Page reconstruite sans réseau : les offres suivantes remontent à la place des cartes
+            // retirées (sinon elles glisseraient hors de toute page) ; la position de défilement reste.
+            int position = _viewport.Offset;
+            _masquesRetires += OffresMasquees.Filtre(_resultats, Magasin.Masques);
+            while (_pageIdx > 0 && _pageIdx * ParPage >= _resultats.Count) _pageIdx--;
+            Affiche(false);
+            _viewport.ScrollTo(position);
+        }
+
+        private void InfoMasques()
+        {
+            if (_masquesRetires <= 0 || _info.Text.Length > 0 && !_info.Text.Contains("masqué")) return;
+            _info.Text = _masquesRetires + (_masquesRetires > 1 ? " offres masquées" : " offre masquée")
+                       + " (j’ai déjà / pas pour moi). « Boutiques » pour les réafficher.";
+        }
+
         internal void BasculeSuivi(Offre o)
         {
             if (o == null || o.SteamAppId <= 0) return;
@@ -887,6 +947,8 @@ namespace BTOptimizer
             _flow.SuspendLayout();
             foreach (Control c in _flow.Controls.Cast<Control>().ToList()) c.Dispose();
             _flow.Controls.Clear();
+            if (OngletMasquable) _masquesRetires += OffresMasquees.Filtre(_resultats, Magasin.Masques);
+            InfoMasques();
             List<Offre> page = _resultats.Skip(_pageIdx * ParPage).Take(ParPage).ToList();
             if (page.Count == 0)
             {
@@ -1023,7 +1085,7 @@ namespace BTOptimizer
             private static readonly Font Barre = new Font(FpsUi.Small, FontStyle.Strikeout);
             private readonly PageBonsPlans _page;
             private readonly Offre _o;
-            private readonly Button _open, _compare, _favorite, _follow;
+            private readonly Button _open, _compare, _favorite, _follow, _more;
             private readonly LinkLabel _instantGaming;
             private ToolTip _tips { get { return _page.Infobulles; } }
             private bool _hover;
@@ -1055,6 +1117,11 @@ namespace BTOptimizer
                 _follow = OnyxDesign.Button(""); _follow.Visible = _o.SteamAppId > 0;
                 _follow.Click += (s, e) => { _page.BasculeSuivi(_o); if (!IsDisposed) RefreshActions(); };
                 Controls.Add(_open); Controls.Add(_compare); Controls.Add(_favorite); Controls.Add(_follow);
+                _more = OnyxDesign.Button("⋯"); _more.Visible = page.OngletMasquable;
+                _more.AccessibleName = "Masquer ce jeu : " + offer.Nom;
+                _tips.SetToolTip(_more, "J’ai déjà ce jeu / Pas pour moi : le masquer des bons plans");
+                _more.Click += (s, e) => _page.MenuMasquer(_more, _o);
+                Controls.Add(_more);
                 // Lien discret vers la même recherche chez Instant Gaming (affilié). Pas pour un jeu gratuit.
                 string ig = _o.PrixCts == 0 ? null : OffresSources.UrlRevendeur(InstantGaming, _o.Nom);
                 if (ig != null && MonetisationRuntime.IsAffiliate(ig))
@@ -1090,6 +1157,7 @@ namespace BTOptimizer
             {
                 int actionsY = PriceY + 50;
                 _compare.SetBounds(Width - 92, PriceY - 1, 78, 26);
+                _more.SetBounds(Width - 42, TitleY - 2, 28, 26);
                 _favorite.SetBounds(Width - 46, actionsY, 32, 32);
                 _follow.SetBounds(_favorite.Left - 80, actionsY, 72, 32);
                 _open.SetBounds(14, actionsY, (_o.SteamAppId > 0 ? _follow.Left : _favorite.Left) - 22, 32);
@@ -1102,7 +1170,7 @@ namespace BTOptimizer
             protected override void Dispose(bool disposing)
             {
                 if (disposing)
-                    foreach (Control c in new Control[] { this, _open, _compare, _favorite, _follow, _instantGaming })
+                    foreach (Control c in new Control[] { this, _open, _compare, _favorite, _follow, _more, _instantGaming })
                         if (c != null) _tips.SetToolTip(c, null);
                 base.Dispose(disposing);
             }
@@ -1140,7 +1208,7 @@ namespace BTOptimizer
                 int storeWidth = Math.Min(Width - 120, TextRenderer.MeasureText(store, FpsUi.Small).Width + 20);
                 Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
                 if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
-                OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - 28, 23));
+                OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - (_more.Visible ? 60 : 28), 23));
                 string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");
                 OnyxDesign.Text(g, price, FpsUi.H2, FpsUi.Gold, new Rectangle(14, PriceY, Width - 116, 25));
                 if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
