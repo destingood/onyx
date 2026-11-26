@@ -68,7 +68,7 @@ namespace BTOptimizer
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
-        private Button _back, _launch, _folder, _close, _hide, _uninstall, _presets;
+        private Button _back, _launch, _folder, _close, _hide, _uninstall, _presets, _clips;
 
         private void BuildActions()
         {
@@ -106,6 +106,10 @@ namespace BTOptimizer
                 Controls.Add(_presets);
             }
 
+            _clips = OnyxDesign.Button("Clips du jeu…");
+            _clips.Click += (s, e) => { using (var f = new ClipsForm(_g.Name)) f.ShowDialog(FindForm()); };
+            Controls.Add(_clips);
+
             // Deux actions VOLONTAIREMENT distinctes : masquer ne touche à rien sur le disque,
             // désinstaller délègue au désinstalleur officiel. Ne jamais confondre les deux.
             _hide = OnyxDesign.Button(GameHidden.IsHidden(_g.Name) ? "Réafficher" : "Masquer");
@@ -140,6 +144,8 @@ namespace BTOptimizer
             int ay = 448;
             if (_prio != null) _prio.SetBounds(Pad, ay, lw, 34);
             if (_presets != null) _presets.SetBounds(Pad, 402, Math.Min(lw, 240), 32);
+            int cx = _presets != null ? Pad + Math.Min(lw, 240) + 12 : Pad;
+            if (_clips != null) _clips.SetBounds(cx, 402, Math.Max(120, Math.Min(180, Pad + lw - cx)), 32);
             int half = (lw - 12) / 2;
             if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
             if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);
@@ -394,7 +400,7 @@ namespace BTOptimizer
             // Conseils FPS SOUS les cartes : l'action passe devant l'explication.
             Section(g, "RÉGLAGES À FAIRE DANS LE JEU", 336, Pad, LeftW);
             string tip = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
-            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 364, LeftW, _presets != null ? 34 : 64), FpsUi.Ink,
+            TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 364, LeftW, 34), FpsUi.Ink,
                 TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
 
             if (!string.IsNullOrEmpty(_g.InstallPath))
