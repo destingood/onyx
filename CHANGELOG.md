@@ -5,6 +5,25 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.05 — Temps de jeu, liste de souhaits Steam, préréglages Fortnite, clips, rappel de nettoyage
+
+- **Temps de jeu.** ONYX note chaque partie (début, durée) et l'affiche dans Jeux, sur la fiche du
+  jeu et dans Jeux dormants. En option, une notification de fin de partie donne les FPS moyens et
+  les plus bas. Les runtimes livrés avec les jeux (WebView2…) ne comptent plus comme des parties.
+- **Bons plans : importer ta liste de souhaits Steam dans les jeux suivis.** Le SteamID ne part vers
+  Steam qu'au clic sur « Importer mes souhaits Steam ». Un second import n'ajoute que les nouveaux.
+- **Bons plans : tranches de prix exactes** (Gratuit, < 1 €, 1-5, 5-10, 10-20, 20-40, > 40 €), prix
+  en dollars convertis au taux BCE, choix « en promo » ou « tous les jeux », lien vers Battle.net.
+- **Fortnite : quatre préréglages graphiques** (Compétition, Performance, Équilibré, Qualité) avec
+  aperçu des valeurs changées avant d'appliquer, retour exact au fichier d'origine et mesure des FPS
+  avant/après en jeu.
+- **Clips.** Tes vidéos (Captures de Windows, Vidéos, NVIDIA et dossiers ajoutés) rangées par jeu,
+  avec vignettes : lire, afficher dans le dossier, copier pour Discord, mettre à la corbeille.
+  La capture des 30 dernières secondes de Windows (Win+Alt+G) s'active depuis Clips, avec une mesure
+  du coût en jeu ; elle reste refusée tant que « Désactiver Game DVR » est appliqué.
+- **Stockage : rappel hebdomadaire du poids mort**, désactivé par défaut. Une analyse sans
+  suppression, jamais pendant une partie, et une notification à partir de 1 Go à récupérer.
+
 ## v16.04 — Stockage : doublons, types de fichiers et place par disque ; Mode Jeu auto plus juste
 
 - **Nouveau module « Fichiers & jeux en double » (page Stockage).** Les copies sont reconnues par
