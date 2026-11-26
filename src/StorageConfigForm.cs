@@ -19,6 +19,7 @@ namespace BTOptimizer
         private CheckedListBox _modules;
         private RadioButton _rSafe, _rDeep;
         private NumericUpDown _alert, _minFile;
+        private CheckBox _hebdo;
         private ListBox _ignored;
         private Label _explain;
         private List<Storage.Module> _defs;
@@ -38,7 +39,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "ONYX — Réglages du stockage";
-            ClientSize = new Size(720, 690);
+            ClientSize = new Size(720, 718);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -110,7 +111,14 @@ namespace BTOptimizer
                 Size = new Size(410, 20),
                 ForeColor = Sub
             });
-            y += 34;
+            y += 30;
+            _hebdo = new CheckBox
+            {
+                Text = "Me prévenir chaque semaine du poids mort (journaux, restes de Steam) — analyse seule, rien n'est supprimé",
+                Location = new Point(20, y), Size = new Size(684, 22), ForeColor = Ink
+            };
+            Controls.Add(_hebdo);
+            y += 32;
 
             Controls.Add(Title("Gros fichiers (vidéos, archives, autres)", 16, y)); y += 26;
             Controls.Add(new Label
@@ -218,6 +226,7 @@ namespace BTOptimizer
             if (_st.MaxSafety >= Storage.SafeVerifier) _rDeep.Checked = true; else _rSafe.Checked = true;
             _alert.Value = Math.Max(_alert.Minimum, Math.Min(_alert.Maximum, _st.AlertPct));
             _minFile.Value = Math.Max(_minFile.Minimum, Math.Min(_minFile.Maximum, _st.MinFileMB));
+            _hebdo.Checked = RappelNettoyage.Charge().Active;
             RefreshIgnored();
             UpdateExplain();
         }
@@ -256,6 +265,7 @@ namespace BTOptimizer
             _st.AlertPct = (int)_alert.Value;
             _st.MinFileMB = (int)_minFile.Value;
             _st.Save();
+            RappelNettoyage.Active(_hebdo.Checked);
             DialogResult = DialogResult.OK;
             Close();
         }

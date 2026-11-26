@@ -136,6 +136,7 @@ namespace BTOptimizer
             });
             _rattrapage.Start();
             try { SuiviVeille.Demarre(this); } catch { }   // Bons plans : veille des jeux suivis (reportée pendant une partie)
+            try { RappelNettoyage.Demarre(this); } catch { }   // Stockage : rappel hebdomadaire du poids mort (si la case est cochée)
 
             Shown += (s, e) =>
             {
