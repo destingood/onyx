@@ -138,8 +138,8 @@ namespace BTOptimizer
             _installes.Height = 28; _installes.Width = 190;
             _installes.Click += (s, e) => SuitInstalles();
             Controls.Add(_installes);
-            _souhaits = OnyxDesign.Button("Importer ma liste de souhaits Steam");
-            _souhaits.Height = 28; _souhaits.Width = 250;
+            _souhaits = OnyxDesign.Button("Importer mes souhaits Steam");
+            _souhaits.Height = 28; _souhaits.Width = 220;
             _souhaits.Click += (s, e) => ImporteSouhaits();
             Controls.Add(_souhaits);
 
@@ -313,7 +313,9 @@ namespace BTOptimizer
             _lTri.SetBounds(338, row + 5, 28, 22); _sortChoice.SetBounds(378, row, 190, 30);
             _lPlat.SetBounds(18, row + 5, 80, 22); _platformChoice.SetBounds(100, row, 236, 30);
             _verifier.SetBounds(width - 376, row, 158, 30); _installes.SetBounds(width - 208, row, 190, 30);
-            _souhaits.SetBounds(width - 636, row, 250, 30);
+            // Le choix de catégorie occupe 100 → 310 sur la même ligne : le bouton ne déborde jamais dessus.
+            int xs = Math.Max(322, width - 606);
+            _souhaits.SetBounds(xs, row, Math.Max(120, Math.Min(220, width - 386 - xs)), 30);
             _context.SetBounds(18, 14, width - 36, 30);
             _resultsLabel.SetBounds(34, 244, width, 22);
             _partner.SetBounds(34, 276, width, 76);
