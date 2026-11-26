@@ -14,6 +14,7 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private static readonly Color Accent = Theme.AccentColor;
         private CheckedListBox _list;
+        private CheckBox _fps;
         private string[] _svcs;
 
         public GameModeForm(Action<string, int> log)
@@ -68,6 +69,13 @@ namespace BTOptimizer
             var detect = MakeBtn("Détecter les services tiers", 190, 350, 250, 38, false);
             detect.Click += (s, e) => Detecte();
             Controls.Add(detect);
+            // Bilan de partie : durée et FPS mesurés, en notification à la fermeture du jeu.
+            _fps = new CheckBox
+            {
+                Text = "Mesurer les FPS de chaque partie (bilan en notification à la fermeture du jeu)",
+                Location = new Point(18, 396), Size = new Size(524, 24), Checked = JournalJeu.MesureFps
+            };
+            Controls.Add(_fps);
             var close = MakeBtn("Fermer", 452, 350, 90, 38, false);
             close.Click += (s, e) => Close();
             Controls.Add(save); Controls.Add(close);
@@ -132,6 +140,7 @@ namespace BTOptimizer
             for (int i = 0; i < ApplisDeFond.Catalogue.Length; i++)
                 if (!_list.GetItemChecked(_svcs.Length + i)) exclApps.Add(ApplisDeFond.Catalogue[i].Cle);
             ApplisDeFond.EnregistrerExclusions(exclApps);
+            JournalJeu.MesureFps = _fps.Checked;
 
             if (_log != null) _log("Mode Jeu : " + excluded.Count + " service(s) et " + exclApps.Count
                                  + " famille(s) d'applications exclu(s) de la suspension.", 0);

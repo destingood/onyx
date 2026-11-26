@@ -38,6 +38,27 @@ namespace BTOptimizer
             return n.ToLowerInvariant();
         }
 
+        // Morceaux de nom des exe d'un dossier de jeu qui ne SONT PAS le jeu : rapports de plantage,
+        // lanceurs, anticheat, installateurs.
+        private static readonly string[] MorceauxExclus = { "crash", "launcher", "anticheat", "eac", "redist", "unins", "setup", "helper", "report" };
+
+        // Runtimes livrés avec certains jeux mais qui tournent sans eux (WebView2 est actif en
+        // permanence sous Windows 11) : noms exacts.
+        private static readonly HashSet<string> RuntimesExclus = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "msedgewebview2", "msedge", "cefsharp.browsersubprocess", "cefsubprocess", "qtwebengineprocess",
+            "java", "javaw", "python", "pythonw", "dotnet", "node", "conhost", "cmd", "powershell",
+            "7z", "7za", "bssndrpt", "werfault", "steamwebhelper", "epicwebhelper"
+        };
+
+        /// <summary>Exe à ne pas mettre dans l'index exe → jeu (<paramref name="cle"/> = <see cref="Cle"/>).</summary>
+        public static bool ExeExclu(string cle)
+        {
+            if (string.IsNullOrEmpty(cle) || RuntimesExclus.Contains(cle)) return true;
+            foreach (string m in MorceauxExclus) if (cle.Contains(m)) return true;
+            return false;
+        }
+
         /// <summary>Nom du premier jeu reconnu parmi les processus, ou null. Les clés de l'index
         /// sont celles de <see cref="Cle"/>.</summary>
         public static string JeuParmi(IEnumerable<string> processus, Dictionary<string, string> exeVersJeu)
@@ -149,14 +170,14 @@ namespace BTOptimizer
             return (int)Math.Min(int.MaxValue, total);
         }
 
-        /// <summary>Fin de la partie la plus récente du jeu, ou null s'il n'a jamais été joué.</summary>
+        /// <summary>Fin de la partie la plus récente du jeu, ou null s'il n'a jamais été joué. Jeu null = tous.</summary>
         public static DateTime? DernierePartie(List<Partie> parties, string jeu)
         {
-            if (parties == null || jeu == null) return null;
+            if (parties == null) return null;
             DateTime? fin = null;
             foreach (Partie p in parties)
             {
-                if (!string.Equals(p.Jeu, jeu, StringComparison.OrdinalIgnoreCase)) continue;
+                if (jeu != null && !string.Equals(p.Jeu, jeu, StringComparison.OrdinalIgnoreCase)) continue;
                 DateTime f = p.Debut.AddSeconds(p.Secondes);
                 if (fin == null || f > fin.Value) fin = f;
             }
@@ -183,6 +204,82 @@ namespace BTOptimizer
             tries.Sort();
             int rang = Math.Max(0, (int)Math.Ceiling(tries.Count * 0.01) - 1);
             bas = tries[rang];
+        }
+
+        /// <summary>Parties dont le nom de jeu satisfait <paramref name="meme"/> (rapprochement des noms
+        /// du catalogue et des launchers, fait par l'appelant).</summary>
+        public static List<Partie> Filtre(List<Partie> parties, Func<string, bool> meme)
+        {
+            var l = new List<Partie>();
+            if (parties == null || meme == null) return l;
+            foreach (Partie p in parties) if (p != null && meme(p.Jeu)) l.Add(p);
+            return l;
+        }
+
+        /// <summary>Les <paramref name="n"/> parties les plus récentes, la plus récente d'abord.</summary>
+        public static List<Partie> Dernieres(List<Partie> parties, int n)
+        {
+            var l = parties == null ? new List<Partie>() : new List<Partie>(parties);
+            l.Sort((a, b) => b.Debut.CompareTo(a.Debut));
+            if (l.Count > n) l.RemoveRange(n, l.Count - n);
+            return l;
+        }
+
+        /// <summary>« 26/11 20:00 · 1 h 12 · 238 FPS en moyenne · 141 au plus bas ».</summary>
+        public static string LignePartie(Partie p)
+        {
+            if (p == null) return "";
+            return p.Debut.ToString("dd'/'MM HH':'mm", CultureInfo.InvariantCulture) + " · " + Bilan(p);
+        }
+
+        /// <summary>Ligne de la tuile Jeux : « 12 h · il y a 2 j ». Null si jamais joué.</summary>
+        public static string Tuile(int secondesTotal, DateTime? derniere, DateTime maintenant)
+        {
+            if (secondesTotal <= 0 || derniere == null) return null;
+            string temps = secondesTotal < 3600 ? Duree(secondesTotal) : (secondesTotal / 3600) + " h";
+            int jours = (int)(maintenant.Date - derniere.Value.Date).TotalDays;
+            string quand = jours <= 0 ? "aujourd'hui" : jours == 1 ? "hier" : "il y a " + jours + " j";
+            return temps + " · " + quand;
+        }
+
+        /// <summary>
+        /// Mesure des FPS d'une partie, relevé après relevé. La moyenne vient du compteur cumulé
+        /// d'images du processus (aucune image perdue entre deux relevés) ; « au plus bas » vient des
+        /// FPS sur 1 s pris à chaque relevé. Un changement de PID (relance), un relevé sans image ou
+        /// plus de 5 s entre deux relevés coupent la continuité : l'intervalle n'est pas compté.
+        /// </summary>
+        public sealed class Mesure
+        {
+            public const double EcartMaxSecondes = 5;
+            public readonly List<double> FpsParSeconde = new List<double>();
+            public long Images;
+            public double Secondes;
+            private int _pid = -1;
+            private long _total;
+            private DateTime _quand;
+
+            public void Ajoute(int pid, long total, double fps, DateTime quand)
+            {
+                if (fps > 0) FpsParSeconde.Add(fps);
+                double ecart = (quand - _quand).TotalSeconds;
+                if (pid == _pid && total >= _total && ecart > 0 && ecart <= EcartMaxSecondes)
+                {
+                    Images += total - _total;
+                    Secondes += ecart;
+                }
+                _pid = pid; _total = total; _quand = quand;
+            }
+
+            /// <summary>Relevé où le jeu n'a présenté aucune image.</summary>
+            public void Rien() { _pid = -1; }
+
+            public void Remplit(Partie p)
+            {
+                if (p == null) return;
+                double moyen, bas;
+                Resume(FpsParSeconde, Images, Secondes, out moyen, out bas);
+                p.FpsMoyen = moyen; p.FpsBas = bas;
+            }
         }
 
         /// <summary>« 1 h 12 · 238 FPS en moyenne · 141 au plus bas » ; sans mesure, la durée seule.</summary>

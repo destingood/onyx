@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -43,6 +44,7 @@ namespace BTOptimizer
             // Démarre tôt le chargement de la jaquette — y compris pour les jeux SANS AppID
             // (EA, Battle.net…) : ForGame résout d'abord le nom via l'index Steam.
             try { GameArt.ForGame(g.Name, g.SteamId, null); } catch { }
+            try { _parties = PageGames.PartiesDe(JournalJeu.Parties, g); } catch { _parties = new List<JournalJeu.Partie>(); }
             BuildActions();
             RefreshPrio();
         }
@@ -353,8 +355,10 @@ namespace BTOptimizer
             OnyxDesign.Text(g, _g.Name, OnyxDesign.Title, FpsUi.Ink, new Rectangle(Pad + 180, 20, W - Pad * 2 - 180, 34));
             using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 64, W - Pad, 64);
 
-            // --- Colonne droite : grande jaquette ---
-            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, 440);
+            // --- Colonne droite : grande jaquette ; plus courte quand le temps de jeu s'affiche dessous ---
+            bool joue = _parties != null && _parties.Count > 0;
+            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, joue ? 290 : 440);
+            if (joue) TempsDeJeu(g, cover.X, cover.Bottom + 16, cover.Width);
             Image big = GameArt.ForGame(_g.Name, _g.SteamId,
                 () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } });
             using (var clip = Round(cover, 14))
@@ -388,6 +392,27 @@ namespace BTOptimizer
             if (!string.IsNullOrEmpty(_g.InstallPath))
                 TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(Pad, ClientSize.Height - 84, LeftW, 16),
                     FpsUi.Dim2, TextFormatFlags.NoPrefix | TextFormatFlags.PathEllipsis);
+        }
+
+        private readonly List<JournalJeu.Partie> _parties;
+
+        /// <summary>Temps de jeu relevé par ONYX : 7 jours, 30 jours, total, puis les 5 dernières parties.</summary>
+        private void TempsDeJeu(Graphics g, int x, int y, int w)
+        {
+            Section(g, "TEMPS DE JEU", y, x, w);
+            DateTime now = DateTime.Now;
+            string semaine = JournalJeu.Duree(JournalJeu.Secondes(_parties, null, now.AddDays(-7)));
+            string mois = JournalJeu.Duree(JournalJeu.Secondes(_parties, null, now.AddDays(-30)));
+            string total = JournalJeu.Duree(JournalJeu.Secondes(_parties, null, DateTime.MinValue));
+            var flags = TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
+            TextRenderer.DrawText(g, "7 jours : " + semaine + "   ·   30 jours : " + mois, FpsUi.Small, new Rectangle(x, y + 28, w, 18), FpsUi.Ink, flags);
+            TextRenderer.DrawText(g, "Au total : " + total, FpsUi.Small, new Rectangle(x, y + 48, w, 18), FpsUi.Ink, flags);
+            int ly = y + 76;
+            foreach (JournalJeu.Partie p in JournalJeu.Dernieres(_parties, 5))
+            {
+                TextRenderer.DrawText(g, JournalJeu.LignePartie(p), FpsUi.Tiny, new Rectangle(x, ly, w, 16), FpsUi.Dim, flags);
+                ly += 17;
+            }
         }
 
         private static void Section(Graphics g, string title, int y, int x, int w)

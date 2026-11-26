@@ -41,6 +41,44 @@ namespace BTOptimizer
         public PageGames(DashboardForm host) : base(host)
         {
             Build();
+            JournalJeu.Change += JournalChange;
+            Disposed += (s, e) => JournalJeu.Change -= JournalChange;
+        }
+
+        // Temps de jeu des tuiles : copie du journal, et texte déjà calculé par carte.
+        private List<JournalJeu.Partie> _journal;
+        private readonly Dictionary<GameScan.GameInfo, string> _tempsJeu = new Dictionary<GameScan.GameInfo, string>();
+
+        /// <summary>Une partie vient d'être close (fil de fond) : on relit le journal et on repeint.</summary>
+        private void JournalChange()
+        {
+            try
+            {
+                if (IsDisposed || !IsHandleCreated) return;
+                BeginInvoke((Action)(() =>
+                {
+                    _journal = null; _tempsJeu.Clear();
+                    if (_flow != null) foreach (Control c in _flow.Controls) c.Invalidate();
+                }));
+            }
+            catch { }
+        }
+
+        /// <summary>Parties du journal qui désignent ce jeu (nom du launcher ou du catalogue).</summary>
+        internal static List<JournalJeu.Partie> PartiesDe(List<JournalJeu.Partie> toutes, GameScan.GameInfo g)
+        {
+            return JournalJeu.Filtre(toutes, n => BibliothequeJeux.MemeJeu(g.Name, g.SteamId, g.Keywords, n, 0));
+        }
+
+        private string TempsJeu(GameScan.GameInfo g)
+        {
+            string t;
+            if (_tempsJeu.TryGetValue(g, out t)) return t;
+            if (_journal == null) _journal = JournalJeu.Parties;
+            List<JournalJeu.Partie> p = PartiesDe(_journal, g);
+            t = JournalJeu.Tuile(JournalJeu.Secondes(p, null, DateTime.MinValue), JournalJeu.DernierePartie(p, null), DateTime.Now);
+            _tempsJeu[g] = t;
+            return t;
         }
 
         private void Build()
@@ -107,6 +145,7 @@ namespace BTOptimizer
         {
             DoLayout();
             UpdateModeButton();
+            _journal = null; _tempsJeu.Clear();   // « il y a N j » bouge avec la date
             // Deja charge : on redessine quand meme, pour repercuter un masquage fait depuis la
             // fiche d'un jeu (sinon la tuile resterait visible jusqu'au prochain lancement).
             if (_loaded) { Render(); if (_detail != null) Host.SetPageToolsVisible(false); return; }
@@ -129,17 +168,8 @@ namespace BTOptimizer
         private void DropSteamSoftware(List<GameScan.GameInfo> games)
         {
             var ids = new List<int>();
-            foreach (GameScan.GameInfo g in games) if (g.Detected && g.SteamId > 0 && !ids.Contains(g.SteamId)) ids.Add(g.SteamId);
-            var software = new HashSet<int>();
-            for (int i = 0; i < ids.Count; i += OffresSources.LotSteam)
-            {
-                try
-                {
-                    string url = OffresSources.UrlFichesSteam(ids.GetRange(i, Math.Min(OffresSources.LotSteam, ids.Count - i)));
-                    software.UnionWith(BibliothequeJeux.LogicielsSteam(OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult()));
-                }
-                catch { }
-            }
+            foreach (GameScan.GameInfo g in games) if (g.Detected && g.SteamId > 0) ids.Add(g.SteamId);
+            HashSet<int> software = LogicielsSteam(ids);
             if (software.Count == 0) return;
             try
             {
@@ -151,6 +181,25 @@ namespace BTOptimizer
                 }));
             }
             catch { }
+        }
+
+        /// <summary>AppID classés « Software » par Steam (réseau, réponse en cache 7 jours ; hors ligne :
+        /// ensemble vide). Bloquant : à appeler hors du fil d'interface.</summary>
+        internal static HashSet<int> LogicielsSteam(List<int> appIds)
+        {
+            var ids = new List<int>();
+            foreach (int id in appIds) if (id > 0 && !ids.Contains(id)) ids.Add(id);
+            var software = new HashSet<int>();
+            for (int i = 0; i < ids.Count; i += OffresSources.LotSteam)
+            {
+                try
+                {
+                    string url = OffresSources.UrlFichesSteam(ids.GetRange(i, Math.Min(OffresSources.LotSteam, ids.Count - i)));
+                    software.UnionWith(BibliothequeJeux.LogicielsSteam(OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult()));
+                }
+                catch { }
+            }
+            return software;
         }
 
         // Fusionne les jeux RÉELLEMENT installés (toutes plateformes, connus ou pas) détectés par
@@ -476,7 +525,8 @@ namespace BTOptimizer
                 }
                 OnyxDesign.Text(gr, game.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
                 var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
-                string status = info != null ? info.SizeText + " · " + info.IdleText : game.Detected ? "Détecté sur ce PC" : "Fiche & réglages";
+                string joue = info == null && game.Detected ? TempsJeu(game) : null;
+                string status = info != null ? info.SizeText + " · " + info.IdleText : joue ?? (game.Detected ? "Détecté sur ce PC" : "Fiche & réglages");
                 OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
                     new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };

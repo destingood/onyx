@@ -16,7 +16,12 @@ namespace BTOptimizer
     /// </summary>
     internal sealed class FpsEtw : IDisposable
     {
-        private const string SessionName = "BTOptimizer-FPS";
+        // Une session ETW est désignée par son nom : en démarrer une du même nom arrête la
+        // précédente. Le journal de jeu mesure donc sous son propre nom, sans couper l'overlay.
+        private readonly string SessionName;
+
+        public FpsEtw() : this("BTOptimizer-FPS") { }
+        public FpsEtw(string nomSession) { SessionName = nomSession; }
 
         // Fournisseurs manifestés de Windows (mêmes IDs que PresentMon).
         private static readonly Guid DxgiProvider = new Guid("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");

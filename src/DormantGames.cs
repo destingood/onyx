@@ -73,6 +73,7 @@ namespace BTOptimizer
 
             Dictionary<string, string> cache = LoadCache();
             var list = new List<Entry>();
+            List<JournalJeu.Partie> journal = JournalJeu.Parties;
 
             for (int i = 0; i < games.Count; i++)
             {
@@ -83,11 +84,20 @@ namespace BTOptimizer
                 long mb = SizeMB(g.InstallDir, cache);
                 if (mb <= 0) continue;                       // dossier illisible/vide : on ignore
 
-                int days = g.LastPlayed == DateTime.MinValue
+                // Hors Steam, pas de date fiable côté launcher : la dernière partie vue par ONYX.
+                DateTime last = g.LastPlayed;
+                bool never = g.NeverPlayed;
+                if (last == DateTime.MinValue)
+                {
+                    DateTime? vu = JournalJeu.DernierePartie(
+                        JournalJeu.Filtre(journal, n => BibliothequeJeux.MemeJeu(g.Name, g.SteamAppId, null, n, 0)), null);
+                    if (vu != null) { last = vu.Value; never = false; }
+                }
+                int days = last == DateTime.MinValue
                     ? -1
-                    : Math.Max(0, (int)(DateTime.Now - g.LastPlayed).TotalDays);
+                    : Math.Max(0, (int)(DateTime.Now - last).TotalDays);
 
-                list.Add(new Entry { Game = g, SizeMB = mb, LastPlayed = g.LastPlayed, DaysIdle = days, Never = g.NeverPlayed });
+                list.Add(new Entry { Game = g, SizeMB = mb, LastPlayed = last, DaysIdle = days, Never = never });
             }
 
             SaveCache(cache);

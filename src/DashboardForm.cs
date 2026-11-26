@@ -187,7 +187,14 @@ namespace BTOptimizer
             };
             retraitIa.Start();
 #endif
+            JournalJeu.PartieClose += BilanPartie;
             FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
+        }
+
+        /// <summary>Fin de partie, option « Mesurer les FPS » cochée : bilan en notification.</summary>
+        private void BilanPartie(JournalJeu.Partie p)
+        {
+            if (p != null && JournalJeu.MesureFps) Notifie(p.Jeu, JournalJeu.Bilan(p));
         }
 
         private void OnResizeShell(object sender, EventArgs e)
@@ -1269,6 +1276,7 @@ namespace BTOptimizer
                     try
                     {
                         VeilleJeu.Releve r = prend();
+                        try { JournalJeu.Tick(r); } catch (Exception ex) { JournalTechnique.Echec("JournalJeu.Tick", ex); }
                         if (!IsDisposed && IsHandleCreated)
                         {
                             BeginInvoke((Action)(() => { try { Applique(r); } finally { System.Threading.Interlocked.Exchange(ref _veille, 0); } }));
@@ -1349,6 +1357,7 @@ namespace BTOptimizer
 
         private void Cleanup()
         {
+            try { JournalJeu.PartieClose -= BilanPartie; JournalJeu.Termine(); } catch { }
             try { BadgeStore.OnNewBadge -= OnNewBadge; } catch { }
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }

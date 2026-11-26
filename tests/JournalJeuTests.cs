@@ -40,6 +40,66 @@ namespace BTOptimizer.Tests
             Reconnaissance();
             Resumes();
             Bilans();
+            Tuiles();
+            Mesures();
+        }
+
+        private static void Mesures()
+        {
+            // 240 FPS pendant 2 min, un relevé toutes les 2 s (compteur cumulé d'images du processus).
+            var m = new JournalJeu.Mesure();
+            for (int i = 0; i <= 60; i++) m.Ajoute(10, 1000 + i * 480L, 240, T0.AddSeconds(i * 2));
+            var p = new JournalJeu.Partie { Jeu = "cs2", Debut = T0, Secondes = 120 };
+            m.Remplit(p);
+            Banc.Verifie("mesure : images comptées entre relevés", true, m.Images == 28800 && Math.Abs(m.Secondes - 120) < 0.001);
+            Banc.Verifie("mesure : moyenne remplie dans la partie", true, Math.Abs(p.FpsMoyen - 240) < 0.001);
+            Banc.Verifie("mesure : 61 relevés, pas de « plus bas » sous 100", true, p.FpsBas == 0);
+
+            // Relance du jeu : nouveau PID, compteur reparti de zéro. Rien de négatif, rien d'inventé.
+            var r = new JournalJeu.Mesure();
+            r.Ajoute(10, 5000, 100, T0);
+            r.Ajoute(10, 5200, 100, T0.AddSeconds(2));
+            r.Ajoute(22, 50, 100, T0.AddSeconds(4));
+            r.Ajoute(22, 250, 100, T0.AddSeconds(6));
+            Banc.Verifie("mesure : changement de PID, pas d'images négatives", true, r.Images == 400 && Math.Abs(r.Secondes - 4) < 0.001);
+
+            // Trou (alt-tab, jeu sans image) : l'intervalle n'est pas compté.
+            var t = new JournalJeu.Mesure();
+            t.Ajoute(10, 0, 60, T0);
+            t.Rien();
+            t.Ajoute(10, 600, 60, T0.AddSeconds(10));
+            t.Ajoute(10, 720, 60, T0.AddSeconds(12));
+            Banc.Verifie("mesure : un relevé sans image coupe la continuité", true, t.Images == 120 && Math.Abs(t.Secondes - 2) < 0.001);
+            var g = new JournalJeu.Mesure();
+            g.Ajoute(10, 0, 60, T0);
+            g.Ajoute(10, 900, 60, T0.AddSeconds(15));
+            Banc.Verifie("mesure : plus de 5 s entre deux relevés, intervalle ignoré", true, g.Images == 0 && g.Secondes == 0);
+        }
+
+        private static void Tuiles()
+        {
+            DateTime now = T0;
+            Banc.Egal("tuile : heures arrondies, jour même", "12 h · aujourd'hui", JournalJeu.Tuile(12 * 3600 + 1700, T0.AddHours(-3), now));
+            Banc.Egal("tuile : moins d'une heure, hier", "45 min · hier", JournalJeu.Tuile(2700, T0.AddDays(-1), now));
+            Banc.Egal("tuile : il y a N j", "3 h · il y a 2 j", JournalJeu.Tuile(3 * 3600, T0.AddDays(-2).AddHours(-1), now));
+            Banc.Verifie("tuile : jamais joué = null", true, JournalJeu.Tuile(0, null, now) == null);
+            var parties = new List<JournalJeu.Partie>
+            {
+                new JournalJeu.Partie { Jeu = "Fortnite", Debut = T0, Secondes = 600 },
+                new JournalJeu.Partie { Jeu = "cs2", Debut = T0, Secondes = 300 },
+            };
+            List<JournalJeu.Partie> f = JournalJeu.Filtre(parties, n => n == "cs2");
+            Banc.Verifie("filtre : garde les parties du jeu", true, f.Count == 1 && f[0].Jeu == "cs2");
+            Banc.Verifie("filtre : entrées nulles, liste vide", true, JournalJeu.Filtre(null, n => true).Count == 0);
+            Banc.Verifie("dernière partie, jeu null = toutes", true, JournalJeu.DernierePartie(parties, null) == T0.AddSeconds(600));
+
+            var histo = new List<JournalJeu.Partie>();
+            for (int i = 0; i < 7; i++) histo.Add(new JournalJeu.Partie { Jeu = "Fortnite", Debut = T0.AddDays(-i), Secondes = 3600 });
+            histo.Reverse();
+            List<JournalJeu.Partie> d = JournalJeu.Dernieres(histo, 5);
+            Banc.Verifie("dernières : 5 au plus, la plus récente d'abord", true, d.Count == 5 && d[0].Debut == T0 && d[4].Debut == T0.AddDays(-4));
+            Banc.Egal("ligne d'une partie", "26/11 20:00 · 1 h 12 · 238 FPS en moyenne · 141 au plus bas",
+                JournalJeu.LignePartie(new JournalJeu.Partie { Jeu = "Fortnite", Debut = T0, Secondes = 4320, FpsMoyen = 238.8, FpsBas = 141.4 }));
         }
 
         private static void PartieSimple()
@@ -159,6 +219,15 @@ namespace BTOptimizer.Tests
             Banc.Egal("sans .exe (noms de processus)", "Counter-Strike 2", JournalJeu.JeuParmi(new[] { "cs2" }, index));
             Banc.Verifie("aucun jeu : null", true, JournalJeu.JeuParmi(new[] { "explorer", "discord" }, index) == null);
             Banc.Verifie("liste null : null, pas d'exception", true, JournalJeu.JeuParmi(null, index) == null);
+
+            // Exe livrés DANS le dossier d'un jeu mais qui tournent sans lui (vu sur Darktide : le
+            // runtime WebView2 de Windows, actif en permanence, comptait comme une partie sans fin).
+            Banc.Verifie("index : runtime WebView2 exclu", true, JournalJeu.ExeExclu("msedgewebview2"));
+            Banc.Verifie("index : sous-processus CEF exclu", true, JournalJeu.ExeExclu("cefsharp.browsersubprocess"));
+            Banc.Verifie("index : rapport de plantage exclu", true, JournalJeu.ExeExclu("unitycrashhandler64"));
+            Banc.Verifie("index : java exclu", true, JournalJeu.ExeExclu("javaw"));
+            Banc.Verifie("index : l'exe du jeu est gardé", false, JournalJeu.ExeExclu("cs2"));
+            Banc.Verifie("index : exe Unreal du jeu gardé", false, JournalJeu.ExeExclu("darktide"));
         }
 
         private static void Resumes()
