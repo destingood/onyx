@@ -132,6 +132,7 @@ namespace BTOptimizer.Tests
             RappelNettoyageTests.Tout();
             TriJeuxTests.Tout();
             OffresMasqueesTests.Tout();
+            LancementTests.Tout();
             return Banc.Bilan();
         }
     }

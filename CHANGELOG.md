@@ -5,6 +5,23 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.07 — Options de lancement, jaquettes perso, capture d'écran, courbe des FPS
+
+- **Jeux : options par jeu.** Clic droit sur une tuile (« Options, lancement et jaquette… ») ou
+  bouton « Options… » de la fiche : nom affiché, exécutable, arguments de lancement et dossier de
+  départ. Champs vides : lancement habituel. Pour un jeu Steam, les arguments passent par
+  `steam.exe -applaunch` (Steam peut demander confirmation) ; Battle.net les ignore.
+- **Jaquette personnalisée.** Choisis une image pour un jeu ; « Jaquette d'origine » la remet, la
+  copie part à la Corbeille.
+- **Capture d'écran : Ctrl+Alt+C.** Enregistre l'écran du jeu au premier plan dans le dossier
+  Captures de Windows, nommée d'après le jeu et l'heure ; elle apparaît dans Clips. Un jeu en plein
+  écran exclusif peut donner une image noire : passe-le en plein écran fenêtré.
+- **Compteur FPS : Ctrl+Alt+F**, aussi dans le menu de l'icône de notification. Ctrl+Alt et non
+  Ctrl+Maj : Ctrl+Maj+F et Ctrl+Maj+C servent déjà dans les navigateurs et les éditeurs.
+- **Fiche du jeu : courbe des FPS** moyens et au plus bas des 20 dernières parties mesurées.
+- **Jeux suivis : rappel de fin de promo.** Une alerte quand une promo suivie se termine dans
+  moins de 48 h ; les alertes de baisse donnent aussi la date de fin.
+
 ## v16.06 — Jeux favoris et joués récemment ; bons plans « J'ai déjà ce jeu »
 
 - **Jeux : favoris ★ et tri « Joués récemment ».** Un clic droit sur un jeu le met en favori : il

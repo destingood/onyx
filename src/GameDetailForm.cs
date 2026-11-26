@@ -45,6 +45,7 @@ namespace BTOptimizer
             // (EA, Battle.net…) : ForGame résout d'abord le nom via l'index Steam.
             try { GameArt.ForGame(g.Name, g.SteamId, null); } catch { }
             try { _parties = PageGames.PartiesDe(JournalJeu.Parties, g); } catch { _parties = new List<JournalJeu.Partie>(); }
+            _pointsFps = JournalJeu.PointsFps(_parties, 20);
             BuildActions();
             RefreshPrio();
         }
@@ -120,6 +121,14 @@ namespace BTOptimizer
             _uninstall.Click += (s, e) => Uninstall();
             Controls.Add(_uninstall);
 
+            _options = OnyxDesign.Button("Options…");
+            _options.AccessibleName = "Options du jeu : nom, exécutable, arguments, jaquette";
+            _options.Click += (s, e) =>
+            {
+                using (var f = new OptionsJeuForm(_g)) { f.ShowDialog(FindForm()); if (f.Change) { OptionsChangees = true; Invalidate(); } }
+            };
+            Controls.Add(_options);
+
             _close = OnyxDesign.Button("Fermer");
             _close.Click += (s, e) => Close();
             Controls.Add(_close);
@@ -153,6 +162,7 @@ namespace BTOptimizer
             if (_close != null) _close.SetBounds(Pad, H - 62, 120, 40);
             if (_hide != null) _hide.SetBounds(Pad + 132, H - 62, 130, 40);
             if (_uninstall != null) _uninstall.SetBounds(Pad + 274, H - 62, 150, 40);
+            if (_options != null) _options.SetBounds(Pad + 436, H - 62, Math.Max(100, Math.Min(118, lw - 436)), 40);
         }
 
         // ---- Priorité CPU dédiée (IFEO, comme la page « Priorité par jeu ») ----
@@ -192,6 +202,10 @@ namespace BTOptimizer
         {
             try
             {
+                // Options choisies par l'utilisateur : exécutable, ou arguments d'un jeu Steam.
+                OptionsJeu.Options opt = OptionsJeu.De(_g.Name);
+                if (OptionsJeu.LanceSiChoisi(_g, opt)) return;
+                string args = opt != null ? opt.Arguments : "";
                 if (_g.SteamId > 0) { Process.Start(new ProcessStartInfo("steam://run/" + _g.SteamId) { UseShellExecute = true }); return; }
 
                 // Jeux Battle.net : passer par l'URI officielle du launcher est bien plus fiable
@@ -204,14 +218,14 @@ namespace BTOptimizer
                     foreach (var exe in _exes)
                     {
                         string p = Path.Combine(_g.InstallPath, exe);
-                        if (File.Exists(p)) { Process.Start(new ProcessStartInfo(p) { UseShellExecute = true, WorkingDirectory = _g.InstallPath }); return; }
+                        if (File.Exists(p)) { Process.Start(new ProcessStartInfo(p, args) { UseShellExecute = true, WorkingDirectory = opt != null && opt.Dossier.Length > 0 ? opt.Dossier : _g.InstallPath }); return; }
                     }
 
                 // Jeu hors catalogue (repéré par le scanner) : on devine l'exécutable principal.
                 string guess = GameLibrary.GuessMainExe(_g.InstallPath);
                 if (guess != null)
                 {
-                    Process.Start(new ProcessStartInfo(guess) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(guess) });
+                    Process.Start(new ProcessStartInfo(guess, args) { UseShellExecute = true, WorkingDirectory = OptionsJeu.DossierDepart(opt != null ? opt.Dossier : "", guess) });
                     return;
                 }
                 OpenFolder();
@@ -366,14 +380,15 @@ namespace BTOptimizer
             int W = ClientSize.Width;
 
             // En-tête de la fiche, indépendant de la barre d’outils de la bibliothèque.
-            OnyxDesign.Text(g, _g.Name, OnyxDesign.Title, FpsUi.Ink, new Rectangle(Pad + 180, 20, W - Pad * 2 - 180, 34));
+            OnyxDesign.Text(g, OptionsJeu.Nom(_g.Name), OnyxDesign.Title, FpsUi.Ink, new Rectangle(Pad + 180, 20, W - Pad * 2 - 180, 34));
             using (var pen = new Pen(FpsUi.Border)) g.DrawLine(pen, Pad, 64, W - Pad, 64);
 
             // --- Colonne droite : grande jaquette ; plus courte quand le temps de jeu s'affiche dessous ---
             bool joue = _parties != null && _parties.Count > 0;
-            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, joue ? 290 : 440);
+            // Courbe des FPS sous le temps de jeu : la jaquette raccourcit encore pour lui laisser la place.
+            var cover = new Rectangle(W - Pad - CoverW, 84, CoverW, !joue ? 440 : _pointsFps.Count >= 2 ? 210 : 290);
             if (joue) TempsDeJeu(g, cover.X, cover.Bottom + 16, cover.Width);
-            Image big = GameArt.ForGame(_g.Name, _g.SteamId,
+            Image big = JaquettesPerso.Pour(_g.Name) ?? GameArt.ForGame(_g.Name, _g.SteamId,
                 () => { try { if (IsHandleCreated) BeginInvoke((Action)Invalidate); } catch { } });
             using (var clip = Round(cover, 14))
             {
@@ -409,6 +424,11 @@ namespace BTOptimizer
         }
 
         private readonly List<JournalJeu.Partie> _parties;
+        private readonly List<JournalJeu.Partie> _pointsFps;
+        private Button _options;
+
+        /// <summary>Vrai si nom, lancement ou jaquette ont changé : la bibliothèque se redessine.</summary>
+        public bool OptionsChangees { get; private set; }
 
         /// <summary>Temps de jeu relevé par ONYX : 7 jours, 30 jours, total, puis les 5 dernières parties.</summary>
         private void TempsDeJeu(Graphics g, int x, int y, int w)
@@ -427,6 +447,37 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, JournalJeu.LignePartie(p), FpsUi.Tiny, new Rectangle(x, ly, w, 16), FpsUi.Dim, flags);
                 ly += 17;
             }
+            if (_pointsFps.Count >= 2) CourbeFps(g, x, ly + 8, w);
+        }
+
+        /// <summary>FPS moyens (or) et au plus bas (gris) des dernières parties mesurées, de gauche (ancienne) à droite (récente).</summary>
+        private void CourbeFps(Graphics g, int x, int y, int w)
+        {
+            Section(g, "FPS · " + _pointsFps.Count + " dernières parties mesurées", y, x, w);
+            var zone = new Rectangle(x + 34, y + 30, w - 40, Math.Max(30, Math.Min(64, ClientSize.Height - y - 50)));
+            double haut = 0, bas = double.MaxValue;
+            foreach (JournalJeu.Partie p in _pointsFps)
+            {
+                haut = Math.Max(haut, p.FpsMoyen);
+                bas = Math.Min(bas, p.FpsBas > 0 ? p.FpsBas : p.FpsMoyen);
+            }
+            if (haut - bas < 10) { haut += 5; bas = Math.Max(0, bas - 5); }
+            Func<int, double, PointF> pt = (i, v) => new PointF(
+                zone.X + (float)i * zone.Width / (_pointsFps.Count - 1),
+                zone.Bottom - (float)((v - bas) / (haut - bas) * zone.Height));
+            var flags = TextFormatFlags.NoPrefix | TextFormatFlags.Right;
+            TextRenderer.DrawText(g, ((int)haut).ToString(), FpsUi.Tiny, new Rectangle(x, zone.Y - 7, 30, 14), FpsUi.Dim, flags);
+            TextRenderer.DrawText(g, ((int)bas).ToString(), FpsUi.Tiny, new Rectangle(x, zone.Bottom - 7, 30, 14), FpsUi.Dim, flags);
+            var basses = new List<PointF>();
+            var moyennes = new PointF[_pointsFps.Count];
+            for (int i = 0; i < _pointsFps.Count; i++)
+            {
+                moyennes[i] = pt(i, _pointsFps[i].FpsMoyen);
+                if (_pointsFps[i].FpsBas > 0) basses.Add(pt(i, _pointsFps[i].FpsBas));
+            }
+            if (basses.Count >= 2) using (var pen = new Pen(FpsUi.Dim2, 1.5f)) g.DrawLines(pen, basses.ToArray());
+            using (var pen = new Pen(FpsUi.Gold, 2f)) g.DrawLines(pen, moyennes);
+            using (var b = new SolidBrush(FpsUi.Gold)) foreach (PointF p in moyennes) g.FillEllipse(b, p.X - 2.5f, p.Y - 2.5f, 5, 5);
         }
 
         private static void Section(Graphics g, string title, int y, int x, int w)

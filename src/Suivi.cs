@@ -73,10 +73,11 @@ namespace BTOptimizer
     }
 
     /// <summary>Un jeu Steam suivi. RemiseNotifiee et GratuitNotifie empêchent une deuxième notification pour la même promo.</summary>
-    internal sealed class JeuSuivi { public int AppId; public string Nom; public int RemiseNotifiee; public string GratuitNotifie = ""; }
+    internal sealed class JeuSuivi { public int AppId; public string Nom; public int RemiseNotifiee; public string GratuitNotifie = ""; public string FinNotifiee = ""; }
 
     /// <summary>
-    /// Jeux suivis (logique PURE) : format du fichier « AppId \t RemiseNotifiee \t GratuitNotifie \t Nom »
+    /// Jeux suivis (logique PURE) : format du fichier « AppId \t RemiseNotifiee \t GratuitNotifie \t Nom \t FinNotifiee »
+    /// (5e colonne ajoutée en 16.07, après le nom : les versions précédentes l'ignorent)
     /// et règle de notification. Une seule alerte par promo, même après un redémarrage ; une fiche
     /// manquante (erreur réseau) ne change rien.
     /// </summary>
@@ -97,7 +98,7 @@ namespace BTOptimizer
                 if (c.Length < 4 || !int.TryParse(c[0], NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0) continue;
                 if (!vus.Add(id)) continue;
                 if (!int.TryParse(c[1], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out remise) || remise > 100 || remise < AAmorcer) remise = 0;
-                res.Add(new JeuSuivi { AppId = id, RemiseNotifiee = remise, GratuitNotifie = c[2], Nom = c[3] });
+                res.Add(new JeuSuivi { AppId = id, RemiseNotifiee = remise, GratuitNotifie = c[2], Nom = c[3], FinNotifiee = c.Length > 4 ? c[4] : "" });
             }
             return res;
         }
@@ -112,7 +113,8 @@ namespace BTOptimizer
                 sb.Append(j.AppId.ToString(CultureInfo.InvariantCulture)).Append('\t')
                   .Append(j.RemiseNotifiee.ToString(CultureInfo.InvariantCulture)).Append('\t')
                   .Append(Favoris.Champ(j.GratuitNotifie)).Append('\t')
-                  .Append(Favoris.Champ(j.Nom)).Append('\n');
+                  .Append(Favoris.Champ(j.Nom)).Append('\t')
+                  .Append(Favoris.Champ(j.FinNotifiee)).Append('\n');
             }
             return sb.ToString();
         }
@@ -142,7 +144,21 @@ namespace BTOptimizer
             return jeux != null && jeux.RemoveAll(j => j.AppId == appId) > 0;
         }
 
+        /// <summary>Fenêtre de l'alerte « la promo se termine » : moins de 48 h avant la fin.</summary>
+        public static readonly TimeSpan AvantFin = TimeSpan.FromHours(48);
+
         public static List<Alerte> Decide(List<JeuSuivi> jeux, List<Offre> fiches, List<Offre> gratuits)
+        {
+            return Decide(jeux, fiches, gratuits, DateTime.UtcNow);
+        }
+
+        /// <summary>Clé d'une fin de promo (une seule alerte « se termine » par promo).</summary>
+        public static string CleFin(DateTime finUtc)
+        {
+            return finUtc.ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
+        }
+
+        public static List<Alerte> Decide(List<JeuSuivi> jeux, List<Offre> fiches, List<Offre> gratuits, DateTime maintenantUtc)
         {
             var res = new List<Alerte>();
             if (jeux == null) return res;
@@ -156,14 +172,29 @@ namespace BTOptimizer
                     if (j.RemiseNotifiee == AAmorcer) j.RemiseNotifiee = Math.Max(0, f.Remise);   // premier contrôle : aucune alerte
                     else if (f.Remise > 0 && f.PrixCts >= 0 && f.Remise > j.RemiseNotifiee)
                     {
+                        bool bientot = FinProche(f, maintenantUtc);
                         res.Add(new Alerte
                         {
                             AppId = j.AppId,
                             Titre = j.Nom + " : −" + f.Remise.ToString(CultureInfo.InvariantCulture) + " %",
-                            Texte = Offres.Prix(f.PrixCts) + " au lieu de " + Offres.Prix(f.PrixOrigineCts) + " sur Steam",
+                            Texte = Offres.Prix(f.PrixCts) + " au lieu de " + Offres.Prix(f.PrixOrigineCts) + " sur Steam"
+                                  + (bientot ? ", jusqu'au " + JusquAu(f.Fin.Value) : ""),
                             Url = f.Url,
                         });
                         j.RemiseNotifiee = f.Remise;
+                        if (bientot) j.FinNotifiee = CleFin(f.Fin.Value);   // la même promo ne notifie pas une 2e fois
+                    }
+                    else if (f.Remise > 0 && f.PrixCts >= 0 && FinProche(f, maintenantUtc) && j.FinNotifiee != CleFin(f.Fin.Value))
+                    {
+                        // Promo déjà signalée (ou en cours au moment du suivi) qui finit bientôt : dernier rappel.
+                        res.Add(new Alerte
+                        {
+                            AppId = j.AppId,
+                            Titre = j.Nom + " : la promo se termine bientôt",
+                            Texte = "−" + f.Remise.ToString(CultureInfo.InvariantCulture) + " % (" + Offres.Prix(f.PrixCts) + ") sur Steam jusqu'au " + JusquAu(f.Fin.Value),
+                            Url = f.Url,
+                        });
+                        j.FinNotifiee = CleFin(f.Fin.Value);
                     }
                     else if (f.Remise == 0) j.RemiseNotifiee = 0;
                 }
@@ -184,6 +215,16 @@ namespace BTOptimizer
                 }
             }
             return res;
+        }
+
+        private static bool FinProche(Offre f, DateTime maintenantUtc)
+        {
+            return f.Fin.HasValue && f.Fin.Value > maintenantUtc && f.Fin.Value - maintenantUtc <= AvantFin;
+        }
+
+        private static string JusquAu(DateTime finUtc)
+        {
+            return finUtc.ToLocalTime().ToString("dd'/'MM 'à' HH'h'mm", CultureInfo.InvariantCulture);
         }
 
         /// <summary>Au plus max notifications : au-delà, les max - 1 premières et une alerte de synthèse.</summary>

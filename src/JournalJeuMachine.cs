@@ -34,6 +34,12 @@ namespace BTOptimizer
             get { lock (_verrou) { return new List<Partie>(Charge()); } }
         }
 
+        /// <summary>Jeu reconnu en ce moment par la veille, ou null.</summary>
+        public static string JeuEnCours
+        {
+            get { lock (_verrou) { return _etat.Jeu; } }
+        }
+
         /// <summary>Partie close pendant que l'application tourne, FPS remplis si mesurés (fil de fond).</summary>
         public static event Action<Partie> PartieClose;
 

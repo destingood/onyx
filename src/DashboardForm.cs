@@ -23,7 +23,7 @@ namespace BTOptimizer
 
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
         [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
-        private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, WM_HOTKEY = 0x0312;
+        private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, HotkeyIdFps = 0xB73, HotkeyIdCapture = 0xB74, WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
         private NotifyIcon _tray;
         private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
@@ -1166,7 +1166,8 @@ namespace BTOptimizer
             var m = new ContextMenuStrip();
             m.Items.Add("Ouvrir ONYX  (Ctrl+Alt+O)", null, (s, e) => RestoreFromTray());
             m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
-            m.Items.Add("Overlay stats on/off", null, (s, e) => ToggleOverlay());
+            m.Items.Add("Compteur FPS on/off  (Ctrl+Alt+F)", null, (s, e) => ToggleOverlay());
+            m.Items.Add("Capture d’écran  (Ctrl+Alt+C)", null, (s, e) => CaptureEcranJeu());
             m.Items.Add("🛡 Gardien : vérifier maintenant", null, (s, e) => GuardianCheckNow());
             var snooze = new ToolStripMenuItem("🔕 Gardien : ne plus me prévenir 7 jours");
             snooze.Click += (s, e) =>
@@ -1326,6 +1327,20 @@ namespace BTOptimizer
             base.OnHandleCreated(e);
             try { RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'); } catch { }
             try { RegisterHotKey(Handle, HotkeyIdShow, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'O'); } catch { }
+            // Ctrl+Alt (et non Ctrl+Maj comme Cortex) : Ctrl+Maj+F et Ctrl+Maj+C servent déjà dans les
+            // navigateurs et les éditeurs, un raccourci global les volerait partout.
+            try { RegisterHotKey(Handle, HotkeyIdFps, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'F'); } catch { }
+            try { RegisterHotKey(Handle, HotkeyIdCapture, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'C'); } catch { }
+        }
+
+        /// <summary>Ctrl+Alt+C — capture de l'écran du jeu, enregistrée dans le dossier Captures de Windows.</summary>
+        private void CaptureEcranJeu()
+        {
+            CaptureEcran.Prend((chemin, erreur) =>
+            {
+                if (chemin != null) Notifie("Capture enregistrée", System.IO.Path.GetFileName(chemin) + " — dans " + System.IO.Path.GetDirectoryName(chemin) + " (Clips du jeu)");
+                else Notifie("Capture impossible", erreur ?? "erreur inconnue");
+            });
         }
 
         // Hide()/Show() (zone de notification) ne déclenchent pas OnVisibleChanged ici : seul
@@ -1340,6 +1355,8 @@ namespace BTOptimizer
         {
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) ToggleBoost();
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdShow) ToggleShell();
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdFps) ToggleOverlay();
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdCapture) CaptureEcranJeu();
             if (m.Msg == 0x007E) DisplayInfo.OublieModes();   // WM_DISPLAYCHANGE : écran changé, modes à relire
             base.WndProc(ref m);
         }
@@ -1362,6 +1379,8 @@ namespace BTOptimizer
             try { BadgeStore.OnNewBadge -= OnNewBadge; } catch { }
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }
+            try { UnregisterHotKey(Handle, HotkeyIdFps); } catch { }
+            try { UnregisterHotKey(Handle, HotkeyIdCapture); } catch { }
             try { if (GameBoost.IsActive) GameBoost.Deactivate(delegate (string a, int b) { }); } catch { }
             // Plan d'alimentation d'origine rétabli tout de suite (sinon : au lancement suivant).
             try { ProfilJeu.Arrete(null); } catch { }

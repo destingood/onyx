@@ -424,7 +424,7 @@ namespace BTOptimizer
 
         private bool Match(GameScan.GameInfo game)
         {
-            return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query))
+            return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query) || OptionsJeu.Nom(game.Name).ToLowerInvariant().Contains(_query))
                 && (_storeFilter == "Toutes les plateformes" || OnStore(game, _storeFilter));
         }
 
@@ -442,7 +442,7 @@ namespace BTOptimizer
             bool recents = _recentMode && !_catalogueMode;
             var cles = new Dictionary<GameScan.GameInfo, TriJeux.Entree>();
             foreach (var game in visible)
-                cles[game] = new TriJeux.Entree { Nom = game.Name, Favori = JeuxFavoris.Est(game.Name), Derniere = recents && game.Detected ? Derniere(game) : null };
+                cles[game] = new TriJeux.Entree { Nom = OptionsJeu.Nom(game.Name), Favori = JeuxFavoris.Est(game.Name), Derniere = recents && game.Detected ? Derniere(game) : null };
             visible.Sort((a, b) =>
             {
                 int rank = _spaceMode && !_catalogueMode ? SpaceRank(a).CompareTo(SpaceRank(b)) : 0;
@@ -469,7 +469,7 @@ namespace BTOptimizer
             // Rien de ce que montrent les tuiles n'a changé (retour sur la page, filtre sans effet) :
             // on garde les cartes, leurs jaquettes et la position de défilement.
             var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-").Append(recents ? "r" : "-");
-            foreach (var game in visible) sig.Append('|').Append(game.Name).Append(cles[game].Favori ? "*" : "");
+            foreach (var game in visible) sig.Append('|').Append(game.Name).Append('=').Append(cles[game].Nom).Append(cles[game].Favori ? "*" : "");
             string signature = sig.ToString();
             if (signature == _signatureRendu && ReferenceEquals(_all, _allRendu) && ReferenceEquals(_spaceData, _spaceRendu) && _flow.Controls.Count > 0)
             { Invalidate(); return; }
@@ -521,7 +521,8 @@ namespace BTOptimizer
 
         private Control Card(GameScan.GameInfo game)
         {
-            var card = new GameTile { Tag = game, Text = game.Name, AccessibleName = game.Name,
+            string affiche = OptionsJeu.Nom(game.Name);
+            var card = new GameTile { Tag = game, Text = affiche, AccessibleName = affiche,
                 AccessibleDescription = "Ouvrir la fiche du jeu", BackColor = FpsUi.BgMain };
             Action ready = () => { try { if (card.IsHandleCreated && !card.IsDisposed) card.BeginInvoke((Action)card.Invalidate); } catch { } };
             card.Paint += (sender, e) =>
@@ -533,7 +534,7 @@ namespace BTOptimizer
                 OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused ? FpsUi.GoldDim : FpsUi.Border, 12);
                 // Hors Steam, la jaquette du catalogue local d'Epic ; à défaut, recherche du nom sur Steam.
                 bool epicArt = game.SteamId <= 0 && game.ImageUrl != null && !GameArt.EchecUrl(game.ImageUrl);
-                Image cover = epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready);
+                Image cover = JaquettesPerso.Pour(game.Name) ?? (epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready));
                 var state = gr.Save();
                 using (var clip = FpsUi.Round(new RectangleF(1, 1, card.Width - 2, card.Height - 2), 11)) gr.SetClip(clip);
                 gr.SetClip(art, CombineMode.Intersect);
@@ -570,14 +571,14 @@ namespace BTOptimizer
                     OnyxDesign.PaintCard(gr, action, FpsUi.Gold, FpsUi.Gold, 7);
                     TextRenderer.DrawText(gr, "Voir le jeu  →", FpsUi.H3, action, FpsUi.BgMain, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
-                OnyxDesign.Text(gr, game.Name, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
+                OnyxDesign.Text(gr, affiche, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
                 var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
                 string joue = info == null && game.Detected ? TempsJeu(game) : null;
                 string status = info != null ? info.SizeText + " · " + info.IdleText : joue ?? (game.Detected ? "Détecté sur ce PC" : "Fiche & réglages");
                 OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
                     new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };
-            _tips.SetToolTip(card, game.Name + " — ouvrir la fiche et les réglages");
+            _tips.SetToolTip(card, affiche + " — ouvrir la fiche et les réglages");
             card.Click += (s, e) => OpenDetail(game);
             card.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
             return card;
@@ -594,6 +595,18 @@ namespace BTOptimizer
             var open = new ToolStripMenuItem("Ouvrir la fiche");
             open.Click += (s, e) => OpenDetail(game);
             _cardMenu.Items.Add(open);
+            var opts = new ToolStripMenuItem("Options, lancement et jaquette…");
+            opts.Click += (s, e) =>
+            {
+                using (var f = new OptionsJeuForm(game))
+                {
+                    f.ShowDialog(FindForm());
+                    if (!f.Change) return;
+                    Render();
+                    if (_flow != null) foreach (Control c in _flow.Controls) c.Invalidate();
+                }
+            };
+            _cardMenu.Items.Add(opts);
             _cardMenu.Show(card, ou);
         }
 
@@ -709,6 +722,7 @@ namespace BTOptimizer
             if (_flow != null) _flow.Visible = on;
             if (_searchBox != null) _searchBox.Visible = on;
             _installed.Visible = _catalogue.Visible = _platform.Visible = _results.Visible = _space.Visible = on;
+            if (_recents != null) _recents.Visible = on;
             Host.SetPageToolsVisible(on);
             if (_mode != null) _mode.Visible = on;
             if (_prio != null) _prio.Visible = on;

@@ -226,6 +226,16 @@ namespace BTOptimizer
         }
 
         /// <summary>« 26/11 20:00 · 1 h 12 · 238 FPS en moyenne · 141 au plus bas ».</summary>
+        /// <summary>Courbe des FPS : les <paramref name="n"/> dernières parties mesurées, de la plus ancienne à la plus récente.</summary>
+        public static List<Partie> PointsFps(List<Partie> parties, int n)
+        {
+            var l = new List<Partie>();
+            if (parties != null) foreach (Partie p in parties) if (p != null && p.FpsMoyen > 0) l.Add(p);
+            l.Sort((a, b) => a.Debut.CompareTo(b.Debut));
+            if (n >= 0 && l.Count > n) l.RemoveRange(0, l.Count - n);
+            return l;
+        }
+
         public static string LignePartie(Partie p)
         {
             if (p == null) return "";
