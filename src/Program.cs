@@ -2679,6 +2679,49 @@ namespace BTOptimizer
                 Console.WriteLine("  Préréglages " + pilote.Jeu + " : aperçu OK (" + apercu.Lines.Length + " lignes)");
                 f.Close();
             }
+            // Succès Steam : Cyberpunk 2077 lu dans le cache de Steam de ce PC (lecture seule).
+            using (var f = new SuccesForm(1091500, "Cyberpunk 2077"))
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show();
+                for (int i = 0; i < 50 && !f.ChargeFini; i++) Pump(100);
+                if (!f.ChargeFini) throw new InvalidOperationException("Succès : chargement jamais terminé.");
+                for (int i = 0; i < f.Controls.Count; i++)
+                {
+                    System.Drawing.Rectangle r = f.Controls[i].Bounds;
+                    if (!f.ClientRectangle.Contains(r)) throw new InvalidOperationException("Succès : « " + f.Controls[i].Text + " » déborde de la fenêtre.");
+                    for (int j = i + 1; j < f.Controls.Count; j++)
+                        if (r.IntersectsWith(f.Controls[j].Bounds))
+                            throw new InvalidOperationException("Succès : « " + f.Controls[i].Text + " » chevauche « " + f.Controls[j].Text + " ».");
+                }
+                SaveGamesShot(f, dir, "succes-cyberpunk");
+                Console.WriteLine("  Succès Cyberpunk 2077 : " + f.Lignes + " lignes");
+                f.Close();
+            }
+            // Fiche Cyberpunk : Préréglages, Clips et Succès sur une ligne, sans chevauchement.
+            using (var f = new GameDetailForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] }, null))
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show();
+                Button succes = null;
+                for (int i = 0; i < 50 && (succes == null || !succes.Visible); i++)
+                {
+                    Pump(100);
+                    foreach (Control c in f.Controls) if (c is Button b && b.Text.StartsWith("Succès", StringComparison.Ordinal)) succes = b;
+                }
+                if (succes == null || !succes.Visible) throw new InvalidOperationException("Fiche : bouton « Succès » absent.");
+                foreach (Control c in f.Controls)
+                {
+                    if (c == succes || !c.Visible || !(c is Button)) continue;
+                    if (c.Bounds.IntersectsWith(succes.Bounds)) throw new InvalidOperationException("Fiche : « Succès » chevauche « " + c.Text + " ».");
+                }
+                if (succes.Right > f.ClientSize.Width - 300) throw new InvalidOperationException("Fiche : « Succès » empiète sur la jaquette.");
+                SaveGamesShot(f, dir, "fiche-succes");
+                Console.WriteLine("  Fiche : " + succes.Text);
+                f.Close();
+            }
             // Bilan de jeu : journal de synthèse (8 jeux, plus que les 6 lignes affichées), les 3 périodes.
             var journal = new System.Collections.Generic.List<JournalJeu.Partie>();
             DateTime ref0 = new DateTime(2026, 11, 27, 22, 0, 0);

@@ -70,7 +70,7 @@ namespace BTOptimizer
 
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
-        private Button _back, _launch, _folder, _close, _hide, _uninstall, _presets, _clips;
+        private Button _back, _launch, _folder, _close, _hide, _uninstall, _presets, _clips, _succes;
 
         private void BuildActions()
         {
@@ -115,6 +115,28 @@ namespace BTOptimizer
             _clips.Click += (s, e) => { using (var f = new ClipsForm(_g.Name)) f.ShowDialog(FindForm()); };
             Controls.Add(_clips);
 
+            // Succès Steam : lus dans le cache de Steam (aucun réseau). Le bouton n'apparaît
+            // que si Steam connaît la liste des succès du jeu ; le compte vient d'un fil à part.
+            if (_g.SteamId > 0)
+            {
+                _succes = OnyxDesign.Button("Succès…");
+                _succes.Visible = false;
+                _succes.AccessibleName = "Succès Steam du jeu";
+                _succes.Click += (s, e) => { using (var f = new SuccesForm(_g.SteamId, _g.Name)) f.ShowDialog(FindForm()); };
+                Controls.Add(_succes);
+                int app = _g.SteamId;
+                // Démarré une fois la fenêtre créée : BeginInvoke échoue avant.
+                EventHandler lance = null;
+                lance = (s0, e0) => { HandleCreated -= lance; Task.Run(() =>
+                {
+                    string raison; DateTime? releve;
+                    SuccesSteam.Bilan b = SuccesSteam.Charge(app, out raison, out releve);
+                    if (b == null) return;
+                    try { BeginInvoke((Action)(() => { if (IsDisposed) return; _succes.Text = "Succès " + b.Obtenus + "/" + b.Total + "…"; _succes.Visible = true; })); } catch { }
+                }); };
+                if (IsHandleCreated) lance(this, EventArgs.Empty); else HandleCreated += lance;
+            }
+
             // Deux actions VOLONTAIREMENT distinctes : masquer ne touche à rien sur le disque,
             // désinstaller délègue au désinstalleur officiel. Ne jamais confondre les deux.
             _hide = OnyxDesign.Button(GameHidden.IsHidden(_g.Name) ? "Réafficher" : "Masquer");
@@ -158,7 +180,9 @@ namespace BTOptimizer
             if (_prio != null) _prio.SetBounds(Pad, ay, lw, 34);
             if (_presets != null) _presets.SetBounds(Pad, 402, Math.Min(lw, 240), 32);
             int cx = _presets != null ? Pad + Math.Min(lw, 240) + 12 : Pad;
-            if (_clips != null) _clips.SetBounds(cx, 402, Math.Max(120, Math.Min(180, Pad + lw - cx)), 32);
+            int clipsW = _succes != null ? 150 : 180;
+            if (_clips != null) _clips.SetBounds(cx, 402, Math.Max(120, Math.Min(clipsW, Pad + lw - cx)), 32);
+            if (_succes != null && _clips != null) { int sx = _clips.Right + 12; _succes.SetBounds(sx, 402, Math.Max(100, Pad + lw - sx), 32); }
             int half = (lw - 12) / 2;
             if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
             if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);

@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077 et Black Ops 6, FPS visés, bilan de jeu, mode manette
+## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077 et Black Ops 6, FPS visés, bilan de jeu, mode manette, succès Steam
 
 - **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par
   des virgules (« coop, à finir »). Elles servent de filtre dans le menu des plateformes et la
@@ -36,8 +36,7 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   depuis le début, avec l'écart par rapport à la période d'avant. Il indique aussi le nombre de
   parties, la plus longue partie, le jour où tu joues le plus et ta série de jours consécutifs.
   Les jeux les plus joués s'affichent en barres, avec leurs FPS moyens quand ils ont été mesurés.
-  Tout vient du journal des parties qu'ONYX tient déjà. Pas de succès : ONYX ne se connecte à aucun
-  compte.
+  Tout vient du journal des parties qu'ONYX tient déjà.
 - **Mes jeux : mode manette.** Une manette Xbox (ou toute manette XInput) parcourt la grille : croix
   ou stick gauche pour se déplacer, A pour ouvrir la fiche puis lancer le jeu, B pour revenir,
   LB/RB pour passer de « Sur mon PC » au « Catalogue ». ONYX ne lit la manette que s'il est au
@@ -50,6 +49,12 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   (s.1.0.cod24.txt0 et .txt1), avec le jeu et Call of Duty HQ fermés, et en garde une copie dans
   Documents\ONYX\Sauvegardes. « Rétablir » remet tout comme avant. Si la synchro des réglages
   dans le cloud est active, ONYX prévient : le jeu peut alors remettre ses propres valeurs.
+- **Mes jeux : succès Steam.** Pour un jeu Steam, la fiche affiche « Succès 10/57… ». Le bouton
+  ouvre la liste des succès : ceux que tu as débloqués d'abord, avec leur date, puis ceux qui
+  restent. Un filtre sépare les deux. Les succès cachés restent cachés tant que tu ne les as pas
+  débloqués, comme dans Steam. ONYX lit le cache que Steam garde sur le PC (appcache\stats) : aucune
+  connexion, aucun compte. Le relevé date de ta dernière partie ou de ta dernière visite de la page
+  Succès dans Steam.
 - **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
   bouton des plateformes.
 

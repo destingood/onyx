@@ -9,8 +9,8 @@ namespace BTOptimizer
     /// d'ONYX (<see cref="JournalJeu"/>) : temps joué, nombre de parties, jeux les plus joués, FPS
     /// moyens, plus longue partie, jour préféré, écart avec la période d'avant.
     ///
-    /// PUR : mêmes parties et même « maintenant », même bilan. Aucun succès (Cortex les lit dans les
-    /// comptes en ligne ; ONYX ne se connecte à aucun compte).
+    /// PUR : mêmes parties et même « maintenant », même bilan. Les succès Steam ont leur propre
+    /// fenêtre (SuccesSteam, lus dans le cache local de Steam).
     /// </summary>
     internal static class BilanJeu
     {
