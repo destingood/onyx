@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077, FPS visés, bilan de jeu, mode manette
+## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077 et Black Ops 6, FPS visés, bilan de jeu, mode manette
 
 - **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par
   des virgules (« coop, à finir »). Elles servent de filtre dans le menu des plateformes et la
@@ -43,6 +43,13 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   LB/RB pour passer de « Sur mon PC » au « Catalogue ». ONYX ne lit la manette que s'il est au
   premier plan sur Mes jeux : en jeu, il ne lit rien. Si Steam est ouvert avec sa configuration
   manette « bureau », une touche peut agir deux fois ; dans ce cas, désactive-la dans Steam.
+- **Préréglages : Call of Duty: Black Ops 6.** Fiche du jeu > « Préréglages graphiques… » : les
+  mêmes quatre modes que Fortnite et Cyberpunk 2077 (13 réglages : ombres, réflexions, particules,
+  modèles, physique, eau, tessellation, filtrage, décor, profondeur de champ, VRS). ONYX n'écrit
+  que des crans listés par le jeu lui-même. Il écrit dans les deux copies du fichier
+  (s.1.0.cod24.txt0 et .txt1), avec le jeu et Call of Duty HQ fermés, et en garde une copie dans
+  Documents\ONYX\Sauvegardes. « Rétablir » remet tout comme avant. Si la synchro des réglages
+  dans le cloud est active, ONYX prévient : le jeu peut alors remettre ses propres valeurs.
 - **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
   bouton des plateformes.
 

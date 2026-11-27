@@ -2645,8 +2645,9 @@ namespace BTOptimizer
                 Console.WriteLine("  Mode manette : déplacement, fiche, retour, LB/RB OK");
                 dash.Hide();
             }
-            // Préréglages Cyberpunk : aperçu seulement (« Compétition » cliqué, « Appliquer » jamais).
-            using (var f = new ReglagesJeuForm(ReglagesCyberpunk.Pilote))
+            // Préréglages Cyberpunk et Black Ops 6 : aperçu seulement (« Compétition » cliqué, « Appliquer » jamais).
+            foreach (IReglagesJeu pilote in new[] { ReglagesCyberpunk.Pilote, ReglagesCod.Pilote })
+            using (var f = new ReglagesJeuForm(pilote))
             {
                 f.StartPosition = FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
@@ -2657,7 +2658,7 @@ namespace BTOptimizer
                     if (mode == null && c is Button b && b.Text == "Compétition") mode = b;
                     if (c is TextBox t) apercu = t;
                 }
-                if (mode == null || apercu == null) throw new InvalidOperationException("Fenêtre des préréglages Cyberpunk incomplète.");
+                if (mode == null || apercu == null) throw new InvalidOperationException("Fenêtre des préréglages " + pilote.Jeu + " incomplète.");
                 // FPS visés : le champ existe, borné 30–500 ; aucun contrôle ne déborde ni n'en chevauche un autre.
                 NumericUpDown objectif = null;
                 foreach (Control c in f.Controls) if (c is NumericUpDown n) objectif = n;
@@ -2673,9 +2674,9 @@ namespace BTOptimizer
                 }
                 mode.PerformClick(); Pump(200);
                 if (!apercu.Text.Contains("changerait") && !apercu.Text.Contains("introuvable"))
-                    throw new InvalidOperationException("Aperçu Cyberpunk inattendu : " + apercu.Text);
-                SaveGamesShot(f, dir, "reglages-cyberpunk");
-                Console.WriteLine("  Préréglages Cyberpunk : aperçu OK (" + apercu.Lines.Length + " lignes)");
+                    throw new InvalidOperationException("Aperçu " + pilote.Jeu + " inattendu : " + apercu.Text);
+                SaveGamesShot(f, dir, pilote == ReglagesCod.Pilote ? "reglages-bo6" : "reglages-cyberpunk");
+                Console.WriteLine("  Préréglages " + pilote.Jeu + " : aperçu OK (" + apercu.Lines.Length + " lignes)");
                 f.Close();
             }
             // Bilan de jeu : journal de synthèse (8 jeux, plus que les 6 lignes affichées), les 3 périodes.

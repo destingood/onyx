@@ -140,6 +140,7 @@ namespace BTOptimizer.Tests
             ObjectifFpsTests.Tout();
             BilanJeuTests.Tout();
             ManetteTests.Tout();
+            ReglagesCodTests.Tout();
             return Banc.Bilan();
         }
     }

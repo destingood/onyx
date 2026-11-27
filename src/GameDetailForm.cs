@@ -102,7 +102,8 @@ namespace BTOptimizer
             BuildBoosts();
 
             IReglagesJeu reglages = string.Equals(_g.Name, "Fortnite", StringComparison.OrdinalIgnoreCase) ? ReglagesFortnite.Pilote
-                                  : ReglagesCyberpunk.EstLeJeu(_g.SteamId, _g.Name) ? ReglagesCyberpunk.Pilote : null;
+                                  : ReglagesCyberpunk.EstLeJeu(_g.SteamId, _g.Name) ? ReglagesCyberpunk.Pilote
+                                  : ReglagesCod.EstLeJeu(_g.SteamId, _g.Name) ? ReglagesCod.Pilote : null;
             if (reglages != null)
             {
                 _presets = OnyxDesign.Button("Préréglages graphiques…");

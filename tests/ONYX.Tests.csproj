@@ -74,6 +74,7 @@
     <Compile Include="..\src\ListeSouhaits.cs" />
     <Compile Include="..\src\ReglagesFortnite.cs" />
     <Compile Include="..\src\ReglagesCyberpunk.cs" />
+    <Compile Include="..\src\ReglagesCod.cs" />
     <Compile Include="..\src\ObjectifFps.cs" />
     <Compile Include="..\src\BilanJeu.cs" />
     <Compile Include="..\src\Manette.cs" />
