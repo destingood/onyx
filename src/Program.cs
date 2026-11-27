@@ -2639,6 +2639,10 @@ namespace BTOptimizer
                     if (!page.Controls.Find("games-grid", true)[0].Visible) throw new InvalidOperationException("Retour à la grille impossible.");
                     Console.WriteLine("  Mes jeux : filtres, état vide, grille et fiche OK à " + size.Width + "x" + size.Height);
                 }
+                page.ValidateManette();
+                page.ApercuManette(); Pump(500);
+                SaveGamesShot(dash, dir, "mode-manette");
+                Console.WriteLine("  Mode manette : déplacement, fiche, retour, LB/RB OK");
                 dash.Hide();
             }
             // Préréglages Cyberpunk : aperçu seulement (« Compétition » cliqué, « Appliquer » jamais).

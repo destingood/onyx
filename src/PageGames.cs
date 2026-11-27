@@ -177,6 +177,105 @@ namespace BTOptimizer
             try { Application.AddMessageFilter(_wheel); } catch { }
 
             Resize += (s, e) => DoLayout();
+
+            ManetteVeille.Geste += GesteManette;
+            VisibleChanged += (s, e) => MajEcouteManette();
+            HandleCreated += (s, e) =>
+            {
+                Form f = FindForm();
+                if (f == null) return;
+                f.Activated += (s2, e2) => { _fenetreActive = true; MajEcouteManette(); };
+                f.Deactivate += (s2, e2) => { _fenetreActive = false; MajEcouteManette(); };
+                _fenetreActive = Form.ActiveForm == f;
+                MajEcouteManette();
+            };
+        }
+
+        // ------------------------------------------------------------------ mode manette
+
+        private int _manetteIndex = -1;
+        private bool _fenetreActive;
+
+        /// <summary>La manette n'est lue que si ONYX est au premier plan sur Mes jeux : jamais en jeu.</summary>
+        private void MajEcouteManette()
+        {
+            Form f = FindForm();
+            ManetteVeille.Ecoute = Visible && _fenetreActive && f != null && f.Visible && f.WindowState != FormWindowState.Minimized;
+        }
+
+        private void GesteManette(Manette.Geste g)
+        {
+            try { if (IsHandleCreated && !IsDisposed) BeginInvoke((Action)(() => AppliqueManette(g))); } catch { }
+        }
+
+        private List<GameTile> Tuiles()
+        {
+            var l = new List<GameTile>();
+            if (_flow != null) foreach (Control c in _flow.Controls) if (c is GameTile t) l.Add(t);
+            return l;
+        }
+
+        private void MarqueManette()
+        {
+            List<GameTile> t = Tuiles();
+            for (int i = 0; i < t.Count; i++)
+            {
+                bool c = i == _manetteIndex;
+                if (t[i].Choisie != c) { t[i].Choisie = c; t[i].Invalidate(); }
+            }
+            if (_manetteIndex >= 0 && _manetteIndex < t.Count) _flow.ScrollControlIntoView(t[_manetteIndex]);
+        }
+
+        /// <summary>Croix ou stick : se déplacer ; A : ouvrir la fiche, puis lancer le jeu depuis la fiche ;
+        /// B : revenir (fiche → grille, recherche effacée, sélection retirée) ; LB / RB : Sur mon PC / Catalogue.</summary>
+        private void AppliqueManette(Manette.Geste g)
+        {
+            if (!Visible || IsDisposed) return;
+            if (_detail != null)
+            {
+                if (g == Manette.Geste.Retour) { CloseDetail(); MarqueManette(); }
+                else if (g == Manette.Geste.Valider)
+                {
+                    Button lancer = BoutonLancer(_detail);
+                    if (lancer != null && lancer.Enabled && lancer.Visible) lancer.PerformClick();
+                }
+                return;
+            }
+            List<GameTile> t = Tuiles();
+            switch (g)
+            {
+                case Manette.Geste.Precedent:
+                case Manette.Geste.Suivant:
+                    if (g == Manette.Geste.Precedent) _installed.PerformClick(); else _catalogue.PerformClick();
+                    _manetteIndex = Tuiles().Count > 0 ? 0 : -1;
+                    MarqueManette();
+                    return;
+                case Manette.Geste.Valider:
+                    if (_manetteIndex >= 0 && _manetteIndex < t.Count && t[_manetteIndex].Tag is GameScan.GameInfo jeu) OpenDetail(jeu);
+                    else { _manetteIndex = Manette.Deplace(-1, t.Count, Colonnes, g); MarqueManette(); }
+                    return;
+                case Manette.Geste.Retour:
+                    if (_search.Text.Length > 0) _search.Text = "";
+                    else _manetteIndex = -1;
+                    MarqueManette();
+                    return;
+                default:
+                    _manetteIndex = Manette.Deplace(_manetteIndex, t.Count, Colonnes, g);
+                    MarqueManette();
+                    return;
+            }
+        }
+
+        /// <summary>Le bouton « Lancer le jeu » de la fiche, cherché par son texte.</summary>
+        private static Button BoutonLancer(Control racine)
+        {
+            foreach (Control c in racine.Controls)
+            {
+                if (c is Button b && b.Text.StartsWith("Lancer le jeu", StringComparison.Ordinal)) return b;
+                Button d = BoutonLancer(c);
+                if (d != null) return d;
+            }
+            return null;
         }
 
         public override void OnShown()
@@ -562,6 +661,7 @@ namespace BTOptimizer
                 _flow.Controls.Add(empty);
             }
             LayoutCards(); _flow.ResumeLayout();
+            if (_manetteIndex >= 0) { _manetteIndex = Math.Min(_manetteIndex, Tuiles().Count - 1); MarqueManette(); }
             foreach (Control control in old) { _tips.SetToolTip(control, null); control.Dispose(); }
             Invalidate();
         }
@@ -575,10 +675,13 @@ namespace BTOptimizer
             button.Invalidate();
         }
 
+        private int Disponible { get { return Math.Max(250, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2); } }
+        private int Colonnes { get { return Math.Max(1, Disponible / 205); } }
+
         private void LayoutCards()
         {
-            int available = Math.Max(250, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2);
-            int columns = Math.Max(1, available / 205);
+            int available = Disponible;
+            int columns = Colonnes;
             int width = (available - (columns - 1) * 16) / columns;
             int index = 0;
             foreach (Control card in _flow.Controls)
@@ -601,7 +704,7 @@ namespace BTOptimizer
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
                 int artHeight = card.Height - 90;
                 var art = new Rectangle(1, 1, card.Width - 2, artHeight);
-                OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused ? FpsUi.GoldDim : FpsUi.Border, 12);
+                OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused || card.Choisie ? FpsUi.GoldDim : FpsUi.Border, 12);
                 // Hors Steam, la jaquette du catalogue local d'Epic ; à défaut, recherche du nom sur Steam.
                 bool epicArt = game.SteamId <= 0 && game.ImageUrl != null && !GameArt.EchecUrl(game.ImageUrl);
                 Image cover = JaquettesPerso.Pour(game.Name) ?? (epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready));
@@ -635,7 +738,7 @@ namespace BTOptimizer
                     using (var fill = new SolidBrush(Color.FromArgb(225, FpsUi.RailBg))) gr.FillPath(fill, path);
                     TextRenderer.DrawText(gr, "★", FpsUi.Small, star, FpsUi.Gold, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                 }
-                if (card.Hot || card.Focused)
+                if (card.Hot || card.Focused || card.Choisie)
                 {
                     var action = new Rectangle(12, artHeight - 40, card.Width - 24, 30);
                     OnyxDesign.PaintCard(gr, action, FpsUi.Gold, FpsUi.Gold, 7);
@@ -651,7 +754,8 @@ namespace BTOptimizer
             List<string> etiquettes = EtiquettesJeux.Pour(game.Name);
             _tips.SetToolTip(card, affiche + " — ouvrir la fiche et les réglages" + (etiquettes.Count > 0 ? "\n# " + string.Join("  # ", etiquettes) : ""));
             card.Click += (s, e) => OpenDetail(game);
-            card.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
+            card.MouseEnter += (s, e) => { if (_manetteIndex >= 0) { _manetteIndex = -1; MarqueManette(); } };   // la souris reprend la main
+            card.MouseUp +=(s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
             return card;
         }
 
@@ -697,6 +801,8 @@ namespace BTOptimizer
         private sealed class GameTile : Button
         {
             public bool Hot;
+            /// <summary>Case choisie à la manette (dessinée comme au survol).</summary>
+            public bool Choisie;
             public GameTile()
             {
                 FlatStyle = FlatStyle.Flat; FlatAppearance.BorderSize = 0; Cursor = Cursors.Hand;
@@ -729,6 +835,38 @@ namespace BTOptimizer
             if (_detail == null || _flow.Visible || _searchBox.Visible || _space.Visible)
                 throw new InvalidOperationException("La fiche ne remplace pas correctement la bibliothèque.");
         }
+        /// <summary>Mode manette sans manette : gestes injectés. « Valider » dans la fiche n'est JAMAIS
+        /// testé (il lancerait le jeu).</summary>
+        internal void ValidateManette()
+        {
+            _installed.PerformClick(); _search.Text = ""; _manetteIndex = -1;
+            List<GameTile> t = Tuiles();
+            int cols = Colonnes;
+            if (t.Count < cols + 2) throw new InvalidOperationException("Manette : trop peu de jeux pour tester la grille.");
+            AppliqueManette(Manette.Geste.Droite);
+            AppliqueManette(Manette.Geste.Droite);
+            AppliqueManette(Manette.Geste.Bas);
+            if (_manetteIndex != 1 + cols || !Tuiles()[1 + cols].Choisie || Tuiles()[0].Choisie)
+                throw new InvalidOperationException("Manette : déplacement incorrect (" + _manetteIndex + ", " + cols + " colonnes).");
+            AppliqueManette(Manette.Geste.Valider);
+            if (_detail == null) throw new InvalidOperationException("Manette : A n'ouvre pas la fiche.");
+            if (BoutonLancer(_detail) == null) throw new InvalidOperationException("Manette : bouton « Lancer le jeu » introuvable dans la fiche.");
+            AppliqueManette(Manette.Geste.Retour);
+            if (_detail != null || !Tuiles()[_manetteIndex].Choisie) throw new InvalidOperationException("Manette : B ne ramène pas à la grille sélectionnée.");
+            AppliqueManette(Manette.Geste.Suivant);
+            if (!_catalogueMode || _manetteIndex != 0) throw new InvalidOperationException("Manette : RB ne passe pas au catalogue.");
+            AppliqueManette(Manette.Geste.Precedent);
+            AppliqueManette(Manette.Geste.Retour);
+            if (_catalogueMode || _manetteIndex != -1) throw new InvalidOperationException("Manette : LB ou B incorrect.");
+        }
+
+        internal void ApercuManette()
+        {
+            _manetteIndex = -1;
+            AppliqueManette(Manette.Geste.Droite);
+            AppliqueManette(Manette.Geste.Droite);
+        }
+
         internal void ValidateLibraryUi()
         {
             _catalogue.PerformClick();
@@ -927,7 +1065,7 @@ namespace BTOptimizer
         protected override void Dispose(bool disposing)
         {
             if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
-            if (disposing) { _tips.Dispose(); _platformMenu.Dispose(); _cardMenu.Dispose(); }
+            if (disposing) { ManetteVeille.Geste -= GesteManette; ManetteVeille.Ecoute = false; _tips.Dispose(); _platformMenu.Dispose(); _cardMenu.Dispose(); }
             base.Dispose(disposing);
         }
     }

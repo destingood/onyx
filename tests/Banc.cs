@@ -139,6 +139,7 @@ namespace BTOptimizer.Tests
             ReglagesCyberpunkTests.Tout();
             ObjectifFpsTests.Tout();
             BilanJeuTests.Tout();
+            ManetteTests.Tout();
             return Banc.Bilan();
         }
     }
