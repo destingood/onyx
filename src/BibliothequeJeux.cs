@@ -199,6 +199,14 @@ namespace BTOptimizer
 
         private static readonly string[] MotsOutils = { "toolchain", "installer", "sdk", "compiler", "dedicated server", "mod tools", "redistributable" };
 
+        /// <summary>Le nom désigne un outil (serveur dédié, SDK, redistribuable…), pas un jeu.</summary>
+        public static bool EstOutil(string nom)
+        {
+            if (string.IsNullOrEmpty(nom)) return false;
+            foreach (string o in MotsOutils) if (nom.IndexOf(o, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
         /// <summary>
         /// Le mot-clé du catalogue apparaît comme mot entier dans le nom d'un programme installé, et ce
         /// programme n'est pas un outil (« Rustup: the Rust toolchain installer » ne veut pas dire Rust le jeu).

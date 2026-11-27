@@ -134,6 +134,7 @@ namespace BTOptimizer.Tests
             OffresMasqueesTests.Tout();
             LancementTests.Tout();
             EtiquettesJeuxTests.Tout();
+            JeuxCompteSteamTests.Tout();
             return Banc.Bilan();
         }
     }

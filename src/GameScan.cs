@@ -76,6 +76,8 @@ namespace BTOptimizer
             public string InstallPath;   // dossier d'installation résolu (si trouvé sur disque)
             public string Store;         // launcher résolu (STEAM / EPIC / RIOT / BATTLE.NET) si détecté
             public string ImageUrl;      // jaquette hors Steam (catalogue local d'Epic), null sinon
+            public bool SurCompte;       // non installé, mais lancé sur le compte Steam de ce PC (JeuxCompteSteam)
+            public int MinutesSteam;     // temps de jeu compté par Steam pour ce compte
             /// <summary>Toutes les plateformes où le jeu est installé (une seule carte par jeu).</summary>
             public readonly System.Collections.Generic.List<string> Stores = new System.Collections.Generic.List<string>();
         }

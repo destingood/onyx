@@ -187,8 +187,11 @@ namespace BTOptimizer
                 List<GameScan.GameInfo> games = new List<GameScan.GameInfo>();
                 try { games = GameScan.Known(); GameScan.Detect(games); } catch { }
                 try { MergeScanned(games); } catch { }   // + TOUS les jeux installés (scanner générique multi-plateforme)
+                var installes = new HashSet<int>();
+                foreach (GameScan.GameInfo g in games) if (g.Detected && g.SteamId > 0) installes.Add(g.SteamId);
                 try { BeginInvoke((Action)(() => { _all = games; UpdatePlatforms(); Render(); PrefetchArt(); })); } catch { }
                 DropSteamSoftware(games);
+                AddOwnedSteam(installes);
             });
         }
 
@@ -209,6 +212,36 @@ namespace BTOptimizer
                 {
                     if (_all == null) return;
                     _all.RemoveAll(g => g.Detected && software.Contains(g.SteamId));
+                    UpdatePlatforms(); Render();
+                }));
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Jeux lancés sur le compte Steam de ce PC mais pas installés : ajoutés au catalogue (en tête),
+        /// ou fusionnés avec la fiche du catalogue qui désigne le même jeu.
+        /// </summary>
+        private void AddOwnedSteam(HashSet<int> installes)
+        {
+            List<GameScan.GameInfo> owned;
+            try { owned = JeuxCompteSteam.Charge(installes); } catch { return; }
+            if (owned.Count == 0) return;
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    if (_all == null) return;
+                    foreach (GameScan.GameInfo o in owned)
+                    {
+                        GameScan.GameInfo same = _all.Find(g => (g.SteamId > 0 && g.SteamId == o.SteamId) || BibliothequeJeux.MemeJeu(g.Name, g.SteamId, g.Keywords, o.Name, o.SteamId));
+                        if (same == null) { _all.Add(o); continue; }
+                        if (same.Detected) continue;   // installé par un autre magasin
+                        same.SurCompte = true; same.MinutesSteam = o.MinutesSteam;
+                        if (same.SteamId <= 0) same.SteamId = o.SteamId;
+                        if (string.IsNullOrEmpty(same.Store)) same.Store = "STEAM";
+                    }
+                    _signatureRendu = null;
                     UpdatePlatforms(); Render();
                 }));
             }
@@ -474,7 +507,8 @@ namespace BTOptimizer
                 cles[game] = new TriJeux.Entree { Nom = OptionsJeu.Nom(game.Name), Favori = JeuxFavoris.Est(game.Name), Derniere = recents && game.Detected ? Derniere(game) : null };
             visible.Sort((a, b) =>
             {
-                int rank = _spaceMode && !_catalogueMode ? SpaceRank(a).CompareTo(SpaceRank(b)) : 0;
+                int rank = _catalogueMode ? b.SurCompte.CompareTo(a.SurCompte)
+                    : _spaceMode ? SpaceRank(a).CompareTo(SpaceRank(b)) : 0;
                 return rank != 0 ? rank : TriJeux.Compare(cles[a], cles[b], recents);
             });
             _installed.Text = "Sur mon PC · " + installed; _catalogue.Text = "Catalogue · " + catalogue;
@@ -484,8 +518,9 @@ namespace BTOptimizer
             StyleFilter(_recents, recents);
             _recents.Enabled = !_catalogueMode;
             _subtitle = installed + (installed == 1 ? " jeu détecté" : " jeux détectés") + " · Tes jeux, leurs réglages et leurs performances.";
+            int surCompte = _catalogueMode ? visible.FindAll(g => g.SurCompte).Count : 0;
             _results.Text = visible.Count + (visible.Count == 1 ? " jeu" : " jeux")
-                + (_catalogueMode ? " dans le catalogue · Non détectés sur ce PC" : " sur ton PC")
+                + (_catalogueMode ? " dans le catalogue · Non détectés sur ce PC" + (surCompte > 0 ? " · dont " + surCompte + " sur ton compte Steam" : "") : " sur ton PC")
                 + (_spaceMode && !_catalogueMode ? (_spaceLoading ? " · Analyse de l’espace…" : " · Tri par espace récupérable")
                    : recents ? " · Joués récemment (journal d’ONYX)" : " · Par ordre alphabétique")
                 + " · Clic droit sur un jeu : ★ favori";
@@ -603,7 +638,7 @@ namespace BTOptimizer
                 OnyxDesign.Text(gr, affiche, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
                 var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
                 string joue = info == null && game.Detected ? TempsJeu(game) : null;
-                string status = info != null ? info.SizeText + " · " + info.IdleText : joue ?? (game.Detected ? "Détecté sur ce PC" : "Fiche & réglages");
+                string status = info != null ? info.SizeText + " · " + info.IdleText : joue ?? (game.Detected ? "Détecté sur ce PC" : game.SurCompte ? JeuxCompteSteam.Statut(game.MinutesSteam) : "Fiche & réglages");
                 OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
                     new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };
@@ -625,6 +660,17 @@ namespace BTOptimizer
             var open = new ToolStripMenuItem("Ouvrir la fiche");
             open.Click += (s, e) => OpenDetail(game);
             _cardMenu.Items.Add(open);
+            if (!game.Detected && game.SteamId > 0)
+            {
+                var install = new ToolStripMenuItem("Installer avec Steam");
+                int id = game.SteamId;
+                install.Click += (s, e) =>
+                {
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("steam://install/" + id) { UseShellExecute = true }); }
+                    catch (Exception ex) { _results.Text = "Steam n'a pas pu s'ouvrir : " + ex.Message; }
+                };
+                _cardMenu.Items.Add(install);
+            }
             var opts = new ToolStripMenuItem("Options, étiquettes et images…");
             opts.Click += (s, e) =>
             {
