@@ -19,7 +19,7 @@ namespace BTOptimizer.Tests
             Banc.Verifie("par défaut, la grille", false, VueJeux.Lit("").Liste);
             Banc.Verifie("« liste » est relu", true, VueJeux.Lit("liste;aucun").Liste);
             Banc.Egal("le regroupement est relu", "Etiquette", VueJeux.Lit("LISTE;etiquette").Par.ToString());
-            Banc.Egal("un regroupement inconnu vaut « aucun »", "Aucun", VueJeux.Lit("liste;genre").Par.ToString());
+            Banc.Egal("un regroupement inconnu vaut « aucun »", "Aucun", VueJeux.Lit("liste;couleur").Par.ToString());
             Banc.Egal("aller-retour du choix", "liste;derniere", VueJeux.Ecrit(VueJeux.Lit("liste;derniere")));
             Banc.Egal("choix absent écrit en grille", "grille;aucun", VueJeux.Ecrit(null));
             Banc.Egal("bouton en grille", "Grille", VueJeux.Bouton(VueJeux.Lit("grille;plateforme")));
@@ -51,6 +51,13 @@ namespace BTOptimizer.Tests
             Banc.Egal("par dernière partie : de la plus récente à jamais, tranches vides omises",
                 "Aujourd'hui  ·  1=1 | 7 derniers jours  ·  1=0 | Plus ancien  ·  1=3 | Jamais lancé avec ONYX ouvert  ·  1=2",
                 Montre(VueJeux.Range(jeux, VueJeux.Groupe.DernierePartie, now)));
+            jeux[0].Genre = "RPG"; jeux[2].Genre = "FPS"; jeux[3].Genre = "RPG";
+            jeux[0].Editeur = "CD PROJEKT RED"; jeux[2].Editeur = "Valve";
+            Banc.Egal("par genre, inconnus à la fin", "FPS  ·  1=2 | RPG  ·  2=0,3 | Genre inconnu  ·  1=1",
+                Montre(VueJeux.Range(jeux, VueJeux.Groupe.Genre, now)));
+            Banc.Egal("par éditeur", "CD PROJEKT RED  ·  1=0 | Valve  ·  1=2 | Éditeur inconnu  ·  2=1,3",
+                Montre(VueJeux.Range(jeux, VueJeux.Groupe.Editeur, now)));
+            Banc.Egal("bouton par genre", "Liste · Genre", VueJeux.Bouton(VueJeux.Lit("liste;genre")));
             Banc.Egal("liste vide : aucun bloc", "0", VueJeux.Range(new List<VueJeux.Jeu>(), VueJeux.Groupe.Plateforme, now).Count.ToString());
             Banc.Egal("liste absente : aucun bloc", "0", VueJeux.Range(null, VueJeux.Groupe.Aucun, now).Count.ToString());
         }

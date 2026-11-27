@@ -49,6 +49,26 @@ namespace BTOptimizer
             _pointsFps = JournalJeu.PointsFps(_parties, 20);
             BuildActions();
             RefreshPrio();
+            ChargeFicheSteam();
+        }
+
+        /// <summary>Fiche Steam pas encore lue (jeu ouvert avant le scan) : chargée hors du fil
+        /// d'interface (réponse en cache 7 jours), puis la fiche se redessine.</summary>
+        private void ChargeFicheSteam()
+        {
+            int id = _g.SteamId;
+            if (id <= 0 || FichesSteam.Connue(id)) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    string url = FicheSteam.Url(new[] { id });
+                    if (url == null) return;
+                    string json = OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult();
+                    if (FichesSteam.Memorise(json) > 0 && IsHandleCreated && !IsDisposed) BeginInvoke((Action)Invalidate);
+                }
+                catch { }
+            });
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -468,6 +488,7 @@ namespace BTOptimizer
             string appreciation = "";
             try { appreciation = NotesJeu.TexteEtoiles(NotesJeu.De(_g.Name).Etoiles); } catch { }
             if (appreciation.Length > 0) st2 += "   ·   ma note " + appreciation;
+            try { if (NotesJeu.De(_g.Name).Recommande) st2 += "   ·   je recommande"; } catch { }
             TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
                 _g.Detected ? FpsUi.Gold : FpsUi.Dim, TextFormatFlags.NoPrefix);
 
@@ -476,6 +497,25 @@ namespace BTOptimizer
             string tip = _g.Uncap ?? "Règle la limite d'images sur Illimitée (ou 500) et coupe la V-Sync dans les options du jeu.";
             TextRenderer.DrawText(g, tip, FpsUi.Body, new Rectangle(Pad, 364, LeftW, 34), FpsUi.Ink,
                 TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+
+            // Fiche Steam (genre, éditeur, sortie, avis) dans l'espace libre sous « Lancer le jeu ».
+            List<string> fiche = FicheSteam.Lignes(FichesSteam.De(_g.SteamId));
+            if (fiche.Count > 0 && _launch != null)
+            {
+                int fy = _launch.Bottom + 26, bas = ClientSize.Height - 92;
+                if (fy + 48 <= bas)
+                {
+                    Section(g, "FICHE STEAM", fy, Pad, LeftW);
+                    int ly = fy + 28;
+                    foreach (string l in fiche)
+                    {
+                        if (ly + 18 > bas) break;
+                        TextRenderer.DrawText(g, l, FpsUi.Small, new Rectangle(Pad, ly, LeftW, 18), FpsUi.Ink,
+                            TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
+                        ly += 21;
+                    }
+                }
+            }
 
             if (!string.IsNullOrEmpty(_g.InstallPath))
                 TextRenderer.DrawText(g, _g.InstallPath, FpsUi.Tiny, new Rectangle(Pad, ClientSize.Height - 84, LeftW, 16),

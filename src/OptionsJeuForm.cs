@@ -14,7 +14,7 @@ namespace BTOptimizer
     {
         private readonly GameScan.GameInfo _g;
         private readonly TextBox _nom, _cible, _args, _dossier, _etiquettes;
-        private readonly Button _jaquette, _origine, _fond, _fondOrigine;
+        private readonly Button _jaquette, _origine, _fond, _fondOrigine, _icone, _iconeOrigine;
         private readonly Label _etat;
 
         public bool Change { get; private set; }
@@ -23,7 +23,7 @@ namespace BTOptimizer
         {
             _g = g;
             Text = "ONYX — Options de " + g.Name;
-            ClientSize = new Size(560, 488);
+            ClientSize = new Size(560, 528);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false; MinimizeBox = false;
@@ -68,6 +68,17 @@ namespace BTOptimizer
             _fondOrigine.Enabled = FondsPerso.A(g.Name);
             _fondOrigine.Click += (s, e) => FondOrigine();
             Controls.Add(_fondOrigine);
+            y += 40;
+
+            _icone = OnyxDesign.Button("Changer l'icône…");
+            _icone.SetBounds(16, y, 190, 32);
+            _icone.Click += (s, e) => ChoisirIcone();
+            Controls.Add(_icone);
+            _iconeOrigine = OnyxDesign.Button("Icône d'origine");
+            _iconeOrigine.SetBounds(214, y, 170, 32);
+            _iconeOrigine.Enabled = IconesPerso.A(g.Name);
+            _iconeOrigine.Click += (s, e) => IconeOrigine();
+            Controls.Add(_iconeOrigine);
             y += 40;
 
             _etat = new Label { Location = new Point(16, y), Size = new Size(528, 20), ForeColor = FpsUi.Dim };
@@ -156,6 +167,30 @@ namespace BTOptimizer
                 }
                 catch (Exception ex) { _etat.ForeColor = FpsUi.Dim; _etat.Text = "Image illisible : " + ex.Message; }
             }
+        }
+
+        private void ChoisirIcone()
+        {
+            using (var d = new OpenFileDialog { Title = "Icône du jeu (vue liste)", Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.ico|Tous les fichiers|*.*", CheckFileExists = true })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    IconesPerso.Pose(_g.Name, d.FileName);
+                    Change = true;
+                    _iconeOrigine.Enabled = true;
+                    _etat.ForeColor = FpsUi.Gold; _etat.Text = "Icône changée : elle s'affiche dans la vue liste.";
+                }
+                catch (Exception ex) { _etat.ForeColor = FpsUi.Dim; _etat.Text = "Image illisible : " + ex.Message; }
+            }
+        }
+
+        private void IconeOrigine()
+        {
+            bool ok = IconesPerso.Retire(_g.Name, Handle);
+            Change = true;
+            _iconeOrigine.Enabled = IconesPerso.A(_g.Name);
+            _etat.Text = ok ? "Icône d'origine rétablie (l'image choisie est dans la Corbeille)." : "La copie n'a pas pu aller à la Corbeille.";
         }
 
         private void FondOrigine()

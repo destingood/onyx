@@ -93,6 +93,7 @@
     <Compile Include="..\src\VueJeux.cs" />
     <Compile Include="..\src\Raccourcis.cs" />
     <Compile Include="..\src\ListeModeJeu.cs" />
+    <Compile Include="..\src\FicheSteam.cs" />
     <Compile Include="..\src\JeuxCompteSteam.cs" />
     <Compile Include="..\src\ListeSouhaitsGog.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />

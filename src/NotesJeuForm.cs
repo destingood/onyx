@@ -16,6 +16,7 @@ namespace BTOptimizer
         private readonly TextBox _note;
         private readonly ListBox _liens;
         private readonly ComboBox _etoiles;
+        private readonly CheckBox _recommande;
         private readonly Button _ajouter, _retirer, _ouvrir;
         private readonly Label _etat, _compte;
         private readonly List<NotesJeu.Lien> _liste;
@@ -42,6 +43,9 @@ namespace BTOptimizer
             for (int n = 1; n <= NotesJeu.MaxEtoiles; n++) _etoiles.Items.Add(new string('★', n) + new string('☆', NotesJeu.MaxEtoiles - n) + "   " + NotesJeu.TexteEtoiles(n));
             _etoiles.SelectedIndex = NotesJeu.EtoilesPropres(f.Etoiles);
             Controls.Add(_etoiles);
+            _recommande = new CheckBox { Text = "Je recommande ce jeu", Checked = f.Recommande, Location = new Point(320, 14), Size = new Size(264, 22) };
+            _recommande.AccessibleName = "Je recommande ce jeu";
+            Controls.Add(_recommande);
 
             Controls.Add(new Label { Text = "Note personnelle (réglages à retenir, objectif, où tu en es…). Elle reste sur ce PC.", Location = new Point(16, 50), Size = new Size(568, 18) });
             _note = new TextBox
@@ -150,7 +154,7 @@ namespace BTOptimizer
 
         private void Enregistrer()
         {
-            if (!NotesJeu.Enregistre(_g.Name, _etoiles.SelectedIndex, _note.Text, _liste))
+            if (!NotesJeu.Enregistre(_g.Name, _etoiles.SelectedIndex, _note.Text, _liste, _recommande.Checked))
             {
                 _etat.Text = "Enregistrement impossible (fichier en lecture seule, ou " + NotesJeu.MaxJeux + " jeux annotés au plus).";
                 return;

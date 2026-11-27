@@ -5,13 +5,13 @@ namespace BTOptimizer
 {
     /// <summary>
     /// AFFICHAGE DE LA BIBLIOTHÈQUE (logique PURE) : grille de jaquettes ou liste, et, en liste,
-    /// regroupement par plateforme, par étiquette ou par dernière partie. Le choix est gardé dans
+    /// regroupement par plateforme, par étiquette, par dernière partie, par genre ou par éditeur. Le choix est gardé dans
     /// bt-jeux-vue.txt (« liste;plateforme »). L'ordre DANS un groupe reste celui de la bibliothèque
     /// (favoris d'abord, puis le tri choisi) : le regroupement ne fait que découper.
     /// </summary>
     internal static class VueJeux
     {
-        public enum Groupe { Aucun, Plateforme, Etiquette, DernierePartie }
+        public enum Groupe { Aucun, Plateforme, Etiquette, DernierePartie, Genre, Editeur }
 
         public sealed class Choix
         {
@@ -25,6 +25,8 @@ namespace BTOptimizer
             public string Plateforme = "";
             public List<string> Etiquettes = new List<string>();
             public DateTime? Derniere;
+            /// <summary>Genre et éditeur de la fiche Steam ; null si le jeu n'en a pas (ou pas encore).</summary>
+            public string Genre, Editeur;
         }
 
         public sealed class Bloc
@@ -34,9 +36,9 @@ namespace BTOptimizer
             public List<int> Jeux = new List<int>();
         }
 
-        private static readonly string[] Codes = { "aucun", "plateforme", "etiquette", "derniere" };
+        private static readonly string[] Codes = { "aucun", "plateforme", "etiquette", "derniere", "genre", "editeur" };
 
-        public static readonly string[] Libelles = { "Aucun", "Plateforme", "Étiquette", "Dernière partie" };
+        public static readonly string[] Libelles = { "Aucun", "Plateforme", "Étiquette", "Dernière partie", "Genre", "Éditeur" };
 
         public static Choix Lit(string texte)
         {
@@ -107,12 +109,17 @@ namespace BTOptimizer
                 }
                 var cles = new List<string>();
                 if (par == Groupe.Plateforme) cles.Add(string.IsNullOrWhiteSpace(j.Plateforme) ? "Autres" : j.Plateforme.Trim());
+                else if (par == Groupe.Genre || par == Groupe.Editeur)
+                {
+                    string v = par == Groupe.Genre ? j.Genre : j.Editeur;
+                    if (!string.IsNullOrWhiteSpace(v)) cles.Add(v.Trim());
+                }
                 else if (j.Etiquettes != null)
                     foreach (string e in j.Etiquettes)
                         if (!string.IsNullOrWhiteSpace(e) && !cles.Exists(x => string.Equals(x, e.Trim(), StringComparison.CurrentCultureIgnoreCase))) cles.Add(e.Trim());
                 if (cles.Count == 0)
                 {
-                    if (sans == null) sans = new Bloc { Titre = "Sans étiquette" };
+                    if (sans == null) sans = new Bloc { Titre = par == Groupe.Genre ? "Genre inconnu" : par == Groupe.Editeur ? "Éditeur inconnu" : "Sans étiquette" };
                     sans.Jeux.Add(i);
                     continue;
                 }

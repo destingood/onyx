@@ -149,6 +149,7 @@ namespace BTOptimizer.Tests
             VueJeuxTests.Tout();
             RaccourcisTests.Tout();
             ListeModeJeuTests.Tout();
+            FicheSteamTests.Tout();
             return Banc.Bilan();
         }
     }

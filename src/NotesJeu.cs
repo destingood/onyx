@@ -6,8 +6,10 @@ namespace BTOptimizer
 {
     /// <summary>
     /// NOTE ET LIENS PAR JEU (logique PURE) : une appréciation sur 5, une note personnelle et quelques
-    /// liens web (wiki, carte, guide…) que l'utilisateur attache à un jeu. Une ligne par jeu dans
-    /// bt-jeux-notes.txt : « clé TAB étoiles TAB note TAB url titre TAB url titre… ». La note garde
+    /// liens web (wiki, carte, guide…) que l'utilisateur attache à un jeu, et « je recommande ». Une ligne
+    /// par jeu dans bt-jeux-notes.txt : « clé TAB étoiles TAB note TAB url titre TAB url titre… » ; un jeu
+    /// recommandé porte « ,r » après ses étoiles (« 4,r »), si bien qu'un fichier sans recommandation
+    /// reste celui des versions précédentes. La note garde
     /// ses retours à la ligne (codés
     /// « \n »). Seuls les liens http et https sont acceptés : un lien ne lance jamais un programme.
     /// Rien ne sort du PC : ONYX n'ouvre un lien que quand l'utilisateur clique dessus.
@@ -23,8 +25,10 @@ namespace BTOptimizer
             public string Cle = "", Note = "";
             /// <summary>Appréciation personnelle : 1 à 5, 0 = pas noté.</summary>
             public int Etoiles;
+            /// <summary>« Je recommande ce jeu ».</summary>
+            public bool Recommande;
             public List<Lien> Liens = new List<Lien>();
-            public bool Vide { get { return Etoiles == 0 && Note.Length == 0 && Liens.Count == 0; } }
+            public bool Vide { get { return Etoiles == 0 && !Recommande && Note.Length == 0 && Liens.Count == 0; } }
             /// <summary>Ce que le bouton de la fiche annonce : la note compte pour un, chaque lien pour un.</summary>
             public int Nombre { get { return (Note.Length > 0 ? 1 : 0) + Liens.Count; } }
         }
@@ -124,9 +128,10 @@ namespace BTOptimizer
             {
                 string[] c = brute.TrimEnd('\r').Split('\t');
                 if (c.Length < 3 || c[0].Length == 0 || !vues.Add(c[0])) continue;
-                int etoiles;
-                int.TryParse(c[1], out etoiles);
+                int etoiles, virgule = c[1].IndexOf(',');
+                int.TryParse(virgule < 0 ? c[1] : c[1].Substring(0, virgule), out etoiles);
                 var f = new Fiche { Cle = c[0], Etoiles = EtoilesPropres(etoiles), Note = NotePropre(Decode(c[2])) };
+                f.Recommande = virgule >= 0 && c[1].Substring(virgule + 1).Trim() == "r";
                 for (int i = 3; i < c.Length && f.Liens.Count < MaxLiens; i++)
                 {
                     int esp = c[i].IndexOf(' ');
@@ -147,7 +152,7 @@ namespace BTOptimizer
             foreach (Fiche f in l)
             {
                 if (f == null || f.Cle.Length == 0 || f.Vide) continue;
-                sb.Append(f.Cle).Append('\t').Append(EtoilesPropres(f.Etoiles)).Append('\t').Append(Code(NotePropre(f.Note)));
+                sb.Append(f.Cle).Append('\t').Append(EtoilesPropres(f.Etoiles)).Append(f.Recommande ? ",r" : "").Append('\t').Append(Code(NotePropre(f.Note)));
                 foreach (Lien k in f.Liens) sb.Append('\t').Append(k.Url).Append(' ').Append(TitrePropre(k.Titre));
                 sb.Append('\n');
             }
@@ -163,14 +168,14 @@ namespace BTOptimizer
         }
 
         /// <summary>
-        /// Remplace l'appréciation, la note et les liens du jeu ; tout vide les retire. Les liens invalides ou en
-        /// double sont écartés. Faux si la liste des jeux est pleine.
+        /// Remplace l'appréciation, la recommandation, la note et les liens du jeu ; tout vide les retire. Les
+        /// liens invalides ou en double sont écartés. Faux si la liste des jeux est pleine.
         /// </summary>
-        public static bool Pose(List<Fiche> l, string nomJeu, int etoiles, string note, IEnumerable<Lien> liens)
+        public static bool Pose(List<Fiche> l, string nomJeu, int etoiles, string note, IEnumerable<Lien> liens, bool recommande = false)
         {
             string cle = BibliothequeJeux.Cle(nomJeu);
             if (l == null || cle.Length == 0) return false;
-            var f = new Fiche { Cle = cle, Etoiles = EtoilesPropres(etoiles), Note = NotePropre(note) };
+            var f = new Fiche { Cle = cle, Etoiles = EtoilesPropres(etoiles), Recommande = recommande, Note = NotePropre(note) };
             if (liens != null)
                 foreach (Lien k in liens)
                 {

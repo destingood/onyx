@@ -2203,6 +2203,7 @@ namespace BTOptimizer
                 case "DiscordForm": return new DiscordForm(log);
                 case "ClipsForm": return new ClipsForm();
                 case "NotesJeuForm": return new NotesJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
+                case "OptionsJeuForm": return new OptionsJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
                 case "RaccourcisForm": return new RaccourcisForm(null);
                 case "BoostConfigForm": return new BoostConfigForm(log);
                 default: return null;
@@ -2693,6 +2694,12 @@ namespace BTOptimizer
                     page.ValidateListe();
                     page.VuePourTest(true, VueJeux.Groupe.Plateforme); Pump(800);
                     SaveGamesShot(dash, dir, "mes-jeux-liste-" + size.Width);
+                    if (size.Width == 1280)
+                    {
+                        // Fiches Steam (genre) : arrivent du réseau après le premier rendu.
+                        page.VuePourTest(true, VueJeux.Groupe.Genre); Pump(3000);
+                        SaveGamesShot(dash, dir, "mes-jeux-genre-" + size.Width);
+                    }
                     page.VuePourTest(false, VueJeux.Groupe.Aucun); Pump(100);
                     page.PreviewDetail(true); Pump(500);
                     SaveGamesShot(dash, dir, "fiche-jeu-" + size.Width);

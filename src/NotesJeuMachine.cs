@@ -36,18 +36,19 @@ namespace BTOptimizer
                 Fiche f = Trouve(Liste(), nomJeu);
                 var copie = new Fiche();
                 if (f == null) return copie;
-                copie.Cle = f.Cle; copie.Note = f.Note; copie.Etoiles = f.Etoiles;
+                copie.Cle = f.Cle; copie.Note = f.Note; copie.Etoiles = f.Etoiles; copie.Recommande = f.Recommande;
                 foreach (Lien k in f.Liens) copie.Liens.Add(new Lien { Titre = k.Titre, Url = k.Url });
                 return copie;
             }
         }
 
-        /// <summary>Enregistre l'appréciation, la note et les liens ; tout vide les retire. Faux si l'écriture échoue.</summary>
-        public static bool Enregistre(string nomJeu, int etoiles, string note, IEnumerable<Lien> liens)
+        /// <summary>Enregistre l'appréciation, la recommandation, la note et les liens ; tout vide les retire.
+        /// Faux si l'écriture échoue.</summary>
+        public static bool Enregistre(string nomJeu, int etoiles, string note, IEnumerable<Lien> liens, bool recommande = false)
         {
             lock (_verrou)
             {
-                if (!Pose(Liste(), nomJeu, etoiles, note, liens)) return false;
+                if (!Pose(Liste(), nomJeu, etoiles, note, liens, recommande)) return false;
                 try
                 {
                     string p = AppPaths.File(Fichier), tmp = p + ".tmp";

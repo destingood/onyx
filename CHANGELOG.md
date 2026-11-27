@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions
+## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux
 
 - **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
   afficher ONYX, compteur en jeu et capture d'écran. On clique dans la case et on tape la
@@ -25,6 +25,19 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   réactifs.
 - **Mises à jour : préversions (bêta).** Menu ⋯ → « Recevoir aussi les préversions » : ONYX
   propose aussi les préversions publiées sur GitHub. À numéro égal, la version finale passe devant.
+- **Fiche Steam du jeu.** La fiche d'un jeu Steam affiche son genre, son développeur et son
+  éditeur, sa date de sortie et les avis des joueurs (« 85 % positives sur 10 007 237 avis »).
+  Ces données viennent de l'appel public qu'ONYX faisait déjà pour reconnaître les logiciels
+  (même réponse, en cache 7 jours) : seuls des numéros de jeux partent, rien du compte. Le genre
+  est la première étiquette des joueurs qui est un vrai genre (« Cyberpunk » ou « Monde ouvert »
+  sont sautés).
+- **Bibliothèque : regrouper par genre ou par éditeur.** Deux choix de plus dans la vue liste.
+  Les jeux sans fiche Steam vont dans « Genre inconnu » ou « Éditeur inconnu ».
+- **Notes du jeu : « Je recommande ce jeu ».** Case à cocher à côté de l'appréciation, rappelée
+  en haut de la fiche. Le fichier des notes reste lisible par les versions précédentes.
+- **Icône personnalisée par jeu.** Options du jeu → « Changer l'icône… » : l'image choisie
+  remplace la miniature de la vue liste (et l'icône de la tuile quand le jeu n'a pas de
+  jaquette). « Icône d'origine » met la copie à la Corbeille.
 
 ## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
 

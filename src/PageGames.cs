@@ -325,7 +325,7 @@ namespace BTOptimizer
             var ids = new List<int>();
             foreach (GameScan.GameInfo g in games) if (g.Detected && g.SteamId > 0) ids.Add(g.SteamId);
             HashSet<int> software = LogicielsSteam(ids);
-            if (software.Count == 0) return;
+            if (software.Count == 0) { RendSiFiches(); return; }
             try
             {
                 BeginInvoke((Action)(() =>
@@ -342,11 +342,33 @@ namespace BTOptimizer
         /// Jeux lancés sur le compte Steam de ce PC mais pas installés : ajoutés au catalogue (en tête),
         /// ou fusionnés avec la fiche du catalogue qui désigne le même jeu.
         /// </summary>
+        private static FicheSteam.Fiche FicheDe(GameScan.GameInfo g) { return g != null ? FichesSteam.De(g.SteamId) : null; }
+
+        /// <summary>Les fiches Steam arrivent après le premier rendu : la liste groupée par genre ou
+        /// par éditeur est refaite (depuis n'importe quel fil).</summary>
+        private void RendSiFiches()
+        {
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    if (!_choixVue.Liste || (_choixVue.Par != VueJeux.Groupe.Genre && _choixVue.Par != VueJeux.Groupe.Editeur)) return;
+                    _signatureRendu = null;
+                    Render();
+                }));
+            }
+            catch { }
+        }
+
         private void AddOwnedSteam(HashSet<int> installes)
         {
             List<GameScan.GameInfo> owned;
             try { owned = JeuxCompteSteam.Charge(installes); } catch { return; }
             if (owned.Count == 0) return;
+            // Fiches Steam des jeux du compte non installés (genre, éditeur) : même appel, même cache.
+            var sansFiche = new List<int>();
+            foreach (GameScan.GameInfo o in owned) if (o.SteamId > 0 && !FichesSteam.Connue(o.SteamId)) sansFiche.Add(o.SteamId);
+            if (sansFiche.Count > 0) { try { LogicielsSteam(sansFiche); } catch { } }
             try
             {
                 BeginInvoke((Action)(() =>
@@ -369,7 +391,8 @@ namespace BTOptimizer
         }
 
         /// <summary>AppID classés « Software » par Steam (réseau, réponse en cache 7 jours ; hors ligne :
-        /// ensemble vide). Bloquant : à appeler hors du fil d'interface.</summary>
+        /// ensemble vide). La même réponse remplit les fiches Steam (genre, éditeur, sortie, avis).
+        /// Bloquant : à appeler hors du fil d'interface.</summary>
         internal static HashSet<int> LogicielsSteam(List<int> appIds)
         {
             var ids = new List<int>();
@@ -379,8 +402,10 @@ namespace BTOptimizer
             {
                 try
                 {
-                    string url = OffresSources.UrlFichesSteam(ids.GetRange(i, Math.Min(OffresSources.LotSteam, ids.Count - i)));
-                    software.UnionWith(BibliothequeJeux.LogicielsSteam(OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult()));
+                    string url = FicheSteam.Url(ids.GetRange(i, Math.Min(OffresSources.LotSteam, ids.Count - i)));
+                    string json = OffresReseau.Texte(url, 7 * 24 * 60).GetAwaiter().GetResult();
+                    software.UnionWith(BibliothequeJeux.LogicielsSteam(json));
+                    FichesSteam.Memorise(json);
                 }
                 catch { }
             }
@@ -672,7 +697,9 @@ namespace BTOptimizer
                     {
                         Plateforme = StoreName(game),
                         Etiquettes = _choixVue.Par == VueJeux.Groupe.Etiquette ? EtiquettesJeux.Pour(game.Name) : null,
-                        Derniere = _choixVue.Par == VueJeux.Groupe.DernierePartie && game.Detected ? Derniere(game) : null
+                        Derniere = _choixVue.Par == VueJeux.Groupe.DernierePartie && game.Detected ? Derniere(game) : null,
+                        Genre = FicheDe(game) != null ? FicheDe(game).Genre : null,
+                        Editeur = FicheDe(game) != null ? FicheDe(game).Editeur : null
                     });
                 foreach (VueJeux.Bloc bloc in VueJeux.Range(infos, _choixVue.Par, DateTime.Now))
                 {
@@ -765,7 +792,7 @@ namespace BTOptimizer
                     using (var fill = new LinearGradientBrush(art, Color.FromArgb(43, 39, 29), FpsUi.RailBg, 60f)) gr.FillRectangle(fill, art);
                     using (var line = new Pen(Color.FromArgb(14, FpsUi.Gold)))
                         for (int x = -artHeight; x < card.Width; x += 22) gr.DrawLine(line, x, art.Bottom, x + artHeight, art.Top);
-                    Image icon = game.Detected && !epicArt ? GameIcon.For(game.InstallPath, ready) : null;
+                    Image icon = IconesPerso.Pour(game.Name) ?? (game.Detected && !epicArt ? GameIcon.For(game.InstallPath, ready) : null);
                     int size = Math.Min(icon != null ? 132 : 100, artHeight - 64);
                     var iconRect = new Rectangle((card.Width - size) / 2, (artHeight - size) / 2, size, size);
                     if (icon != null) DrawIconCover(gr, icon, art, iconRect);
@@ -823,9 +850,19 @@ namespace BTOptimizer
             var vignette = new Rectangle(8, 6, 46, card.Height - 12);
             bool epicArt = game.SteamId <= 0 && game.ImageUrl != null && !GameArt.EchecUrl(game.ImageUrl);
             Image cover = JaquettesPerso.Pour(game.Name) ?? (epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready));
+            Image perso = IconesPerso.Pour(game.Name);
             var state = gr.Save();
             using (var clip = FpsUi.Round(vignette, 6)) gr.SetClip(clip);
-            if (cover != null) DrawCover(gr, cover, vignette);
+            if (perso != null)
+            {
+                // Icône choisie par l'utilisateur : passe avant la jaquette, centrée sans déformation.
+                using (var fill = new SolidBrush(FpsUi.RailBg)) gr.FillRectangle(fill, vignette);
+                gr.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                double k = Math.Min((vignette.Width - 4) / (double)perso.Width, (vignette.Height - 4) / (double)perso.Height);
+                int iw = Math.Max(1, (int)(perso.Width * k)), ih = Math.Max(1, (int)(perso.Height * k));
+                gr.DrawImage(perso, new Rectangle(vignette.X + (vignette.Width - iw) / 2, vignette.Y + (vignette.Height - ih) / 2, iw, ih));
+            }
+            else if (cover != null) DrawCover(gr, cover, vignette);
             else
             {
                 using (var fill = new SolidBrush(FpsUi.RailBg)) gr.FillRectangle(fill, vignette);

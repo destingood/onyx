@@ -85,6 +85,14 @@ namespace BTOptimizer.Tests
             var seule = new List<NotesJeu.Fiche>();
             Banc.Verifie("une appréciation seule suffit à garder la fiche", true, NotesJeu.Pose(seule, "Hades II", 5, "", null) && seule.Count == 1);
             Banc.Egal("l'appréciation seule se relit", "5", NotesJeu.Lire(NotesJeu.Ecrire(seule))[0].Etoiles.ToString());
+            Banc.Egal("sans recommandation, la ligne reste celle des versions précédentes", BibliothequeJeux.Cle("Hades II") + "\t5\t\n", NotesJeu.Ecrire(seule));
+            var reco = new List<NotesJeu.Fiche>();
+            Banc.Verifie("« je recommande » seul suffit à garder la fiche", true, NotesJeu.Pose(reco, "Hades II", 0, "", null, true) && reco.Count == 1);
+            NotesJeu.Pose(reco, "Hades II", 4, "Top", null, true);
+            Banc.Egal("la recommandation s'écrit après les étoiles", BibliothequeJeux.Cle("Hades II") + "\t4,r\tTop\n", NotesJeu.Ecrire(reco));
+            NotesJeu.Fiche relue = NotesJeu.Lire(NotesJeu.Ecrire(reco))[0];
+            Banc.Verifie("étoiles et recommandation se relisent", true, relue.Etoiles == 4 && relue.Recommande);
+            Banc.Verifie("une marque inconnue après la virgule ne recommande pas", false, NotesJeu.Lire("jeu\t3,x\tn\n")[0].Recommande);
 
             Banc.Verifie("remplacer garde une seule fiche par jeu", true, NotesJeu.Pose(l, "fortnite", 0, "Nouvelle note", null) && l.Count == 1);
             Banc.Egal("la note est remplacée", "Nouvelle note", NotesJeu.Trouve(l, "Fortnite").Note);

@@ -112,6 +112,17 @@ namespace BTOptimizer
         public static bool Retire(string nomJeu, IntPtr fenetre) { return _i.Retire(nomJeu, fenetre); }
     }
 
+    /// <summary>Icône personnalisée : miniature de la vue liste (avant la jaquette), et icône de la
+    /// tuile quand le jeu n'a pas de jaquette.</summary>
+    internal static class IconesPerso
+    {
+        private static readonly ImagesPerso _i = new ImagesPerso("icones", 256);
+        public static bool A(string nomJeu) { return _i.A(nomJeu); }
+        public static Image Pour(string nomJeu) { return _i.Pour(nomJeu); }
+        public static void Pose(string nomJeu, string source) { _i.Pose(nomJeu, source); }
+        public static bool Retire(string nomJeu, IntPtr fenetre) { return _i.Retire(nomJeu, fenetre); }
+    }
+
     /// <summary>Image de fond personnalisée, peinte derrière la fiche du jeu.</summary>
     internal static class FondsPerso
     {
