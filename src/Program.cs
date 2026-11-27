@@ -2641,6 +2641,26 @@ namespace BTOptimizer
                 }
                 dash.Hide();
             }
+            // Préréglages Cyberpunk : aperçu seulement (« Compétition » cliqué, « Appliquer » jamais).
+            using (var f = new ReglagesJeuForm(ReglagesCyberpunk.Pilote))
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show(); Pump(200);
+                Button mode = null; TextBox apercu = null;
+                foreach (Control c in f.Controls)
+                {
+                    if (mode == null && c is Button b && b.Text == "Compétition") mode = b;
+                    if (c is TextBox t) apercu = t;
+                }
+                if (mode == null || apercu == null) throw new InvalidOperationException("Fenêtre des préréglages Cyberpunk incomplète.");
+                mode.PerformClick(); Pump(200);
+                if (!apercu.Text.Contains("changerait") && !apercu.Text.Contains("introuvable"))
+                    throw new InvalidOperationException("Aperçu Cyberpunk inattendu : " + apercu.Text);
+                SaveGamesShot(f, dir, "reglages-cyberpunk");
+                Console.WriteLine("  Préréglages Cyberpunk : aperçu OK (" + apercu.Lines.Length + " lignes)");
+                f.Close();
+            }
         }
 
         private static void SaveGamesShot(Form form, string dir, string name)

@@ -26,11 +26,33 @@ namespace BTOptimizer
             }
         }
 
-        public static bool JeuOuvert()
+        public static bool JeuOuvert() { return FichierReglagesJeu.JeuOuvert(Processus); }
+
+        /// <summary>Ce que la fenêtre des préréglages utilise.</summary>
+        public static readonly IReglagesJeu Pilote = new PiloteFortnite();
+
+        private sealed class PiloteFortnite : IReglagesJeu
         {
-            foreach (string n in VeilleJeu.NomsProcessus())
-                if (string.Equals(n, Processus, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
+            public string Jeu { get { return "Fortnite"; } }
+            public string Note
+            {
+                get
+                {
+                    return "Écrit dans GameUserSettings.ini, Fortnite fermé. Les valeurs sont une proposition d'ONYX, pas une mesure : "
+                         + "« Mesurer en jeu » dit ce qu'elles valent sur ton PC. Jamais touchés : résolution, limite d'images, plein écran, moteur de rendu, DLSS/TSR.";
+                }
+            }
+            public string FichierMesure { get { return "bt-reglages-fortnite-avant.txt"; } }
+            public string NomMode(int m) { return ReglagesFortnite.NomMode((Mode)m); }
+            public List<string> Apercu(int m, out List<string> absentes, out string raison)
+            {
+                List<Changement> c = ReglagesFortnite.Apercu((Mode)m, out absentes, out raison);
+                absentes = absentes.ConvertAll(Libelle);
+                return c == null ? null : c.ConvertAll(Ligne);
+            }
+            public string Applique(int m) { return ReglagesFortnite.Applique((Mode)m); }
+            public string Retablit() { return ReglagesFortnite.Retablit(); }
+            public bool ARetablir { get { return Etat().Count > 0; } }
         }
 
         /// <summary>Changements enregistrés par le dernier préréglage (vide : rien à rétablir).</summary>
@@ -111,42 +133,11 @@ namespace BTOptimizer
 
         // ------------------------------------------------------------------ fichier
 
-        private static string Refus()
-        {
-            if (JeuOuvert()) return "Ferme Fortnite : le jeu réécrit ce fichier en quittant.";
-            try
-            {
-                if (!File.Exists(Chemin)) return "Fichier de réglages introuvable : lance Fortnite une fois.";
-                if ((File.GetAttributes(Chemin) & FileAttributes.ReadOnly) != 0)
-                    return "Le fichier de réglages est en lecture seule : ONYX n'y touche pas (retire l'attribut toi-même si tu veux l'utiliser).";
-            }
-            catch (Exception ex) { return "Fichier de réglages illisible : " + ex.Message; }
-            return null;
-        }
+        private static string Refus() { return FichierReglagesJeu.Refus(Chemin, Processus, "Fortnite"); }
 
-        /// <summary>Texte du fichier et son encodage d'origine (BOM compris) ; null + raison sinon.</summary>
-        private static string LitIni(out Encoding enc, out string raison)
-        {
-            enc = new UTF8Encoding(false); raison = null;
-            try
-            {
-                if (!File.Exists(Chemin)) { raison = "Fichier de réglages introuvable : lance Fortnite une fois."; return null; }
-                byte[] b = File.ReadAllBytes(Chemin);
-                int saut = 0;
-                if (b.Length >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF) { enc = new UTF8Encoding(true); saut = 3; }
-                else if (b.Length >= 2 && b[0] == 0xFF && b[1] == 0xFE) { enc = new UnicodeEncoding(false, true); saut = 2; }
-                else if (b.Length >= 2 && b[0] == 0xFE && b[1] == 0xFF) { enc = new UnicodeEncoding(true, true); saut = 2; }
-                return enc.GetString(b, saut, b.Length - saut);
-            }
-            catch (Exception ex) { raison = "Fichier de réglages illisible : " + ex.Message; return null; }
-        }
+        private static string LitIni(out Encoding enc, out string raison) { return FichierReglagesJeu.Lit(Chemin, "Fortnite", out enc, out raison); }
 
-        private static void Ecrit(string chemin, string texte, Encoding enc)
-        {
-            string tmp = chemin + ".onyx.tmp";
-            File.WriteAllText(tmp, texte, enc);   // l'encodage porte son BOM d'origine (ou aucun)
-            File.Move(tmp, chemin, true);
-        }
+        private static void Ecrit(string chemin, string texte, Encoding enc) { FichierReglagesJeu.Ecrit(chemin, texte, enc); }
 
         private static void EcritEtat(List<Changement> etat)
         {
@@ -155,11 +146,6 @@ namespace BTOptimizer
             Ecrit(p, Ecrire(etat), new UTF8Encoding(false));
         }
 
-        private static void Sauvegarde()
-        {
-            string dossier = Sauvegardes.Dossier(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
-            Directory.CreateDirectory(dossier);
-            File.Copy(Chemin, Path.Combine(dossier, "Fortnite-GameUserSettings-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".ini"), false);
-        }
+        private static void Sauvegarde() { FichierReglagesJeu.Sauvegarde(Chemin, "Fortnite-GameUserSettings"); }
     }
 }
