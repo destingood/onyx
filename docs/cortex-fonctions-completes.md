@@ -22,21 +22,21 @@ Relevé du 27/11/2026.
 | Liste à cocher en 4 groupes : processus, services Windows, services non-Windows, éléments spéciaux | ✅ (ONYX suspend, ne ferme pas) |
 | Réglages recommandés en un clic | ✅ |
 | Compteurs : éléments optimisés, restaurés, RAM libérée ; usage processeur, carte graphique, mémoire | ✅ |
-| Enregistrer / charger la liste de processus dans un fichier | ❌ |
+| Enregistrer / charger la liste de processus dans un fichier | ✅ v16.12 (le fichier ne contient que des exclusions) |
 | Spécial : libérer la RAM | ✅ |
 | Spécial : plan d'alimentation | ✅ |
 | Spécial : réveiller tous les cœurs | ✅ `cpu_unpark_cores` |
 | Spécial : affinité (applis de fond poussées sur d'autres cœurs, masques par nombre de cœurs) | ✅ |
-| Spécial : priorité du lanceur (Steam) relevée | ➖ priorité du jeu par profil |
+| Spécial : priorité du lanceur (Steam) relevée | ✅ v16.12 option « lanceur un cran au-dessus » (jamais « haute ») |
 | Spécial : applis de fond coupées | ✅ mode Efficacité |
 | Spécial : télémétrie et rapports d'erreurs coupés pendant la partie | ✅ DiagTrack |
 | Spécial : Cortana coupée | sans objet sous Windows 11 |
 | Spécial : touche Windows bloquée | ✅ v16.09 |
 | Spécial : touches rémanentes coupées | ✅ v16.09 |
 | Spécial : vider le presse-papiers | 🚫 destructif, gain nul |
-| Spécial : « Bureau de jeu » (le jeu tourne sur un bureau Windows à part, raccourci pour en sortir) | ❌ |
+| Spécial : « Bureau de jeu » (le jeu tourne sur un bureau Windows à part, raccourci pour en sortir) | 🚫 v16.12 : les jeux Steam, Epic et Battle.net se relancent par leur lanceur, ouvert sur le bureau normal (Steam : SteamAPI_RestartAppIfNecessary) ; le jeu n'apparaîtrait pas sur le bureau à part, et l'utilisateur risquerait de rester devant un bureau vide |
 | 59 services arrêtés en jeu (liste Windows 10 et 11) | 🚫 mesuré le 27/11 : moins de 2 s de processeur en 2 h |
-| Raccourcis clavier : booster, restaurer, sortir du Bureau de jeu | ➖ Ctrl+Alt+G seulement |
+| Raccourcis clavier : booster, restaurer, sortir du Bureau de jeu | ✅ v16.12 modifiables (Mode Jeu, afficher ONYX, compteur, capture) ; Bureau de jeu 🚫 |
 
 ### 1.2 Booster Prime
 | Fonction de Cortex | ONYX |
@@ -49,7 +49,7 @@ Relevé du 27/11/2026.
 | Revenir en arrière, rafraîchir, indiquer le dossier du jeu à la main | ✅ « Rétablir » ; dossier manuel ? |
 | Afficher les FPS depuis l'écran du préréglage | ✅ |
 | Réglage d'image : luminosité, contraste, teinte, saturation, bouton restaurer | ✅ filtre de couleurs |
-| Liste des jeux et des réglages mise à jour par Internet | ❌ (figée dans ONYX) |
+| Liste des jeux et des réglages mise à jour par Internet | 🚫 préréglages arrêtés à 3 jeux (décision) ; la liste suit les mises à jour d'ONYX |
 
 ---
 
@@ -65,9 +65,9 @@ Relevé du 27/11/2026.
 | Recherche, filtre, rafraîchir | ✅ |
 | Ajouter un jeu à la main (parcourir un .exe) | ✅ ? |
 | Étiquettes | ✅ v16.08 |
-| Genres (38 genres) | ❌ |
-| Ma note personnelle sur un jeu, « je recommande » | ✅ v16.10 appréciation sur 5 et note écrite ; « je recommande » ❌ |
-| Note de la plateforme (avis) | ❌ |
+| Genres (38 genres) | ✅ v16.12 genre de la fiche Steam, regroupement par genre |
+| Ma note personnelle sur un jeu, « je recommande » | ✅ v16.10 appréciation et note ; « je recommande » v16.12 |
+| Note de la plateforme (avis) | ✅ v16.12 avis Steam (« 85 % positives sur … avis ») |
 | Plateformes lues : Steam, Epic, GOG, EA/Origin, Ubisoft, Battle.net, Xbox, Humble, WeGame, jeux « directs » | ✅ multi-lanceur (WeGame et Humble ?) |
 
 ### 2.2 Fiche d'un jeu
@@ -76,13 +76,13 @@ Relevé du 27/11/2026.
 | Lancer, installer, désinstaller, ouvrir le dossier, retirer de la liste | ✅ |
 | Favori | ✅ |
 | Temps total, dernière partie | ✅ journal de jeu |
-| Développeur, éditeur, date de sortie, genre | ❌ |
+| Développeur, éditeur, date de sortie, genre | ✅ v16.12 fiche Steam |
 | Onglets Général / Activité / Ma progression (succès) | ➖ succès Steam (v16.08) |
-| Modifier : jaquette, image de fond, icône | ✅ jaquette et fond ; icône ❌ |
+| Modifier : jaquette, image de fond, icône | ✅ jaquette et fond ; icône v16.12 |
 | Modifier : surnom du jeu | ✅ « Nom affiché » des options du jeu (déjà là avant ce relevé) |
 | Modifier : cible de lancement, paramètres de lancement, dossier de départ | ✅ options de lancement ; dossier de départ ? |
 | Modifier : liens web (plusieurs par jeu) | ✅ v16.10 (12 liens, http et https seulement) |
-| Résolution conseillée | ❌ |
+| Résolution conseillée | 🚫 sans source fiable par jeu et par machine |
 | Courbe d'une partie : FPS moyen / min / max, usage et température processeur et carte graphique, RAM, résolution, durée | ➖ FPS et bilan ; températures par partie ? |
 | Export de la courbe en CSV | ✅ moniteur FPS |
 | État Booster Prime sur la fiche (optimal, optimiser, annuler, FPS prédits) | ✅ préréglage sur la fiche |
@@ -95,11 +95,11 @@ Relevé du 27/11/2026.
 | Progression des succès | ✅ Steam |
 | Encart liste de souhaits (gratuits, à paraître) | ➖ dans Bons plans |
 | Actualités (blog Razer) | ✅ Actus |
-| « Populaire en ce moment » | ❌ |
-| Serveurs Discord : ajouter les siens, serveurs conseillés, rejoindre | ❌ (ONYX a la présence Discord, que Cortex n'a pas) |
-| Disposition de l'accueil modifiable et enregistrée | ❌ |
+| « Populaire en ce moment » | ✅ v16.12 onglet Populaires (classement public Steam) |
+| Serveurs Discord : ajouter les siens, serveurs conseillés, rejoindre | ✅ v16.12 « Mes serveurs Discord » (liens d'invitation, ouverture d'un double-clic) ; serveurs conseillés 🚫 (liste tenue par Razer) |
+| Disposition de l'accueil modifiable et enregistrée | 🚫 gros chantier pour peu d'usage |
 | Profil public ou privé, page de résumé d'un autre joueur | 🚫 compte et serveurs |
-| Carte postale à partager : jeux favoris, plus joués, temps total, succès ; image sur le Bureau, code HTML / BBCode | ❌ |
+| Carte postale à partager : jeux favoris, plus joués, temps total, succès ; image sur le Bureau, code HTML / BBCode | ✅ image v16.11 ; HTML, BBCode et texte v16.12 |
 
 ### 2.4 Plateformes (comptes reliés)
 | Fonction de Cortex | ONYX |
@@ -112,12 +112,12 @@ Relevé du 27/11/2026.
 ### 2.5 En jeu (overlay)
 | Fonction de Cortex | ONYX |
 |---|---|
-| Barre d'outils en jeu, heure, mes clips, réglages | ❌ (ONYX n'affiche que le compteur) |
+| Barre d'outils en jeu, heure, mes clips, réglages | 🚫 impossible en plein écran exclusif sans injection (anticheat) |
 | Compteur : marche/arrêt, automatique au lancement du jeu | ✅ |
-| Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ✅ v16.10 position, taille, couleur ; style en ligne et aperçu ❌ |
-| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes : FPS, 1 % bas, processeur, carte graphique, températures, mémoire vidéo, watts, RAM, débit réseau, heure, durée, courbe ; ventilateurs, fréquence, tension, disque, batterie ❌ (ventilateurs : pilote noyau) |
+| Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ✅ v16.10 position, taille, couleur ; style en ligne et aperçu v16.12 |
+| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes ; fréquence réelle du processeur, disque et batterie v16.12 ; ventilateurs et tension ❌ (pilote noyau) |
 | Graphique créé à la fin de la partie, notification | ✅ bilan de partie |
-| Widget Xbox Game Bar | ❌ |
+| Widget Xbox Game Bar | 🚫 demande une application UWP à part |
 
 ### 2.6 Streaming = Remote Play
 | Fonction de Cortex | ONYX |
@@ -133,7 +133,7 @@ Relevé du 27/11/2026.
 | Mini-jeux (jeux web instantanés) | 🚫 |
 | Playtest : tester un jeu, rendre un rapport, gagner du Silver | 🚫 |
 | Acheter avec Razer Gold | 🚫 |
-| Mode console (interface plein écran à la manette) | ➖ mode manette dans Mes jeux |
+| Mode console (interface plein écran à la manette) | ✅ v16.12 Mes jeux en plein écran (F11, bouton Menu de la manette, Échap pour sortir) |
 
 ---
 
@@ -145,7 +145,7 @@ Relevé du 27/11/2026.
 | **Nettoyer** : analyse, taille par catégorie, résumé, dernière analyse et dernier nettoyage | ✅ |
 | Nettoyer : navigateurs (alerte si le navigateur est ouvert), dossiers temporaires Windows, Corbeille | ✅ |
 | Nettoyer : liste d'exclusions (éléments à ne jamais nettoyer) | ✅ v16.10 dossiers exclus, en plus de « Ne plus me proposer » |
-| Nettoyer : garder les cookies de certains sites | ❌ (ONYX ne touche pas aux cookies) |
+| Nettoyer : garder les cookies de certains sites | 🚫 ONYX ne touche pas aux cookies |
 | Nettoyer : nettoyage programmé | ➖ rappel hebdomadaire, sans suppression automatique (règle : confirmation) |
 | **Défragmenter les jeux** : liste, nombre de fragments, jeux sur SSD écartés | ✅ |
 | **Ma machine** : vue d'ensemble, processeur (cœurs, multiplicateur, caches L1/L2/L3), carte mère, RAM (emplacements), carte graphique (pilote, date), disque, écran, audio, caméra, clavier, souris, micrologiciel, adresse MAC | ✅ infos système ; clavier / souris / caméra ? |
@@ -164,11 +164,11 @@ Relevé du 27/11/2026.
 | Dossier d'enregistrement, déplacer les fichiers | ✅ dossier ; déplacement ? |
 | Limite d'espace disque, suppression automatique des plus anciens, détail de l'espace utilisé | ✅ v16.10 limite et espace utilisé ; les plus anciens sont proposés puis envoyés à la Corbeille après accord, jamais supprimés seuls |
 | Bibliothèque : récents, mes clips, par jeu, recherche | ✅ |
-| Tri par nom ou date | ➖ ? |
+| Tri par nom ou date | ✅ v16.12 récents, anciens, nom, taille |
 | Renommer un clip | ✅ v16.10 |
-| Suppression par lot | ➖ Corbeille, par lot ? |
+| Suppression par lot | ✅ Corbeille, par lot (existait) ; Ctrl+A v16.12 |
 | Cloud : envoi, téléchargement, synchronisation, expiration, filtre local / cloud | 🚫 serveurs |
-| Clips automatiques par l'API officielle du jeu : CS2, Dota 2, LoL | ❌ non testable chez Lucas |
+| Clips automatiques par l'API officielle du jeu : CS2, Dota 2, LoL | 🚫 demande d'écrire un fichier de configuration dans le dossier du jeu ; LoL non testable |
 | Clips automatiques par **analyse de l'image** (26 jeux : Apex Legends, Battlefield 6, Borderlands 4, Crimson Desert, Delta Force, Elden Ring, Elden Ring Nightreign, Euro Truck Simulator 2, **Fortnite**, Forza Horizon 6, Genshin Impact, GTA V, Helldivers 2, Kingdom Come: Deliverance 2, Marvel Rivals, Mount & Blade II, Overwatch, Palworld, PUBG, Rainbow Six, Red Dead Redemption 2, Roblox, Rocket League, Street Fighter 6, Valorant, War Thunder) | ❌ — ne lit ni la mémoire ni le processus du jeu ; demande un modèle de reconnaissance par jeu |
 | Pseudo en jeu à renseigner (pour reconnaître ses propres actions) | ❌ |
 
@@ -183,9 +183,9 @@ Relevé du 27/11/2026.
 | Plus bas historique | ✅ |
 | Seuils de remise : toute remise, 33 %, 50 %, 70 % | ✅ filtres prix |
 | Import liste de souhaits Steam | ✅ |
-| Import liste de souhaits Humble | ❌ (GOG fait à la place) |
+| Import liste de souhaits Humble | 🚫 demande la connexion au compte (cookie) |
 | Alerte baisse de prix | ✅ |
-| Alerte sortie d'un jeu suivi | ➖ date connue, alerte ? |
+| Alerte sortie d'un jeu suivi | ✅ v16.12 notification le jour de la sortie, avec le prix |
 | Alertes par e-mail (immédiat ou quotidien) | 🚫 serveurs |
 | Pastilles de notification | ✅ |
 
@@ -226,17 +226,17 @@ Relevé du 27/11/2026.
 
 | Fonction de Cortex | ONYX |
 |---|---|
-| Langue (10 langues) | ❌ français seul |
-| Thème sombre ou clair | ❌ sombre seul |
+| Langue (10 langues) | 🚫 français seul (chantier hors de proportion) |
+| Thème sombre ou clair | 🚫 sombre seul (chantier hors de proportion) |
 | Page de démarrage au choix | ? |
 | Lancement avec Windows, masquage automatique | ✅ |
 | Accélération matérielle de l'interface | sans objet |
-| Lancer les jeux avec Cortex, quitter Cortex à la fermeture du jeu | ❌ |
-| Raccourcis clavier modifiables, tout réinitialiser | ❌ raccourcis fixes |
-| Notifications par catégorie | ➖ |
+| Lancer les jeux avec Cortex, quitter Cortex à la fermeture du jeu | ✅ lancement depuis Mes jeux ; quitter à la fermeture du jeu 🚫 (ONYX tient le journal de jeu et le Mode Jeu auto) |
+| Raccourcis clavier modifiables, tout réinitialiser | ✅ v16.12 |
+| Notifications par catégorie | ✅ v16.12 (Gardien, mise à jour, jeux suivis, nettoyage) |
 | Recommandations de matériel Razer par catégorie | sans objet |
 | Mode invité ou compte Razer, fusion des données | sans objet (aucun compte) |
-| Mise à jour, canal bêta (Insider), retour d'expérience | ✅ mise à jour ; canal bêta ❌ |
+| Mise à jour, canal bêta (Insider), retour d'expérience | ✅ mise à jour ; préversions v16.12 |
 | Collecte de données d'usage (activée dans la configuration) | sans objet : rien ne sort du PC |
 
 ---
@@ -254,9 +254,9 @@ Relevé du 27/11/2026.
 4. ~~**Fiche jeu** : surnom, liens web, note personnelle~~ : fait en v16.10 (le surnom existait déjà).
 5. ~~**Bibliothèque en liste** (en plus de la grille) et regroupement~~ : fait en v16.11 (pas de regroupement par genre : ONYX ne connaît pas le genre des jeux).
 6. ~~**Bilan : comparaison avec la période d'avant** et **carte du bilan en image** à partager~~ : fait (comparaison déjà là, carte en v16.11).
-7. **Bureau de jeu** (bureau Windows séparé pour le jeu).
-8. **Raccourcis clavier modifiables.**
-9. **Souhaits Humble.**
+7. ~~**Bureau de jeu**~~ : écarté en v16.12 (les lanceurs ouvrent le jeu sur le bureau normal).
+8. ~~**Raccourcis clavier modifiables.**~~ Fait en v16.12.
+9. ~~**Souhaits Humble.**~~ Écarté : connexion au compte nécessaire.
 10. **Clips automatiques par analyse d'image pour Fortnite** : gros chantier, modèle de reconnaissance à construire.
 
 ## Sources web

@@ -2718,6 +2718,22 @@ namespace BTOptimizer
                 page.ApercuManette(); Pump(500);
                 SaveGamesShot(dash, dir, "mode-manette");
                 Console.WriteLine("  Mode manette : déplacement, fiche, retour, LB/RB OK");
+                // Mode console : fenêtre invisible pendant le test (elle couvrirait l'écran).
+                System.Drawing.Rectangle avant = dash.Bounds;
+                dash.Opacity = 0.0;
+                dash.ShowPage(0); Pump(300);
+                dash.BasculeConsole(); Pump(600);
+                System.Drawing.Rectangle ecran = Screen.FromControl(dash).Bounds;
+                if (!dash.ModeConsole || dash.FormBorderStyle != FormBorderStyle.None || dash.Bounds != ecran || dash.PageAt(2) == null || !dash.PageAt(2).Visible)
+                    throw new InvalidOperationException("Mode console : plein écran sur Mes jeux attendu (" + dash.Bounds + " / " + ecran + ").");
+                if (page.Controls.Find("games-console", true)[0].Text != "Quitter (Échap)") throw new InvalidOperationException("Mode console : bouton de sortie absent.");
+                page.ValidateLibraryUi();
+                SaveGamesShot(dash, dir, "mode-console");
+                dash.ShowPage(1); Pump(300);   // une autre page fait quitter le mode console
+                if (dash.ModeConsole || dash.FormBorderStyle == FormBorderStyle.None || dash.Bounds != avant)
+                    throw new InvalidOperationException("Mode console : fenêtre non rétablie (" + dash.Bounds + " au lieu de " + avant + ").");
+                dash.Opacity = 1.0;
+                Console.WriteLine("  Mode console : plein écran " + ecran.Width + "x" + ecran.Height + ", sortie et fenêtre rétablie OK");
                 dash.Hide();
             }
             // Préréglages Cyberpunk et Black Ops 6 : aperçu seulement (« Compétition » cliqué, « Appliquer » jamais).

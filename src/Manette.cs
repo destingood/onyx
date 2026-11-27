@@ -11,11 +11,13 @@ namespace BTOptimizer
     /// </summary>
     internal static class Manette
     {
-        public enum Geste { Aucun, Gauche, Droite, Haut, Bas, Valider, Retour, Precedent, Suivant }
+        public enum Geste { Aucun, Gauche, Droite, Haut, Bas, Valider, Retour, Precedent, Suivant, Menu }
 
         // Masques XINPUT_GAMEPAD (documentation XInput de Microsoft).
         public const ushort CroixHaut = 0x0001, CroixBas = 0x0002, CroixGauche = 0x0004, CroixDroite = 0x0008;
         public const ushort BoutonLB = 0x0100, BoutonRB = 0x0200, BoutonA = 0x1000, BoutonB = 0x2000;
+        /// <summary>Bouton Menu (« Start ») : entre dans le mode console ou en sort.</summary>
+        public const ushort BoutonMenu = 0x0010;
 
         /// <summary>Stick à mi-course au moins (sur 32 767) : un stick au repos qui dérive ne déplace rien.</summary>
         public const int SeuilStick = 16000;
@@ -60,6 +62,7 @@ namespace BTOptimizer
             if ((neufs & BoutonB) != 0) l.Add(Geste.Retour);
             if ((neufs & BoutonLB) != 0) l.Add(Geste.Precedent);
             if ((neufs & BoutonRB) != 0) l.Add(Geste.Suivant);
+            if ((neufs & BoutonMenu) != 0) l.Add(Geste.Menu);
             e.Boutons = boutons;
 
             if (d != e.Direction)

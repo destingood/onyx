@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne, notifications au choix, jeux populaires
+## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne, notifications au choix, jeux populaires, mode console
 
 - **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
   afficher ONYX, compteur en jeu et capture d'écran. On clique dans la case et on tape la
@@ -60,6 +60,10 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 - **Mes serveurs Discord.** Menu ⋯ → Système → « Mes serveurs Discord… » : on colle les liens
   d'invitation (discord.gg/…) de ses serveurs de jeu, ONYX les ouvre d'un double-clic. Seuls les
   liens Discord sont acceptés ; aucun compte, rien n'est envoyé.
+- **Mode console.** Mes jeux sur tout l'écran, sans bordure ni barre de navigation, pour jouer
+  à la manette depuis le canapé : bouton « Mode console » de la page, F11, ou bouton Menu de la
+  manette quand ONYX est au premier plan. Échap, F11 ou Menu en sortent ; la fenêtre retrouve sa
+  taille et sa place. Rien n'est changé dans Windows.
 
 ## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
 

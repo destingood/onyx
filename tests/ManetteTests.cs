@@ -24,6 +24,14 @@ namespace BTOptimizer.Tests
             Banc.Egal("B, LB et RB ensemble", "Retour,Precedent,Suivant",
                 S(Manette.Avance(e, (ushort)(Manette.BoutonA | Manette.BoutonB | Manette.BoutonLB | Manette.BoutonRB), 0, 0, 120)));
 
+            Manette.Avance(e, 0, 0, 0, 150);
+            Banc.Egal("bouton Menu : mode console", "Menu", S(Manette.Avance(e, Manette.BoutonMenu, 0, 0, 180)));
+            Banc.Egal("bouton Menu maintenu : une seule bascule", "", S(Manette.Avance(e, Manette.BoutonMenu, 0, 0, 900)));
+            Banc.Verifie("mode console branché (page, Échap, F11, fermeture)", true,
+                CatalogueTests.Source("PageGames.cs").Contains("Geste.Menu) { Host.BasculeConsole()")
+                && CatalogueTests.Source("DashboardForm.cs").Contains("keyData == Keys.F11 || (keyData == Keys.Escape && _console")
+                && CatalogueTests.Source("DashboardForm.cs").Contains("if (_console) BasculeConsole(); } catch { } try { WindowBounds.Save"));
+
             e = new Manette.Etat();
             Manette.Avance(e, 0, 0, 0, 0);
             Banc.Egal("droite pressée : un pas", "Droite", S(Manette.Avance(e, Manette.CroixDroite, 0, 0, 100)));

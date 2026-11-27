@@ -13,7 +13,7 @@ namespace BTOptimizer
         private FlowLayoutPanel _flow;
         private Button _mode;
         private Button _prio;
-        private Button _clips, _bilan;
+        private Button _clips, _bilan, _consoleBtn;
         private Button _space;
         private TextBox _search;
         private BufferedPanel _searchBox;
@@ -139,6 +139,13 @@ namespace BTOptimizer
             _bilan.Click += (s, e) => Host.OpenDialog(new BilanJeuForm(JournalJeu.Parties, DateTime.Now, Favoris()));
             Controls.Add(_bilan);
 
+            _consoleBtn = OnyxDesign.Button("Mode console");
+            _consoleBtn.Name = "games-console";
+            _consoleBtn.AccessibleName = "Mode console : Mes jeux en plein écran, à la manette (F11)";
+            _consoleBtn.Click += (s, e) => Host.BasculeConsole();
+            Controls.Add(_consoleBtn);
+            Host.ConsoleChange += () => { _consoleBtn.Text = Host.ModeConsole ? "Quitter (Échap)" : "Mode console"; };
+
             _space = OnyxDesign.Button("Trier par espace");
             _space.Width = 128; _space.Height = 34;
             _space.Click += (s, e) => ToggleSpace();
@@ -255,6 +262,7 @@ namespace BTOptimizer
         private void AppliqueManette(Manette.Geste g)
         {
             if (!Visible || IsDisposed) return;
+            if (g == Manette.Geste.Menu) { Host.BasculeConsole(); return; }
             if (_detail != null)
             {
                 if (g == Manette.Geste.Retour) { CloseDetail(); MarqueManette(); }
@@ -1274,6 +1282,7 @@ namespace BTOptimizer
             _prio.SetBounds(_mode.Left - 172, 20, 160, 36);
             _clips.SetBounds(_prio.Left - 112, 20, 100, 36);
             _bilan.SetBounds(_clips.Left - 112, 20, 100, 36);
+            _consoleBtn.SetBounds(_bilan.Left - 152, 20, 140, 36);
             _installed.SetBounds(34, row, 142, 36); _catalogue.SetBounds(184, row, 136, 36);
             _space.SetBounds(332, row, 132, 36);
             _recents.SetBounds(472, row, 150, 36);

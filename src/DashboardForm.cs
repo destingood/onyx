@@ -190,7 +190,8 @@ namespace BTOptimizer
             retraitIa.Start();
 #endif
             JournalJeu.PartieClose += BilanPartie;
-            FormClosing += (s, e) => { try { WindowBounds.Save(this); } catch { } Cleanup(); };
+            // Mode console quitté d'abord : la position enregistrée est celle de la fenêtre normale.
+            FormClosing += (s, e) => { try { if (_console) BasculeConsole(); } catch { } try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
         /// <summary>Fin de partie, option « Mesurer les FPS » cochée : bilan en notification.</summary>
@@ -1602,6 +1603,11 @@ namespace BTOptimizer
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == Keys.F11 || (keyData == Keys.Escape && _console && !_railOpen))
+            {
+                BasculeConsole();
+                return true;
+            }
             if (keyData == (Keys.Control | Keys.B) || (keyData == Keys.Escape && _railOpen))
             {
                 _railPinned = keyData != Keys.Escape && !_railOpen;
@@ -1766,9 +1772,63 @@ namespace BTOptimizer
         // ------------------------------------------------------------------
         //  Navigation par pages
         // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        //  Mode console : Mes jeux en plein écran, sans barre ni bordure, à la manette
+        // ------------------------------------------------------------------
+        private const int PageJeuxIdx = 2;
+        private bool _console;
+        private FormBorderStyle _avantBord;
+        private FormWindowState _avantEtat;
+        private Rectangle _avantBornes;
+        private Padding _avantMarge;
+
+        /// <summary>Déclenché après chaque entrée ou sortie du mode console.</summary>
+        public event Action ConsoleChange;
+        public bool ModeConsole { get { return _console; } }
+
+        /// <summary>
+        /// Entre dans le mode console (Mes jeux sur tout l'écran) ou en sort. Rien n'est changé dans
+        /// Windows : seule la fenêtre d'ONYX perd sa bordure et la barre de navigation, puis les
+        /// retrouve à l'identique. F11, Échap, le bouton Menu de la manette ou le bouton de la page.
+        /// </summary>
+        public void BasculeConsole()
+        {
+            if (!_console)
+            {
+                _avantBord = FormBorderStyle; _avantEtat = WindowState; _avantMarge = Padding;
+                _avantBornes = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+                ShowPage(PageJeuxIdx);
+                if (_current != PageJeuxIdx) return;   // page impossible à ouvrir : rien ne change
+                _console = true;
+                if (_railOpen) { _railPinned = false; SetRail(false); }
+                SuspendLayout();
+                _rail.Visible = false;
+                Padding = Padding.Empty;
+                if (WindowState != FormWindowState.Normal) WindowState = FormWindowState.Normal;
+                FormBorderStyle = FormBorderStyle.None;
+                Bounds = Screen.FromControl(this).Bounds;
+                ResumeLayout(true);
+                if (Visible) Activate();
+            }
+            else
+            {
+                _console = false;
+                SuspendLayout();
+                FormBorderStyle = _avantBord;
+                Bounds = _avantBornes;
+                if (_avantEtat == FormWindowState.Maximized) WindowState = FormWindowState.Maximized;
+                Padding = _avantMarge;
+                _rail.Visible = true;
+                ResumeLayout(true);
+            }
+            Action h = ConsoleChange;
+            if (h != null) h();
+        }
+
         public void ShowPage(int idx)
         {
             if (idx < 0 || idx >= _pages.Length) return;
+            if (_console && idx != PageJeuxIdx) BasculeConsole();   // une autre page : retour à la fenêtre normale
             _dernierePage = Environment.TickCount64;
 
             if (_pages[idx] == null)
