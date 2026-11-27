@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077, FPS visés
+## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077, FPS visés, bilan de jeu
 
 - **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par
   des virgules (« coop, à finir »). Elles servent de filtre dans le menu des plateformes et la
@@ -32,6 +32,12 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   dépasse 25 % et que les FPS ne butent pas sur une limite. Le mode conseillé s'affiche en aperçu,
   sans rien écrire. Si la limite d'images du jeu est sous l'objectif, ONYX le dit avant la mesure.
   Contrairement à Razer Cortex, aucune prédiction : sans mesure, pas de conseil.
+- **Mes jeux : bilan de jeu.** Le bouton « Bilan » montre le temps joué sur 7 jours, 30 jours ou
+  depuis le début, avec l'écart par rapport à la période d'avant. Il indique aussi le nombre de
+  parties, la plus longue partie, le jour où tu joues le plus et ta série de jours consécutifs.
+  Les jeux les plus joués s'affichent en barres, avec leurs FPS moyens quand ils ont été mesurés.
+  Tout vient du journal des parties qu'ONYX tient déjà. Pas de succès : ONYX ne se connecte à aucun
+  compte.
 - **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
   bouton des plateformes.
 

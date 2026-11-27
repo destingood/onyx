@@ -13,7 +13,7 @@ namespace BTOptimizer
         private FlowLayoutPanel _flow;
         private Button _mode;
         private Button _prio;
-        private Button _clips;
+        private Button _clips, _bilan;
         private Button _space;
         private TextBox _search;
         private BufferedPanel _searchBox;
@@ -116,6 +116,12 @@ namespace BTOptimizer
             _clips.AccessibleName = "Bibliothèque des clips";
             _clips.Click += (s, e) => Host.OpenDialog(new ClipsForm());
             Controls.Add(_clips);
+
+            _bilan = OnyxDesign.Button("Bilan");
+            _bilan.Name = "games-bilan";
+            _bilan.AccessibleName = "Bilan de jeu : temps joué et jeux les plus joués";
+            _bilan.Click += (s, e) => Host.OpenDialog(new BilanJeuForm(JournalJeu.Parties, DateTime.Now));
+            Controls.Add(_bilan);
 
             _space = OnyxDesign.Button("Trier par espace");
             _space.Width = 128; _space.Height = 34;
@@ -896,6 +902,7 @@ namespace BTOptimizer
             _mode.SetBounds(right - 190, 20, 190, 36);
             _prio.SetBounds(_mode.Left - 172, 20, 160, 36);
             _clips.SetBounds(_prio.Left - 112, 20, 100, 36);
+            _bilan.SetBounds(_clips.Left - 112, 20, 100, 36);
             _installed.SetBounds(34, row, 142, 36); _catalogue.SetBounds(184, row, 136, 36);
             _space.SetBounds(332, row, 132, 36);
             _recents.SetBounds(472, row, 150, 36);

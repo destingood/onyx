@@ -75,6 +75,7 @@
     <Compile Include="..\src\ReglagesFortnite.cs" />
     <Compile Include="..\src\ReglagesCyberpunk.cs" />
     <Compile Include="..\src\ObjectifFps.cs" />
+    <Compile Include="..\src\BilanJeu.cs" />
     <Compile Include="..\src\Clips.cs" />
     <Compile Include="..\src\CaptureFond.cs" />
     <Compile Include="..\src\RappelNettoyage.cs" />

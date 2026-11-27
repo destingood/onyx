@@ -2674,6 +2674,35 @@ namespace BTOptimizer
                 Console.WriteLine("  Préréglages Cyberpunk : aperçu OK (" + apercu.Lines.Length + " lignes)");
                 f.Close();
             }
+            // Bilan de jeu : journal de synthèse (8 jeux, plus que les 6 lignes affichées), les 3 périodes.
+            var journal = new System.Collections.Generic.List<JournalJeu.Partie>();
+            DateTime ref0 = new DateTime(2026, 11, 27, 22, 0, 0);
+            string[] noms = { "Fortnite", "Counter-Strike 2", "Cyberpunk 2077", "Rocket League", "Elden Ring", "VALORANT", "Minecraft", "Hades II" };
+            for (int i = 0; i < 40; i++)
+                journal.Add(new JournalJeu.Partie { Jeu = noms[(i * 7 + i / 5) % noms.Length], Debut = ref0.AddDays(-i * 1.3).AddHours(-2), Secondes = 900 + (i * 613) % 6000, FpsMoyen = i % 3 == 0 ? 0 : 140 + i * 4 });
+            using (var f = new BilanJeuForm(journal, ref0))
+            {
+                f.StartPosition = FormStartPosition.Manual;
+                f.Location = new System.Drawing.Point(-5000, -5000);
+                f.Show(); Pump(200);
+                Label resume = null;
+                foreach (Control c in f.Controls) if (c is Label l && l.Text.Contains("de jeu,")) resume = l;
+                if (resume == null) throw new InvalidOperationException("Bilan de jeu : résumé absent.");
+                for (int i = 0; i < f.Controls.Count; i++)
+                {
+                    System.Drawing.Rectangle r = f.Controls[i].Bounds;
+                    if (!f.ClientRectangle.Contains(r)) throw new InvalidOperationException("Bilan : « " + f.Controls[i].Text + " » déborde de la fenêtre.");
+                    for (int j = i + 1; j < f.Controls.Count; j++)
+                        if (r.IntersectsWith(f.Controls[j].Bounds))
+                            throw new InvalidOperationException("Bilan : « " + f.Controls[i].Text + " » chevauche « " + f.Controls[j].Text + " ».");
+                }
+                foreach (Control c in f.Controls)
+                    if (c is Button b && b.Text == "30 jours") { b.PerformClick(); Pump(150); }
+                if (!resume.Text.Contains("30 jours d'avant")) throw new InvalidOperationException("Bilan 30 jours inattendu : " + resume.Text);
+                SaveGamesShot(f, dir, "bilan-jeu");
+                Console.WriteLine("  Bilan de jeu : 3 périodes OK — " + resume.Text.Split('\r')[0]);
+                f.Close();
+            }
         }
 
         private static void SaveGamesShot(Form form, string dir, string name)
