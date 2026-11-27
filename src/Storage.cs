@@ -370,7 +370,7 @@ namespace BTOptimizer
             foreach (DormantGames.Entry e in games)
             {
                 if (!e.IsDormant || e.SizeMB <= 0) continue;
-                if (st.IsIgnored(e.Name)) continue;
+                if (st.IsIgnored(e.Name) || st.Exclu(e.InstallDir)) continue;
                 DormantGames.Entry cap = e;
                 m.Items.Add(new StorageItem
                 {
@@ -1447,6 +1447,20 @@ namespace BTOptimizer
         private readonly HashSet<string> _off = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _ignored = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Dossiers exclus par l'utilisateur : rien de ce qu'ils contiennent n'est proposé,
+        /// et un cache qui en contient un n'est plus vidé (voir <see cref="ExclusionsNettoyage"/>).</summary>
+        private readonly List<string> _exclus = new List<string>();
+
+        public List<string> Exclus { get { return new List<string>(_exclus); } }
+
+        /// <summary>Null si l'exclusion est ajoutée, sinon la raison du refus.</summary>
+        public string Exclut(string chemin) { return ExclusionsNettoyage.Ajoute(_exclus, chemin); }
+
+        public void RetireExclu(string chemin) { _exclus.RemoveAll(e => string.Equals(e, chemin, StringComparison.OrdinalIgnoreCase)); }
+
+        /// <summary>Ce chemin est exclu, ou contient un dossier exclu.</summary>
+        public bool Exclu(string chemin) { return ExclusionsNettoyage.Touche(_exclus, chemin); }
+
         public static string ConfigPath
         {
             get { return AppPaths.File("bt-stockage.txt"); }
@@ -1460,7 +1474,7 @@ namespace BTOptimizer
             if (on) _off.Remove(moduleId); else _off.Add(moduleId);
         }
 
-        public bool IsIgnored(string key) { return !string.IsNullOrEmpty(key) && _ignored.Contains(key); }
+        public bool IsIgnored(string key) { return !string.IsNullOrEmpty(key) && (_ignored.Contains(key) || Exclu(key)); }
 
         public void Ignore(string key) { if (!string.IsNullOrEmpty(key)) _ignored.Add(key); }
 
@@ -1482,6 +1496,7 @@ namespace BTOptimizer
                 // Une ligne par élément ignoré : un « ; » est permis dans un nom de fichier Windows,
                 // l'ancienne liste séparée par « ; » coupait ces chemins en morceaux.
                 foreach (string ig in _ignored) sb.Append("ignore1=").Append(ig).Append('\n');
+                foreach (string ex in _exclus) sb.Append("exclu1=").Append(ex).Append('\n');
                 File.WriteAllText(ConfigPath, sb.ToString());
             }
             catch { }
@@ -1504,6 +1519,7 @@ namespace BTOptimizer
                     else if (k == "minfile") { int n; if (int.TryParse(v, out n)) s.MinFileMB = Math.Max(50, Math.Min(4096, n)); }
                     else if (k == "off") foreach (string id in v.Split(';')) if (id.Length > 0) s._off.Add(id);
                     else if (k == "ignore1") { if (v.Length > 0) s._ignored.Add(v); }
+                    else if (k == "exclu1") s.Exclut(v);   // relu par le même contrôle que la saisie
                     else if (k == "ignore") foreach (string p in v.Split(';')) if (p.Length > 0) s._ignored.Add(p);   // ancien format
                 }
             }

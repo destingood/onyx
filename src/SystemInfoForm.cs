@@ -653,7 +653,12 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 List<JunkScan.Item> items;
-                try { items = JunkScan.Scan(JunkScan.DefaultMinBytes, 8000, _log); }
+                try
+                {
+                    items = JunkScan.Scan(JunkScan.DefaultMinBytes, 8000, _log);
+                    StorageSettings reglages = StorageSettings.Load();
+                    items.RemoveAll(i => reglages.Exclu(i.Path));   // dossiers exclus du nettoyage
+                }
                 catch (Exception ex)
                 {
                     if (_log != null) _log("Recherche du poids mort : échec (" + ex.Message + ").", 3);

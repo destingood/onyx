@@ -13,7 +13,7 @@ namespace BTOptimizer
     /// </summary>
     internal static partial class Clips
     {
-        public sealed class Clip { public string Chemin, Jeu; public DateTime Date; public long Octets; }
+        public sealed class Clip { public string Chemin, Jeu, Racine; public DateTime Date; public long Octets; }
 
         public const string Autres = "Autres";
 
@@ -63,6 +63,90 @@ namespace BTOptimizer
             foreach (Clip c in clips)
                 if (c != null && (jeu == null || string.Equals(c.Jeu, jeu, StringComparison.OrdinalIgnoreCase))) res.Add(c);
             res.Sort((x, y) => y.Date.CompareTo(x.Date));
+            return res;
+        }
+
+        // ------------------------------------------------------------------ renommer
+
+        public const int NomMax = 120;
+
+        private static readonly string[] Reserves =
+        {
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+        };
+
+        /// <summary>
+        /// Nom de fichier (sans extension) que Windows accepte, ou null avec la raison. L'extension
+        /// tapée par habitude est retirée : renommer ne change jamais le type du fichier.
+        /// </summary>
+        public static string NomPropre(string saisi, string extension, out string erreur)
+        {
+            erreur = null;
+            string n = (saisi ?? "").Trim();
+            if (!string.IsNullOrEmpty(extension) && n.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                n = n.Substring(0, n.Length - extension.Length);
+            n = n.Trim().TrimEnd('.', ' ');   // Windows retire lui-même les points et espaces de fin
+            if (n.Length == 0) { erreur = "Le nom est vide."; return null; }
+            if (n.Length > NomMax) { erreur = "Le nom dépasse " + NomMax + " caractères."; return null; }
+            foreach (char c in n)
+            {
+                if (c < 32) { erreur = "Le nom contient un caractère invisible."; return null; }
+                if ("\\/:*?\"<>|".IndexOf(c) >= 0) { erreur = "Caractère interdit dans un nom de fichier : " + c; return null; }
+            }
+            int point = n.IndexOf('.');
+            string debut = (point >= 0 ? n.Substring(0, point) : n).Trim();
+            if (Array.Exists(Reserves, r => string.Equals(r, debut, StringComparison.OrdinalIgnoreCase)))
+            { erreur = "« " + debut + " » est un nom réservé par Windows."; return null; }
+            return n;
+        }
+
+        /// <summary>Même dossier, même extension, nouveau nom.</summary>
+        public static string CheminRenomme(string chemin, string nom)
+        {
+            string dossier = Path.GetDirectoryName(chemin) ?? "";
+            return Path.Combine(dossier, nom + Path.GetExtension(chemin));
+        }
+
+        // ------------------------------------------------------------------ limite d'espace
+
+        /// <summary>Choix proposés, en Go ; 0 = aucune limite.</summary>
+        public static readonly int[] LimitesGo = { 0, 5, 10, 20, 50, 100, 200, 500 };
+
+        /// <summary>Limite relue du fichier de réglage : un entier de Go entre 1 et 10 000, sinon 0 (aucune).</summary>
+        public static int LitLimite(string texte)
+        {
+            int v;
+            if (!int.TryParse((texte ?? "").Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out v)) return 0;
+            return v >= 1 && v <= 10000 ? v : 0;
+        }
+
+        public static long Total(IEnumerable<Clip> clips)
+        {
+            long t = 0;
+            if (clips != null) foreach (Clip c in clips) if (c != null && c.Octets > 0) t += c.Octets;
+            return t;
+        }
+
+        /// <summary>
+        /// Les clips à retirer pour repasser sous la limite : les plus ANCIENS d'abord, et pas un de
+        /// plus qu'il ne faut. Limite nulle ou négative : aucun. Cette liste n'est qu'une proposition,
+        /// l'envoi à la Corbeille reste confirmé par l'utilisateur.
+        /// </summary>
+        public static List<Clip> EnTrop(IEnumerable<Clip> clips, long limiteOctets)
+        {
+            var res = new List<Clip>();
+            if (clips == null || limiteOctets <= 0) return res;
+            long total = Total(clips);
+            if (total <= limiteOctets) return res;
+            var anciens = new List<Clip>();
+            foreach (Clip c in clips) if (c != null && c.Octets > 0) anciens.Add(c);
+            anciens.Sort((x, y) => x.Date.CompareTo(y.Date));
+            foreach (Clip c in anciens)
+            {
+                if (total <= limiteOctets) break;
+                res.Add(c); total -= c.Octets;
+            }
             return res;
         }
     }

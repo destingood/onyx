@@ -1178,6 +1178,14 @@ namespace BTOptimizer
             // La corbeille contient des fichiers que l'utilisateur a VUS : niveau 1, jamais dans le
             // « superflu » automatique.
             list.Add(new CleanTarget { Name = "Corbeille", Path = null, IsRecycleBin = true, Kind = "bin", Safety = 1 });
+            // Exclusions de l'utilisateur, appliquées ICI pour que tous les nettoyeurs les respectent :
+            // une cible exclue, ou qui contient un dossier exclu, n'est ni mesurée ni vidée.
+            try
+            {
+                StorageSettings reglages = StorageSettings.Load();
+                list.RemoveAll(t => !t.IsRecycleBin && reglages.Exclu(t.Path));
+            }
+            catch { }
             foreach (CleanTarget t in list) t.SizeMB = MeasureCleanTarget(t);
             return list;
         }

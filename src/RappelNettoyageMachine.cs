@@ -67,6 +67,8 @@ namespace BTOptimizer
                     try
                     {
                         var items = JunkScan.Scan(JunkScan.DefaultMinBytes, 20000, (m, n) => { });
+                        StorageSettings reglages = StorageSettings.Load();
+                        items.RemoveAll(i => reglages.Exclu(i.Path));   // dossiers exclus du nettoyage
                         Etat f = Charge();
                         f.Derniere = DateTime.Now;
                         Sauve(f);

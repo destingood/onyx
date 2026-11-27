@@ -66,7 +66,7 @@ Relevé du 27/11/2026.
 | Ajouter un jeu à la main (parcourir un .exe) | ✅ ? |
 | Étiquettes | ✅ v16.08 |
 | Genres (38 genres) | ❌ |
-| Ma note personnelle sur un jeu, « je recommande » | ❌ |
+| Ma note personnelle sur un jeu, « je recommande » | ✅ v16.10 appréciation sur 5 et note écrite ; « je recommande » ❌ |
 | Note de la plateforme (avis) | ❌ |
 | Plateformes lues : Steam, Epic, GOG, EA/Origin, Ubisoft, Battle.net, Xbox, Humble, WeGame, jeux « directs » | ✅ multi-lanceur (WeGame et Humble ?) |
 
@@ -79,9 +79,9 @@ Relevé du 27/11/2026.
 | Développeur, éditeur, date de sortie, genre | ❌ |
 | Onglets Général / Activité / Ma progression (succès) | ➖ succès Steam (v16.08) |
 | Modifier : jaquette, image de fond, icône | ✅ jaquette et fond ; icône ❌ |
-| Modifier : surnom du jeu | ❌ |
+| Modifier : surnom du jeu | ✅ « Nom affiché » des options du jeu (déjà là avant ce relevé) |
 | Modifier : cible de lancement, paramètres de lancement, dossier de départ | ✅ options de lancement ; dossier de départ ? |
-| Modifier : liens web (plusieurs par jeu) | ❌ |
+| Modifier : liens web (plusieurs par jeu) | ✅ v16.10 (12 liens, http et https seulement) |
 | Résolution conseillée | ❌ |
 | Courbe d'une partie : FPS moyen / min / max, usage et température processeur et carte graphique, RAM, résolution, durée | ➖ FPS et bilan ; températures par partie ? |
 | Export de la courbe en CSV | ✅ moniteur FPS |
@@ -114,8 +114,8 @@ Relevé du 27/11/2026.
 |---|---|
 | Barre d'outils en jeu, heure, mes clips, réglages | ❌ (ONYX n'affiche que le compteur) |
 | Compteur : marche/arrêt, automatique au lancement du jeu | ✅ |
-| Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ➖ ? |
-| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ➖ FPS, processeur, carte graphique, RAM, température |
+| Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ✅ v16.10 position, taille, couleur ; style en ligne et aperçu ❌ |
+| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes : FPS, 1 % bas, processeur, carte graphique, températures, mémoire vidéo, watts, RAM, débit réseau, heure, durée, courbe ; ventilateurs, fréquence, tension, disque, batterie ❌ (ventilateurs : pilote noyau) |
 | Graphique créé à la fin de la partie, notification | ✅ bilan de partie |
 | Widget Xbox Game Bar | ❌ |
 
@@ -144,7 +144,7 @@ Relevé du 27/11/2026.
 | **Accélérer** : analyse, tout cocher / décocher, optimiser, « revenir aux valeurs Windows » | ✅ catalogue de réglages, bien plus large |
 | **Nettoyer** : analyse, taille par catégorie, résumé, dernière analyse et dernier nettoyage | ✅ |
 | Nettoyer : navigateurs (alerte si le navigateur est ouvert), dossiers temporaires Windows, Corbeille | ✅ |
-| Nettoyer : liste d'exclusions (éléments à ne jamais nettoyer) | ❌ |
+| Nettoyer : liste d'exclusions (éléments à ne jamais nettoyer) | ✅ v16.10 dossiers exclus, en plus de « Ne plus me proposer » |
 | Nettoyer : garder les cookies de certains sites | ❌ (ONYX ne touche pas aux cookies) |
 | Nettoyer : nettoyage programmé | ➖ rappel hebdomadaire, sans suppression automatique (règle : confirmation) |
 | **Défragmenter les jeux** : liste, nombre de fragments, jeux sur SSD écartés | ✅ |
@@ -162,10 +162,10 @@ Relevé du 27/11/2026.
 | Micro, curseur de la souris visible | ➖ Windows |
 | Générique Razer en fin de clip | sans objet |
 | Dossier d'enregistrement, déplacer les fichiers | ✅ dossier ; déplacement ? |
-| Limite d'espace disque, suppression automatique des plus anciens, détail de l'espace utilisé | ❌ |
+| Limite d'espace disque, suppression automatique des plus anciens, détail de l'espace utilisé | ✅ v16.10 limite et espace utilisé ; les plus anciens sont proposés puis envoyés à la Corbeille après accord, jamais supprimés seuls |
 | Bibliothèque : récents, mes clips, par jeu, recherche | ✅ |
 | Tri par nom ou date | ➖ ? |
-| Renommer un clip | ❌ |
+| Renommer un clip | ✅ v16.10 |
 | Suppression par lot | ➖ Corbeille, par lot ? |
 | Cloud : envoi, téléchargement, synchronisation, expiration, filtre local / cloud | 🚫 serveurs |
 | Clips automatiques par l'API officielle du jeu : CS2, Dota 2, LoL | ❌ non testable chez Lucas |
@@ -248,10 +248,10 @@ Relevé du 27/11/2026.
 ---
 
 ## Manques réalisables dans ONYX, du plus utile au moins utile
-1. **Compteur en jeu au choix** : mémoire vidéo, ventilateurs, débit réseau, heure, durée de la partie ; position, taille, couleur.
-2. **Clips** : renommer, limite d'espace disque avec suppression des plus anciens (vers la Corbeille).
-3. **Nettoyage : liste d'exclusions.**
-4. **Fiche jeu** : surnom, liens web, note personnelle.
+1. ~~**Compteur en jeu au choix**~~ : fait en v16.10 (sans les ventilateurs, qui demandent un pilote noyau).
+2. ~~**Clips** : renommer, limite d'espace disque~~ : fait en v16.10.
+3. ~~**Nettoyage : liste d'exclusions.**~~ Fait en v16.10.
+4. ~~**Fiche jeu** : surnom, liens web, note personnelle~~ : fait en v16.10 (le surnom existait déjà).
 5. **Bibliothèque en liste** (en plus de la grille) et regroupement.
 6. **Bilan : comparaison avec la période d'avant** et **carte du bilan en image** à partager.
 7. **Bureau de jeu** (bureau Windows séparé pour le jeu).

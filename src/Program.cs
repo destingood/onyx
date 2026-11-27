@@ -11,8 +11,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("16.9.0.0")]
-[assembly: AssemblyFileVersion("16.9.0.0")]
+[assembly: AssemblyVersion("16.10.0.0")]
+[assembly: AssemblyFileVersion("16.10.0.0")]
 
 namespace BTOptimizer
 {
@@ -2201,6 +2201,8 @@ namespace BTOptimizer
                 case "BenchmarkFpsForm": return new BenchmarkFpsForm(log);
                 case "GameModeForm": return new GameModeForm(log);
                 case "DiscordForm": return new DiscordForm(log);
+                case "ClipsForm": return new ClipsForm();
+                case "NotesJeuForm": return new NotesJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
                 default: return null;
             }
         }
@@ -2212,7 +2214,13 @@ namespace BTOptimizer
                 f.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
                 f.Show();
-                if (f is StatsOverlayWindow sw) sw.SeedDemo();   // données de démo pour l'inspection visuelle hors jeu
+                if (f is StatsOverlayWindow sw)
+                {
+                    // BT_COMPTEUR = réglages du compteur à photographier (« 1;1;2;3;cpu,vram,net »).
+                    string opts = Environment.GetEnvironmentVariable("BT_COMPTEUR");
+                    if (!string.IsNullOrEmpty(opts)) { sw.Applique(CompteurJeu.Lit(opts)); f.Location = new System.Drawing.Point(-5000, -5000); }
+                    sw.SeedDemo();   // données de démo pour l'inspection visuelle hors jeu
+                }
                 if (f is BenchmarkFpsForm bf) bf.SeedDemo();
                 Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
@@ -2765,9 +2773,37 @@ namespace BTOptimizer
                     if (c.Bounds.IntersectsWith(succes.Bounds)) throw new InvalidOperationException("Fiche : « Succès » chevauche « " + c.Text + " ».");
                 }
                 if (succes.Right > f.ClientSize.Width - 300) throw new InvalidOperationException("Fiche : « Succès » empiète sur la jaquette.");
+                // Rangée du bas (Fermer, Masquer, Désinstaller, Options, Notes) : ni chevauchement ni débord sous la jaquette.
+                var boutons = new System.Collections.Generic.List<Button>();
+                bool notes = false;
+                foreach (Control c in f.Controls) if (c is Button b && b.Visible) { boutons.Add(b); if (b.Text.StartsWith("Notes", StringComparison.Ordinal)) notes = true; }
+                if (!notes) throw new InvalidOperationException("Fiche : bouton « Notes » absent.");
+                for (int i = 0; i < boutons.Count; i++)
+                {
+                    if (boutons[i].Right > f.ClientSize.Width - 300) throw new InvalidOperationException("Fiche : « " + boutons[i].Text + " » empiète sur la jaquette.");
+                    for (int j = i + 1; j < boutons.Count; j++)
+                        if (boutons[i].Bounds.IntersectsWith(boutons[j].Bounds))
+                            throw new InvalidOperationException("Fiche : « " + boutons[i].Text + " » chevauche « " + boutons[j].Text + " ».");
+                }
                 SaveGamesShot(f, dir, "fiche-succes");
                 Console.WriteLine("  Fiche : " + succes.Text);
                 f.Close();
+            }
+            // Notes et liens : aller-retour réel sur le fichier, avec un jeu de synthèse retiré ensuite.
+            {
+                string fichierNotes = AppPaths.File("bt-jeux-notes.txt");
+                bool existait = System.IO.File.Exists(fichierNotes);
+                const string jeuTest = "ONYX jeu de test des notes";
+                var liensTest = new System.Collections.Generic.List<NotesJeu.Lien> { new NotesJeu.Lien { Url = "exemple.fr/guide", Titre = "Guide" } };
+                if (!NotesJeu.Enregistre(jeuTest, 4, "ligne 1\r\nligne 2", liensTest)) throw new InvalidOperationException("Notes : enregistrement refusé.");
+                NotesJeu.Fiche relue = NotesJeu.Trouve(NotesJeu.Lire(System.IO.File.ReadAllText(fichierNotes, System.Text.Encoding.UTF8)), jeuTest);
+                if (relue == null || relue.Etoiles != 4 || relue.Note != "ligne 1\nligne 2" || relue.Liens.Count != 1 || relue.Liens[0].Url != "https://exemple.fr/guide")
+                    throw new InvalidOperationException("Notes : le fichier relu ne rend pas ce qui a été enregistré.");
+                if (!NotesJeu.Enregistre(jeuTest, 0, "", null) || !NotesJeu.De(jeuTest).Vide) throw new InvalidOperationException("Notes : la fiche de test n'a pas été retirée.");
+                if (!existait) { try { System.IO.File.Delete(fichierNotes); } catch { } }
+                string raisonLien;
+                if (NotesJeu.Ouvre("file:///C:/Windows/notepad.exe", out raisonLien)) throw new InvalidOperationException("Notes : un lien qui n'est pas du web a été ouvert.");
+                Console.WriteLine("  Notes et liens : aller-retour sur le fichier OK");
             }
             // Bilan de jeu : journal de synthèse (8 jeux, plus que les 6 lignes affichées), les 3 périodes.
             var journal = new System.Collections.Generic.List<JournalJeu.Partie>();

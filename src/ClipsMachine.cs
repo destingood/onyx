@@ -111,13 +111,49 @@ namespace BTOptimizer
                 {
                     if (res.Count >= max) return;
                     if (!EstVideo(f.Name) || !vus.Add(f.FullName)) continue;
-                    res.Add(new Clip { Chemin = f.FullName, Jeu = JeuDepuisChemin(racine, f.FullName), Date = f.LastWriteTime, Octets = f.Length });
+                    res.Add(new Clip { Chemin = f.FullName, Jeu = JeuDepuisChemin(racine, f.FullName), Racine = racine, Date = f.LastWriteTime, Octets = f.Length });
                 }
                 if (profondeur >= ProfondeurMax) return;
                 foreach (DirectoryInfo s in d.EnumerateDirectories())
                     Parcourt(racine, s.FullName, profondeur + 1, max, res, vus);
             }
             catch { }   // dossier protégé ou disparu : on passe
+        }
+
+        // ------------------------------------------------------------------ renommer, limite d'espace
+
+        /// <summary>
+        /// Renomme le clip dans son dossier sans jamais écraser un autre fichier. Renvoie le nouveau
+        /// chemin, ou null avec la raison (fichier ouvert dans un lecteur, nom déjà pris…).
+        /// </summary>
+        public static string Renomme(string chemin, string nom, out string erreur)
+        {
+            erreur = null;
+            try
+            {
+                string cible = CheminRenomme(chemin, nom);
+                if (string.Equals(cible, chemin, StringComparison.Ordinal)) return chemin;
+                // Même nom à la casse près : c'est le même fichier, Windows accepte le changement.
+                if (!string.Equals(cible, chemin, StringComparison.OrdinalIgnoreCase) && (File.Exists(cible) || Directory.Exists(cible)))
+                { erreur = "Un fichier porte déjà ce nom dans ce dossier."; return null; }
+                File.Move(chemin, cible);
+                return cible;
+            }
+            catch (Exception ex) { erreur = ex.Message; return null; }
+        }
+
+        private const string FichierLimite = "bt-clips-limite.txt";
+
+        /// <summary>Limite d'espace choisie pour les clips, en Go ; 0 = aucune.</summary>
+        public static int LimiteGo()
+        {
+            try { string p = AppPaths.File(FichierLimite); return File.Exists(p) ? LitLimite(File.ReadAllText(p)) : 0; }
+            catch { return 0; }
+        }
+
+        public static void EcritLimite(int go)
+        {
+            File.WriteAllText(AppPaths.File(FichierLimite), go.ToString(System.Globalization.CultureInfo.InvariantCulture), new UTF8Encoding(false));
         }
 
         // ------------------------------------------------------------------ vignettes de l'Explorateur

@@ -12,8 +12,9 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Bibliothèque des clips : les vidéos de Captures, Vidéos et des dossiers ajoutés, rangées par
-    /// jeu. Lire, afficher dans le dossier, copier (se colle dans Discord), mettre à la Corbeille
-    /// après confirmation. Aucune suppression définitive.
+    /// jeu. Lire, afficher dans le dossier, copier (se colle dans Discord), renommer, mettre à la
+    /// Corbeille après confirmation. Limite d'espace : ONYX propose d'envoyer les plus anciens à la
+    /// Corbeille, jamais sans confirmation. Aucune suppression définitive.
     /// </summary>
     internal sealed class ClipsForm : Form
     {
@@ -23,7 +24,12 @@ namespace BTOptimizer
         private readonly ListView _liste;
         private readonly ImageList _images;
         private readonly Label _etat;
-        private readonly Button _lire, _dossier, _copier, _corbeille, _actualiser, _ajouter;
+        private readonly Button _lire, _dossier, _copier, _renommer, _corbeille, _actualiser, _ajouter, _liberer;
+        private readonly ComboBox _limite;
+        private readonly Label _limiteTitre, _espace;
+        private List<Clips.Clip> _enTrop = new List<Clips.Clip>();
+        private string _apres;   // message à montrer une fois la liste rechargée
+        private bool _pret;
         private readonly string _jeuVoulu;
         private List<Clips.Clip> _tous = new List<Clips.Clip>();
         private readonly List<string> _jeuxAffiches = new List<string>();
@@ -64,15 +70,39 @@ namespace BTOptimizer
             _liste.AccessibleName = "Clips";
             _liste.SelectedIndexChanged += (s, e) => MajBoutons();
             _liste.ItemActivate += (s, e) => Lire();
-            _liste.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) Corbeille(); else if (e.Control && e.KeyCode == Keys.C) Copier(); };
+            _liste.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Delete) Corbeille();
+                else if (e.KeyCode == Keys.F2) Renommer();
+                else if (e.Control && e.KeyCode == Keys.C) Copier();
+            };
             Controls.Add(_liste);
 
             _lire = Bouton("Lire", (s, e) => Lire());
             _dossier = Bouton("Afficher dans le dossier", (s, e) => Dossier());
-            _copier = Bouton("Copier le fichier", (s, e) => Copier());
+            _copier = Bouton("Copier", (s, e) => Copier());
+            _renommer = Bouton("Renommer…", (s, e) => Renommer());
             _corbeille = Bouton("Corbeille…", (s, e) => Corbeille());
             _actualiser = Bouton("Actualiser", (s, e) => Charge());
             _ajouter = Bouton("Ajouter un dossier…", (s, e) => Ajoute());
+
+            // Limite d'espace : un choix, l'espace occupé, et le bouton qui libère (visible si dépassée).
+            _limiteTitre = new Label { Text = "Limite d'espace :", ForeColor = FpsUi.Dim, Font = FpsUi.Small, TextAlign = ContentAlignment.MiddleLeft };
+            Controls.Add(_limiteTitre);
+            _limite = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, FlatStyle = FlatStyle.Flat, Font = FpsUi.Small };
+            _limite.AccessibleName = "Limite d'espace des clips";
+            int choisie = Clips.LimiteGo();
+            var valeurs = new List<int>(Clips.LimitesGo);
+            if (!valeurs.Contains(choisie)) { valeurs.Add(choisie); valeurs.Sort(); }   // valeur écrite à la main dans le fichier
+            foreach (int go in valeurs) _limite.Items.Add(go == 0 ? "Aucune" : go + " Go");
+            _limite.Tag = valeurs;
+            _limite.SelectedIndex = Math.Max(0, valeurs.IndexOf(choisie));
+            _limite.SelectedIndexChanged += (s, e) => ChangeLimite();
+            Controls.Add(_limite);
+            _espace = new Label { ForeColor = FpsUi.Dim, Font = FpsUi.Small, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft };
+            Controls.Add(_espace);
+            _liberer = Bouton("Libérer…", (s, e) => Libere());
+            _liberer.Visible = false;
 
             _etat = new Label { ForeColor = FpsUi.Dim, Font = FpsUi.Small, AutoEllipsis = true };
             Controls.Add(_etat);
@@ -84,6 +114,7 @@ namespace BTOptimizer
             ConstruitCapture();
             Place();
             MajBoutons();
+            _pret = true;
         }
 
         /// <summary>Bandeau du haut (note, puis réglages de capture) : la liste commence sous lui.</summary>
@@ -104,21 +135,31 @@ namespace BTOptimizer
             Haut.SetBounds(m, 14, W - 2 * m, HautH);
             foreach (Control c in Haut.Controls) if (c.Name == "clips-note") c.Width = Haut.Width;
             PlaceCapture();
-            int y = 14 + HautH + 10, bas = H - 96;
+            int y = 14 + HautH + 10, bas = H - 138;
             _jeux.SetBounds(m, y, 200, bas - y);
             _liste.SetBounds(m + 212, y, W - 2 * m - 212, bas - y);
             int x = m, by = H - 82;
-            foreach (Button b in new[] { _lire, _dossier, _copier, _corbeille })
+            foreach (Button b in new[] { _lire, _dossier, _copier, _renommer, _corbeille })
             {
                 int w = TextRenderer.MeasureText(b.Text, b.Font).Width + 36;
                 b.SetBounds(x, by, w, 34); x += w + 10;
             }
-            int xr = W - m;
+            // Ligne du dessus : limite d'espace à gauche, dossiers à droite.
+            int ly = H - 126, xr = W - m;
             foreach (Button b in new[] { _ajouter, _actualiser })
             {
                 int w = TextRenderer.MeasureText(b.Text, b.Font).Width + 36;
-                xr -= w; b.SetBounds(xr, by, w, 34); xr -= 10;
+                xr -= w; b.SetBounds(xr, ly, w, 34); xr -= 10;
             }
+            _limiteTitre.SetBounds(m, ly, 104, 34);
+            _limite.SetBounds(m + 106, ly + 5, 96, 26);
+            int lx = m + 212;
+            if (_liberer.Visible)
+            {
+                int w = TextRenderer.MeasureText(_liberer.Text, _liberer.Font).Width + 36;
+                _liberer.SetBounds(lx, ly, w, 34); lx += w + 10;
+            }
+            _espace.SetBounds(lx, ly, Math.Max(0, xr - lx), 34);
             _etat.SetBounds(m, H - 38, W - 2 * m, 20);
         }
 
@@ -160,7 +201,65 @@ namespace BTOptimizer
                 : l.Count + (l.Count > 1 ? " clips" : " clip") + (l.Count >= Clips.MaxFichiers ? " (limite de " + Clips.MaxFichiers + " atteinte)" : "")
                   + " dans " + racines.Count + (racines.Count > 1 ? " dossiers." : " dossier.");
             if (_jeuVoulu != null && sel == 0 && l.Count > 0) texte += " Aucun clip rangé sous « " + _jeuVoulu + " » : tout est affiché.";
-            _etat.Text = texte;
+            _etat.Text = _apres ?? texte;
+            _apres = null;
+            MajEspace();
+        }
+
+        // ------------------------------------------------------------------ limite d'espace
+
+        private int LimiteChoisie()
+        {
+            var valeurs = (List<int>)_limite.Tag;
+            return _limite.SelectedIndex >= 0 && _limite.SelectedIndex < valeurs.Count ? valeurs[_limite.SelectedIndex] : 0;
+        }
+
+        private void ChangeLimite()
+        {
+            if (!_pret) return;
+            try { Clips.EcritLimite(LimiteChoisie()); }
+            catch (Exception ex) { _etat.Text = "Limite non enregistrée : " + ex.Message; }
+            MajEspace();
+        }
+
+        /// <summary>Espace occupé par les clips trouvés, et ce qu'il faudrait retirer pour tenir la limite.</summary>
+        private void MajEspace()
+        {
+            int go = LimiteChoisie();
+            long total = Clips.Total(_tous);
+            _enTrop = Clips.EnTrop(_tous, go * (1L << 30));
+            long octets = Clips.Total(_enTrop);
+            string texte = _tous.Count == 0 ? "" : "Tes clips occupent " + Clips.TailleLisible(total) + ".";
+            if (_enTrop.Count > 0)
+                texte = Clips.TailleLisible(total) + " occupés, limite dépassée : " + _enTrop.Count
+                      + (_enTrop.Count > 1 ? " clips les plus anciens" : " clip le plus ancien") + " à retirer.";
+            _espace.Text = texte;
+            _espace.ForeColor = _enTrop.Count > 0 ? FpsUi.Gold : FpsUi.Dim;
+            _liberer.Text = "Libérer " + Clips.TailleLisible(octets) + "…";
+            _liberer.Visible = _enTrop.Count > 0;
+            Place();
+        }
+
+        /// <summary>Envoie à la Corbeille les clips les plus anciens qui dépassent la limite, après confirmation.</summary>
+        private void Libere()
+        {
+            if (_enTrop.Count == 0) return;
+            var lot = new List<Clips.Clip>(_enTrop);
+            var sb = new System.Text.StringBuilder();
+            sb.Append("Limite d'espace : ").Append(LimiteChoisie()).Append(" Go. Pour repasser dessous, mettre à la Corbeille ")
+              .Append(lot.Count > 1 ? "les " + lot.Count + " clips les plus anciens" : "le clip le plus ancien")
+              .Append(" (").Append(Clips.TailleLisible(Clips.Total(lot))).Append(") ?\n\n");
+            for (int i = 0; i < lot.Count && i < 12; i++)
+                sb.Append(lot[i].Date.ToString("dd/MM/yyyy")).Append("  ").Append(Path.GetFileName(lot[i].Chemin)).Append("\n");
+            if (lot.Count > 12) sb.Append("… et ").Append(lot.Count - 12).Append(lot.Count - 12 > 1 ? " autres.\n" : " autre.\n");
+            sb.Append("\nTu peux les restaurer depuis la Corbeille de Windows tant qu'elle n'est pas vidée.");
+            if (MessageBox.Show(this, sb.ToString(), "ONYX — Clips", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.OK) return;
+            var chemins = lot.ConvertAll(x => x.Chemin);
+            bool ok = Storage.RecycleFiles(chemins, Handle);
+            int restants = chemins.FindAll(File.Exists).Count;
+            _apres = ok && restants == 0 ? (lot.Count > 1 ? lot.Count + " clips" : "1 clip") + " à la Corbeille."
+                                         : "Corbeille : " + (chemins.Count - restants) + " sur " + chemins.Count + " déplacés.";
+            Charge();
         }
 
         private void Remplit()
@@ -237,7 +336,7 @@ namespace BTOptimizer
         private void MajBoutons()
         {
             int n = _liste.SelectedItems.Count;
-            _lire.Enabled = n == 1; _dossier.Enabled = n == 1;
+            _lire.Enabled = n == 1; _dossier.Enabled = n == 1; _renommer.Enabled = n == 1;
             _copier.Enabled = n > 0; _corbeille.Enabled = n > 0;
         }
 
@@ -270,6 +369,33 @@ namespace BTOptimizer
             catch (Exception ex) { _etat.Text = "Copie impossible : " + ex.Message; }
         }
 
+        /// <summary>Renomme le clip choisi (F2) : même dossier, même extension, jamais d'écrasement.</summary>
+        private void Renommer()
+        {
+            List<Clips.Clip> c = Choisis();
+            if (c.Count != 1) return;
+            Clips.Clip clip = c[0];
+            string ext = Path.GetExtension(clip.Chemin);
+            // Rangé d'après son nom (pas d'après un dossier) : le dire, sinon le clip change de jeu sans prévenir.
+            bool parNom = clip.Racine != null && clip.Jeu != Clips.Autres
+                && Clips.JeuDepuisChemin(clip.Racine, Path.Combine(Path.GetDirectoryName(clip.Chemin) ?? "", "x" + ext)) == Clips.Autres;
+            string saisi = SaisieTexte.Demande(this, "ONYX — Renommer le clip",
+                "Nouveau nom (l'extension " + ext + " ne change pas)."
+                    + (parNom ? " Ce clip est rangé sous « " + clip.Jeu + " » d'après son nom : garde le nom du jeu et la date pour qu'il y reste." : ""),
+                Path.GetFileNameWithoutExtension(clip.Chemin),
+                t => { string raison; return Clips.NomPropre(t, ext, out raison) == null ? raison : null; }, Clips.NomMax + 8);
+            if (saisi == null) return;
+            string erreur, nom = Clips.NomPropre(saisi, ext, out erreur);
+            if (nom == null) { _etat.Text = erreur; return; }
+            string nouveau = Clips.Renomme(clip.Chemin, nom, out erreur);
+            if (nouveau == null) { _etat.Text = "Renommage impossible : " + erreur; return; }
+            if (nouveau == clip.Chemin) return;
+            string jeu = clip.Racine != null ? Clips.JeuDepuisChemin(clip.Racine, nouveau) : clip.Jeu;
+            _apres = "Renommé en « " + Path.GetFileName(nouveau) + " »."
+                + (!string.Equals(jeu, clip.Jeu, StringComparison.OrdinalIgnoreCase) ? " Il est maintenant rangé sous « " + jeu + " »." : "");
+            Charge();
+        }
+
         private void Corbeille()
         {
             List<Clips.Clip> c = Choisis();
@@ -281,7 +407,7 @@ namespace BTOptimizer
             var chemins = c.ConvertAll(x => x.Chemin);
             bool ok = Storage.RecycleFiles(chemins, Handle);
             int restants = chemins.FindAll(File.Exists).Count;
-            _etat.Text = ok && restants == 0 ? quoi + " à la Corbeille." : "Corbeille : " + (chemins.Count - restants) + " sur " + chemins.Count + " déplacés.";
+            _apres = ok && restants == 0 ? quoi + " à la Corbeille." : "Corbeille : " + (chemins.Count - restants) + " sur " + chemins.Count + " déplacés.";
             Charge();
         }
 

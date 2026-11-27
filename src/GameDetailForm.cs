@@ -155,7 +155,16 @@ namespace BTOptimizer
             };
             Controls.Add(_options);
 
-            _close = OnyxDesign.Button("Fermer");
+            // Note personnelle et liens web du jeu : le bouton annonce combien il y en a.
+            _notes = OnyxDesign.Button(TexteNotes());
+            _notes.AccessibleName = "Notes et liens du jeu";
+            _notes.Click += (s, e) =>
+            {
+                using (var f = new NotesJeuForm(_g)) { f.ShowDialog(FindForm()); if (f.Change) { _notes.Text = TexteNotes(); Invalidate(); } }
+            };
+            Controls.Add(_notes);
+
+            _close =OnyxDesign.Button("Fermer");
             _close.Click += (s, e) => Close();
             Controls.Add(_close);
 
@@ -187,10 +196,27 @@ namespace BTOptimizer
             if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
             if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);
 
-            if (_close != null) _close.SetBounds(Pad, H - 62, 120, 40);
-            if (_hide != null) _hide.SetBounds(Pad + 132, H - 62, 130, 40);
-            if (_uninstall != null) _uninstall.SetBounds(Pad + 274, H - 62, 150, 40);
-            if (_options != null) _options.SetBounds(Pad + 436, H - 62, Math.Max(100, Math.Min(118, lw - 436)), 40);
+            // Rangée du bas : cinq boutons qui se partagent la colonne gauche (jamais sous la jaquette).
+            int[] parts = { 90, 106, 126, 96, 105 };   // Fermer, Masquer, Désinstaller, Options, Notes
+            Button[] bas = { _close, _hide, _uninstall, _options, _notes };
+            const int ecart = 8;
+            int somme = 0; foreach (int p in parts) somme += p;
+            double k = Math.Min(1.25, (lw - ecart * (parts.Length - 1)) / (double)somme);
+            int bx = Pad;
+            for (int i = 0; i < bas.Length; i++)
+            {
+                int bw = (int)(parts[i] * k);
+                if (bas[i] != null) bas[i].SetBounds(bx, H - 62, bw, 40);
+                bx += bw + ecart;
+            }
+        }
+
+        /// <summary>« Notes · 3 » quand le jeu a une note ou des liens, « Notes… » sinon.</summary>
+        private string TexteNotes()
+        {
+            int n = 0;
+            try { n = NotesJeu.De(_g.Name).Nombre; } catch { }
+            return n > 0 ? "Notes · " + n : "Notes…";
         }
 
         // ---- Priorité CPU dédiée (IFEO, comme la page « Priorité par jeu ») ----
@@ -438,6 +464,10 @@ namespace BTOptimizer
             TextRenderer.DrawText(g, "Préparer ta session", FpsUi.H2, new Rectangle(Pad, 84, LeftW, 26),
                 FpsUi.Ink, TextFormatFlags.NoPrefix);
             string st2 = _g.Detected ? ("● DÉTECTÉ" + (string.IsNullOrEmpty(_g.Store) ? "" : "   ·   " + _g.Store)) : "non installé sur ce PC";
+            // Appréciation personnelle (fenêtre « Notes ») : rappelée à côté de l'état du jeu.
+            string appreciation = "";
+            try { appreciation = NotesJeu.TexteEtoiles(NotesJeu.De(_g.Name).Etoiles); } catch { }
+            if (appreciation.Length > 0) st2 += "   ·   ma note " + appreciation;
             TextRenderer.DrawText(g, st2, FpsUi.Small, new Rectangle(Pad, 114, LeftW, 18),
                 _g.Detected ? FpsUi.Gold : FpsUi.Dim, TextFormatFlags.NoPrefix);
 
@@ -454,7 +484,7 @@ namespace BTOptimizer
 
         private readonly List<JournalJeu.Partie> _parties;
         private readonly List<JournalJeu.Partie> _pointsFps;
-        private Button _options;
+        private Button _options, _notes;
 
         /// <summary>Vrai si nom, lancement ou jaquette ont changé : la bibliothèque se redessine.</summary>
         public bool OptionsChangees { get; private set; }

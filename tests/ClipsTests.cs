@@ -40,6 +40,46 @@ namespace BTOptimizer.Tests
             List<Clips.Clip> fn = Clips.Trie(new[] { a, b, c }, "FORTNITE");
             Banc.Egal("filtre par jeu, casse ignorée", "c,a", string.Join(",", fn.ConvertAll(x => x.Chemin)));
             Banc.Verifie("liste nulle : vide", true, Clips.Trie(null, null).Count == 0);
+
+            // Renommer.
+            string err;
+            Banc.Egal("nom simple gardé", "Clutch 1v4", Clips.NomPropre("  Clutch 1v4  ", ".mp4", out err));
+            Banc.Egal("extension tapée par habitude : retirée", "Clutch", Clips.NomPropre("Clutch.MP4", ".mp4", out err));
+            Banc.Egal("points et espaces de fin retirés", "Clutch", Clips.NomPropre("Clutch. . ", ".mp4", out err));
+            Banc.Egal("point au milieu gardé", "v1.2 final", Clips.NomPropre("v1.2 final", ".mp4", out err));
+            Banc.Verifie("nom vide refusé, avec la raison", true, Clips.NomPropre("   ", ".mp4", out err) == null && err == "Le nom est vide.");
+            Banc.Verifie("extension seule refusée", true, Clips.NomPropre(".mp4", ".mp4", out err) == null);
+            foreach (char c2 in "\\/:*?\"<>|")
+                if (Clips.NomPropre("a" + c2 + "b", ".mp4", out err) != null) Banc.Verifie("caractère interdit accepté : " + c2, true, false);
+            Banc.Verifie("caractères interdits refusés", true, Clips.NomPropre("a:b", ".mp4", out err) == null && err.EndsWith(":"));
+            Banc.Verifie("tabulation refusée", true, Clips.NomPropre("a\tb", ".mp4", out err) == null);
+            Banc.Verifie("nom réservé refusé (CON, com1.txt)", true,
+                Clips.NomPropre("con", ".mp4", out err) == null && Clips.NomPropre("COM1.txt", ".mp4", out err) == null);
+            Banc.Egal("nom qui commence comme un réservé : accepté", "Console", Clips.NomPropre("Console", ".mp4", out err));
+            Banc.Verifie("nom trop long refusé", true, Clips.NomPropre(new string('a', Clips.NomMax + 1), ".mp4", out err) == null);
+            Banc.Egal("nom à la longueur maximale accepté", Clips.NomMax.ToString(), Clips.NomPropre(new string('a', Clips.NomMax), ".mp4", out err).Length.ToString());
+            Banc.Egal("même dossier, même extension", @"D:\Vidéos\Captures\Clutch.mp4",
+                Clips.CheminRenomme(@"D:\Vidéos\Captures\Fortnite 2026-11-26 21-04-11.mp4", "Clutch"));
+
+            // Limite d'espace.
+            Banc.Egal("limite relue", "50", Clips.LitLimite(" 50\r\n").ToString());
+            Banc.Verifie("limite absente, nulle, négative, absurde ou illisible : aucune", true,
+                Clips.LitLimite(null) == 0 && Clips.LitLimite("0") == 0 && Clips.LitLimite("-5") == 0
+                && Clips.LitLimite("99999") == 0 && Clips.LitLimite("5,5") == 0 && Clips.LitLimite("dix") == 0);
+            Banc.Verifie("le premier choix proposé est « aucune »", true, Clips.LimitesGo[0] == 0);
+
+            var v1 = new Clips.Clip { Chemin = "v1", Date = new DateTime(2026, 1, 1), Octets = 40 };
+            var v2 = new Clips.Clip { Chemin = "v2", Date = new DateTime(2026, 3, 1), Octets = 30 };
+            var v3 = new Clips.Clip { Chemin = "v3", Date = new DateTime(2026, 2, 1), Octets = 20 };
+            var v4 = new Clips.Clip { Chemin = "v4", Date = new DateTime(2026, 4, 1), Octets = 10 };
+            var lot = new[] { v4, v1, v2, v3 };
+            Banc.Egal("total", "100", Clips.Total(lot).ToString());
+            Banc.Verifie("sous la limite ou juste dessus : rien à retirer", true,
+                Clips.EnTrop(lot, 100).Count == 0 && Clips.EnTrop(lot, 500).Count == 0);
+            Banc.Verifie("aucune limite : rien à retirer", true, Clips.EnTrop(lot, 0).Count == 0 && Clips.EnTrop(lot, -1).Count == 0 && Clips.EnTrop(null, 10).Count == 0);
+            Banc.Egal("dépassement de 1 : le plus ancien seulement", "v1", string.Join(",", Clips.EnTrop(lot, 99).ConvertAll(x => x.Chemin)));
+            Banc.Egal("les plus anciens d'abord, pas un de plus qu'il ne faut", "v1,v3", string.Join(",", Clips.EnTrop(lot, 45).ConvertAll(x => x.Chemin)));
+            Banc.Egal("limite plus petite que le plus récent : tout part", "v1,v3,v2,v4", string.Join(",", Clips.EnTrop(lot, 5).ConvertAll(x => x.Chemin)));
         }
     }
 }

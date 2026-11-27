@@ -5,6 +5,27 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.10 — Compteur en jeu au choix, clips (renommer, limite d'espace), dossiers exclus du nettoyage, notes et liens par jeu
+
+- **Compteur en jeu : tu choisis ce qu'il affiche.** Fenêtre « Compteur en jeu » : douze lignes à
+  cocher (1 % bas, processeur et sa température, carte graphique et sa température, mémoire vidéo,
+  watts de la carte, RAM, débit réseau descendant et montant, heure, durée de la partie, courbe),
+  six positions à l'écran, trois tailles et cinq couleurs. Les ventilateurs ne sont pas proposés :
+  les lire demande un pilote noyau, qu'ONYX n'installe pas. Tout est lu depuis Windows et le pilote
+  graphique, rien n'entre dans le jeu.
+- **Clips : renommer.** Bouton « Renommer… » (ou F2). ONYX refuse les noms interdits par Windows et
+  n'écrase jamais un fichier existant ; il prévient quand le clip est rangé d'après son nom.
+- **Clips : limite d'espace.** Choisis une limite (5 à 500 Go). Quand tes clips la dépassent, le
+  bouton « Libérer… » propose les plus anciens, juste ce qu'il faut pour repasser dessous, avec la
+  liste des fichiers. Rien ne part sans ton accord, et tout va à la Corbeille.
+- **Nettoyage : dossiers exclus.** Dans les réglages du stockage, « Dossiers exclus du nettoyage » :
+  ce qu'un dossier exclu contient n'est plus jamais proposé, et un cache qui en contient un n'est
+  plus vidé. La règle vaut pour tous les nettoyages d'ONYX (nettoyage, maintenance, centre de
+  stockage, rappel hebdomadaire, copilote). 50 dossiers au plus.
+- **Fiche d'un jeu : notes et liens.** Bouton « Notes… » : ton appréciation sur 5, une note
+  personnelle (2 000 caractères) et jusqu'à 12 liens web (wiki, carte, guide…) qui s'ouvrent dans
+  ton navigateur. Seules les adresses http et https sont acceptées. Tout reste sur ce PC.
+
 ## v16.09 — Clavier pendant la partie
 
 - **Mode Jeu : touche Windows bloquée en jeu** (case « Bloquer la touche Windows… » dans les

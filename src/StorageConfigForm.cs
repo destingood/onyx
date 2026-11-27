@@ -20,7 +20,7 @@ namespace BTOptimizer
         private RadioButton _rSafe, _rDeep;
         private NumericUpDown _alert, _minFile;
         private CheckBox _hebdo;
-        private ListBox _ignored;
+        private ListBox _ignored, _exclus;
         private Label _explain;
         private List<Storage.Module> _defs;
 
@@ -39,7 +39,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "ONYX — Réglages du stockage";
-            ClientSize = new Size(720, 718);
+            ClientSize = new Size(720, 772);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -145,22 +145,46 @@ namespace BTOptimizer
             });
             y += 34;
 
-            Controls.Add(Title("Ne plus me proposer", 16, y)); y += 24;
+            // Deux listes côte à côte : ce que tu as écarté d'une analyse, et les dossiers exclus à la main.
+            Label tIgn = Title("Ne plus me proposer", 16, y); tIgn.Size = new Size(336, 20); Controls.Add(tIgn);
+            Label tExc = Title("Dossiers exclus du nettoyage", 368, y); tExc.Size = new Size(336, 20); Controls.Add(tExc);
+            y += 24;
             _ignored = new ListBox
             {
                 Location = new Point(16, y),
-                Size = new Size(560, 76),
+                Size = new Size(336, 76),
                 BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.White
+                BackColor = Color.White, HorizontalScrollbar = true
             };
+            _ignored.AccessibleName = "Éléments à ne plus proposer";
             Controls.Add(_ignored);
+            _exclus = new ListBox
+            {
+                Location = new Point(368, y),
+                Size = new Size(336, 76),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.White, HorizontalScrollbar = true
+            };
+            _exclus.AccessibleName = "Dossiers exclus du nettoyage";
+            Controls.Add(_exclus);
+            y += 82;
 
-            Button bDel = MakeBtn("Retirer", 584, y, 120, 32, false);
+            Button bDel = MakeBtn("Retirer", 16, y, 110, 30, false);
             bDel.Click += OnRemoveIgnored;
             Controls.Add(bDel);
-            Button bClear = MakeBtn("Tout retirer", 584, y + 40, 120, 32, false);
+            Button bClear = MakeBtn("Tout retirer", 134, y, 120, 30, false);
             bClear.Click += (s, e) => { _st.ClearIgnored(); RefreshIgnored(); };
             Controls.Add(bClear);
+            Button bAdd = MakeBtn("Ajouter un dossier…", 368, y, 170, 30, false);
+            bAdd.Click += OnAddExclu;
+            Controls.Add(bAdd);
+            Button bRem = MakeBtn("Retirer", 546, y, 110, 30, false);
+            bRem.Click += OnRemoveExclu;
+            Controls.Add(bRem);
+            y += 34;
+            _exclusNote = Hint("Rien de ce qu'un dossier exclu contient n'est proposé, et un cache qui en contient un n'est plus vidé.", 368, y);
+            _exclusNote.Size = new Size(336, 32);
+            Controls.Add(_exclusNote);
 
             var bottom = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = Color.FromArgb(245, 246, 248) };
             Button ok = MakeBtn("Enregistrer", 496, 10, 120, 36, true);
@@ -228,7 +252,42 @@ namespace BTOptimizer
             _minFile.Value = Math.Max(_minFile.Minimum, Math.Min(_minFile.Maximum, _st.MinFileMB));
             _hebdo.Checked = RappelNettoyage.Charge().Active;
             RefreshIgnored();
+            RefreshExclus();
             UpdateExplain();
+        }
+
+        private Label _exclusNote;
+        private const string NoteExclus = "Rien de ce qu'un dossier exclu contient n'est proposé, et un cache qui en contient un n'est plus vidé.";
+
+        private void RefreshExclus()
+        {
+            _exclus.Items.Clear();
+            List<string> list = _st.Exclus;
+            list.Sort(StringComparer.CurrentCultureIgnoreCase);
+            foreach (string s in list) _exclus.Items.Add(s);
+            if (_exclus.Items.Count == 0) _exclus.Items.Add("(aucun dossier exclu)");
+        }
+
+        private void OnAddExclu(object sender, EventArgs e)
+        {
+            using (var d = new FolderBrowserDialog { Description = "Dossier à ne jamais nettoyer ni proposer", UseDescriptionForTitle = true, ShowNewFolderButton = false })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                string refus = _st.Exclut(d.SelectedPath);
+                _exclusNote.Text = refus ?? NoteExclus;
+                _exclusNote.ForeColor = refus != null ? Color.FromArgb(190, 60, 50) : Sub;
+                RefreshExclus();
+            }
+        }
+
+        private void OnRemoveExclu(object sender, EventArgs e)
+        {
+            if (_exclus.SelectedItem == null) return;
+            string s = Convert.ToString(_exclus.SelectedItem);
+            if (s.StartsWith("(")) return;
+            _st.RetireExclu(s);
+            _exclusNote.Text = NoteExclus; _exclusNote.ForeColor = Sub;
+            RefreshExclus();
         }
 
         private void UpdateExplain()
