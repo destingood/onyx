@@ -7,14 +7,14 @@ namespace BTOptimizer
 {
     /// <summary>
     /// Options d'un jeu (clic droit sur une tuile, ou fiche du jeu) : nom affiché, exécutable,
-    /// arguments, dossier de départ, jaquette personnalisée. Champs vides = lancement habituel.
+    /// arguments, dossier de départ, étiquettes, jaquette et fond personnalisés. Champs vides = lancement habituel.
     /// <see cref="Change"/> dit à l'appelant de redessiner la bibliothèque.
     /// </summary>
     internal sealed class OptionsJeuForm : Form
     {
         private readonly GameScan.GameInfo _g;
-        private readonly TextBox _nom, _cible, _args, _dossier;
-        private readonly Button _jaquette, _origine;
+        private readonly TextBox _nom, _cible, _args, _dossier, _etiquettes;
+        private readonly Button _jaquette, _origine, _fond, _fondOrigine;
         private readonly Label _etat;
 
         public bool Change { get; private set; }
@@ -23,7 +23,7 @@ namespace BTOptimizer
         {
             _g = g;
             Text = "ONYX — Options de " + g.Name;
-            ClientSize = new Size(560, 392);
+            ClientSize = new Size(560, 488);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false; MinimizeBox = false;
@@ -35,6 +35,8 @@ namespace BTOptimizer
             _cible = Champ("Exécutable (vide : lancement habituel, par " + (string.IsNullOrEmpty(g.Store) ? "le dossier du jeu" : g.Store) + ")", o.Cible, ref y, ChoisirExe);
             _args = Champ("Arguments de lancement (ex. -novid -high)", o.Arguments, ref y, null);
             _dossier = Champ("Dossier de départ (vide : celui de l'exécutable)", o.Dossier, ref y, ChoisirDossier);
+            _etiquettes = Champ("Étiquettes, séparées par des virgules (ex. solo, coop, à finir) : filtre de la bibliothèque",
+                EtiquettesJeux.Saisie(EtiquettesJeux.Pour(g.Name)), ref y, null);
 
             var note = new Label
             {
@@ -55,6 +57,17 @@ namespace BTOptimizer
             _origine.Enabled = JaquettesPerso.A(g.Name);
             _origine.Click += (s, e) => JaquetteOrigine();
             Controls.Add(_origine);
+            y += 40;
+
+            _fond = OnyxDesign.Button("Changer le fond…");
+            _fond.SetBounds(16, y, 190, 32);
+            _fond.Click += (s, e) => ChoisirFond();
+            Controls.Add(_fond);
+            _fondOrigine = OnyxDesign.Button("Fond d'origine");
+            _fondOrigine.SetBounds(214, y, 170, 32);
+            _fondOrigine.Enabled = FondsPerso.A(g.Name);
+            _fondOrigine.Click += (s, e) => FondOrigine();
+            Controls.Add(_fondOrigine);
             y += 40;
 
             _etat = new Label { Location = new Point(16, y), Size = new Size(528, 20), ForeColor = FpsUi.Dim };
@@ -129,12 +142,37 @@ namespace BTOptimizer
             _etat.Text = ok ? "Jaquette d'origine rétablie (l'image choisie est dans la Corbeille)." : "La copie n'a pas pu aller à la Corbeille.";
         }
 
+        private void ChoisirFond()
+        {
+            using (var d = new OpenFileDialog { Title = "Image de fond de la fiche", Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|Tous les fichiers|*.*", CheckFileExists = true })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    FondsPerso.Pose(_g.Name, d.FileName);
+                    Change = true;
+                    _fondOrigine.Enabled = true;
+                    _etat.ForeColor = FpsUi.Gold; _etat.Text = "Fond changé : il s'affiche derrière la fiche du jeu.";
+                }
+                catch (Exception ex) { _etat.ForeColor = FpsUi.Dim; _etat.Text = "Image illisible : " + ex.Message; }
+            }
+        }
+
+        private void FondOrigine()
+        {
+            bool ok = FondsPerso.Retire(_g.Name, Handle);
+            Change = true;
+            _fondOrigine.Enabled = FondsPerso.A(_g.Name);
+            _etat.Text = ok ? "Fond d'origine rétabli (l'image choisie est dans la Corbeille)." : "La copie n'a pas pu aller à la Corbeille.";
+        }
+
         private void Enregistrer()
         {
             string cible = _cible.Text.Trim(), dossier = _dossier.Text.Trim();
             if (cible.Length > 0 && !File.Exists(cible)) { _etat.Text = "Exécutable introuvable : " + cible; _cible.Focus(); return; }
             if (dossier.Length > 0 && !Directory.Exists(dossier)) { _etat.Text = "Dossier introuvable : " + dossier; _dossier.Focus(); return; }
             if (!OptionsJeu.Enregistre(_g.Name, _nom.Text, cible, _args.Text, dossier)) { _etat.Text = "Enregistrement impossible (fichier en lecture seule ?)."; return; }
+            if (!EtiquettesJeux.Enregistre(_g.Name, _etiquettes.Text)) { _etat.Text = "Étiquettes non enregistrées (fichier en lecture seule, ou " + EtiquettesJeux.MaxJeux + " jeux étiquetés au plus)."; return; }
             Change = true;
             DialogResult = DialogResult.OK;
             Close();

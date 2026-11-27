@@ -79,6 +79,7 @@
     <Compile Include="..\src\TriJeux.cs" />
     <Compile Include="..\src\OffresMasquees.cs" />
     <Compile Include="..\src\OptionsJeu.cs" />
+    <Compile Include="..\src\EtiquettesJeux.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />
     <Compile Include="..\src\LatenceReelle.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />

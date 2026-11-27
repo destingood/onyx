@@ -23,6 +23,7 @@ namespace BTOptimizer
         private Label _results;
         private bool _catalogueMode;
         private string _storeFilter = "Toutes les plateformes";
+        private string _tagFilter;   // étiquette choisie dans le même menu (null : aucune)
         private readonly ToolTip _tips = new ToolTip();
 
         // Mode « Espace » : retrie la bibliothèque par espace DORMANT (taille × temps sans jouer)
@@ -408,6 +409,30 @@ namespace BTOptimizer
             _platformMenu.Items.Clear();
             AddPlatform("Toutes les plateformes");
             foreach (string name in names) AddPlatform(name);
+            List<string> tags = EtiquettesJeux.Toutes();
+            if (_tagFilter != null && !EtiquettesJeux.Porte(tags, _tagFilter))
+            {
+                _tagFilter = null; _storeFilter = "Toutes les plateformes"; _platform.Text = _storeFilter + "  ⌄";
+                foreach (ToolStripItem choice in _platformMenu.Items)
+                    if (choice is ToolStripMenuItem m) m.Checked = m.Text == _storeFilter;
+            }
+            if (tags.Count == 0) return;
+            _platformMenu.Items.Add(new ToolStripSeparator());
+            _platformMenu.Items.Add(new ToolStripMenuItem("Étiquettes") { Enabled = false });
+            foreach (string tag in tags) AddTag(tag);
+        }
+
+        private void AddTag(string tag)
+        {
+            var item = new ToolStripMenuItem("# " + tag) { Checked = string.Equals(tag, _tagFilter, StringComparison.OrdinalIgnoreCase) };
+            item.Click += (s, e) =>
+            {
+                _tagFilter = tag; _storeFilter = "Toutes les plateformes"; _platform.Text = "# " + tag + "  ⌄";
+                foreach (ToolStripItem choice in _platformMenu.Items)
+                    if (choice is ToolStripMenuItem m) m.Checked = m == item;
+                Render();
+            };
+            _platformMenu.Items.Add(item);
         }
 
         private void AddPlatform(string name)
@@ -415,8 +440,9 @@ namespace BTOptimizer
             var item = new ToolStripMenuItem(name) { Checked = name == _storeFilter };
             item.Click += (s, e) =>
             {
-                _storeFilter = name; _platform.Text = name + "  ⌄";
-                foreach (ToolStripMenuItem choice in _platformMenu.Items) choice.Checked = choice == item;
+                _storeFilter = name; _tagFilter = null; _platform.Text = name + "  ⌄";
+                foreach (ToolStripItem choice in _platformMenu.Items)
+                    if (choice is ToolStripMenuItem m) m.Checked = m == item;
                 Render();
             };
             _platformMenu.Items.Add(item);
@@ -424,7 +450,10 @@ namespace BTOptimizer
 
         private bool Match(GameScan.GameInfo game)
         {
-            return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query) || OptionsJeu.Nom(game.Name).ToLowerInvariant().Contains(_query))
+            List<string> tags = _query.Length > 0 || _tagFilter != null ? EtiquettesJeux.Pour(game.Name) : null;
+            return (_query.Length == 0 || (game.Name ?? "").ToLowerInvariant().Contains(_query) || OptionsJeu.Nom(game.Name).ToLowerInvariant().Contains(_query)
+                    || EtiquettesJeux.Contient(tags, _query))
+                && (_tagFilter == null || EtiquettesJeux.Porte(tags, _tagFilter))
                 && (_storeFilter == "Toutes les plateformes" || OnStore(game, _storeFilter));
         }
 
@@ -578,7 +607,8 @@ namespace BTOptimizer
                 OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
                     new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };
-            _tips.SetToolTip(card, affiche + " — ouvrir la fiche et les réglages");
+            List<string> etiquettes = EtiquettesJeux.Pour(game.Name);
+            _tips.SetToolTip(card, affiche + " — ouvrir la fiche et les réglages" + (etiquettes.Count > 0 ? "\n# " + string.Join("  # ", etiquettes) : ""));
             card.Click += (s, e) => OpenDetail(game);
             card.MouseUp += (s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
             return card;
@@ -595,13 +625,15 @@ namespace BTOptimizer
             var open = new ToolStripMenuItem("Ouvrir la fiche");
             open.Click += (s, e) => OpenDetail(game);
             _cardMenu.Items.Add(open);
-            var opts = new ToolStripMenuItem("Options, lancement et jaquette…");
+            var opts = new ToolStripMenuItem("Options, étiquettes et images…");
             opts.Click += (s, e) =>
             {
                 using (var f = new OptionsJeuForm(game))
                 {
                     f.ShowDialog(FindForm());
                     if (!f.Change) return;
+                    UpdatePlatforms();
+                    _signatureRendu = null;   // étiquettes et images ne changent pas la signature
                     Render();
                     if (_flow != null) foreach (Control c in _flow.Controls) c.Invalidate();
                 }

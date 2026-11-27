@@ -39,6 +39,7 @@ namespace BTOptimizer
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = FpsUi.BgMain; Font = FpsUi.Body; DoubleBuffered = true;
+            Disposed += (s, e) => { if (_fondRendu != null) _fondRendu.Dispose(); };
             try { Icon = Logo.MakeIcon(32, FpsUi.Gold); } catch { }
 
             // Démarre tôt le chargement de la jaquette — y compris pour les jeux SANS AppID
@@ -125,7 +126,7 @@ namespace BTOptimizer
             _options.AccessibleName = "Options du jeu : nom, exécutable, arguments, jaquette";
             _options.Click += (s, e) =>
             {
-                using (var f = new OptionsJeuForm(_g)) { f.ShowDialog(FindForm()); if (f.Change) { OptionsChangees = true; Invalidate(); } }
+                using (var f = new OptionsJeuForm(_g)) { f.ShowDialog(FindForm()); if (f.Change) { OptionsChangees = true; Invalidate(true); } }
             };
             Controls.Add(_options);
 
@@ -378,6 +379,7 @@ namespace BTOptimizer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int W = ClientSize.Width;
+            PeintFond(g);
 
             // En-tête de la fiche, indépendant de la barre d’outils de la bibliothèque.
             OnyxDesign.Text(g, OptionsJeu.Nom(_g.Name), OnyxDesign.Title, FpsUi.Ink, new Rectangle(Pad + 180, 20, W - Pad * 2 - 180, 34));
@@ -492,6 +494,36 @@ namespace BTOptimizer
             p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             p.CloseFigure(); return p;
+        }
+
+        private Bitmap _fondRendu;
+        private Image _fondSource;
+
+        /// <summary>
+        /// Fond choisi par l'utilisateur (Options du jeu), sous un voile sombre pour garder le texte
+        /// lisible. Mis à l'échelle une fois par taille de fenêtre, pas à chaque peinture.
+        /// </summary>
+        private void PeintFond(Graphics g)
+        {
+            Image src = FondsPerso.Pour(_g.Name);
+            if (src == null) { if (_fondRendu != null) { _fondRendu.Dispose(); _fondRendu = null; } return; }
+            Size taille = ClientSize;
+            if (taille.Width < 1 || taille.Height < 1) return;
+            if (_fondRendu == null || !ReferenceEquals(_fondSource, src) || _fondRendu.Size != taille)
+            {
+                if (_fondRendu != null) _fondRendu.Dispose();
+                _fondSource = src;
+                _fondRendu = new Bitmap(taille.Width, taille.Height);
+                var tout = new Rectangle(Point.Empty, taille);
+                using (Graphics gb = Graphics.FromImage(_fondRendu))
+                {
+                    gb.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    DrawCover(gb, src, tout);
+                    using (var voile = new LinearGradientBrush(tout, Color.FromArgb(178, FpsUi.BgMain), Color.FromArgb(240, FpsUi.BgMain), 90f))
+                        gb.FillRectangle(voile, tout);
+                }
+            }
+            g.DrawImageUnscaled(_fondRendu, 0, 0);
         }
 
         private static void DrawCover(Graphics g, Image img, Rectangle dst)
