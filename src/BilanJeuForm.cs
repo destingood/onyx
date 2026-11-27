@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BTOptimizer
@@ -21,6 +22,8 @@ namespace BTOptimizer
         private readonly Label _resume;
         private readonly BufferedPanel _jeux;
         private BilanJeu.Resultat _r;
+        private int _jours = 7;
+        private List<SuccesSteam.Deblocage> _succes;   // null tant que le cache Steam n'est pas lu
 
         public BilanJeuForm(List<JournalJeu.Partie> parties, DateTime maintenant)
         {
@@ -65,10 +68,21 @@ namespace BTOptimizer
             CancelButton = fermer;
 
             Affiche(7);
+            // Succès Steam datés, lus dans le cache local de Steam : la ligne s'ajoute une fois lus.
+            HandleCreated += (s, e) => Task.Run(() =>
+            {
+                List<SuccesSteam.Deblocage> l = SuccesSteam.ChargeTous();
+                try { BeginInvoke((Action)(() => { if (IsDisposed) return; _succes = l; Affiche(_jours); })); } catch { }
+            });
         }
+
+        /// <summary>Pour le test d'interface : vrai une fois le cache Steam lu.</summary>
+        internal bool SuccesLus { get { return _succes != null; } }
+        internal string TexteResume { get { return _resume.Text; } }
 
         private void Affiche(int jours)
         {
+            _jours = jours;
             _r = BilanJeu.Calcule(_parties, _maintenant, jours);
             foreach (Button b in _periodes)
             {
@@ -78,7 +92,10 @@ namespace BTOptimizer
                 b.FlatAppearance.BorderSize = actif ? 1 : 0;
                 b.FlatAppearance.BorderColor = actif ? FpsUi.GoldDim : FpsUi.Border;
             }
-            _resume.Text = string.Join("\r\n", BilanJeu.Resume(_r));
+            List<string> lignes = BilanJeu.Resume(_r);
+            string succes = SuccesSteam.LigneBilan(_succes, _maintenant, jours);
+            if (succes != null) lignes.Add(succes);
+            _resume.Text = string.Join("\r\n", lignes);
             _jeux.Invalidate();
         }
 

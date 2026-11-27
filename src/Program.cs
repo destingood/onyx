@@ -2747,6 +2747,16 @@ namespace BTOptimizer
                 foreach (Control c in f.Controls)
                     if (c is Button b && b.Text == "30 jours") { b.PerformClick(); Pump(150); }
                 if (!resume.Text.Contains("30 jours d'avant")) throw new InvalidOperationException("Bilan 30 jours inattendu : " + resume.Text);
+                for (int i = 0; i < 100 && !f.SuccesLus; i++) Pump(100);
+                if (!f.SuccesLus) throw new InvalidOperationException("Bilan : succès Steam jamais lus.");
+                foreach (Control c in f.Controls)
+                    if (c is Button b && b.Text == "Depuis le début") { b.PerformClick(); Pump(150); }
+                int haut = TextRenderer.MeasureText(resume.Text, resume.Font, new System.Drawing.Size(resume.Width, 1000), TextFormatFlags.WordBreak).Height;
+                if (haut > resume.Height) throw new InvalidOperationException("Bilan : résumé coupé (" + haut + " > " + resume.Height + " px) : " + resume.Text);
+                Console.WriteLine("  Bilan, succès : " + (resume.Text.Contains("Succès Steam") ? resume.Text.Substring(resume.Text.LastIndexOf((char)10) + 1) : "aucun succès daté sur ce PC"));
+                SaveGamesShot(f, dir, "bilan-succes");
+                foreach (Control c in f.Controls)
+                    if (c is Button b && b.Text == "30 jours") { b.PerformClick(); Pump(150); }
                 SaveGamesShot(f, dir, "bilan-jeu");
                 Console.WriteLine("  Bilan de jeu : 3 périodes OK — " + resume.Text.Split('\r')[0]);
                 f.Close();

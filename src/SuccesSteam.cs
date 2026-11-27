@@ -197,6 +197,47 @@ namespace BTOptimizer
             return "Débloqué le " + DateTimeOffset.FromUnixTimeSeconds(s.DateUnix).LocalDateTime.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
         }
 
+        /// <summary>Un succès débloqué, daté, pour le bilan de jeu.</summary>
+        public sealed class Deblocage
+        {
+            public string Jeu = "", Nom = "";
+            public long DateUnix;
+        }
+
+        /// <summary>Succès débloqués ET datés d'un jeu (les succès sans date ne comptent pas dans une période).</summary>
+        public static List<Deblocage> Deblocages(Bilan b, string jeu)
+        {
+            var l = new List<Deblocage>();
+            if (b == null) return l;
+            foreach (Succes s in b.Liste)
+                if (s.Obtenu && s.DateUnix > 0) l.Add(new Deblocage { Jeu = string.IsNullOrEmpty(jeu) ? b.Jeu : jeu, Nom = s.Nom, DateUnix = s.DateUnix });
+            return l;
+        }
+
+        /// <summary>
+        /// Ligne du bilan de jeu : « Succès Steam débloqués : 4 sur 2 jeux (dernier : « T-2077 »,
+        /// Cyberpunk 2077, le 30/10). » ; jours &lt;= 0 = depuis le début. null s'il n'y en a aucun.
+        /// </summary>
+        public static string LigneBilan(List<Deblocage> tous, DateTime maintenant, int jours)
+        {
+            if (tous == null || tous.Count == 0) return null;
+            long depuis = jours > 0 ? new DateTimeOffset(maintenant.AddDays(-jours)).ToUnixTimeSeconds() : long.MinValue;
+            long jusqua = new DateTimeOffset(maintenant).ToUnixTimeSeconds();
+            Deblocage dernier = null;
+            int n = 0;
+            var jeux = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Deblocage d in tous)
+            {
+                if (d.DateUnix < depuis || d.DateUnix > jusqua) continue;
+                n++; jeux.Add(d.Jeu);
+                if (dernier == null || d.DateUnix > dernier.DateUnix) dernier = d;
+            }
+            if (n == 0) return null;
+            string date = DateTimeOffset.FromUnixTimeSeconds(dernier.DateUnix).LocalDateTime.ToString("dd'/'MM", CultureInfo.InvariantCulture);
+            return "Succès Steam débloqués : " + n + (jeux.Count > 1 ? " sur " + jeux.Count + " jeux" : "")
+                 + " (dernier : « " + dernier.Nom + " », " + dernier.Jeu + ", le " + date + ").";
+        }
+
         /// <summary>« 10 / 57 (18 %) ».</summary>
         public static string Resume(Bilan b)
         {

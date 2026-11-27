@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -11,6 +12,36 @@ namespace BTOptimizer
     /// </summary>
     internal static partial class SuccesSteam
     {
+        /// <summary>
+        /// Tous les succès datés du compte Steam courant, tous jeux confondus (pour le bilan).
+        /// Bloquant (une lecture par jeu ayant des succès) : hors du fil d'interface. Vide si Steam est absent.
+        /// </summary>
+        public static List<Deblocage> ChargeTous()
+        {
+            var tous = new List<Deblocage>();
+            try
+            {
+                string steam = SteamGames.SteamPath();
+                if (steam == null) return tous;
+                string dossier = Path.Combine(steam, "appcache", "stats");
+                string login = Path.Combine(steam, "config", "loginusers.vdf");
+                if (!Directory.Exists(dossier) || !File.Exists(login)) return tous;
+                string compte = JeuxCompteSteam.Compte(ListeSouhaits.SteamId64(File.ReadAllText(login, Encoding.UTF8)));
+                if (compte == null) return tous;
+                string prefixe = "UserGameStats_" + compte + "_";
+                foreach (string joueur in Directory.GetFiles(dossier, prefixe + "*.bin"))
+                {
+                    string app = Path.GetFileNameWithoutExtension(joueur).Substring(prefixe.Length);
+                    string schema = Path.Combine(dossier, "UserGameStatsSchema_" + app + ".bin");
+                    if (!File.Exists(schema)) continue;
+                    try { tous.AddRange(Deblocages(Lit(File.ReadAllBytes(schema), File.ReadAllBytes(joueur)), null)); }
+                    catch { }   // un fichier en cours d'écriture par Steam : ce jeu manque cette fois
+                }
+            }
+            catch (Exception ex) { JournalTechnique.Echec("SuccesSteam.ChargeTous", ex); }
+            return tous;
+        }
+
         /// <summary>Succès du jeu, ou null + raison lisible. releve = date du dernier relevé de Steam.</summary>
         public static Bilan Charge(int appId, out string raison, out DateTime? releve)
         {

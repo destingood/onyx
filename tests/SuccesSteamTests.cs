@@ -78,6 +78,20 @@ namespace BTOptimizer.Tests
             SuccesSteam.Bilan rien = SuccesSteam.Lit(Schema(), null);
             Banc.Verifie("aucun relevé du joueur : tout reste à débloquer", true, rien != null && rien.Obtenus == 0 && rien.Total == 4 && SuccesSteam.Etat(rien.Liste[0]) == "À débloquer");
 
+            // Bilan de jeu : succès datés, par période.
+            List<SuccesSteam.Deblocage> d = SuccesSteam.Deblocages(b, "Jeu A");
+            Banc.Verifie("déblocages : seuls les succès datés comptent", true, d.Count == 2 && d.TrueForAll(x => x.Jeu == "Jeu A"));
+            DateTime t1 = DateTimeOffset.FromUnixTimeSeconds(1750000000).LocalDateTime;
+            d.Add(new SuccesSteam.Deblocage { Jeu = "Jeu B", Nom = "Autre", DateUnix = 1750000000 - 3 * 86400 });
+            string l7 = SuccesSteam.LigneBilan(d, t1.AddDays(1), 7);
+            Banc.Egal("ligne sur 7 jours : 2 succès sur 2 jeux, le plus récent nommé",
+                "Succès Steam débloqués : 2 sur 2 jeux (dernier : « Le Monde », Jeu A, le " + t1.ToString("dd'/'MM") + ").", l7);
+            Banc.Verifie("depuis le début : les 3", true, SuccesSteam.LigneBilan(d, t1.AddDays(1), 0).StartsWith("Succès Steam débloqués : 3 sur 2 jeux"));
+            Banc.Verifie("un seul jeu : pas de « sur 1 jeux »", true, SuccesSteam.LigneBilan(d, t1.AddDays(1), 1) == "Succès Steam débloqués : 1 (dernier : « Le Monde », Jeu A, le " + t1.ToString("dd'/'MM") + ").");
+            Banc.Verifie("rien dans la période, liste vide ou pas encore lue : pas de ligne", true,
+                SuccesSteam.LigneBilan(d, t1.AddDays(30), 7) == null && SuccesSteam.LigneBilan(new List<SuccesSteam.Deblocage>(), t1, 0) == null && SuccesSteam.LigneBilan(null, t1, 0) == null);
+            Banc.Verifie("succès daté après « maintenant » : ignoré", true, SuccesSteam.LigneBilan(d, t1.AddDays(-1), 0).StartsWith("Succès Steam débloqués : 2 sur 2 jeux (dernier : « Autre »"));
+
             byte[] s = Schema();
             byte[] tronque = new byte[s.Length - 5];
             Array.Copy(s, tronque, tronque.Length);

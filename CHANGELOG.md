@@ -55,6 +55,8 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   débloqués, comme dans Steam. ONYX lit le cache que Steam garde sur le PC (appcache\stats) : aucune
   connexion, aucun compte. Le relevé date de ta dernière partie ou de ta dernière visite de la page
   Succès dans Steam.
+  Le bilan de jeu compte aussi les succès Steam débloqués sur la période choisie, sur combien de
+  jeux, et nomme le dernier.
 - **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
   bouton des plateformes.
 
