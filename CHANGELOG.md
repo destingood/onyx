@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne
+## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne, notifications au choix, jeux populaires
 
 - **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
   afficher ONYX, compteur en jeu et capture d'écran. On clique dans la case et on tape la
@@ -47,6 +47,19 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 - **Jeux suivis : alerte de sortie.** Un jeu suivi qui est « à venir » sur Steam déclenche une
   notification le jour où il sort, avec son prix. Même contrôle que les promos (toutes les 6 h,
   jamais en partie) : aucun appel en plus. Les cartes des jeux à venir l'indiquent.
+- **Notifications au choix.** Menu ⋯ → Système → « Notifications… » : une case par catégorie
+  (Gardien, mise à jour d'ONYX, jeux suivis, rappel de nettoyage). Une catégorie coupée ne
+  sonne plus ; les pastilles et le bandeau d'ONYX restent. Un jeu qui vient de planter est
+  toujours signalé.
+- **Bons plans : onglet « Populaires ».** Les 48 jeux les plus joués sur Steam en ce moment,
+  d'après le classement public de Steam, avec le nombre de joueurs connectés. Liste gardée une
+  heure ; la recherche filtre aussi cet onglet.
+- **Bilan de jeu : « Copier le texte ».** Le bilan de la période en code HTML (site, blog), en
+  BBCode (forum) ou en texte simple : temps total, faits, 5 jeux les plus joués, succès Steam
+  et jeux favoris ★. Aucune image ni adresse externe dans le texte.
+- **Mes serveurs Discord.** Menu ⋯ → Système → « Mes serveurs Discord… » : on colle les liens
+  d'invitation (discord.gg/…) de ses serveurs de jeu, ONYX les ouvre d'un double-clic. Seuls les
+  liens Discord sont acceptés ; aucun compte, rien n'est envoyé.
 
 ## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
 

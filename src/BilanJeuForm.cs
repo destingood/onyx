@@ -24,11 +24,15 @@ namespace BTOptimizer
         private BilanJeu.Resultat _r;
         private int _jours = 7;
         private List<SuccesSteam.Deblocage> _succes;   // null tant que le cache Steam n'est pas lu
-        private readonly Button _enregistre, _copie;
+        private readonly Button _enregistre, _copie, _texte;
+        private readonly List<string> _favoris;
+        private readonly ContextMenuStrip _menuTexte = new ContextMenuStrip { Font = FpsUi.Body, ShowImageMargin = false };
 
-        public BilanJeuForm(List<JournalJeu.Partie> parties, DateTime maintenant)
+        /// <param name="favoris">Noms des jeux favoris ★ de la bibliothèque, pour la carte postale.</param>
+        public BilanJeuForm(List<JournalJeu.Partie> parties, DateTime maintenant, IEnumerable<string> favoris = null)
         {
             _parties = parties ?? new List<JournalJeu.Partie>();
+            _favoris = favoris != null ? new List<string>(favoris) : new List<string>();
             _maintenant = maintenant;
             Text = "ONYX — Bilan de jeu";
             ClientSize = new Size(720, 566);
@@ -71,6 +75,15 @@ namespace BTOptimizer
             _copie.SetBounds(220, 520, 150, 34);
             _copie.Click += (s, e) => CopieImage();
             Controls.Add(_copie);
+            // Carte postale en texte : à coller sur un forum (BBCode), un site (HTML) ou ailleurs.
+            _texte = OnyxDesign.Button("Copier le texte ▾");
+            _texte.SetBounds(380, 520, 190, 34);
+            _menuTexte.Items.Add("Code HTML (site, blog)", null, (s, e) => CopieTexte(CartePostale.Html(Postale()), "HTML copié ✓"));
+            _menuTexte.Items.Add("BBCode (forum)", null, (s, e) => CopieTexte(CartePostale.BBCode(Postale()), "BBCode copié ✓"));
+            _menuTexte.Items.Add("Texte simple", null, (s, e) => CopieTexte(CartePostale.Texte(Postale()), "Texte copié ✓"));
+            _texte.Click += (s, e) => _menuTexte.Show(_texte, new Point(0, _texte.Height));
+            Controls.Add(_texte);
+            FormClosed += (s, e) => _menuTexte.Dispose();
 
             Button fermer = OnyxDesign.Button("Fermer");
             fermer.SetBounds(590, 520, 110, 34);
@@ -107,7 +120,7 @@ namespace BTOptimizer
             string succes = SuccesSteam.LigneBilan(_succes, _maintenant, jours);
             if (succes != null) lignes.Add(succes);
             _resume.Text = string.Join("\r\n", lignes);
-            _enregistre.Enabled = _copie.Enabled = _r.Parties > 0;
+            _enregistre.Enabled = _copie.Enabled = _texte.Enabled = _r.Parties > 0;
             _jeux.Invalidate();
         }
 
@@ -131,6 +144,25 @@ namespace BTOptimizer
                 try { using (Bitmap b = Carte()) b.Save(d.FileName, System.Drawing.Imaging.ImageFormat.Png); }
                 catch (Exception ex) { MessageBox.Show(this, "Enregistrement impossible : " + ex.Message, "Bilan de jeu", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             }
+        }
+
+        /// <summary>Carte postale de la période affichée (pour le test d'interface aussi).</summary>
+        internal CartePostale.Contenu Postale()
+        {
+            return CartePostale.Prepare(_r, SuccesSteam.LigneBilan(_succes, _maintenant, _jours), _favoris);
+        }
+
+        private void CopieTexte(string texte, string fait)
+        {
+            try
+            {
+                Clipboard.SetText(texte);
+                _texte.Text = fait;
+                var t = new Timer { Interval = 2000 };
+                t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (!_texte.IsDisposed) _texte.Text = "Copier le texte ▾"; };
+                t.Start();
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Copie impossible : " + ex.Message, "Bilan de jeu", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void CopieImage()

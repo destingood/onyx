@@ -2205,6 +2205,8 @@ namespace BTOptimizer
                 case "NotesJeuForm": return new NotesJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
                 case "OptionsJeuForm": return new OptionsJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
                 case "RaccourcisForm": return new RaccourcisForm(null);
+                case "NotificationsForm": return new NotificationsForm();
+                case "ServeursDiscordForm": return new ServeursDiscordForm();
                 case "BoostConfigForm": return new BoostConfigForm(log);
                 default: return null;
             }
@@ -2498,6 +2500,11 @@ namespace BTOptimizer
                 for (int i = 0; i < 60 && page.BusyForTest; i++) Pump(1000);
                 if (page.BusyForTest) throw new InvalidOperationException("Les offres gratuites n’ont pas terminé leur chargement.");
                 Pump(2000); page.ValidateDealsUi(); SaveGamesShot(dash, dir, "bons-plans-gratuits");
+                page.PreviewPopular(); Pump(100);
+                for (int i = 0; i < 60 && page.BusyForTest; i++) Pump(1000);
+                if (page.BusyForTest) throw new InvalidOperationException("Les jeux populaires n’ont pas terminé leur chargement.");
+                Console.WriteLine("  Bons plans : " + page.OffersForTest + " jeux populaires reçus.");
+                Pump(2000); page.ValidateDealsUi(); SaveGamesShot(dash, dir, "bons-plans-populaires");
                 for (int tab = 2; tab < 5; tab++)
                 {
                     page.PreviewLocalTab(tab); Pump(100); page.ValidateDealsUi();
@@ -2824,7 +2831,7 @@ namespace BTOptimizer
             string[] noms = { "Fortnite", "Counter-Strike 2", "Cyberpunk 2077", "Rocket League", "Elden Ring", "VALORANT", "Minecraft", "Hades II" };
             for (int i = 0; i < 40; i++)
                 journal.Add(new JournalJeu.Partie { Jeu = noms[(i * 7 + i / 5) % noms.Length], Debut = ref0.AddDays(-i * 1.3).AddHours(-2), Secondes = 900 + (i * 613) % 6000, FpsMoyen = i % 3 == 0 ? 0 : 140 + i * 4 });
-            using (var f = new BilanJeuForm(journal, ref0))
+            using (var f = new BilanJeuForm(journal, ref0, new[] { "Hades II", "Cyberpunk 2077" }))
             {
                 f.StartPosition = FormStartPosition.Manual;
                 f.Location = new System.Drawing.Point(-5000, -5000);
@@ -2860,6 +2867,12 @@ namespace BTOptimizer
                     if (!string.IsNullOrEmpty(dir)) carte.Save(System.IO.Path.Combine(dir, "bilan-carte.png"), System.Drawing.Imaging.ImageFormat.Png);
                 }
                 Console.WriteLine("  Bilan de jeu : carte image 1200x630 OK");
+                CartePostale.Contenu postale = f.Postale();
+                string bb = CartePostale.BBCode(postale), html = CartePostale.Html(postale);
+                if (postale.Jeux.Count == 0 || postale.Favoris.Count != 2 || !bb.Contains("[list=1]") || !html.StartsWith("<div") || html.Contains("http"))
+                    throw new InvalidOperationException("Bilan : carte postale texte inattendue.");
+                if (!string.IsNullOrEmpty(dir)) System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "bilan-postale.html"), "<!doctype html><meta charset=utf-8><body style=\"background:#333;padding:30px\">" + html, new System.Text.UTF8Encoding(false));
+                Console.WriteLine("  Bilan de jeu : carte postale HTML/BBCode OK (" + postale.Jeux.Count + " jeux, 2 favoris)");
                 Console.WriteLine("  Bilan de jeu : 3 périodes OK — " + resume.Text.Split('\r')[0]);
                 f.Close();
             }

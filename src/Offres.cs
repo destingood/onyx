@@ -20,6 +20,7 @@ namespace BTOptimizer
         public DateTime? Fin;          // fin de l'offre, UTC
         public DateTime? Sortie;       // date de sortie, UTC
         public bool AVenir;            // Steam : pas encore sorti (release.is_coming_soon)
+        public int Joueurs;            // joueurs connectés (onglet Populaires), 0 = inconnu
         public string[] Plateformes = new string[0];
         public int[] Tags = new int[0];   // tagids Steam
         public string Url;

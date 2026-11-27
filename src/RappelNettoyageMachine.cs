@@ -58,7 +58,7 @@ namespace BTOptimizer
             {
                 if (_enCours || DateTime.UtcNow < _prochainUtc) return;
                 Etat e = Charge();
-                if (!e.Active || !Du(e.Derniere, DateTime.Now)) { _prochainUtc = DateTime.UtcNow + Ensuite; return; }
+                if (!e.Active || !NotifReglages.Active(NotifCategories.Nettoyage) || !Du(e.Derniere, DateTime.Now)) { _prochainUtc = DateTime.UtcNow + Ensuite; return; }
                 // Reporté (reste dû) tant qu'un jeu tourne ou que le Mode Jeu est actif.
                 if (GameBoost.IsActive || Native.IsGameFullscreen() || GameScan.RunningKnownGame() != null) return;
                 _enCours = true;

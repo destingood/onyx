@@ -94,6 +94,10 @@
     <Compile Include="..\src\Raccourcis.cs" />
     <Compile Include="..\src\ListeModeJeu.cs" />
     <Compile Include="..\src\FicheSteam.cs" />
+    <Compile Include="..\src\NotifCategories.cs" />
+    <Compile Include="..\src\Populaires.cs" />
+    <Compile Include="..\src\CartePostale.cs" />
+    <Compile Include="..\src\ServeursDiscord.cs" />
     <Compile Include="..\src\JeuxCompteSteam.cs" />
     <Compile Include="..\src\ListeSouhaitsGog.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />

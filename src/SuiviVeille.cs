@@ -172,7 +172,8 @@ namespace BTOptimizer
             List<Suivi.Alerte> alertes = Suivi.Decide(Magasin.Suivis, fiches, gratuits);
             Magasin.SauveSuivis();
             if (alertes.Count == 0) return;
-            foreach (Suivi.Alerte a in Suivi.Regroupe(alertes, 3)) host.Notifie(a.Titre, a.Texte);
+            if (NotifReglages.Active(NotifCategories.JeuxSuivis))   // coupé : la pastille de Bons plans reste
+                foreach (Suivi.Alerte a in Suivi.Regroupe(alertes, 3)) host.Notifie(a.Titre, a.Texte);
             AlertesNonVues += alertes.Count;
             host.SignaleBonsPlans(AlertesNonVues);
         }

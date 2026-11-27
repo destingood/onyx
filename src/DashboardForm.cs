@@ -344,6 +344,7 @@ namespace BTOptimizer
             sys.DropDownItems.Add("🔎 Inventaire des services (mesuré sur cette machine)", null, (s, e) => OpenDialog(new InventaireServicesForm(Log)));
             sys.DropDownItems.Add("⏱ Chaîne d'entrée (du clic au pixel, en ms)", null, (s, e) => OpenDialog(new ChaineEntreeForm(Log)));
             sys.DropDownItems.Add("Discord (ce qui pèse en jeu)", null, (s, e) => OpenDialog(new DiscordForm(Log)));
+            sys.DropDownItems.Add("💬 Mes serveurs Discord (liens d'invitation)…", null, (s, e) => OpenDialog(new ServeursDiscordForm()));
             sys.DropDownItems.Add("🗑 Retirer les applis Windows (dé-bloatware)", null, (s, e) => OpenDialog(new BloatRemoveForm(Log)));
             sys.DropDownItems.Add(new ToolStripSeparator());
             sys.DropDownItems.Add(MenuHead("🪟 Windows"));
@@ -377,6 +378,7 @@ namespace BTOptimizer
             sys.DropDownItems.Add(audience);
             sys.DropDownItems.Add("Ce que les statistiques envoient…", null, (s, e) => ExpliqueAudience());
             sys.DropDownItems.Add("⌨ Raccourcis clavier…", null, (s, e) => OpenDialog(new RaccourcisForm(this)));
+            sys.DropDownItems.Add("🔔 Notifications…", null, (s, e) => OpenDialog(new NotificationsForm()));
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
@@ -757,6 +759,8 @@ namespace BTOptimizer
                                 corps = al[0] + (al.Count > 1 ? "  (+" + (al.Count - 1) + " autre(s) — dis « gardien » au Copilote)" : "");
                             }
                             TrayAlertBadge(sos != null ? 1 : al.Count);   // la pastille reste après la notification
+                            // Catégorie « Gardien » coupée : la pastille suffit (un plantage récent notifie toujours).
+                            if (sos == null && !NotifReglages.Active(NotifCategories.Gardien)) return;
 
                             // VRAIE notification Windows d'abord : elle s'enregistre dans le centre
                             // de notifications, donc elle est retrouvable si l'utilisateur était
@@ -937,6 +941,7 @@ namespace BTOptimizer
             // pas une alerte de santé, et un titre générique se referme sans être lu.
             // UNE fois par version : la vérification revient toutes les 6 heures, la notification
             // non. Le bandeau dans l'app, lui, reste jusqu'à l'installation.
+            if (!NotifReglages.Active(NotifCategories.MiseAJour)) return;   // le bandeau suffit
             if (!UpdateFlag.DoitNotifier(dispo)) return;
             UpdateFlag.MarqueNotifiee(dispo);
             try

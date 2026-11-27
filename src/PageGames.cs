@@ -43,6 +43,15 @@ namespace BTOptimizer
         private string _query = "";
         private string _subtitle = "Analyse des jeux installés…";
         private List<GameScan.GameInfo> _all;
+
+        /// <summary>Noms affichés des jeux favoris ★, dans l'ordre de la bibliothèque (carte postale du bilan).</summary>
+        private List<string> Favoris()
+        {
+            var l = new List<string>();
+            if (_all == null) return l;
+            foreach (var g in _all) if (g != null && JeuxFavoris.Est(g.Name)) l.Add(OptionsJeu.Nom(g.Name));
+            return l;
+        }
         private bool _loaded;
         internal int RendusPourTest;
         private string _signatureRendu;
@@ -127,7 +136,7 @@ namespace BTOptimizer
             _bilan = OnyxDesign.Button("Bilan");
             _bilan.Name = "games-bilan";
             _bilan.AccessibleName = "Bilan de jeu : temps joué et jeux les plus joués";
-            _bilan.Click += (s, e) => Host.OpenDialog(new BilanJeuForm(JournalJeu.Parties, DateTime.Now));
+            _bilan.Click += (s, e) => Host.OpenDialog(new BilanJeuForm(JournalJeu.Parties, DateTime.Now, Favoris()));
             Controls.Add(_bilan);
 
             _space = OnyxDesign.Button("Trier par espace");

@@ -150,6 +150,10 @@ namespace BTOptimizer.Tests
             RaccourcisTests.Tout();
             ListeModeJeuTests.Tout();
             FicheSteamTests.Tout();
+            NotifCategoriesTests.Tout();
+            PopulairesTests.Tout();
+            CartePostaleTests.Tout();
+            ServeursDiscordTests.Tout();
             return Banc.Bilan();
         }
     }

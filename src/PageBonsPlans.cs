@@ -16,9 +16,9 @@ namespace BTOptimizer
     /// </summary>
     internal sealed class PageBonsPlans : FpsPage
     {
-        private const int OngletPromos = 0, OngletGratuits = 1, OngletNouveautes = 2, OngletSuivis = 3, OngletFavoris = 4;
+        private const int OngletPromos = 0, OngletGratuits = 1, OngletNouveautes = 2, OngletSuivis = 3, OngletFavoris = 4, OngletPopulaires = 5;
         private const int ParPage = 24, LotsMax = 3, PasSteam = 50;
-        private static readonly string[] NomsOnglets = { "Promos", "Gratuits", "Nouveautés", "Suivis", "Favoris" };
+        private static readonly string[] NomsOnglets = { "Promos", "Gratuits", "Nouveautés", "Suivis", "Favoris", "Populaires" };
         private static readonly Offres.Tranche[] Tranches = Offres.Tranches;
         private static readonly string[] ModesOffres = { "En promo", "Tous les jeux" };
         private static readonly KeyValuePair<string, string>[] Tris =
@@ -67,6 +67,8 @@ namespace BTOptimizer
         private List<Offre> _resultats = new List<Offre>();
         private List<Offre> _gratuitsBruts;
         private DateTime _gratuitsLe;   // UTC ; au-delà d'une heure, la liste est rechargée
+        private List<Offre> _populairesBruts;
+        private DateTime _populairesLe;   // UTC ; même règle
 
         public PageBonsPlans(DashboardForm host) : base(host)
         {
@@ -320,7 +322,7 @@ namespace BTOptimizer
             _support.Visible = Monetisation.Support(MonetisationRuntime.Settings) != null;
             _support.SetBounds(w - 486, 20, 150, 36);
             _searchBox.SetBounds(w - 324, 20, 290, 36); _search.SetBounds(12, 9, 266, 22);
-            int tabWidth = (width - 32) / 5;
+            int tabWidth = (width - 8 * (NomsOnglets.Length - 1)) / NomsOnglets.Length;
             for (int i = 0; i < _onglets.Length; i++) _onglets[i].SetBounds(34 + i * (tabWidth + 8), 98, tabWidth, 40);
             _filters.SetBounds(34, 146, width, 88);
             int row = 50;
@@ -390,7 +392,7 @@ namespace BTOptimizer
                 _onglets[i].Text = i == OngletSuivis && nv > 0 ? "Suivis •" + nv.ToString(CultureInfo.InvariantCulture) : NomsOnglets[i];
                 Style(_onglets[i], i == _onglet);
             }
-            bool prixActif = _onglet != OngletGratuits && _onglet != OngletFavoris;
+            bool prixActif = _onglet != OngletGratuits && _onglet != OngletFavoris && _onglet != OngletPopulaires;
             for (int i = 0; i < _pilules.Length; i++)
             {
                 _pilules[i].Enabled = prixActif;
@@ -401,7 +403,9 @@ namespace BTOptimizer
             foreach (var pill in _pilules) pill.Visible = prixActif;
             _lCat.Visible = prixActif;   // listes natives jamais montrées (boutons de choix) : les afficher un instant créait leur fenêtre
             _context.Visible = !prixActif;
-            _context.Text = _onglet == OngletFavoris ? "Tes offres enregistrées, réunies au même endroit. Les prix actuels sont disponibles sur la boutique." : "Jeux et contenus offerts : consulte les plateformes et la date de fin avant de les récupérer.";
+            _context.Text = _onglet == OngletFavoris ? "Tes offres enregistrées, réunies au même endroit. Les prix actuels sont disponibles sur la boutique."
+                : _onglet == OngletPopulaires ? "Les jeux les plus joués sur Steam en ce moment, d'après le classement public de Steam (joueurs connectés, mis à jour toutes les heures)."
+                : "Jeux et contenus offerts : consulte les plateformes et la date de fin avant de les récupérer.";
             bool plateforme = _onglet == OngletGratuits;   // une seule plateforme ailleurs (Steam) ; Favoris : texte seul
             _lPlat.Visible = plateforme;
             bool tri = _onglet == OngletPromos || _onglet == OngletNouveautes;
@@ -534,6 +538,7 @@ namespace BTOptimizer
             {
                 case OngletGratuits: ChargeGratuits(_generation); break;
                 case OngletFavoris: _resultats = ListeFavoris(); Affiche(false); break;
+                case OngletPopulaires: ChargePopulaires(_generation); break;
                 case OngletSuivis:
                     if (Texte().Length > 0) ChargeSteam(_generation, false);
                     else ChargeSuivis(_generation);
@@ -687,6 +692,49 @@ namespace BTOptimizer
                     AfficheGratuits(erreur);
                 });
             });
+        }
+
+        /// <summary>Classement Steam (cache 60 min), puis fiches des jeux pour le nom, le prix et l'image.</summary>
+        private void ChargePopulaires(int gen)
+        {
+            if (_populairesBruts != null && DateTime.UtcNow - _populairesLe < TimeSpan.FromMinutes(60)) { AffichePopulaires(false); return; }
+            EtatChargement();
+            Task.Run(async () =>
+            {
+                var l = new List<Offre>();
+                bool erreur = true;
+                try
+                {
+                    List<Populaires.Rang> rangs = Populaires.Lit(await OffresReseau.Texte(Populaires.Url, 60).ConfigureAwait(false), Populaires.Max);
+                    if (rangs.Count > 0)
+                    {
+                        List<Offre> fiches = await OffresReseau.FichesSteam(rangs.Select(r => r.AppId), 60).ConfigureAwait(false);
+                        foreach (Populaires.Rang r in rangs)
+                        {
+                            Offre f = fiches.Find(o => o != null && o.SteamAppId == r.AppId);
+                            if (f == null) continue;   // logiciel, outil ou fiche absente : pas montré
+                            f.Joueurs = r.Joueurs;
+                            l.Add(f);
+                        }
+                        erreur = l.Count == 0;
+                    }
+                }
+                catch { }
+                Retour(gen, () =>
+                {
+                    _occupe = false;
+                    _populairesBruts = erreur ? null : l;
+                    _populairesLe = DateTime.UtcNow;
+                    AffichePopulaires(erreur);
+                });
+            });
+        }
+
+        private void AffichePopulaires(bool erreur)
+        {
+            string t = Offres.NomNormalise(Texte());
+            _resultats = (_populairesBruts ?? new List<Offre>()).Where(o => t.Length == 0 || Offres.NomNormalise(o.Nom).Contains(t)).ToList();
+            Affiche(erreur && _resultats.Count == 0);
         }
 
         private void AfficheGratuits(bool erreur)
@@ -1138,6 +1186,7 @@ namespace BTOptimizer
         }
         internal void PreviewEmpty(bool error) { _generation++; _occupe = false; _resultats.Clear(); Affiche(error); }
         internal void PreviewFree() { ChoisitOnglet(OngletGratuits); }
+        internal void PreviewPopular() { ChoisitOnglet(OngletPopulaires); }
         internal void PreviewPricedPage()
         {
             int index = _resultats.FindIndex(o => o.PrixCts > 0 && o.SteamAppId > 0);
@@ -1316,7 +1365,8 @@ namespace BTOptimizer
                     OnyxDesign.Text(g, Offres.PrixOrigineDe(_o), Barre, FpsUi.Dim2, new Rectangle(14, PriceY + 27, 82, 18));
                 string detail = _o.Plateformes != null ? string.Join(", ", _o.Plateformes.Take(2)) : "";
                 bool urgent = false;
-                if (_o.Fin.HasValue)
+                if (_o.Joueurs > 0) detail = Populaires.TexteJoueurs(_o.Joueurs);
+                else if (_o.Fin.HasValue)
                 {
                     var remaining = _o.Fin.Value - DateTime.UtcNow;
                     urgent = remaining > TimeSpan.Zero && remaining < TimeSpan.FromHours(48);
