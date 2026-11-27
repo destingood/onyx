@@ -60,7 +60,7 @@ namespace BTOptimizer.Tests
             Banc.Verifie("retirer", true, Suivi.Retire(plein, 3) && plein.Count == 49 && !Suivi.Retire(plein, 3));
             var cinq = new List<Suivi.Alerte>(); for (int i = 0; i < 5; i++) cinq.Add(new Suivi.Alerte { Titre = "T" + i });
             var r3 = Suivi.Regroupe(cinq, 3);
-            Banc.Verifie("regroupement", true, r3.Count == 3 && r3[1].Titre == "T1" && r3[2].Titre == "3 autres jeux suivis en promo" && Suivi.Regroupe(cinq, 5).Count == 5);
+            Banc.Verifie("regroupement", true, r3.Count == 3 && r3[1].Titre == "T1" && r3[2].Titre == "3 autres alertes de jeux suivis" && Suivi.Regroupe(cinq, 5).Count == 5);
             Banc.Verifie("suivis abîmés", true, Suivi.Lire("abc\t0\t\tX\n12\n730\t10\t\tCounter-Strike 2\n").Count == 1);
         }
     }

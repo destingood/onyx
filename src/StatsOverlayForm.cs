@@ -14,7 +14,7 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private StatsOverlaySettings _s;
         private CheckBox _chk;
-        private ComboBox _corner, _taille, _couleur;
+        private ComboBox _corner, _taille, _couleur, _style;
         private readonly Dictionary<string, CheckBox> _lignes = new Dictionary<string, CheckBox>();
         private bool _pret;
 
@@ -34,6 +34,7 @@ namespace BTOptimizer
             _s.Corner = Math.Max(0, _corner.SelectedIndex);
             _s.O.Taille = Math.Max(0, _taille.SelectedIndex);
             _s.O.Couleur = Math.Max(0, _couleur.SelectedIndex);
+            _s.O.Style = Math.Max(0, _style.SelectedIndex);
             _s.O.Lignes.Clear();
             foreach (var kv in _lignes) if (kv.Value.Checked) _s.O.Lignes.Add(kv.Key);
             _s.Save();
@@ -54,7 +55,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "ONYX — Compteur en jeu";
-            ClientSize = new Size(560, 556);
+            ClientSize = new Size(560, 640);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -93,10 +94,11 @@ namespace BTOptimizer
             _corner = Liste("Position :", 144, CompteurJeu.Positions, _s.Corner);
             _taille = Liste("Taille :", 176, CompteurJeu.Tailles, _s.O.Taille);
             _couleur = Liste("Couleur :", 208, CompteurJeu.Couleurs, _s.O.Couleur);
+            _style = Liste("Style :", 240, CompteurJeu.Styles, _s.O.Style);
 
             Controls.Add(new Label
             {
-                Text = "Mesures affichées sous les FPS", Location = new Point(18, 248), Size = new Size(400, 22),
+                Text = "Mesures affichées avec les FPS", Location = new Point(18, 280), Size = new Size(400, 22),
                 Font = new Font("Segoe UI Semibold", 9.5f)
             });
             // Deux colonnes, dans l'ordre d'affichage du compteur.
@@ -107,7 +109,7 @@ namespace BTOptimizer
                 var c = new CheckBox
                 {
                     Text = CompteurJeu.Libelle(id), Checked = _s.O.A(id),
-                    Location = new Point(i < moitie ? 18 : 286, 274 + (i % moitie) * 26), Size = new Size(262, 24)
+                    Location = new Point(i < moitie ? 18 : 286, 306 + (i % moitie) * 26), Size = new Size(262, 24)
                 };
                 c.CheckedChanged += (s, e) => Applique();
                 _lignes[id] = c;
@@ -119,17 +121,29 @@ namespace BTOptimizer
                 Text = "Le compteur réapparaît au prochain démarrage s'il est activé. En plein écran EXCLUSIF, Windows "
                      + "masque toute surimpression : passe le jeu en « plein écran fenêtré » pour le voir. Les "
                      + "ventilateurs ne sont pas proposés : les lire demande un pilote noyau, qu'ONYX n'installe pas.",
-                Location = new Point(18, 438), Size = new Size(524, 62), ForeColor = Color.FromArgb(110, 115, 125)
+                Location = new Point(18, 306 + moitie * 26 + 10), Size = new Size(524, 62), ForeColor = Color.FromArgb(110, 115, 125)
             });
+            int bas = 306 + moitie * 26 + 80;
+
+            // Aperçu : valeurs de démonstration pendant 5 secondes, pour juger la place et la taille.
+            var apercu = new Button
+            {
+                Text = "Aperçu (5 s)", Location = new Point(18, bas), Size = new Size(130, 34), FlatStyle = FlatStyle.Flat,
+                BackColor = Color.White, ForeColor = Color.FromArgb(40, 44, 52)
+            };
+            apercu.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
+            apercu.Click += (s, e) => { Applique(); StatsOverlayManager.Apercu(_s); };
+            Controls.Add(apercu);
 
             var close = new Button
             {
-                Text = "Fermer", Location = new Point(452, 508), Size = new Size(90, 34), FlatStyle = FlatStyle.Flat,
+                Text = "Fermer", Location = new Point(452, bas), Size = new Size(90, 34), FlatStyle = FlatStyle.Flat,
                 BackColor = Color.White, ForeColor = Color.FromArgb(40, 44, 52)
             };
             close.FlatAppearance.BorderColor = Color.FromArgb(200, 204, 210);
             close.Click += (s, e) => Close();
             Controls.Add(close);
+            ClientSize = new Size(560, bas + 48);
         }
     }
 }

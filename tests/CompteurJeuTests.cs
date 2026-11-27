@@ -51,6 +51,33 @@ namespace BTOptimizer.Tests
             o.Taille = 0; CompteurJeu.Dimensions(o, out l, out h);
             Banc.Egal("tout coché, petit (× 0,85)", "189x270", l + "x" + h);
 
+            // Style en ligne.
+            o = CompteurJeu.Lit("1;1;1;0;cpu,ram");
+            Banc.Egal("style bloc : le fichier reste celui des versions précédentes", "1;1;1;0;cpu,ram", CompteurJeu.Ecrit(o));
+            o.Style = 1;
+            Banc.Egal("style en ligne : un sixième champ", "1;1;1;0;cpu,ram;1", CompteurJeu.Ecrit(o));
+            Banc.Egal("style en ligne relu", "1", CompteurJeu.Lit("1;1;1;0;cpu,ram;1").Style.ToString());
+            Banc.Egal("style inconnu : bloc", "0", CompteurJeu.Lit("1;1;1;0;cpu,ram;7").Style.ToString());
+            CompteurJeu.Dimensions(o, out l, out h);
+            Banc.Egal("bandeau FPS + CPU + RAM, taille moyenne", "238x28", l + "x" + h);
+            o.Lignes.Add(CompteurJeu.CpuTemp); o.Lignes.Add(CompteurJeu.Courbe);
+            Banc.Egal("la température s'ajoute à la case du processeur ; la courbe ne prend pas de place", "272",
+                CompteurJeu.LargeurEnLigne(o).ToString());
+            o = CompteurJeu.Lit("1;1;1;0;cpumhz,disque,batterie");
+            Banc.Egal("nouvelles mesures : une ligne chacune en bloc", "3", CompteurJeu.NbLignes(o).ToString());
+
+            // Nouvelles mesures.
+            Banc.Egal("fréquence : base × % de performance", "4,72 GHz", CompteurJeu.TexteFrequence(CompteurJeu.Frequence(3700, 127.57)));
+            Banc.Egal("fréquence sous 1 GHz", "800 MHz", CompteurJeu.TexteFrequence(800));
+            Banc.Verifie("fréquence : compteur absent ou nul → pas de mesure", true,
+                double.IsNaN(CompteurJeu.Frequence(double.NaN, 100)) && double.IsNaN(CompteurJeu.Frequence(3700, 0)) && CompteurJeu.TexteFrequence(double.NaN) == "—");
+            Banc.Egal("disque : 100 − inactivité", "12", CompteurJeu.ActiviteDisque(88).ToString());
+            Banc.Egal("disque : bornes", "0|100", CompteurJeu.ActiviteDisque(130) + "|" + CompteurJeu.ActiviteDisque(-5));
+            Banc.Egal("batterie", "82 %", CompteurJeu.TexteBatterie(0.82, false, false));
+            Banc.Egal("batterie en charge", "40 % · en charge", CompteurJeu.TexteBatterie(0.4, true, false));
+            Banc.Verifie("PC fixe ou niveau inconnu (255 %) : pas de mesure", true,
+                CompteurJeu.TexteBatterie(1, false, true) == "—" && CompteurJeu.TexteBatterie(2.55, false, false) == "—");
+
             // Place : zone de travail 1920 × 1040 décalée de (100, 50), fenêtre 222 × 178.
             int x, y;
             CompteurJeu.Place(0, 100, 50, 1920, 1040, 222, 178, out x, out y); Banc.Egal("haut gauche", "116,66", x + "," + y);

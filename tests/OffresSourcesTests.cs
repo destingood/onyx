@@ -58,6 +58,9 @@ namespace BTOptimizer.Tests
             Banc.Verifie("URL fiches", true, uf.StartsWith("https://api.steampowered.com/IStoreBrowseService/GetItems/v1?input_json=") && Uri.UnescapeDataString(uf).Contains("{\"appid\":730}") && Uri.UnescapeDataString(uf).Contains("\"country_code\":\"FR\""));
             Banc.Verifie("URL fiches : liste vide", true, OffresSources.UrlFichesSteam(new int[0]) == null);
             var fs = OffresSources.FichesSteam(Fiches);
+            Banc.Verifie("fiche : « à venir » lu dans release.is_coming_soon", true,
+                OffresSources.FichesSteam("{\"response\":{\"store_items\":[{\"appid\":2272360,\"success\":1,\"name\":\"DoW IV\",\"release\":{\"steam_release_date\":1796313600,\"is_coming_soon\":true}}]}}")[0].AVenir
+                && !fs[0].AVenir);
             Banc.Verifie("fiches : échec écarté", true, fs.Count == 4);
             Banc.Verifie("fiche en promo", true, fs[0].SteamAppId == 2909400 && fs[0].PrixCts == 749 && fs[0].PrixOrigineCts == 4999 && fs[0].Remise == 85 && fs[0].Fin == DateTimeOffset.FromUnixTimeSeconds(1796234400).UtcDateTime && fs[0].Url == "https://store.steampowered.com/app/2909400/" && fs[0].Tags.Length == 3);
             Banc.Verifie("fiche hors promo", true, fs[1].PrixCts == 5999 && fs[1].PrixOrigineCts == 5999 && fs[1].Remise == 0 && fs[1].Fin == null);

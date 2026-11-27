@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux
+## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne
 
 - **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
   afficher ONYX, compteur en jeu et capture d'écran. On clique dans la case et on tape la
@@ -38,6 +38,15 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 - **Icône personnalisée par jeu.** Options du jeu → « Changer l'icône… » : l'image choisie
   remplace la miniature de la vue liste (et l'icône de la tuile quand le jeu n'a pas de
   jaquette). « Icône d'origine » met la copie à la Corbeille.
+- **Compteur en jeu : style « En ligne ».** Un bandeau fin d'une seule ligne (FPS puis les
+  mesures cochées), au choix du bloc habituel. Bouton « Aperçu (5 s) » pour le voir sans lancer
+  de jeu. Trois mesures de plus : fréquence réelle du processeur (compteurs de performance de
+  Windows, turbo compris), activité des disques et batterie des PC portables.
+- **Clips : choix de l'ordre.** Plus récents, plus anciens, par nom ou plus gros d'abord, sous la
+  liste des jeux. Ctrl+A sélectionne tout (la mise à la Corbeille de plusieurs clips existait déjà).
+- **Jeux suivis : alerte de sortie.** Un jeu suivi qui est « à venir » sur Steam déclenche une
+  notification le jour où il sort, avec son prix. Même contrôle que les promos (toutes les 6 h,
+  jamais en partie) : aucun appel en plus. Les cartes des jeux à venir l'indiquent.
 
 ## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
 

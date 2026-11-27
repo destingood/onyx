@@ -51,6 +51,23 @@ namespace BTOptimizer
 
         public static void Hide() { if (_win != null && !_win.IsDisposed) _win.Hide(); }
 
+        /// <summary>Aperçu de 5 secondes avec des valeurs de démonstration, sans mesure ni session
+        /// ETW ; ensuite le compteur reprend son état (affiché et mesuré s'il est activé, sinon masqué).</summary>
+        public static void Apercu(StatsOverlaySettings s)
+        {
+            if (_win == null || _win.IsDisposed) _win = new StatsOverlayWindow();
+            _win.Applique(s.O);
+            if (!_win.Visible) _win.Show();
+            _win.SeedDemo();
+            var t = new Timer { Interval = 5000 };
+            t.Tick += (o, e) =>
+            {
+                t.Stop(); t.Dispose();
+                try { if (s.Enabled) Show(s); else Hide(); } catch { }
+            };
+            t.Start();
+        }
+
         public static void Toggle(StatsOverlaySettings s) { if (IsVisible) Hide(); else Show(s); }
 
         public static void ShowOnStartupIfEnabled(Action<string, int> log)
@@ -76,6 +93,7 @@ namespace BTOptimizer
         private long _octetsRecus = -1, _octetsEnvoyes = -1;
         private DateTime _releveReseau;
         private double _debitRecu = double.NaN, _debitEnvoye = double.NaN;
+        private string _batterie = "—";
         private FpsEtw _fps;
         private double _lastFps = double.NaN;
         private double _lastLow = double.NaN;
@@ -141,7 +159,8 @@ namespace BTOptimizer
         {
             try { _timer.Stop(); } catch { }
             _lastFps = 144; _lastLow = 118; _fpsName = "Counter-Strike 2";
-            _last = new HwSample { CpuLoad = 38, RamLoad = 46, CpuTempC = 58 };
+            _last = new HwSample { CpuLoad = 38, RamLoad = 46, CpuTempC = 58, CpuMhz = 4720, DisqueActivite = 12 };
+            _batterie = CompteurJeu.TexteBatterie(0.82, false, false);
             _last.Gpu = new GpuInfo { Ok = true, Util = 72, TempC = 64, VramUsedMB = 5320, VramTotalMB = 12288, PowerW = 186 };
             _debitRecu = 124.6e6; _debitEnvoye = 850e3; _duree = TimeSpan.FromMinutes(65);
             _fpsHist.Clear();
@@ -160,7 +179,7 @@ namespace BTOptimizer
                 int l, h; CompteurJeu.Dimensions(_o, out l, out h);
                 ClientSize = new Size(l, h);
                 var ancienne = Region;
-                Region = RoundedRegion(ClientRectangle, E(12));
+                Region = RoundedRegion(ClientRectangle, E(_o.Style == 1 ? 8 : 12));
                 if (ancienne != null) ancienne.Dispose();
                 var wa = Screen.PrimaryScreen.WorkingArea;
                 int x, y; CompteurJeu.Place(_o.Position, wa.Left, wa.Top, wa.Width, wa.Height, Width, Height, out x, out y);
@@ -240,6 +259,7 @@ namespace BTOptimizer
                         _last = s; _lastFps = fps; _lastLow = low; _fpsName = fname;
                         _debitRecu = recu; _debitEnvoye = envoye;
                         _duree = _chrono.Marque(fname, DateTime.UtcNow);
+                        if (_o.A(CompteurJeu.Batterie)) _batterie = LitBatterie();
                         if (!double.IsNaN(fps)) { _fpsHist.Enqueue(fps); while (_fpsHist.Count > HistMax) _fpsHist.Dequeue(); }
                         _sampling = false; Invalidate();
                     }));
@@ -270,6 +290,107 @@ namespace BTOptimizer
             recu = _octetsRecus < 0 ? double.NaN : CompteurJeu.Debit(_octetsRecus, r, sec);
             envoye = _octetsRecus < 0 ? double.NaN : CompteurJeu.Debit(_octetsEnvoyes, e, sec);
             _octetsRecus = r; _octetsEnvoyes = e; _releveReseau = maintenant;
+        }
+
+        /// <summary>Niveau de la batterie (GetSystemPowerStatus, instantané) ; « — » sur un PC fixe.</summary>
+        private static string LitBatterie()
+        {
+            try
+            {
+                PowerStatus p = SystemInformation.PowerStatus;
+                bool sans = (p.BatteryChargeStatus & BatteryChargeStatus.NoSystemBattery) != 0 || (p.BatteryChargeStatus & BatteryChargeStatus.Unknown) != 0;
+                return CompteurJeu.TexteBatterie(p.BatteryLifePercent, (p.BatteryChargeStatus & BatteryChargeStatus.Charging) != 0, sans);
+            }
+            catch { return "—"; }
+        }
+
+        /// <summary>Bandeau : la fenêtre prend la largeur réellement dessinée (marge contre les
+        /// petits écarts d'une seconde à l'autre), puis se replace dans son coin.</summary>
+        private void AjusteLargeur(int voulue)
+        {
+            try
+            {
+                ClientSize = new Size(voulue, ClientSize.Height);
+                var ancienne = Region;
+                Region = RoundedRegion(ClientRectangle, E(8));
+                if (ancienne != null) ancienne.Dispose();
+                var wa = Screen.PrimaryScreen.WorkingArea;
+                int x, y; CompteurJeu.Place(_o.Position, wa.Left, wa.Top, wa.Width, wa.Height, Width, Height, out x, out y);
+                Location = new Point(x, y);
+                Invalidate();
+            }
+            catch { }
+        }
+
+        private struct Segment { public string Nom, Valeur; public Color Couleur; }
+
+        /// <summary>Style en ligne : « 144 FPS · 1% 118 · CPU 38 % 58° · … » sur une seule ligne.</summary>
+        private void PeintEnLigne(Graphics g, Color? fixe)
+        {
+            var r = ClientRectangle;
+            using (var pen = new Pen(FpsUi.Accent(70))) g.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
+            HwSample s = _last;
+            bool gpuOk = s != null && s.Gpu != null && s.Gpu.Ok;
+            var l = new System.Collections.Generic.List<Segment>();
+            Color fc = double.IsNaN(_lastFps) ? Dim : fixe ?? (_lastFps >= 100 ? Neon : _lastFps >= 55 ? Color.FromArgb(230, 175, 45) : Color.FromArgb(232, 84, 74));
+            l.Add(new Segment { Valeur = (double.IsNaN(_lastFps) ? "—" : _lastFps.ToString("0")) + " FPS", Couleur = fc });
+            if (_o.A(CompteurJeu.Bas1) && !double.IsNaN(_lastLow) && _lastLow > 0)
+                l.Add(new Segment { Nom = "1%", Valeur = _lastLow.ToString("0"), Couleur = fixe ?? (_lastLow >= 80 ? Neon : _lastLow >= 45 ? Color.FromArgb(230, 175, 45) : Color.FromArgb(232, 84, 74)) });
+            if (_o.A(CompteurJeu.Cpu) || _o.A(CompteurJeu.CpuTemp))
+            {
+                string v = !_o.A(CompteurJeu.Cpu) ? "" : s == null || s.CpuLoad < 0 ? "—" : s.CpuLoad.ToString("0") + " %";
+                if (_o.A(CompteurJeu.CpuTemp) && s != null && !double.IsNaN(s.CpuTempC)) v = (v + " " + s.CpuTempC.ToString("0") + "°").Trim();
+                l.Add(new Segment { Nom = "CPU", Valeur = v.Length == 0 ? "—" : v, Couleur = s == null ? Dim : fixe ?? LoadColor(s.CpuLoad) });
+            }
+            if (_o.A(CompteurJeu.CpuMhz))
+                l.Add(new Segment { Valeur = CompteurJeu.TexteFrequence(s != null ? s.CpuMhz : double.NaN), Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Gpu) || _o.A(CompteurJeu.GpuTemp))
+            {
+                double gu = gpuOk ? s.Gpu.Util : double.NaN, gt = gpuOk ? s.Gpu.TempC : double.NaN;
+                string v = !_o.A(CompteurJeu.Gpu) ? "" : double.IsNaN(gu) ? "—" : gu.ToString("0") + " %";
+                if (_o.A(CompteurJeu.GpuTemp) && !double.IsNaN(gt) && gt > 0) v = (v + " " + gt.ToString("0") + "°").Trim();
+                l.Add(new Segment { Nom = "GPU", Valeur = v.Length == 0 ? "—" : v, Couleur = double.IsNaN(gu) ? Dim : fixe ?? LoadColor(gu) });
+            }
+            if (_o.A(CompteurJeu.Vram))
+                l.Add(new Segment { Nom = "VRAM", Valeur = gpuOk ? CompteurJeu.TexteVram(s.Gpu.VramUsedMB, s.Gpu.VramTotalMB) : "—", Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Watts))
+                l.Add(new Segment { Valeur = gpuOk && s.Gpu.PowerW > 0 ? s.Gpu.PowerW.ToString("0") + " W" : "—", Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Ram))
+                l.Add(new Segment { Nom = "RAM", Valeur = s == null ? "—" : s.RamLoad.ToString("0") + " %", Couleur = s == null ? Dim : fixe ?? LoadColor(s.RamLoad) });
+            if (_o.A(CompteurJeu.Disque))
+                l.Add(new Segment { Nom = "DISQUE", Valeur = s == null || double.IsNaN(s.DisqueActivite) ? "—" : s.DisqueActivite.ToString("0") + " %", Couleur = s == null ? Dim : fixe ?? LoadColor(s.DisqueActivite) });
+            if (_o.A(CompteurJeu.Reseau))
+                l.Add(new Segment { Valeur = "↓ " + CompteurJeu.TexteDebit(_debitRecu) + "  ↑ " + CompteurJeu.TexteDebit(_debitEnvoye), Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Batterie))
+                l.Add(new Segment { Nom = "BATT", Valeur = _batterie, Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Heure))
+                l.Add(new Segment { Valeur = DateTime.Now.ToString("HH:mm"), Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Duree))
+                l.Add(new Segment { Nom = "PARTIE", Valeur = _duree.HasValue ? CompteurJeu.TexteDuree(_duree.Value) : "—", Couleur = fixe ?? Ink });
+
+            const TextFormatFlags f = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine;
+            int x = E(9);
+            using (var lab = new Font("Segoe UI", (float)(7.5 * _k)))
+            using (var val = new Font("Segoe UI Semibold", (float)(10 * _k)))
+            using (var sep = new Pen(Color.FromArgb(60, 64, 62)))
+            {
+                for (int i = 0; i < l.Count; i++)
+                {
+                    if (i > 0) { g.DrawLine(sep, x - E(6), E(8), x - E(6), r.Height - E(8)); }
+                    if (l[i].Nom != null)
+                    {
+                        int wn = TextRenderer.MeasureText(g, l[i].Nom, lab, Size.Empty, f).Width;
+                        TextRenderer.DrawText(g, l[i].Nom, lab, new Rectangle(x, 0, wn + 2, r.Height), Dim, f);
+                        x += wn + E(4);
+                    }
+                    int wv = TextRenderer.MeasureText(g, l[i].Valeur, val, Size.Empty, f).Width;
+                    TextRenderer.DrawText(g, l[i].Valeur, val, new Rectangle(x, 0, wv + 2, r.Height), l[i].Couleur, f);
+                    x += wv + E(13);
+                }
+            }
+            int voulue = x - E(13) + E(10);
+            if (voulue > r.Width || voulue < r.Width - E(30))
+                try { BeginInvoke((Action)(() => AjusteLargeur(voulue + E(8)))); } catch { }
         }
 
         private static Region RoundedRegion(Rectangle r, int radius)
@@ -306,6 +427,7 @@ namespace BTOptimizer
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             var r = ClientRectangle;
             Color? fixe = CouleurFixe();
+            if (_o.Style == 1) { PeintEnLigne(g, fixe); return; }
 
             // Liseré néon fin.
             using (var pen = new Pen(FpsUi.Accent(70))) g.DrawRectangle(pen, 0, 0, r.Width - 1, r.Height - 1);
@@ -355,6 +477,8 @@ namespace BTOptimizer
                         !_o.A(CompteurJeu.Cpu) ? null : s == null || s.CpuLoad < 0 ? "—" : s.CpuLoad.ToString("0") + " %",
                         _o.A(CompteurJeu.CpuTemp) && s != null && !double.IsNaN(s.CpuTempC) ? s.CpuTempC.ToString("0") + "°" : null,
                         s == null ? Dim : fixe ?? LoadColor(s.CpuLoad), fixe);
+                if (_o.A(CompteurJeu.CpuMhz))
+                    Large(g, lab, val, ref y, "FRÉQ", CompteurJeu.TexteFrequence(s != null ? s.CpuMhz : double.NaN), fixe ?? Ink);
                 if (_o.A(CompteurJeu.Gpu) || _o.A(CompteurJeu.GpuTemp))
                 {
                     double gu = gpuOk ? s.Gpu.Util : double.NaN;
@@ -371,8 +495,13 @@ namespace BTOptimizer
                     Large(g, lab, val, ref y, "GPU W", gpuOk && s.Gpu.PowerW > 0 ? s.Gpu.PowerW.ToString("0") + " W" : "—", fixe ?? Ink);
                 if (_o.A(CompteurJeu.Ram))
                     Row(g, lab, val, ref y, "RAM", s == null ? "—" : s.RamLoad.ToString("0") + " %", null, s == null ? Dim : fixe ?? LoadColor(s.RamLoad), fixe);
+                if (_o.A(CompteurJeu.Disque))
+                    Large(g, lab, val, ref y, "DISQUE", s == null || double.IsNaN(s.DisqueActivite) ? "—" : s.DisqueActivite.ToString("0") + " %",
+                        s == null || double.IsNaN(s.DisqueActivite) ? Dim : fixe ?? LoadColor(s.DisqueActivite));
                 if (_o.A(CompteurJeu.Reseau))
                     Large(g, lab, val, ref y, "NET", "↓ " + CompteurJeu.TexteDebit(_debitRecu) + "  ↑ " + CompteurJeu.TexteDebit(_debitEnvoye), fixe ?? Ink, lab);
+                if (_o.A(CompteurJeu.Batterie))
+                    Large(g, lab, val, ref y, "BATT", _batterie, fixe ?? Ink);
                 if (_o.A(CompteurJeu.Heure))
                     Large(g, lab, val, ref y, "HEURE", DateTime.Now.ToString("HH:mm"), fixe ?? Ink);
                 if (_o.A(CompteurJeu.Duree))

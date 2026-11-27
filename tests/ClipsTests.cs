@@ -40,6 +40,16 @@ namespace BTOptimizer.Tests
             List<Clips.Clip> fn = Clips.Trie(new[] { a, b, c }, "FORTNITE");
             Banc.Egal("filtre par jeu, casse ignorée", "c,a", string.Join(",", fn.ConvertAll(x => x.Chemin)));
             Banc.Verifie("liste nulle : vide", true, Clips.Trie(null, null).Count == 0);
+            var d1 = new Clips.Clip { Chemin = @"C:\V\Écran final.mp4", Jeu = "X", Date = new DateTime(2026, 11, 1), Octets = 50 };
+            var d2 = new Clips.Clip { Chemin = @"C:\V\clutch.mp4", Jeu = "X", Date = new DateTime(2026, 11, 3), Octets = 900 };
+            var d3 = new Clips.Clip { Chemin = @"C:\V\Ace.mkv", Jeu = "X", Date = new DateTime(2026, 11, 2), Octets = 900 };
+            var trois = new[] { d1, d2, d3 };
+            System.Func<List<Clips.Clip>, string> noms = l => string.Join(",", l.ConvertAll(x => System.IO.Path.GetFileNameWithoutExtension(x.Chemin)));
+            Banc.Egal("tri 1 : plus anciens d'abord", "Écran final,Ace,clutch", noms(Clips.Trie(trois, null, 1)));
+            Banc.Egal("tri 2 : nom, casse et accents ignorés", "Ace,clutch,Écran final", noms(Clips.Trie(trois, null, 2)));
+            Banc.Egal("tri 3 : plus gros, égalité au plus récent", "clutch,Ace,Écran final", noms(Clips.Trie(trois, null, 3)));
+            Banc.Egal("tri inconnu : plus récents", "clutch,Ace,Écran final", noms(Clips.Trie(trois, null, 9)));
+            Banc.Egal("quatre ordres proposés", "4", Clips.Ordres.Length.ToString());
 
             // Renommer.
             string err;

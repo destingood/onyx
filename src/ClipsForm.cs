@@ -25,7 +25,9 @@ namespace BTOptimizer
         private readonly ImageList _images;
         private readonly Label _etat;
         private readonly Button _lire, _dossier, _copier, _renommer, _corbeille, _actualiser, _ajouter, _liberer;
-        private readonly ComboBox _limite;
+        private readonly ComboBox _limite, _tri;
+        /// <summary>Ordre choisi, gardé tant qu'ONYX reste ouvert.</summary>
+        private static int _ordre;
         private readonly Label _limiteTitre, _espace;
         private List<Clips.Clip> _enTrop = new List<Clips.Clip>();
         private string _apres;   // message à montrer une fois la liste rechargée
@@ -60,6 +62,12 @@ namespace BTOptimizer
             _jeux.AccessibleName = "Jeux";
             _jeux.SelectedIndexChanged += (s, e) => Remplit();
             Controls.Add(_jeux);
+            _tri = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, FlatStyle = FlatStyle.Flat, Font = FpsUi.Small };
+            _tri.AccessibleName = "Ordre des clips";
+            _tri.Items.AddRange(Clips.Ordres);
+            _tri.SelectedIndex = _ordre >= 0 && _ordre < Clips.Ordres.Length ? _ordre : 0;
+            _tri.SelectedIndexChanged += (s, e) => { _ordre = _tri.SelectedIndex; if (_pret) Remplit(); };
+            Controls.Add(_tri);
 
             _images = new ImageList { ImageSize = new Size(VigL, VigH), ColorDepth = ColorDepth.Depth32Bit };
             _liste = new ListView
@@ -75,6 +83,7 @@ namespace BTOptimizer
                 if (e.KeyCode == Keys.Delete) Corbeille();
                 else if (e.KeyCode == Keys.F2) Renommer();
                 else if (e.Control && e.KeyCode == Keys.C) Copier();
+                else if (e.Control && e.KeyCode == Keys.A) ToutSelectionner();
             };
             Controls.Add(_liste);
 
@@ -136,7 +145,8 @@ namespace BTOptimizer
             foreach (Control c in Haut.Controls) if (c.Name == "clips-note") c.Width = Haut.Width;
             PlaceCapture();
             int y = 14 + HautH + 10, bas = H - 138;
-            _jeux.SetBounds(m, y, 200, bas - y);
+            _jeux.SetBounds(m, y, 200, bas - y - 34);
+            _tri.SetBounds(m, bas - 26, 200, 26);
             _liste.SetBounds(m + 212, y, W - 2 * m - 212, bas - y);
             int x = m, by = H - 82;
             foreach (Button b in new[] { _lire, _dossier, _copier, _renommer, _corbeille })
@@ -262,10 +272,18 @@ namespace BTOptimizer
             Charge();
         }
 
+        private void ToutSelectionner()
+        {
+            _liste.BeginUpdate();
+            foreach (ListViewItem it in _liste.Items) it.Selected = true;
+            _liste.EndUpdate();
+            MajBoutons();
+        }
+
         private void Remplit()
         {
             string jeu = _jeux.SelectedIndex > 0 && _jeux.SelectedIndex < _jeuxAffiches.Count ? _jeuxAffiches[_jeux.SelectedIndex] : null;
-            List<Clips.Clip> l = Clips.Trie(_tous, jeu);
+            List<Clips.Clip> l = Clips.Trie(_tous, jeu, _tri.SelectedIndex);
             _liste.BeginUpdate();
             _liste.Items.Clear();
             foreach (Image i in _images.Images) i.Dispose();

@@ -15,9 +15,9 @@ namespace BTOptimizer
         // Identifiants des lignes, dans l'ORDRE d'affichage.
         public const string Bas1 = "low", Cpu = "cpu", CpuTemp = "cputemp", Gpu = "gpu", GpuTemp = "gputemp",
                             Vram = "vram", Watts = "gpuw", Ram = "ram", Reseau = "net", Heure = "heure",
-                            Duree = "duree", Courbe = "courbe";
+                            Duree = "duree", Courbe = "courbe", CpuMhz = "cpumhz", Disque = "disque", Batterie = "batterie";
 
-        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, Gpu, GpuTemp, Vram, Watts, Ram, Reseau, Heure, Duree, Courbe };
+        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, CpuMhz, Gpu, GpuTemp, Vram, Watts, Ram, Disque, Reseau, Batterie, Heure, Duree, Courbe };
 
         /// <summary>Le libellé de chaque case à cocher des réglages.</summary>
         public static string Libelle(string id)
@@ -27,6 +27,9 @@ namespace BTOptimizer
                 case Bas1: return "Images les plus lentes (1% low)";
                 case Cpu: return "Processeur (charge)";
                 case CpuTemp: return "Température du processeur";
+                case CpuMhz: return "Fréquence du processeur";
+                case Disque: return "Activité des disques";
+                case Batterie: return "Batterie (PC portable)";
                 case Gpu: return "Carte graphique (charge)";
                 case GpuTemp: return "Température de la carte graphique";
                 case Vram: return "Mémoire vidéo utilisée";
@@ -44,6 +47,8 @@ namespace BTOptimizer
         public static readonly string[] Positions = { "Haut gauche", "Haut droit", "Bas gauche", "Bas droit", "Haut centre", "Bas centre" };
         public static readonly string[] Tailles = { "Petit", "Moyen", "Grand" };
         public static readonly string[] Couleurs = { "Automatique (vert, orange, rouge selon la valeur)", "Blanc", "Or", "Vert", "Bleu clair" };
+        /// <summary>0 = bloc (FPS en grand, une mesure par ligne) · 1 = en ligne (bandeau fin d'une ligne).</summary>
+        public static readonly string[] Styles = { "Bloc (FPS en grand, une mesure par ligne)", "En ligne (bandeau fin, sans la courbe)" };
 
         public sealed class Options
         {
@@ -51,6 +56,7 @@ namespace BTOptimizer
             public int Position = 1;
             public int Taille = 1;
             public int Couleur;
+            public int Style;
             /// <summary>Par défaut : ce que le compteur affichait avant d'être réglable.</summary>
             public HashSet<string> Lignes = new HashSet<string>(StringComparer.Ordinal) { Bas1, Cpu, CpuTemp, Gpu, GpuTemp, Ram, Courbe };
 
@@ -58,8 +64,9 @@ namespace BTOptimizer
         }
 
         /// <summary>
-        /// « 1;1 » (ancien format : actif ; coin) ou « 1;1;2;0;cpu,gpu,ram ». Un fichier ancien garde
-        /// l'affichage d'avant. Une valeur hors bornes revient à la valeur par défaut.
+        /// « 1;1 » (ancien format : actif ; coin), « 1;1;2;0;cpu,gpu,ram », puis « ;1 » pour le style en
+        /// ligne. Un fichier ancien garde l'affichage d'avant. Une valeur hors bornes revient à la valeur
+        /// par défaut.
         /// </summary>
         public static Options Lit(string texte)
         {
@@ -80,6 +87,7 @@ namespace BTOptimizer
                     if (Array.IndexOf(Toutes, id) >= 0) o.Lignes.Add(id);
                 }
             }
+            if (p.Length > 5 && int.TryParse(p[5].Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out v) && v < Styles.Length) o.Style = v;
             return o;
         }
 
@@ -89,7 +97,8 @@ namespace BTOptimizer
             foreach (string id in Toutes) if (o.Lignes.Contains(id)) l.Add(id);   // ordre stable
             return (o.Actif ? "1" : "0") + ";" + o.Position.ToString(CultureInfo.InvariantCulture) + ";"
                  + o.Taille.ToString(CultureInfo.InvariantCulture) + ";" + o.Couleur.ToString(CultureInfo.InvariantCulture) + ";"
-                 + string.Join(",", l);
+                 + string.Join(",", l)
+                 + (o.Style != 0 ? ";" + o.Style.ToString(CultureInfo.InvariantCulture) : "");   // style bloc : fichier d'avant
         }
 
         /// <summary>Facteur d'échelle : petit 0,85 · moyen 1 · grand 1,3.</summary>
@@ -104,16 +113,53 @@ namespace BTOptimizer
             int n = 0;
             if (o.A(Cpu) || o.A(CpuTemp)) n++;
             if (o.A(Gpu) || o.A(GpuTemp)) n++;
-            foreach (string id in new[] { Vram, Watts, Ram, Reseau, Heure, Duree }) if (o.A(id)) n++;
+            foreach (string id in new[] { CpuMhz, Vram, Watts, Ram, Disque, Reseau, Batterie, Heure, Duree }) if (o.A(id)) n++;
             return n;
         }
 
-        /// <summary>Taille de la fenêtre à l'échelle 1 : 222 × (72 + 28 par ligne + 22 pour la courbe, sinon 6).</summary>
+        /// <summary>Taille de la fenêtre à l'échelle 1 : 222 × (72 + 28 par ligne + 22 pour la courbe, sinon 6).
+        /// En ligne : un bandeau de 28 de haut, aussi large que ses mesures.</summary>
         public static void Dimensions(Options o, out int largeur, out int hauteur)
         {
             double k = Echelle(o.Taille);
+            if (o.Style == 1)
+            {
+                largeur = (int)Math.Round(LargeurEnLigne(o) * k);
+                hauteur = (int)Math.Round(28 * k);
+                return;
+            }
             largeur = (int)Math.Round(222 * k);
             hauteur = (int)Math.Round((72 + 28 * NbLignes(o) + (o.A(Courbe) ? 22 : 6)) * k);
+        }
+
+        /// <summary>
+        /// Largeur de départ du bandeau à l'échelle 1 : marges, FPS (toujours), puis chaque mesure cochée.
+        /// La fenêtre s'ajuste ensuite à la largeur réellement dessinée.
+        /// </summary>
+        public static int LargeurEnLigne(Options o)
+        {
+            int w = 16 + 72;
+            foreach (string id in Toutes)
+            {
+                if (!o.A(id)) continue;
+                switch (id)
+                {
+                    case Bas1: w += 62; break;
+                    case Cpu: case Gpu: w += 76 + (o.A(id == Cpu ? CpuTemp : GpuTemp) ? 34 : 0); break;
+                    case CpuTemp: w += o.A(Cpu) ? 0 : 66; break;
+                    case GpuTemp: w += o.A(Gpu) ? 0 : 66; break;
+                    case CpuMhz: w += 70; break;
+                    case Vram: w += 122; break;
+                    case Watts: w += 56; break;
+                    case Ram: w += 74; break;
+                    case Disque: w += 92; break;
+                    case Reseau: w += 176; break;
+                    case Batterie: w += 112; break;
+                    case Heure: w += 50; break;
+                    case Duree: w += 104; break;
+                }
+            }
+            return w;
         }
 
         /// <summary>Coin haut-gauche de la fenêtre dans la zone de travail de l'écran.</summary>
@@ -156,6 +202,38 @@ namespace BTOptimizer
             string u = (utiliseMo / 1024.0).ToString("0.0", fr);
             if (totalMo <= 0) return u + " Go";
             return u + " / " + Math.Round(totalMo / 1024.0).ToString("0", fr) + " Go";
+        }
+
+        /// <summary>
+        /// Fréquence réelle du processeur, comme le Gestionnaire des tâches : fréquence de base ×
+        /// « % de performance » (au-delà de 100 % en mode turbo). NaN si l'un des deux manque.
+        /// </summary>
+        public static double Frequence(double baseMhz, double performancePct)
+        {
+            if (double.IsNaN(baseMhz) || double.IsNaN(performancePct) || baseMhz <= 0 || performancePct <= 0) return double.NaN;
+            return baseMhz * performancePct / 100.0;
+        }
+
+        /// <summary>« 4,72 GHz », « 850 MHz », « — ».</summary>
+        public static string TexteFrequence(double mhz)
+        {
+            var fr = CultureInfo.GetCultureInfo("fr-FR");
+            if (double.IsNaN(mhz) || mhz <= 0) return "—";
+            return mhz >= 1000 ? (mhz / 1000).ToString("0.00", fr) + " GHz" : Math.Round(mhz).ToString("0", fr) + " MHz";
+        }
+
+        /// <summary>Activité des disques (« temps actif ») tirée du temps d'inactivité, bornée de 0 à 100.</summary>
+        public static double ActiviteDisque(double inactifPct)
+        {
+            if (double.IsNaN(inactifPct)) return double.NaN;
+            return Math.Max(0, Math.Min(100, 100 - inactifPct));
+        }
+
+        /// <summary>« 82 % », « 82 % · en charge » ; « — » sans batterie ou niveau inconnu.</summary>
+        public static string TexteBatterie(double niveau, bool enCharge, bool sansBatterie)
+        {
+            if (sansBatterie || double.IsNaN(niveau) || niveau < 0 || niveau > 1) return "—";
+            return Math.Round(niveau * 100).ToString("0", CultureInfo.InvariantCulture) + " %" + (enCharge ? " · en charge" : "");
         }
 
         /// <summary>« 42 min », « 1 h 05 ».</summary>

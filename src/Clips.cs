@@ -55,15 +55,42 @@ namespace BTOptimizer
             return jeu.Length > 0 ? jeu : Autres;
         }
 
-        /// <summary>Plus récent d'abord ; <paramref name="jeu"/> null = tous les jeux.</summary>
-        public static List<Clip> Trie(IEnumerable<Clip> clips, string jeu)
+        /// <summary>Ordres d'affichage proposés, dans l'ordre des numéros de <see cref="Trie"/>.</summary>
+        public static readonly string[] Ordres = { "Plus récents d'abord", "Plus anciens d'abord", "Nom (A → Z)", "Plus gros d'abord" };
+
+        private static readonly System.Globalization.CompareInfo Francais = System.Globalization.CultureInfo.GetCultureInfo("fr-FR").CompareInfo;
+
+        /// <summary>
+        /// Clips du jeu (<paramref name="jeu"/> null = tous) dans l'ordre choisi : 0 plus récents,
+        /// 1 plus anciens, 2 nom de fichier (accents et casse ignorés), 3 plus gros. À égalité, le
+        /// plus récent passe devant ; un numéro inconnu vaut 0.
+        /// </summary>
+        public static List<Clip> Trie(IEnumerable<Clip> clips, string jeu, int ordre = 0)
         {
             var res = new List<Clip>();
             if (clips == null) return res;
             foreach (Clip c in clips)
                 if (c != null && (jeu == null || string.Equals(c.Jeu, jeu, StringComparison.OrdinalIgnoreCase))) res.Add(c);
-            res.Sort((x, y) => y.Date.CompareTo(x.Date));
+            Comparison<Clip> recent = (x, y) => y.Date.CompareTo(x.Date);
+            switch (ordre)
+            {
+                case 1: res.Sort((x, y) => x.Date.CompareTo(y.Date)); break;
+                case 2:
+                    res.Sort((x, y) =>
+                    {
+                        int n = Francais.Compare(NomSeul(x.Chemin), NomSeul(y.Chemin), System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace);
+                        return n != 0 ? n : recent(x, y);
+                    });
+                    break;
+                case 3: res.Sort((x, y) => { int n = y.Octets.CompareTo(x.Octets); return n != 0 ? n : recent(x, y); }); break;
+                default: res.Sort(recent); break;
+            }
             return res;
+        }
+
+        private static string NomSeul(string chemin)
+        {
+            try { return Path.GetFileNameWithoutExtension(chemin ?? "") ?? ""; } catch { return chemin ?? ""; }
         }
 
         // ------------------------------------------------------------------ renommer

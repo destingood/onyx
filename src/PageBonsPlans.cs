@@ -1310,7 +1310,7 @@ namespace BTOptimizer
                 Badge(g, store, new Rectangle(18, 18, storeWidth, 25), FpsUi.RailBg, CouleurStore(_o.Source));
                 if (_o.Remise > 0) Badge(g, "−" + _o.Remise + " %", new Rectangle(Width - 88, 18, 70, 25), FpsUi.Gold, FpsUi.BgMain);
                 OnyxDesign.Text(g, _o.Nom ?? "Jeu", FpsUi.H3, FpsUi.Ink, new Rectangle(14, TitleY, Width - (_more.Visible ? 60 : 28), 23));
-                string price = _o.PrixCts < 0 ? "Prix à consulter" : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");
+                string price = _o.PrixCts < 0 ? (_o.AVenir ? "À venir" : "Prix à consulter") : Offres.PrixDe(_o) + (_o.Devise == "USD" && _o.PrixCts > 0 ? " US" : "");
                 OnyxDesign.Text(g, price, FpsUi.H2, FpsUi.Gold, new Rectangle(14, PriceY, Width - 116, 25));
                 if (_o.Remise > 0 && _o.PrixOrigineCts > 0)
                     OnyxDesign.Text(g, Offres.PrixOrigineDe(_o), Barre, FpsUi.Dim2, new Rectangle(14, PriceY + 27, 82, 18));
@@ -1322,7 +1322,7 @@ namespace BTOptimizer
                     urgent = remaining > TimeSpan.Zero && remaining < TimeSpan.FromHours(48);
                     detail = remaining <= TimeSpan.Zero ? "Offre terminée" : urgent ? "Encore " + Math.Max(1, (int)Math.Ceiling(remaining.TotalHours)) + " h" : "Jusqu’au " + _o.Fin.Value.ToLocalTime().ToString("dd/MM");
                 }
-                else if (_o.Sortie.HasValue) detail = "Sortie le " + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy");
+                else if (_o.Sortie.HasValue) detail = (_o.AVenir ? "À venir · sortie le " : "Sortie le ") + _o.Sortie.Value.ToLocalTime().ToString("dd/MM/yy");
                 int detailX = _o.Remise > 0 && _o.PrixOrigineCts > 0 ? 100 : 14;
                 OnyxDesign.Text(g, detail, FpsUi.Tiny, urgent ? FpsUi.Warn : FpsUi.Dim, new Rectangle(detailX, PriceY + 27, Width - detailX - 14, 18));
             }

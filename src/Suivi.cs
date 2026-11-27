@@ -72,13 +72,14 @@ namespace BTOptimizer
         }
     }
 
-    /// <summary>Un jeu Steam suivi. RemiseNotifiee et GratuitNotifie empêchent une deuxième notification pour la même promo.</summary>
-    internal sealed class JeuSuivi { public int AppId; public string Nom; public int RemiseNotifiee; public string GratuitNotifie = ""; public string FinNotifiee = ""; }
+    /// <summary>Un jeu Steam suivi. RemiseNotifiee et GratuitNotifie empêchent une deuxième notification pour la même promo ;
+    /// Attendu : vu « à venir » sur Steam, la sortie n'est pas encore notifiée.</summary>
+    internal sealed class JeuSuivi { public int AppId; public string Nom; public int RemiseNotifiee; public string GratuitNotifie = ""; public string FinNotifiee = ""; public bool Attendu; }
 
     /// <summary>
     /// Jeux suivis (logique PURE) : format du fichier « AppId \t RemiseNotifiee \t GratuitNotifie \t Nom \t FinNotifiee »
-    /// (5e colonne ajoutée en 16.07, après le nom : les versions précédentes l'ignorent)
-    /// et règle de notification. Une seule alerte par promo, même après un redémarrage ; une fiche
+    /// (5e colonne ajoutée en 16.07, après le nom : les versions précédentes l'ignorent ; 6e colonne « 1 »
+    /// pour un jeu attendu, écrite seulement dans ce cas) et règle de notification. Une seule alerte par promo, même après un redémarrage ; une fiche
     /// manquante (erreur réseau) ne change rien.
     /// </summary>
     internal static class Suivi
@@ -98,7 +99,7 @@ namespace BTOptimizer
                 if (c.Length < 4 || !int.TryParse(c[0], NumberStyles.None, CultureInfo.InvariantCulture, out id) || id <= 0) continue;
                 if (!vus.Add(id)) continue;
                 if (!int.TryParse(c[1], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out remise) || remise > 100 || remise < AAmorcer) remise = 0;
-                res.Add(new JeuSuivi { AppId = id, RemiseNotifiee = remise, GratuitNotifie = c[2], Nom = c[3], FinNotifiee = c.Length > 4 ? c[4] : "" });
+                res.Add(new JeuSuivi { AppId = id, RemiseNotifiee = remise, GratuitNotifie = c[2], Nom = c[3], FinNotifiee = c.Length > 4 ? c[4] : "", Attendu = c.Length > 5 && c[5].Trim() == "1" });
             }
             return res;
         }
@@ -114,7 +115,7 @@ namespace BTOptimizer
                   .Append(j.RemiseNotifiee.ToString(CultureInfo.InvariantCulture)).Append('\t')
                   .Append(Favoris.Champ(j.GratuitNotifie)).Append('\t')
                   .Append(Favoris.Champ(j.Nom)).Append('\t')
-                  .Append(Favoris.Champ(j.FinNotifiee)).Append('\n');
+                  .Append(Favoris.Champ(j.FinNotifiee)).Append(j.Attendu ? "\t1" : "").Append('\n');
             }
             return sb.ToString();
         }
@@ -135,7 +136,7 @@ namespace BTOptimizer
         {
             if (jeux == null || o == null || o.SteamAppId <= 0) return false;
             if (jeux.Exists(j => j.AppId == o.SteamAppId) || jeux.Count >= Max) return false;
-            jeux.Add(new JeuSuivi { AppId = o.SteamAppId, Nom = Favoris.Champ(o.Nom).Trim(), RemiseNotifiee = Math.Max(0, o.Remise) });
+            jeux.Add(new JeuSuivi { AppId = o.SteamAppId, Nom = Favoris.Champ(o.Nom).Trim(), RemiseNotifiee = Math.Max(0, o.Remise), Attendu = o.AVenir });
             return true;
         }
 
@@ -169,6 +170,19 @@ namespace BTOptimizer
                 if (f != null)
                 {
                     if (!string.IsNullOrWhiteSpace(f.Nom)) j.Nom = Favoris.Champ(f.Nom).Trim();
+                    // Sortie : le jeu était « à venir » au contrôle précédent et ne l'est plus.
+                    if (f.AVenir) j.Attendu = true;
+                    else if (j.Attendu)
+                    {
+                        j.Attendu = false;
+                        res.Add(new Alerte
+                        {
+                            AppId = j.AppId,
+                            Titre = j.Nom + " est sorti",
+                            Texte = f.PrixCts == 0 ? "Disponible sur Steam, gratuit" : f.PrixCts > 0 ? "Disponible sur Steam : " + Offres.Prix(f.PrixCts) : "Disponible sur Steam",
+                            Url = f.Url,
+                        });
+                    }
                     if (j.RemiseNotifiee == AAmorcer) j.RemiseNotifiee = Math.Max(0, f.Remise);   // premier contrôle : aucune alerte
                     else if (f.Remise > 0 && f.PrixCts >= 0 && f.Remise > j.RemiseNotifiee)
                     {
@@ -235,7 +249,7 @@ namespace BTOptimizer
             if (alertes.Count <= max) { res.AddRange(alertes); return res; }
             for (int i = 0; i < max - 1; i++) res.Add(alertes[i]);
             int reste = alertes.Count - (max - 1);
-            res.Add(new Alerte { Titre = reste.ToString(CultureInfo.InvariantCulture) + " autres jeux suivis en promo", Texte = "Ouvre Bons plans › Suivis", Url = null });
+            res.Add(new Alerte { Titre = reste.ToString(CultureInfo.InvariantCulture) + " autres alertes de jeux suivis", Texte = "Ouvre Bons plans › Suivis", Url = null });
             return res;
         }
     }

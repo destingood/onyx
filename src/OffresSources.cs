@@ -150,7 +150,12 @@ namespace BTOptimizer
                         Image = ImageSteam(it),
                     };
                     JsonElement rel;
-                    if (Prop(it, "release", out rel)) o.Sortie = DepuisUnix(Entier(rel, "steam_release_date", 0));
+                    if (Prop(it, "release", out rel))
+                    {
+                        o.Sortie = DepuisUnix(Entier(rel, "steam_release_date", 0));
+                        JsonElement bientot;
+                        o.AVenir = Prop(rel, "is_coming_soon", out bientot) && bientot.ValueKind == JsonValueKind.True;
+                    }
 
                     JsonElement gratuit;
                     if (Prop(it, "is_free", out gratuit) && gratuit.ValueKind == JsonValueKind.True)

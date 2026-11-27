@@ -20,6 +20,10 @@ namespace BTOptimizer
         public long RamUsedMB, RamTotalMB;
         public double RamLoad;            // %
         public double CpuTempC = double.NaN;
+        /// <summary>Fréquence réelle du processeur (MHz) ; NaN si Windows ne la donne pas.</summary>
+        public double CpuMhz = double.NaN;
+        /// <summary>Activité des disques physiques (%, « temps actif ») ; NaN si inconnue.</summary>
+        public double DisqueActivite = double.NaN;
         public double TimerMs;
         public GpuInfo Gpu = new GpuInfo();
     }
@@ -122,7 +126,7 @@ namespace BTOptimizer
             return best;
         }
 
-        private IntPtr _query, _cpu;
+        private IntPtr _query, _cpu, _freqBase, _perf, _inactif;
         private bool _pdhReady;
 
         // ---- RAM ----
@@ -157,11 +161,23 @@ namespace BTOptimizer
             _amorce = true;
             if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out _query) != 0) { _query = IntPtr.Zero; return; }
             if (PdhAddEnglishCounter(_query, @"\Processor(_Total)\% Processor Time", IntPtr.Zero, out _cpu) != 0) return;
+            // Facultatifs : absents sur certains Windows, le reste fonctionne sans eux.
+            if (PdhAddEnglishCounter(_query, @"\Processor Information(_Total)\Processor Frequency", IntPtr.Zero, out _freqBase) != 0) _freqBase = IntPtr.Zero;
+            if (PdhAddEnglishCounter(_query, @"\Processor Information(_Total)\% Processor Performance", IntPtr.Zero, out _perf) != 0) _perf = IntPtr.Zero;
+            if (PdhAddEnglishCounter(_query, @"\PhysicalDisk(_Total)\% Idle Time", IntPtr.Zero, out _inactif) != 0) _inactif = IntPtr.Zero;
             PdhCollectQueryData(_query);
             _pdhReady = true;
         }
 
         public bool HasGpu { get { return _nvsmi != null; } }
+
+        /// <summary>Valeur d'un compteur PDH facultatif ; NaN s'il manque ou n'est pas valide.</summary>
+        private static double Valeur(IntPtr compteur)
+        {
+            if (compteur == IntPtr.Zero) return double.NaN;
+            PdhValue v;
+            return PdhGetFormattedCounterValue(compteur, PDH_FMT_DOUBLE, IntPtr.Zero, out v) == 0 && v.CStatus == 0 ? v.Value : double.NaN;
+        }
 
         public HwSample Sample()
         {
@@ -176,6 +192,8 @@ namespace BTOptimizer
                     PdhValue v;
                     if (PdhGetFormattedCounterValue(_cpu, PDH_FMT_DOUBLE, IntPtr.Zero, out v) == 0 && v.CStatus == 0)
                         s.CpuLoad = v.Value;
+                    s.CpuMhz = CompteurJeu.Frequence(Valeur(_freqBase), Valeur(_perf));
+                    s.DisqueActivite = CompteurJeu.ActiviteDisque(Valeur(_inactif));
                 }
             }
 

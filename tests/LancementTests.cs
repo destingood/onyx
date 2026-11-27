@@ -97,6 +97,20 @@ namespace BTOptimizer.Tests
             Banc.Egal("promo suivante : nouvelle alerte", "1", Suivi.Decide(jeux, new List<Offre> { cs(50, now.AddDays(30).AddHours(20)) }, null, now.AddDays(30)).Count.ToString());
             Banc.Egal("promo finie : rien", "0", Suivi.Decide(jeux, new List<Offre> { cs(50, now.AddHours(-1)) }, null, now.AddDays(31)).Count.ToString());
 
+            // Sortie d'un jeu attendu : une alerte au premier contrôle où Steam ne le dit plus « à venir ».
+            Func<bool, Offre> dow = avenir => new Offre { Source = "steam", Id = "2272360", SteamAppId = 2272360, Nom = "Dawn of War IV",
+                Url = "https://store.steampowered.com/app/2272360/", PrixCts = 5399, PrixOrigineCts = 5399, AVenir = avenir };
+            var attendus = new List<JeuSuivi>();
+            Banc.Verifie("suivi d'un jeu à venir : marqué attendu", true, Suivi.Ajoute(attendus, dow(true)) && attendus[0].Attendu);
+            Banc.Egal("encore à venir : rien", "0", Suivi.Decide(attendus, new List<Offre> { dow(true) }, null, now).Count.ToString());
+            Banc.Egal("relu : attendu gardé (6e colonne)", "True", Suivi.Lire(Suivi.Ecrire(attendus))[0].Attendu.ToString());
+            List<Suivi.Alerte> sortie = Suivi.Decide(attendus, new List<Offre> { dow(false) }, null, now);
+            Banc.Verifie("sorti : une alerte avec le prix", true, sortie.Count == 1 && sortie[0].Titre == "Dawn of War IV est sorti" && sortie[0].Texte.Contains("53,99"));
+            Banc.Egal("pas deux fois", "0", Suivi.Decide(attendus, new List<Offre> { dow(false) }, null, now).Count.ToString());
+            Banc.Verifie("jeu déjà sorti au moment du suivi : jamais d'alerte de sortie", true, !jeux[0].Attendu && Suivi.Ecrire(jeux).Split('\t').Length == 5);
+            var panne = new List<JeuSuivi> { new JeuSuivi { AppId = 2272360, Nom = "Dawn of War IV", Attendu = true } };
+            Banc.Verifie("fiche manquante (réseau) : rien, reste attendu", true, Suivi.Decide(panne, new List<Offre>(), null, now).Count == 0 && panne[0].Attendu);
+
             // Nouvelle remise plus forte ET fin proche : une seule alerte, qui donne la date de fin.
             var j2 = new List<JeuSuivi> { new JeuSuivi { AppId = 730, Nom = "Counter-Strike 2", RemiseNotifiee = 0 } };
             List<Suivi.Alerte> b = Suivi.Decide(j2, new List<Offre> { cs(75, now.AddHours(10)) }, null, now);
