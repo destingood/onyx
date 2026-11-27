@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -219,6 +220,47 @@ namespace BTOptimizer
             catch { return null; }
         }
 
+        private static string BetaPath { get { return AppPaths.File("bt-update-beta.txt"); } }
+
+        /// <summary>Canal bêta : proposer aussi les préversions publiées sur GitHub. Coupé par défaut.</summary>
+        public static bool CanalBeta
+        {
+            get { try { return File.Exists(BetaPath) && File.ReadAllText(BetaPath).Trim() == "1"; } catch { return false; } }
+            set { try { if (value) File.WriteAllText(BetaPath, "1"); else if (File.Exists(BetaPath)) File.Delete(BetaPath); } catch { } }
+        }
+
+        /// <summary>Lit la LISTE des releases GitHub et garde la plus récente, préversions comprises
+        /// (jamais un brouillon). PUR.</summary>
+        public static Release ParseReleaseBeta(string json)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json)) return null;
+                using (var d = JsonDocument.Parse(json))
+                {
+                    if (d.RootElement.ValueKind != JsonValueKind.Array) return null;
+                    var rels = new List<Release>();
+                    var pre = new List<bool>();
+                    var bro = new List<bool>();
+                    foreach (JsonElement e in d.RootElement.EnumerateArray())
+                    {
+                        if (e.ValueKind != JsonValueKind.Object) continue;
+                        Release r = ParseRelease(e.GetRawText());
+                        if (r == null) continue;
+                        JsonElement p, b;
+                        rels.Add(r);
+                        pre.Add(e.TryGetProperty("prerelease", out p) && p.ValueKind == JsonValueKind.True);
+                        bro.Add(e.TryGetProperty("draft", out b) && b.ValueKind == JsonValueKind.True);
+                    }
+                    var vs = new Version[rels.Count];
+                    for (int i = 0; i < vs.Length; i++) vs[i] = rels[i].AssetUrl != null ? rels[i].Ver : null;   // sans installateur : rien à proposer
+                    int k = MajLogique.ChoisitRelease(vs, pre.ToArray(), bro.ToArray(), true);
+                    return k < 0 ? null : rels[k];
+                }
+            }
+            catch { return null; }
+        }
+
         private static HttpClient Http()
         {
             var h = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
@@ -275,22 +317,25 @@ namespace BTOptimizer
             }
 
             // 2-3) Releases GitHub : dépôt forcé, sinon distribution publique puis dépôt principal.
+            // Canal bêta : la liste complète, pour voir aussi les préversions (« latest » les ignore).
             string[] repos = RepoOverride != null ? new[] { RepoOverride } : DefaultRepos;
-            bool sawPrivate = false, sawRate = false;
+            bool sawPrivate = false, sawRate = false, beta = CanalBeta;
             foreach (var repo in repos)
             {
                 try
                 {
                     using (var h = Http())
-                    using (var resp = h.GetAsync("https://api.github.com/repos/" + repo + "/releases/latest").Result)
+                    using (var resp = h.GetAsync("https://api.github.com/repos/" + repo + (beta ? "/releases?per_page=20" : "/releases/latest")).Result)
                     {
                         int code = (int)resp.StatusCode;
                         if (code == 404) { sawPrivate = true; continue; }        // privé, inexistant, ou sans release
                         if (code == 401) { sawPrivate = true; continue; }        // jeton invalide/expiré
                         if (code == 403) { sawRate = true; continue; }
                         if (!resp.IsSuccessStatusCode) continue;
-                        var rel = ParseRelease(resp.Content.ReadAsStringAsync().Result);
+                        string json = resp.Content.ReadAsStringAsync().Result;
+                        var rel = beta ? ParseReleaseBeta(json) : ParseRelease(json);
                         if (rel != null && rel.Ver != null) return rel;
+                        if (beta) sawPrivate = true;   // liste vide : aucune release publiée
                     }
                 }
                 catch (Exception ex)

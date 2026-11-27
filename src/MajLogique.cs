@@ -13,6 +13,29 @@ namespace BTOptimizer
     /// </summary>
     internal static class MajLogique
     {
+        /// <summary>
+        /// Canal bêta : parmi les releases GitHub (liste /releases), l'index de la plus récente à
+        /// proposer, ou -1. Jamais un brouillon ; une préversion seulement si le canal bêta est choisi.
+        /// À version égale, la version finale passe devant la préversion.
+        /// </summary>
+        public static int ChoisitRelease(Version[] versions, bool[] preversions, bool[] brouillons, bool beta)
+        {
+            int meilleur = -1;
+            if (versions == null) return -1;
+            for (int i = 0; i < versions.Length; i++)
+            {
+                if (versions[i] == null) continue;
+                bool pre = preversions != null && i < preversions.Length && preversions[i];
+                bool brouillon = brouillons != null && i < brouillons.Length && brouillons[i];
+                if (brouillon || (pre && !beta)) continue;
+                if (meilleur < 0) { meilleur = i; continue; }
+                int c = versions[i].CompareTo(versions[meilleur]);
+                bool preMeilleur = preversions != null && meilleur < preversions.Length && preversions[meilleur];
+                if (c > 0 || (c == 0 && preMeilleur && !pre)) meilleur = i;
+            }
+            return meilleur;
+        }
+
         /// <summary>ONYX reste ouvert toute la journée dans la zone de notification : une seule
         /// vérification par jour faisait attendre jusqu'au lendemain une version publiée le soir.
         /// 4 requêtes par jour restent très loin de la limite de GitHub (60 par heure).</summary>

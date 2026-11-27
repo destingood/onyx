@@ -63,7 +63,17 @@ namespace BTOptimizer.Tests
                 string.Join(",", ModeJeuRegles.Suspendables(new[] { "SysMain", "WSearch", "NvContainerLocalSystem", "Spooler" })));
             Banc.Egal("liste nulle", "", string.Join(",", ModeJeuRegles.Suspendables(null)));
 
+            Banc.Titre("Mode Jeu : priorité du lanceur");
+            Banc.Verifie("Steam reconnu, casse libre", true, ModeJeuRegles.EstLanceur("Steam") && ModeJeuRegles.EstLanceur("EpicGamesLauncher"));
+            Banc.Verifie("sous-processus et jeux non reconnus", false, ModeJeuRegles.EstLanceur("steamwebhelper") || ModeJeuRegles.EstLanceur("FortniteClient-Win64-Shipping") || ModeJeuRegles.EstLanceur(null));
+            Banc.Egal("normale → au-dessus de la normale", "32768", ModeJeuRegles.PrioriteLanceur(0x20).ToString());
+            Banc.Egal("Efficacité (inactive) respectée", "-1", ModeJeuRegles.PrioriteLanceur(0x40).ToString());
+            Banc.Egal("déjà haute : rien", "-1", ModeJeuRegles.PrioriteLanceur(0x80).ToString());
+            Banc.Egal("déjà au-dessus : rien", "-1", ModeJeuRegles.PrioriteLanceur(0x8000).ToString());
+
             Banc.Titre("Mode Jeu : les règles sont bien branchées");
+            Banc.Verifie("la priorité du lanceur passe par la règle pure et le journal", true,
+                CatalogueTests.Source("GameBoost.cs").Contains("ModeJeuRegles.PrioriteLanceur(") && CatalogueTests.Source("GameBoost.cs").Contains("RelevePrioriteLanceurs("));
             string gb = CatalogueTests.Source("GameBoost.cs");
             Banc.Verifie("le socle ne nomme plus Windows Search", false, gb.Contains("\"SysMain\", \"WSearch\""));
             Banc.Verifie("la liste suspendue passe par le filtre", true, gb.Contains("ModeJeuRegles.Suspendables("));

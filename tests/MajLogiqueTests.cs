@@ -54,6 +54,16 @@ namespace BTOptimizer.Tests
             Banc.Verifie("même version déjà notifiée : se taire", false, MajLogique.ANotifier("15.98", " 15.98\r\n"));
             Banc.Verifie("aucune version : se taire", false, MajLogique.ANotifier(null, null) || MajLogique.ANotifier(" ", null));
 
+            var vs = new[] { new Version(16, 11), new Version(16, 12), new Version(16, 13), null, new Version(16, 12) };
+            var pre = new[] { false, true, false, false, false };
+            var bro = new[] { false, false, true, false, false };
+            Banc.Egal("bêta coupé : la finale la plus récente, jamais un brouillon", "4", MajLogique.ChoisitRelease(vs, pre, bro, false).ToString());
+            Banc.Egal("bêta : à version égale, la finale passe devant", "4", MajLogique.ChoisitRelease(vs, pre, bro, true).ToString());
+            Banc.Egal("bêta : une préversion plus récente est proposée", "1",
+                MajLogique.ChoisitRelease(new[] { new Version(16, 11), new Version(16, 12) }, new[] { false, true }, null, true).ToString());
+            Banc.Egal("rien de publiable", "-1", MajLogique.ChoisitRelease(new[] { new Version(16, 12) }, new[] { true }, null, false).ToString());
+            Banc.Egal("liste vide", "-1", MajLogique.ChoisitRelease(null, null, null, true).ToString());
+
             Banc.Verifie("progression lisible", true, MajLogique.Progression(12900000, 57942239) == "12,3 / 55,3 Mo — 22 %");
             Banc.Verifie("progression sans taille connue", true, MajLogique.Progression(5 * 1048576, 0) == "5,0 Mo");
             Banc.Verifie("installation silencieuse avec relance demandée", true,

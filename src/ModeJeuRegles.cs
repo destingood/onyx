@@ -55,5 +55,27 @@ namespace BTOptimizer
                     if (!string.IsNullOrEmpty(s) && !JamaisSuspendu(s)) l.Add(s);
             return l.ToArray();
         }
+
+        /// <summary>Processus principaux des lanceurs dont la priorité peut être relevée pendant la
+        /// partie (option, coupée par défaut). Leurs sous-processus (navigateur intégré…) restent tels quels.</summary>
+        public static readonly string[] Lanceurs = { "steam", "EpicGamesLauncher", "EADesktop", "Battle.net", "upc", "GalaxyClient" };
+
+        public const int PrioriteNormale = 0x20, PrioriteAuDessusNormale = 0x8000;
+
+        public static bool EstLanceur(string nom)
+        {
+            if (string.IsNullOrEmpty(nom)) return false;
+            foreach (string l in Lanceurs) if (string.Equals(l, nom, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        /// <summary>PUR : nouvelle priorité d'un lanceur, ou -1 pour n'y rien changer. Seule la priorité
+        /// normale est relevée, d'un cran : une autre valeur a été choisie par quelqu'un (l'utilisateur,
+        /// le mode Efficacité), on la respecte. Jamais « haute » ni « temps réel » : le lanceur
+        /// passerait devant le jeu.</summary>
+        public static int PrioriteLanceur(int actuelle)
+        {
+            return actuelle == PrioriteNormale ? PrioriteAuDessusNormale : -1;
+        }
     }
 }

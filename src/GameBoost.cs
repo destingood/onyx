@@ -270,6 +270,14 @@ namespace BTOptimizer
                     if (log != null) log("Applications de fond : " + ex.Message, 2);
                 }
 
+                // --- 2 bis. Lanceurs d'un cran au-dessus (option) ---------------------------
+                // Même journal que l'Efficacité : priorité d'origine notée AVANT, rendue à la sortie.
+                if (LanceurPrioritaire)
+                {
+                    try { RelevePrioriteLanceurs(log); }
+                    catch (Exception ex) { if (log != null) log("Lanceurs : " + ex.Message, 2); }
+                }
+
                 // --- 3. Mémoire, en épargnant le jeu — SEULEMENT si elle manque -------------
                 // Vider tous les processus quand la mémoire est large coûte au lieu de rapporter :
                 // les pages partent dans le fichier d'échange puis reviennent par fautes de page,
@@ -341,6 +349,46 @@ namespace BTOptimizer
                 return true;
             }
             catch { return false; }
+        }
+
+        private static string LanceurPath { get { return AppPaths.File("bt-gamemode-lanceur.txt"); } }
+
+        /// <summary>Option : relever d'un cran la priorité du lanceur (Steam, Epic…) pendant la partie.
+        /// Coupée par défaut : le jeu n'y gagne rien ; c'est l'overlay et les téléchargements du
+        /// lanceur qui restent plus réactifs.</summary>
+        public static bool LanceurPrioritaire
+        {
+            get { try { return File.Exists(LanceurPath) && File.ReadAllText(LanceurPath).Trim() == "1"; } catch { return false; } }
+            set { try { if (value) File.WriteAllText(LanceurPath, "1"); else if (File.Exists(LanceurPath)) File.Delete(LanceurPath); } catch { } }
+        }
+
+        private static void RelevePrioriteLanceurs(Action<string, int> log)
+        {
+            int n = 0;
+            foreach (System.Diagnostics.Process p in System.Diagnostics.Process.GetProcesses())
+            {
+                try
+                {
+                    if (!ModeJeuRegles.EstLanceur(p.ProcessName)) continue;
+                    int orig = (int)p.PriorityClass;
+                    int nouvelle = ModeJeuRegles.PrioriteLanceur(orig);
+                    if (nouvelle < 0) continue;
+                    uint ctl, etat;
+                    if (!Native.LitEco(p.Id, out ctl, out etat)) continue;
+                    var e = new Efficacite.Entree
+                    {
+                        Pid = p.Id, DebutTicks = p.StartTime.ToUniversalTime().Ticks, Nom = p.ProcessName,
+                        Priorite = orig, Controle = ctl, Etat = etat
+                    };
+                    _eco.Add(e);
+                    if (!EcrireEco()) { _eco.Remove(e); continue; }   // pas noté : on ne touche à rien
+                    try { p.PriorityClass = (System.Diagnostics.ProcessPriorityClass)nouvelle; n++; }
+                    catch { _eco.Remove(e); EcrireEco(); }
+                }
+                catch { }
+                finally { try { p.Dispose(); } catch { } }
+            }
+            if (n > 0 && log != null) log("Mode Jeu : " + n + " lanceur(s) passé(s) en priorité « au-dessus de la normale ».", 0);
         }
 
         /// <summary>Remet chaque processus noté à sa priorité et à son EcoQoS d'origine. Un processus

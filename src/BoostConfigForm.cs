@@ -79,12 +79,12 @@ namespace BTOptimizer
             }
 
             var note = new Label();
-            note.SetBounds(16, y + 6, 588, 20);
+            note.SetBounds(16, y + 4, 588, 32);
             note.ForeColor = Theme.InkDimColor;
             note.Font = new Font("Segoe UI", 8f);
             note.Text = "Exemple : tu imprimes pendant que tu joues ? Mets « Spooler » sur OFF. "
                       + "Un service déjà désactivé par tes optimisations n'est de toute façon jamais touché.";
-            y += 32;
+            y += 42;
 
             // ---------------- Applications de fond ------------------------------------------
             var titre = new Label();
@@ -119,13 +119,95 @@ namespace BTOptimizer
                 nom.Text = c.Libelle;
 
                 var pourquoi = new Label();
-                pourquoi.SetBounds(70, y + 20, 534, 26);
+                pourquoi.SetBounds(70, y + 20, 534, 31);
                 pourquoi.ForeColor = Theme.InkDimColor;
                 pourquoi.Font = new Font("Segoe UI", 8f);
                 pourquoi.Text = c.Pourquoi;
 
                 Controls.AddRange(new Control[] { swa, nom, pourquoi });
-                y += 46;
+                y += 52;
+            }
+
+            var swl = new NeonSwitch();
+            swl.SetBounds(16, y + 6, 46, 22);
+            swl.SetCheckedSilent(GameBoost.LanceurPrioritaire);
+            swl.CheckedChanged += (s, e) =>
+            {
+                GameBoost.LanceurPrioritaire = swl.Checked;
+                if (_log != null) _log("Mode jeu : priorité du lanceur " + (swl.Checked ? "relevée" : "laissée telle quelle") + " pendant la partie (mémorisé).", 0);
+            };
+            var nl = new Label();
+            nl.SetBounds(70, y + 7, 534, 20);
+            nl.Font = new Font("Segoe UI Semibold", 9f);
+            nl.Text = "Lanceur un cran au-dessus (Steam, Epic, EA, Battle.net, Ubisoft, GOG)";
+            var pl = new Label();
+            pl.SetBounds(70, y + 26, 534, 32);
+            pl.ForeColor = Theme.InkDimColor;
+            pl.Font = new Font("Segoe UI", 8f);
+            pl.Text = "Priorité « au-dessus de la normale » pendant la partie, rendue à la sortie. Le jeu n'y gagne "
+                    + "pas d'images : seuls l'overlay et les téléchargements du lanceur restent plus réactifs.";
+            Controls.AddRange(new Control[] { swl, nl, pl });
+            y += 58;
+
+            // Garder la liste de côté ou la reprendre sur un autre PC (exclusions seulement).
+            var exporte = OnyxDesign.Button("Enregistrer la liste…");
+            exporte.SetBounds(16, y + 12, 190, 34);
+            exporte.Click += (s, e) => ExporteListe();
+            var importe = OnyxDesign.Button("Charger une liste…");
+            importe.SetBounds(214, y + 12, 190, 34);
+            importe.Click += (s, e) => ImporteListe();
+            Controls.AddRange(new Control[] { exporte, importe });
+            ClientSize = new Size(620, y + 62);
+        }
+
+        private static string DossierListes()
+        {
+            string d = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            try { if (!string.IsNullOrEmpty(d)) d = System.IO.Directory.CreateDirectory(System.IO.Path.Combine(d, "ONYX")).FullName; } catch { }
+            return d ?? "";
+        }
+
+        private void ExporteListe()
+        {
+            using (var d = new SaveFileDialog
+            {
+                Title = "Enregistrer la liste du Mode Jeu", Filter = "Liste ONYX (*.txt)|*.txt", DefaultExt = "txt", AddExtension = true,
+                FileName = "mode-jeu-onyx.txt", InitialDirectory = DossierListes()
+            })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    System.IO.File.WriteAllText(d.FileName, ListeModeJeu.Ecrit(GameBoost.LoadExclusions(), ApplisDeFond.ExclusionsChargees()));
+                    if (_log != null) _log("Mode jeu : liste enregistrée dans " + d.FileName + ".", 0);
+                }
+                catch (Exception ex) { MessageBox.Show(this, "Enregistrement impossible : " + ex.Message, "Mode jeu", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }
+        }
+
+        private void ImporteListe()
+        {
+            using (var d = new OpenFileDialog { Title = "Charger une liste du Mode Jeu", Filter = "Liste ONYX (*.txt)|*.txt", InitialDirectory = DossierListes() })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                ListeModeJeu.Contenu c = null;
+                try
+                {
+                    if (new System.IO.FileInfo(d.FileName).Length <= 200000)
+                    {
+                        var applis = new List<string>();
+                        foreach (ApplisDeFond.Categorie k in ApplisDeFond.Catalogue) applis.Add(k.Cle);
+                        c = ListeModeJeu.Lit(System.IO.File.ReadAllText(d.FileName), GameBoost.AffectedServices, applis);
+                    }
+                }
+                catch { }
+                if (c == null) { MessageBox.Show(this, ListeModeJeu.Bilan(null), "Mode jeu", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+                if (MessageBox.Show(this, ListeModeJeu.Bilan(c) + "\n\nRemplacer tes réglages actuels par cette liste ?", "Mode jeu",
+                                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                foreach (KeyValuePair<string, NeonSwitch> kv in _sw) kv.Value.SetCheckedSilent(!c.Services.Contains(kv.Key));
+                foreach (KeyValuePair<string, NeonSwitch> kv in _swApps) kv.Value.SetCheckedSilent(!c.Applis.Contains(kv.Key));
+                SaveNow();
+                SaveApps();
             }
         }
 

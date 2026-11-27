@@ -2203,6 +2203,8 @@ namespace BTOptimizer
                 case "DiscordForm": return new DiscordForm(log);
                 case "ClipsForm": return new ClipsForm();
                 case "NotesJeuForm": return new NotesJeuForm(new GameScan.GameInfo { Name = "Cyberpunk 2077", SteamId = 1091500, Store = "STEAM", Dirs = new string[0], Keywords = new string[0] });
+                case "RaccourcisForm": return new RaccourcisForm(null);
+                case "BoostConfigForm": return new BoostConfigForm(log);
                 default: return null;
             }
         }

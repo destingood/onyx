@@ -147,6 +147,8 @@ namespace BTOptimizer.Tests
             ExclusionsNettoyageTests.Tout();
             NotesJeuTests.Tout();
             VueJeuxTests.Tout();
+            RaccourcisTests.Tout();
+            ListeModeJeuTests.Tout();
             return Banc.Bilan();
         }
     }

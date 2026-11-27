@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
@@ -375,6 +376,7 @@ namespace BTOptimizer
             };
             sys.DropDownItems.Add(audience);
             sys.DropDownItems.Add("Ce que les statistiques envoient…", null, (s, e) => ExpliqueAudience());
+            sys.DropDownItems.Add("⌨ Raccourcis clavier…", null, (s, e) => OpenDialog(new RaccourcisForm(this)));
             var anim = new ToolStripMenuItem("Animations de l'interface") { Checked = AnimSettings.UserEnabled };
             anim.Click += (s, e) => { bool now = !AnimSettings.UserEnabled; AnimSettings.UserEnabled = now; anim.Checked = now; };
             sys.DropDownItems.Add(anim);
@@ -392,6 +394,17 @@ namespace BTOptimizer
             m.Add(new ToolStripSeparator());
             m.Add("❓  J'ai un problème…", null, (s, e) => OpenDialog(new HelpNavForm(Log)));
             m.Add("🔄  Vérifier les mises à jour d'ONYX", null, (s, e) => ShowUpdateCheck());
+            var beta = new ToolStripMenuItem("🧪  Recevoir aussi les préversions (bêta)");
+            try { beta.Checked = Updater.CanalBeta; } catch { }
+            beta.Click += (s, e) =>
+            {
+                bool now = !Updater.CanalBeta;
+                Updater.CanalBeta = now;
+                beta.Checked = now;
+                Log(now ? "Mises à jour : les préversions seront aussi proposées (moins testées que les versions finales)."
+                        : "Mises à jour : versions finales seulement.", 0);
+            };
+            m.Add(beta);
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
         }
 
@@ -1164,10 +1177,11 @@ namespace BTOptimizer
             // suivante les exécutait tous.
             _tray.BalloonTipClicked += (s, e) => { var a = _actionBulle; _actionBulle = null; try { if (a != null) a(); } catch { } };
             var m = new ContextMenuStrip();
-            m.Items.Add("Ouvrir ONYX  (Ctrl+Alt+O)", null, (s, e) => RestoreFromTray());
-            m.Items.Add("▶ MODE JEU on/off  (Ctrl+Alt+G)", null, (s, e) => ToggleBoost());
-            m.Items.Add("Compteur FPS on/off  (Ctrl+Alt+F)", null, (s, e) => ToggleOverlay());
-            m.Items.Add("Capture d’écran  (Ctrl+Alt+C)", null, (s, e) => CaptureEcranJeu());
+            _trayRaccourcis[1] = (ToolStripMenuItem)m.Items.Add("Ouvrir ONYX", null, (s, e) => RestoreFromTray());
+            _trayRaccourcis[0] = (ToolStripMenuItem)m.Items.Add("▶ MODE JEU on/off", null, (s, e) => ToggleBoost());
+            _trayRaccourcis[2] = (ToolStripMenuItem)m.Items.Add("Compteur FPS on/off", null, (s, e) => ToggleOverlay());
+            _trayRaccourcis[3] = (ToolStripMenuItem)m.Items.Add("Capture d’écran", null, (s, e) => CaptureEcranJeu());
+            TexteMenuRaccourcis();
             m.Items.Add("🛡 Gardien : vérifier maintenant", null, (s, e) => GuardianCheckNow());
             var snooze = new ToolStripMenuItem("🔕 Gardien : ne plus me prévenir 7 jours");
             snooze.Click += (s, e) =>
@@ -1325,12 +1339,69 @@ namespace BTOptimizer
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            try { RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'G'); } catch { }
-            try { RegisterHotKey(Handle, HotkeyIdShow, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'O'); } catch { }
-            // Ctrl+Alt (et non Ctrl+Maj comme Cortex) : Ctrl+Maj+F et Ctrl+Maj+C servent déjà dans les
-            // navigateurs et les éditeurs, un raccourci global les volerait partout.
-            try { RegisterHotKey(Handle, HotkeyIdFps, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'F'); } catch { }
-            try { RegisterHotKey(Handle, HotkeyIdCapture, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, (uint)'C'); } catch { }
+            // Ctrl+Alt par défaut (et non Ctrl+Maj comme Cortex) : Ctrl+Maj+F et Ctrl+Maj+C servent déjà
+            // dans les navigateurs et les éditeurs. Chaque raccourci se change dans ⋯ → Système → Raccourcis.
+            List<string> echecs = InscritRaccourcis();
+            if (echecs.Count > 0) Log("Raccourcis pris par une autre application : " + string.Join(", ", echecs) + ". Change-les dans ⋯ → Système → Raccourcis clavier.", 1);
+        }
+
+        // Ordre de Raccourcis.Action : Mode Jeu, Afficher, Compteur, Capture.
+        private static readonly int[] HotkeyIds = { HotkeyId, HotkeyIdShow, HotkeyIdFps, HotkeyIdCapture };
+        private Raccourcis.Combo[] _raccourcis = ChargeRaccourcis();
+        private readonly ToolStripMenuItem[] _trayRaccourcis = new ToolStripMenuItem[4];
+
+        internal static Raccourcis.Combo[] ChargeRaccourcis()
+        {
+            try
+            {
+                string p = AppPaths.File("bt-raccourcis.txt");
+                return Raccourcis.LitFichier(System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : "");
+            }
+            catch { return Raccourcis.TousParDefaut(); }
+        }
+
+        internal Raccourcis.Combo[] RaccourcisActuels { get { return _raccourcis; } }
+
+        /// <summary>Pendant la saisie d'un raccourci : sans ça, Windows avalerait la combinaison actuelle.</summary>
+        internal void SuspendRaccourcis()
+        {
+            foreach (int id in HotkeyIds) try { UnregisterHotKey(Handle, id); } catch { }
+        }
+
+        internal List<string> ReprendRaccourcis() { return IsHandleCreated ? InscritRaccourcis() : new List<string>(); }
+
+        /// <summary>Réinscrit les quatre raccourcis ; rend ceux que Windows a refusés (déjà pris ailleurs).</summary>
+        private List<string> InscritRaccourcis()
+        {
+            var echecs = new List<string>();
+            for (int i = 0; i < HotkeyIds.Length; i++)
+            {
+                try { UnregisterHotKey(Handle, HotkeyIds[i]); } catch { }
+                Raccourcis.Combo c = _raccourcis[i];
+                if (c == null || c.Vide) continue;
+                bool ok = false;
+                try { ok = RegisterHotKey(Handle, HotkeyIds[i], c.Mods | MOD_NOREPEAT, (uint)c.Touche); } catch { }
+                if (!ok) echecs.Add(Raccourcis.Texte(c));
+            }
+            return echecs;
+        }
+
+        /// <summary>Applique et enregistre de nouveaux raccourcis ; rend ceux que Windows a refusés.</summary>
+        internal List<string> AppliqueRaccourcis(Raccourcis.Combo[] t)
+        {
+            _raccourcis = t ?? Raccourcis.TousParDefaut();
+            try { System.IO.File.WriteAllText(AppPaths.File("bt-raccourcis.txt"), Raccourcis.EcritFichier(_raccourcis)); } catch { }
+            List<string> echecs = IsHandleCreated ? InscritRaccourcis() : new List<string>();
+            TexteMenuRaccourcis();
+            return echecs;
+        }
+
+        private void TexteMenuRaccourcis()
+        {
+            string[] noms = { "▶ MODE JEU on/off", "Ouvrir ONYX", "Compteur FPS on/off", "Capture d’écran" };
+            for (int i = 0; i < _trayRaccourcis.Length; i++)
+                if (_trayRaccourcis[i] != null)
+                    _trayRaccourcis[i].Text = noms[i] + (_raccourcis[i].Vide ? "" : "  (" + Raccourcis.Texte(_raccourcis[i]) + ")");
         }
 
         /// <summary>Ctrl+Alt+C — capture de l'écran du jeu, enregistrée dans le dossier Captures de Windows.</summary>

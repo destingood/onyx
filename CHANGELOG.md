@@ -5,6 +5,27 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions
+
+- **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
+  afficher ONYX, compteur en jeu et capture d'écran. On clique dans la case et on tape la
+  combinaison (Ctrl ou Alt avec une lettre, un chiffre ou F1 à F12), « Désactiver » par action,
+  « Tout réinitialiser ». Une touche seule, Maj seule et Alt+F4 sont refusés ; deux actions ne
+  peuvent pas partager la même combinaison. Si une autre application a déjà pris la combinaison,
+  ONYX le dit. Le menu de la zone de notification affiche les raccourcis choisis.
+- **Mode Jeu : enregistrer et charger la liste.** Dans « ce qui s'arrête pendant la partie » :
+  « Enregistrer la liste… » et « Charger une liste… » (fichier texte, proposé dans Documents\ONYX).
+  Le fichier ne contient que des exclusions : une liste reçue peut faire laisser un service
+  tranquille, jamais en faire arrêter un nouveau. Les noms inconnus sont ignorés et comptés.
+- **Mode Jeu : lanceur un cran au-dessus (option, coupée par défaut).** Steam, Epic, EA,
+  Battle.net, Ubisoft Connect et GOG passent en priorité « au-dessus de la normale » pendant la
+  partie, puis retrouvent leur priorité d'origine (notée avant, comme pour le mode Efficacité,
+  donc rendue aussi après un plantage). Seule la priorité normale est relevée, jamais en « haute ».
+  Le jeu n'y gagne pas d'images : c'est l'overlay et les téléchargements du lanceur qui restent
+  réactifs.
+- **Mises à jour : préversions (bêta).** Menu ⋯ → « Recevoir aussi les préversions » : ONYX
+  propose aussi les préversions publiées sur GitHub. À numéro égal, la version finale passe devant.
+
 ## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
 
 - **Mes jeux : grille ou liste.** Nouveau bouton « Grille ⌄ » à côté de la recherche. La liste
