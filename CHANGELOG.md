@@ -5,6 +5,30 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077
+
+- **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par
+  des virgules (« coop, à finir »). Elles servent de filtre dans le menu des plateformes et la
+  recherche les trouve. 8 étiquettes au plus par jeu.
+- **Fond personnalisé de la fiche.** « Changer le fond… » met une image derrière la fiche du jeu,
+  sous un voile sombre qui garde le texte lisible. « Fond d'origine » la retire et envoie la copie à
+  la Corbeille.
+- **Catalogue : tes jeux Steam non installés.** ONYX lit la liste locale des jeux de ton compte
+  Steam. Ils passent en tête du Catalogue avec leur temps de jeu, et le clic droit propose
+  « Installer avec Steam ». Seuls les jeux lancés au moins une fois sur ce PC y figurent. Leurs
+  noms sont demandés à Steam, puis gardés en cache 7 jours.
+- **Bons plans : importer ta liste de souhaits GOG.** Le bouton d'import devient un menu
+  Steam / GOG. Pour GOG, tape ton pseudo (ta liste doit être publique). Chaque jeu est cherché sur
+  Steam puis suivi au prix Steam, et les titres introuvables sont listés. Humble Bundle n'a pas de
+  liste lisible sans connexion : non pris en charge.
+- **Préréglages graphiques : Cyberpunk 2077.** Le bouton de la fiche propose les mêmes 4 modes que
+  pour Fortnite, avec aperçu, copie de sauvegarde, « Rétablir » et mesure en jeu. ONYX ne réécrit
+  que les valeurs visées de UserSettings.json, uniquement avec des crans que le menu du jeu
+  propose. Il ne touche jamais à la résolution, à DLSS/FSR/XeSS, à la génération d'images, à la
+  synchro verticale, à la limite d'images ni à Reflex.
+- **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
+  bouton des plateformes.
+
 ## v16.07 — Options de lancement, jaquettes perso, capture d'écran, courbe des FPS
 
 - **Jeux : options par jeu.** Clic droit sur une tuile (« Options, lancement et jaquette… ») ou
