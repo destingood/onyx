@@ -5,6 +5,20 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.09 — Clavier pendant la partie
+
+- **Mode Jeu : touche Windows bloquée en jeu** (case « Bloquer la touche Windows… » dans les
+  réglages du Mode Jeu, non cochée par défaut). Elle n'est avalée que lorsque le jeu est au premier
+  plan : le jeu détecté par le Mode Jeu automatique, ou une fenêtre plein écran si tu l'as lancé à
+  la main. Alt+Tab, et la touche marche à nouveau. Win+G et Win+Maj+S sont bloqués avec elle. ONYX
+  lit le clavier depuis son propre processus : rien n'entre dans le jeu.
+- **Mode Jeu : raccourcis Maj coupés pendant la partie** (coché par défaut). Maj appuyée cinq fois
+  (touches rémanentes) ou Maj droite tenue 8 s (touches filtres) n'ouvrent plus de fenêtre en
+  pleine partie. Seul le raccourci est coupé, pour la session seulement : ton réglage Windows n'est
+  pas modifié et revient à la sortie du Mode Jeu, ou au lancement suivant si ONYX a été fermé
+  entre-temps.
+- **Réglages du Mode Jeu :** le texte d'introduction n'est plus coupé par la liste.
+
 ## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077 et Black Ops 6, FPS visés, bilan de jeu, mode manette, succès Steam
 
 - **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par

@@ -11,8 +11,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("16.8.0.0")]
-[assembly: AssemblyFileVersion("16.8.0.0")]
+[assembly: AssemblyVersion("16.9.0.0")]
+[assembly: AssemblyFileVersion("16.9.0.0")]
 
 namespace BTOptimizer
 {
@@ -291,6 +291,53 @@ namespace BTOptimizer
                 Console.WriteLine();
                 Console.WriteLine(SteamGames.StorageText() ?? "(emplacement des jeux indisponible)");
                 Environment.Exit(0);
+            }
+
+            // BT_CLAVIER=1 : clavier du Mode Jeu POUR DE VRAI (crochet pose puis retire, raccourcis
+            // Maj coupes puis rendus, reprise apres plantage), puis sort. Les reglages sont rendus.
+            if (Environment.GetEnvironmentVariable("BT_CLAVIER") == "1")
+            {
+                int err = 0;
+                Action<string, int> lg = delegate(string m, int l) { Console.WriteLine("  " + m); };
+                ClavierJeu.Options avant = ClavierJeu.Reglages;
+                uint? r0 = ClavierJeu.DrapeauxRemanentes(), f0 = ClavierJeu.DrapeauxFiltres();
+                Console.WriteLine("origine : remanentes=" + r0 + " filtres=" + f0);
+                uint? rVrai = r0, fVrai = f0;
+                try
+                {
+                    // Raccourcis deja coupes sur ce PC : on les rallume pour la session, sinon rien a tester.
+                    ClavierJeu.PoseDrapeauxPourTest(r0 | ClavierJeu.Raccourci, f0 | ClavierJeu.Raccourci);
+                    r0 = ClavierJeu.DrapeauxRemanentes(); f0 = ClavierJeu.DrapeauxFiltres();
+                    Console.WriteLine("pour test : remanentes=" + r0 + " filtres=" + f0);
+                    ClavierJeu.Reglages = new ClavierJeu.Options { ToucheWindows = true, Raccourcis = true };
+                    ClavierJeu.Active("BT_PAS_UN_JEU", lg);
+                    uint? r1 = ClavierJeu.DrapeauxRemanentes(), f1 = ClavierJeu.DrapeauxFiltres();
+                    Console.WriteLine("en jeu  : remanentes=" + r1 + " filtres=" + f1 + " crochet=" + ClavierJeu.CrochetActif);
+                    if (!ClavierJeu.CrochetActif) { err++; Console.WriteLine("KO crochet absent"); }
+                    if (r1 == null || (r1.Value & ClavierJeu.Raccourci) != 0) { err++; Console.WriteLine("KO raccourci remanentes encore actif"); }
+                    if (f1 == null || (f1.Value & ClavierJeu.Raccourci) != 0) { err++; Console.WriteLine("KO raccourci filtres encore actif"); }
+                    ClavierJeu.Desactive(lg);
+                    if (ClavierJeu.CrochetActif) { err++; Console.WriteLine("KO crochet reste pose"); }
+                    if (ClavierJeu.DrapeauxRemanentes() != r0 || ClavierJeu.DrapeauxFiltres() != f0) { err++; Console.WriteLine("KO drapeaux non rendus"); }
+                    if (System.IO.File.Exists(AppPaths.File("bt-gamemode-clavier-etat.txt"))) { err++; Console.WriteLine("KO marqueur reste"); }
+
+                    // Plantage simule : Mode Jeu actif, ONYX relance -> Soigne rend les raccourcis.
+                    ClavierJeu.Active("BT_PAS_UN_JEU", lg);
+                    bool soigne = ClavierJeu.Soigne(lg);
+                    if (ClavierJeu.DrapeauxRemanentes() != r0 || ClavierJeu.DrapeauxFiltres() != f0) { err++; Console.WriteLine("KO reprise : drapeaux non rendus"); }
+                    Console.WriteLine("reprise apres plantage : " + soigne);
+                    ClavierJeu.Desactive(lg);
+                }
+                catch (Exception ex) { err++; Console.WriteLine("KO " + ex); }
+                finally
+                {
+                    ClavierJeu.Reglages = avant;
+                    ClavierJeu.PoseDrapeauxPourTest(rVrai, fVrai);
+                    Console.WriteLine("rendu    : remanentes=" + ClavierJeu.DrapeauxRemanentes() + " filtres=" + ClavierJeu.DrapeauxFiltres());
+                    if (ClavierJeu.DrapeauxRemanentes() != rVrai || ClavierJeu.DrapeauxFiltres() != fVrai) { err++; Console.WriteLine("KO etat d origine non rendu"); }
+                }
+                Console.WriteLine("CLAVIER — " + err + " erreur(s)");
+                Environment.Exit(err == 0 ? 0 : 1);
             }
 
             // BT_BOTTLE=1 : mesure CPU/GPU (20 s) et verdict du goulot d'etranglement, puis sort.

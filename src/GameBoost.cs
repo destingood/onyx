@@ -8,7 +8,8 @@ namespace BTOptimizer
     /// Mode Jeu : un interrupteur temporaire qui suspend (arrête, sans désactiver) les services de
     /// fond non essentiels, met en mode Efficacité (priorité Idle + EcoQoS, comme le Gestionnaire
     /// des tâches) les processus des applications qui n'ont rien à faire là pendant une partie
-    /// (voir ApplisDeFond — AUCUN n'est fermé), nettoie la RAM et force le timer 1 ms.
+    /// (voir ApplisDeFond — AUCUN n'est fermé), nettoie la RAM, force le timer 1 ms et, selon les
+    /// réglages, bloque la touche Windows et coupe les raccourcis Maj (voir ClavierJeu).
     ///
     /// « Désactiver » rétablit TOUT : les services sont relancés, chaque processus retrouve sa
     /// priorité et son état EcoQoS d'origine, le timer est rendu.
@@ -284,6 +285,11 @@ namespace BTOptimizer
                     try { freed = Sys.CleanMemory(log, proteges); } catch { }
                 }
 
+                // --- 4. Clavier : touche Windows et raccourcis Maj (selon les réglages) -------
+                // Isolé comme la mémoire : un refus de Windows ne doit pas empêcher d'entrer en Mode Jeu.
+                try { ClavierJeu.Active(jeuProtege, log); }
+                catch (Exception ex) { if (log != null) log("Clavier : " + ex.Message, 2); }
+
                 IsActive = true;
                 try { BadgeStore.MarkBoostUsed(); BadgeCatalog.EvaluateEvents(); } catch { }   // badge « Mode Jeu » (+ toast)
 
@@ -395,6 +401,7 @@ namespace BTOptimizer
                 try { if (File.Exists(EcoPath)) File.Delete(EcoPath); } catch { }
 
                 try { if (!_timerWasActive) Native.SetTimer1ms(false); } catch { }
+                try { ClavierJeu.Desactive(log); } catch { }
 
                 IsActive = false;
                 if (log != null)
@@ -446,6 +453,10 @@ namespace BTOptimizer
             catch { }
             try { if (File.Exists(EcoPath)) File.Delete(EcoPath); } catch { }
 
+            // --- Raccourcis Maj coupés pendant la partie
+            bool clavier = false;
+            try { clavier = ClavierJeu.Soigne(log); } catch { }
+
             if (log != null)
             {
                 if (ok > 0)
@@ -453,7 +464,7 @@ namespace BTOptimizer
                 if (rendus > 0)
                     log("Mode Jeu interrompu la dernière fois : " + rendus + " processus rendus à leur priorité d'origine.", 1);
             }
-            return ok + rendus;
+            return ok + rendus + (clavier ? 1 : 0);
         }
     }
 }

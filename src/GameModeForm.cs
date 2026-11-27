@@ -14,7 +14,7 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private static readonly Color Accent = Theme.AccentColor;
         private CheckedListBox _list;
-        private CheckBox _fps;
+        private CheckBox _fps, _winKey, _raccourcis;
         private string[] _svcs;
 
         public GameModeForm(Action<string, int> log)
@@ -29,7 +29,7 @@ namespace BTOptimizer
         private void Build()
         {
             Text = "ONYX — Réglages Mode Jeu";
-            ClientSize = new Size(560, 430);
+            ClientSize = new Size(560, 510);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
@@ -51,32 +51,45 @@ namespace BTOptimizer
                      + "services de fond (relancés à la désactivation) et passe en mode Efficacité les familles d'applications cochées "
                      + "(rien n'est fermé, la priorité d'origine est rendue à la sortie). Décoche ce que tu "
                      + "veux GARDER. Ton choix est mémorisé.",
-                Location = new Point(18, 60), Size = new Size(524, 58), ForeColor = Color.FromArgb(60, 64, 72)
+                Location = new Point(18, 60), Size = new Size(524, 82), ForeColor = Color.FromArgb(60, 64, 72)
             });
 
             _list = new CheckedListBox
             {
-                Location = new Point(18, 124), Size = new Size(524, 214),
+                Location = new Point(18, 148), Size = new Size(524, 214),
                 CheckOnClick = true, BorderStyle = BorderStyle.FixedSingle, IntegralHeight = false
             };
             Controls.Add(_list);
 
-            var save = MakeBtn("Enregistrer", 18, 350, 160, 38, true);
+            var save = MakeBtn("Enregistrer", 18, 374, 160, 38, true);
             save.Click += (s, e) => Save();
             // La liste ci-dessus est ÉCRITE EN DUR : elle ne connaît que Windows. Les services qui
             // tournent vraiment pendant une partie sont ceux des suites constructeur et des
             // logiciels installés ici, et eux ne se devinent pas. Ce bouton va les chercher.
-            var detect = MakeBtn("Détecter les services tiers", 190, 350, 250, 38, false);
+            var detect = MakeBtn("Détecter les services tiers", 190, 374, 250, 38, false);
             detect.Click += (s, e) => Detecte();
             Controls.Add(detect);
             // Bilan de partie : durée et FPS mesurés, en notification à la fermeture du jeu.
             _fps = new CheckBox
             {
                 Text = "Mesurer les FPS de chaque partie (bilan en notification à la fermeture du jeu)",
-                Location = new Point(18, 396), Size = new Size(524, 24), Checked = JournalJeu.MesureFps
+                Location = new Point(18, 420), Size = new Size(524, 24), Checked = JournalJeu.MesureFps
             };
             Controls.Add(_fps);
-            var close = MakeBtn("Fermer", 452, 350, 90, 38, false);
+            // Clavier pendant la partie (ClavierJeu) : rendu à la sortie du Mode Jeu.
+            ClavierJeu.Options clavier = ClavierJeu.Reglages;
+            _winKey = new CheckBox
+            {
+                Text = "Bloquer la touche Windows quand le jeu est devant (Win+G et Win+Maj+S aussi)",
+                Location = new Point(18, 448), Size = new Size(524, 24), Checked = clavier.ToucheWindows
+            };
+            _raccourcis = new CheckBox
+            {
+                Text = "Couper les raccourcis Maj (touches rémanentes, touches filtres) pendant la partie",
+                Location = new Point(18, 476), Size = new Size(524, 24), Checked = clavier.Raccourcis
+            };
+            Controls.Add(_winKey); Controls.Add(_raccourcis);
+            var close = MakeBtn("Fermer", 452, 374, 90, 38, false);
             close.Click += (s, e) => Close();
             Controls.Add(save); Controls.Add(close);
         }
@@ -141,6 +154,7 @@ namespace BTOptimizer
                 if (!_list.GetItemChecked(_svcs.Length + i)) exclApps.Add(ApplisDeFond.Catalogue[i].Cle);
             ApplisDeFond.EnregistrerExclusions(exclApps);
             JournalJeu.MesureFps = _fps.Checked;
+            ClavierJeu.Reglages = new ClavierJeu.Options { ToucheWindows = _winKey.Checked, Raccourcis = _raccourcis.Checked };
 
             if (_log != null) _log("Mode Jeu : " + excluded.Count + " service(s) et " + exclApps.Count
                                  + " famille(s) d'applications exclu(s) de la suspension.", 0);

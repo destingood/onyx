@@ -142,6 +142,7 @@ namespace BTOptimizer.Tests
             ManetteTests.Tout();
             ReglagesCodTests.Tout();
             SuccesSteamTests.Tout();
+            ClavierJeuTests.Tout();
             return Banc.Bilan();
         }
     }
