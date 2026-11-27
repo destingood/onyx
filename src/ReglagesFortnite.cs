@@ -133,6 +133,18 @@ namespace BTOptimizer
             return c == null ? "" : Libelle(c.Cle) + " : " + Valeur(c.Avant) + " → " + Valeur(c.Apres);
         }
 
+        /// <summary>Limite d'images du jeu (FrameRateLimit, 0 = aucune) et synchro verticale ; lues, jamais écrites.</summary>
+        public static int LimiteImages(string ini, out bool vsync)
+        {
+            Dictionary<string, string> v = Valeurs(ini ?? "");
+            string s;
+            vsync = v.TryGetValue(Id(Jeu, "bUseVSync"), out s) && Pareil(s, "True");
+            double d;
+            return v.TryGetValue(Id(Jeu, "FrameRateLimit"), out s)
+                && double.TryParse(s.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d) && d >= 1
+                ? (int)Math.Round(d) : 0;
+        }
+
         public static List<Changement> Lire(string texte)
         {
             var res = new List<Changement>();

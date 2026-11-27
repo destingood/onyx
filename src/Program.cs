@@ -2654,6 +2654,19 @@ namespace BTOptimizer
                     if (c is TextBox t) apercu = t;
                 }
                 if (mode == null || apercu == null) throw new InvalidOperationException("Fenêtre des préréglages Cyberpunk incomplète.");
+                // FPS visés : le champ existe, borné 30–500 ; aucun contrôle ne déborde ni n'en chevauche un autre.
+                NumericUpDown objectif = null;
+                foreach (Control c in f.Controls) if (c is NumericUpDown n) objectif = n;
+                if (objectif == null || objectif.Minimum != ObjectifFps.Min || objectif.Maximum != ObjectifFps.Max)
+                    throw new InvalidOperationException("Champ « FPS visés » absent ou mal borné.");
+                for (int i = 0; i < f.Controls.Count; i++)
+                {
+                    System.Drawing.Rectangle r = f.Controls[i].Bounds;
+                    if (!f.ClientRectangle.Contains(r)) throw new InvalidOperationException("Préréglages : « " + f.Controls[i].Text + " » déborde de la fenêtre.");
+                    for (int j = i + 1; j < f.Controls.Count; j++)
+                        if (r.IntersectsWith(f.Controls[j].Bounds))
+                            throw new InvalidOperationException("Préréglages : « " + f.Controls[i].Text + " » chevauche « " + f.Controls[j].Text + " ».");
+                }
                 mode.PerformClick(); Pump(200);
                 if (!apercu.Text.Contains("changerait") && !apercu.Text.Contains("introuvable"))
                     throw new InvalidOperationException("Aperçu Cyberpunk inattendu : " + apercu.Text);

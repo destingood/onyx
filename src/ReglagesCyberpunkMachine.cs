@@ -63,6 +63,18 @@ namespace BTOptimizer
             public string Applique(int m) { return ReglagesCyberpunk.Applique((Mode)m); }
             public string Retablit() { return ReglagesCyberpunk.Retablit(); }
             public bool ARetablir { get { return Etat().Count > 0; } }
+            public bool Situation(out int? mode, out int limite, out bool vsync)
+            {
+                mode = null; limite = 0; vsync = false;
+                Encoding enc; string raison;
+                string json = FichierReglagesJeu.Lit(Chemin, NomJeu, out enc, out raison);
+                if (json == null) return false;
+                var n = new List<int>(); List<string> absentes;
+                for (int m = 0; m < 4; m++) n.Add(Prevoit(json, (Mode)m, out absentes).Count);
+                mode = ObjectifFps.ModeActuel(n);
+                limite = LimiteImages(json, out vsync);
+                return true;
+            }
         }
 
         public static List<Changement> Etat()

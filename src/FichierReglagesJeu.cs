@@ -78,5 +78,8 @@ namespace BTOptimizer
         string Applique(int mode);
         string Retablit();
         bool ARetablir { get; }
+        /// <summary>Lecture seule pour « FPS visés » : mode déjà en place (null : réglages perso), limite d'images
+        /// du jeu (0 : aucune) et synchro verticale. Faux si le fichier est illisible.</summary>
+        bool Situation(out int? mode, out int limite, out bool vsync);
     }
 }

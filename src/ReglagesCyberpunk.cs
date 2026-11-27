@@ -129,6 +129,18 @@ namespace BTOptimizer
             return d;
         }
 
+        /// <summary>Limite d'images du jeu (0 = aucune) et synchro verticale ; lues, jamais écrites.</summary>
+        public static int LimiteImages(string json, out bool vsync)
+        {
+            Dictionary<string, string> v = Valeurs(json);
+            string s, n;
+            vsync = v.TryGetValue(Id("/video/display", "VSync"), out s) && !string.IsNullOrEmpty(s) && !s.EndsWith("-Off", StringComparison.Ordinal);
+            int i;
+            return v.TryGetValue(Id("/video/display", "MaximumFPS_OnOff"), out s) && s == "true"
+                && v.TryGetValue(Id("/video/display", "MaximumFPS_Value"), out n) && int.TryParse(n, NumberStyles.None, CultureInfo.InvariantCulture, out i) && i > 0
+                ? i : 0;
+        }
+
         public static string Id(string groupe, string nom) { return (groupe ?? "") + "\n" + (nom ?? ""); }
 
         // ------------------------------------------------------------------ textes

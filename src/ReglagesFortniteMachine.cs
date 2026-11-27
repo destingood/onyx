@@ -53,6 +53,18 @@ namespace BTOptimizer
             public string Applique(int m) { return ReglagesFortnite.Applique((Mode)m); }
             public string Retablit() { return ReglagesFortnite.Retablit(); }
             public bool ARetablir { get { return Etat().Count > 0; } }
+            public bool Situation(out int? mode, out int limite, out bool vsync)
+            {
+                mode = null; limite = 0; vsync = false;
+                Encoding enc; string raison;
+                string ini = LitIni(out enc, out raison);
+                if (ini == null) return false;
+                var n = new List<int>(); List<string> absentes;
+                for (int m = 0; m < 4; m++) n.Add(Prevoit(ini, (Mode)m, out absentes).Count);
+                mode = ObjectifFps.ModeActuel(n);
+                limite = LimiteImages(ini, out vsync);
+                return true;
+            }
         }
 
         /// <summary>Changements enregistrés par le dernier préréglage (vide : rien à rétablir).</summary>

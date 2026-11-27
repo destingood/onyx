@@ -18,17 +18,20 @@ namespace BTOptimizer
     {
         private readonly IReglagesJeu _jeu;
         private readonly TextBox _apercu;
-        private readonly Label _etat;
+        private readonly Label _etat, _obstacle;
+        private readonly NumericUpDown _objectif;
         private readonly Button _appliquer, _retablir, _mesurer;
         private readonly List<Button> _modes = new List<Button>();
         private int? _choisi;
+        private int _limite;          // limite d'images lue dans le fichier du jeu (0 : aucune)
+        private bool _vsync, _lu;
         private volatile bool _stop, _mesureEnCours;
 
         public ReglagesJeuForm(IReglagesJeu jeu)
         {
             _jeu = jeu;
             Text = "ONYX — Préréglages " + jeu.Jeu;
-            ClientSize = new Size(660, 540);
+            ClientSize = new Size(660, 588);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -52,40 +55,101 @@ namespace BTOptimizer
                 x += 157;
             }
 
+            // FPS visés : ONYX n'a pas de base de prédiction ; il mesure en jeu puis conseille un cran.
+            Controls.Add(new Label { Text = "FPS visés :", Location = new Point(20, 130), Size = new Size(90, 24), ForeColor = FpsUi.Ink });
+            _objectif = new NumericUpDown
+            {
+                Minimum = ObjectifFps.Min, Maximum = ObjectifFps.Max, Increment = 10,
+                Location = new Point(112, 126), Size = new Size(84, 28),
+                BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, BorderStyle = BorderStyle.FixedSingle,
+                Value = ObjectifEnregistre()
+            };
+            _objectif.ValueChanged += (s, e) => { EnregistreObjectif(); MajObstacle(); };
+            Controls.Add(_objectif);
+            _obstacle = new Label { Location = new Point(208, 122), Size = new Size(432, 44), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
+            Controls.Add(_obstacle);
+
             _apercu = new TextBox
             {
                 Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true,
-                Location = new Point(20, 124), Size = new Size(620, 230),
+                Location = new Point(20, 172), Size = new Size(620, 230),
                 BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, BorderStyle = BorderStyle.FixedSingle, Font = FpsUi.Body,
                 Text = "Choisis un mode pour voir ce qui changerait."
             };
             Controls.Add(_apercu);
 
             _appliquer = OnyxDesign.PrimaryButton("Appliquer");
-            _appliquer.SetBounds(20, 368, 150, 36); _appliquer.Enabled = false;
+            _appliquer.SetBounds(20, 416, 150, 36); _appliquer.Enabled = false;
             _appliquer.Click += (s, e) => Applique();
             Controls.Add(_appliquer);
 
             _retablir = OnyxDesign.Button("Rétablir");
-            _retablir.SetBounds(180, 368, 130, 36);
+            _retablir.SetBounds(180, 416, 130, 36);
             _retablir.Click += (s, e) => Retablit();
             Controls.Add(_retablir);
 
             _mesurer = OnyxDesign.Button("Mesurer en jeu");
-            _mesurer.SetBounds(320, 368, 200, 36);
+            _mesurer.SetBounds(320, 416, 200, 36);
             _mesurer.Click += (s, e) => Mesure();
             Controls.Add(_mesurer);
 
             Button fermer = OnyxDesign.Button("Fermer");
-            fermer.SetBounds(530, 368, 110, 36);
+            fermer.SetBounds(530, 416, 110, 36);
             fermer.Click += (s, e) => Close();
             Controls.Add(fermer);
 
-            _etat = new Label { Location = new Point(20, 416), Size = new Size(620, 110), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
+            _etat = new Label { Location = new Point(20, 464), Size = new Size(620, 110), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
             Controls.Add(_etat);
 
             FormClosing += (s, e) => _stop = true;
             MajBoutons();
+            int? actuel;
+            _lu = _jeu.Situation(out actuel, out _limite, out _vsync);
+            MajObstacle();
+        }
+
+        // ------------------------------------------------------------------ FPS visés
+
+        private int Objectif { get { return (int)_objectif.Value; } }
+
+        private Dictionary<string, int> Objectifs()
+        {
+            try { string p = AppPaths.File(ObjectifFps.Fichier); return ObjectifFps.Lire(File.Exists(p) ? File.ReadAllText(p, Encoding.UTF8) : null); }
+            catch { return ObjectifFps.Lire(null); }
+        }
+
+        private int ObjectifEnregistre()
+        {
+            int v;
+            return Objectifs().TryGetValue(_jeu.Jeu, out v) ? v : ObjectifFps.Defaut;
+        }
+
+        private void EnregistreObjectif()
+        {
+            try
+            {
+                Dictionary<string, int> d = Objectifs();
+                d[_jeu.Jeu] = Objectif;
+                File.WriteAllText(AppPaths.File(ObjectifFps.Fichier), ObjectifFps.Ecrire(d), new UTF8Encoding(false));
+            }
+            catch (Exception ex) { JournalTechnique.Echec("objectif FPS", ex); }
+        }
+
+        /// <summary>Limite d'images du jeu sous l'objectif, ou synchro verticale : dit AVANT de mesurer.</summary>
+        private void MajObstacle()
+        {
+            string o = _lu ? ObjectifFps.Obstacle(_jeu.Jeu, Objectif, _limite, _vsync) : null;
+            _obstacle.ForeColor = o != null && _limite > 0 && _limite < Objectif ? FpsUi.Gold : FpsUi.Dim;
+            _obstacle.Text = o ?? "Mesure en jeu, puis ONYX conseille un cran plus léger ou plus beau selon l'écart. Aucune prédiction sans mesure.";
+        }
+
+        /// <summary>Conseil d'un cran d'après la mesure ; null si le fichier du jeu est illisible.</summary>
+        private ObjectifFps.Avis Conseil(Preuve.MesureJeu m)
+        {
+            int? mode;
+            _lu = _jeu.Situation(out mode, out _limite, out _vsync);   // relu : le joueur a pu changer la limite en jeu
+            MajObstacle();
+            return _lu ? ObjectifFps.Juge(_jeu.Jeu, m.FpsMoy, m.Low1, Objectif, mode, _limite, _vsync, _jeu.NomMode) : null;
         }
 
         private void MajBoutons()
@@ -166,13 +230,18 @@ namespace BTOptimizer
             {
                 try { File.WriteAllText(AppPaths.File(_jeu.FichierMesure), Preuve.EcritJeu(m), new UTF8Encoding(false)); }
                 catch (Exception ex) { _etat.Text = "Mesure « avant » non enregistrée : " + ex.Message; MajBoutons(); return; }
-                _etat.Text = "Mesure « avant » : " + m.Resume() + ". Ferme " + _jeu.Jeu + ", applique un mode, puis « Mesurer en jeu (après) ».";
+                ObjectifFps.Avis a = Conseil(m);
+                _etat.Text = "Mesure « avant » : " + m.Resume() + "." + (a != null ? " " + a.Texte : "")
+                           + " Ferme " + _jeu.Jeu + ", applique un mode, puis « Mesurer en jeu (après) ».";
+                if (a != null && a.Mode.HasValue) Choisit(a.Mode.Value);   // aperçu du mode conseillé, rien d'écrit
             }
             else
             {
                 Preuve.Verdict v = Preuve.JugeJeu(avant, m);
                 _apercu.Text = "Avant : " + avant.Resume() + "\r\nAprès : " + m.Resume() + "\r\n" + Preuve.RapportJeu(avant, m)
                     + "\r\nVerdict : " + Preuve.Libelle(v);
+                ObjectifFps.Avis a = Conseil(m);
+                if (a != null) _apercu.AppendText("\r\n\r\nFPS visés (" + Objectif + ") : " + a.Texte);
                 _etat.Text = "Comparaison terminée. « Rétablir » remet tes anciens réglages si le résultat ne te plaît pas.";
                 try { File.Delete(AppPaths.File(_jeu.FichierMesure)); } catch { }
             }

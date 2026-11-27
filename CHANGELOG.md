@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077
+## v16.08 — Étiquettes, fonds perso, jeux du compte Steam, souhaits GOG, préréglages Cyberpunk 2077, FPS visés
 
 - **Jeux : étiquettes.** Dans « Options, étiquettes et images… », tape des étiquettes séparées par
   des virgules (« coop, à finir »). Elles servent de filtre dans le menu des plateformes et la
@@ -26,6 +26,12 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
   que les valeurs visées de UserSettings.json, uniquement avec des crans que le menu du jeu
   propose. Il ne touche jamais à la résolution, à DLSS/FSR/XeSS, à la génération d'images, à la
   synchro verticale, à la limite d'images ni à Reflex.
+- **Préréglages : FPS visés.** Dans la fenêtre des préréglages (Fortnite, Cyberpunk 2077), choisis
+  ton objectif (30 à 500 FPS, gardé par jeu). Après une mesure en jeu de 60 s, ONYX conseille un cran.
+  Il propose un mode plus léger si l'objectif est manqué. Il propose un mode plus beau si la marge
+  dépasse 25 % et que les FPS ne butent pas sur une limite. Le mode conseillé s'affiche en aperçu,
+  sans rien écrire. Si la limite d'images du jeu est sous l'objectif, ONYX le dit avant la mesure.
+  Contrairement à Razer Cortex, aucune prédiction : sans mesure, pas de conseil.
 - **Mes jeux, fenêtre étroite :** la recherche passe sous les filtres au lieu de chevaucher le
   bouton des plateformes.
 
