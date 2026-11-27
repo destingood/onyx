@@ -135,6 +135,7 @@ namespace BTOptimizer.Tests
             LancementTests.Tout();
             EtiquettesJeuxTests.Tout();
             JeuxCompteSteamTests.Tout();
+            ListeSouhaitsGogTests.Tout();
             return Banc.Bilan();
         }
     }

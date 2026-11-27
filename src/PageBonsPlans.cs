@@ -49,6 +49,7 @@ namespace BTOptimizer
         private bool _storesChanges;
         private int _masquesRetires;   // offres retirées par « J'ai déjà » / « Pas pour moi » depuis le dernier chargement
         private readonly ContextMenuStrip _menuCarte = new ContextMenuStrip { Font = FpsUi.Body, ShowImageMargin = false };
+        private readonly ContextMenuStrip _menuSouhaits = new ContextMenuStrip { Font = FpsUi.Body, ShowImageMargin = false };
         private bool OngletMasquable { get { return _onglet != OngletSuivis && _onglet != OngletFavoris; } }
         private readonly Dictionary<string, int> _pagesStores = new Dictionary<string, int>();   // prochaine page par store
         private readonly HashSet<string> _finis = new HashSet<string>();   // stores sans page suivante
@@ -147,9 +148,13 @@ namespace BTOptimizer
             _installes.Height = 28; _installes.Width = 190;
             _installes.Click += (s, e) => SuitInstalles();
             Controls.Add(_installes);
-            _souhaits = OnyxDesign.Button("Importer mes souhaits Steam");
+            _souhaits = OnyxDesign.Button("Importer mes souhaits  ⌄");
             _souhaits.Height = 28; _souhaits.Width = 220;
-            _souhaits.Click += (s, e) => ImporteSouhaits();
+            _souhaits.AccessibleName = "Importer une liste de souhaits Steam ou GOG";
+            _menuSouhaits.BackColor = FpsUi.Card; _menuSouhaits.ForeColor = FpsUi.Ink;
+            _menuSouhaits.Items.Add("Depuis Steam (compte de ce PC)", null, (s, e) => ImporteSouhaits());
+            _menuSouhaits.Items.Add("Depuis GOG (pseudo, liste publique)…", null, (s, e) => ImporteSouhaitsGog());
+            _souhaits.Click += (s, e) => _menuSouhaits.Show(_souhaits, new Point(0, _souhaits.Height + 4));
             Controls.Add(_souhaits);
 
             _flow = new BufferedFlow();
@@ -223,6 +228,7 @@ namespace BTOptimizer
             {
                 try { _attente.Dispose(); } catch { }
                 try { _menuStores.Dispose(); } catch { }
+                try { _menuSouhaits.Dispose(); } catch { }
             }
             base.Dispose(disposing);
         }
@@ -844,6 +850,101 @@ namespace BTOptimizer
                     _info.Text = message;
                 });
             });
+        }
+
+        private const string FichierPseudoGog = "bt-gog-pseudo.txt";
+
+        /// <summary>
+        /// Liste de souhaits GOG publique → suivis Steam (même jeu cherché sur Steam). Seul le pseudo
+        /// part, vers gog.com ; les titres partent vers la recherche Steam. Le pseudo est gardé sur ce PC.
+        /// </summary>
+        private void ImporteSouhaitsGog()
+        {
+            string avant = "";
+            try { string f = AppPaths.File(FichierPseudoGog); if (File.Exists(f)) avant = File.ReadAllText(f).Trim(); } catch { }
+            string saisie = DemandePseudoGog(avant);
+            if (saisie == null) return;
+            string pseudo = ListeSouhaitsGog.Pseudo(saisie);
+            if (pseudo == null) { _info.Text = "Pseudo GOG non reconnu : tape ton pseudo ou colle l'adresse de ton profil (gog.com/u/…)."; return; }
+            try { File.WriteAllText(AppPaths.File(FichierPseudoGog), pseudo, new System.Text.UTF8Encoding(false)); } catch { }
+            _souhaits.Enabled = false;
+            _info.Text = "Lecture de la liste de souhaits GOG…";
+            Task.Run(async () =>
+            {
+                string message = null; var ids = new List<int>(); var noms = new Dictionary<int, string>();
+                var introuvables = new List<string>(); int lus = 0, injoignables = 0; bool tronque = false;
+                try
+                {
+                    ListeSouhaitsGog.Page p1 = ListeSouhaitsGog.Lire(await OffresReseau.Texte(ListeSouhaitsGog.Url(pseudo, 1), 0).ConfigureAwait(false));
+                    if (p1 == null) message = "Liste GOG introuvable : vérifie le pseudo et que ta liste de souhaits est publique (ou GOG est injoignable pour l'instant).";
+                    else
+                    {
+                        var titres = new List<string>(p1.Titres);
+                        for (int n = 2; n <= Math.Min(p1.Pages, ListeSouhaitsGog.PagesMax); n++)
+                        {
+                            ListeSouhaitsGog.Page pn = ListeSouhaitsGog.Lire(await OffresReseau.Texte(ListeSouhaitsGog.Url(pseudo, n), 0).ConfigureAwait(false));
+                            if (pn == null || pn.Numero != n) { tronque = true; break; }   // page non servie : on s'arrête là
+                            foreach (string t in pn.Titres) if (!titres.Contains(t)) titres.Add(t);
+                        }
+                        if (p1.Pages > ListeSouhaitsGog.PagesMax) tronque = true;
+                        if (titres.Count > Suivi.Max * 2) { titres.RemoveRange(Suivi.Max * 2, titres.Count - Suivi.Max * 2); tronque = true; }
+                        if (titres.Count == 0) message = "Liste de souhaits GOG vide (ou sans jeu).";
+                        foreach (string t in titres)
+                        {
+                            int id = SteamAppIndex.ResolveMaintenant(t);
+                            string court = id == 0 ? ListeSouhaitsGog.Simplifie(t) : null;   // « … : Édition Ultime » → nom du jeu
+                            if (court != null) id = SteamAppIndex.ResolveMaintenant(court);
+                            lus++;
+                            if (lus % 10 == 0) { int fait = lus, tout = titres.Count; Retour(-1, () => _info.Text = "Recherche des jeux GOG sur Steam… " + fait + "/" + tout); }
+                            if (id < 0) { injoignables++; continue; }
+                            if (id == 0) { introuvables.Add(t); continue; }
+                            if (!ids.Contains(id)) { ids.Add(id); noms[id] = t; }
+                        }
+                    }
+                }
+                catch (Exception ex) { JournalTechnique.Echec("PageBonsPlans.ImporteSouhaitsGog", ex); message = TexteErreur; }
+                Retour(-1, () =>
+                {
+                    _souhaits.Enabled = true;
+                    if (message == null)
+                    {
+                        int ajoutes, deja, laisses;
+                        ListeSouhaits.Importe(Magasin.Suivis, ids, noms, out ajoutes, out deja, out laisses);
+                        if (ajoutes > 0) Magasin.SauveSuivis();
+                        message = ListeSouhaitsGog.Compte(lus - injoignables, introuvables, ListeSouhaits.Compte(ajoutes, deja, laisses), tronque)
+                            + (injoignables > 0 ? " " + injoignables + " non vérifié" + (injoignables > 1 ? "s" : "") + " (Steam injoignable) : relance plus tard." : "")
+                            + " Alertes au prix Steam.";
+                        if (_onglet == OngletSuivis && Texte().Length == 0) Recharge();
+                    }
+                    _info.Text = message;
+                });
+            });
+        }
+
+        private string DemandePseudoGog(string defaut)
+        {
+            using (var f = new Form
+            {
+                Text = "ONYX — Liste de souhaits GOG", ClientSize = new Size(460, 168), FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent, MaximizeBox = false, MinimizeBox = false, ShowInTaskbar = false,
+                BackColor = FpsUi.BgMain, ForeColor = FpsUi.Ink, Font = FpsUi.Body,
+            })
+            {
+                f.Controls.Add(new Label
+                {
+                    Text = "Ton pseudo GOG, ou l'adresse de ton profil (gog.com/u/…). La liste doit être publique ; seul ce pseudo part, vers gog.com.",
+                    Location = new Point(16, 14), Size = new Size(428, 42), ForeColor = FpsUi.Dim,
+                });
+                var tb = new TextBox { Text = defaut ?? "", Location = new Point(16, 64), Width = 428 };
+                var ok = OnyxDesign.AccentButton("Importer");
+                ok.SetBounds(460 - 16 - 110 - 10 - 120, 116, 120, 34); ok.DialogResult = DialogResult.OK;
+                var ca = OnyxDesign.Button("Annuler");
+                ca.SetBounds(460 - 16 - 110, 116, 110, 34); ca.DialogResult = DialogResult.Cancel;
+                f.Controls.Add(tb); f.Controls.Add(ok); f.Controls.Add(ca);
+                f.AcceptButton = ok; f.CancelButton = ca;
+                try { Theme.Apply(f); } catch { }
+                return f.ShowDialog(FindForm()) == DialogResult.OK ? tb.Text : null;
+            }
         }
 
         internal bool EstFavori(Offre o) { return o != null && Favoris.Contient(Magasin.FavorisJeux, o.Cle); }

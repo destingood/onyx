@@ -81,6 +81,7 @@
     <Compile Include="..\src\OptionsJeu.cs" />
     <Compile Include="..\src\EtiquettesJeux.cs" />
     <Compile Include="..\src\JeuxCompteSteam.cs" />
+    <Compile Include="..\src\ListeSouhaitsGog.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />
     <Compile Include="..\src\LatenceReelle.cs" />
     <Compile Include="..\src\EtatOrigine.cs" />

@@ -58,6 +58,35 @@ namespace BTOptimizer
             return 0;
         }
 
+        /// <summary>
+        /// Comme <see cref="Resolve"/>, mais attend la réponse : à appeler hors du fil d'interface.
+        /// Renvoie -1 si Steam est injoignable (non mémorisé : on réessaiera), 0 si le jeu est absent de Steam (mémorisé).
+        /// </summary>
+        public static int ResolveMaintenant(string name)
+        {
+            string key = Norm(name);
+            if (key.Length < 3) return 0;
+            lock (_lock)
+            {
+                if (!_loaded) { _loaded = true; LoadCache(); }
+                int id;
+                if (_cache.TryGetValue(key, out id)) return id;
+            }
+            string json;
+            try
+            {
+                using (var h = new HttpClient())
+                {
+                    h.Timeout = TimeSpan.FromSeconds(12);
+                    json = h.GetStringAsync(SearchUrl + Uri.EscapeDataString(name)).GetAwaiter().GetResult();
+                }
+            }
+            catch { return -1; }
+            int found = PickBest(json, key);
+            lock (_lock) { _cache[key] = found; SaveCache(); }
+            return found;
+        }
+
         private static async Task SearchAsync(string key, string name, Action onReady)
         {
             int found = 0;
