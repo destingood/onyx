@@ -52,6 +52,20 @@ namespace BTOptimizer.Tests
             Banc.Verifie("journal vide : explication", true, BilanJeu.Resume(BilanJeu.Calcule(null, maintenant, 0))[0].StartsWith("Aucune partie enregistrée"));
             Banc.Verifie("écart négatif", true,
                 BilanJeu.Ecart(new BilanJeu.Resultat { Jours = 7, Secondes = 500, SecondesAvant = 1000 }) == "−50 % par rapport aux 7 jours d'avant");
+
+            Banc.Titre("Bilan de jeu — carte image");
+            r = BilanJeu.Calcule(parties, maintenant, 7);
+            Banc.Egal("titre de la carte", "Bilan de jeu · 7 derniers jours", BilanJeu.CarteTitre(r));
+            Banc.Egal("sous le grand chiffre", "de jeu · 4 parties · 2 jeux", BilanJeu.CarteSous(r));
+            Banc.Egal("faits : écart, plus longue partie, série", "+300 % par rapport aux 7 jours d'avant | Plus longue partie : 1 h 30 sur Counter-Strike 2 | Série : 3 jours de suite",
+                string.Join(" | ", BilanJeu.CarteFaits(r)));
+            r = BilanJeu.Calcule(parties, maintenant.AddDays(2), 0);
+            Banc.Egal("sans écart ni série : le jour préféré", "Plus longue partie : 1 h 30 sur Counter-Strike 2 | Jour préféré : le mercredi",
+                string.Join(" | ", BilanJeu.CarteFaits(r)));
+            Banc.Egal("carte vide", "aucune partie sur la période", BilanJeu.CarteSous(BilanJeu.Calcule(null, maintenant, 7)));
+            Banc.Egal("carte vide : aucun fait", "0", BilanJeu.CarteFaits(BilanJeu.Calcule(null, maintenant, 7)).Count.ToString());
+            Banc.Egal("nom de fichier (7 jours)", "ONYX-bilan-7-jours-2026-11-27.png", BilanJeu.NomImage(7, maintenant));
+            Banc.Egal("nom de fichier (tout)", "ONYX-bilan-complet-2026-11-27.png", BilanJeu.NomImage(0, maintenant));
         }
     }
 }

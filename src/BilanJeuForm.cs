@@ -24,6 +24,7 @@ namespace BTOptimizer
         private BilanJeu.Resultat _r;
         private int _jours = 7;
         private List<SuccesSteam.Deblocage> _succes;   // null tant que le cache Steam n'est pas lu
+        private readonly Button _enregistre, _copie;
 
         public BilanJeuForm(List<JournalJeu.Partie> parties, DateTime maintenant)
         {
@@ -61,6 +62,16 @@ namespace BTOptimizer
             _jeux.Paint += (s, e) => DessineJeux(e.Graphics);
             Controls.Add(_jeux);
 
+            // Carte image à partager : enregistrée dans Images\ONYX ou copiée. Rien n'est envoyé.
+            _enregistre = OnyxDesign.Button("Enregistrer l'image…");
+            _enregistre.SetBounds(20, 520, 190, 34);
+            _enregistre.Click += (s, e) => EnregistreImage();
+            Controls.Add(_enregistre);
+            _copie = OnyxDesign.Button("Copier l'image");
+            _copie.SetBounds(220, 520, 150, 34);
+            _copie.Click += (s, e) => CopieImage();
+            Controls.Add(_copie);
+
             Button fermer = OnyxDesign.Button("Fermer");
             fermer.SetBounds(590, 520, 110, 34);
             fermer.Click += (s, e) => Close();
@@ -96,7 +107,43 @@ namespace BTOptimizer
             string succes = SuccesSteam.LigneBilan(_succes, _maintenant, jours);
             if (succes != null) lignes.Add(succes);
             _resume.Text = string.Join("\r\n", lignes);
+            _enregistre.Enabled = _copie.Enabled = _r.Parties > 0;
             _jeux.Invalidate();
+        }
+
+        /// <summary>La carte de la période affichée (pour le test d'interface aussi).</summary>
+        internal Bitmap Carte()
+        {
+            return BilanCarte.Dessine(_r, SuccesSteam.LigneBilan(_succes, _maintenant, _jours), _maintenant);
+        }
+
+        private void EnregistreImage()
+        {
+            string dossier = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            try { if (!string.IsNullOrEmpty(dossier)) dossier = System.IO.Directory.CreateDirectory(System.IO.Path.Combine(dossier, "ONYX")).FullName; } catch { }
+            using (var d = new SaveFileDialog
+            {
+                Title = "Enregistrer la carte du bilan", Filter = "Image PNG|*.png", DefaultExt = "png", AddExtension = true,
+                FileName = BilanJeu.NomImage(_jours, _maintenant), InitialDirectory = dossier ?? ""
+            })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                try { using (Bitmap b = Carte()) b.Save(d.FileName, System.Drawing.Imaging.ImageFormat.Png); }
+                catch (Exception ex) { MessageBox.Show(this, "Enregistrement impossible : " + ex.Message, "Bilan de jeu", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }
+        }
+
+        private void CopieImage()
+        {
+            try
+            {
+                using (Bitmap b = Carte()) Clipboard.SetImage(b);
+                _copie.Text = "Image copiée ✓";
+                var t = new Timer { Interval = 2000 };
+                t.Tick += (s, e) => { t.Stop(); t.Dispose(); if (!_copie.IsDisposed) _copie.Text = "Copier l'image"; };
+                t.Start();
+            }
+            catch (Exception ex) { MessageBox.Show(this, "Copie impossible : " + ex.Message, "Bilan de jeu", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private void DessineJeux(Graphics g)

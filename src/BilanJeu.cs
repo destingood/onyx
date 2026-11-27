@@ -136,6 +136,38 @@ namespace BTOptimizer
             return l;
         }
 
+        /// <summary>Titre de la carte image : « Bilan de jeu · 7 derniers jours ».</summary>
+        public static string CarteTitre(Resultat r)
+        {
+            return "Bilan de jeu · " + NomPeriode(r == null ? 0 : r.Jours);
+        }
+
+        /// <summary>Sous le grand chiffre : « de jeu · 23 parties · 8 jeux ».</summary>
+        public static string CarteSous(Resultat r)
+        {
+            if (r == null || r.Parties == 0) return "aucune partie sur la période";
+            return "de jeu · " + r.Parties + (r.Parties > 1 ? " parties" : " partie") + " · " + r.Jeux.Count + (r.Jeux.Count > 1 ? " jeux" : " jeu");
+        }
+
+        /// <summary>Faits courts de la carte, trois au plus : écart, plus longue partie, série.</summary>
+        public static List<string> CarteFaits(Resultat r)
+        {
+            var l = new List<string>();
+            if (r == null || r.Parties == 0) return l;
+            string e = Ecart(r);
+            if (e != null) l.Add(char.ToUpperInvariant(e[0]) + e.Substring(1));
+            if (r.PlusLongue != null) l.Add("Plus longue partie : " + JournalJeu.Duree(r.PlusLongue.Secondes) + " sur " + r.PlusLongue.Jeu);
+            if (r.Serie > 1) l.Add("Série : " + r.Serie + " jours de suite");
+            else if (r.JourPrefere.HasValue && r.Parties > 1) l.Add("Jour préféré : le " + NomJour(r.JourPrefere.Value));
+            return l;
+        }
+
+        /// <summary>Nom de fichier proposé : « ONYX-bilan-7-jours-2026-11-27.png », « ONYX-bilan-complet-… ».</summary>
+        public static string NomImage(int jours, DateTime maintenant)
+        {
+            return "ONYX-bilan-" + (jours > 0 ? jours + "-jours" : "complet") + "-" + maintenant.ToString("yyyy'-'MM'-'dd", CultureInfo.InvariantCulture) + ".png";
+        }
+
         /// <summary>« 12 h 30 · 8 parties · 236 FPS en moyenne » pour une ligne de jeu.</summary>
         public static string Detail(Ligne g)
         {

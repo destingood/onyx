@@ -60,8 +60,8 @@ Relevé du 27/11/2026.
 |---|---|
 | Vues : tous les jeux, installés, favoris, récents | ✅ |
 | Jeux possédés non installés, bouton Installer | ✅ Steam (v16.08) |
-| Grille ou liste | ❌ grille seule |
-| Tri et regroupement : temps de jeu, dernière partie, plateforme, genre, étiquette, note, installé ou non | ➖ tri présent ; genre et note absents |
+| Grille ou liste | ✅ v16.11 (bouton « Grille ⌄ ») |
+| Tri et regroupement : temps de jeu, dernière partie, plateforme, genre, étiquette, note, installé ou non | ✅ tri, et regroupement par plateforme, étiquette ou dernière partie (v16.11) ; genre absent |
 | Recherche, filtre, rafraîchir | ✅ |
 | Ajouter un jeu à la main (parcourir un .exe) | ✅ ? |
 | Étiquettes | ✅ v16.08 |
@@ -91,7 +91,7 @@ Relevé du 27/11/2026.
 | Fonction de Cortex | ONYX |
 |---|---|
 | Jeux récents | ✅ |
-| Résumé : temps joué, comparaison avec hier / semaine dernière / mois dernier, jeu et genre les plus joués | ✅ bilan 7 j / 30 j / tout ; comparaison avec la période d'avant ❌ |
+| Résumé : temps joué, comparaison avec hier / semaine dernière / mois dernier, jeu et genre les plus joués | ✅ bilan 7 j / 30 j / tout, comparaison avec la période d'avant, carte image à partager (v16.11) |
 | Progression des succès | ✅ Steam |
 | Encart liste de souhaits (gratuits, à paraître) | ➖ dans Bons plans |
 | Actualités (blog Razer) | ✅ Actus |
@@ -252,8 +252,8 @@ Relevé du 27/11/2026.
 2. ~~**Clips** : renommer, limite d'espace disque~~ : fait en v16.10.
 3. ~~**Nettoyage : liste d'exclusions.**~~ Fait en v16.10.
 4. ~~**Fiche jeu** : surnom, liens web, note personnelle~~ : fait en v16.10 (le surnom existait déjà).
-5. **Bibliothèque en liste** (en plus de la grille) et regroupement.
-6. **Bilan : comparaison avec la période d'avant** et **carte du bilan en image** à partager.
+5. ~~**Bibliothèque en liste** (en plus de la grille) et regroupement~~ : fait en v16.11 (pas de regroupement par genre : ONYX ne connaît pas le genre des jeux).
+6. ~~**Bilan : comparaison avec la période d'avant** et **carte du bilan en image** à partager~~ : fait (comparaison déjà là, carte en v16.11).
 7. **Bureau de jeu** (bureau Windows séparé pour le jeu).
 8. **Raccourcis clavier modifiables.**
 9. **Souhaits Humble.**

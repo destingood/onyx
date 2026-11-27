@@ -11,8 +11,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Outil local — assistant IA et recherche web optionnels et désactivables")]
 // Une seule source de version : AssemblyFileVersion suit AssemblyVersion (le .iss lit la
 // version de FICHIER du binaire — sans ça, l'installateur affichait une version périmée).
-[assembly: AssemblyVersion("16.10.0.0")]
-[assembly: AssemblyFileVersion("16.10.0.0")]
+[assembly: AssemblyVersion("16.11.0.0")]
+[assembly: AssemblyFileVersion("16.11.0.0")]
 
 namespace BTOptimizer
 {
@@ -2688,6 +2688,10 @@ namespace BTOptimizer
                 {
                     dash.ClientSize = size; Pump(150); page.ValidateLibraryUi(); Pump(800);
                     SaveGamesShot(dash, dir, "mes-jeux-" + size.Width);
+                    page.ValidateListe();
+                    page.VuePourTest(true, VueJeux.Groupe.Plateforme); Pump(800);
+                    SaveGamesShot(dash, dir, "mes-jeux-liste-" + size.Width);
+                    page.VuePourTest(false, VueJeux.Groupe.Aucun); Pump(100);
                     page.PreviewDetail(true); Pump(500);
                     SaveGamesShot(dash, dir, "fiche-jeu-" + size.Width);
                     page.PreviewDetail(false); Pump(100);
@@ -2841,6 +2845,12 @@ namespace BTOptimizer
                 foreach (Control c in f.Controls)
                     if (c is Button b && b.Text == "30 jours") { b.PerformClick(); Pump(150); }
                 SaveGamesShot(f, dir, "bilan-jeu");
+                using (System.Drawing.Bitmap carte = f.Carte())
+                {
+                    if (carte.Width != BilanCarte.Largeur || carte.Height != BilanCarte.Hauteur) throw new InvalidOperationException("Bilan : carte image mal dimensionnée.");
+                    if (!string.IsNullOrEmpty(dir)) carte.Save(System.IO.Path.Combine(dir, "bilan-carte.png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+                Console.WriteLine("  Bilan de jeu : carte image 1200x630 OK");
                 Console.WriteLine("  Bilan de jeu : 3 périodes OK — " + resume.Text.Split('\r')[0]);
                 f.Close();
             }

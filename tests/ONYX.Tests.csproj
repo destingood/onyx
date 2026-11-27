@@ -90,6 +90,7 @@
     <Compile Include="..\src\CompteurJeu.cs" />
     <Compile Include="..\src\ExclusionsNettoyage.cs" />
     <Compile Include="..\src\NotesJeu.cs" />
+    <Compile Include="..\src\VueJeux.cs" />
     <Compile Include="..\src\JeuxCompteSteam.cs" />
     <Compile Include="..\src\ListeSouhaitsGog.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />

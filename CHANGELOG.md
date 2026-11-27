@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.11 — Bibliothèque en liste avec regroupement, carte du bilan en image
+
+- **Mes jeux : grille ou liste.** Nouveau bouton « Grille ⌄ » à côté de la recherche. La liste
+  montre une ligne par jeu (petite jaquette, nom, plateforme, étiquettes, état ou temps de jeu) et
+  se regroupe au choix par plateforme, par étiquette ou par dernière partie (aujourd'hui, 7 jours,
+  30 jours, plus ancien, jamais lancé avec ONYX ouvert). Dans un groupe, l'ordre reste celui de la
+  bibliothèque (favoris d'abord, puis le tri choisi). Le choix est gardé d'une ouverture à l'autre.
+  En liste, la manette avance d'une ligne à la fois.
+- **Bilan de jeu : carte image à partager.** Boutons « Enregistrer l'image… » (PNG 1200 × 630,
+  proposé dans Images\ONYX) et « Copier l'image ». La carte reprend la période affichée : temps de
+  jeu, parties, écart avec la période d'avant, plus longue partie, série, succès Steam et les cinq
+  jeux les plus joués. Rien n'est envoyé : tu partages l'image toi-même.
+
 ## v16.10 — Compteur en jeu au choix, clips (renommer, limite d'espace), dossiers exclus du nettoyage, notes et liens par jeu
 
 - **Compteur en jeu : tu choisis ce qu'il affiche.** Fenêtre « Compteur en jeu » : douze lignes à

@@ -20,6 +20,11 @@ namespace BTOptimizer
         private Button _installed, _catalogue;
         private Button _platform;
         private readonly ContextMenuStrip _platformMenu = new ContextMenuStrip();
+        // Grille ou liste, et regroupement de la liste (choix gardé dans bt-jeux-vue.txt).
+        private Button _vue;
+        private readonly ContextMenuStrip _vueMenu = new ContextMenuStrip();
+        private VueJeux.Choix _choixVue = ChargeVue();
+        private const int LargeurVue = 200;
         private Label _results;
         private bool _catalogueMode;
         private string _storeFilter = "Toutes les plateformes";
@@ -65,7 +70,9 @@ namespace BTOptimizer
                 BeginInvoke((Action)(() =>
                 {
                     _journal = null; _tempsJeu.Clear(); _derniere.Clear();
-                    if (_recentMode) Render();
+                    bool parPartie = _choixVue.Liste && _choixVue.Par == VueJeux.Groupe.DernierePartie;
+                    if (parPartie) _signatureRendu = null;   // un jeu peut changer de tranche
+                    if (_recentMode || parPartie) Render();
                     if (_flow != null) foreach (Control c in _flow.Controls) c.Invalidate();
                 }));
             }
@@ -150,6 +157,14 @@ namespace BTOptimizer
             _platformMenu.Font = FpsUi.Body; _platformMenu.ShowImageMargin = false;
             _platform.Click += (s, e) => _platformMenu.Show(_platform, new Point(0, _platform.Height + 4));
             Controls.Add(_platform);
+
+            _vue = OnyxDesign.Button(VueJeux.Bouton(_choixVue) + "  ⌄");
+            _vue.Name = "games-vue";
+            _vue.AccessibleName = "Affichage : grille ou liste, et regroupement";
+            _vueMenu.BackColor = FpsUi.Card; _vueMenu.ForeColor = FpsUi.Ink;
+            _vueMenu.Font = FpsUi.Body; _vueMenu.ShowImageMargin = false;
+            _vue.Click += (s, e) => MenuVue();
+            Controls.Add(_vue);
 
             _searchBox = new BufferedPanel { BackColor = Color.Transparent };
             _searchBox.Paint += (s, e) => OnyxDesign.PaintCard(e.Graphics, _searchBox.ClientRectangle, FpsUi.Card,
@@ -637,7 +652,8 @@ namespace BTOptimizer
             }
             // Rien de ce que montrent les tuiles n'a changé (retour sur la page, filtre sans effet) :
             // on garde les cartes, leurs jaquettes et la position de défilement.
-            var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-").Append(recents ? "r" : "-");
+            var sig = new System.Text.StringBuilder(_catalogueMode ? "c" : "i").Append(_spaceMode ? "s" : "-").Append(_spaceLoading ? "l" : "-").Append(recents ? "r" : "-")
+                .Append(_choixVue.Liste ? "L" + (int)_choixVue.Par : "G");
             foreach (var game in visible) sig.Append('|').Append(game.Name).Append('=').Append(cles[game].Nom).Append(cles[game].Favori ? "*" : "");
             string signature = sig.ToString();
             if (signature == _signatureRendu && ReferenceEquals(_all, _allRendu) && ReferenceEquals(_spaceData, _spaceRendu) && _flow.Controls.Count > 0)
@@ -647,7 +663,24 @@ namespace BTOptimizer
             _flow.SuspendLayout();
             var old = new Control[_flow.Controls.Count]; _flow.Controls.CopyTo(old, 0);
             _flow.Controls.Clear(); _flow.AutoScrollPosition = Point.Empty;
-            foreach (var game in visible) _flow.Controls.Add(Card(game));
+            if (_choixVue.Liste && _choixVue.Par != VueJeux.Groupe.Aucun && visible.Count > 0)
+            {
+                // Liste regroupée : un en-tête par bloc, puis ses jeux dans l'ordre de la bibliothèque.
+                var infos = new List<VueJeux.Jeu>();
+                foreach (var game in visible)
+                    infos.Add(new VueJeux.Jeu
+                    {
+                        Plateforme = StoreName(game),
+                        Etiquettes = _choixVue.Par == VueJeux.Groupe.Etiquette ? EtiquettesJeux.Pour(game.Name) : null,
+                        Derniere = _choixVue.Par == VueJeux.Groupe.DernierePartie && game.Detected ? Derniere(game) : null
+                    });
+                foreach (VueJeux.Bloc bloc in VueJeux.Range(infos, _choixVue.Par, DateTime.Now))
+                {
+                    _flow.Controls.Add(new EnTeteGroupe(bloc.Titre));
+                    foreach (int i in bloc.Jeux) _flow.Controls.Add(Card(visible[i]));
+                }
+            }
+            else foreach (var game in visible) _flow.Controls.Add(Card(game));
             if (visible.Count == 0)
             {
                 var empty = new BufferedPanel { Height = 200, Tag = "empty", BackColor = Color.Transparent };
@@ -676,11 +709,23 @@ namespace BTOptimizer
         }
 
         private int Disponible { get { return Math.Max(250, _flow.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 2); } }
-        private int Colonnes { get { return Math.Max(1, Disponible / 205); } }
+        private int Colonnes { get { return _choixVue.Liste ? 1 : Math.Max(1, Disponible / 205); } }
+
+        private const int HauteurLigne = 64;
 
         private void LayoutCards()
         {
             int available = Disponible;
+            if (_choixVue.Liste)
+            {
+                foreach (Control c in _flow.Controls)
+                {
+                    if (c is EnTeteGroupe) { c.Size = new Size(available, 34); c.Margin = new Padding(0, 8, 0, 6); }
+                    else if (c.Tag is string) c.Size = new Size(available, 200);
+                    else { c.Size = new Size(available, HauteurLigne); c.Margin = new Padding(0, 0, 0, 8); }
+                }
+                return;
+            }
             int columns = Colonnes;
             int width = (available - (columns - 1) * 16) / columns;
             int index = 0;
@@ -698,10 +743,13 @@ namespace BTOptimizer
             var card = new GameTile { Tag = game, Text = affiche, AccessibleName = affiche,
                 AccessibleDescription = "Ouvrir la fiche du jeu", BackColor = FpsUi.BgMain };
             Action ready = () => { try { if (card.IsHandleCreated && !card.IsDisposed) card.BeginInvoke((Action)card.Invalidate); } catch { } };
+            List<string> etiquettes = EtiquettesJeux.Pour(game.Name);
+            string sousTitre = StoreName(game) + (etiquettes.Count > 0 ? "   ·   # " + string.Join("   # ", etiquettes) : "");
             card.Paint += (sender, e) =>
             {
                 Graphics gr = e.Graphics;
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
+                if (_choixVue.Liste) { DessineLigne(gr, card, game, affiche, sousTitre, ready); return; }
                 int artHeight = card.Height - 90;
                 var art = new Rectangle(1, 1, card.Width - 2, artHeight);
                 OnyxDesign.PaintCard(gr, card.ClientRectangle, FpsUi.Card, card.Hot || card.Focused || card.Choisie ? FpsUi.GoldDim : FpsUi.Border, 12);
@@ -745,18 +793,123 @@ namespace BTOptimizer
                     TextRenderer.DrawText(gr, "Voir le jeu  →", FpsUi.H3, action, FpsUi.BgMain, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
                 OnyxDesign.Text(gr, affiche, FpsUi.H3, FpsUi.Ink, new Rectangle(14, artHeight + 12, card.Width - 28, 40), true);
-                var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
-                string joue = info == null && game.Detected ? TempsJeu(game) : null;
-                string status = info != null ? info.SizeText + " · " + info.IdleText : joue ?? (game.Detected ? "Détecté sur ce PC" : game.SurCompte ? JeuxCompteSteam.Statut(game.MinutesSteam) : "Fiche & réglages");
-                OnyxDesign.Text(gr, status, FpsUi.Tiny, info != null && info.IsDormant ? FpsUi.Warn : FpsUi.Dim,
+                bool dormant;
+                string status = Statut(game, out dormant);
+                OnyxDesign.Text(gr, status, FpsUi.Tiny, dormant ? FpsUi.Warn : FpsUi.Dim,
                     new Rectangle(14, card.Height - 26, card.Width - 28, 18));
             };
-            List<string> etiquettes = EtiquettesJeux.Pour(game.Name);
             _tips.SetToolTip(card, affiche + " — ouvrir la fiche et les réglages" + (etiquettes.Count > 0 ? "\n# " + string.Join("  # ", etiquettes) : ""));
             card.Click += (s, e) => OpenDetail(game);
             card.MouseEnter += (s, e) => { if (_manetteIndex >= 0) { _manetteIndex = -1; MarqueManette(); } };   // la souris reprend la main
             card.MouseUp +=(s, e) => { if (e.Button == MouseButtons.Right) MenuCarte(card, game, e.Location); };
             return card;
+        }
+
+        /// <summary>Ligne d'état d'un jeu : espace et inactivité (tri par espace), temps de jeu, ou statut.</summary>
+        private string Statut(GameScan.GameInfo game, out bool dormant)
+        {
+            var info = _spaceMode && game.Detected ? SpaceInfo(game) : null;
+            dormant = info != null && info.IsDormant;
+            string joue = info == null && game.Detected ? TempsJeu(game) : null;
+            return info != null ? info.SizeText + " · " + info.IdleText
+                : joue ?? (game.Detected ? "Détecté sur ce PC" : game.SurCompte ? JeuxCompteSteam.Statut(game.MinutesSteam) : "Fiche & réglages");
+        }
+
+        /// <summary>Un jeu en vue liste : petite jaquette, nom, plateforme et étiquettes, état à droite.</summary>
+        private void DessineLigne(Graphics gr, GameTile card, GameScan.GameInfo game, string affiche, string sousTitre, Action ready)
+        {
+            bool vif = card.Hot || card.Focused || card.Choisie;
+            OnyxDesign.PaintCard(gr, card.ClientRectangle, vif ? FpsUi.BlendGold(FpsUi.Card, .06f) : FpsUi.Card, vif ? FpsUi.GoldDim : FpsUi.Border, 10);
+            var vignette = new Rectangle(8, 6, 46, card.Height - 12);
+            bool epicArt = game.SteamId <= 0 && game.ImageUrl != null && !GameArt.EchecUrl(game.ImageUrl);
+            Image cover = JaquettesPerso.Pour(game.Name) ?? (epicArt ? GameArt.GetUrl(game.ImageUrl, ready) : GameArt.ForGame(game.Name, game.SteamId, ready));
+            var state = gr.Save();
+            using (var clip = FpsUi.Round(vignette, 6)) gr.SetClip(clip);
+            if (cover != null) DrawCover(gr, cover, vignette);
+            else
+            {
+                using (var fill = new SolidBrush(FpsUi.RailBg)) gr.FillRectangle(fill, vignette);
+                Image icon = game.Detected && !epicArt ? GameIcon.For(game.InstallPath, ready) : null;
+                if (icon != null) gr.DrawImage(icon, new Rectangle(vignette.X + 7, vignette.Y + (vignette.Height - 32) / 2, 32, 32));
+                else OnyxDesign.IconWell(gr, NavIcons.Jeux, new Rectangle(vignette.X + 5, vignette.Y + (vignette.Height - 36) / 2, 36, 36));
+            }
+            gr.Restore(state);
+
+            int droite = Math.Max(140, Math.Min(280, card.Width / 3));
+            int x = vignette.Right + 16, largeur = card.Width - x - droite - 24;
+            if (JeuxFavoris.Est(game.Name))
+            {
+                TextRenderer.DrawText(gr, "★", FpsUi.Small, new Rectangle(x, 9, 20, 24), FpsUi.Gold, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                x += 22; largeur -= 22;
+            }
+            TextRenderer.DrawText(gr, affiche, FpsUi.H3, new Rectangle(x, 9, largeur, 24), FpsUi.Ink,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            TextRenderer.DrawText(gr, sousTitre, FpsUi.Tiny, new Rectangle(vignette.Right + 16, 36, card.Width - vignette.Right - droite - 40, 18), FpsUi.Dim,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            bool dormant;
+            string status = Statut(game, out dormant);
+            TextRenderer.DrawText(gr, vif ? "Voir le jeu  →" : status, vif ? FpsUi.H3 : FpsUi.Small, new Rectangle(card.Width - droite - 16, 0, droite, card.Height),
+                vif ? FpsUi.Gold : dormant ? FpsUi.Warn : FpsUi.Dim,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        }
+
+        /// <summary>Titre d'un bloc de la liste regroupée (« Steam · 12 »).</summary>
+        private sealed class EnTeteGroupe : Control
+        {
+            public EnTeteGroupe(string titre)
+            {
+                Text = titre; Tag = "groupe"; AccessibleName = titre; AccessibleRole = AccessibleRole.StaticText;
+                SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint
+                    | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
+                BackColor = Color.Transparent;
+            }
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                TextRenderer.DrawText(e.Graphics, Text, FpsUi.H3, new Rectangle(2, 0, Width - 4, Height - 4), FpsUi.Gold,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                using (var pen = new Pen(FpsUi.Border)) e.Graphics.DrawLine(pen, 0, Height - 1, Width, Height - 1);
+            }
+        }
+
+        private static VueJeux.Choix ChargeVue()
+        {
+            try
+            {
+                string p = AppPaths.File("bt-jeux-vue.txt");
+                return VueJeux.Lit(System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : "");
+            }
+            catch { return new VueJeux.Choix(); }
+        }
+
+        private void MenuVue()
+        {
+            _vueMenu.Items.Clear();
+            var grille = new ToolStripMenuItem("Grille de jaquettes") { Checked = !_choixVue.Liste };
+            grille.Click += (s, e) => ChangeVue(false, _choixVue.Par);
+            var liste = new ToolStripMenuItem("Liste") { Checked = _choixVue.Liste };
+            liste.Click += (s, e) => ChangeVue(true, _choixVue.Par);
+            _vueMenu.Items.Add(grille); _vueMenu.Items.Add(liste);
+            _vueMenu.Items.Add(new ToolStripSeparator());
+            _vueMenu.Items.Add(new ToolStripMenuItem("Regrouper la liste par") { Enabled = false });
+            foreach (VueJeux.Groupe g in Enum.GetValues(typeof(VueJeux.Groupe)))
+            {
+                VueJeux.Groupe par = g;
+                var it = new ToolStripMenuItem("   " + VueJeux.Libelles[(int)g]) { Checked = _choixVue.Liste && _choixVue.Par == g };
+                it.Click += (s, e) => ChangeVue(true, par);
+                _vueMenu.Items.Add(it);
+            }
+            _vueMenu.Show(_vue, new Point(0, _vue.Height + 4));
+        }
+
+        /// <summary>Change l'affichage ; <paramref name="garde"/> faux = essai sans écrire le choix (test d'interface).</summary>
+        private void ChangeVue(bool liste, VueJeux.Groupe par, bool garde = true)
+        {
+            _choixVue = new VueJeux.Choix { Liste = liste, Par = par };
+            if (garde)
+                try { System.IO.File.WriteAllText(AppPaths.File("bt-jeux-vue.txt"), VueJeux.Ecrit(_choixVue)); } catch { }
+            _vue.Text = VueJeux.Bouton(_choixVue) + "  ⌄";
+            if (_manetteIndex >= 0) _manetteIndex = 0;
+            Render();
         }
 
         /// <summary>Clic droit sur une tuile : favori ★ (en tête de la bibliothèque).</summary>
@@ -839,6 +992,7 @@ namespace BTOptimizer
         /// testé (il lancerait le jeu).</summary>
         internal void ValidateManette()
         {
+            VuePourTest(false, VueJeux.Groupe.Aucun);
             _installed.PerformClick(); _search.Text = ""; _manetteIndex = -1;
             List<GameTile> t = Tuiles();
             int cols = Colonnes;
@@ -867,8 +1021,41 @@ namespace BTOptimizer
             AppliqueManette(Manette.Geste.Droite);
         }
 
+        /// <summary>Change l'affichage sans écrire bt-jeux-vue.txt.</summary>
+        internal void VuePourTest(bool liste, VueJeux.Groupe par) { ChangeVue(liste, par, false); }
+
+        /// <summary>Vue liste : lignes pleine largeur, en-têtes en mode groupé, bouton sans chevauchement,
+        /// manette sur une seule colonne. Le choix d'origine est remis à la fin.</summary>
+        internal void ValidateListe()
+        {
+            var avant = _choixVue;
+            _installed.PerformClick(); _search.Text = "";
+            foreach (VueJeux.Groupe g in Enum.GetValues(typeof(VueJeux.Groupe)))
+            {
+                VuePourTest(true, g);
+                int lignes = 0, entetes = 0;
+                foreach (Control c in _flow.Controls)
+                {
+                    if (c is EnTeteGroupe) { entetes++; continue; }
+                    if (!(c is GameTile)) continue;
+                    lignes++;
+                    if (c.Height != HauteurLigne || c.Width != Disponible || c.Right > _flow.ClientSize.Width)
+                        throw new InvalidOperationException("Liste : ligne mal dimensionnée (" + c.Width + "x" + c.Height + ").");
+                }
+                if (lignes == 0) throw new InvalidOperationException("Liste : aucun jeu.");
+                if ((g == VueJeux.Groupe.Aucun) != (entetes == 0)) throw new InvalidOperationException("Liste : en-têtes incorrects pour " + g + ".");
+                if (_vue.Text.IndexOf(VueJeux.Bouton(_choixVue), StringComparison.Ordinal) < 0) throw new InvalidOperationException("Liste : texte du bouton.");
+            }
+            if (Colonnes != 1) throw new InvalidOperationException("Liste : la manette doit avancer d'une ligne.");
+            if (_vue.Bounds.IntersectsWith(_platform.Bounds) || _vue.Bounds.IntersectsWith(_searchBox.Bounds)
+                || _vue.Bounds.IntersectsWith(_results.Bounds) || _vue.Left < 0 || _vue.Bottom > _flow.Top)
+                throw new InvalidOperationException("Bouton d'affichage superposé.");
+            VuePourTest(avant.Liste, avant.Par);
+        }
+
         internal void ValidateLibraryUi()
         {
+            VuePourTest(false, VueJeux.Groupe.Aucun);
             _catalogue.PerformClick();
             foreach (Control tile in _flow.Controls)
                 if (tile.Tag is GameScan.GameInfo game && game.Detected) throw new InvalidOperationException("Jeu détecté dans le catalogue.");
@@ -1046,11 +1233,12 @@ namespace BTOptimizer
             _recents.SetBounds(472, row, 150, 36);
             // Fenêtre étroite : plateformes et recherche ne tiennent plus sur la rangée des filtres,
             // la recherche descend à droite de la ligne des résultats.
-            bool etroit = right - 630 < 150 + 12 + 230;
+            bool etroit = right - 630 < 150 + 12 + LargeurVue + 12 + 230;
             _searchBox.SetBounds(right - 230, etroit ? row + 46 : row, 230, 36);
             _search.SetBounds(12, 9, 206, 20);
-            _platform.SetBounds(630, row, etroit ? Math.Max(120, right - 630) : _searchBox.Left - 642, 36);
-            _results.SetBounds(34, row + 52, (etroit ? _searchBox.Left - 12 : right) - 34, 24);
+            _vue.SetBounds(_searchBox.Left - 12 - LargeurVue, _searchBox.Top, LargeurVue, 36);
+            _platform.SetBounds(630, row, etroit ? Math.Max(120, right - 630) : _vue.Left - 642, 36);
+            _results.SetBounds(34, row + 52, (etroit ? _vue.Left - 12 : right) - 34, 24);
             _flow.SetBounds(34, row + 86, ClientSize.Width - 52, Math.Max(100, ClientSize.Height - row - 102));
             _flow.SuspendLayout(); LayoutCards(); _flow.ResumeLayout();
         }
@@ -1065,7 +1253,7 @@ namespace BTOptimizer
         protected override void Dispose(bool disposing)
         {
             if (disposing && _wheel != null) { try { Application.RemoveMessageFilter(_wheel); } catch { } _wheel = null; }
-            if (disposing) { ManetteVeille.Geste -= GesteManette; ManetteVeille.Ecoute = false; _tips.Dispose(); _platformMenu.Dispose(); _cardMenu.Dispose(); }
+            if (disposing) { ManetteVeille.Geste -= GesteManette; ManetteVeille.Ecoute = false; _tips.Dispose(); _platformMenu.Dispose(); _cardMenu.Dispose(); _vueMenu.Dispose(); }
             base.Dispose(disposing);
         }
     }
