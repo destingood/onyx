@@ -748,7 +748,9 @@ namespace BTOptimizer
             DoLayout();
             foreach (Control tile in _flow.Controls)
                 if (tile.Right > _flow.ClientSize.Width || tile.Width < 180) throw new InvalidOperationException("Grille hors cadre.");
-            if (_platform.Right + 8 > _searchBox.Left) throw new InvalidOperationException("Filtres superposés.");
+            if (_platform.Bounds.IntersectsWith(_searchBox.Bounds) || _results.Bounds.IntersectsWith(_searchBox.Bounds)
+                || _searchBox.Bottom > _flow.Top || _platform.Right > ClientSize.Width)
+                throw new InvalidOperationException("Filtres superposés.");
         }
 #endif
 
@@ -897,10 +899,13 @@ namespace BTOptimizer
             _installed.SetBounds(34, row, 142, 36); _catalogue.SetBounds(184, row, 136, 36);
             _space.SetBounds(332, row, 132, 36);
             _recents.SetBounds(472, row, 150, 36);
-            _searchBox.SetBounds(right - 230, row, 230, 36);
+            // Fenêtre étroite : plateformes et recherche ne tiennent plus sur la rangée des filtres,
+            // la recherche descend à droite de la ligne des résultats.
+            bool etroit = right - 630 < 150 + 12 + 230;
+            _searchBox.SetBounds(right - 230, etroit ? row + 46 : row, 230, 36);
             _search.SetBounds(12, 9, 206, 20);
-            _platform.SetBounds(630, row, Math.Max(120, _searchBox.Left - 642), 36);
-            _results.SetBounds(34, row + 52, right - 34, 24);
+            _platform.SetBounds(630, row, etroit ? Math.Max(120, right - 630) : _searchBox.Left - 642, 36);
+            _results.SetBounds(34, row + 52, (etroit ? _searchBox.Left - 12 : right) - 34, 24);
             _flow.SetBounds(34, row + 86, ClientSize.Width - 52, Math.Max(100, ClientSize.Height - row - 102));
             _flow.SuspendLayout(); LayoutCards(); _flow.ResumeLayout();
         }
