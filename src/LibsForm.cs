@@ -619,6 +619,44 @@ namespace BTOptimizer
                 ok ? 1 : 2);
             return ok;
         }
+
+        /// <summary>winget avec sa sortie lue en UTF-8 (description et éditeur accentués) ; null si le
+        /// processus ne démarre pas. Sert à la fiche : lecture seule, rien n'est modifié.</summary>
+        public static string Lit(string winget, string args, int delaiMs)
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = winget, Arguments = args, UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8, StandardErrorEncoding = System.Text.Encoding.UTF8
+                };
+                using (var p = System.Diagnostics.Process.Start(psi))
+                {
+                    var sortie = p.StandardOutput.ReadToEndAsync();
+                    var erreurs = p.StandardError.ReadToEndAsync();
+                    if (!p.WaitForExit(delaiMs)) { try { p.Kill(true); } catch { } return null; }
+                    try { return (sortie.Result ?? "") + (erreurs.Result ?? ""); } catch { return null; }
+                }
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Désinstalle une appli par winget (commande déjà construite par FicheAppli, après
+        /// confirmation de l'utilisateur). Réussi = winget l'annonce, ou l'appli n'est plus détectée.</summary>
+        public static bool Uninstall(string winget, LibItem item, string args, Action<string, int> log)
+        {
+            log("Désinstallation de " + item.Name + " (winget " + item.WingetId + ")...", 0);
+            NativeResult r = Sys.Run(winget, args);
+            bool encoreLa = true;
+            try { encoreLa = item.Installed(); } catch { }
+            bool ok = r.ExitCode == 0 || !encoreLa;
+            log(ok ? item.Name + " : désinstallé. ✔"
+                   : item.Name + " : désinstallation refusée" + WingetReason(r) + " — passe par Paramètres > Applications.",
+                ok ? 1 : 2);
+            return ok;
+        }
     }
 
     /// <summary>Panneau « Bibliothèques & applis de jeu » : détection locale + installation winget.</summary>
@@ -627,8 +665,9 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private CheckedListBox _list;
         private Label _summary;
-        private Button _btnScan, _btnInstall, _btnClose;
+        private Button _btnScan, _btnInstall, _btnClose, _btnFiche, _btnRetire;
         private List<LibScan.LibItem> _items = new List<LibScan.LibItem>();
+        private List<bool> _installed = new List<bool>();
         private string _winget;
 
         private static readonly Color Accent = Theme.AccentColor;
@@ -672,8 +711,9 @@ namespace BTOptimizer
             {
                 Text = "Un jeu qui refuse de se lancer, c'est presque toujours une bibliothèque manquante. "
                      + "Détection locale instantanée ; installation par WINGET (gestionnaire officiel Microsoft) — "
-                     + "aucun téléchargement douteux. Manquantes = pré-cochées · double-clic sur un outil ✔ pour l'OUVRIR.",
-                Location = new Point(18, 58), Size = new Size(644, 46), ForeColor = Color.FromArgb(60, 64, 72)
+                     + "aucun téléchargement douteux. Manquantes = pré-cochées · double-clic sur un outil ✔ pour l'OUVRIR · "
+                     + "Fiche et Désinstaller agissent sur la ligne sélectionnée.",
+                Location = new Point(18, 54), Size = new Size(644, 52), ForeColor = Color.FromArgb(60, 64, 72)
             };
             Controls.Add(intro);
 
@@ -693,13 +733,17 @@ namespace BTOptimizer
             };
             Controls.Add(_summary);
 
-            _btnScan = MakeBtn("Analyser à nouveau", 18, 434, 150, 38, false);
+            _btnScan = MakeBtn("Analyser", 18, 434, 84, 38, false);
             _btnScan.Click += (s, e) => Scan();
-            _btnInstall = MakeBtn("INSTALLER LA SÉLECTION (winget)", 178, 434, 280, 38, true);
+            _btnInstall = MakeBtn("INSTALLER LA SÉLECTION (winget)", 108, 434, 246, 38, true);
             _btnInstall.Click += OnInstall;
-            _btnClose = MakeBtn("Fermer", 572, 434, 90, 38, false);
+            _btnFiche = MakeBtn("Fiche…", 360, 434, 74, 38, false);
+            _btnFiche.Click += OnFiche;
+            _btnRetire = MakeBtn("Désinstaller…", 440, 434, 110, 38, false);
+            _btnRetire.Click += OnDesinstalle;
+            _btnClose = MakeBtn("Fermer", 582, 434, 80, 38, false);
             _btnClose.Click += (s, e) => Close();
-            Controls.Add(_btnScan); Controls.Add(_btnInstall); Controls.Add(_btnClose);
+            Controls.Add(_btnScan); Controls.Add(_btnInstall); Controls.Add(_btnFiche); Controls.Add(_btnRetire); Controls.Add(_btnClose);
         }
 
         private static Button MakeBtn(string text, int x, int y, int w, int h, bool primary)
@@ -718,6 +762,7 @@ namespace BTOptimizer
         {
             Cursor = busy ? Cursors.WaitCursor : Cursors.Default;
             _btnScan.Enabled = !busy; _btnInstall.Enabled = !busy; _list.Enabled = !busy;
+            _btnFiche.Enabled = !busy; _btnRetire.Enabled = !busy;
         }
 
         private void Scan()
@@ -742,6 +787,7 @@ namespace BTOptimizer
         private void Populate(List<LibScan.LibItem> items, List<bool> installed, string winget)
         {
             _items = items;
+            _installed = installed;
             _winget = winget;
             _list.Items.Clear();
             int missing = 0, firstHi = -1;
@@ -781,6 +827,80 @@ namespace BTOptimizer
             if (!LibScan.TryLaunch(it))
                 MessageBox.Show(this, it.Name + " est installé mais introuvable automatiquement — ouvre-le depuis le menu Démarrer.",
                     "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private bool WingetLa()
+        {
+            if (_winget != null) return true;
+            MessageBox.Show(this,
+                "winget est introuvable sur ce PC.\n\nInstalle « App Installer » (gratuit, Microsoft) depuis le "
+                + "Microsoft Store, puis relance l'analyse.",
+                "winget requis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        /// <summary>Ligne sélectionnée (surlignée, pas seulement cochée) ; -1 avec un message sinon.</summary>
+        private int Selection()
+        {
+            int i = _list.SelectedIndex;
+            if (i >= 0 && i < _items.Count) return i;
+            MessageBox.Show(this, "Clique d'abord sur une ligne de la liste.", "ONYX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return -1;
+        }
+
+        // Fiche de l'appli : version, éditeur, description, licence, lus par « winget show ».
+        private void OnFiche(object sender, EventArgs e)
+        {
+            int i = Selection();
+            if (i < 0 || !WingetLa()) return;
+            LibScan.LibItem it = _items[i];
+            string winget = _winget, args = FicheAppli.ArgsFiche(it.WingetId);
+            SetBusy(true);
+            _summary.Text = "Lecture de la fiche de " + it.Name + "...";
+            Task.Run(() =>
+            {
+                string fiche = FicheAppli.Nettoie(LibScan.Lit(winget, args, 30000), it.WingetId);
+                try
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        SetBusy(false);
+                        _summary.Text = "";
+                        MessageBox.Show(this, fiche.Length > 0 ? fiche : "Fiche indisponible (pas de connexion, ou winget n'a pas répondu en 30 s).",
+                            it.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        // Désinstallation d'une appli du catalogue : jamais une bibliothèque essentielle, toujours après confirmation.
+        private void OnDesinstalle(object sender, EventArgs e)
+        {
+            int i = Selection();
+            if (i < 0) return;
+            LibScan.LibItem it = _items[i];
+            bool here = i < _installed.Count && _installed[i];
+            string refus = FicheAppli.Refus(it.Essential, here);
+            if (refus != null)
+            {
+                MessageBox.Show(this, refus, it.Name, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (!WingetLa()) return;
+            if (MessageBox.Show(this,
+                    "Désinstaller « " + it.Name + " » de ce PC ?\n\nSes réglages et ses données peuvent partir avec lui. "
+                    + "Tu pourras le réinstaller d'ici, mais pas retrouver ce qu'il aura effacé.",
+                    "Désinstallation", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.OK)
+                return;
+            string winget = _winget, args = FicheAppli.ArgsDesinstalle(it.WingetId);
+            SetBusy(true);
+            _summary.Text = "Désinstallation en cours (voir le journal)...";
+            Task.Run(() =>
+            {
+                LibScan.Uninstall(winget, it, args, _log);
+                try { BeginInvoke((Action)(() => Scan())); } catch { }
+            });
         }
 
         private void OnInstall(object sender, EventArgs e)

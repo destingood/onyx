@@ -61,7 +61,7 @@ namespace BTOptimizer
                 Enregistre(close);
                 try { var h = PartieClose; if (h != null) h(close); } catch { }
             }
-            if (enCours != null && MesureFps) ReleveFps(enCours, index, now);
+            if (enCours != null && MesureFps) { ReleveFps(enCours, index, now); ReleveMateriel(enCours); }
             else if (enCours == null) ArreteMesure();
         }
 
@@ -87,8 +87,8 @@ namespace BTOptimizer
 
         private static string CheminOption { get { return AppPaths.File("bt-journal-fps.txt"); } }
 
-        /// <summary>Option « Mesurer les FPS de chaque partie ». Défaut : NON (session ETW, droits
-        /// administrateur) ; persistante.</summary>
+        /// <summary>Option « Mesurer chaque partie » (FPS, charge et températures). Défaut : NON (session
+        /// ETW, droits administrateur) ; persistante.</summary>
         public static bool MesureFps
         {
             get
@@ -133,12 +133,49 @@ namespace BTOptimizer
             }
         }
 
-        /// <summary>Remplit les FPS de la partie close si c'est elle qu'on mesurait, puis arrête.</summary>
+        // Matériel de la partie : même option, même fil de fond que les FPS. Lecture seule (compteurs
+        // Windows, API du constructeur de la carte graphique) : rien n'est lu dans le jeu.
+        private static HwMonitor _hw;
+        private static Materiel _materiel;
+        private static string _jeuMateriel;
+
+        private static void ReleveMateriel(string jeu)
+        {
+            lock (_verrouMesure)
+            {
+                if (!string.Equals(_jeuMateriel, jeu, StringComparison.OrdinalIgnoreCase))
+                {
+                    StopHw();
+                    _jeuMateriel = jeu;
+                    _materiel = new Materiel();
+                    try { _hw = new HwMonitor(); }
+                    catch (Exception ex) { JournalTechnique.Echec("JournalJeu.HwMonitor", ex); }
+                    return;   // la charge du processeur se mesure entre deux relevés : premier chiffre au suivant
+                }
+                if (_hw == null || _materiel == null) return;
+                try
+                {
+                    HwSample s = _hw.Sample();
+                    bool gpu = s.Gpu != null && s.Gpu.Ok;
+                    _materiel.Ajoute(s.CpuLoad, s.CpuTempC, gpu ? s.Gpu.Util : double.NaN, gpu ? s.Gpu.TempC : double.NaN, s.RamLoad);
+                }
+                catch (Exception ex) { JournalTechnique.Echec("JournalJeu.ReleveMateriel", ex); }
+            }
+        }
+
+        private static void StopHw()
+        {
+            try { if (_hw != null) _hw.Dispose(); } catch { }
+            _hw = null;
+        }
+
+        /// <summary>Remplit les FPS et le matériel de la partie close si c'est elle qu'on mesurait, puis arrête.</summary>
         private static void FinMesure(Partie p)
         {
             lock (_verrouMesure)
             {
                 if (_mesure != null && string.Equals(_jeuMesure, p.Jeu, StringComparison.OrdinalIgnoreCase)) _mesure.Remplit(p);
+                if (_materiel != null && string.Equals(_jeuMateriel, p.Jeu, StringComparison.OrdinalIgnoreCase)) _materiel.Remplit(p);
             }
             ArreteMesure();
         }
@@ -147,10 +184,13 @@ namespace BTOptimizer
         {
             lock (_verrouMesure)
             {
-                if (_jeuMesure == null && _fps == null) return;
+                if (_jeuMesure == null && _fps == null && _jeuMateriel == null && _hw == null) return;
                 StopEtw();
+                StopHw();
                 _jeuMesure = null;
                 _mesure = null;
+                _jeuMateriel = null;
+                _materiel = null;
             }
         }
 

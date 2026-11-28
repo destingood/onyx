@@ -546,6 +546,13 @@ namespace BTOptimizer
                 TextRenderer.DrawText(g, JournalJeu.LignePartie(p), FpsUi.Tiny, new Rectangle(x, ly, w, 16), FpsUi.Dim, flags);
                 ly += 17;
             }
+            // Matériel de la dernière partie mesurée (option « Mesurer chaque partie » du Mode Jeu).
+            string materiel = JournalJeu.TexteMateriel(JournalJeu.DerniereMesuree(_parties));
+            if (materiel != null)
+            {
+                TextRenderer.DrawText(g, materiel, FpsUi.Tiny, new Rectangle(x, ly, w, 16), FpsUi.Ink, flags);
+                ly += 17;
+            }
             if (_pointsFps.Count >= 2) CourbeFps(g, x, ly + 8, w);
         }
 

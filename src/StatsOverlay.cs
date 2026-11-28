@@ -161,7 +161,7 @@ namespace BTOptimizer
             _lastFps = 144; _lastLow = 118; _fpsName = "Counter-Strike 2";
             _last = new HwSample { CpuLoad = 38, RamLoad = 46, CpuTempC = 58, CpuMhz = 4720, DisqueActivite = 12 };
             _batterie = CompteurJeu.TexteBatterie(0.82, false, false);
-            _last.Gpu = new GpuInfo { Ok = true, Util = 72, TempC = 64, VramUsedMB = 5320, VramTotalMB = 12288, PowerW = 186 };
+            _last.Gpu = new GpuInfo { Ok = true, Util = 72, TempC = 64, VramUsedMB = 5320, VramTotalMB = 12288, PowerW = 186, FanRpm = 1450, FanPct = 42 };
             _debitRecu = 124.6e6; _debitEnvoye = 850e3; _duree = TimeSpan.FromMinutes(65);
             _fpsHist.Clear();
             int[] demo = { 120, 132, 140, 138, 144, 150, 146, 142, 139, 148, 152, 144, 141, 137, 145, 150, 148, 144, 142, 146, 151, 149, 143, 140, 147, 152, 146, 141 };
@@ -355,6 +355,8 @@ namespace BTOptimizer
                 l.Add(new Segment { Nom = "VRAM", Valeur = gpuOk ? CompteurJeu.TexteVram(s.Gpu.VramUsedMB, s.Gpu.VramTotalMB) : "—", Couleur = fixe ?? Ink });
             if (_o.A(CompteurJeu.Watts))
                 l.Add(new Segment { Valeur = gpuOk && s.Gpu.PowerW > 0 ? s.Gpu.PowerW.ToString("0") + " W" : "—", Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Ventilo))
+                l.Add(new Segment { Nom = "VENT", Valeur = gpuOk ? CompteurJeu.TexteVentilateur(s.Gpu.FanRpm, s.Gpu.FanPct) : "—", Couleur = fixe ?? Ink });
             if (_o.A(CompteurJeu.Ram))
                 l.Add(new Segment { Nom = "RAM", Valeur = s == null ? "—" : s.RamLoad.ToString("0") + " %", Couleur = s == null ? Dim : fixe ?? LoadColor(s.RamLoad) });
             if (_o.A(CompteurJeu.Disque))
@@ -493,6 +495,8 @@ namespace BTOptimizer
                         !gpuOk || s.Gpu.VramTotalMB <= 0 ? fixe ?? Ink : fixe ?? LoadColor(100.0 * s.Gpu.VramUsedMB / s.Gpu.VramTotalMB));
                 if (_o.A(CompteurJeu.Watts))
                     Large(g, lab, val, ref y, "GPU W", gpuOk && s.Gpu.PowerW > 0 ? s.Gpu.PowerW.ToString("0") + " W" : "—", fixe ?? Ink);
+                if (_o.A(CompteurJeu.Ventilo))
+                    Large(g, lab, val, ref y, "VENT", gpuOk ? CompteurJeu.TexteVentilateur(s.Gpu.FanRpm, s.Gpu.FanPct) : "—", fixe ?? Ink, lab);
                 if (_o.A(CompteurJeu.Ram))
                     Row(g, lab, val, ref y, "RAM", s == null ? "—" : s.RamLoad.ToString("0") + " %", null, s == null ? Dim : fixe ?? LoadColor(s.RamLoad), fixe);
                 if (_o.A(CompteurJeu.Disque))

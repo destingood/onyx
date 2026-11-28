@@ -2042,7 +2042,7 @@ namespace BTOptimizer
                 // Relevé GPU NATIF complet (LibreHardwareMonitor, GPU seul, sans pilote noyau).
                 GpuReading gr = GpuSensors.Read();
                 Console.WriteLine(string.Format(
-                    "  GPU natif (LHM, sans pilote, en-process) : {0} — {1}°C · charge {2}% · {3}/{4} MHz · {5} W · VRAM {6}/{7} Mo",
+                    "  GPU natif (LHM, sans pilote, en-process) : {0} — {1}°C · charge {2}% · {3}/{4} MHz · {5} W · VRAM {6}/{7} Mo · ventilateur {8}",
                     gr.Ok ? gr.Name : "n/d",
                     double.IsNaN(gr.TempC) ? "?" : gr.TempC.ToString("0"),
                     double.IsNaN(gr.LoadPct) ? "?" : gr.LoadPct.ToString("0"),
@@ -2050,7 +2050,8 @@ namespace BTOptimizer
                     double.IsNaN(gr.MemMhz) ? "?" : gr.MemMhz.ToString("0"),
                     double.IsNaN(gr.PowerW) ? "?" : gr.PowerW.ToString("0"),
                     gr.VramUsedMB < 0 ? "?" : gr.VramUsedMB.ToString(),
-                    gr.VramTotalMB < 0 ? "?" : gr.VramTotalMB.ToString()));
+                    gr.VramTotalMB < 0 ? "?" : gr.VramTotalMB.ToString(),
+                    CompteurJeu.TexteVentilateur(gr.FanRpm, gr.FanPct)));
                 using (var f = new MonitorForm()) { f.CreateControl(); }
                 Console.WriteLine("  UI MonitorForm : construite OK.");
             }

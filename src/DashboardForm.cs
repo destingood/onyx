@@ -141,7 +141,7 @@ namespace BTOptimizer
 
             Shown += (s, e) =>
             {
-                SetDark(); ShowPage(0);
+                SetDark(); ShowPage(PageOuverture);
                 if (_rail != null) { _rail.Height = ClientSize.Height; _rail.BringToFront(); }
                 // Rétablit les overlays activés au dernier lancement (le shell remplace MainForm
                 // qui portait ces appels — sans ça le viseur ne réapparaissait plus au démarrage).
@@ -194,10 +194,12 @@ namespace BTOptimizer
             FormClosing += (s, e) => { try { if (_console) BasculeConsole(); } catch { } try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
-        /// <summary>Fin de partie, option « Mesurer les FPS » cochée : bilan en notification.</summary>
+        /// <summary>Fin de partie, option « Mesurer chaque partie » cochée : bilan en notification.</summary>
         private void BilanPartie(JournalJeu.Partie p)
         {
-            if (p != null && JournalJeu.MesureFps) Notifie(p.Jeu, JournalJeu.Bilan(p));
+            if (p == null || !JournalJeu.MesureFps) return;
+            string materiel = JournalJeu.TexteMateriel(p);
+            Notifie(p.Jeu, JournalJeu.Bilan(p) + (materiel == null ? "" : "\n" + materiel));
         }
 
         private void OnResizeShell(object sender, EventArgs e)
@@ -360,6 +362,21 @@ namespace BTOptimizer
             var trayStart = new ToolStripMenuItem("Démarrer minimisé (zone de notification)") { Checked = TrayStartEnabled };
             trayStart.Click += (s, e) => { bool now = !TrayStartEnabled; TrayStartEnabled = now; trayStart.Checked = now; };
             sys.DropDownItems.Add(trayStart);
+            // Page d'ouverture : une seule cochée ; prise en compte au prochain lancement.
+            var ouverture = new ToolStripMenuItem("Ouvrir ONYX sur la page…");
+            for (int i = 0; i < PageDemarrage.Noms.Length; i++)
+            {
+                int page = i;
+                var choix = new ToolStripMenuItem(PageDemarrage.Noms[i].Replace("&", "&&")) { Checked = PageOuverture == i };
+                choix.Click += (s, e) =>
+                {
+                    PageOuverture = page;
+                    foreach (ToolStripItem autre in ouverture.DropDownItems) ((ToolStripMenuItem)autre).Checked = autre == choix;
+                    Log("ONYX s'ouvrira sur « " + PageDemarrage.Noms[page] + " » au prochain lancement.", 0);
+                };
+                ouverture.DropDownItems.Add(choix);
+            }
+            sys.DropDownItems.Add(ouverture);
             var discord = new ToolStripMenuItem("Présence Discord (« optimise son PC avec ONYX »)") { Checked = DiscordPresence.Enabled };
             discord.Click += (s, e) => { bool now = !DiscordPresence.Enabled; DiscordPresence.Enabled = now; discord.Checked = now; if (now) DiscordPresence.Start(); else DiscordPresence.Stop(); };
             sys.DropDownItems.Add(discord);
@@ -662,6 +679,19 @@ namespace BTOptimizer
         {
             get { return AppPaths.File("bt-traystart.txt"); }
         }
+        /// <summary>Page sur laquelle ONYX s'ouvre (choix de l'utilisateur ; Centre de contrôle par défaut).</summary>
+        private static int PageOuverture
+        {
+            get
+            {
+                // Tests d'interface et captures : toujours le Centre de contrôle, quel que soit le réglage du PC.
+                if (Environment.GetEnvironmentVariable("BT_UITEST") == "1" || Environment.GetEnvironmentVariable("BT_UISHOT") != null) return 0;
+                try { string f = AppPaths.File("bt-page-demarrage.txt"); return System.IO.File.Exists(f) ? PageDemarrage.Lit(System.IO.File.ReadAllText(f)) : 0; }
+                catch { return 0; }
+            }
+            set { try { System.IO.File.WriteAllText(AppPaths.File("bt-page-demarrage.txt"), PageDemarrage.Ecrit(value)); } catch { } }
+        }
+
         private static bool TrayStartEnabled
         {
             get { try { return System.IO.File.Exists(TrayStartPath) && System.IO.File.ReadAllText(TrayStartPath).Trim() == "1"; } catch { return false; } }
@@ -1552,7 +1582,7 @@ namespace BTOptimizer
             _rail.Controls.Add(_railProfile);
 
             string[] glyphs = { "🏠", "🚀", "🎮", "💉", "🧪", "🏆", "🩺", "⚙", "💽", "🏷", "📰" };
-            string[] tips = { "Centre de contrôle", "Optimiser Windows", "Mes jeux", "Santé & entretien", "Performances", "Mes badges", "Assistant PC", "Matériel en direct", "Nettoyage & disques", "Bons plans", "Actualités" };
+            string[] tips = PageDemarrage.Noms;
             // Icône de chaque page : l'index 9 de NavIcons est « Outils », d'où un tableau explicite.
             int[] icones = { 0, 1, 2, 3, 4, 5, 6, 7, 8, NavIcons.BonsPlans, NavIcons.Actus };
             for (int i = 0; i < glyphs.Length; i++)

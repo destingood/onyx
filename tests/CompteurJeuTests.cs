@@ -78,6 +78,16 @@ namespace BTOptimizer.Tests
             Banc.Verifie("PC fixe ou niveau inconnu (255 %) : pas de mesure", true,
                 CompteurJeu.TexteBatterie(1, false, true) == "—" && CompteurJeu.TexteBatterie(2.55, false, false) == "—");
 
+            Banc.Egal("ventilateur : tours et consigne", "1 450 tr/min · 42 %", CompteurJeu.TexteVentilateur(1450.4, 42));
+            Banc.Egal("ventilateur : tours seuls", "980 tr/min", CompteurJeu.TexteVentilateur(980, double.NaN));
+            Banc.Egal("ventilateur : consigne seule", "42 %", CompteurJeu.TexteVentilateur(double.NaN, 42));
+            Banc.Egal("ventilateur coupé au repos", "à l'arrêt", CompteurJeu.TexteVentilateur(0, 0));
+            Banc.Egal("ventilateur non lu", "—", CompteurJeu.TexteVentilateur(double.NaN, double.NaN));
+            Banc.Egal("ventilateur : une ligne en bloc", "1", CompteurJeu.NbLignes(CompteurJeu.Lit("1;1;1;0;gpufan")).ToString());
+            Banc.Verifie("ventilateur : pas coché par défaut (affichage d'avant gardé)", false, CompteurJeu.Lit(null).A(CompteurJeu.Ventilo));
+            Banc.Verifie("ventilateur : lu sans pilote noyau (carte graphique seule)", true,
+                CatalogueTests.Source("GpuSensors.cs").Contains("case SensorType.Fan:") && CatalogueTests.Source("GpuSensors.cs").Contains("IsMotherboardEnabled= false"));
+
             // Place : zone de travail 1920 × 1040 décalée de (100, 50), fenêtre 222 × 178.
             int x, y;
             CompteurJeu.Place(0, 100, 50, 1920, 1040, 222, 178, out x, out y); Banc.Egal("haut gauche", "116,66", x + "," + y);

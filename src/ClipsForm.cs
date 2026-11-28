@@ -24,13 +24,14 @@ namespace BTOptimizer
         private readonly ListView _liste;
         private readonly ImageList _images;
         private readonly Label _etat;
-        private readonly Button _lire, _dossier, _copier, _renommer, _corbeille, _actualiser, _ajouter, _liberer;
+        private readonly Button _lire, _dossier, _copier, _renommer, _deplacer, _corbeille, _actualiser, _ajouter, _liberer;
         private readonly ComboBox _limite, _tri;
         /// <summary>Ordre choisi, gardé tant qu'ONYX reste ouvert.</summary>
         private static int _ordre;
         private readonly Label _limiteTitre, _espace;
         private List<Clips.Clip> _enTrop = new List<Clips.Clip>();
         private string _apres;   // message à montrer une fois la liste rechargée
+        private bool _deplacement;   // déplacement en cours (gros fichiers : fait hors du fil d'interface)
         private bool _pret;
         private readonly string _jeuVoulu;
         private List<Clips.Clip> _tous = new List<Clips.Clip>();
@@ -91,6 +92,7 @@ namespace BTOptimizer
             _dossier = Bouton("Afficher dans le dossier", (s, e) => Dossier());
             _copier = Bouton("Copier", (s, e) => Copier());
             _renommer = Bouton("Renommer…", (s, e) => Renommer());
+            _deplacer = Bouton("Déplacer vers…", (s, e) => Deplacer());
             _corbeille = Bouton("Corbeille…", (s, e) => Corbeille());
             _actualiser = Bouton("Actualiser", (s, e) => Charge());
             _ajouter = Bouton("Ajouter un dossier…", (s, e) => Ajoute());
@@ -149,7 +151,7 @@ namespace BTOptimizer
             _tri.SetBounds(m, bas - 26, 200, 26);
             _liste.SetBounds(m + 212, y, W - 2 * m - 212, bas - y);
             int x = m, by = H - 82;
-            foreach (Button b in new[] { _lire, _dossier, _copier, _renommer, _corbeille })
+            foreach (Button b in new[] { _lire, _dossier, _copier, _renommer, _deplacer, _corbeille })
             {
                 int w = TextRenderer.MeasureText(b.Text, b.Font).Width + 36;
                 b.SetBounds(x, by, w, 34); x += w + 10;
@@ -356,6 +358,7 @@ namespace BTOptimizer
             int n = _liste.SelectedItems.Count;
             _lire.Enabled = n == 1; _dossier.Enabled = n == 1; _renommer.Enabled = n == 1;
             _copier.Enabled = n > 0; _corbeille.Enabled = n > 0;
+            _deplacer.Enabled = n > 0 && !_deplacement;
         }
 
         private void Lire()
@@ -412,6 +415,49 @@ namespace BTOptimizer
             _apres = "Renommé en « " + Path.GetFileName(nouveau) + " »."
                 + (!string.Equals(jeu, clip.Jeu, StringComparison.OrdinalIgnoreCase) ? " Il est maintenant rangé sous « " + jeu + " »." : "");
             Charge();
+        }
+
+        /// <summary>
+        /// Range les clips choisis dans un dossier au choix (autre disque compris). Rien n'est supprimé
+        /// ni écrasé ; un dossier qu'ONYX ne balayait pas est ajouté aux dossiers suivis, pour que les
+        /// clips restent dans la liste.
+        /// </summary>
+        private void Deplacer()
+        {
+            List<Clips.Clip> c = Choisis();
+            if (c.Count == 0 || _deplacement) return;
+            string dossier;
+            using (var dlg = new FolderBrowserDialog())
+            {
+                dlg.Description = "Dossier où ranger " + (c.Count > 1 ? "ces " + c.Count + " clips" : "ce clip");
+                dlg.ShowNewFolderButton = true;
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                dossier = dlg.SelectedPath;
+            }
+            var chemins = c.ConvertAll(x => x.Chemin);
+            _deplacement = true;
+            MajBoutons();
+            _etat.Text = "Déplacement en cours…";
+            Task.Run(() =>
+            {
+                int faits = 0; string erreur = null;
+                foreach (string chemin in chemins)
+                {
+                    string e;
+                    if (Clips.Deplace(chemin, dossier, out e) != null) faits++;
+                    else if (erreur == null) erreur = e;
+                }
+                if (faits > 0)
+                    try { if (!Clips.DejaSuivi(dossier)) Clips.AjouteDossier(dossier); } catch { }
+                string bilan = (faits == chemins.Count ? (faits > 1 ? faits + " clips déplacés" : "Clip déplacé")
+                                                       : faits + " sur " + chemins.Count + " déplacés")
+                             + " vers « " + dossier + " »." + (erreur != null ? " Refus : " + erreur : "");
+                try
+                {
+                    if (!_ferme) BeginInvoke((Action)(() => { _deplacement = false; _apres = bilan; MajBoutons(); Charge(); }));
+                }
+                catch { }
+            });
         }
 
         private void Corbeille()

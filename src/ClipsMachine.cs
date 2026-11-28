@@ -142,6 +142,26 @@ namespace BTOptimizer
             catch (Exception ex) { erreur = ex.Message; return null; }
         }
 
+        /// <summary>
+        /// Déplace le clip dans un autre dossier (autre disque compris) sans jamais écraser : si le nom
+        /// y est pris, « (2) », « (3) »… Renvoie le nouveau chemin, ou null avec la raison.
+        /// </summary>
+        public static string Deplace(string chemin, string dossier, out string erreur)
+        {
+            erreur = null;
+            try
+            {
+                string cible = CibleDeplacement(chemin, dossier, p => File.Exists(p) || Directory.Exists(p));
+                if (cible == null) { erreur = "le clip est déjà dans ce dossier."; return null; }
+                File.Move(chemin, cible);   // sans écrasement ; entre deux disques : copie, puis retrait de l'original
+                return cible;
+            }
+            catch (Exception ex) { erreur = ex.Message; return null; }
+        }
+
+        /// <summary>Le dossier fait-il déjà partie de ceux qu'ONYX balaie (racine ou sous-dossier assez proche).</summary>
+        public static bool DejaSuivi(string dossier) { return DejaSuivi(dossier, Racines(), ProfondeurMax); }
+
         private const string FichierLimite = "bt-clips-limite.txt";
 
         /// <summary>Limite d'espace choisie pour les clips, en Go ; 0 = aucune.</summary>

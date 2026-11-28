@@ -119,8 +119,8 @@ namespace BTOptimizer
             Controls.Add(new Label
             {
                 Text = "Le compteur réapparaît au prochain démarrage s'il est activé. En plein écran EXCLUSIF, Windows "
-                     + "masque toute surimpression : passe le jeu en « plein écran fenêtré » pour le voir. Les "
-                     + "ventilateurs ne sont pas proposés : les lire demande un pilote noyau, qu'ONYX n'installe pas.",
+                     + "masque toute surimpression : passe le jeu en « plein écran fenêtré » pour le voir. Les ventilateurs "
+                     + "du processeur et du boîtier ne sont pas proposés : les lire demande un pilote noyau, qu'ONYX n'installe pas.",
                 Location = new Point(18, 306 + moitie * 26 + 10), Size = new Size(524, 62), ForeColor = Color.FromArgb(110, 115, 125)
             });
             int bas = 306 + moitie * 26 + 80;

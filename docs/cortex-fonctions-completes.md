@@ -80,10 +80,10 @@ Relevé du 27/11/2026.
 | Onglets Général / Activité / Ma progression (succès) | ➖ succès Steam (v16.08) |
 | Modifier : jaquette, image de fond, icône | ✅ jaquette et fond ; icône v16.12 |
 | Modifier : surnom du jeu | ✅ « Nom affiché » des options du jeu (déjà là avant ce relevé) |
-| Modifier : cible de lancement, paramètres de lancement, dossier de départ | ✅ options de lancement ; dossier de départ ? |
+| Modifier : cible de lancement, paramètres de lancement, dossier de départ | ✅ options de lancement et dossier de départ |
 | Modifier : liens web (plusieurs par jeu) | ✅ v16.10 (12 liens, http et https seulement) |
 | Résolution conseillée | 🚫 sans source fiable par jeu et par machine |
-| Courbe d'une partie : FPS moyen / min / max, usage et température processeur et carte graphique, RAM, résolution, durée | ➖ FPS et bilan ; températures par partie ? |
+| Courbe d'une partie : FPS moyen / min / max, usage et température processeur et carte graphique, RAM, résolution, durée | ✅ FPS et bilan ; charge et température du processeur et de la carte graphique, RAM par partie en v16.13 (pas de courbe tracée, ni de résolution) |
 | Export de la courbe en CSV | ✅ moniteur FPS |
 | État Booster Prime sur la fiche (optimal, optimiser, annuler, FPS prédits) | ✅ préréglage sur la fiche |
 
@@ -115,7 +115,7 @@ Relevé du 27/11/2026.
 | Barre d'outils en jeu, heure, mes clips, réglages | 🚫 impossible en plein écran exclusif sans injection (anticheat) |
 | Compteur : marche/arrêt, automatique au lancement du jeu | ✅ |
 | Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ✅ v16.10 position, taille, couleur ; style en ligne et aperçu v16.12 |
-| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes ; fréquence réelle du processeur, disque et batterie v16.12 ; ventilateurs et tension ❌ (pilote noyau) |
+| Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes ; fréquence réelle du processeur, disque et batterie v16.12 ; ventilateur de la carte graphique v16.13 (API du constructeur) ; ventilateur, tension et puissance du processeur ❌ (pilote noyau) |
 | Graphique créé à la fin de la partie, notification | ✅ bilan de partie |
 | Widget Xbox Game Bar | 🚫 demande une application UWP à part |
 
@@ -161,7 +161,7 @@ Relevé du 27/11/2026.
 | Zone : plein écran ou fenêtre du jeu | ➖ Windows |
 | Micro, curseur de la souris visible | ➖ Windows |
 | Générique Razer en fin de clip | sans objet |
-| Dossier d'enregistrement, déplacer les fichiers | ✅ dossier ; déplacement ? |
+| Dossier d'enregistrement, déplacer les fichiers | ✅ dossier ; « Déplacer vers… » en v16.13 (autre disque compris, rien n'est écrasé) |
 | Limite d'espace disque, suppression automatique des plus anciens, détail de l'espace utilisé | ✅ v16.10 limite et espace utilisé ; les plus anciens sont proposés puis envoyés à la Corbeille après accord, jamais supprimés seuls |
 | Bibliothèque : récents, mes clips, par jeu, recherche | ✅ |
 | Tri par nom ou date | ✅ v16.12 récents, anciens, nom, taille |
@@ -195,9 +195,9 @@ Relevé du 27/11/2026.
 
 | Fonction de Cortex | ONYX |
 |---|---|
-| Catalogue d'applis et d'extensions de navigateur pour joueurs, fiche détaillée | ❌ |
-| Notes des utilisateurs, historique des versions, jeux et systèmes compatibles | ❌ |
-| Téléchargement, dossier de téléchargement, « Mes applis », désinstallation | ❌ |
+| Catalogue d'applis et d'extensions de navigateur pour joueurs, fiche détaillée | ➖ applis de jeu par winget ; fiche (version, éditeur, description, licence) en v16.13 ; pas d'extensions de navigateur |
+| Notes des utilisateurs, historique des versions, jeux et systèmes compatibles | ❌ (données du serveur de Razer, sans équivalent public) |
+| Téléchargement, dossier de téléchargement, « Mes applis », désinstallation | ➖ installation et liste des applis présentes ; désinstallation en v16.13 (après confirmation, jamais une bibliothèque essentielle) ; le dossier est celui de winget |
 | Recommandations par notification, achats intégrés, bandeau partenaires | 🚫 |
 
 ---
@@ -228,7 +228,7 @@ Relevé du 27/11/2026.
 |---|---|
 | Langue (10 langues) | 🚫 français seul (chantier hors de proportion) |
 | Thème sombre ou clair | 🚫 sombre seul (chantier hors de proportion) |
-| Page de démarrage au choix | ? |
+| Page de démarrage au choix | ✅ v16.13 (⋯ → Système → « Ouvrir ONYX sur la page… ») |
 | Lancement avec Windows, masquage automatique | ✅ |
 | Accélération matérielle de l'interface | sans objet |
 | Lancer les jeux avec Cortex, quitter Cortex à la fermeture du jeu | ✅ lancement depuis Mes jeux ; quitter à la fermeture du jeu 🚫 (ONYX tient le journal de jeu et le Mode Jeu auto) |
@@ -258,6 +258,15 @@ Relevé du 27/11/2026.
 8. ~~**Raccourcis clavier modifiables.**~~ Fait en v16.12.
 9. ~~**Souhaits Humble.**~~ Écarté : connexion au compte nécessaire.
 10. **Clips automatiques par analyse d'image pour Fortnite** : gros chantier, modèle de reconnaissance à construire.
+11. ~~**Applis : fiche et désinstallation**, **ventilateur de la carte graphique au compteur**, **page d'ouverture au choix**, **charge et températures par partie**, **déplacer des clips**~~ : fait en v16.13.
+
+## Ce qui reste absent, et pourquoi (état v16.13)
+- **Clips automatiques et pseudo en jeu** : Cortex reconnaît les moments forts par analyse d'image, avec un modèle par jeu. ONYX n'en a pas ; le construire est un chantier à part.
+- **Ventilateur, tension et puissance du processeur, ventilateurs du boîtier** : leur lecture demande un pilote noyau, qu'ONYX n'installe pas.
+- **Notes des utilisateurs et historique des versions des applis** : données du serveur de Razer.
+- **Plateformes reliées, souhaits, récompenses, Remote Play, Razer AVA** : comptes ou services en ligne de Razer.
+- **Nettoyage programmé sans confirmation** : écarté, ONYX ne supprime rien sans confirmation.
+- **Réglages d'enregistrement des clips Windows (qualité, durée)** : non écrits par ONYX, les valeurs de registre n'ont pas pu être vérifiées.
 
 ## Sources web
 - https://www.razer.com/cortex

@@ -8,7 +8,7 @@ namespace BTOptimizer
     /// Capteurs GPU NATIFS, tous constructeurs, via LibreHardwareMonitorLib en mode « GPU SEUL ».
     /// Important : on n'active QUE le GPU (CPU / carte mère / etc. désactivés) — donc le pilote
     /// noyau de la lib (qui ne sert QU'AU CPU/carte mère via MSR/SuperIO) n'est JAMAIS chargé.
-    /// Températures / charge / fréquence / puissance / VRAM passent par les API user-mode des
+    /// Températures / charge / fréquence / puissance / VRAM / ventilateur de la carte passent par les API user-mode des
     /// constructeurs (NVAPI / ADL / IGCL) : natif, sans injection, compatible anticheat.
     /// </summary>
     internal static class GpuSensors
@@ -81,6 +81,13 @@ namespace BTOptimizer
                                     break;
                                 case SensorType.Power:
                                     if (Has(n, "Package") || Has(n, "GPU Power") || double.IsNaN(r.PowerW)) r.PowerW = v;
+                                    break;
+                                case SensorType.Fan:
+                                    // Plusieurs ventilateurs : le plus rapide (celui qu'on entend).
+                                    if (v >= 0 && v < 20000 && (double.IsNaN(r.FanRpm) || v > r.FanRpm)) r.FanRpm = v;
+                                    break;
+                                case SensorType.Control:
+                                    if (Has(n, "Fan") && v >= 0 && v <= 100 && (double.IsNaN(r.FanPct) || v > r.FanPct)) r.FanPct = v;
                                     break;
                                 case SensorType.SmallData:
                                     if (Has(n, "Memory Used") && !Has(n, "D3D")) r.VramUsedMB = (long)v;

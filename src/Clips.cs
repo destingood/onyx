@@ -135,6 +135,48 @@ namespace BTOptimizer
             return Path.Combine(dossier, nom + Path.GetExtension(chemin));
         }
 
+        // ------------------------------------------------------------------ déplacer
+
+        private static string SansBarre(string dossier) { return (dossier ?? "").TrimEnd('\\', '/'); }
+
+        /// <summary>
+        /// Chemin d'arrivée d'un clip déplacé dans <paramref name="dossier"/> : même nom, ou « nom (2) »,
+        /// « nom (3) »… si le nom y est déjà pris — rien n'est jamais écrasé. Null si le clip est déjà
+        /// dans ce dossier, ou si aucun nom n'est libre.
+        /// </summary>
+        public static string CibleDeplacement(string chemin, string dossier, Func<string, bool> existe)
+        {
+            if (string.IsNullOrEmpty(chemin) || string.IsNullOrEmpty(dossier)) return null;
+            if (string.Equals(SansBarre(Path.GetDirectoryName(chemin)), SansBarre(dossier), StringComparison.OrdinalIgnoreCase)) return null;
+            string nom = Path.GetFileNameWithoutExtension(chemin), ext = Path.GetExtension(chemin);
+            for (int n = 1; n <= 99; n++)
+            {
+                string cible = Path.Combine(dossier, (n == 1 ? nom : nom + " (" + n + ")") + ext);
+                if (existe == null || !existe(cible)) return cible;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Le dossier est-il déjà balayé : une des racines, ou un de leurs sous-dossiers à
+        /// <paramref name="profondeurMax"/> niveaux au plus. Sinon il faut l'ajouter aux dossiers suivis,
+        /// faute de quoi un clip qu'on y déplace disparaîtrait de la liste.
+        /// </summary>
+        public static bool DejaSuivi(string dossier, IEnumerable<string> racines, int profondeurMax)
+        {
+            string d = SansBarre(dossier);
+            if (d.Length == 0 || racines == null) return false;
+            foreach (string racine in racines)
+            {
+                string r = SansBarre(racine);
+                if (r.Length == 0) continue;
+                if (string.Equals(d, r, StringComparison.OrdinalIgnoreCase)) return true;
+                if (!d.StartsWith(r + "\\", StringComparison.OrdinalIgnoreCase)) continue;
+                if (d.Substring(r.Length + 1).Split('\\', '/').Length <= profondeurMax) return true;
+            }
+            return false;
+        }
+
         // ------------------------------------------------------------------ limite d'espace
 
         /// <summary>Choix proposés, en Go ; 0 = aucune limite.</summary>

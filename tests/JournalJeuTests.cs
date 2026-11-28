@@ -179,6 +179,41 @@ namespace BTOptimizer.Tests
             Banc.Verifie("une tabulation dans le nom ne casse pas la ligne", true, relues.Count == 2 && relues[1].Jeu == "Counter Strike 2");
             Banc.Verifie("FPS non mesurés relus à 0", true, relues.Count == 2 && relues[1].FpsMoyen == 0 && relues[1].FpsBas == 0);
             Banc.Verifie("format indépendant de la culture (point décimal)", true, texte.Contains("238.8"));
+            Banc.Verifie("sans mesure du matériel : la ligne des versions précédentes (5 champs)", true,
+                texte.Split('\n')[0].Split('\t').Length == 5);
+
+            // Matériel de la partie.
+            var m = new JournalJeu.Materiel();
+            m.Ajoute(40, 70, 95, 71, 60);
+            m.Ajoute(42, 72.4, 97, 74, 68);
+            m.Ajoute(-1, double.NaN, double.NaN, 0, 0);   // relevé sans capteur : ignoré
+            var pm = new JournalJeu.Partie { Jeu = "Fortnite", Debut = T0, Secondes = 4320, FpsMoyen = 238.8, FpsBas = 141 };
+            m.Remplit(pm);
+            Banc.Verifie("matériel : charge moyenne, température et mémoire au plus haut", true,
+                pm.CpuMoyen == 41 && pm.GpuMoyen == 96 && pm.CpuTempMax == 72.4 && pm.GpuTempMax == 74 && pm.RamMax == 68);
+            Banc.Egal("matériel : texte", "CPU 41 % (72° max) · GPU 96 % (74° max) · RAM 68 % max", JournalJeu.TexteMateriel(pm));
+            Banc.Verifie("matériel non mesuré : pas de texte", true, JournalJeu.TexteMateriel(parties[1]) == null);
+            Banc.Egal("matériel : carte sans capteur de température", "GPU 96 %",
+                JournalJeu.TexteMateriel(new JournalJeu.Partie { Jeu = "x", GpuMoyen = 96 }));
+            Banc.Egal("matériel : température seule", "CPU 72° max",
+                JournalJeu.TexteMateriel(new JournalJeu.Partie { Jeu = "x", CpuTempMax = 72 }));
+            var vide = new JournalJeu.Partie { Jeu = "x", Debut = T0, Secondes = 100 };
+            new JournalJeu.Materiel().Remplit(vide);
+            Banc.Verifie("aucun relevé : rien d'inventé", true, JournalJeu.TexteMateriel(vide) == null);
+            List<JournalJeu.Partie> avecMateriel = JournalJeu.Lire(JournalJeu.Ecrire(new List<JournalJeu.Partie> { pm, parties[1] }));
+            Banc.Verifie("matériel conservé dans le fichier", true, avecMateriel.Count == 2 && avecMateriel[0].CpuMoyen == 41
+                && Math.Abs(avecMateriel[0].CpuTempMax - 72.4) < 0.01 && avecMateriel[0].GpuMoyen == 96 && avecMateriel[0].GpuTempMax == 74 && avecMateriel[0].RamMax == 68
+                && avecMateriel[1].CpuMoyen == 0);
+            Banc.Verifie("fichier d'une version précédente : relu, matériel à 0", true,
+                JournalJeu.Lire("Fortnite\t2026-11-26T20:00:00\t4320\t238.8\t141\n").Count == 1
+                && JournalJeu.Lire("Fortnite\t2026-11-26T20:00:00\t4320\t238.8\t141\n")[0].RamMax == 0);
+            Banc.Verifie("champ de matériel abîmé : la partie reste, la valeur est ignorée", true,
+                JournalJeu.Lire("Fortnite\t2026-11-26T20:00:00\t4320\t238.8\t141\tabc\t72\n")[0].CpuTempMax == 72
+                && JournalJeu.Lire("Fortnite\t2026-11-26T20:00:00\t4320\t238.8\t141\tabc\t72\n")[0].CpuMoyen == 0);
+            Banc.Verifie("dernière partie mesurée", true, JournalJeu.DerniereMesuree(avecMateriel) == avecMateriel[0]
+                && JournalJeu.DerniereMesuree(relues) == null);
+            Banc.Verifie("matériel : relevé sur le fil de fond de la veille, avec les FPS", true,
+                CatalogueTests.Source("JournalJeuMachine.cs").Contains("{ ReleveFps(enCours, index, now); ReleveMateriel(enCours); }"));
 
             List<JournalJeu.Partie> abimees = JournalJeu.Lire("ligne cassée\n" + texte + "Fortnite\tpas une date\t12\t0\t0\n\n");
             Banc.Verifie("une ligne abîmée est ignorée, les autres lues", true, abimees.Count == 2);

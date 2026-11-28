@@ -12,6 +12,8 @@ namespace BTOptimizer
         public string Name = "-";
         public double TempC, Util, CoreMhz, MemMhz, PowerW;
         public long VramUsedMB, VramTotalMB;
+        /// <summary>Ventilateur de la carte graphique (tr/min, consigne en %). NaN si non lu.</summary>
+        public double FanRpm = double.NaN, FanPct = double.NaN;
     }
 
     public class HwSample
@@ -297,6 +299,7 @@ namespace BTOptimizer
                 if (!double.IsNaN(r.PowerW)) g.PowerW = r.PowerW;
                 if (r.VramUsedMB >= 0) g.VramUsedMB = r.VramUsedMB;
                 if (r.VramTotalMB >= 0) g.VramTotalMB = r.VramTotalMB;
+                g.FanRpm = r.FanRpm; g.FanPct = r.FanPct;
                 g.Ok = true;
                 return g;
             }
@@ -380,9 +383,9 @@ namespace BTOptimizer
             g.VramUsedMB = vram;
             // Température NATIVE tous constructeurs via LibreHardwareMonitor en mode GPU seul
             // (API user-mode NVAPI/ADL/IGCL, AUCUN pilote noyau) — comble le manque AMD/Intel.
-            string lhmName;
-            g.TempC = GpuSensors.ReadGpuTempC(out lhmName);
-            if (!string.IsNullOrEmpty(lhmName)) g.Name = lhmName;
+            GpuReading lu = GpuSensors.Read();
+            g.TempC = lu.TempC; g.FanRpm = lu.FanRpm; g.FanPct = lu.FanPct;
+            if (!string.IsNullOrEmpty(lu.Name)) g.Name = lu.Name;
             g.Ok = true;
             return g;
         }

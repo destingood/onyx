@@ -8,16 +8,18 @@ namespace BTOptimizer
     /// COMPTEUR EN JEU — PUR. Ce que l'utilisateur choisit d'afficher par-dessus le jeu, à quelle
     /// taille, à quel endroit et dans quelle couleur, plus les textes des mesures. La fenêtre
     /// (StatsOverlay.cs) ne fait que dessiner ce qui est décidé ici.
-    /// Les ventilateurs n'y figurent pas : les lire demande un pilote noyau, qu'ONYX n'installe pas.
+    /// Seul le ventilateur de la carte graphique y figure (lu par l'API de son constructeur) ; ceux
+    /// du processeur et du boîtier demandent un pilote noyau, qu'ONYX n'installe pas.
     /// </summary>
     internal static class CompteurJeu
     {
         // Identifiants des lignes, dans l'ORDRE d'affichage.
         public const string Bas1 = "low", Cpu = "cpu", CpuTemp = "cputemp", Gpu = "gpu", GpuTemp = "gputemp",
                             Vram = "vram", Watts = "gpuw", Ram = "ram", Reseau = "net", Heure = "heure",
-                            Duree = "duree", Courbe = "courbe", CpuMhz = "cpumhz", Disque = "disque", Batterie = "batterie";
+                            Duree = "duree", Courbe = "courbe", CpuMhz = "cpumhz", Disque = "disque", Batterie = "batterie",
+                            Ventilo = "gpufan";
 
-        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, CpuMhz, Gpu, GpuTemp, Vram, Watts, Ram, Disque, Reseau, Batterie, Heure, Duree, Courbe };
+        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, CpuMhz, Gpu, GpuTemp, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree, Courbe };
 
         /// <summary>Le libellé de chaque case à cocher des réglages.</summary>
         public static string Libelle(string id)
@@ -34,6 +36,7 @@ namespace BTOptimizer
                 case GpuTemp: return "Température de la carte graphique";
                 case Vram: return "Mémoire vidéo utilisée";
                 case Watts: return "Puissance de la carte graphique (W)";
+                case Ventilo: return "Ventilateur de la carte graphique";
                 case Ram: return "Mémoire (RAM)";
                 case Reseau: return "Débit réseau (réception et envoi)";
                 case Heure: return "Heure";
@@ -113,7 +116,7 @@ namespace BTOptimizer
             int n = 0;
             if (o.A(Cpu) || o.A(CpuTemp)) n++;
             if (o.A(Gpu) || o.A(GpuTemp)) n++;
-            foreach (string id in new[] { CpuMhz, Vram, Watts, Ram, Disque, Reseau, Batterie, Heure, Duree }) if (o.A(id)) n++;
+            foreach (string id in new[] { CpuMhz, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree }) if (o.A(id)) n++;
             return n;
         }
 
@@ -151,6 +154,7 @@ namespace BTOptimizer
                     case CpuMhz: w += 70; break;
                     case Vram: w += 122; break;
                     case Watts: w += 56; break;
+                    case Ventilo: w += 150; break;
                     case Ram: w += 74; break;
                     case Disque: w += 92; break;
                     case Reseau: w += 176; break;
@@ -202,6 +206,20 @@ namespace BTOptimizer
             string u = (utiliseMo / 1024.0).ToString("0.0", fr);
             if (totalMo <= 0) return u + " Go";
             return u + " / " + Math.Round(totalMo / 1024.0).ToString("0", fr) + " Go";
+        }
+
+        /// <summary>
+        /// Ventilateur de la carte graphique : « 1 450 tr/min · 42 % », « 1 450 tr/min », « 42 % »,
+        /// « à l'arrêt » (ventilateurs coupés au repos), « — » si la carte ne donne rien.
+        /// </summary>
+        public static string TexteVentilateur(double toursMin, double pourcent)
+        {
+            bool t = !double.IsNaN(toursMin) && toursMin >= 0, p = !double.IsNaN(pourcent) && pourcent >= 0;
+            if (!t && !p) return "—";
+            if ((t && toursMin < 1) || (!t && pourcent < 1)) return "à l'arrêt";
+            string tours = t ? Math.Round(toursMin).ToString("#,0", CultureInfo.InvariantCulture).Replace(',', ' ') + " tr/min" : null;
+            string pct = p ? Math.Round(pourcent).ToString("0", CultureInfo.InvariantCulture) + " %" : null;
+            return tours == null ? pct : pct == null ? tours : tours + " · " + pct;
         }
 
         /// <summary>

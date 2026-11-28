@@ -9,6 +9,8 @@ namespace BTOptimizer
         public string Name;
         public double TempC = double.NaN, LoadPct = double.NaN, CoreMhz = double.NaN, MemMhz = double.NaN, PowerW = double.NaN;
         public long VramUsedMB = -1, VramTotalMB = -1;
+        /// <summary>Ventilateur de la carte : tours par minute et consigne en %. NaN si la carte ne les donne pas.</summary>
+        public double FanRpm = double.NaN, FanPct = double.NaN;
     }
 
     /// <summary>

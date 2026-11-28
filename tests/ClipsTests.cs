@@ -71,6 +71,32 @@ namespace BTOptimizer.Tests
             Banc.Egal("même dossier, même extension", @"D:\Vidéos\Captures\Clutch.mp4",
                 Clips.CheminRenomme(@"D:\Vidéos\Captures\Fortnite 2026-11-26 21-04-11.mp4", "Clutch"));
 
+            // Déplacer.
+            var pris = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            Banc.Egal("déplacement : même nom dans le nouveau dossier", @"E:\Clips\Clutch.mp4", Clips.CibleDeplacement(@"D:\Vidéos\Captures\Clutch.mp4", @"E:\Clips", pris.Contains));
+            Banc.Egal("déplacement : barre finale du dossier tolérée", @"E:\Clips\Clutch.mp4", Clips.CibleDeplacement(@"D:\Vidéos\Captures\Clutch.mp4", @"E:\Clips\", pris.Contains));
+            Banc.Egal("déplacement : racine d'un disque", @"E:\Clutch.mp4", Clips.CibleDeplacement(@"D:\Vidéos\Clutch.mp4", @"E:\", pris.Contains));
+            pris.Add(@"E:\Clips\Clutch.mp4");
+            Banc.Egal("déplacement : nom pris, rien d'écrasé", @"E:\Clips\Clutch (2).mp4", Clips.CibleDeplacement(@"D:\Vidéos\Captures\Clutch.mp4", @"E:\Clips", pris.Contains));
+            pris.Add(@"E:\Clips\clutch (2).MP4");
+            Banc.Egal("déplacement : numéro suivant", @"E:\Clips\Clutch (3).mp4", Clips.CibleDeplacement(@"D:\Vidéos\Captures\Clutch.mp4", @"E:\Clips", pris.Contains));
+            Banc.Verifie("déplacement : déjà dans ce dossier (casse et barre finale ignorées)", true,
+                Clips.CibleDeplacement(@"E:\Clips\Clutch.mp4", @"e:\clips\", pris.Contains) == null);
+            Banc.Verifie("déplacement : aucun nom libre, aucun chemin", true, Clips.CibleDeplacement(@"D:\a.mp4", @"E:\Clips", p => true) == null);
+            Banc.Verifie("déplacement : entrées vides", true, Clips.CibleDeplacement(null, @"E:\Clips", null) == null && Clips.CibleDeplacement(@"D:\a.mp4", "", null) == null);
+            var suivis = new[] { @"C:\Users\u\Videos\Captures", @"C:\Users\u\Videos\" };
+            Banc.Verifie("dossier suivi : une racine", true, Clips.DejaSuivi(@"c:\users\u\videos", suivis, 3));
+            Banc.Verifie("dossier suivi : sous-dossier balayé (3 niveaux)", true, Clips.DejaSuivi(@"C:\Users\u\Videos\OBS\Fortnite\2026", suivis, 3));
+            Banc.Verifie("dossier trop profond : à ajouter", false, Clips.DejaSuivi(@"C:\Users\u\Videos\a\b\c\d", suivis, 3));
+            Banc.Verifie("dossier ailleurs : à ajouter", false, Clips.DejaSuivi(@"E:\Clips", suivis, 3));
+            Banc.Verifie("dossier au nom voisin d'une racine : à ajouter", false, Clips.DejaSuivi(@"C:\Users\u\Videos2", suivis, 3));
+            Banc.Verifie("dossier vide ou aucune racine : non suivi", false, Clips.DejaSuivi("", suivis, 3) || Clips.DejaSuivi(@"E:\Clips", null, 3));
+            string srcClips = CatalogueTests.Source("ClipsMachine.cs"), srcForm = CatalogueTests.Source("ClipsForm.cs");
+            Banc.Verifie("déplacement : jamais d'écrasement (File.Move à deux arguments)", true,
+                srcClips.Contains("File.Move(chemin, cible);") && !srcClips.Contains("File.Move(chemin, cible, true)"));
+            Banc.Verifie("déplacement : hors du fil d'interface, dossier suivi ensuite", true,
+                srcForm.Contains("Clips.Deplace(chemin, dossier, out e)") && srcForm.Contains("if (!Clips.DejaSuivi(dossier)) Clips.AjouteDossier(dossier);"));
+
             // Limite d'espace.
             Banc.Egal("limite relue", "50", Clips.LitLimite(" 50\r\n").ToString());
             Banc.Verifie("limite absente, nulle, négative, absurde ou illisible : aucune", true,

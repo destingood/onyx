@@ -99,6 +99,8 @@
     <Compile Include="..\src\CartePostale.cs" />
     <Compile Include="..\src\ServeursDiscord.cs" />
     <Compile Include="..\src\FpsEtwCalcul.cs" />
+    <Compile Include="..\src\FicheAppli.cs" />
+    <Compile Include="..\src\PageDemarrage.cs" />
     <Compile Include="..\src\JeuxCompteSteam.cs" />
     <Compile Include="..\src\ListeSouhaitsGog.cs" />
     <Compile Include="..\src\CaptureEcran.cs" />

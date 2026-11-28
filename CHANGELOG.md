@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.13 — Compteur de FPS fiable
+## v16.13 — Compteur de FPS fiable, applis (fiche et désinstallation), ventilateur de la carte graphique, page d'ouverture, mesures par partie, déplacement de clips
 
 - **Compteur de FPS : le chiffre ne monte et ne descend plus tout seul.** Windows ne remet pas
   les images une par une mais par paquets, au pire une fois par seconde. Le compteur comptait
@@ -17,6 +17,25 @@ l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche au
 - **Contrôle en ligne de commande** : `BTOptimizer.exe -fps [jeu.exe] [secondes]` (administrateur)
   relève le compteur chaque seconde et le compare au compte exact des images ; résultat dans
   `bt-optimizer-log.txt`. Lecture seule.
+- **Applis de jeu : « Fiche… » et « Désinstaller… ».** Dans « Bibliothèques & applis de jeu », on
+  clique une ligne puis « Fiche… » : version, éditeur, description et licence, lus par
+  `winget show` (rien n'est modifié). « Désinstaller… » retire une appli installée par
+  `winget uninstall`, après confirmation. Les bibliothèques essentielles (Visual C++, DirectX,
+  .NET, OpenAL) ne se désinstallent pas d'ici : des jeux en dépendent.
+- **Compteur en jeu : ventilateur de la carte graphique.** Nouvelle mesure au choix (16 au total) :
+  « 1 450 tr/min · 42 % », ou « à l'arrêt » quand la carte coupe ses ventilateurs au repos. Lue
+  par l'API du constructeur, sans pilote. Les ventilateurs du processeur et du boîtier restent
+  absents : ils demandent un pilote noyau, qu'ONYX n'installe pas.
+- **Page d'ouverture au choix.** Menu ⋯ → Système → ⭐ ONYX → « Ouvrir ONYX sur la page… » : ONYX
+  s'ouvre sur la page voulue (Mes jeux, Bons plans, Matériel en direct…) au lieu du Centre de
+  contrôle.
+- **Journal de jeu : charge et températures de chaque partie.** Avec « Mesurer chaque partie »
+  coché, le bilan de fin de partie et la fiche du jeu donnent, en plus des FPS, la charge moyenne
+  et la température la plus haute du processeur et de la carte graphique, et la RAM la plus haute.
+  Les parties déjà enregistrées restent lisibles.
+- **Clips : « Déplacer vers… ».** Range les clips choisis dans un autre dossier, autre disque
+  compris. Rien n'est écrasé (un nom déjà pris devient « nom (2) ») ni supprimé ; le dossier
+  d'arrivée est ajouté aux dossiers suivis pour que les clips restent dans la liste.
 
 ## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne, notifications au choix, jeux populaires, mode console
 

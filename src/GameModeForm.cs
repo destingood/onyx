@@ -72,7 +72,7 @@ namespace BTOptimizer
             // Bilan de partie : durée et FPS mesurés, en notification à la fermeture du jeu.
             _fps = new CheckBox
             {
-                Text = "Mesurer les FPS de chaque partie (bilan en notification à la fermeture du jeu)",
+                Text = "Mesurer chaque partie : FPS, charge et températures (bilan à la fermeture du jeu)",
                 Location = new Point(18, 420), Size = new Size(524, 24), Checked = JournalJeu.MesureFps
             };
             Controls.Add(_fps);
