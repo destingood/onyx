@@ -5,6 +5,35 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.14 — Installation en ligne, mises à jour automatiques en option, « Ignorer cette version »
+
+- **Installateur en ligne : `ONYX-Installation.exe` (2 Mo).** Un seul petit fichier à donner : il
+  lit sur GitHub quelle est la dernière version, vérifie la place sur le disque, télécharge
+  l'installateur complet, contrôle son empreinte SHA256, puis l'installe sans autre question.
+  Le même fichier installe toujours la dernière version. Aucune statistique d'installation,
+  aucun programme proposé en plus : une seule adresse est contactée, GitHub.
+- **« Installer les mises à jour automatiquement »** (menu ⋯, coupé par défaut). Une nouvelle
+  version est téléchargée en fond, jamais pendant une partie, contrôlée, puis installée sans
+  aucune fenêtre quand ONYX est réduit dans la zone de notification et qu'aucun jeu ne tourne.
+  ONYX se rouvre seul, réduit comme il l'était, et une notification dit ce qui a été fait.
+  Fenêtre d'ONYX ouverte : rien ne s'installe sans ton clic ; le bandeau reste, et son bouton
+  installe aussitôt puisque le fichier est déjà là. Sans cette option, rien ne change : ONYX
+  prévient et attend.
+- **« Ignorer cette version »** dans la fenêtre de mise à jour : plus de bandeau, d'annonce ni de
+  notification pour cette version-là ; la suivante est de nouveau proposée, et le menu ⋯ →
+  « Vérifier les mises à jour » la montre toujours.
+- **Mise à jour importante.** Un correctif de sécurité ou de fiabilité peut être publié comme
+  « important » : il ne s'ignore pas (le rappel revient), mais il n'est jamais installé de force.
+- **Place sur le disque vérifiée avant le téléchargement** : s'il en manque, ONYX le dit avec
+  les chiffres (« il faut 367 Mo libres, il en reste 120 ») et ne télécharge rien.
+- **Un installateur déjà téléchargé n'est pas retéléchargé** : mise à jour reportée puis reprise,
+  le fichier présent est recontrôlé et réutilisé.
+- **Installateur tenu entre son contrôle et son lancement** : aucun autre programme ne peut le
+  remplacer dans l'intervalle ; un fichier modifié n'est pas lancé, et ONYX reste comme il est.
+- **Corrigé : les anciens installateurs n'étaient jamais supprimés.** Le ménage du démarrage
+  regardait le dossier temporaire, pas son sous-dossier `ONYX-maj` où ils sont téléchargés :
+  chaque mise à jour laissait ses 58 Mo. Ils sont retirés au prochain lancement.
+
 ## v16.13 — Compteur de FPS fiable, applis (fiche et désinstallation), ventilateur de la carte graphique, page d'ouverture, mesures par partie, déplacement de clips, jaquettes des Bons plans
 
 - **Compteur de FPS : le chiffre ne monte et ne descend plus tout seul.** Windows ne remet pas

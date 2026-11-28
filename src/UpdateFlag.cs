@@ -92,6 +92,28 @@ namespace BTOptimizer
             try { if (!string.IsNullOrWhiteSpace(version)) File.WriteAllText(CheminNotif, version.Trim()); } catch { }
         }
 
+        private static string CheminIgnoree { get { return AppPaths.File("bt-maj-ignoree.txt"); } }
+
+        /// <summary>« Ignorer cette version » : plus de bandeau, d'annonce ni de notification pour
+        /// elle, et pas d'installation automatique. La version suivante est de nouveau proposée ;
+        /// la vérification à la demande (menu ⋯) montre toujours la version ignorée.</summary>
+        public static void Ignore(string version)
+        {
+            try { if (!string.IsNullOrWhiteSpace(version)) File.WriteAllText(CheminIgnoree, version.Trim()); } catch { }
+        }
+
+        /// <summary>Une mise à jour importante ne s'ignore pas : la marque est retirée.</summary>
+        public static void OublieIgnoree()
+        {
+            try { if (File.Exists(CheminIgnoree)) File.Delete(CheminIgnoree); } catch { }
+        }
+
+        public static bool EstIgnoree(string version)
+        {
+            try { return File.Exists(CheminIgnoree) && MajLogique.EstIgnoree(version, File.ReadAllText(CheminIgnoree)); }
+            catch { return false; }
+        }
+
         public static void Clear()
         {
             try { if (File.Exists(Chemin)) File.Delete(Chemin); }
@@ -135,6 +157,7 @@ namespace BTOptimizer
                 string v = Parse(File.ReadAllText(Chemin));
                 if (v == null) { Clear(); return null; }
                 if (!ADevoirSignaler(v, Updater.CurrentVersion())) { Clear(); return null; }
+                if (EstIgnoree(v)) return null;   // version ignorée : ni bandeau, ni annonce
                 return v;
             }
             catch { return null; }

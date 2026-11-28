@@ -2195,6 +2195,20 @@ namespace BTOptimizer
                 case "WindowLagForm": return new WindowLagForm(log);
                 case "HelpNavForm": return new HelpNavForm(log);
                 case "AboutForm": return new AboutForm();
+                case "MajForm":
+                case "MajFormImportante":
+                {
+                    // Version factice : la fenêtre s'ouvre sur « mise à jour disponible », rien n'est téléchargé.
+                    var rel = new Updater.Release
+                    {
+                        Ver = new Version(99, 0), Tag = "v99.0", Size = 61000000,
+                        Notes = "## Nouveautés\n- **Installation en ligne** : un seul petit fichier à donner.\n- Mises à jour automatiques en option.\n- Corrigé : les anciens installateurs n'étaient jamais supprimés.",
+                        AssetUrl = "https://github.com/destingood/onyx-releases/releases/download/v99.0/ONYX-Setup-99.0.0.0.exe",
+                        AssetName = "ONYX-Setup-99.0.0.0.exe",
+                        Obligatoire = name == "MajFormImportante"
+                    };
+                    return new MajForm(() => Tuple.Create(rel, ""), (a, b) => null);
+                }
                 case "SpeedTestForm": return new SpeedTestForm(log);
                 case "ControllerForm": return new ControllerForm(log);
                 case "StatsOverlayForm": return new StatsOverlayForm(log);
@@ -2231,10 +2245,16 @@ namespace BTOptimizer
                 Pump(3000);   // laisse le OnLoad / les scans de fond peupler la fenêtre
                 using (var bmp = new System.Drawing.Bitmap(Math.Max(1, f.Width), Math.Max(1, f.Height)))
                 {
-                    using (var g = System.Drawing.Graphics.FromImage(bmp))
+                    // Deux passes : hors écran, rien n'est dessiné avant la première capture, qui
+                    // déclenche le dessin ; le dernier contrôle peint peut la manquer (rectangle blanc).
+                    for (int passe = 0; passe < 2; passe++)
                     {
-                        IntPtr hdc = g.GetHdc();
-                        try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); }
+                        using (var g = System.Drawing.Graphics.FromImage(bmp))
+                        {
+                            IntPtr hdc = g.GetHdc();
+                            try { PrintWindow(f.Handle, hdc, PW_RENDERFULLCONTENT); } finally { g.ReleaseHdc(hdc); }
+                        }
+                        if (passe == 0) Pump(200);
                     }
                     bmp.Save(System.IO.Path.Combine(dir, "form-" + name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
                 }
@@ -3012,14 +3032,17 @@ namespace BTOptimizer
                 f.Show();
                 if (!Attend(() => f.Etat == "dispo", 3000)) { err++; Console.WriteLine("  KO maj : état « dispo » attendu, obtenu " + f.Etat); return; }
                 if (f.LibellePrincipal != "Mettre à jour") { err++; Console.WriteLine("  KO maj : bouton principal « " + f.LibellePrincipal + " »."); }
+                if (f.LibelleTertiaire != "Ignorer cette version") { err++; Console.WriteLine("  KO maj : bouton « Ignorer cette version » absent (« " + f.LibelleTertiaire + " »)."); }
                 if (f.TexteNotes.Contains("**") || f.TexteNotes.Contains("##") || f.TexteNotes.Contains("Installation") || !f.TexteNotes.Contains("• Gros gain"))
                 { err++; Console.WriteLine("  KO maj : notes mal nettoyées : " + f.TexteNotes.Replace("\r\n", " | ")); }
                 f.ClicPrincipal();
                 if (!Attend(() => f.TexteDetail.Contains("50 %"), 3000)) { err++; Console.WriteLine("  KO maj : progression non affichée (« " + f.TexteDetail + " »)."); }
                 if (f.LibelleSecondaire != "Annuler") { err++; Console.WriteLine("  KO maj : pas de bouton « Annuler » pendant le téléchargement."); }
+                if (f.LibelleTertiaire != null) { err++; Console.WriteLine("  KO maj : « Ignorer cette version » encore affiché pendant le téléchargement."); }
                 f.ClicSecondaire();
                 if (!Attend(() => f.Etat == "dispo", 3000) || !f.TexteDetail.Contains("annulé")) { err++; Console.WriteLine("  KO maj : annulation mal gérée (" + f.Etat + ", « " + f.TexteDetail + " »)."); }
                 if (lance != null) { err++; Console.WriteLine("  KO maj : installateur lancé après annulation."); }
+                if (f.LibelleTertiaire == null) { err++; Console.WriteLine("  KO maj : « Ignorer cette version » non revenu après l'annulation."); }
 
                 // 3) Téléchargement terminé : l'installateur est lancé.
                 bloque.Set();
@@ -3037,6 +3060,58 @@ namespace BTOptimizer
                 if (!Attend(() => f.Etat == "erreur", 3000) || f.LibellePrincipal != "Réessayer" || !f.TexteDetail.Contains("refusé"))
                 { err++; Console.WriteLine("  KO maj : échec de lancement mal signalé (" + f.Etat + ", « " + f.TexteDetail + " »)."); }
                 f.Dispose();
+
+                // 4 bis) Mise à jour importante : pas de bouton « Ignorer », marque invisible dans les notes.
+                var importante = new Updater.Release
+                {
+                    Ver = new Version(99, 0), Tag = "v99.0", Size = 1000, Obligatoire = true,
+                    Notes = "## Correctif\n- Faille corrigée\n<!-- onyx:obligatoire -->",
+                    AssetUrl = neuve.AssetUrl, AssetName = "ONYX-Setup.exe"
+                };
+                f = new MajForm(() => Tuple.Create(importante, ""), (a, b) => null);
+                f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+                f.Show();
+                if (!Attend(() => f.Etat == "dispo", 3000)) { err++; Console.WriteLine("  KO maj : mise à jour importante, état " + f.Etat); }
+                else
+                {
+                    if (f.LibelleTertiaire != null) { err++; Console.WriteLine("  KO maj : une mise à jour importante peut être ignorée."); }
+                    if (f.TexteNotes.Contains("onyx") || !f.TexteNotes.Contains("Faille corrigée"))
+                    { err++; Console.WriteLine("  KO maj : marque visible dans les notes : " + f.TexteNotes.Replace("\r\n", " | ")); }
+                    f.ClicTertiaire(); Pump(50);
+                    if (f.IsDisposed) { err++; Console.WriteLine("  KO maj : mise à jour importante ignorée par ClicTertiaire."); }
+                }
+                f.Dispose();
+
+                // 4 ter) « Ignorer cette version » : marque écrite, rappel prévenu, fenêtre fermée.
+                // Le fichier est celui de l'utilisateur quand ONYX est installé : il est remis tel quel.
+                string cheminIgnoree = AppPaths.File("bt-maj-ignoree.txt");
+                string avantIgnoree = null;
+                try { if (System.IO.File.Exists(cheminIgnoree)) avantIgnoree = System.IO.File.ReadAllText(cheminIgnoree); } catch { }
+                try
+                {
+                    UpdateFlag.OublieIgnoree();
+                    string ignoree = null;
+                    f = new MajForm(() => Tuple.Create(neuve, ""), (a, b) => null);
+                    f.QuandIgnoree = v => ignoree = v;
+                    f.StartPosition = FormStartPosition.Manual; f.Location = new System.Drawing.Point(-20000, -20000);
+                    f.Show();
+                    Attend(() => f.Etat == "dispo", 3000);
+                    f.ClicTertiaire(); Pump(50);
+                    if (ignoree != "99.00") { err++; Console.WriteLine("  KO maj : version ignorée non signalée (« " + ignoree + " »)."); }
+                    if (!UpdateFlag.EstIgnoree("99.0") || UpdateFlag.EstIgnoree("99.1")) { err++; Console.WriteLine("  KO maj : marque de version ignorée fausse."); }
+                    if (!f.IsDisposed) { err++; Console.WriteLine("  KO maj : fenêtre restée ouverte après « Ignorer cette version »."); }
+                    UpdateFlag.OublieIgnoree();
+                    if (UpdateFlag.EstIgnoree("99.0")) { err++; Console.WriteLine("  KO maj : marque de version ignorée non retirée."); }
+                }
+                finally
+                {
+                    try
+                    {
+                        if (avantIgnoree != null) System.IO.File.WriteAllText(cheminIgnoree, avantIgnoree);
+                        else UpdateFlag.OublieIgnoree();
+                    }
+                    catch { }
+                }
 
                 // 5) Depuis le tableau de bord : une seule fenêtre, même après deux appels.
                 var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;

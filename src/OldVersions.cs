@@ -113,7 +113,10 @@ namespace BTOptimizer
             long freed = 0;
             try
             {
+                // Les installateurs téléchargés vivent dans %TEMP%\ONYX-maj : le ménage ne regardait
+                // que %TEMP%, et chaque mise à jour laissait donc ses 58 Mo derrière elle.
                 var found = Find(Path.GetTempPath());
+                found.AddRange(Find(Path.Combine(Path.GetTempPath(), MajLogique.DossierMaj)));
                 if (found.Count == 0) return 0;
                 var dead = Obsolete(found, Updater.CurrentVersion(), DateTime.Now);
                 foreach (var c in dead)

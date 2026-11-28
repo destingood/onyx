@@ -48,6 +48,13 @@ namespace BTOptimizer
         /// pas ouvrir l'application.</summary>
         public const string ArgsSilencieux = "/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELANCE=1";
 
+        /// <summary>Installation automatique : aucune fenêtre du tout (ONYX est réduit, l'utilisateur
+        /// fait autre chose), puis ONYX est rouvert — réduit lui aussi, voir RetourDiscret.</summary>
+        public const string ArgsDiscrets = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELANCE=1";
+
+        /// <summary>Dossier, sous %TEMP%, où l'installateur est téléchargé et où le ménage le retire.</summary>
+        public const string DossierMaj = "ONYX-maj";
+
         private const string Format = "yyyy-MM-dd HH:mm";
 
         public static string Horodatage(DateTime t) { return t.ToString(Format, CultureInfo.InvariantCulture); }
@@ -104,7 +111,9 @@ namespace BTOptimizer
             if (string.IsNullOrWhiteSpace(md)) return "";
             var sb = new StringBuilder();
             bool vide = true;   // la dernière ligne écrite est vide (ou rien encore)
-            foreach (string brute in md.Replace("\r", "").Split('\n'))
+            // Les commentaires HTML ne s'affichent pas sur GitHub : ils portent les marques lues par
+            // ONYX (mise à jour importante) et n'ont rien à faire dans une fenêtre.
+            foreach (string brute in Regex.Replace(md, "<!--.*?-->", "", RegexOptions.Singleline).Replace("\r", "").Split('\n'))
             {
                 string l = brute.Trim();
                 bool titre = l.StartsWith("#");
@@ -144,6 +153,107 @@ namespace BTOptimizer
             if (total <= 0) return f + " Mo";
             int pct = (int)Math.Min(100, fait * 100 / total);
             return f + " / " + (total / 1048576.0).ToString("0.0", fr) + " Mo — " + pct + " %";
+        }
+
+        // ------------------------------------------------------------------ fichier à télécharger
+
+        /// <summary>
+        /// Lequel des fichiers d'une release est l'installateur à télécharger ? 3 : l'installateur
+        /// complet (« ONYX-Setup-16.14.0.0.exe ») ; 2 : un autre programme dont le nom contient
+        /// « setup » ; 1 : un autre programme ; 0 : pas un programme. L'installateur léger
+        /// (« ONYX-Installation.exe ») ne fait que télécharger le complet : il ne doit jamais être
+        /// pris pour la mise à jour, quel que soit l'ordre des fichiers de la release.
+        /// </summary>
+        public static int RangInstallateur(string nom)
+        {
+            if (string.IsNullOrEmpty(nom) || !nom.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return 0;
+            if (nom.StartsWith("ONYX-Setup-", StringComparison.OrdinalIgnoreCase)) return 3;
+            return nom.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0 ? 2 : 1;
+        }
+
+        // ------------------------------------------------------------------ ignorer, importante
+
+        /// <summary>« v16.14 », « 16.14.0.0 », « ONYX 16.14 » → « 16.14 » ; null si illisible.</summary>
+        private static string Numero(string version)
+        {
+            if (string.IsNullOrEmpty(version)) return null;
+            Match m = Regex.Match(version, @"(\d{1,6})\.(\d{1,6})");
+            return m.Success ? int.Parse(m.Groups[1].Value) + "." + int.Parse(m.Groups[2].Value) : null;
+        }
+
+        /// <summary>Même version publiée (Majeur.Mineur), quelle que soit l'écriture.</summary>
+        public static bool MemeVersion(string a, string b)
+        {
+            string x = Numero(a);
+            return x != null && x == Numero(b);
+        }
+
+        /// <summary>« Ignorer cette version » ne vaut que pour CETTE version : la suivante est de
+        /// nouveau proposée.</summary>
+        public static bool EstIgnoree(string dispo, string ignoree) { return MemeVersion(dispo, ignoree); }
+
+        /// <summary>Mise à jour importante (correctif de sécurité ou de fiabilité) : les notes de la
+        /// release portent le commentaire « &lt;!-- onyx:obligatoire --&gt; », invisible sur GitHub.
+        /// Elle ne peut pas être ignorée ; elle n'est pas installée de force pour autant.</summary>
+        public static bool EstObligatoire(string notes)
+        {
+            return !string.IsNullOrEmpty(notes) && Regex.IsMatch(notes, @"<!--\s*onyx:obligatoire\s*-->", RegexOptions.IgnoreCase);
+        }
+
+        // ------------------------------------------------------------------ espace disque
+
+        /// <summary>Place à avoir avant de télécharger : l'installateur, l'application qu'il pose
+        /// (à peu près deux fois sa taille avec ce qu'elle décompresse au premier lancement), et
+        /// 200 Mo de marge — un disque plein à ras bord en pleine installation laisse un ONYX cassé.</summary>
+        public static long EspaceRequis(long taille) { return Math.Max(0L, taille) * 3 + 200L * 1048576; }
+
+        /// <summary>Espace libre inconnu (négatif) : on ne bloque pas sur un doute.</summary>
+        public static bool EspaceSuffisant(long libre, long taille) { return libre < 0 || libre >= EspaceRequis(taille); }
+
+        public static string TexteEspace(long libre, long taille)
+        {
+            var fr = CultureInfo.GetCultureInfo("fr-FR");
+            return "Pas assez de place sur le disque : il faut " + (EspaceRequis(taille) / 1048576.0).ToString("0", fr)
+                 + " Mo libres, il en reste " + (Math.Max(0L, libre) / 1048576.0).ToString("0", fr) + ". Rien n'a été téléchargé.";
+        }
+
+        // ------------------------------------------------------------------ installation automatique
+
+        /// <summary>L'installation automatique n'a lieu que si l'option est cochée, que le fichier
+        /// vient de GitHub et que son empreinte est publiée : sans empreinte, rien ne prouve que le
+        /// fichier reçu est celui qui a été publié, et personne n'est devant l'écran pour en juger.</summary>
+        public static bool AutoPossible(bool auto, bool lienGitHub, string sha256)
+        {
+            return auto && lienGitHub && !string.IsNullOrEmpty(sha256);
+        }
+
+        /// <summary>Installer maintenant, sans rien demander ? Seulement quand ONYX est réduit dans
+        /// la zone de notification, qu'aucun jeu ne tourne et que la fenêtre de mise à jour n'est pas
+        /// ouverte : ONYX se ferme une minute, ses services en jeu avec lui.</summary>
+        public static bool MomentPropice(bool fenetreVisible, bool jeuEnCours, bool fenetreMajOuverte)
+        {
+            return !fenetreVisible && !jeuEnCours && !fenetreMajOuverte;
+        }
+
+        /// <summary>Marque écrite juste avant une installation automatique : « 16.14|2026-11-28 12:00 ».</summary>
+        public static string MarqueRetour(string version, DateTime t) { return (version ?? "").Trim() + "|" + Horodatage(t); }
+
+        /// <summary>
+        /// ONYX redémarre-t-il après une installation automatique ? Alors il revient réduit, comme
+        /// il l'était. Renvoie la version installée, ou null : marque absente ou illisible, vieille
+        /// de plus de 15 minutes (l'installation prend une minute), ou version qui tourne différente
+        /// de celle annoncée (l'installation n'a pas eu lieu).
+        /// </summary>
+        public static string RetourDiscret(string marque, DateTime maintenant, string versionCourante)
+        {
+            if (string.IsNullOrWhiteSpace(marque)) return null;
+            string[] p = marque.Trim().Split('|');
+            if (p.Length != 2) return null;
+            DateTime t;
+            if (!DateTime.TryParseExact(p[1].Trim(), Format, CultureInfo.InvariantCulture, DateTimeStyles.None, out t)) return null;
+            double minutes = (maintenant - t).TotalMinutes;
+            if (minutes < -1 || minutes > 15) return null;
+            return MemeVersion(p[0], versionCourante) ? p[0].Trim() : null;
         }
     }
 }

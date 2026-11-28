@@ -20,6 +20,10 @@ namespace BTOptimizer
     ///
     /// Rien n'est téléchargé sans le clic sur « Mettre à jour ». Non modale : l'application reste
     /// utilisable pendant le téléchargement.
+    ///
+    /// Trois réponses possibles : « Mettre à jour », « Plus tard » (le rappel revient au prochain
+    /// lancement) et « Ignorer cette version » (plus de rappel pour elle ; la suivante est
+    /// proposée). Une mise à jour importante n'a pas le troisième bouton.
     /// </summary>
     internal sealed class MajForm : Form
     {
@@ -31,10 +35,13 @@ namespace BTOptimizer
         private readonly Label _titre, _statut, _detail;
         private readonly TextBox _notes;
         private readonly Barre _barre;
-        private readonly PillButton _principal, _secondaire;
+        private readonly PillButton _principal, _secondaire, _tertiaire;
         private Updater.Release _rel;
         private CancellationTokenSource _annulation;
         private Action _actionPrincipale, _actionSecondaire;
+
+        /// <summary>Appelée quand l'utilisateur choisit « Ignorer cette version » (« 16.14 »).</summary>
+        internal Action<string> QuandIgnoree;
 
         /// <summary>recherche, ajour, indispo, dispo, telechargement, erreur, installation.</summary>
         internal string Etat { get; private set; }
@@ -45,6 +52,8 @@ namespace BTOptimizer
         internal string LibelleSecondaire { get { return _secondaire.Visible ? _secondaire.Text : null; } }
         internal void ClicPrincipal() { var a = _actionPrincipale; if (a != null) a(); }
         internal void ClicSecondaire() { var a = _actionSecondaire; if (a != null) a(); }
+        internal string LibelleTertiaire { get { return _tertiaire.Visible ? _tertiaire.Text : null; } }
+        internal void ClicTertiaire() { if (_tertiaire.Visible) Ignore(); }
 
         /// <param name="verif">Interroge le serveur des mises à jour (appelé hors du fil d'interface).</param>
         /// <param name="lanceur">Lance l'installateur téléchargé : null si c'est parti, sinon l'erreur.</param>
@@ -76,9 +85,11 @@ namespace BTOptimizer
             _detail = new Label { Location = new Point(22, 298), Size = new Size(496, 32), ForeColor = FpsUi.Dim2, Font = FpsUi.Small, UseMnemonic = false };
             _principal = new PillButton("Mettre à jour") { Size = new Size(150, 32), Location = new Point(368, 334) };
             _secondaire = new PillButton("Fermer") { Size = new Size(120, 32), Location = new Point(240, 334) };
+            _tertiaire = new PillButton("Ignorer cette version") { Size = new Size(176, 32), Location = new Point(22, 334), Visible = false };
             _principal.Click += (s, e) => ClicPrincipal();
             _secondaire.Click += (s, e) => ClicSecondaire();
-            Controls.AddRange(new Control[] { _titre, _statut, _notes, _barre, _detail, _principal, _secondaire });
+            _tertiaire.Click += (s, e) => ClicTertiaire();
+            Controls.AddRange(new Control[] { _titre, _statut, _notes, _barre, _detail, _principal, _secondaire, _tertiaire });
             AcceptButton = _principal;
 
             FormClosing += (s, e) =>
@@ -104,6 +115,7 @@ namespace BTOptimizer
             _actionSecondaire = asec;
             // Sans bouton principal, le secondaire prend sa place à droite.
             _secondaire.Left = principal != null ? 240 : 398;
+            _tertiaire.Visible = false;   // « Ignorer cette version » : seulement devant une version proposée
         }
 
         private void Recherche()
@@ -146,8 +158,10 @@ namespace BTOptimizer
                 Boutons(null, null, "Fermer", Close);
                 return;
             }
-            _titre.Text = "Version " + Court(rel.Ver) + " disponible";
-            _statut.Text = "Tu as la version " + Court(cur) + ". Tes réglages, la mémoire du Copilote et ton journal sont conservés.";
+            _titre.Text = "Version " + Court(rel.Ver) + (rel.Obligatoire ? " : mise à jour importante" : " disponible");
+            _statut.Text = rel.Obligatoire
+                ? "Tu as la version " + Court(cur) + ". Correctif important : cette version ne s'ignore pas. Tes réglages et ton journal sont conservés."
+                : "Tu as la version " + Court(cur) + ". Tes réglages, la mémoire du Copilote et ton journal sont conservés.";
             string notes = MajLogique.NotesLisibles(rel.Notes, 1500);
             _notes.Text = notes.Length > 0 ? notes.Replace("\n", "\r\n") : "Aucune note de version publiée.";
             _notes.Visible = true;
@@ -165,6 +179,19 @@ namespace BTOptimizer
             _detail.Text = "Téléchargement de " + SteamGames.Human(rel.Size) + " depuis GitHub, empreinte vérifiée, "
                          + "puis installation sans assistant. ONYX se ferme et se rouvre tout seul.";
             Boutons("Mettre à jour", Telecharge, "Plus tard", Close);
+            _tertiaire.Visible = !rel.Obligatoire;
+        }
+
+        /// <summary>« Ignorer cette version » : plus de bandeau, d'annonce ni de notification pour
+        /// elle ; la suivante sera proposée. Une mise à jour importante n'a pas ce bouton.</summary>
+        private void Ignore()
+        {
+            var rel = _rel;
+            if (rel == null || rel.Ver == null || rel.Obligatoire) return;
+            string v = Court(rel.Ver);
+            try { UpdateFlag.Ignore(v); } catch { }
+            try { var a = QuandIgnoree; if (a != null) a(v); } catch { }
+            Close();
         }
 
         private void Telecharge()

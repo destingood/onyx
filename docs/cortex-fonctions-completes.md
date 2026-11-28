@@ -237,6 +237,12 @@ Relevé du 27/11/2026.
 | Recommandations de matériel Razer par catégorie | sans objet |
 | Mode invité ou compte Razer, fusion des données | sans objet (aucun compte) |
 | Mise à jour, canal bêta (Insider), retour d'expérience | ✅ mise à jour ; préversions v16.12 |
+| Installateur léger en ligne (lit la dernière version, contrôle la place sur le disque, télécharge puis installe) | ✅ v16.14 (`ONYX-Installation.exe`, empreinte SHA256 contrôlée) |
+| Mise à jour reportable, version à ignorer, mise à jour obligatoire | ✅ v16.14 (« Plus tard », « Ignorer cette version » ; une mise à jour importante ne s'ignore pas, mais n'est jamais installée de force) |
+| Mise à jour appliquée en arrière-plan | ✅ v16.14, en option coupée par défaut (hors partie, ONYX réduit dans la zone de notification) |
+| Module déjà téléchargé non retéléchargé, ménage des anciens installateurs | ✅ v16.14 |
+| Installation par modules, service Windows de mise à jour | 🚫 ONYX tient en un seul exécutable ; un service qui tourne en permanence pour une mise à jour par semaine n'a pas d'intérêt |
+| Promotion d'autres logiciels dans l'installateur, statistiques d'installation | 🚫 par choix : rien d'autre n'est installé, rien ne sort du PC |
 | Collecte de données d'usage (activée dans la configuration) | sans objet : rien ne sort du PC |
 
 ---
@@ -259,8 +265,11 @@ Relevé du 27/11/2026.
 9. ~~**Souhaits Humble.**~~ Écarté : connexion au compte nécessaire.
 10. **Clips automatiques par analyse d'image pour Fortnite** : gros chantier, modèle de reconnaissance à construire.
 11. ~~**Applis : fiche et désinstallation**, **ventilateur de la carte graphique au compteur**, **page d'ouverture au choix**, **charge et températures par partie**, **déplacer des clips**~~ : fait en v16.13.
+12. ~~**Installation et mise à jour** : installateur en ligne, installation automatique en option, version à ignorer, mise à jour importante, contrôle de la place sur le disque~~ : fait en v16.14.
 
-## Ce qui reste absent, et pourquoi (état v16.13)
+## Ce qui reste absent, et pourquoi (état v16.14)
+- **Installation par modules et mises à jour partielles** : Cortex télécharge chaque module à part. ONYX est un seul exécutable de 58 Mo : le découper compliquerait l'installation sans gain mesurable. Pas de reprise d'un téléchargement interrompu non plus, pour la même raison.
+- **Service Windows de mise à jour, statistiques d'installation, autres logiciels proposés à l'installation** : écartés par choix (rien ne tourne en permanence, rien ne sort du PC, rien d'autre n'est installé).
 - **Clips automatiques et pseudo en jeu** : Cortex reconnaît les moments forts par analyse d'image, avec un modèle par jeu. ONYX n'en a pas ; le construire est un chantier à part.
 - **Ventilateur, tension et puissance du processeur, ventilateurs du boîtier** : leur lecture demande un pilote noyau, qu'ONYX n'installe pas.
 - **Notes des utilisateurs et historique des versions des applis** : données du serveur de Razer.

@@ -13,7 +13,8 @@ namespace BTOptimizer
     /// l'ancienne version en gardant les données (elles vivent à côté, voir AppPaths).
     ///
     /// Règles tenues :
-    ///  • RIEN n'est téléchargé ni installé sans un clic explicite ;
+    ///  • RIEN n'est téléchargé ni installé sans un clic explicite — sauf si l'utilisateur a coché
+    ///    lui-même « Installer les mises à jour automatiquement » (coupé par défaut, voir MajAuto) ;
     ///  • le fichier ne peut venir QUE de github.com (une réponse détournée ne peut pas faire
     ///    exécuter n'importe quoi) ;
     ///  • si aucune version n'est publiée, l'app le dit franchement au lieu d'inventer.
@@ -98,6 +99,8 @@ namespace BTOptimizer
             public long Size;
             /// <summary>Empreinte SHA256 annoncée (hex minuscules), ou null si la source n'en donne pas.</summary>
             public string Sha256;
+            /// <summary>Mise à jour importante : elle ne peut pas être ignorée (voir MajLogique.EstObligatoire).</summary>
+            public bool Obligatoire;
         }
 
         /// <summary>« v15.58 », « 15.58.0.0 », « ONYX 15.58 » → Version. null si illisible. PUR.</summary>
@@ -172,6 +175,9 @@ namespace BTOptimizer
                     if (r.TryGetProperty("size", out sz) && sz.ValueKind == JsonValueKind.Number) rel.Size = sz.GetInt64();
                     JsonElement h;
                     if (r.TryGetProperty("sha256", out h) && h.ValueKind == JsonValueKind.String) rel.Sha256 = MajLogique.Sha256DuDigest(h.GetString());
+                    JsonElement ob;
+                    rel.Obligatoire = (r.TryGetProperty("mandatory", out ob) && ob.ValueKind == JsonValueKind.True)
+                                   || MajLogique.EstObligatoire(rel.Notes);
                     return rel;
                 }
             }
@@ -194,6 +200,8 @@ namespace BTOptimizer
                     rel.Ver = ParseTag(rel.Tag);
                     JsonElement body;
                     if (r.TryGetProperty("body", out body) && body.ValueKind == JsonValueKind.String) rel.Notes = body.GetString();
+                    rel.Obligatoire = MajLogique.EstObligatoire(rel.Notes);
+                    int rang = 0;   // rang du fichier retenu, voir MajLogique.RangInstallateur
                     JsonElement assets;
                     if (r.TryGetProperty("assets", out assets) && assets.ValueKind == JsonValueKind.Array)
                         foreach (var a in assets.EnumerateArray())
@@ -202,10 +210,11 @@ namespace BTOptimizer
                             if (!a.TryGetProperty("name", out nm) || nm.ValueKind != JsonValueKind.String) continue;
                             if (!a.TryGetProperty("browser_download_url", out url) || url.ValueKind != JsonValueKind.String) continue;
                             string name = nm.GetString();
-                            if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
-                            // on privilégie l'installateur officiel
-                            bool better = rel.AssetUrl == null || name.IndexOf("setup", StringComparison.OrdinalIgnoreCase) >= 0;
-                            if (!better) continue;
+                            // L'installateur complet passe devant tout autre programme de la release :
+                            // l'installateur léger, lui, ne fait que télécharger le complet.
+                            int rg = MajLogique.RangInstallateur(name);
+                            if (rg == 0 || rg < rang || (rg == rang && rg == 1)) continue;
+                            rang = rg;
                             rel.AssetName = name;
                             rel.AssetUrl = url.GetString();
                             rel.Size = a.TryGetProperty("size", out sz) && sz.ValueKind == JsonValueKind.Number ? sz.GetInt64() : 0;
@@ -227,6 +236,16 @@ namespace BTOptimizer
         {
             get { try { return File.Exists(BetaPath) && File.ReadAllText(BetaPath).Trim() == "1"; } catch { return false; } }
             set { try { if (value) File.WriteAllText(BetaPath, "1"); else if (File.Exists(BetaPath)) File.Delete(BetaPath); } catch { } }
+        }
+
+        private static string AutoPath { get { return AppPaths.File("bt-update-auto.txt"); } }
+
+        /// <summary>Installation automatique des mises à jour (voir MajAuto). Coupée par défaut :
+        /// sans cette option, rien n'est téléchargé ni installé sans un clic.</summary>
+        public static bool Auto
+        {
+            get { try { return File.Exists(AutoPath) && File.ReadAllText(AutoPath).Trim() == "1"; } catch { return false; } }
+            set { try { if (value) File.WriteAllText(AutoPath, "1"); else if (File.Exists(AutoPath)) File.Delete(AutoPath); } catch { } }
         }
 
         /// <summary>Lit la LISTE des releases GitHub et garde la plus récente, préversions comprises
@@ -411,11 +430,33 @@ namespace BTOptimizer
             string part = null;
             try
             {
-                string dossier = Path.Combine(Path.GetTempPath(), "ONYX-maj");
+                string dossier = Path.Combine(Path.GetTempPath(), MajLogique.DossierMaj);
                 Directory.CreateDirectory(dossier);
                 string nom = Path.GetFileName(rel.AssetName ?? "");
                 if (string.IsNullOrEmpty(nom)) nom = "ONYX-Setup.exe";
                 string dest = Path.Combine(dossier, nom);
+                // Déjà téléchargé et intact (mise à jour reportée, ou préparée par l'installation
+                // automatique) : on ne retélécharge pas. Sans empreinte publiée, rien ne prouve que
+                // le fichier présent est le bon : on retélécharge.
+                if (!string.IsNullOrEmpty(rel.Sha256) && File.Exists(dest))
+                {
+                    long present = new FileInfo(dest).Length;
+                    if ((rel.Size <= 0 || present == rel.Size) && MajLogique.EmpreinteOk(dest, rel.Sha256))
+                    {
+                        if (progression != null) progression(present, present);
+                        erreur = "";
+                        return dest;
+                    }
+                }
+                // La place est contrôlée AVANT : un disque plein en cours de route laisse un fichier
+                // tronqué, ou pire une installation à moitié posée.
+                long libre = -1;
+                try { libre = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dossier))).AvailableFreeSpace; } catch { }
+                if (!MajLogique.EspaceSuffisant(libre, rel.Size))
+                {
+                    erreur = MajLogique.TexteEspace(libre, rel.Size);
+                    return null;
+                }
                 part = dest + ".part";
                 long total = rel.Size;
                 using (var h = Http())
@@ -476,6 +517,32 @@ namespace BTOptimizer
                                       + ") : vérifie ta connexion. Rien n'a été installé.";
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Lance l'installateur téléchargé. Le fichier est rouvert SANS partage en écriture, son
+        /// empreinte est recalculée, et il reste tenu jusqu'au démarrage : entre le contrôle et le
+        /// lancement, aucun programme ne peut le remplacer (ONYX tourne en administrateur, le
+        /// dossier temporaire est ouvert en écriture à tout ce qui tourne sur la session).
+        /// « avantLancement » n'est appelée que si le fichier est le bon, juste avant de le démarrer
+        /// (ONYX y lâche son verrou d'instance unique : un fichier refusé ne le lui fait pas perdre).
+        /// null si c'est parti, sinon la raison.
+        /// </summary>
+        public static string LanceControle(string fichier, string sha256, string args, Action avantLancement = null)
+        {
+            try
+            {
+                using (var fs = new FileStream(fichier, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    if (!string.IsNullOrEmpty(sha256)
+                        && !string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(fs)), sha256.Trim(), StringComparison.OrdinalIgnoreCase))
+                        return "le fichier a changé depuis son contrôle, il n'a pas été lancé";
+                    if (avantLancement != null) avantLancement();
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(fichier, args ?? "") { UseShellExecute = true });
+                }
+                return null;
+            }
+            catch (Exception ex) { return ex.Message; }
         }
 
         private static void SupprimeSansErreur(string chemin)

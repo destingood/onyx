@@ -105,12 +105,19 @@ namespace BTOptimizer
             StartGuardian();   // contrôle silencieux des signaux vitaux (1×/jour ; muet si tout va bien)
             // Démarrage minimisé (optionnel) : ONYX naît dans la zone de notification — le Gardien
             // surveille chaque jour, aucune fenêtre ne s'impose. Ctrl+Alt+O le fait apparaître.
-            if (TrayStartEnabled && Environment.GetEnvironmentVariable("BT_UISHOT") == null
+            // Retour d'une installation automatique : ONYX était réduit, il revient réduit — l'écran
+            // de l'utilisateur ne change pas. Une notification dit ce qui a été fait.
+            string retourMaj = null;
+            try { retourMaj = MajAuto.RetourDiscret(); } catch { }
+            bool reduit = TrayStartEnabled || retourMaj != null;
+            if (reduit && Environment.GetEnvironmentVariable("BT_UISHOT") == null
                 && Environment.GetEnvironmentVariable("BT_UITEST") != "1")
                 Shown += (s, e) => { try { Hide(); _tray.Visible = true; } catch { } };
             // « Quoi de neuf » : une fois après une mise à jour (jamais au 1er lancement, jamais en mode tray).
-            if (!TrayStartEnabled)
+            if (!reduit)
                 Shown += (s, e) => { try { BeginInvoke((Action)(() => WhatsNew.ShowIfUpdated(this))); } catch { } };
+            if (retourMaj != null)
+                Shown += (s, e) => { try { AnnonceRetourMaj(retourMaj); } catch { } };
             Resize += OnResizeShell;
             BadgeStore.OnNewBadge += OnNewBadge;   // toast « nouveau badge débloqué ! »
 
@@ -425,6 +432,28 @@ namespace BTOptimizer
                         : "Mises à jour : versions finales seulement.", 0);
             };
             m.Add(beta);
+            var auto = new ToolStripMenuItem("📥  Installer les mises à jour automatiquement")
+            {
+                ToolTipText = "Télécharge les nouvelles versions hors partie et les installe quand ONYX est réduit\n"
+                            + "dans la zone de notification. Fenêtre ouverte : rien ne s'installe sans ton clic."
+            };
+            try { auto.Checked = Updater.Auto; } catch { }
+            auto.Click += (s, e) =>
+            {
+                bool now = !Updater.Auto;
+                Updater.Auto = now;
+                auto.Checked = now;
+                try
+                {
+                    Journal.Add(now ? "Mises à jour : installation automatique activée (hors partie, ONYX réduit dans la zone de notification)."
+                                    : "Mises à jour : installation automatique coupée. ONYX prévient et attend ton clic.");
+                }
+                catch { }
+                if (!now) { MajAuto.Oublie(); return; }
+                // Une version attend peut-être déjà : on n'attend pas la prochaine vérification (6 heures).
+                System.Threading.Tasks.Task.Run(() => { try { VerifieMiseAJour(true); } catch { } });
+            };
+            m.Add(auto);
             m.Add("ℹ  À propos de ONYX", null, (s, e) => OpenDialog(new AboutForm()));
         }
 
@@ -448,6 +477,7 @@ namespace BTOptimizer
                 return Tuple.Create(r, st);
             }, LanceInstallation);
             _majForm = f;
+            f.QuandIgnoree = v => { RetireBandeauMaj(); MajAuto.Oublie(); };
             f.FormClosed += (s, e) => { if (_majForm == f) _majForm = null; };
             f.Show(this);
         }
@@ -456,16 +486,23 @@ namespace BTOptimizer
         /// le rouvre à la fin (RELANCE=1). null si c'est parti, sinon le message d'erreur.</summary>
         private string LanceInstallation(string file, Updater.Release rel)
         {
+            return LanceInstallation(file, rel, MajLogique.ArgsSilencieux);
+        }
+
+        /// <summary>Idem, avec les arguments de l'installateur au choix (installation automatique :
+        /// aucune fenêtre). Le fichier est recontrôlé et tenu jusqu'à son démarrage.</summary>
+        private string LanceInstallation(string file, Updater.Release rel, string args)
+        {
             if (LancePourTest != null) return LancePourTest(file);
-            try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
-            // Le verrou d'instance unique est libéré AVANT : l'installateur refuse de démarrer
-            // tant qu'il existe, même pendant les quelques instants où ONYX se ferme.
-            Program.LibereInstance();
-            try
+            // Le verrou d'instance unique est libéré AVANT le démarrage : l'installateur refuse de
+            // démarrer tant qu'il existe, même pendant les quelques instants où ONYX se ferme.
+            // Il ne l'est qu'une fois le fichier reconnu : un fichier refusé laisse ONYX intact.
+            string err = Updater.LanceControle(file, rel.Sha256, args, () =>
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file, MajLogique.ArgsSilencieux) { UseShellExecute = true });
-            }
-            catch (Exception ex) { return ex.Message; }
+                try { Journal.Add("Mise à jour lancée vers la version " + rel.Tag); } catch { }
+                Program.LibereInstance();
+            });
+            if (err != null) return err;
             try { BeginInvoke((Action)(() => { try { Close(); } catch { } })); } catch { }
             return null;
         }
@@ -932,9 +969,20 @@ namespace BTOptimizer
         /// la vérification échouait, le jour était consommé, et aucune nouvelle tentative n'avait
         /// lieu avant le lendemain.
         /// </summary>
-        private void VerifieMiseAJour()
+        private void VerifieMiseAJour(bool force = false)
         {
-            if (!Updater.VerificationDue()) return;   // toutes les 6 heures au plus
+            // Installation automatique : une version déjà trouvée avance à chaque passage (15 min),
+            // sans réinterroger GitHub.
+            try { AvanceMajAuto(); } catch { }
+            // Option cochée, version en attente, mais rien en mémoire (ONYX vient d'être lancé) :
+            // une vérification tout de suite, une seule fois par session, pour retrouver le fichier
+            // à installer sans attendre 6 heures.
+            if (!force && !_rappelAutoFait && Updater.Auto && MajAuto.Proposee == null && UpdateFlag.EnAttente() != null)
+            {
+                _rappelAutoFait = true;
+                force = true;
+            }
+            if (!force && !Updater.VerificationDue()) return;   // toutes les 6 heures au plus
 
             string st;
             Updater.Release nu;
@@ -947,6 +995,7 @@ namespace BTOptimizer
             if (!Updater.IsNewer(Updater.CurrentVersion(), nu.Ver))
             {
                 try { UpdateFlag.Clear(); } catch { }
+                MajAuto.Oublie();
                 return;
             }
 
@@ -954,6 +1003,13 @@ namespace BTOptimizer
             // Mémorisée pour l'affichage DANS l'app : la notification Windows peut être manquée
             // (PC absent, notifications coupées), l'en-tête de la fenêtre, lui, reste visible.
             try { UpdateFlag.Set(dispo); } catch { }
+            // Mise à jour importante : « Ignorer cette version » ne tient pas contre elle.
+            if (nu.Obligatoire) { try { UpdateFlag.OublieIgnoree(); } catch { } }
+            // Version ignorée : ni bandeau, ni notification, ni installation automatique. Elle
+            // reste visible par le menu ⋯ → « Vérifier les mises à jour ».
+            if (UpdateFlag.EstIgnoree(dispo)) return;
+            bool auto = MajLogique.AutoPossible(Updater.Auto, Updater.IsTrustedUrl(nu.AssetUrl), nu.Sha256);
+            if (auto) MajAuto.Propose(nu);
             try
             {
                 BeginInvoke((Action)(() =>
@@ -972,6 +1028,9 @@ namespace BTOptimizer
             // pas une alerte de santé, et un titre générique se referme sans être lu.
             // UNE fois par version : la vérification revient toutes les 6 heures, la notification
             // non. Le bandeau dans l'app, lui, reste jusqu'à l'installation.
+            // Installation automatique : pas de « clique pour mettre à jour », ONYX s'en charge et
+            // préviendra une fois la version posée. Le bandeau, lui, est déjà monté.
+            if (auto) { try { AvanceMajAuto(); } catch { } return; }
             if (!NotifReglages.Active(NotifCategories.MiseAJour)) return;   // le bandeau suffit
             if (!UpdateFlag.DoitNotifier(dispo)) return;
             UpdateFlag.MarqueNotifiee(dispo);
@@ -992,6 +1051,101 @@ namespace BTOptimizer
                         catch { }
                     }));
                 }
+            }
+            catch { }
+        }
+
+        private int _majAutoOccupee;             // 1 pendant un passage de l'installation automatique
+        private volatile bool _rappelAutoFait;   // vérification de reprise déjà faite dans cette session
+
+        private static bool PartieEnCours()
+        {
+            try { return GameBoost.IsActive || Native.IsGameFullscreen() || GameScan.RunningKnownGame() != null; }
+            catch { return true; }   // dans le doute, on ne touche à rien
+        }
+
+        /// <summary>
+        /// Installation automatique (option du menu ⋯, coupée par défaut) : fait avancer la version
+        /// proposée d'un cran. Appelée hors du fil d'interface, à chaque passage du rappel périodique.
+        ///  • jamais pendant une partie : ni téléchargement (58 Mo sur la connexion du jeu), ni
+        ///    installation (ONYX se ferme une minute, ses services en jeu avec lui) ;
+        ///  • l'installation n'a lieu que si ONYX est réduit dans la zone de notification : devant
+        ///    une fenêtre ouverte, c'est l'utilisateur qui décide, par le bandeau.
+        /// </summary>
+        private void AvanceMajAuto()
+        {
+            Updater.Release rel = MajAuto.Proposee;
+            if (rel == null || rel.Ver == null) return;
+            if (!Updater.Auto) { MajAuto.Oublie(); return; }
+            if (System.Threading.Interlocked.Exchange(ref _majAutoOccupee, 1) == 1) return;   // un passage à la fois
+            try
+            {
+                string v = rel.Ver.Major + "." + rel.Ver.Minor.ToString("00");
+                if (UpdateFlag.EstIgnoree(v)) { MajAuto.Oublie(); return; }
+                if (PartieEnCours()) return;
+
+                if (MajAuto.Fichier == null)
+                {
+                    string err;
+                    if (!MajAuto.Telecharge(out err))
+                    {
+                        if (!string.IsNullOrEmpty(err))
+                            try { Journal.Add("Mise à jour automatique : la version " + v + " n'a pas pu être téléchargée (" + err + "). Nouvel essai plus tard."); } catch { }
+                        return;
+                    }
+                    try { Journal.Add("Mise à jour automatique : version " + v + " téléchargée et contrôlée. Elle s'installera quand ONYX sera réduit dans la zone de notification, hors partie."); } catch { }
+                }
+
+                // Le téléchargement a pu durer : la partie est relue, et la fenêtre l'est sur son fil.
+                bool partie = PartieEnCours();
+                string fichier = MajAuto.Fichier;
+                if (fichier == null || IsDisposed || !IsHandleCreated) return;
+                Invoke((Action)(() =>
+                {
+                    try
+                    {
+                        if (IsDisposed) return;
+                        bool majOuverte = _majForm != null && !_majForm.IsDisposed;
+                        if (!MajLogique.MomentPropice(Visible, partie, majOuverte)) return;
+                        MajAuto.MarqueRetour(v);
+                        string e = LanceInstallation(fichier, rel, MajLogique.ArgsDiscrets);
+                        if (e == null) return;
+                        // Fichier refusé ou lancement impossible : ONYX reste comme il est. Le
+                        // fichier est écarté, la prochaine vérification repartira de zéro.
+                        MajAuto.EffaceRetour();
+                        MajAuto.Oublie();
+                        try { System.IO.File.Delete(fichier); } catch { }
+                        try { Journal.Add("Mise à jour automatique : la version " + v + " n'a pas été installée (" + e + ")."); } catch { }
+                    }
+                    catch { }
+                }));
+            }
+            catch { }
+            finally { System.Threading.Interlocked.Exchange(ref _majAutoOccupee, 0); }
+        }
+
+        /// <summary>ONYX vient d'être rouvert par une installation automatique : le journal et une
+        /// notification le disent, puisqu'aucune fenêtre ne l'a montré.</summary>
+        private void AnnonceRetourMaj(string version)
+        {
+            try { Journal.Add("Mise à jour automatique : ONYX " + version + " est installé."); } catch { }
+            if (!NotifReglages.Active(NotifCategories.MiseAJour)) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { WinToast.Show("ONYX " + version + " est installé", "Mise à jour automatique terminée. Tes réglages et ton journal sont conservés."); }
+                catch { }
+            });
+        }
+
+        /// <summary>« Ignorer cette version » : le bandeau et le rappel du titre disparaissent.</summary>
+        private void RetireBandeauMaj()
+        {
+            try
+            {
+                Panel b = _bandeauMaj;
+                _bandeauMaj = null;
+                if (b != null) { Controls.Remove(b); b.Dispose(); }
+                Text = "ONYX — Windows & Gaming";
             }
             catch { }
         }
