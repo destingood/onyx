@@ -5,7 +5,7 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
-## v16.15 (en préparation) — Minuteur au compteur, résolution dans les préréglages, fermeture de Steam, résidus des jeux
+## v16.15 — Minuteur au compteur, résolution dans les préréglages, fermeture de Steam, résidus des jeux
 
 - **Minuteur au compteur en jeu.** Nouvelle ligne « Minuteur » à cocher dans le compteur :
   chronomètre ou compte à rebours de 1 min à 2 h. Ctrl+Alt+T démarre ou met en pause,
