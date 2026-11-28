@@ -154,6 +154,7 @@ namespace BTOptimizer.Tests
             PopulairesTests.Tout();
             CartePostaleTests.Tout();
             ServeursDiscordTests.Tout();
+            FpsEtwTests.Tout();
             return Banc.Bilan();
         }
     }

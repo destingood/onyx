@@ -11,6 +11,7 @@ namespace BTOptimizer
     ///   BTOptimizer.exe -apply reco|esport|all|profile [-backup] [-restorepoint]
     ///   BTOptimizer.exe -revert profile|all
     ///   BTOptimizer.exe -prove   (optimisation prouvée : lots mesurés, régressions annulées)
+    ///   BTOptimizer.exe -fps [jeu.exe] [secondes]   (contrôle du compteur de FPS, en administrateur)
     ///   BTOptimizer.exe -allerretour [all|ids=a,b,c]   (applique puis rétablit chaque réglage et compare
     ///                    à l'état d'origine ; refusé hors machine virtuelle, code 7)
     /// -apply et -revert acceptent aussi ids=a,b,c à la place du mode.
@@ -114,6 +115,16 @@ namespace BTOptimizer
                 string t = LatenceMesure.MesureEtCompare(jeu, sec);
                 foreach (string l in t.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)) log(l, 0);
                 return LatenceMesure.Outil() == null ? 3 : 0;
+            }
+
+            if (string.Equals(args[0], "-fps", StringComparison.OrdinalIgnoreCase))
+            {
+                // -fps [jeu.exe] [secondes] : contrôle du compteur de FPS contre le compte exact des images.
+                string jeu = null; int sec = 30, n;
+                for (int i = 1; i < args.Length; i++)
+                    if (int.TryParse(args[i], out n)) sec = n; else jeu = args[i];
+                foreach (string l in FpsControle.Mesure(jeu, sec)) log(l, 0);
+                return 0;
             }
 
             if (string.Equals(args[0], "-allerretour", StringComparison.OrdinalIgnoreCase))

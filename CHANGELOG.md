@@ -5,6 +5,19 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.13 — Compteur de FPS fiable
+
+- **Compteur de FPS : le chiffre ne monte et ne descend plus tout seul.** Windows ne remet pas
+  les images une par une mais par paquets, au pire une fois par seconde. Le compteur comptait
+  « la dernière seconde » jusqu'à l'instant présent : les images déjà affichées mais pas encore
+  remises manquaient au compte, et le chiffre variait selon l'instant du relevé (un jeu stable à
+  144 FPS s'affichait entre 63 et 144). La seconde comptée finit maintenant sur la dernière image
+  reçue. Corrigé pour le compteur en jeu, le moniteur FPS et le benchmark. Un jeu fermé ou figé
+  voit toujours son chiffre retomber.
+- **Contrôle en ligne de commande** : `BTOptimizer.exe -fps [jeu.exe] [secondes]` (administrateur)
+  relève le compteur chaque seconde et le compare au compte exact des images ; résultat dans
+  `bt-optimizer-log.txt`. Lecture seule.
+
 ## v16.12 — Raccourcis clavier modifiables, liste du Mode Jeu dans un fichier, lanceur prioritaire, préversions, fiche Steam des jeux, compteur en ligne, notifications au choix, jeux populaires, mode console
 
 - **Raccourcis clavier modifiables.** Menu ⋯ → Système → « Raccourcis clavier… » : Mode Jeu,
