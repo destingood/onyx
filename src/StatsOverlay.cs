@@ -70,6 +70,31 @@ namespace BTOptimizer
 
         public static void Toggle(StatsOverlaySettings s) { if (IsVisible) Hide(); else Show(s); }
 
+        /// <summary>Minuteur du compteur : garde son état quand le compteur est masqué.</summary>
+        public static readonly CompteurJeu.ChronoMinuteur Minuteur = new CompteurJeu.ChronoMinuteur();
+
+        /// <summary>
+        /// Raccourci « minuteur » : démarre, met en pause ou reprend. Rend le texte de la notification
+        /// quand le minuteur n'est pas visible (ligne non cochée ou compteur masqué), sinon null.
+        /// </summary>
+        public static string BasculeMinuteur()
+        {
+            var s = StatsOverlaySettings.Load();
+            if (!s.O.A(CompteurJeu.Minuteur))
+                return "Coche « " + CompteurJeu.Libelle(CompteurJeu.Minuteur) + " » dans les réglages du compteur en jeu (⋯ → Compteur en jeu).";
+            Minuteur.Duree = TimeSpan.FromMinutes(s.O.DureeMinuteur);
+            Minuteur.Bascule(DateTime.Now);
+            if (_win != null && !_win.IsDisposed) _win.Invalidate();
+            if (!IsVisible) return "Minuteur " + (Minuteur.EnMarche ? "lancé" : "en pause") + " : affiche le compteur en jeu pour le voir.";
+            return null;
+        }
+
+        public static void RemetMinuteur()
+        {
+            Minuteur.RemetAZero();
+            if (_win != null && !_win.IsDisposed) _win.Invalidate();
+        }
+
         public static void ShowOnStartupIfEnabled(Action<string, int> log)
         {
             var s = StatsOverlaySettings.Load();
@@ -121,7 +146,7 @@ namespace BTOptimizer
             Applique(_o);
 
             _timer.Interval = 1000;
-            _timer.Tick += (s, e) => Sample();
+            _timer.Tick += (s, e) => { Sample(); FinMinuteur(); };
             // Ce minuteur était une variable LOCALE, démarrée et jamais arrêtée : il continuait de
             // battre toutes les 3 secondes bien après que l'utilisateur ait masqué l'overlay, et
             // sa capture de « this » empêchait la fenêtre d'être libérée. Il devient un champ,
@@ -174,6 +199,7 @@ namespace BTOptimizer
         {
             _o = o ?? new CompteurJeu.Options();
             _k = CompteurJeu.Echelle(_o.Taille);
+            StatsOverlayManager.Minuteur.Duree = TimeSpan.FromMinutes(_o.DureeMinuteur);
             try
             {
                 int l, h; CompteurJeu.Dimensions(_o, out l, out h);
@@ -190,6 +216,24 @@ namespace BTOptimizer
         }
 
         private int E(double v) { return (int)Math.Round(v * _k); }
+
+        /// <summary>Fin du compte à rebours : signal sonore de Windows, une fois (lecture asynchrone).</summary>
+        private void FinMinuteur()
+        {
+            try
+            {
+                if (!_o.A(CompteurJeu.Minuteur) || !StatsOverlayManager.Minuteur.Fin(DateTime.Now)) return;
+                if (_o.SonMinuteur) System.Media.SystemSounds.Exclamation.Play();
+                Invalidate();
+            }
+            catch { }
+        }
+
+        private Color CouleurMinuteur(Color? fixe)
+        {
+            var m = StatsOverlayManager.Minuteur;
+            return m.Fini ? LoadColor(100) : m.EnMarche ? fixe ?? Ink : Dim;
+        }
 
         protected override void OnVisibleChanged(EventArgs e)
         {
@@ -369,6 +413,8 @@ namespace BTOptimizer
                 l.Add(new Segment { Valeur = DateTime.Now.ToString("HH:mm"), Couleur = fixe ?? Ink });
             if (_o.A(CompteurJeu.Duree))
                 l.Add(new Segment { Nom = "PARTIE", Valeur = _duree.HasValue ? CompteurJeu.TexteDuree(_duree.Value) : "—", Couleur = fixe ?? Ink });
+            if (_o.A(CompteurJeu.Minuteur))
+                l.Add(new Segment { Nom = StatsOverlayManager.Minuteur.Etiquette(DateTime.Now), Valeur = StatsOverlayManager.Minuteur.Texte(DateTime.Now), Couleur = CouleurMinuteur(fixe) });
 
             const TextFormatFlags f = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine;
             int x = E(9);
@@ -510,6 +556,8 @@ namespace BTOptimizer
                     Large(g, lab, val, ref y, "HEURE", DateTime.Now.ToString("HH:mm"), fixe ?? Ink);
                 if (_o.A(CompteurJeu.Duree))
                     Large(g, lab, val, ref y, "PARTIE", _duree.HasValue ? CompteurJeu.TexteDuree(_duree.Value) : "—", fixe ?? Ink);
+                if (_o.A(CompteurJeu.Minuteur))
+                    Large(g, lab, val, ref y, StatsOverlayManager.Minuteur.Etiquette(DateTime.Now), StatsOverlayManager.Minuteur.Texte(DateTime.Now), CouleurMinuteur(fixe));
             }
 
             // Mini-historique des FPS (sparkline).

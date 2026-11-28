@@ -12,7 +12,8 @@ namespace BTOptimizer
     /// Fenêtre des préréglages d'un jeu (Fortnite, Cyberpunk 2077 ; ouverte depuis la fiche du jeu) : un mode choisi montre
     /// d'abord « réglage : avant → après », rien n'est écrit avant « Appliquer ». « Mesurer en jeu »
     /// reprend la mesure de 60 s de PreuveJeu, avant puis après : aucun chiffre de FPS n'est
-    /// annoncé sans elle.
+    /// annoncé sans elle. Résolution et mode d'affichage : au choix, seulement parmi les valeurs que le
+    /// fichier du jeu et l'écran acceptent ; « Ne pas changer » par défaut.
     /// </summary>
     internal sealed class ReglagesJeuForm : Form
     {
@@ -22,6 +23,11 @@ namespace BTOptimizer
         private readonly NumericUpDown _objectif;
         private readonly Button _appliquer, _retablir, _mesurer;
         private readonly List<Button> _modes = new List<Button>();
+        private readonly ComboBox _res, _aff;
+        private OptionsAffichage _options;
+        private string _raisonAffichage;
+        private bool _chargeAffichage;
+        private int _mode = -1;       // dernier préréglage cliqué (-1 : aucun)
         private int? _choisi;
         private int _limite;          // limite d'images lue dans le fichier du jeu (0 : aucune)
         private bool _vsync, _lu;
@@ -31,7 +37,7 @@ namespace BTOptimizer
         {
             _jeu = jeu;
             Text = "ONYX — Préréglages " + jeu.Jeu;
-            ClientSize = new Size(660, 588);
+            ClientSize = new Size(660, 632);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -69,36 +75,41 @@ namespace BTOptimizer
             _obstacle = new Label { Location = new Point(208, 122), Size = new Size(432, 44), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
             Controls.Add(_obstacle);
 
+            Controls.Add(new Label { Text = "Résolution :", Location = new Point(20, 176), Size = new Size(90, 24), ForeColor = FpsUi.Ink });
+            _res = Liste(112, 172, 150);
+            Controls.Add(new Label { Text = "Affichage :", Location = new Point(276, 176), Size = new Size(82, 24), ForeColor = FpsUi.Ink });
+            _aff = Liste(360, 172, 220);
+
             _apercu = new TextBox
             {
                 Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, WordWrap = true,
-                Location = new Point(20, 172), Size = new Size(620, 230),
+                Location = new Point(20, 216), Size = new Size(620, 230),
                 BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, BorderStyle = BorderStyle.FixedSingle, Font = FpsUi.Body,
-                Text = "Choisis un mode pour voir ce qui changerait."
+                Text = "Choisis un mode, ou une résolution ou un affichage, pour voir ce qui changerait."
             };
             Controls.Add(_apercu);
 
             _appliquer = OnyxDesign.PrimaryButton("Appliquer");
-            _appliquer.SetBounds(20, 416, 150, 36); _appliquer.Enabled = false;
+            _appliquer.SetBounds(20, 460, 150, 36); _appliquer.Enabled = false;
             _appliquer.Click += (s, e) => Applique();
             Controls.Add(_appliquer);
 
             _retablir = OnyxDesign.Button("Rétablir");
-            _retablir.SetBounds(180, 416, 130, 36);
+            _retablir.SetBounds(180, 460, 130, 36);
             _retablir.Click += (s, e) => Retablit();
             Controls.Add(_retablir);
 
             _mesurer = OnyxDesign.Button("Mesurer en jeu");
-            _mesurer.SetBounds(320, 416, 200, 36);
+            _mesurer.SetBounds(320, 460, 200, 36);
             _mesurer.Click += (s, e) => Mesure();
             Controls.Add(_mesurer);
 
             Button fermer = OnyxDesign.Button("Fermer");
-            fermer.SetBounds(530, 416, 110, 36);
+            fermer.SetBounds(530, 460, 110, 36);
             fermer.Click += (s, e) => Close();
             Controls.Add(fermer);
 
-            _etat = new Label { Location = new Point(20, 464), Size = new Size(620, 110), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
+            _etat = new Label { Location = new Point(20, 508), Size = new Size(620, 110), ForeColor = FpsUi.Dim, Font = FpsUi.Small };
             Controls.Add(_etat);
 
             FormClosing += (s, e) => _stop = true;
@@ -106,6 +117,72 @@ namespace BTOptimizer
             int? actuel;
             _lu = _jeu.Situation(out actuel, out _limite, out _vsync);
             MajObstacle();
+            ChargeAffichage();
+        }
+
+        // ------------------------------------------------------------------ résolution et affichage
+
+        private sealed class Element
+        {
+            public string Valeur, Texte;
+            public override string ToString() { return Texte; }
+        }
+
+        private ComboBox Liste(int x, int y, int largeur)
+        {
+            var c = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(x, y), Size = new Size(largeur, 28),
+                BackColor = FpsUi.Card, ForeColor = FpsUi.Ink, FlatStyle = FlatStyle.Flat, Enabled = false
+            };
+            c.SelectedIndexChanged += (s, e) => { if (!_chargeAffichage) Choisit(_mode); };
+            Controls.Add(c);
+            return c;
+        }
+
+        /// <summary>Lit le fichier du jeu et les modes de l'écran hors du fil d'interface, puis remplit les listes.</summary>
+        private void ChargeAffichage()
+        {
+            _res.Enabled = _aff.Enabled = false;
+            Task.Run(() =>
+            {
+                string raison = null; OptionsAffichage o = null;
+                try { o = _jeu.Affichage(out raison); } catch (Exception ex) { raison = "Affichage illisible : " + ex.Message; }
+                try { if (!IsDisposed) BeginInvoke((Action)(() => { if (!IsDisposed) RemplitAffichage(o, raison); })); } catch { }
+            });
+        }
+
+        private void RemplitAffichage(OptionsAffichage o, string raison)
+        {
+            _options = o; _raisonAffichage = o == null ? raison : o.Remarque;
+            _chargeAffichage = true;
+            _res.Items.Clear(); _aff.Items.Clear();
+            if (o != null && o.ResolutionActuelle != null && o.Resolutions.Count > 0)
+            {
+                _res.Items.Add(new Element { Texte = "Ne pas changer (" + AffichageJeu.Texte(o.ResolutionActuelle) + ")" });
+                foreach (string x in o.Resolutions) _res.Items.Add(new Element { Valeur = x, Texte = AffichageJeu.Texte(x) });
+            }
+            else _res.Items.Add(new Element { Texte = "Non proposée" });
+            if (o != null && o.ModeActuel != null && o.Modes.Count > 0)
+            {
+                _aff.Items.Add(new Element { Texte = "Ne pas changer (" + o.LibelleMode(o.ModeActuel) + ")" });
+                foreach (KeyValuePair<string, string> m in o.Modes) _aff.Items.Add(new Element { Valeur = m.Key, Texte = m.Value });
+            }
+            else _aff.Items.Add(new Element { Texte = "Non proposé" });
+            _res.SelectedIndex = 0; _aff.SelectedIndex = 0;
+            _chargeAffichage = false;
+            MajBoutons();
+        }
+
+        /// <summary>Résolution et mode choisis dans les listes ; null si rien n'est choisi.</summary>
+        private ChoixAffichage Choix()
+        {
+            var a = new ChoixAffichage
+            {
+                Resolution = _res.SelectedItem is Element ? ((Element)_res.SelectedItem).Valeur : null,
+                Mode = _aff.SelectedItem is Element ? ((Element)_aff.SelectedItem).Valeur : null
+            };
+            return a.Vide ? null : a;
         }
 
         // ------------------------------------------------------------------ FPS visés
@@ -157,6 +234,8 @@ namespace BTOptimizer
             _retablir.Enabled = !_mesureEnCours && _jeu.ARetablir;
             _appliquer.Enabled = !_mesureEnCours && _choisi.HasValue;
             foreach (Button b in _modes) b.Enabled = !_mesureEnCours;
+            _res.Enabled = !_mesureEnCours && _res.Items.Count > 1;
+            _aff.Enabled = !_mesureEnCours && _aff.Items.Count > 1;
             bool avant = Preuve.LitJeu(LitMesure()) != null;
             _mesurer.Text = _mesureEnCours ? "Mesure en cours…" : avant ? "Mesurer en jeu (après)" : "Mesurer en jeu (avant)";
             _mesurer.Enabled = !_mesureEnCours;
@@ -164,14 +243,24 @@ namespace BTOptimizer
 
         private void Choisit(int m)
         {
-            List<string> absentes; string raison;
-            List<string> c = _jeu.Apercu(m, out absentes, out raison);
+            _mode = m;
+            ChoixAffichage a = Choix();
             _choisi = null;
+            if (m < 0 && a == null)
+            {
+                _apercu.Text = "Choisis un mode, ou une résolution ou un affichage, pour voir ce qui changerait."
+                    + (_raisonAffichage != null ? "\r\n\r\n" + _raisonAffichage : "");
+                MajBoutons(); return;
+            }
+            List<string> absentes; string raison;
+            List<string> c = _jeu.Apercu(m, a, out absentes, out raison);
             if (c == null) { _apercu.Text = raison; MajBoutons(); return; }
-            var sb = new StringBuilder("« " + _jeu.NomMode(m) + " » changerait :\r\n");
+            string quoi = m >= 0 ? "« " + _jeu.NomMode(m) + " »" + (a != null ? " et l'affichage choisi" : "") : "L'affichage choisi";
+            var sb = new StringBuilder(quoi + " changerait :\r\n");
             if (c.Count == 0) sb.Append("  rien, le fichier est déjà réglé ainsi.");
             foreach (string x in c) sb.Append("  ").Append(x).Append("\r\n");
             if (absentes.Count > 0) sb.Append("\r\nAbsents ou inattendus dans le fichier, non touchés : ").Append(string.Join(", ", absentes)).Append('.');
+            if (a != null && _raisonAffichage != null) sb.Append("\r\n\r\n").Append(_raisonAffichage);
             _apercu.Text = sb.ToString();
             if (c.Count > 0) _choisi = m;
             MajBoutons();
@@ -180,9 +269,10 @@ namespace BTOptimizer
         private void Applique()
         {
             if (!_choisi.HasValue) return;
-            string r = _jeu.Applique(_choisi.Value);
+            string r = _jeu.Applique(_choisi.Value, Choix());
             _apercu.Text = r;
-            _choisi = null;
+            _choisi = null; _mode = -1;
+            ChargeAffichage();   // relit les valeurs actuelles ; remet « Ne pas changer »
             _etat.Text = Preuve.LitJeu(LitMesure()) != null
                 ? "Mesure « avant » enregistrée : lance " + _jeu.Jeu + ", mets-toi dans une scène comparable, puis « Mesurer en jeu (après) »."
                 : "Pour chiffrer l'effet : « Rétablir », mesure « avant » en jeu, ferme le jeu, réapplique, puis mesure « après ».";
@@ -192,7 +282,8 @@ namespace BTOptimizer
         private void Retablit()
         {
             _apercu.Text = _jeu.Retablit();
-            MajBoutons();
+            _choisi = null; _mode = -1;
+            ChargeAffichage();
         }
 
         // ------------------------------------------------------------------ mesure en jeu

@@ -24,7 +24,7 @@ namespace BTOptimizer
 
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
         [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr h, int id);
-        private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, HotkeyIdFps = 0xB73, HotkeyIdCapture = 0xB74, WM_HOTKEY = 0x0312;
+        private const int HotkeyId = 0xB71, HotkeyIdShow = 0xB72, HotkeyIdFps = 0xB73, HotkeyIdCapture = 0xB74, HotkeyIdMinuteur = 0xB75, HotkeyIdMinuteur0 = 0xB76, WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000;
         private NotifyIcon _tray;
         private Panel _bandeauMaj;   // rappel de mise à jour, en haut de la fenêtre
@@ -197,11 +197,15 @@ namespace BTOptimizer
             retraitIa.Start();
 #endif
             JournalJeu.PartieClose += BilanPartie;
+            JournalJeu.PartieClose += FermeLanceur.PartieClose;
+            FermeLanceur.Ferme += FinSteam;
             // Mode console quitté d'abord : la position enregistrée est celle de la fenêtre normale.
             FormClosing += (s, e) => { try { if (_console) BasculeConsole(); } catch { } try { WindowBounds.Save(this); } catch { } Cleanup(); };
         }
 
         /// <summary>Fin de partie, option « Mesurer chaque partie » cochée : bilan en notification.</summary>
+        private void FinSteam(string m) { Notifie("Steam", m); }
+
         private void BilanPartie(JournalJeu.Partie p)
         {
             if (p == null || !JournalJeu.MesureFps) return;
@@ -1371,6 +1375,8 @@ namespace BTOptimizer
             _trayRaccourcis[0] = (ToolStripMenuItem)m.Items.Add("▶ MODE JEU on/off", null, (s, e) => ToggleBoost());
             _trayRaccourcis[2] = (ToolStripMenuItem)m.Items.Add("Compteur FPS on/off", null, (s, e) => ToggleOverlay());
             _trayRaccourcis[3] = (ToolStripMenuItem)m.Items.Add("Capture d’écran", null, (s, e) => CaptureEcranJeu());
+            _trayRaccourcis[4] = (ToolStripMenuItem)m.Items.Add("Minuteur : démarrer / pause", null, (s, e) => BasculeMinuteur());
+            _trayRaccourcis[5] = (ToolStripMenuItem)m.Items.Add("Minuteur : remise à zéro", null, (s, e) => StatsOverlayManager.RemetMinuteur());
             TexteMenuRaccourcis();
             m.Items.Add("🛡 Gardien : vérifier maintenant", null, (s, e) => GuardianCheckNow());
             var snooze = new ToolStripMenuItem("🔕 Gardien : ne plus me prévenir 7 jours");
@@ -1535,10 +1541,10 @@ namespace BTOptimizer
             if (echecs.Count > 0) Log("Raccourcis pris par une autre application : " + string.Join(", ", echecs) + ". Change-les dans ⋯ → Système → Raccourcis clavier.", 1);
         }
 
-        // Ordre de Raccourcis.Action : Mode Jeu, Afficher, Compteur, Capture.
-        private static readonly int[] HotkeyIds = { HotkeyId, HotkeyIdShow, HotkeyIdFps, HotkeyIdCapture };
+        // Ordre de Raccourcis.Action : Mode Jeu, Afficher, Compteur, Capture, Minuteur, remise à zéro du minuteur.
+        private static readonly int[] HotkeyIds = { HotkeyId, HotkeyIdShow, HotkeyIdFps, HotkeyIdCapture, HotkeyIdMinuteur, HotkeyIdMinuteur0 };
         private Raccourcis.Combo[] _raccourcis = ChargeRaccourcis();
-        private readonly ToolStripMenuItem[] _trayRaccourcis = new ToolStripMenuItem[4];
+        private readonly ToolStripMenuItem[] _trayRaccourcis = new ToolStripMenuItem[6];
 
         internal static Raccourcis.Combo[] ChargeRaccourcis()
         {
@@ -1560,7 +1566,7 @@ namespace BTOptimizer
 
         internal List<string> ReprendRaccourcis() { return IsHandleCreated ? InscritRaccourcis() : new List<string>(); }
 
-        /// <summary>Réinscrit les quatre raccourcis ; rend ceux que Windows a refusés (déjà pris ailleurs).</summary>
+        /// <summary>Réinscrit les raccourcis ; rend ceux que Windows a refusés (déjà pris ailleurs).</summary>
         private List<string> InscritRaccourcis()
         {
             var echecs = new List<string>();
@@ -1588,10 +1594,17 @@ namespace BTOptimizer
 
         private void TexteMenuRaccourcis()
         {
-            string[] noms = { "▶ MODE JEU on/off", "Ouvrir ONYX", "Compteur FPS on/off", "Capture d’écran" };
+            string[] noms = { "▶ MODE JEU on/off", "Ouvrir ONYX", "Compteur FPS on/off", "Capture d’écran", "Minuteur : démarrer / pause", "Minuteur : remise à zéro" };
             for (int i = 0; i < _trayRaccourcis.Length; i++)
                 if (_trayRaccourcis[i] != null)
                     _trayRaccourcis[i].Text = noms[i] + (_raccourcis[i].Vide ? "" : "  (" + Raccourcis.Texte(_raccourcis[i]) + ")");
+        }
+
+        /// <summary>Ctrl+Alt+T — minuteur du compteur en jeu ; prévient s'il n'est pas visible.</summary>
+        private void BasculeMinuteur()
+        {
+            try { string m = StatsOverlayManager.BasculeMinuteur(); if (m != null) Notifie("Minuteur", m); }
+            catch { }
         }
 
         /// <summary>Ctrl+Alt+C — capture de l'écran du jeu, enregistrée dans le dossier Captures de Windows.</summary>
@@ -1618,6 +1631,8 @@ namespace BTOptimizer
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdShow) ToggleShell();
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdFps) ToggleOverlay();
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdCapture) CaptureEcranJeu();
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdMinuteur) BasculeMinuteur();
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyIdMinuteur0) { try { StatsOverlayManager.RemetMinuteur(); } catch { } }
             if (m.Msg == 0x007E) DisplayInfo.OublieModes();   // WM_DISPLAYCHANGE : écran changé, modes à relire
             base.WndProc(ref m);
         }
@@ -1636,7 +1651,7 @@ namespace BTOptimizer
 
         private void Cleanup()
         {
-            try { JournalJeu.PartieClose -= BilanPartie; JournalJeu.Termine(); } catch { }
+            try { JournalJeu.PartieClose -= BilanPartie; JournalJeu.PartieClose -= FermeLanceur.PartieClose; FermeLanceur.Ferme -= FinSteam; JournalJeu.Termine(); } catch { }
             try { BadgeStore.OnNewBadge -= OnNewBadge; } catch { }
             try { UnregisterHotKey(Handle, HotkeyId); } catch { }
             try { UnregisterHotKey(Handle, HotkeyIdShow); } catch { }

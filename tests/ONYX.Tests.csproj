@@ -88,6 +88,9 @@
     <Compile Include="..\src\OptionsJeu.cs" />
     <Compile Include="..\src\EtiquettesJeux.cs" />
     <Compile Include="..\src\CompteurJeu.cs" />
+    <Compile Include="..\src\AffichageJeu.cs" />
+    <Compile Include="..\src\FermeLanceur.cs" />
+    <Compile Include="..\src\ResidusJeuxRegles.cs" />
     <Compile Include="..\src\ExclusionsNettoyage.cs" />
     <Compile Include="..\src\NotesJeu.cs" />
     <Compile Include="..\src\VueJeux.cs" />

@@ -10,7 +10,8 @@ namespace BTOptimizer
     /// une clé absente n'est jamais ajoutée ; « Rétablir » remet l'ancienne valeur seulement là
     /// où ONYX a encore la main (valeur = celle qu'il a écrite). Clés relevées le 26/11/2026 ;
     /// valeurs : proposition du plan, uniquement des crans que le menu Vidéo du jeu propose.
-    /// Jamais touchés : résolution, FrameRateLimit, plein écran, moteur de rendu, DLSS/TSR.
+    /// Affichage (au choix, à part) : résolution et mode, seulement si leurs clés sont déjà dans le
+    /// fichier. Jamais touchés : taille de la fenêtre, FrameRateLimit, moteur de rendu, DLSS/TSR.
     /// </summary>
     internal static partial class ReglagesFortnite
     {
@@ -39,6 +40,85 @@ namespace BTOptimizer
             new[] { Jeu,     "bUseVSync",                   "False", "False", "False", "False" },
             new[] { Jeu,     "bUseNanite",                  "False", "False", "False", "True" },
         };
+
+        // Mode d'affichage d'Unreal Engine (EWindowMode) : valeur du fichier, libellé du menu Vidéo.
+        public static readonly string[][] ModesAffichage = { new[] { "0", "Plein écran" }, new[] { "1", "Plein écran fenêtré" }, new[] { "2", "Fenêtré" } };
+        private static readonly string[] ClesResolution = { "ResolutionSizeX", "ResolutionSizeY", "LastUserConfirmedResolutionSizeX", "LastUserConfirmedResolutionSizeY" };
+        private static readonly string[] ClesMode = { "FullscreenMode", "LastConfirmedFullscreenMode", "PreferredFullscreenMode" };
+
+        private static bool ModeConnu(string v)
+        {
+            foreach (string[] m in ModesAffichage) if (m[0] == (v ?? "").Trim()) return true;
+            return false;
+        }
+
+        private static bool Entier(string v)
+        {
+            int n;
+            return int.TryParse((v ?? "").Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out n) && n > 0;
+        }
+
+        /// <summary>« 2560x1440 » d'après ResolutionSizeX/Y ; null si absentes ou illisibles.</summary>
+        public static string ResolutionActuelle(string ini)
+        {
+            Dictionary<string, string> v = Valeurs(ini ?? "");
+            string x, y;
+            if (!v.TryGetValue(Id(Jeu, "ResolutionSizeX"), out x) || !v.TryGetValue(Id(Jeu, "ResolutionSizeY"), out y) || !Entier(x) || !Entier(y)) return null;
+            return x.Trim() + "x" + y.Trim();
+        }
+
+        /// <summary>Valeur de FullscreenMode ; null si la clé manque (fichier « Diff=true » : le jeu garde son défaut).</summary>
+        public static string ModeAffichageActuel(string ini)
+        {
+            string m;
+            return Valeurs(ini ?? "").TryGetValue(Id(Jeu, "FullscreenMode"), out m) && ModeConnu(m) ? m.Trim() : null;
+        }
+
+        /// <summary>Identifiant Windows de l'écran du jeu (DisplayID), ou null.</summary>
+        public static string IdEcran(string ini)
+        {
+            string d;
+            return Valeurs(ini ?? "").TryGetValue(Id(Jeu, "DisplayID"), out d) ? AffichageJeu.IdEcran(d) : null;
+        }
+
+        /// <summary>
+        /// Résolution et mode d'affichage demandés. Les quatre clés de résolution et les trois du mode
+        /// ne changent que si elles sont déjà là ; PreferredFullscreenMode (mode du retour en plein
+        /// écran) ne prend jamais « Fenêtré ». Une clé manquante va dans <paramref name="clesAbsentes"/>.
+        /// </summary>
+        public static List<Changement> PrevoitAffichage(string ini, ChoixAffichage a, out List<string> clesAbsentes)
+        {
+            var res = new List<Changement>();
+            clesAbsentes = new List<string>();
+            if (a == null) return res;
+            Dictionary<string, string> v = Valeurs(ini ?? "");
+            int l, h;
+            if (a.Resolution != null && AffichageJeu.Lit(a.Resolution, out l, out h))
+            {
+                if (ResolutionActuelle(ini) == null) clesAbsentes.Add("ResolutionSizeX");
+                else
+                    foreach (string cle in ClesResolution)
+                    {
+                        string avant;
+                        if (!v.TryGetValue(Id(Jeu, cle), out avant) || !Entier(avant)) continue;
+                        string cible = (cle.EndsWith("X", StringComparison.Ordinal) ? l : h).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        if (!Pareil(avant, cible)) res.Add(new Changement { Section = Jeu, Cle = cle, Avant = avant, Apres = cible });
+                    }
+            }
+            if (a.Mode != null && ModeConnu(a.Mode))
+            {
+                if (ModeAffichageActuel(ini) == null) clesAbsentes.Add("FullscreenMode");
+                else
+                    foreach (string cle in ClesMode)
+                    {
+                        string avant;
+                        if (!v.TryGetValue(Id(Jeu, cle), out avant) || !ModeConnu(avant)) continue;
+                        if (cle == "PreferredFullscreenMode" && a.Mode.Trim() == "2") continue;
+                        if (!Pareil(avant, a.Mode)) res.Add(new Changement { Section = Jeu, Cle = cle, Avant = avant, Apres = a.Mode.Trim() });
+                    }
+            }
+            return res;
+        }
 
         public static string NomMode(Mode m)
         {
@@ -107,6 +187,10 @@ namespace BTOptimizer
             { "sg.TextureQuality", "Textures" }, { "sg.EffectsQuality", "Effets" }, { "sg.FoliageQuality", "Feuillage" },
             { "sg.ShadingQuality", "Ombrage" }, { "sg.LandscapeQuality", "Terrain" },
             { "bMotionBlur", "Flou de mouvement" }, { "bUseVSync", "Synchronisation verticale" }, { "bUseNanite", "Maillages Nanite" },
+            { "ResolutionSizeX", "Résolution (largeur)" }, { "ResolutionSizeY", "Résolution (hauteur)" },
+            { "LastUserConfirmedResolutionSizeX", "Résolution confirmée (largeur)" }, { "LastUserConfirmedResolutionSizeY", "Résolution confirmée (hauteur)" },
+            { "FullscreenMode", "Mode d'affichage" }, { "LastConfirmedFullscreenMode", "Mode d'affichage confirmé" },
+            { "PreferredFullscreenMode", "Mode du plein écran" },
         };
 
         private static readonly string[] Crans = { "Bas", "Moyen", "Élevé", "Épique" };
@@ -130,7 +214,16 @@ namespace BTOptimizer
         /// <summary>« Ombres : Épique → Bas ».</summary>
         public static string Ligne(Changement c)
         {
-            return c == null ? "" : Libelle(c.Cle) + " : " + Valeur(c.Avant) + " → " + Valeur(c.Apres);
+            if (c == null) return "";
+            if (Array.IndexOf(ClesResolution, c.Cle) >= 0) return Libelle(c.Cle) + " : " + c.Avant.Trim() + " → " + c.Apres.Trim();
+            if (Array.IndexOf(ClesMode, c.Cle) >= 0) return Libelle(c.Cle) + " : " + NomAffichage(c.Avant) + " → " + NomAffichage(c.Apres);
+            return Libelle(c.Cle) + " : " + Valeur(c.Avant) + " → " + Valeur(c.Apres);
+        }
+
+        public static string NomAffichage(string v)
+        {
+            foreach (string[] m in ModesAffichage) if (m[0] == (v ?? "").Trim()) return m[1];
+            return v;
         }
 
         /// <summary>Limite d'images du jeu (FrameRateLimit, 0 = aucune) et synchro verticale ; lues, jamais écrites.</summary>

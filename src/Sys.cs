@@ -1138,6 +1138,59 @@ namespace BTOptimizer
             /// <summary>Processus qui possèdent ce cache (voir <see cref="CachesApplis"/>) : tant
             /// que l'un d'eux tourne, le cache n'est PAS vidé. Null = aucun propriétaire.</summary>
             public string[] Proprietaires;
+
+            /// <summary>Résidu de jeu (voir <see cref="ResidusJeux"/>) : fichiers envoyés à la Corbeille, jamais supprimés.</summary>
+            public bool VersCorbeille;
+        }
+
+        /// <summary>
+        /// Journaux et rapports de plantage des jeux (voir <see cref="ResidusJeuxRegles"/>). Liste À PART de
+        /// <see cref="CleanTargets"/> : les routines et l'assistant n'y touchent jamais ; seul « Nettoyage
+        /// disque » les montre, décochés. Lecture seule ici.
+        /// </summary>
+        public static System.Collections.Generic.List<CleanTarget> ResidusJeux()
+        {
+            var list = new System.Collections.Generic.List<CleanTarget>();
+            try
+            {
+                string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                foreach (string dossier in Directory.EnumerateDirectories(local))
+                {
+                    try
+                    {
+                        string saved = Path.Combine(dossier, "Saved"), config = Path.Combine(saved, "Config");
+                        if (!Directory.Exists(config)) continue;
+                        var sous = new System.Collections.Generic.List<string>();
+                        foreach (string c in Directory.EnumerateDirectories(config)) sous.Add(Path.GetFileName(c));
+                        if (!ResidusJeuxRegles.EstUnreal(sous) && !ResidusJeuxRegles.RetenuParNom(Path.GetFileName(dossier))) continue;
+                        string jeu = ResidusJeuxRegles.NomJeu(Path.GetFileName(dossier));
+                        foreach (string s in ResidusJeuxRegles.SousDossiers)
+                        {
+                            string p = Path.Combine(saved, s);
+                            if (Directory.Exists(p) && Directory.EnumerateFiles(p, "*", SearchOption.AllDirectories).GetEnumerator().MoveNext())
+                                list.Add(new CleanTarget { Name = ResidusJeuxRegles.Libelle(jeu, s), Path = p, Kind = "jeux", Safety = 1, VersCorbeille = true });
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            try
+            {
+                string steam = GetUser(@"Software\Valve\Steam", "SteamPath") as string;
+                string dumps = string.IsNullOrEmpty(steam) ? null : Path.Combine(steam.Replace('/', '\\'), "dumps");
+                if (dumps != null && Directory.Exists(dumps) && Directory.EnumerateFiles(dumps, "*", SearchOption.AllDirectories).GetEnumerator().MoveNext())
+                    list.Add(new CleanTarget { Name = "Steam — rapports de plantage (dumps)", Path = dumps, Kind = "jeux", Safety = 1, VersCorbeille = true });
+            }
+            catch { }
+            try
+            {
+                StorageSettings reglages = StorageSettings.Load();
+                list.RemoveAll(t => reglages.Exclu(t.Path));
+            }
+            catch { }
+            foreach (CleanTarget t in list) t.SizeMB = MeasureCleanTarget(t);
+            return list;
         }
 
         public static System.Collections.Generic.List<CleanTarget> CleanTargets()
@@ -1345,6 +1398,7 @@ namespace BTOptimizer
                 if (string.IsNullOrEmpty(t.Path) || !Directory.Exists(t.Path)) return 0;
                 string ouvert = CachesApplis.Ouvert(t.Proprietaires, ProcessusOuverts());
                 if (ouvert != null) { log(CachesApplis.MessageIgnore(t.Name, ouvert), 2); return 0; }
+                if (t.VersCorbeille) return VersCorbeille(t, log);
                 foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
                 {
                     try { File.SetAttributes(f, FileAttributes.Normal); File.Delete(f); removed++; } catch { }
@@ -1357,6 +1411,25 @@ namespace BTOptimizer
             }
             catch (Exception ex) { log(t.Name + " : " + ex.Message, 2); }
             return removed;
+        }
+
+        /// <summary>Résidu de jeu : seulement les fichiers libres (un jeu ouvert garde son journal), à la Corbeille.</summary>
+        private static int VersCorbeille(CleanTarget t, Action<string, int> log)
+        {
+            if (JournalJeu.JeuEnCours != null) { log(t.Name + " : ignoré, un jeu est ouvert (" + JournalJeu.JeuEnCours + ").", 2); return 0; }
+            var libres = new System.Collections.Generic.List<string>();
+            foreach (string f in Directory.EnumerateFiles(t.Path, "*", SearchOption.AllDirectories))
+            {
+                try { using (new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.None)) { } libres.Add(f); } catch { }
+            }
+            if (libres.Count == 0) { log(t.Name + " : rien de libre à envoyer à la Corbeille.", 1); return 0; }
+            if (!Storage.RecycleFiles(libres)) { log(t.Name + " : envoi à la Corbeille refusé ou incomplet.", 2); return 0; }
+            foreach (string d in Directory.EnumerateDirectories(t.Path))
+            {
+                try { if (!Directory.EnumerateFileSystemEntries(d, "*", SearchOption.AllDirectories).GetEnumerator().MoveNext()) Directory.Delete(d, true); } catch { }
+            }
+            log(t.Name + " : " + libres.Count + " fichier(s) envoyé(s) à la Corbeille.", 1);
+            return libres.Count;
         }
 
         /// <summary>Noms des processus ouverts (sans « .exe »). Liste vide si la lecture échoue :

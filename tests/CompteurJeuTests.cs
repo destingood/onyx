@@ -128,6 +128,53 @@ namespace BTOptimizer.Tests
             foreach (string id in CompteurJeu.Toutes)
                 if (CompteurJeu.Libelle(id) == id) Banc.Verifie("libellé manquant pour " + id, true, false);
             Banc.Verifie("chaque ligne a un libellé", true, true);
+            Minuteur();
+        }
+
+        private static void Minuteur()
+        {
+            Banc.Titre("Minuteur du compteur");
+            var o = CompteurJeu.Lit("1;1;1;0;cpu");
+            Banc.Verifie("fichier d'avant : chronomètre, signal sonore", true, o.DureeMinuteur == 0 && o.SonMinuteur && !o.A(CompteurJeu.Minuteur));
+            Banc.Egal("réglages d'origine : fichier inchangé", "1;1;1;0;cpu", CompteurJeu.Ecrit(o));
+            o.DureeMinuteur = 10; o.SonMinuteur = false; o.Lignes.Add(CompteurJeu.Minuteur);
+            Banc.Egal("durée et son écrits après le style", "1;1;1;0;cpu,minuteur;0;10;0", CompteurJeu.Ecrit(o));
+            var o2 = CompteurJeu.Lit(CompteurJeu.Ecrit(o));
+            Banc.Verifie("relu", true, o2.DureeMinuteur == 10 && !o2.SonMinuteur && o2.A(CompteurJeu.Minuteur) && o2.Style == 0);
+            Banc.Egal("durée hors liste refusée", "0", CompteurJeu.Lit("1;1;1;0;cpu;0;7;1").DureeMinuteur.ToString());
+            Banc.Egal("noms des durées", "Chronomètre (temps écoulé)|Compte à rebours de 90 min|Compte à rebours de 2 h",
+                CompteurJeu.NomDuree(0) + "|" + CompteurJeu.NomDuree(90) + "|" + CompteurJeu.NomDuree(120));
+            int l1, h1, l2, h2;
+            var sans = CompteurJeu.Lit("1;1;1;0;cpu"); CompteurJeu.Dimensions(sans, out l1, out h1);
+            CompteurJeu.Dimensions(o2, out l2, out h2);
+            Banc.Verifie("une ligne de plus dans le bloc", true, h2 - h1 == 28 && l1 == l2);
+
+            var t0 = new DateTime(2026, 11, 28, 20, 0, 0);
+            var c = new CompteurJeu.ChronoMinuteur();
+            Banc.Egal("chrono à l'arrêt", "CHRONO 00:00", c.Etiquette(t0) + " " + c.Texte(t0));
+            c.Bascule(t0);
+            Banc.Egal("chrono lancé", "CHRONO 01:05", c.Etiquette(t0.AddSeconds(65.7)) + " " + c.Texte(t0.AddSeconds(65.7)));
+            c.Bascule(t0.AddSeconds(70));
+            Banc.Egal("pause : le temps ne bouge plus", "PAUSE 01:10", c.Etiquette(t0.AddSeconds(500)) + " " + c.Texte(t0.AddSeconds(500)));
+            c.Bascule(t0.AddSeconds(600));
+            Banc.Egal("reprise", "01:20", c.Texte(t0.AddSeconds(610)));
+            Banc.Egal("plus d'une heure", "1:01:10", c.Texte(t0.AddSeconds(600 + 3600)));
+            Banc.Verifie("un chronomètre ne finit jamais", false, c.Fin(t0.AddHours(30)));
+            c.RemetAZero();
+            Banc.Egal("remise à zéro", "CHRONO 00:00", c.Etiquette(t0) + " " + c.Texte(t0));
+
+            var r = new CompteurJeu.ChronoMinuteur { Duree = TimeSpan.FromMinutes(5) };
+            Banc.Egal("compte à rebours prêt", "REBOURS 05:00", r.Etiquette(t0) + " " + r.Texte(t0));
+            r.Bascule(t0);
+            Banc.Egal("seconde entamée comptée", "05:00|04:59", r.Texte(t0.AddSeconds(0.5)) + "|" + r.Texte(t0.AddSeconds(1.2)));
+            Banc.Verifie("pas fini avant l'heure", false, r.Fin(t0.AddSeconds(299)));
+            Banc.Verifie("fin signalée", true, r.Fin(t0.AddSeconds(300.4)));
+            Banc.Verifie("fin signalée une seule fois", false, r.Fin(t0.AddSeconds(302)));
+            Banc.Egal("arrêté sur zéro", "FINI 00:00", r.Etiquette(t0.AddSeconds(900)) + " " + r.Texte(t0.AddSeconds(900)));
+            r.Bascule(t0.AddSeconds(1000));
+            Banc.Egal("relancé après la fin : repart du début", "REBOURS 04:50", r.Etiquette(t0.AddSeconds(1010)) + " " + r.Texte(t0.AddSeconds(1010)));
+            r.Duree = TimeSpan.FromMinutes(1);
+            Banc.Verifie("changer la durée remet à zéro", true, !r.EnMarche && r.Texte(t0) == "01:00");
         }
     }
 }

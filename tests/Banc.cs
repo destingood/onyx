@@ -141,6 +141,9 @@ namespace BTOptimizer.Tests
             BilanJeuTests.Tout();
             ManetteTests.Tout();
             ReglagesCodTests.Tout();
+            AffichageJeuTests.Tout();
+            FermeLanceurTests.Tout();
+            ResidusJeuxTests.Tout();
             SuccesSteamTests.Tout();
             ClavierJeuTests.Tout();
             CompteurJeuTests.Tout();

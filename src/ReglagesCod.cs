@@ -13,7 +13,8 @@ namespace BTOptimizer
     /// que le menu propose, et ONYX n'écrit QUE l'un d'eux (ou true/false pour une case à cocher).
     /// Seule la valeur des lignes visées change, le reste du fichier reste identique octet pour
     /// octet ; un réglage absent, en double ou dont la valeur sort de la liste n'est pas touché.
-    /// Valeurs : proposition d'ONYX. Jamais touchés : résolution, préréglage de qualité, textures,
+    /// Valeurs : proposition d'ONYX. Affichage (au choix, à part) : résolution au format « 2560x1440 » et
+    /// mode d'affichage parmi la liste du fichier. Jamais touchés : préréglage de qualité, textures,
     /// DLSS/FSR/XeSS, génération d'images, synchro verticale, limite d'images, Reflex.
     /// </summary>
     internal static partial class ReglagesCod
@@ -44,6 +45,7 @@ namespace BTOptimizer
         private static readonly Regex LigneReglage = new Regex(@"^(?<cle>[A-Za-z0-9_]+)@[0-9;]+ = (?<val>.*?)(?: // (?<com>.*))?$", RegexOptions.CultureInvariant);
 
         /// <summary>Valeurs réécrites ou gardées dans l'état : rien qui casserait une ligne.</summary>
+        private static readonly Regex FormatResolution = new Regex(@"^[0-9]{3,5}x[0-9]{3,5}$", RegexOptions.CultureInvariant);
         private static readonly Regex Simple = new Regex(@"^[A-Za-z0-9 _+.:%\-]{1,64}$", RegexOptions.CultureInvariant);
 
         public const int SteamId = 4384550;
@@ -69,7 +71,7 @@ namespace BTOptimizer
 
         private sealed class Reglage
         {
-            public string Valeur;
+            public string Cle, Valeur;
             public int Debut, Longueur, Fois;
             public List<string> Liste;    // crans du menu (« one of »), null sinon
             public bool Commentaire;
@@ -93,7 +95,7 @@ namespace BTOptimizer
                     if (d.TryGetValue(cle, out r)) r.Fois++;
                     else
                     {
-                        r = new Reglage { Valeur = m.Groups["val"].Value, Debut = pos + m.Groups["val"].Index, Longueur = m.Groups["val"].Length, Fois = 1 };
+                        r = new Reglage { Cle = cle, Valeur = m.Groups["val"].Value, Debut = pos + m.Groups["val"].Index, Longueur = m.Groups["val"].Length, Fois = 1 };
                         Group com = m.Groups["com"];
                         r.Commentaire = com.Success;
                         if (com.Success && com.Value.StartsWith("one of ", StringComparison.Ordinal))
@@ -110,6 +112,8 @@ namespace BTOptimizer
         private static bool Reconnu(Reglage r, string cible)
         {
             if (r == null || r.Fois != 1 || !Simple.IsMatch(cible) || !Simple.IsMatch(r.Valeur)) return false;
+            // Résolution : ligne sans liste ni commentaire, valeur actuelle et visée « 1920x1080 ».
+            if (r.Cle == "Resolution") return r.Liste == null && !r.Commentaire && FormatResolution.IsMatch(r.Valeur) && FormatResolution.IsMatch(cible);
             if (r.Liste != null) return r.Liste.Contains(r.Valeur) && r.Liste.Contains(cible);
             if (r.Commentaire) return false;   // plage de nombres : jamais écrite ici
             return (r.Valeur == "true" || r.Valeur == "false") && (cible == "true" || cible == "false");
@@ -128,6 +132,60 @@ namespace BTOptimizer
                 if (!d.TryGetValue(t[0], out r) || !Reconnu(r, cible)) { clesAbsentes.Add(t[0]); continue; }
                 if (string.Equals(r.Valeur, cible, StringComparison.Ordinal)) continue;
                 res.Add(new Changement { Cle = t[0], Avant = r.Valeur, Apres = cible });
+            }
+            return res;
+        }
+
+        /// <summary>« 2560x1440 », ou null si la ligne manque ou n'a pas ce format.</summary>
+        public static string ResolutionActuelle(string texte)
+        {
+            Reglage r;
+            return Reglages(texte).TryGetValue("Resolution", out r) && Reconnu(r, r.Valeur) ? r.Valeur : null;
+        }
+
+        /// <summary>Modes que le fichier propose (« one of » de DisplayMode) et le mode actuel ; null si la ligne est inattendue.</summary>
+        public static List<string> ModesAffichage(string texte, out string actuel)
+        {
+            actuel = null;
+            Reglage r;
+            if (!Reglages(texte).TryGetValue("DisplayMode", out r) || r.Liste == null || !Reconnu(r, r.Valeur)) return null;
+            actuel = r.Valeur;
+            return new List<string>(r.Liste);
+        }
+
+        /// <summary>Nom de l'écran choisi dans le jeu (« Monitor »), ou null.</summary>
+        public static string Ecran(string texte)
+        {
+            Reglage r;
+            return Reglages(texte).TryGetValue("Monitor", out r) && r.Fois == 1 && r.Valeur.Length > 0 ? r.Valeur : null;
+        }
+
+        /// <summary>
+        /// Résolution et mode d'affichage demandés, seulement vers une valeur que le fichier accepte.
+        /// PreferredDisplayMode (mode du plein écran) suit quand le mode visé est dans sa propre liste.
+        /// </summary>
+        public static List<Changement> PrevoitAffichage(string texte, ChoixAffichage a, out List<string> clesAbsentes)
+        {
+            var res = new List<Changement>();
+            clesAbsentes = new List<string>();
+            if (a == null) return res;
+            Dictionary<string, Reglage> d = Reglages(texte);
+            Reglage r;
+            if (a.Resolution != null)
+            {
+                if (!d.TryGetValue("Resolution", out r) || !Reconnu(r, a.Resolution)) clesAbsentes.Add("Resolution");
+                else if (r.Valeur != a.Resolution) res.Add(new Changement { Cle = "Resolution", Avant = r.Valeur, Apres = a.Resolution });
+            }
+            if (a.Mode != null)
+            {
+                if (!d.TryGetValue("DisplayMode", out r) || r.Liste == null || !Reconnu(r, a.Mode)) clesAbsentes.Add("DisplayMode");
+                else
+                {
+                    if (r.Valeur != a.Mode) res.Add(new Changement { Cle = "DisplayMode", Avant = r.Valeur, Apres = a.Mode });
+                    Reglage p;
+                    if (d.TryGetValue("PreferredDisplayMode", out p) && p.Liste != null && Reconnu(p, a.Mode) && p.Valeur != a.Mode)
+                        res.Add(new Changement { Cle = "PreferredDisplayMode", Avant = p.Valeur, Apres = a.Mode });
+                }
             }
             return res;
         }
@@ -224,6 +282,7 @@ namespace BTOptimizer
             { "Tessellation", "Tessellation" }, { "TextureFilter", "Filtrage des textures" },
             { "WorldStreamingQuality", "Chargement du décor" }, { "DepthOfField", "Profondeur de champ" },
             { "VRS", "Ombrage à taux variable (VRS)" },
+            { "Resolution", "Résolution" }, { "DisplayMode", "Mode d'affichage" }, { "PreferredDisplayMode", "Mode du plein écran" },
         };
 
         private static readonly Dictionary<string, string> Crans = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -233,7 +292,12 @@ namespace BTOptimizer
             { "Low Quality", "Bas" }, { "Medium Quality", "Moyen" }, { "High Quality", "Élevé" },
             { "0_Off", "désactivée" }, { "1_Near", "Proche" }, { "2_All", "Partout" },
             { "true", "activé" }, { "false", "désactivé" },
+            { "Windowed", "Fenêtré" }, { "Fullscreen", "Plein écran" }, { "Fullscreen borderless window", "Plein écran fenêtré" },
+            { "Fullscreen borderless extended window", "Plein écran fenêtré étendu" },
         };
+
+        /// <summary>Libellé d'un mode d'affichage du fichier (« Plein écran fenêtré »).</summary>
+        public static string NomAffichage(string v) { return Valeur(v); }
 
         public static string Libelle(string cle)
         {

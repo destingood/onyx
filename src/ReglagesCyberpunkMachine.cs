@@ -50,17 +50,24 @@ namespace BTOptimizer
             }
             public string FichierMesure { get { return "bt-reglages-cyberpunk-avant.txt"; } }
             public string NomMode(int m) { return ReglagesCyberpunk.NomMode((Mode)m); }
-            public List<string> Apercu(int m, out List<string> absentes, out string raison)
+            public List<string> Apercu(int m, ChoixAffichage a, out List<string> absentes, out string raison)
             {
                 absentes = new List<string>();
                 Encoding enc;
                 string json = FichierReglagesJeu.Lit(Chemin, NomJeu, out enc, out raison);
                 if (json == null) return null;
+                if (m < 0) return new List<string>();
                 List<Changement> c = Prevoit(json, (Mode)m, out absentes);
                 absentes = absentes.ConvertAll(Libelle);
                 return c.ConvertAll(Ligne);
             }
-            public string Applique(int m) { return ReglagesCyberpunk.Applique((Mode)m); }
+            public string Applique(int m, ChoixAffichage a) { return m < 0 ? "Rien à changer." : ReglagesCyberpunk.Applique((Mode)m); }
+            public OptionsAffichage Affichage(out string raison)
+            {
+                raison = "Résolution et mode d'affichage : Cyberpunk 2077 les range dans des listes que le jeu construit lui-même au lancement. "
+                       + "ONYX n'y touche pas : règle-les dans le menu du jeu.";
+                return null;
+            }
             public string Retablit() { return ReglagesCyberpunk.Retablit(); }
             public bool ARetablir { get { return Etat().Count > 0; } }
             public bool Situation(out int? mode, out int limite, out bool vsync)

@@ -31,8 +31,19 @@ namespace BTOptimizer.Tests
             lus = Raccourcis.LitFichier("afficher=Ctrl+Alt+G\n");
             Banc.Egal("fichier : la seconde revient à son défaut s'il est libre", "Ctrl+Alt+G|Ctrl+Alt+O",
                 Raccourcis.Texte(lus[0]) + "|" + Raccourcis.Texte(lus[1]));
-            Banc.Egal("aller-retour du fichier", "modejeu=Ctrl+Alt+K\nafficher=Ctrl+Alt+O\ncompteur=désactivé\ncapture=Ctrl+Alt+C\n",
+            Banc.Egal("aller-retour du fichier", "modejeu=Ctrl+Alt+K\nafficher=Ctrl+Alt+O\ncompteur=désactivé\ncapture=Ctrl+Alt+C\nminuteur=Ctrl+Alt+T\nminuteur0=Ctrl+Alt+R\n",
                 Raccourcis.EcritFichier(Raccourcis.LitFichier(Raccourcis.EcritFichier(Raccourcis.LitFichier("modejeu=Ctrl+Alt+K\ncompteur=désactivé")))));
+            var anciens = Raccourcis.LitFichier("modejeu=Ctrl+Alt+G\nafficher=Ctrl+Alt+O\ncompteur=Ctrl+Alt+F\ncapture=Ctrl+Alt+C\n");
+            Banc.Egal("fichier d'avant le minuteur : ses deux raccourcis prennent leur défaut", "Ctrl+Alt+T|Ctrl+Alt+R",
+                Raccourcis.Texte(anciens[(int)Raccourcis.Action.Minuteur]) + "|" + Raccourcis.Texte(anciens[(int)Raccourcis.Action.MinuteurZero]));
+            Banc.Verifie("aucun conflit entre les raccourcis par défaut", true, PasDeConflit());
+        }
+
+        private static bool PasDeConflit()
+        {
+            var t = Raccourcis.TousParDefaut();
+            for (int i = 0; i < t.Length; i++) if (Raccourcis.Conflit(t, t[i], i) >= 0 || Raccourcis.Refus(t[i]) != null) return false;
+            return true;
         }
     }
 }

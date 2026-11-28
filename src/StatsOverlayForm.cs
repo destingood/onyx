@@ -14,7 +14,8 @@ namespace BTOptimizer
         private readonly Action<string, int> _log;
         private StatsOverlaySettings _s;
         private CheckBox _chk;
-        private ComboBox _corner, _taille, _couleur, _style;
+        private ComboBox _corner, _taille, _couleur, _style, _minuteur;
+        private CheckBox _son;
         private readonly Dictionary<string, CheckBox> _lignes = new Dictionary<string, CheckBox>();
         private bool _pret;
 
@@ -35,6 +36,8 @@ namespace BTOptimizer
             _s.O.Taille = Math.Max(0, _taille.SelectedIndex);
             _s.O.Couleur = Math.Max(0, _couleur.SelectedIndex);
             _s.O.Style = Math.Max(0, _style.SelectedIndex);
+            _s.O.DureeMinuteur = CompteurJeu.DureesMinuteur[Math.Max(0, _minuteur.SelectedIndex)];
+            _s.O.SonMinuteur = _son.Checked;
             _s.O.Lignes.Clear();
             foreach (var kv in _lignes) if (kv.Value.Checked) _s.O.Lignes.Add(kv.Key);
             _s.Save();
@@ -95,10 +98,25 @@ namespace BTOptimizer
             _taille = Liste("Taille :", 176, CompteurJeu.Tailles, _s.O.Taille);
             _couleur = Liste("Couleur :", 208, CompteurJeu.Couleurs, _s.O.Couleur);
             _style = Liste("Style :", 240, CompteurJeu.Styles, _s.O.Style);
+            var durees = new string[CompteurJeu.DureesMinuteur.Length];
+            for (int i = 0; i < durees.Length; i++) durees[i] = CompteurJeu.NomDuree(CompteurJeu.DureesMinuteur[i]);
+            _minuteur = Liste("Minuteur :", 272, durees, Math.Max(0, Array.IndexOf(CompteurJeu.DureesMinuteur, _s.O.DureeMinuteur)));
+            _son = new CheckBox
+            {
+                Text = "Signal sonore à la fin du compte à rebours", Checked = _s.O.SonMinuteur,
+                Location = new Point(130, 302), Size = new Size(330, 24)
+            };
+            _son.CheckedChanged += (s, e) => Applique();
+            Controls.Add(_son);
+            Controls.Add(new Label
+            {
+                Text = "Raccourcis : démarrer / pause et remise à zéro (⋯ → Système → Raccourcis clavier).",
+                Location = new Point(130, 326), Size = new Size(412, 20), ForeColor = Color.FromArgb(110, 115, 125)
+            });
 
             Controls.Add(new Label
             {
-                Text = "Mesures affichées avec les FPS", Location = new Point(18, 280), Size = new Size(400, 22),
+                Text = "Mesures affichées avec les FPS", Location = new Point(18, 356), Size = new Size(400, 22),
                 Font = new Font("Segoe UI Semibold", 9.5f)
             });
             // Deux colonnes, dans l'ordre d'affichage du compteur.
@@ -109,7 +127,7 @@ namespace BTOptimizer
                 var c = new CheckBox
                 {
                     Text = CompteurJeu.Libelle(id), Checked = _s.O.A(id),
-                    Location = new Point(i < moitie ? 18 : 286, 306 + (i % moitie) * 26), Size = new Size(262, 24)
+                    Location = new Point(i < moitie ? 18 : 286, 382 + (i % moitie) * 26), Size = new Size(262, 24)
                 };
                 c.CheckedChanged += (s, e) => Applique();
                 _lignes[id] = c;
@@ -121,9 +139,9 @@ namespace BTOptimizer
                 Text = "Le compteur réapparaît au prochain démarrage s'il est activé. En plein écran EXCLUSIF, Windows "
                      + "masque toute surimpression : passe le jeu en « plein écran fenêtré » pour le voir. Les ventilateurs "
                      + "du processeur et du boîtier ne sont pas proposés : les lire demande un pilote noyau, qu'ONYX n'installe pas.",
-                Location = new Point(18, 306 + moitie * 26 + 10), Size = new Size(524, 62), ForeColor = Color.FromArgb(110, 115, 125)
+                Location = new Point(18, 382 + moitie * 26 + 10), Size = new Size(524, 62), ForeColor = Color.FromArgb(110, 115, 125)
             });
-            int bas = 306 + moitie * 26 + 80;
+            int bas = 382 + moitie * 26 + 80;
 
             // Aperçu : valeurs de démonstration pendant 5 secondes, pour juger la place et la taille.
             var apercu = new Button

@@ -39,18 +39,36 @@ namespace BTOptimizer
                 get
                 {
                     return "Écrit dans GameUserSettings.ini, Fortnite fermé. Les valeurs sont une proposition d'ONYX, pas une mesure : "
-                         + "« Mesurer en jeu » dit ce qu'elles valent sur ton PC. Jamais touchés : résolution, limite d'images, plein écran, moteur de rendu, DLSS/TSR.";
+                         + "« Mesurer en jeu » dit ce qu'elles valent sur ton PC. Résolution et mode d'affichage : seulement si tu les choisis. Jamais touchés : limite d'images, moteur de rendu, DLSS/TSR.";
                 }
             }
             public string FichierMesure { get { return "bt-reglages-fortnite-avant.txt"; } }
             public string NomMode(int m) { return ReglagesFortnite.NomMode((Mode)m); }
-            public List<string> Apercu(int m, out List<string> absentes, out string raison)
+            public List<string> Apercu(int m, ChoixAffichage a, out List<string> absentes, out string raison)
             {
-                List<Changement> c = ReglagesFortnite.Apercu((Mode)m, out absentes, out raison);
+                absentes = new List<string>();
+                Encoding enc;
+                string ini = LitIni(out enc, out raison);
+                if (ini == null) return null;
+                List<Changement> c = Prevoit(ini, m, a, out absentes);
                 absentes = absentes.ConvertAll(Libelle);
-                return c == null ? null : c.ConvertAll(Ligne);
+                return c.ConvertAll(Ligne);
             }
-            public string Applique(int m) { return ReglagesFortnite.Applique((Mode)m); }
+            public string Applique(int m, ChoixAffichage a) { return ReglagesFortnite.Applique(m, a); }
+            public OptionsAffichage Affichage(out string raison)
+            {
+                Encoding enc;
+                string ini = LitIni(out enc, out raison);
+                if (ini == null) return null;
+                var o = new OptionsAffichage { ResolutionActuelle = ResolutionActuelle(ini), ModeActuel = ModeAffichageActuel(ini) };
+                if (o.ResolutionActuelle != null) o.Resolutions = DisplayInfo.Resolutions(IdEcran(ini), null);
+                if (o.ModeActuel != null) foreach (string[] x in ModesAffichage) o.Modes.Add(new KeyValuePair<string, string>(x[0], x[1]));
+                var rq = new StringBuilder("En plein écran fenêtré, Fortnite s'affiche en général à la résolution du bureau : la résolution choisie sert surtout en plein écran.");
+                if (o.ResolutionActuelle == null) rq.Append(" Résolution absente du fichier : non proposée.");
+                if (o.ModeActuel == null) rq.Append(" Mode d'affichage absent du fichier (Fortnite garde son réglage par défaut) : change-le une fois dans le menu du jeu, ONYX pourra ensuite le régler.");
+                o.Remarque = rq.ToString();
+                return o;
+            }
             public string Retablit() { return ReglagesFortnite.Retablit(); }
             public bool ARetablir { get { return Etat().Count > 0; } }
             public bool Situation(out int? mode, out int limite, out bool vsync)
@@ -83,7 +101,21 @@ namespace BTOptimizer
             return ini == null ? null : Prevoit(ini, m, out absentes);
         }
 
-        public static string Applique(Mode m)
+        /// <summary>Préréglage graphique (mode -1 : aucun) puis affichage choisi.</summary>
+        private static List<Changement> Prevoit(string ini, int m, ChoixAffichage a, out List<string> absentes)
+        {
+            List<string> abs1 = new List<string>(), abs2;
+            List<Changement> c = new List<Changement>();
+            if (m >= 0) c = Prevoit(ini, (Mode)m, out abs1);
+            c.AddRange(PrevoitAffichage(ini, a, out abs2));
+            abs1.AddRange(abs2);
+            absentes = abs1;
+            return c;
+        }
+
+        public static string Applique(Mode m) { return Applique((int)m, null); }
+
+        public static string Applique(int m, ChoixAffichage a)
         {
             string refus = Refus();
             if (refus != null) return refus;
@@ -91,8 +123,9 @@ namespace BTOptimizer
             string ini = LitIni(out enc, out raison);
             if (ini == null) return raison;
             List<string> absentes;
-            List<Changement> c = Prevoit(ini, m, out absentes);
-            if (c.Count == 0) return "Rien à changer : le fichier est déjà réglé en « " + NomMode(m) + " ».";
+            List<Changement> c = Prevoit(ini, m, a, out absentes);
+            string quoi = m >= 0 ? "« " + NomMode((Mode)m) + " »" + (a != null && !a.Vide ? " et affichage" : "") : "Affichage";
+            if (c.Count == 0) return "Rien à changer : le fichier est déjà réglé ainsi.";
             List<Changement> etat = Etat();
             try
             {
@@ -105,7 +138,7 @@ namespace BTOptimizer
                 JournalTechnique.Echec("ReglagesFortnite.Applique", ex);
                 return "Écriture impossible, rien n'a changé : " + ex.Message;
             }
-            var sb = new StringBuilder("« " + NomMode(m) + " » appliqué : " + c.Count + (c.Count > 1 ? " réglages écrits." : " réglage écrit."));
+            var sb = new StringBuilder(quoi + " appliqué : " + c.Count + (c.Count > 1 ? " réglages écrits." : " réglage écrit."));
             foreach (Changement x in c) sb.Append("\r\n  ").Append(Ligne(x));
             if (absentes.Count > 0) sb.Append("\r\nAbsents du fichier, non ajoutés : ").Append(string.Join(", ", absentes.ConvertAll(Libelle))).Append('.');
             return sb.ToString();

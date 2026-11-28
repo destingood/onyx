@@ -73,9 +73,12 @@ namespace BTOptimizer
         string Note { get; }
         string FichierMesure { get; }
         string NomMode(int mode);
-        /// <summary>Lignes « réglage : avant → après » ; null + raison si le fichier est illisible.</summary>
-        System.Collections.Generic.List<string> Apercu(int mode, out System.Collections.Generic.List<string> absentes, out string raison);
-        string Applique(int mode);
+        /// <summary>Lignes « réglage : avant → après » pour un mode (-1 : aucun préréglage graphique) et
+        /// l'affichage choisi (null : inchangé) ; null + raison si le fichier est illisible.</summary>
+        System.Collections.Generic.List<string> Apercu(int mode, ChoixAffichage affichage, out System.Collections.Generic.List<string> absentes, out string raison);
+        string Applique(int mode, ChoixAffichage affichage);
+        /// <summary>Résolutions et modes proposables ; null + raison si le jeu ne s'y prête pas. Énumère les modes de l'écran : hors du fil d'interface.</summary>
+        OptionsAffichage Affichage(out string raison);
         string Retablit();
         bool ARetablir { get; }
         /// <summary>Lecture seule pour « FPS visés » : mode déjà en place (null : réglages perso), limite d'images

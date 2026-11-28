@@ -5,6 +5,32 @@ celles qui ne le garantissent pas sont signalées (voir plus bas). Aucune n'util
 d'injection (compatible anticheat), et rien n'est modifié sans ton action. Les versions suivent
 l'assembly (`BTOptimizer.dll`) ; la puce de version de l'en-tête les affiche automatiquement.
 
+## v16.15 (en préparation) — Minuteur au compteur, résolution dans les préréglages, fermeture de Steam, résidus des jeux
+
+- **Minuteur au compteur en jeu.** Nouvelle ligne « Minuteur » à cocher dans le compteur :
+  chronomètre ou compte à rebours de 1 min à 2 h. Ctrl+Alt+T démarre ou met en pause,
+  Ctrl+Alt+R remet à zéro (raccourcis modifiables, aussi dans le menu de la zone de
+  notification). Signal sonore de Windows à la fin du compte à rebours (coupable). Rien n'est
+  lu ni écrit dans le jeu : le compteur reste une fenêtre à part.
+- **Résolution et mode d'affichage dans les préréglages** (Fortnite, Black Ops 6). Deux listes,
+  « Ne pas changer » par défaut. Résolutions : seulement celles que Windows accepte pour l'écran
+  du jeu (ou, si l'écran n'est pas connu, celles que tous les écrans acceptent). Modes : ceux du
+  menu Vidéo du jeu (Fortnite : plein écran, plein écran fenêtré, fenêtré ; Black Ops 6 : la
+  liste écrite dans son fichier). Même règles que les préréglages : aperçu avant écriture, jeu
+  fermé, fichier en lecture seule refusé, sauvegarde, « Rétablir », aucune ligne ajoutée.
+  Cyberpunk 2077 : non proposé, le jeu range ces valeurs dans des listes qu'il construit lui-même.
+- **Fermer Steam à la fin de la partie** (case dans la fiche d'un jeu Steam, coupée par défaut).
+  Deux minutes après la fin d'une partie lancée depuis ONYX, Steam est fermé par sa propre
+  commande `steam.exe -shutdown`, comme « Steam > Quitter ». Seulement si Steam n'était pas
+  déjà ouvert avant le lancement, et si aucun autre jeu n'a démarré entre-temps. Les autres
+  lanceurs (Epic, EA, Battle.net, Ubisoft, GOG) n'ont pas de commande de fermeture documentée :
+  ONYX ne les arrête pas de force.
+- **Nettoyage disque : journaux et rapports de plantage des jeux.** Jeux Unreal Engine
+  (`%LOCALAPPDATA%\<jeu>\Saved\Logs` et `\Saved\Crashes`, jamais la configuration ni les
+  sauvegardes), lanceur Epic, vidages de plantage de Steam. Jamais cochés d'avance, envoyés à la
+  **Corbeille**, ignorés pendant une partie ; les routines d'entretien et l'assistant n'y touchent
+  pas. Les éditeurs (UEFN) restent hors liste : leurs journaux servent au créateur.
+
 ## v16.14 — Installation en ligne, mises à jour automatiques en option, « Ignorer cette version »
 
 - **Installateur en ligne : `ONYX-Installation.exe` (2 Mo).** Un seul petit fichier à donner : il

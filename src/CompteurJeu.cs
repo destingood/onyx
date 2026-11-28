@@ -17,9 +17,9 @@ namespace BTOptimizer
         public const string Bas1 = "low", Cpu = "cpu", CpuTemp = "cputemp", Gpu = "gpu", GpuTemp = "gputemp",
                             Vram = "vram", Watts = "gpuw", Ram = "ram", Reseau = "net", Heure = "heure",
                             Duree = "duree", Courbe = "courbe", CpuMhz = "cpumhz", Disque = "disque", Batterie = "batterie",
-                            Ventilo = "gpufan";
+                            Ventilo = "gpufan", Minuteur = "minuteur";
 
-        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, CpuMhz, Gpu, GpuTemp, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree, Courbe };
+        public static readonly string[] Toutes = { Bas1, Cpu, CpuTemp, CpuMhz, Gpu, GpuTemp, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree, Minuteur, Courbe };
 
         /// <summary>Le libellé de chaque case à cocher des réglages.</summary>
         public static string Libelle(string id)
@@ -41,6 +41,7 @@ namespace BTOptimizer
                 case Reseau: return "Débit réseau (réception et envoi)";
                 case Heure: return "Heure";
                 case Duree: return "Durée de la partie";
+                case Minuteur: return "Minuteur (chrono ou compte à rebours)";
                 case Courbe: return "Courbe des FPS";
                 default: return id;
             }
@@ -52,6 +53,15 @@ namespace BTOptimizer
         public static readonly string[] Couleurs = { "Automatique (vert, orange, rouge selon la valeur)", "Blanc", "Or", "Vert", "Bleu clair" };
         /// <summary>0 = bloc (FPS en grand, une mesure par ligne) · 1 = en ligne (bandeau fin d'une ligne).</summary>
         public static readonly string[] Styles = { "Bloc (FPS en grand, une mesure par ligne)", "En ligne (bandeau fin, sans la courbe)" };
+        /// <summary>Durées du minuteur en minutes ; 0 = chronomètre (compte le temps écoulé).</summary>
+        public static readonly int[] DureesMinuteur = { 0, 1, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120 };
+
+        public static string NomDuree(int minutes)
+        {
+            if (minutes <= 0) return "Chronomètre (temps écoulé)";
+            return "Compte à rebours de " + (minutes % 60 == 0 ? (minutes / 60).ToString(CultureInfo.InvariantCulture) + " h"
+                                                               : minutes.ToString(CultureInfo.InvariantCulture) + " min");
+        }
 
         public sealed class Options
         {
@@ -60,6 +70,9 @@ namespace BTOptimizer
             public int Taille = 1;
             public int Couleur;
             public int Style;
+            /// <summary>Minuteur : durée du compte à rebours en minutes (0 = chronomètre) et signal sonore à la fin.</summary>
+            public int DureeMinuteur;
+            public bool SonMinuteur = true;
             /// <summary>Par défaut : ce que le compteur affichait avant d'être réglable.</summary>
             public HashSet<string> Lignes = new HashSet<string>(StringComparer.Ordinal) { Bas1, Cpu, CpuTemp, Gpu, GpuTemp, Ram, Courbe };
 
@@ -68,7 +81,7 @@ namespace BTOptimizer
 
         /// <summary>
         /// « 1;1 » (ancien format : actif ; coin), « 1;1;2;0;cpu,gpu,ram », puis « ;1 » pour le style en
-        /// ligne. Un fichier ancien garde l'affichage d'avant. Une valeur hors bornes revient à la valeur
+        /// ligne, puis « ;10;1 » pour le minuteur (durée en minutes ; signal sonore). Un fichier ancien garde l'affichage d'avant. Une valeur hors bornes revient à la valeur
         /// par défaut.
         /// </summary>
         public static Options Lit(string texte)
@@ -91,6 +104,8 @@ namespace BTOptimizer
                 }
             }
             if (p.Length > 5 && int.TryParse(p[5].Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out v) && v < Styles.Length) o.Style = v;
+            if (p.Length > 6 && int.TryParse(p[6].Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out v) && Array.IndexOf(DureesMinuteur, v) >= 0) o.DureeMinuteur = v;
+            if (p.Length > 7) o.SonMinuteur = p[7].Trim() != "0";
             return o;
         }
 
@@ -98,10 +113,12 @@ namespace BTOptimizer
         {
             var l = new List<string>();
             foreach (string id in Toutes) if (o.Lignes.Contains(id)) l.Add(id);   // ordre stable
+            bool minuteur = o.DureeMinuteur != 0 || !o.SonMinuteur;
             return (o.Actif ? "1" : "0") + ";" + o.Position.ToString(CultureInfo.InvariantCulture) + ";"
                  + o.Taille.ToString(CultureInfo.InvariantCulture) + ";" + o.Couleur.ToString(CultureInfo.InvariantCulture) + ";"
                  + string.Join(",", l)
-                 + (o.Style != 0 ? ";" + o.Style.ToString(CultureInfo.InvariantCulture) : "");   // style bloc : fichier d'avant
+                 + (o.Style != 0 || minuteur ? ";" + o.Style.ToString(CultureInfo.InvariantCulture) : "")   // réglages d'origine : fichier d'avant
+                 + (minuteur ? ";" + o.DureeMinuteur.ToString(CultureInfo.InvariantCulture) + ";" + (o.SonMinuteur ? "1" : "0") : "");
         }
 
         /// <summary>Facteur d'échelle : petit 0,85 · moyen 1 · grand 1,3.</summary>
@@ -116,7 +133,7 @@ namespace BTOptimizer
             int n = 0;
             if (o.A(Cpu) || o.A(CpuTemp)) n++;
             if (o.A(Gpu) || o.A(GpuTemp)) n++;
-            foreach (string id in new[] { CpuMhz, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree }) if (o.A(id)) n++;
+            foreach (string id in new[] { CpuMhz, Vram, Watts, Ventilo, Ram, Disque, Reseau, Batterie, Heure, Duree, Minuteur }) if (o.A(id)) n++;
             return n;
         }
 
@@ -161,6 +178,7 @@ namespace BTOptimizer
                     case Batterie: w += 112; break;
                     case Heure: w += 50; break;
                     case Duree: w += 104; break;
+                    case Minuteur: w += 116; break;
                 }
             }
             return w;
@@ -283,6 +301,75 @@ namespace BTOptimizer
                 }
                 else if (_jeu != null && maintenant - _vu > Oubli) _jeu = null;
                 return _jeu == null ? (TimeSpan?)null : maintenant - _debut;
+            }
+        }
+
+        /// <summary>
+        /// Minuteur du compteur : chronomètre (durée nulle) ou compte à rebours. Démarrer, mettre en
+        /// pause et reprendre au même raccourci ; remise à zéro à part. La fin d'un compte à rebours
+        /// n'est signalée qu'une fois, et le minuteur s'arrête sur 00:00.
+        /// </summary>
+        public sealed class ChronoMinuteur
+        {
+            private TimeSpan _cumul;
+            private DateTime? _depuis;
+            private bool _fini;
+            private TimeSpan _duree;
+
+            /// <summary>Zéro : chronomètre. Changer la durée remet à zéro.</summary>
+            public TimeSpan Duree
+            {
+                get { return _duree; }
+                set { if (value < TimeSpan.Zero) value = TimeSpan.Zero; if (value != _duree) { _duree = value; RemetAZero(); } }
+            }
+
+            public bool EnMarche { get { return _depuis.HasValue; } }
+            public bool Fini { get { return _fini; } }
+
+            public TimeSpan Ecoule(DateTime maintenant)
+            {
+                TimeSpan e = _cumul + (_depuis.HasValue ? maintenant - _depuis.Value : TimeSpan.Zero);
+                if (e < TimeSpan.Zero) e = TimeSpan.Zero;
+                return _duree > TimeSpan.Zero && e > _duree ? _duree : e;
+            }
+
+            /// <summary>Démarre, met en pause ou reprend. Un compte à rebours fini repart du début.</summary>
+            public void Bascule(DateTime maintenant)
+            {
+                if (_depuis.HasValue) { _cumul = Ecoule(maintenant); _depuis = null; return; }
+                if (_fini) { _cumul = TimeSpan.Zero; _fini = false; }
+                _depuis = maintenant;
+            }
+
+            public void RemetAZero() { _cumul = TimeSpan.Zero; _depuis = null; _fini = false; }
+
+            /// <summary>Vrai une seule fois, quand le compte à rebours atteint zéro ; le minuteur s'arrête.</summary>
+            public bool Fin(DateTime maintenant)
+            {
+                if (_duree <= TimeSpan.Zero || _fini || !_depuis.HasValue || Ecoule(maintenant) < _duree) return false;
+                _cumul = _duree; _depuis = null; _fini = true;
+                return true;
+            }
+
+            /// <summary>« CHRONO », « REBOURS », « PAUSE » ou « FINI ».</summary>
+            public string Etiquette(DateTime maintenant)
+            {
+                if (_fini) return "FINI";
+                if (!_depuis.HasValue && Ecoule(maintenant) > TimeSpan.Zero) return "PAUSE";
+                return _duree > TimeSpan.Zero ? "REBOURS" : "CHRONO";
+            }
+
+            /// <summary>« 04:59 », « 1:05:09 ». Compte à rebours : temps restant arrondi à la seconde supérieure.</summary>
+            public string Texte(DateTime maintenant)
+            {
+                TimeSpan e = Ecoule(maintenant);
+                long s = _duree > TimeSpan.Zero
+                    ? (long)Math.Ceiling((_duree - e).TotalSeconds - 1e-9)
+                    : (long)Math.Floor(e.TotalSeconds + 1e-9);
+                if (s < 0) s = 0;
+                long h = s / 3600, m = s / 60 % 60, sec = s % 60;
+                string ms = m.ToString("00", CultureInfo.InvariantCulture) + ":" + sec.ToString("00", CultureInfo.InvariantCulture);
+                return h > 0 ? h.ToString(CultureInfo.InvariantCulture) + ":" + ms : ms;
             }
         }
     }

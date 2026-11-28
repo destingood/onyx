@@ -88,6 +88,7 @@ namespace BTOptimizer
             Task.Run(() =>
             {
                 List<Sys.CleanTarget> t = Sys.CleanTargets();
+                t.AddRange(Sys.ResidusJeux());
                 try { BeginInvoke((Action)(() => Populate(t))); } catch { }
             });
         }
@@ -101,7 +102,7 @@ namespace BTOptimizer
             {
                 // Les caches IA (Copilot, Recall) ne sont jamais cochés d'avance : ce sont
                 // des traces d'activité, et elles ne se régénèrent pas une fois effacées.
-                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && t.Kind != "ia" && t.Kind != "gpu");   // shaders : à cocher à la main
+                _list.Items.Add(string.Format("{0}   —   {1:N0} Mo", t.Name, t.SizeMB), t.SizeMB > 0 && t.Kind != "ia" && t.Kind != "gpu" && t.Kind != "jeux");   // shaders et résidus de jeux : à cocher à la main
                 sum += t.SizeMB;
             }
             _total.Text = string.Format("Total récupérable : {0:N0} Mo", sum);
@@ -119,10 +120,16 @@ namespace BTOptimizer
             // ou des captures Recall, c'est perdu pour de bon : on le dit avant, pas après.
             bool ia = false;
             foreach (Sys.CleanTarget t in sel) if (t.Kind == "ia") { ia = true; break; }
+            int jeux = 0;
+            foreach (Sys.CleanTarget t in sel) if (t.VersCorbeille) jeux++;
 
             if (MessageBox.Show(this,
-                    "Supprimer définitivement le contenu des " + sel.Count + " emplacement(s) cochés ?\n"
-                    + "(Fichiers temporaires — cette action n'est pas réversible, mais ces dossiers se régénèrent.)"
+                    (jeux == sel.Count
+                        ? "Envoyer à la Corbeille le contenu des " + sel.Count + " emplacement(s) cochés ?\n"
+                          + "(Journaux et rapports de plantage des jeux : récupérables tant que la Corbeille n'est pas vidée.)"
+                        : "Supprimer définitivement le contenu des " + (sel.Count - jeux) + " emplacement(s) cochés ?\n"
+                          + "(Fichiers temporaires — cette action n'est pas réversible, mais ces dossiers se régénèrent.)"
+                          + (jeux > 0 ? "\nLes " + jeux + " résidu(s) de jeux cochés partent à la Corbeille." : ""))
                     + (ia ? "\n\n⚠ Ta sélection contient l'historique local des fonctions IA de Windows "
                           + "(Copilot / Recall). Celui-là ne se régénère pas : les captures et les "
                           + "conversations passées seront perdues." : ""),
@@ -134,6 +141,7 @@ namespace BTOptimizer
             {
                 foreach (Sys.CleanTarget t in sel) Sys.CleanTargetNow(t, _log);
                 List<Sys.CleanTarget> after = Sys.CleanTargets();
+                after.AddRange(Sys.ResidusJeux());
                 try { BeginInvoke((Action)(() => { Populate(after); _log("Nettoyage terminé.", 1); })); } catch { }
             });
         }

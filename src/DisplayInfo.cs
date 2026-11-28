@@ -115,6 +115,41 @@ namespace BTOptimizer
             }
         }
 
+        /// <summary>
+        /// Résolutions que Windows accepte pour l'écran du jeu (« 2560x1440 », triées, au moins 800 × 600).
+        /// Écran trouvé par son identifiant (« MONITOR\SAM793E\{…}\0002 ») ou son nom ; sinon, celles
+        /// que tous les écrans allumés acceptent. Lecture seule ; prend le verrou d'affichage : hors du fil d'interface.
+        /// </summary>
+        internal static List<string> Resolutions(string idEcran, string nomEcran)
+        {
+            var parEcran = new List<HashSet<string>>();
+            HashSet<string> trouve = null;
+            try
+            {
+                for (uint i = 0; i < 32; i++)
+                {
+                    var a = new DISPLAY_DEVICE { cb = Marshal.SizeOf(typeof(DISPLAY_DEVICE)) };
+                    if (!EnumDisplayDevices(null, i, ref a, 0)) break;
+                    if ((a.StateFlags & 0x1) == 0) continue;   // DISPLAY_DEVICE_ATTACHED_TO_DESKTOP
+                    var modes = new HashSet<string>(StringComparer.Ordinal);
+                    DEVMODE m = NewDevMode();
+                    for (int k = 0; EnumDisplaySettings(a.DeviceName, k, ref m); k++) { modes.Add(m.dmPelsWidth + "x" + m.dmPelsHeight); m = NewDevMode(); }
+                    if (modes.Count == 0) continue;
+                    parEcran.Add(modes);
+                    for (uint j = 0; j < 8; j++)
+                    {
+                        var e = new DISPLAY_DEVICE { cb = Marshal.SizeOf(typeof(DISPLAY_DEVICE)) };
+                        if (!EnumDisplayDevices(a.DeviceName, j, ref e, 0)) break;
+                        if ((idEcran != null && string.Equals((e.DeviceID ?? "").Trim(), idEcran, StringComparison.OrdinalIgnoreCase))
+                            || (nomEcran != null && string.Equals((e.DeviceString ?? "").Trim(), nomEcran.Trim(), StringComparison.OrdinalIgnoreCase)))
+                            trouve = modes;
+                    }
+                }
+            }
+            catch { }
+            return AffichageJeu.Trie(trouve ?? AffichageJeu.Communes(parEcran));
+        }
+
         /// <summary>Oublie les modes connus (écran branché ou changé).</summary>
         internal static void OublieModes() { lock (_maxConnus) _maxConnus.Clear(); }
 

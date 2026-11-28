@@ -89,22 +89,37 @@ namespace BTOptimizer
                 get
                 {
                     return "Écrit dans les deux copies des réglages du jeu (s.1.0.cod24.txt0 et .txt1), jeu fermé. Valeurs proposées par ONYX, choisies parmi les crans du menu : "
-                         + "« Mesurer en jeu » dit ce qu'elles valent. Jamais touchés : résolution, textures, DLSS/FSR/XeSS, génération d'images, synchro verticale, limite d'images, Reflex.";
+                         + "« Mesurer en jeu » dit ce qu'elles valent. Résolution et mode d'affichage : seulement si tu les choisis. Jamais touchés : textures, DLSS/FSR/XeSS, génération d'images, synchro verticale, limite d'images, Reflex.";
                 }
             }
             public string FichierMesure { get { return "bt-reglages-cod-avant.txt"; } }
             public string NomMode(int m) { return ReglagesCod.NomMode((Mode)m); }
-            public List<string> Apercu(int m, out List<string> absentes, out string raison)
+            public List<string> Apercu(int m, ChoixAffichage a, out List<string> absentes, out string raison)
             {
                 absentes = new List<string>();
                 Encoding enc;
                 string texte = LitRecent(out enc, out raison);
                 if (texte == null) return null;
-                List<Changement> c = Prevoit(texte, (Mode)m, out absentes);
+                List<Changement> c = Prevoit(texte, m, a, out absentes);
                 absentes = absentes.ConvertAll(Libelle);
                 return c.ConvertAll(Ligne);
             }
-            public string Applique(int m) { return ReglagesCod.Applique((Mode)m); }
+            public string Applique(int m, ChoixAffichage a) { return ReglagesCod.Applique(m, a); }
+            public OptionsAffichage Affichage(out string raison)
+            {
+                Encoding enc;
+                string texte = LitRecent(out enc, out raison);
+                if (texte == null) return null;
+                string mode;
+                List<string> modes = ModesAffichage(texte, out mode);
+                var o = new OptionsAffichage { ResolutionActuelle = ResolutionActuelle(texte), ModeActuel = mode };
+                if (o.ResolutionActuelle != null) o.Resolutions = DisplayInfo.Resolutions(null, Ecran(texte));
+                if (modes != null) foreach (string x in modes) o.Modes.Add(new KeyValuePair<string, string>(x, NomAffichage(x)));
+                o.Remarque = "La résolution sert surtout en plein écran : en plein écran fenêtré, le jeu suit en général celle du bureau."
+                    + (o.ResolutionActuelle == null ? " Résolution absente ou inattendue dans le fichier : non proposée." : "")
+                    + (modes == null ? " Mode d'affichage absent ou inattendu dans le fichier : non proposé." : "");
+                return o;
+            }
             public string Retablit() { return ReglagesCod.Retablit(); }
             public bool ARetablir { get { return Etat().Count > 0; } }
             public bool Situation(out int? mode, out int limite, out bool vsync)
@@ -127,7 +142,21 @@ namespace BTOptimizer
             catch { return new List<Changement>(); }
         }
 
-        public static string Applique(Mode m)
+        /// <summary>Préréglage graphique (mode -1 : aucun) puis affichage choisi.</summary>
+        private static List<Changement> Prevoit(string texte, int m, ChoixAffichage a, out List<string> absentes)
+        {
+            List<string> abs1 = new List<string>(), abs2;
+            List<Changement> c = new List<Changement>();
+            if (m >= 0) c = Prevoit(texte, (Mode)m, out abs1);
+            c.AddRange(PrevoitAffichage(texte, a, out abs2));
+            abs1.AddRange(abs2);
+            absentes = abs1;
+            return c;
+        }
+
+        public static string Applique(Mode m) { return Applique((int)m, null); }
+
+        public static string Applique(int m, ChoixAffichage a)
         {
             string refus = Refus();
             if (refus != null) return refus;
@@ -135,8 +164,9 @@ namespace BTOptimizer
             string texte = LitRecent(out enc, out raison);
             if (texte == null) return raison;
             List<string> absentes;
-            List<Changement> c = Prevoit(texte, m, out absentes);
-            if (c.Count == 0) return "Rien à changer : les réglages sont déjà en « " + NomMode(m) + " »." + AvisNuage(texte);
+            List<Changement> c = Prevoit(texte, m, a, out absentes);
+            string quoi = m >= 0 ? "« " + NomMode((Mode)m) + " »" + (a != null && !a.Vide ? " et affichage" : "") : "Affichage";
+            if (c.Count == 0) return "Rien à changer : les réglages sont déjà ainsi." + AvisNuage(texte);
             string nouveau = Applique(texte, c);
             if (string.Equals(nouveau, texte, StringComparison.Ordinal)) return "Rien n'a pu être écrit : format du fichier inattendu, il n'a pas été modifié.";
             List<Changement> etat = Etat();
@@ -151,7 +181,7 @@ namespace BTOptimizer
                 JournalTechnique.Echec("ReglagesCod.Applique", ex);
                 return "Écriture impossible : " + ex.Message + " Vérifie les deux fichiers ; « Rétablir » ou la copie de Documents\\ONYX\\Sauvegardes remettent l'état d'avant.";
             }
-            var sb = new StringBuilder("« " + NomMode(m) + " » appliqué : " + c.Count + (c.Count > 1 ? " réglages écrits." : " réglage écrit."));
+            var sb = new StringBuilder(quoi + " appliqué : " + c.Count + (c.Count > 1 ? " réglages écrits." : " réglage écrit."));
             foreach (Changement x in c) sb.Append("\r\n  ").Append(Ligne(x));
             if (absentes.Count > 0) sb.Append("\r\nAbsents ou inattendus dans le fichier, non touchés : ").Append(string.Join(", ", absentes.ConvertAll(Libelle))).Append('.');
             sb.Append(AvisNuage(texte));

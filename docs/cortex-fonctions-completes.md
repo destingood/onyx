@@ -47,7 +47,7 @@ Relevé du 27/11/2026, complété le 28/11/2026 (second passage : 2 910 identifi
 | 34 jeux distincts (48 entrées avec les variantes régionales) : ARC Raiders, Apex Legends, Baldur's Gate 3, Battlefield 6, Black Myth: Wukong, Call of Duty, Counter-Strike 2, Crimson Desert, Cyberpunk 2077, Delta Force, Diablo IV, Dota 2, Elden Ring, Fortnite, Genshin Impact, GTA V, Hogwarts Legacy, Honkai: Star Rail, League of Legends, Lost Ark, Marvel Rivals, Minecraft, Naraka: Bladepoint, Overlord 2, Overwatch, PUBG, Palworld, Roblox, Rocket League, Rust, Sons of the Forest, Starfield, Valorant, Valheim | ➖ 3 jeux (Fortnite, Cyberpunk 2077, Black Ops 6) — décision : on s'arrête là |
 | 4 modes par jeu (dont Compétitif et Équilibré) | ✅ 4 modes |
 | Réglage par réglage en Bas / Moyen / Élevé | ✅ aperçu avant écriture |
-| Résolution et mode plein écran changés par le préréglage | ❌ vérifié le 28/11 : aucun préréglage d'ONYX ne touche la résolution ni le mode d'affichage |
+| Résolution et mode plein écran changés par le préréglage | ✅ v16.15 (en préparation) : au choix, Fortnite et Black Ops 6, valeurs du menu du jeu acceptées par l'écran ; Cyberpunk 2077 non proposé |
 | FPS prédits par IA | 🚫 remplacé par la mesure réelle de 60 s |
 | Revenir en arrière, rafraîchir, indiquer le dossier du jeu à la main | ✅ « Rétablir » ; dossier manuel ? |
 | Afficher les FPS depuis l'écran du préréglage | ✅ |
@@ -120,7 +120,7 @@ Relevé du 27/11/2026, complété le 28/11/2026 (second passage : 2 910 identifi
 | Compteur : position, taille (petit, moyen, grand), style (empilé ou en ligne), couleur du texte, aperçu | ✅ v16.10 position, taille, couleur ; style en ligne et aperçu v16.12 |
 | Jusqu'à 12 mesures au choix : FPS ; processeur (usage, température, fréquence, tension, ventilateur, puissance) ; carte graphique (usage, température, mémoire vidéo, ventilateur) ; RAM ; disque ; débit descendant et montant ; batterie ; heure ; durée de la partie | ✅ v16.10 douze lignes ; fréquence réelle du processeur, disque et batterie v16.12 ; ventilateur de la carte graphique v16.13 (API du constructeur) ; ventilateur, tension et puissance du processeur ❌ (pilote noyau) |
 | Graphique créé à la fin de la partie, notification | ✅ bilan de partie |
-| Minuteur et compte à rebours au compteur : démarrer, remettre à zéro, durée au choix, signal sonore, raccourcis | ❌ relevé du 28/11 |
+| Minuteur et compte à rebours au compteur : démarrer, remettre à zéro, durée au choix, signal sonore, raccourcis | ✅ v16.15 (en préparation) |
 | Widget Xbox Game Bar | 🚫 demande une application UWP à part |
 
 ### 2.6 Streaming = Remote Play
@@ -148,7 +148,7 @@ Relevé du 27/11/2026, complété le 28/11/2026 (second passage : 2 910 identifi
 | **Accélérer** : analyse, tout cocher / décocher, optimiser, « revenir aux valeurs Windows » | ✅ catalogue de réglages, bien plus large. Cortex : 82 réglages en 5 groupes (bureau, cache disque, système de fichiers, réseau, services Windows) ; ONYX a les mêmes familles (délais de menu et de fermeture des programmes, noms courts NTFS, date de dernier accès, SysMain, registre à distance…). Les 18 services à couper 🚫 : sur le PC de l'utilisateur, 13 des 14 présents sont déjà arrêtés (relevé du 28/11). Réglages sans effet sur Windows 11 (DLL inutilisées, Internet Explorer) ou risqués (mémoire virtuelle coupée) 🚫 |
 | **Nettoyer** : analyse, taille par catégorie, résumé, dernière analyse et dernier nettoyage | ✅ |
 | Nettoyer : navigateurs (alerte si le navigateur est ouvert), dossiers temporaires Windows, Corbeille | ✅ |
-| Nettoyer : résidus par jeu (627 entrées : journaux, rapports de plantage, fichiers temporaires dans les dossiers des jeux) et par application (161 entrées) | ➖ ONYX nettoie les caches du système, des pilotes graphiques, des lanceurs, de Discord et des navigateurs, pas les dossiers des jeux |
+| Nettoyer : résidus par jeu (627 entrées : journaux, rapports de plantage, fichiers temporaires dans les dossiers des jeux) et par application (161 entrées) | ➖ v16.15 (en préparation) : journaux et rapports de plantage des jeux Unreal Engine, du lanceur Epic et de Steam, vers la Corbeille ; pas de liste de 627 entrées ni de fichiers temporaires dans les dossiers d'installation |
 | Nettoyer : registre (21 catégories) | 🚫 aucun gain mesurable attendu, risque de casser une application ; ONYX ne supprime pas de clés de registre en masse |
 | Nettoyer : historique de navigation, formulaires (10 catégories « vie privée ») | 🚫 ONYX ne touche qu'aux caches des navigateurs |
 | Nettoyer : lancer le nettoyage tout seul après l'analyse | 🚫 règle : confirmation |
@@ -241,7 +241,7 @@ Relevé du 27/11/2026, complété le 28/11/2026 (second passage : 2 910 identifi
 | Lancement avec Windows, masquage automatique | ✅ |
 | Accélération matérielle de l'interface | sans objet |
 | Lancer les jeux avec Cortex, quitter Cortex à la fermeture du jeu | ✅ lancement depuis Mes jeux ; quitter à la fermeture du jeu 🚫 (ONYX tient le journal de jeu et le Mode Jeu auto) |
-| Fermer le lanceur (Steam, Epic…) à la fin de la partie | ❌ relevé du 28/11 |
+| Fermer le lanceur (Steam, Epic…) à la fin de la partie | ➖ v16.15 (en préparation) : Steam seulement (`steam.exe -shutdown`) ; les autres lanceurs n'ont pas de commande de fermeture documentée |
 | Avertir quand les notifications de Windows sont coupées | ❌ relevé du 28/11 (les bulles de la zone de notification d'ONYX en dépendent) |
 | « Quoi de neuf » affiché après une mise à jour | ➖ les notes sont montrées avant l'installation ; après, une notification seulement |
 | Raccourcis clavier modifiables, tout réinitialiser | ✅ v16.12 |
@@ -278,10 +278,10 @@ Relevé du 27/11/2026, complété le 28/11/2026 (second passage : 2 910 identifi
 10. **Clips automatiques par analyse d'image pour Fortnite** : gros chantier, modèle de reconnaissance à construire.
 11. ~~**Applis : fiche et désinstallation**, **ventilateur de la carte graphique au compteur**, **page d'ouverture au choix**, **charge et températures par partie**, **déplacer des clips**~~ : fait en v16.13.
 12. ~~**Installation et mise à jour** : installateur en ligne, installation automatique en option, version à ignorer, mise à jour importante, contrôle de la place sur le disque~~ : fait en v16.14.
-13. **Fermer le lanceur à la fin de la partie** (option, coupée par défaut) : relevé du 28/11.
-14. **Minuteur et compte à rebours au compteur en jeu**, avec raccourcis et signal sonore : relevé du 28/11.
-15. **Résolution et mode d'affichage dans les préréglages** (valeurs proposées par le menu du jeu et acceptées par l'écran seulement) : relevé du 28/11.
-16. **Nettoyage des résidus des jeux installés** (journaux et rapports de plantage, liste courte et vérifiée jeu par jeu) : relevé du 28/11.
+13. ~~**Fermer le lanceur à la fin de la partie**~~ : fait pour Steam (v16.15, en préparation).
+14. ~~**Minuteur et compte à rebours au compteur en jeu**~~ : fait (v16.15, en préparation).
+15. ~~**Résolution et mode d'affichage dans les préréglages**~~ : fait pour Fortnite et Black Ops 6 (v16.15, en préparation).
+16. ~~**Nettoyage des résidus des jeux installés**~~ : journaux et rapports de plantage (v16.15, en préparation).
 17. **Téléchargements de Windows Update mis en pause pendant la partie** : à mesurer avant de décider (les 59 services arrêtés en jeu ont déjà été écartés par la mesure).
 18. **Petits** : avertir quand les notifications de Windows sont coupées ; « quoi de neuf » après une mise à jour.
 

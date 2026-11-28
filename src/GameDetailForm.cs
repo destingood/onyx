@@ -91,6 +91,7 @@ namespace BTOptimizer
         private int LeftW { get { return ClientSize.Width - Pad * 2 - CoverW - 32; } }
 
         private Button _back, _launch, _folder, _close, _hide, _uninstall, _presets, _clips, _succes;
+        private CheckBox _fermeSteam;
 
         private void BuildActions()
         {
@@ -118,6 +119,18 @@ namespace BTOptimizer
             _folder.Enabled = _g.InstallPath != null;
             _folder.Click += (s, e) => OpenFolder();
             Controls.Add(_folder);
+
+            // Réglage commun à tous les jeux Steam, coupé par défaut (voir FermeLanceur).
+            if (_g.SteamId > 0)
+            {
+                _fermeSteam = new CheckBox
+                {
+                    Text = "Fermer Steam 2 min après la fin de la partie (seulement si ONYX l'a ouvert en lançant le jeu)",
+                    Checked = FermeLanceur.Actif, ForeColor = FpsUi.Dim, Font = FpsUi.Small, BackColor = Color.Transparent
+                };
+                _fermeSteam.CheckedChanged += (s, e) => FermeLanceur.Actif = _fermeSteam.Checked;
+                Controls.Add(_fermeSteam);
+            }
 
             BuildBoosts();
 
@@ -215,6 +228,12 @@ namespace BTOptimizer
             int half = (lw - 12) / 2;
             if (_launch != null) _launch.SetBounds(Pad, ay + 42, half, 34);
             if (_folder != null) _folder.SetBounds(Pad + half + 12, ay + 42, half, 34);
+            if (_fermeSteam != null)
+            {
+                int fy = ay + 42 + 34 + 6;
+                _fermeSteam.SetBounds(Pad, fy, lw, 24);
+                _fermeSteam.Visible = fy + 24 <= H - 66;   // jamais sur la rangée du bas
+            }
 
             // Rangée du bas : cinq boutons qui se partagent la colonne gauche (jamais sous la jaquette).
             int[] parts = { 90, 106, 126, 96, 105 };   // Fermer, Masquer, Désinstaller, Options, Notes
@@ -278,6 +297,7 @@ namespace BTOptimizer
             {
                 // Options choisies par l'utilisateur : exécutable, ou arguments d'un jeu Steam.
                 OptionsJeu.Options opt = OptionsJeu.De(_g.Name);
+                if (_g.SteamId > 0) FermeLanceur.NoteLancement(_g.Name);   // Steam ouvert avant ? (fermeture en fin de partie)
                 if (OptionsJeu.LanceSiChoisi(_g, opt)) return;
                 string args = opt != null ? opt.Arguments : "";
                 if (_g.SteamId > 0) { Process.Start(new ProcessStartInfo("steam://run/" + _g.SteamId) { UseShellExecute = true }); return; }

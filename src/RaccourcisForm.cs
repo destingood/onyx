@@ -25,7 +25,7 @@ namespace BTOptimizer
             for (int i = 0; i < _t.Length; i++) _t[i] = new Raccourcis.Combo { Mods = actuels[i].Mods, Touche = actuels[i].Touche };
 
             Text = "ONYX — Raccourcis clavier";
-            ClientSize = new Size(600, 360);
+            ClientSize = new Size(600, 160 + Raccourcis.Nombre * 50);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false; MinimizeBox = false;
@@ -54,7 +54,7 @@ namespace BTOptimizer
                 Controls.Add(off);
             }
 
-            _etat = new Label { Location = new Point(16, 270), Size = new Size(568, 36), ForeColor = FpsUi.Dim };
+            _etat = new Label { Location = new Point(16, 70 + Raccourcis.Nombre * 50), Size = new Size(568, 36), ForeColor = FpsUi.Dim };
             Controls.Add(_etat);
 
             var reset = OnyxDesign.Button("Tout réinitialiser");

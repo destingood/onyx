@@ -12,7 +12,7 @@ namespace BTOptimizer
     /// </summary>
     internal static class Raccourcis
     {
-        public enum Action { ModeJeu, Afficher, Compteur, Capture }
+        public enum Action { ModeJeu, Afficher, Compteur, Capture, Minuteur, MinuteurZero }
 
         public const uint ModAlt = 0x1, ModCtrl = 0x2, ModMaj = 0x4;
 
@@ -25,9 +25,10 @@ namespace BTOptimizer
             public bool MemeQue(Combo o) { return o != null && !Vide && !o.Vide && Mods == o.Mods && Touche == o.Touche; }
         }
 
-        public static readonly string[] Codes = { "modejeu", "afficher", "compteur", "capture" };
-        public static readonly string[] Libelles = { "Mode Jeu (activer / couper)", "Afficher ou ranger ONYX", "Compteur en jeu", "Capture d'écran du jeu" };
-        private static readonly char[] Defauts = { 'G', 'O', 'F', 'C' };
+        public static readonly string[] Codes = { "modejeu", "afficher", "compteur", "capture", "minuteur", "minuteur0" };
+        public static readonly string[] Libelles = { "Mode Jeu (activer / couper)", "Afficher ou ranger ONYX", "Compteur en jeu", "Capture d'écran du jeu",
+                                                     "Minuteur : démarrer / pause", "Minuteur : remise à zéro" };
+        private static readonly char[] Defauts = { 'G', 'O', 'F', 'C', 'T', 'R' };
 
         public static int Nombre { get { return Codes.Length; } }
 
