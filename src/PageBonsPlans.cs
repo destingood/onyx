@@ -1326,13 +1326,12 @@ namespace BTOptimizer
             }
             private static void Cover(Graphics g, Image image, Rectangle target)
             {
-                Rectangle destination = DealArtwork.Fit(image.Size, target);
                 OnyxDesign.PaintCard(g, target, FpsUi.RailBg, FpsUi.Border, 8);
                 var state = g.Save();
                 using (var path = FpsUi.Round(target, 8))
                 {
                     g.SetClip(path);
-                    g.DrawImage(image, destination, new Rectangle(Point.Empty, image.Size), GraphicsUnit.Pixel);
+                    DealArtwork.Draw(g, image, target);
                 }
                 g.Restore(state);
             }

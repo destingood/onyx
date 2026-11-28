@@ -177,7 +177,7 @@ namespace BTOptimizer
             if (image != null)
             {
                 var state = g.Save();
-                using (var path = FpsUi.Round(art, 10)) { g.SetClip(path); g.DrawImage(image, DealArtwork.Fit(image.Size, art)); }
+                using (var path = FpsUi.Round(art, 10)) { g.SetClip(path); DealArtwork.Draw(g, image, art); }
                 g.Restore(state);
             }
             else Logo.Draw(g, new RectangleF(82, 46, 60, 60), FpsUi.Gold, false);
